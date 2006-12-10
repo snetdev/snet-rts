@@ -1,0 +1,63 @@
+	Repairs:
+---------
+
+- Write comments 
+
+
+
+To Implement:
+--------------
+
+- det. combinators
+
+- SNET interface for in/out
+
+- memory managment
+
+
+
+
+Resolved (History):
+--------------------
+20.11.06
+- SNETsync: use typeenoding instead of TENCpattern, 
+            remove ofl- and out-tag.
+- Renaming: SNET -> SNet, TENC -> SNetTenc,
+            SNETstar2 -> SNetStarInner
+- Filter: Add "Use Field" to use field without copying.
+          Add "Use Tag" to use a tag.
+          
+          
+30.10.06
+- termination
+- improved graphical frontend (AETHER demo)
+
+
+16.10.06
+- SNETstar: pattern instead of tags
+- API completion
+- control records (SNETsync, ...)
+- SNETsync: die without a trace ;)
+
+
+14.10.06
+- Makefile
+- Proper handling of Binding Tags
+
+
+12.10.06
+- SNETfilter: add interface and complete instruction set (complete rewrite)
+- Improve the Makefile (dependencies)
+
+
+10.10.06
+- Handle: create union for the datastructure
+
+
+09.10.06
+- SNETsync: inherited fields/tags must not overwrite
+            fields/tags already present in out record
+- SNETparallel: !!! implement best match !!!
+
+
+

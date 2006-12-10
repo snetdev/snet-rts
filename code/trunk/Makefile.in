@@ -1,0 +1,81 @@
+
+
+# -------------------------------------------------------------------
+# Makefile.in, last changed: 14.10.06
+# -------------------------------------------------------------------
+
+
+
+# GTKINCLUDE, GTKLIBS and SOCKETLIBS are set by configure.sh
+CC						=		gcc
+CCFLAGS				=		-Wall -g
+CCINCLUDE			=		-I./include
+
+LDPATHS				=		-L./lib
+LIBS					=		-lsnet -lpthread -lrt
+
+AR						=		ar
+ARFLAGS				=		-rcs
+
+SNETLIBSRC		=		$(wildcard src/runtime/*.c)
+SNETLIBS			=		$(patsubst %.c,%.o,$(SNETLIBSRC))
+
+DEMOSRC				=		$(wildcard src/demo/*.c)
+DEMOBINS			=		$(patsubst src/demo/%.c,bin/%,$(DEMOSRC))
+
+TOOLSRC				=		$(wildcard src/tools/*.c)
+TOOLBINS			=		$(patsubst src/tools/%.c,bin/%,$(TOOLSRC))
+
+
+# -------------------------------------------------------------------
+
+all: lib/libsnet.a tools demos
+
+tools: $(TOOLBINS)
+
+demos: $(DEMOBINS) 
+
+# -------------------------------------------------------------------
+
+
+
+# --- runtime -------------------------------------------------------
+
+lib/libsnet.a: $(SNETLIBS)
+	$(AR) $(ARFLAGS) $@ $(SNETLIBS)
+
+%.o: %.c
+	$(CC) $(CCFLAGS) $(CCINCLUDE) -o $@ -c $<
+
+
+
+# --- tools ---------------------------------------------------------
+
+bin/FeederFront: src/tools/FeederFront.c
+	$(CC) $(CCFLAGS) $(CCINCLUDE) $(GTKINCLUDE)  -o $@  $< $(LDPATHS) $(LIBS) $(GTKLIBS) $(SOCKETLIBS)
+
+bin/RecordInspector: src/tools/RecordInspector.c
+	$(CC) $(CCFLAGS) $(CCINCLUDE) $(GTKINCLUDE)  -o $@  $< $(LDPATHS) $(LIBS) $(GTKLIBS) $(SOCKETLIBS)
+
+
+
+
+# --- demos ---------------------------------------------------------	
+
+bin/%:	src/demo/%.c lib/libsnet.a
+	$(CC) $(CCFLAGS) $(CCINCLUDE)  -o $@  $< $(LDPATHS) $(LIBS) $(SOCKETLIBS)
+
+
+
+
+
+# --- clean ---------------------------------------------------------
+
+clean:
+	-rm -f $(SNETLIBS) lib/libsnet.a $(DEMOBINS) $(TOOLBINS) 
+
+
+
+
+# --- EOF -----------------------------------------------------------
+
