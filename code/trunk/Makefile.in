@@ -51,10 +51,7 @@ lib/libsnet.a: $(SNETLIBS)
 
 # --- tools ---------------------------------------------------------
 
-bin/FeederFront: src/tools/FeederFront.c
-	$(CC) $(CCFLAGS) $(CCINCLUDE) $(GTKINCLUDE)  -o $@  $< $(LDPATHS) $(LIBS) $(GTKLIBS) $(SOCKETLIBS)
-
-bin/RecordInspector: src/tools/RecordInspector.c
+bin/%: src/tools/%.c
 	$(CC) $(CCFLAGS) $(CCINCLUDE) $(GTKINCLUDE)  -o $@  $< $(LDPATHS) $(LIBS) $(GTKLIBS) $(SOCKETLIBS)
 
 
