@@ -71,6 +71,10 @@ typedef struct {
 } dispatch_info_t;
 
 
+typedef struct {
+  snet_buffer_t *buf;
+  int num;
+} snet_blist_elem_t;
 
 // used in SNetOut (depends on local variables!)
 #define ENTRYSUM( RECNUM, TENCNUM)\
@@ -165,28 +169,35 @@ extern snet_handle_t *SNetOut( snet_handle_t *hnd, int variant_num, ...) {
   snet_record_t *out_rec, *old_rec;
   snet_variantencoding_t *venc;
 
-  venc = SNetTencGetVariant( SNetHndGetType( hnd), variant_num);
-
-  out_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( venc));
-
 
   // set values from box
 
+  if( variant_num > 0) { /* if variant_num == 0 => box produced nothing (empty to empty) */
 
-  va_start( args, variant_num);
-  names = SNetTencGetFieldNames( venc);
-  for( i=0; i<SNetTencGetNumFields( venc); i++) {
-    SNetRecSetField( out_rec, names[i], va_arg( args, void*));
+   venc = SNetTencGetVariant( SNetHndGetType( hnd), variant_num);
+   out_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( venc));
+
+   va_start( args, variant_num);
+   names = SNetTencGetFieldNames( venc);
+   for( i=0; i<SNetTencGetNumFields( venc); i++) {
+     SNetRecSetField( out_rec, names[i], va_arg( args, void*));
+   }
+   names = SNetTencGetTagNames( venc);
+   for( i=0; i<SNetTencGetNumTags( venc); i++) {
+     SNetRecSetTag( out_rec, names[i], va_arg( args, int));
+   }
+   names = SNetTencGetBTagNames( venc);
+   for( i=0; i<SNetTencGetNumBTags( venc); i++) {
+     SNetRecSetBTag( out_rec, names[i], va_arg( args, int));
+   }
+   va_end( args);
   }
-  names = SNetTencGetTagNames( venc);
-  for( i=0; i<SNetTencGetNumTags( venc); i++) {
-    SNetRecSetTag( out_rec, names[i], va_arg( args, int));
+  else {
+    venc = SNetTencVariantEncode( SNetTencCreateVector( 0),
+                                  SNetTencCreateVector( 0),
+                                  SNetTencCreateVector( 0));
+    out_rec = SNetRecCreate( REC_data, venc);
   }
-  names = SNetTencGetBTagNames( venc);
-  for( i=0; i<SNetTencGetNumBTags( venc); i++) {
-    SNetRecSetBTag( out_rec, names[i], va_arg( args, int));
-  }
-  va_end( args);
 
 
   // flow inherit
@@ -216,80 +227,6 @@ extern snet_handle_t *SNetOut( snet_handle_t *hnd, int variant_num, ...) {
   return( hnd);
 }
 
-/*
-extern snet_handle_t *SNetOut( snet_handle_t *hnd, int variant_num, ...) {
-  
-  int i, last_entry;
-  va_list args;
-  snet_record_t *outrec;
-  snet_vector_t *field_names, *tag_names, *btag_names;
-  snet_variantencoding_t *venc;
-  snet_record_t *rec;
-  int *names;
-
-  venc = SNetTencGetVariant( SNetHndGetType( hnd), variant_num);
-  rec = SNetHndGetRecord( hnd);
-
-  field_names = SNetCreateEmptyVector( SNetRecGetNumFields( rec) + SNetTencGetNumFields( venc));
-  tag_names = SNetCreateEmptyVector( SNetRecGetNumTags( rec) + SNetTencGetNumTags( venc));
-  btag_names = SNetCreateEmptyVector( SNetTencGetNumBTags( venc));
-
-
-
-  FILL_NAME_VECTOR( SNetRecGetUnconsumedFieldNames, SNetRecGetNumFields, SNetTencGetFieldNames,
-                    SNetTencGetNumFields, field_names);
-  FILL_NAME_VECTOR( SNetRecGetUnconsumedTagNames, SNetRecGetNumTags, SNetTencGetTagNames,
-                    SNetTencGetNumTags, tag_names);
-
-  names = SNetTencGetBTagNames( venc);
-  for( i=0; i<SNetTencGetNumBTags( venc); i++) {
-    SNetTencSetVectorEntry( btag_names, i, names[i]);
-  }
-
-  SNetTencRemoveUnsetEntries( field_names);
-  SNetTencRemoveUnsetEntries( tag_names);
-
-  outrec = SNetRecCreate( REC_data, SNetTencVariantEncode( field_names, tag_names, btag_names));
-
-  names = SNetRecGetUnconsumedFieldNames( rec);
-  for( i=0; i<SNetRecGetNumFields( rec); i++) {
-    void *ptr;
-    ptr = SNetRecGetField( rec, names[i]);
-    SNetRecSetField( outrec, names[i], ptr);
-  }
-  SNetMemFree( names);
-
-  names = SNetRecGetUnconsumedTagNames( rec);
-  for( i=0; i<SNetRecGetNumTags( rec); i++) {
-    int val;
-
-    val = SNetRecGetTag( rec, names[i]);
-    SNetRecSetTag( outrec, names[i], val);
-  }
-  SNetMemFree( names);
-
-  va_start( args, variant_num);
-
-  names = SNetTencGetFieldNames( venc);
-  for( i=0; i<SNetTencGetNumFields( venc); i++) {
-    SNetRecSetField( outrec, names[i], va_arg( args, void*));
-  }
-  names = SNetTencGetTagNames( venc);
-  for( i=0; i<SNetTencGetNumTags( venc); i++) {
-    SNetRecSetTag( outrec, names[i], va_arg( args, int));
-  }
-  names = SNetTencGetBTagNames( venc);
-  for( i=0; i<SNetTencGetNumBTags( venc); i++) {
-    SNetRecSetBTag( outrec, names[i], va_arg( args, int));
-  }
-  va_end( args);
-
-  SNetBufPut( SNetHndGetOutbuffer( hnd), outrec);
-
-  return( hnd);
-}
-*/
-
 
 /* ------------------------------------------------------------------------- */
 /*  SNetBox                                                                  */
@@ -317,10 +254,16 @@ static void *BoxThread( void *hndl) {
         SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
         SNetRecDestroy( rec);
         break;
-      case REC_star:
+      case REC_collect:
         printf("\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
+      case REC_sort_begin:
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        break;
+      case REC_sort_end:
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        break;        
       case REC_terminate: 
         terminate = true;
         SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
@@ -334,7 +277,7 @@ static void *BoxThread( void *hndl) {
  
 }
 
-extern snet_buffer_t *SNetBox( snet_buffer_t *inbuf, void *boxfun, 
+extern snet_buffer_t *SNetBox( snet_buffer_t *inbuf, void (*boxfun)( snet_handle_t*), 
                                    snet_typeencoding_t *outspec) {
 
   snet_buffer_t *outbuf;
@@ -516,10 +459,158 @@ static int LLSTgetCount( linked_list_t *lst) {
 
 
 
+/* ============================================================= */
+/* ============================================================= */
 
-static void *StarDispatcher( void *info) {
+static void *DetCollector( void *info) {
 
- 
+  dispatch_info_t *inf = (dispatch_info_t*)info;
+  snet_buffer_t *outbuf = inf->to_buf;
+  snet_buffer_t *current_buf;
+
+  sem_t *sem;
+  snet_record_t *rec;
+  linked_list_t *lst;
+
+  bool terminate = false;
+  bool got_record;
+
+  int last_seen = -1;  
+  int completed_buffers = 0;
+
+  sem = SNetMemAlloc( sizeof( sem_t));
+  sem_init( sem, 0, 0);
+
+  SNetBufRegisterDispatcher( inf->from_buf, sem);
+  
+  lst = LLSTcreate( (void*)inf->from_buf);
+
+  while( !( terminate)) {
+
+    while( completed_buffers < LLSTgetCount( lst)) {
+      got_record = false;  
+
+      while( !( got_record)) {
+        current_buf = (snet_buffer_t*)LLSTget( lst);
+
+        sem_wait( sem);
+        sem_post( sem); /* wait here if all buffers are empty, sem_post because */
+        rec = SNetBufShow( current_buf); /* sem_wait is called again in switch() */
+  
+        if( rec != NULL) {
+          got_record = true;
+        
+          if( SNetRecGetDescriptor( rec) == REC_sort_begin) {
+            if( SNetRecGetNum( rec) == ( last_seen + 1)) {
+            
+            
+              if( SNetRecGetLevel( rec) != 0) {
+               printf("\n\nDBG :: level not 0\n\n"); 
+              }
+              bool done = false;
+            
+              while( !( done)) {
+              
+                rec = SNetBufGet( current_buf);
+                sem_wait( sem);
+
+			          switch( SNetRecGetDescriptor( rec)) {
+			            case REC_data:
+			              SNetBufPut( outbuf, rec); 
+			              break;
+			  
+			            case REC_sync:
+			              LLSTset( lst, SNetRecGetBuffer( rec));
+			              SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
+			             SNetRecDestroy( rec);
+			             break;
+			  
+			           case REC_collect:
+			              LLSTadd( lst, SNetRecGetBuffer( rec));
+			             SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
+			             SNetRecDestroy( rec);
+			             break;
+			
+	  		          case REC_sort_begin:
+                   if( SNetRecGetLevel( rec) != 0) {
+                     SNetRecSetLevel( rec, SNetRecGetLevel( rec) - 1);
+                     SNetBufPut( outbuf, rec);
+                   }
+                   else { 
+        //            printf("\ncounter of start %d\n", SNetRecGetNum( rec));
+                    //SNetRecDestroy( rec); 
+                   }
+		  	          break;
+			          
+			            case REC_sort_end:
+                   if( SNetRecGetLevel( rec) == 0) {
+                     //SNetRecDestroy( rec);
+                     done = true; 
+                     completed_buffers += 1;
+      //               printf("\ncompleted buffers: %d/%d\n", completed_buffers, LLSTgetCount( lst));
+                   }
+                  else {
+                     SNetRecSetLevel( rec, SNetRecGetLevel( rec) - 1);
+                     SNetBufPut( outbuf, rec);
+                  }
+			           break;
+			
+			            case REC_terminate:
+			             SNetBufDestroy( LLSTget( lst));
+			             LLSTremoveCurrent( lst);
+			             if( LLSTgetCount( lst) == 0) {
+			               terminate = true;
+			               SNetBufPut( outbuf, rec);
+			               SNetBufBlockUntilEmpty( outbuf);
+			               SNetBufDestroy( outbuf);
+			             }
+			             break;
+			         } // switch
+               
+            } /* while */ 
+         }
+         else { /* last_seen does not match */
+           //printf("last seen didn't match\n");
+           LLSTnext( lst);
+
+         }
+        }
+        else { /* shouldn't happen! (rec is not a sort_begin_token) */
+            
+          printf("happened[%d]\n", SNetRecGetDescriptor( rec));
+        }
+          
+          
+        }
+        else { /* BufShow was NULL */
+          LLSTnext( lst); 
+        }
+        
+      }
+    }
+    completed_buffers = 0;
+    last_seen += 1;
+    //printf("last seen: %d\n", last_seen); 
+ }
+        
+
+  SNetMemFree( inf);
+  return( NULL);
+}
+/* ============================================================= */
+/* ============================================================= */
+
+
+
+
+
+
+
+
+
+/*
+static void *Collector( void *info) {
+
   dispatch_info_t *inf = (dispatch_info_t*)info;
   snet_buffer_t *outbuf = inf->to_buf;
   snet_buffer_msg_t msg;
@@ -557,12 +648,17 @@ static void *StarDispatcher( void *info) {
             SNetRecDestroy( rec);
             break;
   
-          case REC_star:
+          case REC_collect:
             LLSTadd( lst, SNetRecGetBuffer( rec));
             SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
             SNetRecDestroy( rec);
             break;
-
+          case REC_sort_begin:
+            SNetBufPut( outbuf, rec);
+            break;
+          case REC_sort_end:
+            SNetBufPut( outbuf, rec);
+            break;
           case REC_terminate:
             SNetBufDestroy( LLSTget( lst));
             LLSTremoveCurrent( lst);
@@ -584,10 +680,210 @@ static void *StarDispatcher( void *info) {
   SNetMemFree( inf);
   return( NULL);
 }
+*/
+
+static bool CompareSortRecords( snet_record_t *rec1, snet_record_t *rec2) {
+
+  bool res;
+
+  if( ( rec1 == NULL) || ( rec2 == NULL)) {  
+    if( ( rec1 == NULL) && ( rec2 == NULL)) {
+      res = true;
+    }
+    else {
+      res = false;
+    }
+  }
+  else {
+    if( ( SNetRecGetLevel( rec1) == SNetRecGetLevel( rec2)) &&
+        ( SNetRecGetNum( rec1) == SNetRecGetNum( rec2)))  {
+     res = true;
+   }
+   else {
+      res = false;
+    }
+  }
+
+  return( res);
+}
 
 
-static snet_buffer_t *CreateStarDispatcher( snet_buffer_t *initial_buffer) {
 
+typedef struct {
+  snet_buffer_t *buf;
+  snet_record_t *current;
+} snet_collect_elem_t;
+
+static void *Collector( void *info) {
+
+  dispatch_info_t *inf = (dispatch_info_t*)info;
+  snet_buffer_t *outbuf = inf->to_buf;
+  snet_buffer_t *current_buf;
+  sem_t *sem;
+  snet_record_t *rec;
+  linked_list_t *lst;
+  bool terminate = false;
+  bool got_record;
+  snet_collect_elem_t *tmp_elem, *elem;
+
+  snet_record_t *current_sort_rec = NULL;
+  
+  int counter = 0; 
+  int sort_end_counter = 0;
+
+  sem = SNetMemAlloc( sizeof( sem_t));
+  sem_init( sem, 0, 0);
+
+  SNetBufRegisterDispatcher( inf->from_buf, sem);
+  
+  elem = SNetMemAlloc( sizeof( snet_collect_elem_t));
+  elem->buf = inf->from_buf;
+  elem->current = NULL;
+
+  lst = LLSTcreate( elem);
+
+  while( !( terminate)) {
+    got_record = false;
+    sem_wait( sem);
+    while( !( got_record)) {
+      current_buf = ((snet_collect_elem_t*) LLSTget( lst))->buf;
+      rec = SNetBufShow( current_buf);
+      if( rec != NULL) { 
+       
+        got_record = true;
+        
+        switch( SNetRecGetDescriptor( rec)) {
+          case REC_data:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+              rec = SNetBufGet( current_buf);
+              SNetBufPut( outbuf, rec);
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+                
+            //rec = SNetBufGet( current_buf);
+            //SNetBufPut( outbuf, rec);
+            break;
+  
+          case REC_sync:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+             rec = SNetBufGet( current_buf);
+             tmp_elem = LLSTget( lst);
+             tmp_elem->buf = SNetRecGetBuffer( rec);
+             LLSTset( lst, tmp_elem);
+             SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
+             SNetRecDestroy( rec);
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+            break;
+  
+          case REC_collect:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+              rec = SNetBufGet( current_buf);
+             tmp_elem = SNetMemAlloc( sizeof( snet_collect_elem_t));
+             tmp_elem->buf = SNetRecGetBuffer( rec);
+// !!             tmp_elem->current = NULL;
+             if( current_sort_rec == NULL) {
+               tmp_elem->current = NULL;
+             }
+             else {
+               tmp_elem->current = SNetRecCreate( REC_sort_begin, 
+                                  SNetRecGetLevel( current_sort_rec), SNetRecGetNum( current_sort_rec));
+             }
+             LLSTadd( lst, tmp_elem);
+             SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
+             SNetRecDestroy( rec);
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }            
+            break;
+          case REC_sort_begin:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+              rec = SNetBufGet( current_buf);
+              tmp_elem->current = rec;
+              counter += 1;
+
+              if( counter == LLSTgetCount( lst)) {
+                current_sort_rec = rec;
+                counter = 0;
+                SNetBufPut( outbuf, rec);
+              }
+              else {
+                //SNetRecDestroy( rec);
+              }
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+            break;
+          case REC_sort_end:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+              rec = SNetBufGet( current_buf);
+              sort_end_counter += 1;
+              if( sort_end_counter == LLSTgetCount( lst)) {
+                SNetBufPut( outbuf, rec);
+                sort_end_counter = 0;
+              }
+              else {
+                //SNetRecDestroy( rec);
+              }
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+            break;
+          case REC_terminate:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+              rec = SNetBufGet( current_buf);
+              tmp_elem = LLSTget( lst);
+              SNetBufDestroy( tmp_elem->buf);
+              LLSTremoveCurrent( lst);
+              SNetMemFree( tmp_elem);
+              if( LLSTgetCount( lst) == 0) {
+                terminate = true;
+                SNetBufPut( outbuf, rec);
+               SNetBufBlockUntilEmpty( outbuf);
+               SNetBufDestroy( outbuf);
+              }
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+
+            break;
+        } // switch
+      } // if
+      else {
+        LLSTnext( lst);
+      }
+    } // while !got_record
+  } // while !terminate
+
+  SNetMemFree( inf);
+  return( NULL);
+}
+
+
+
+static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer, 
+                                        bool is_det) {
+                                          
   snet_buffer_t *outbuf;
   pthread_t *thread;
   dispatch_info_t *buffers;
@@ -600,15 +896,30 @@ static snet_buffer_t *CreateStarDispatcher( snet_buffer_t *initial_buffer) {
 
 
   thread = SNetMemAlloc( sizeof( pthread_t));
-  pthread_create( thread, NULL, StarDispatcher, (void*)buffers);
+  
+  if( is_det) {
+    pthread_create( thread, NULL, DetCollector, (void*)buffers);
+  }
+  else {
+    pthread_create( thread, NULL, Collector, (void*)buffers);
+  }
   pthread_detach( *thread);
 
   return( outbuf);
 }
 
+static snet_buffer_t *CreateCollector( snet_buffer_t *initial_buffer) {	
+
+  return( CollectorStartup( initial_buffer, false));
+}
+
+static snet_buffer_t *CreateDetCollector( snet_buffer_t *initial_buffer) { 
+
+  return( CollectorStartup( initial_buffer, true));
+}
 
 /* ------------------------------------------------------------------------- */
-/*  SNetParallelDet non-deterministic                                           */
+/*  SNetParallel non-deterministic                                           */
 /* ------------------------------------------------------------------------- */
 
 
@@ -685,7 +996,7 @@ static void *ParallelBoxThread( void *hndl) {
 
   snet_handle_t *hnd = (snet_handle_t*) hndl;
   snet_record_t *rec;
-  snet_buffer_t *go_buffer=NULL;
+  snet_buffer_t *go_buffer = NULL;
   match_count_t *match_a, *match_b;
   bool terminate = false;
 
@@ -722,11 +1033,20 @@ static void *ParallelBoxThread( void *hndl) {
         SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
         SNetRecDestroy( rec);
         break;
-      case REC_star:
+      case REC_collect:
         printf("\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
-
+      case REC_sort_begin:
+        SNetBufPut( SNetHndGetOutbufferA( hnd), 
+            SNetRecCreate( REC_sort_begin, SNetRecGetLevel( rec), SNetRecGetNum( rec)));
+        SNetBufPut( SNetHndGetOutbufferB( hnd), rec);
+        break;
+      case REC_sort_end:
+        SNetBufPut( SNetHndGetOutbufferA( hnd), 
+            SNetRecCreate( REC_sort_end, SNetRecGetLevel( rec), SNetRecGetNum( rec)));
+        SNetBufPut( SNetHndGetOutbufferB( hnd), rec);        
+        break;
       case REC_terminate:
         terminate = true;
         SNetBufPut( SNetHndGetOutbufferA( hnd), rec);
@@ -761,8 +1081,8 @@ extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf, snet_buffer_t* (*box_a
   outbuf_a = (*box_a)( transit_a);
   outbuf_b = (*box_b)( transit_b);
 
-  outbuf = CreateStarDispatcher( outbuf_a);
-  SNetBufPut( outbuf_a, SNetRecCreate( REC_star, outbuf_b));
+  outbuf = CreateCollector( outbuf_a);
+  SNetBufPut( outbuf_a, SNetRecCreate( REC_collect, outbuf_b));
 
   box_thread = SNetMemAlloc( sizeof( pthread_t));
   pthread_create( box_thread, NULL, ParallelBoxThread, (void*)hnd);
@@ -772,39 +1092,169 @@ extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf, snet_buffer_t* (*box_a
 }
 
 
+/* B------------------------------------------------------- */
+/* B Det Parallel Playground ------------------------------ */
+/* B------------------------------------------------------- */
 
 
-/* ------------------------------------------------------------------------- */
-/*  SNetParallelDet                                                             */
-/* ------------------------------------------------------------------------- */
+
+static void *DetParallelBoxThread( void *hndl) {
+
+  snet_handle_t *hnd = (snet_handle_t*) hndl;
+  snet_record_t *rec;
+  snet_buffer_t *go_buffer = NULL;
+  match_count_t *match_a, *match_b;
+  bool terminate = false;
+  int counter = 1;
+
+
+  while( !( terminate)) {
+    
+    rec = SNetBufGet( SNetHndGetInbuffer( hnd));
+
+    switch( SNetRecGetDescriptor( rec)) {
+      case REC_data:
+        match_a = CheckMatch( rec, SNetTencGetVariant( SNetHndGetType( hnd), 1));
+        match_b = CheckMatch( rec, SNetTencGetVariant( SNetHndGetType( hnd), 2));
+ 
+        // this is for testing only and may be deleted once we have
+        // a proper type checker
+        if( !( match_a->is_match) && !( match_b->is_match)) {
+          printf("\n\n ** Fatal Error ** : Record doesn't match! (SNETparallel)\n\n");
+          exit( 1);
+        }
+  
+        if( match_a->is_match && match_b->is_match) {
+          go_buffer = BestMatch( match_a, match_b, 
+                                 SNetHndGetOutbufferA( hnd), SNetHndGetOutbufferB( hnd));
+        }
+        else if( match_a->is_match) {
+          go_buffer = SNetHndGetOutbufferA( hnd);
+
+        } else {
+         go_buffer = SNetHndGetOutbufferB( hnd);
+        } 
+        
+        if( go_buffer == SNetHndGetOutbufferA( hnd)) { /* !!! implement this properly !!! */ 
+          SNetBufPut( go_buffer, SNetRecCreate( REC_sort_begin, 0, counter));
+          SNetBufPut( go_buffer, rec); 
+          SNetBufPut( go_buffer, SNetRecCreate( REC_sort_end, 0, counter));
+          SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+          SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_end, 0, counter));
+        }
+        else {
+          SNetBufPut( go_buffer, SNetRecCreate( REC_sort_begin, 0, counter));
+          SNetBufPut( go_buffer, rec); 
+          SNetBufPut( go_buffer, SNetRecCreate( REC_sort_end, 0, counter));
+          SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+          SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));          
+        }
+
+       
+       counter += 1;
+       SNetMemFree( match_a); SNetMemFree( match_b);
+      break;
+      case REC_sync:
+        SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
+        SNetRecDestroy( rec);
+        break;
+      case REC_collect:
+        printf("\nUnhandled control record, destroying it.\n\n");
+        SNetRecDestroy( rec);
+        break;
+      case REC_sort_begin:
+        SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+        SNetBufPut( SNetHndGetOutbufferA( hnd), rec);
+        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));
+        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_end, 0, counter));
+        counter += 1;
+        break;
+      case REC_sort_end:
+        SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+        SNetBufPut( SNetHndGetOutbufferA( hnd), rec);
+        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));
+        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_end, 0, counter));
+        counter += 1;
+        break;
+      case REC_terminate:
+
+        terminate = true;
+
+        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+        SNetBufPut( SNetHndGetOutbufferA( hnd), rec);
+        // counter += 1;
+        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+        SNetBufPut( SNetHndGetOutbufferB( hnd), rec);         
+        
+        SNetBufBlockUntilEmpty( SNetHndGetOutbufferA( hnd));
+        SNetBufBlockUntilEmpty( SNetHndGetOutbufferB( hnd));
+        SNetBufDestroy( SNetHndGetOutbufferA( hnd));
+        SNetBufDestroy( SNetHndGetOutbufferB( hnd));
+        SNetHndDestroy( hnd);
+        break;
+    }
+  }  
+
+  return( NULL);
+}
 
 
 extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),
+                                   snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *outtype) {
+  snet_handle_t *hnd;
+  snet_buffer_t *outbuf;
+  snet_buffer_t *transit_a, *transit_b;
+  snet_buffer_t *outbuf_a, *outbuf_b;
+  pthread_t *box_thread;
+
+  transit_a = SNetBufCreate( BUFFER_SIZE);
+  transit_b = SNetBufCreate( BUFFER_SIZE);
+
+  hnd = SNetHndCreate( HND_parallel, inbuf, transit_a, transit_b, outtype);
+  
+  outbuf_a = (*box_a)( transit_a);
+  outbuf_b = (*box_b)( transit_b);
+
+  outbuf = CreateDetCollector( outbuf_a);
+  SNetBufPut( outbuf_a, SNetRecCreate( REC_sort_begin, 0, 0));
+  SNetBufPut( outbuf_a, SNetRecCreate( REC_collect, outbuf_b));
+  SNetBufPut( outbuf_a, SNetRecCreate( REC_sort_end, 0, 0));
+  SNetBufPut( outbuf_b, SNetRecCreate( REC_sort_begin, 0, 0));
+  SNetBufPut( outbuf_b, SNetRecCreate( REC_sort_end, 0, 0));  
+  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  pthread_create( box_thread, NULL, DetParallelBoxThread, (void*)hnd);
+  pthread_detach( *box_thread);
+ 
+  return( outbuf);
+}
+
+
+
+/* E------------------------------------------------------- */
+/* E------------------------------------------------------- */
+/* E------------------------------------------------------- */
+
+
+/* ------------------------------------------------------------------------- */
+/*  SNetParallelDet                                                          */
+/* ------------------------------------------------------------------------- */
+
+
+
+extern snet_buffer_t *SNetParallelDet_BACKUP_( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),
                                   snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *outtype) {
-  if( warn_parallel++ == 0) {
-    printf(" \n\n ** Please note ** : SNETparallel not yet implemented.\n"
-          "                      Using non-deterministic version instead.\n\n");
-  }
+
+
+
+
 
   return( SNetParallel( inbuf, box_a, box_b, outtype));
 }
 
-
-
-/* ------------------------------------------------------------------------- */
-/*  SNetStarDet                                                                 */
-/* ------------------------------------------------------------------------- */
-
-extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),  
-                           snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *type) {
-
-  if( warn_star++ == 0) {
-    printf(" \n\n ** Please note ** : SNETstar not yet implemented.\n"
-           "                     Using non-deterministic version instead.\n\n");
-  }
-
-  return( SNetStar( inbuf, box_a, box_b, type));
-}
 
 /* ------------------------------------------------------------------------- */
 /*  SNetStar                                                                 */
@@ -857,16 +1307,14 @@ static void *StarBoxThread( void *hndl) {
   snet_buffer_t *real_outbuf, *our_outbuf, *starbuf=NULL;
   bool terminate = false;
   snet_typeencoding_t *exit_tags;
-  snet_record_t *rec;
+  snet_record_t *rec, *current_sort_rec = NULL;
 
   real_outbuf = SNetHndGetOutbuffer( hnd);
   exit_tags = SNetHndGetType( hnd);
   box = SNetHndGetBoxfunA( hnd);
   self = SNetHndGetBoxfunB( hnd);
    
-//  our_outbuf = SNetBufCreate( BUFFER_SIZE);
-  BUF_CREATE( our_outbuf, BUFFER_SIZE);
-  BUF_SET_NAME( our_outbuf, "STARourOutbuf");
+  our_outbuf = SNetBufCreate( BUFFER_SIZE);
 
   while( !( terminate)) {
   
@@ -882,7 +1330,13 @@ static void *StarBoxThread( void *hndl) {
             // register new buffer with dispatcher,
             // starbuf is returned by self, which is SNetStarIncarnate
             starbuf = SNetSerial( our_outbuf, box, self);        
-            SNetBufPut( real_outbuf, SNetRecCreate( REC_star, starbuf));
+            SNetBufPut( real_outbuf, SNetRecCreate( REC_collect, starbuf));
+/*            if( current_sort_rec != NULL) {
+              printf("put\n");
+              SNetBufPut( our_outbuf, SNetRecCreate( REC_sort_begin, 
+                              SNetRecGetLevel( current_sort_rec), 
+                              SNetRecGetNum( current_sort_rec)));
+            }*/
          }
          SNetBufPut( our_outbuf, rec);
        }
@@ -893,11 +1347,30 @@ static void *StarBoxThread( void *hndl) {
         SNetRecDestroy( rec);
         break;
 
-      case REC_star:
+      case REC_collect:
         printf("\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
-
+      case REC_sort_begin:
+        SNetRecDestroy( current_sort_rec);
+        current_sort_rec = SNetRecCreate( REC_sort_begin, SNetRecGetLevel( rec),
+                                          SNetRecGetNum( rec));
+        if( starbuf != NULL) {
+          SNetBufPut( our_outbuf, SNetRecCreate( REC_sort_begin,
+                                    SNetRecGetLevel( rec),
+                                    SNetRecGetNum( rec)));
+        }
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        break;
+      case REC_sort_end:
+        if( starbuf != NULL) {
+          SNetBufPut( our_outbuf, SNetRecCreate( REC_sort_end,
+                                    SNetRecGetLevel( rec),
+                                    SNetRecGetNum( rec)));
+          
+        }
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        break;
       case REC_terminate:
         terminate = true;
         SNetHndDestroy( hnd);
@@ -927,13 +1400,13 @@ extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(sn
 //  BUF_CREATE( star_outbuf, BUFFER_SIZE);
   
   
-  hnd = SNetHndCreate( HND_star, inbuf, star_outbuf, box_a, box_b, type);
+  hnd = SNetHndCreate( HND_star, inbuf, star_outbuf, box_a, box_b, type, false);
   box_thread = SNetMemAlloc( sizeof( pthread_t));
 
   pthread_create( box_thread, NULL, StarBoxThread, hnd);
   pthread_detach( *box_thread);
 
-  dispatch_outbuf = CreateStarDispatcher( star_outbuf);
+  dispatch_outbuf = CreateCollector( star_outbuf);
   
   return( dispatch_outbuf);
 }
@@ -949,7 +1422,7 @@ extern snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf, snet_buffer_t* (*
   outbuf = SNetBufCreate( BUFFER_SIZE);
 
 
-  hnd = SNetHndCreate( HND_star, inbuf, outbuf, box_a, box_b, type);
+  hnd = SNetHndCreate( HND_star, inbuf, outbuf, box_a, box_b, type, true);
   
   box_thread = SNetMemAlloc( sizeof( pthread_t));
   pthread_create( box_thread, NULL, StarBoxThread, hnd);
@@ -957,6 +1430,179 @@ extern snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf, snet_buffer_t* (*
 
   return( outbuf);
 }
+
+
+
+
+
+/* ------------------------------------------------------------------------- */
+/*  SNetStarDet                                                              */
+/* ------------------------------------------------------------------------- */
+
+static void *DetStarBoxThread( void *hndl) {
+
+  snet_handle_t *hnd = (snet_handle_t*)hndl;
+  snet_buffer_t* (*box)( snet_buffer_t*);
+  snet_buffer_t* (*self)( snet_buffer_t*);
+  snet_buffer_t *real_outbuf, *our_outbuf, *starbuf=NULL;
+  bool terminate = false;
+  snet_typeencoding_t *exit_tags;
+  snet_record_t *rec;
+ 
+  snet_record_t *sort_begin, *sort_end;
+  int counter = 0;
+
+
+  real_outbuf = SNetHndGetOutbuffer( hnd);
+  exit_tags = SNetHndGetType( hnd);
+  box = SNetHndGetBoxfunA( hnd);
+  self = SNetHndGetBoxfunB( hnd);
+   
+  our_outbuf = SNetBufCreate( BUFFER_SIZE);
+
+  while( !( terminate)) {
+  
+    rec = SNetBufGet( SNetHndGetInbuffer( hnd));
+
+    switch( SNetRecGetDescriptor( rec)) {
+      case REC_data:
+        if( !( SNetHndIsIncarnate( hnd))) { 
+          sort_begin = SNetRecCreate( REC_sort_begin, 0, counter);
+          sort_end = SNetRecCreate( REC_sort_end, 0, counter);
+        
+          SNetBufPut( real_outbuf, sort_begin);
+          if( starbuf != NULL) {
+            SNetBufPut( our_outbuf, sort_begin);
+          }
+          
+          if( MatchesExitPattern( rec, exit_tags)) {
+            SNetBufPut( real_outbuf, rec);
+          }
+          else {
+            if( starbuf == NULL) {
+              starbuf = SNetSerial( our_outbuf, box, self);        
+              SNetBufPut( real_outbuf, SNetRecCreate( REC_collect, starbuf));
+              SNetBufPut( our_outbuf, sort_begin); 
+            }
+            SNetBufPut( our_outbuf, rec);
+          }
+
+          SNetBufPut( real_outbuf, sort_end);
+          if( starbuf != NULL) {
+            SNetBufPut( our_outbuf, sort_end);
+          }
+          counter += 1;
+        }
+        else { /* incarnation */
+          if( MatchesExitPattern( rec, exit_tags)) {
+           SNetBufPut( real_outbuf, rec);
+         }
+         else {
+           if( starbuf == NULL) {
+             // register new buffer with dispatcher,
+             // starbuf is returned by self, which is SNetStarIncarnate
+             starbuf = SNetSerial( our_outbuf, box, self);        
+             SNetBufPut( real_outbuf, SNetRecCreate( REC_collect, starbuf));
+             SNetBufPut( our_outbuf, sort_begin); /* sort_begin is set in "case REC_sort_xxx" */
+          }
+          SNetBufPut( our_outbuf, rec);
+         }
+        }
+       break;
+
+      case REC_sync:
+        SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
+        SNetRecDestroy( rec);
+        break;
+
+      case REC_collect:
+        printf("\nUnhandled control record, destroying it.\n\n");
+        SNetRecDestroy( rec);
+        break;
+      case REC_sort_end:
+      case REC_sort_begin:
+        if( !( SNetHndIsIncarnate( hnd))) {
+          SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        }
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        if( starbuf != NULL) {
+          SNetBufPut( our_outbuf, rec);
+        }
+        else {
+          if( SNetRecGetDescriptor( rec) == REC_sort_begin) {
+            sort_begin = rec;
+          }
+          else {
+            sort_end = rec;
+          }
+        }
+        break;
+      case REC_terminate:
+
+        terminate = true;
+        
+        SNetHndDestroy( hnd);
+        if( starbuf != NULL) {
+          SNetBufPut( our_outbuf, SNetRecCreate( REC_sort_begin, 0, counter));
+          SNetBufPut( our_outbuf, rec);
+        }
+        SNetBufPut( real_outbuf, SNetRecCreate( REC_sort_begin, 0, counter));
+        SNetBufPut( real_outbuf, rec);
+        SNetBufBlockUntilEmpty( our_outbuf);
+        SNetBufDestroy( our_outbuf);
+        //real_outbuf will be destroyed by the dispatcher
+        break;
+    }
+  }
+
+  return( NULL);
+}
+
+extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),  
+                           snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *type) {
+
+    
+  snet_buffer_t *star_outbuf, *dispatch_outbuf;
+  snet_handle_t *hnd;
+  pthread_t *box_thread;
+
+  star_outbuf = SNetBufCreate( BUFFER_SIZE);
+  
+  hnd = SNetHndCreate( HND_star, inbuf, star_outbuf, box_a, box_b, type, false);
+  box_thread = SNetMemAlloc( sizeof( pthread_t));
+
+  pthread_create( box_thread, NULL, DetStarBoxThread, hnd);
+  pthread_detach( *box_thread);
+
+  dispatch_outbuf = CreateDetCollector( star_outbuf);
+  
+  return( dispatch_outbuf);
+}
+
+
+extern snet_buffer_t *SNetStarDetIncarnate( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),
+                              snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *type) {
+
+  snet_buffer_t *outbuf;
+  snet_handle_t *hnd;
+  pthread_t *box_thread;
+
+  outbuf = SNetBufCreate( BUFFER_SIZE);
+
+  hnd = SNetHndCreate( HND_star, inbuf, outbuf, box_a, box_b, type, true);
+  
+  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  pthread_create( box_thread, NULL, DetStarBoxThread, hnd);
+  pthread_detach( *box_thread);
+
+  return( outbuf);
+}
+
+
+
+
+
+
 
 /* ------------------------------------------------------------------------- */
 /*  SNetSync                                                                 */
@@ -1135,11 +1781,16 @@ static void *SyncBoxThread( void *hndl) {
         SNetRecDestroy( rec);
 
       break;
-      case REC_star:
+      case REC_collect:
         printf("\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
-
+      case REC_sort_begin:
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        break;
+      case REC_sort_end:
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        break;
     case REC_terminate:
         printf("SYNC DIED\n");
         terminate = true;
@@ -1189,12 +1840,6 @@ extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf, snet_typeencoding_t *outty
 
 
 
-typedef struct {
-  snet_buffer_t *buf;
-  int num;
-} snet_blist_elem_t;
-
-
 snet_blist_elem_t *FindBufInList( linked_list_t *l, int num) {
 
   int i;
@@ -1217,7 +1862,7 @@ static void *SplitBoxThread( void *hndl) {
   snet_handle_t *hnd = (snet_handle_t*)hndl;
   snet_buffer_t *initial;
   int ltag, ltag_val, utag, utag_val;
-  snet_record_t *rec;
+  snet_record_t *rec, *current_sort_rec;
   snet_buffer_t* (*boxfun)( snet_buffer_t*);
   bool terminate = false;
   linked_list_t *repos = NULL;
@@ -1242,7 +1887,8 @@ static void *SplitBoxThread( void *hndl) {
           elem = SNetMemAlloc( sizeof( snet_blist_elem_t));
           elem->num = ltag_val;
           elem->buf = SNetBufCreate( BUFFER_SIZE);
-          SNetBufPut( initial, SNetRecCreate( REC_star, boxfun( elem->buf)));
+          SNetBufPut( initial, SNetRecCreate( REC_collect, boxfun( elem->buf)));
+          //SNetBufBlockUntilEmpty( initial);
           repos = LLSTcreate( elem);
         }
 
@@ -1253,9 +1899,15 @@ static void *SplitBoxThread( void *hndl) {
             elem->num = i;
             elem->buf = SNetBufCreate( BUFFER_SIZE);
             LLSTadd( repos, elem);
-            SNetBufPut( initial, SNetRecCreate( REC_star, boxfun( elem->buf)));
+            SNetBufPut( initial, SNetRecCreate( REC_collect, boxfun( elem->buf)));
+            //SNetBufBlockUntilEmpty( initial);
+          } 
+          if( i == utag_val) {
+            SNetBufPut( elem->buf, rec); // last rec is not copied.
           }
-          SNetBufPut( elem->buf, rec); // COPY
+          else {
+            SNetBufPut( elem->buf, RECcopy( rec)); // COPY
+          }
         } 
         break;
       case REC_sync:
@@ -1263,11 +1915,34 @@ static void *SplitBoxThread( void *hndl) {
         SNetRecDestroy( rec);
 
         break;
-      case REC_star:
+      case REC_collect:
         printf("\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
-
+      case REC_sort_begin:
+        current_sort_rec = rec;
+        for( i=0; i<( LLSTgetCount( repos) - 1); i++) {
+          elem = LLSTget( repos);
+          SNetBufPut( elem->buf, 
+              SNetRecCreate( REC_sort_begin, SNetRecGetLevel( rec), 
+                             SNetRecGetNum( rec)));
+          LLSTnext( repos);
+        }
+        elem = LLSTget( repos);
+        SNetBufPut( elem->buf, rec);
+        break;
+      case REC_sort_end:
+        current_sort_rec = rec;
+        for( i=0; i<( LLSTgetCount( repos) - 1); i++) {
+          elem = LLSTget( repos);
+          SNetBufPut( elem->buf, 
+              SNetRecCreate( REC_sort_end, SNetRecGetLevel( rec), 
+                             SNetRecGetNum( rec)));
+          LLSTnext( repos);
+        }
+        elem = LLSTget( repos);
+        SNetBufPut( elem->buf, rec);      
+        break;
       case REC_terminate:
         terminate = true;
 
@@ -1296,7 +1971,7 @@ extern snet_buffer_t *SNetSplit( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)( 
   initial = SNetBufCreate( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_split, inbuf, initial, box_a, ltag, utag);
  
-  outbuf = CreateStarDispatcher( initial);
+  outbuf = CreateCollector( initial);
 
   box_thread = SNetMemAlloc( sizeof( pthread_t));
   pthread_create( box_thread, NULL, SplitBoxThread, (void*)hnd);
@@ -1307,6 +1982,149 @@ extern snet_buffer_t *SNetSplit( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)( 
 
 
 
+/* B------------------------------------------------------- */
+/* B Det Split    Playground ------------------------------ */
+/* B------------------------------------------------------- */
+
+
+static void *DetSplitBoxThread( void *hndl) {
+
+  int i,j;
+  snet_handle_t *hnd = (snet_handle_t*)hndl;
+  snet_buffer_t *initial, *tmp;
+  int ltag, ltag_val, utag, utag_val;
+  snet_record_t *rec;
+  snet_buffer_t* (*boxfun)( snet_buffer_t*);
+  bool terminate = false;
+  linked_list_t *repos = NULL;
+  snet_blist_elem_t *elem;
+
+  int counter = 1;
+
+
+  initial = SNetHndGetOutbuffer( hnd);
+  boxfun = SNetHndGetBoxfun( hnd);
+  ltag = SNetHndGetTagA( hnd);
+  utag = SNetHndGetTagB( hnd);
+
+  
+  while( !( terminate)) {
+    rec = SNetBufGet( SNetHndGetInbuffer( hnd));
+
+    switch( SNetRecGetDescriptor( rec)) {
+      case REC_data:
+        ltag_val = SNetRecGetTag( rec, ltag);
+        utag_val = SNetRecGetTag( rec, utag);
+        
+        if( repos == NULL) {
+          elem = SNetMemAlloc( sizeof( snet_blist_elem_t));
+          elem->num = ltag_val;
+          elem->buf = SNetBufCreate( BUFFER_SIZE);
+          SNetBufPut( initial, SNetRecCreate( REC_sort_begin, 0, 0));
+          
+          tmp = boxfun( elem->buf);
+          SNetBufPut( initial, SNetRecCreate( REC_collect, tmp));
+          SNetBufPut( tmp, SNetRecCreate( REC_sort_begin, 0, 0));
+          SNetBufPut( tmp, SNetRecCreate( REC_sort_end, 0, 0));
+
+          SNetBufPut( initial, SNetRecCreate( REC_sort_end, 0, 0));
+          repos = LLSTcreate( elem);
+        }
+
+
+        SNetBufPut( initial, SNetRecCreate( REC_sort_begin, 0, counter)); 
+        for( j=0; j<LLSTgetCount( repos); j++) {
+          elem = LLSTget( repos);
+          SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter)); 
+          LLSTnext( repos);
+        }
+
+        for( i = ltag_val; i <= utag_val; i++) {
+          elem = FindBufInList( repos, i);
+          if( elem == NULL) {
+            elem = SNetMemAlloc( sizeof( snet_blist_elem_t));
+            elem->num = i;
+            elem->buf = SNetBufCreate( BUFFER_SIZE);
+            LLSTadd( repos, elem);
+            SNetBufPut( initial, SNetRecCreate( REC_collect, boxfun( elem->buf)));
+            SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter));
+          }
+          if( i == utag_val) {
+            SNetBufPut( elem->buf, rec); // last rec is not copied.
+          }
+          else {
+            SNetBufPut( elem->buf, RECcopy( rec)); // COPY
+          }
+        }
+
+        for( j=0; j<LLSTgetCount( repos); j++) {
+          elem = LLSTget( repos);
+          SNetBufPut( elem->buf, SNetRecCreate( REC_sort_end, 0, counter)); 
+          LLSTnext( repos);
+        }
+        SNetBufPut( initial, SNetRecCreate( REC_sort_end, 0, counter)); 
+        counter += 1;
+
+        break;
+      case REC_sync:
+        SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
+        SNetRecDestroy( rec);
+        break;
+      case REC_collect:
+        printf("\nUnhandled control record, destroying it.\n\n");
+        SNetRecDestroy( rec);
+        break;
+      case REC_sort_begin:
+        SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        break;
+      case REC_sort_end:
+        SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        break;
+      case REC_terminate:
+        terminate = true;
+
+        for( i=0; i<LLSTgetCount( repos); i++) {
+          elem = LLSTget( repos);
+          SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter)); 
+          SNetBufPut( (snet_buffer_t*)elem->buf, rec);
+          LLSTnext( repos);
+        }
+        SNetBufPut( initial, SNetRecCreate( REC_sort_begin, 0, counter)); 
+        SNetBufPut( initial, rec);
+        break;
+    }
+  }
+
+  return( NULL);
+}
+
+
+
+
+extern snet_buffer_t *SNetSplitDet( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)( snet_buffer_t*),
+                            int ltag, int utag) {
+
+  snet_buffer_t *initial, *outbuf;
+  snet_handle_t *hnd;
+  pthread_t *box_thread;
+
+  initial = SNetBufCreate( BUFFER_SIZE);
+  hnd = SNetHndCreate( HND_split, inbuf, initial, box_a, ltag, utag);
+ 
+  outbuf = CreateDetCollector( initial);
+
+  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  pthread_create( box_thread, NULL, DetSplitBoxThread, (void*)hnd);
+  pthread_detach( *box_thread);
+
+  return( outbuf);
+}
+
+/* E------------------------------------------------------- */
+/* E Det Split    Playground ------------------------------ */
+/* E------------------------------------------------------- */
 
 
 
@@ -1498,11 +2316,16 @@ static void *FilterThread( void *hndl) {
         SNetHndSetInbuffer( hnd, SNetRecGetBuffer( in_rec));
         SNetRecDestroy( in_rec);
       break;
-      case REC_star:
+      case REC_collect:
         printf("\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( in_rec);
         break;
-
+      case REC_sort_begin:
+        SNetBufPut( SNetHndGetOutbuffer( hnd), in_rec);
+        break;
+      case REC_sort_end:
+        SNetBufPut( SNetHndGetOutbuffer( hnd), in_rec);
+        break;
     case REC_terminate:
       terminate = true;
       SNetBufPut( outbuf, in_rec);

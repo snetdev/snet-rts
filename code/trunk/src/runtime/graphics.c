@@ -209,6 +209,19 @@ static void *GraphicBoxThread( void *hndl) {
               hnd->inbuf = SNetRecGetBuffer( rec);
               SNetRecDestroy( rec);
               break;
+            case REC_sort_begin:
+              strcpy( buf, "The current record contains:\n\n");
+              strcat( buf, " - \n - control message: sort begin\n - \n");
+              send(s, buf, strlen( buf) + 1, 0);
+              state = STATE_OK;
+              break;           
+            case REC_sort_end:
+              strcpy( buf, "The current record contains:\n\n");
+              strcat( buf, " - \n - control message: sort end\n - \n");
+              send(s, buf, strlen( buf) + 1, 0);
+              state = STATE_OK;
+              break;
+
             default:
               strcpy( buf, "\nReceived unhandled control record!\n");
               terminate = true;

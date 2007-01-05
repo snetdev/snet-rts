@@ -66,6 +66,7 @@ typedef struct {
   void (*boxfun_a)( snet_handle_t*);
   void (*boxfun_b)( snet_handle_t*);
   snet_typeencoding_t *type;
+  bool is_incarnate;
 } star_handle_t;
 
 typedef struct {
@@ -126,6 +127,7 @@ struct handle {
 /* ------------------------------------------------------------------------- */
   
 static void WrongHandleType() {
+  printf("\n\n ** Fatal Error ** : Wrong handle was passed.\n\n");
   exit( 1);
 }
 
@@ -179,6 +181,7 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
             HANDLE->star_hnd->boxfun_a = va_arg( args, void*);
             HANDLE->star_hnd->boxfun_b = va_arg( args, void*);
             HANDLE->star_hnd->type = va_arg( args, snet_typeencoding_t*);
+            HANDLE->star_hnd->is_incarnate = va_arg( args, bool);
 
 //            FILL_HANDLE( star_hnd, true, true, false, false, true,
 //                         true, true, false, false, false, false);
@@ -543,4 +546,16 @@ extern snet_typeencoding_t *SNetHndGetPatterns( snet_handle_t *hndl) {
 }
 
 
+extern bool SNetHndIsIncarnate( snet_handle_t *hnd) {
+  
+  bool res;
 
+  switch( hnd->descr) {
+    case HND_star: 
+      res = hnd->hnd->star_hnd->is_incarnate; 
+      break;
+    default: WrongHandleType();
+  }
+
+  return( res);
+}

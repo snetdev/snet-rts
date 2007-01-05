@@ -68,7 +68,7 @@ extern void *SNetBufGet( snet_buffer_t *buf	); // TODO: returns element, not buf
 
 
 /*
- * Puts the pointer given as second parameter eventually to the buffer.
+ * Puts the pointer given as second parameter to the buffer if possible.
  * This function will NOT block (returns immediately).
  * The function needs a third parameter to let the caller know if
  * the element was stored in the buffer or not. Possible values for
@@ -87,7 +87,7 @@ extern snet_buffer_t *SNetBufTryPut( snet_buffer_t *buf, void* elem, snet_buffer
 
 
 /*
- * Returns eventually an element from the buffer.
+ * Returns an element from the buffer if possible.
  * This function will NOT block (returns immediately).
  * The function needs a second parameter to let the caller know
  * what happened.
@@ -101,6 +101,16 @@ extern snet_buffer_t *SNetBufTryPut( snet_buffer_t *buf, void* elem, snet_buffer
  */
 
 extern void *SNetBufTryGet( snet_buffer_t *buf, snet_buffer_msg_t *msg);
+
+
+
+/*
+ * Returns element from the buffer _without_ deleting it.
+ * 
+ * RETURNS: an element or NULL
+ */
+ 
+extern void *SNetBufShow( snet_buffer_t *buf);
 
 
 
@@ -156,6 +166,7 @@ extern void SNetBufBlockUntilEmpty( snet_buffer_t *bf);
 extern void SNetBufDestroy( snet_buffer_t *bf);
 
 extern void SNetBufDestroyByDispatcher( snet_buffer_t *bf);
+
 
 #endif
 

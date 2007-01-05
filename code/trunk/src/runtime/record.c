@@ -3,8 +3,6 @@
  * Implementation of the record and its functions.
  */
 
-// TODO: replace Get/Set/Take function bodies by
-//       macro calls (-> getNum)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -52,7 +50,18 @@ typedef struct {
 } sync_rec_t;
 
 typedef struct {
+  int num;
+  int level;
+} sort_begin_t;
 
+typedef struct {
+  int num;
+  int level;  
+} sort_end_t;
+
+
+typedef struct {
+  /* empty */
 } terminate_rec_t;
 
 typedef struct {
@@ -63,6 +72,8 @@ union record_types {
   data_rec_t *data_rec;
   sync_rec_t *sync_rec;
   star_rec_t *star_rec;
+  sort_begin_t *sort_begin_rec;
+  sort_end_t *sort_end_rec;
   terminate_rec_t *terminate_rec;
 };
 
@@ -141,16 +152,28 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
       rec->rec->sync_rec = SNetMemAlloc( sizeof( sync_rec_t));
       rec->rec->sync_rec->inbuf = va_arg( args, snet_buffer_t*);
       break;
-    case REC_star:
+    case REC_collect:
       rec->rec = SNetMemAlloc( sizeof( snet_record_types_t));
       rec->rec->star_rec = SNetMemAlloc( sizeof( star_rec_t));
       rec->rec->star_rec->outbuf = va_arg( args, snet_buffer_t*);
       break;
     case REC_terminate:
       break;
+    case REC_sort_begin:
+      rec->rec = SNetMemAlloc( sizeof( snet_record_types_t));
+      rec->rec->sort_begin_rec = SNetMemAlloc( sizeof( sort_begin_t));
+      rec->rec->sort_begin_rec->level = va_arg( args, int);
+      rec->rec->sort_begin_rec->num =   va_arg( args, int);    
+      break;
+    case REC_sort_end:
+      rec->rec = SNetMemAlloc( sizeof( snet_record_types_t));
+      rec->rec->sort_end_rec = SNetMemAlloc( sizeof( sort_end_t));
+      rec->rec->sort_end_rec->level = va_arg( args, int);
+      rec->rec->sort_end_rec->num = va_arg( args, int);
+      break;
 
     default:
-      printf("\n\n ** Fatal Error ** : Unknown control record description. \n\n");
+      printf("\n\n ** Fatal Error ** : Unknown control record description. [%d]  \n\n", descr);
       exit( 1);
   }
 
@@ -161,7 +184,7 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
 
 
 extern void SNetRecDestroy( snet_record_t *rec) {
-
+ if( rec != NULL) {
   switch( rec->rec_descr) {
     case REC_data:
       SNetTencDestroyVariantEncoding( rec->rec->data_rec->v_enc);
@@ -174,8 +197,18 @@ extern void SNetRecDestroy( snet_record_t *rec) {
     case REC_sync:
       SNetMemFree( rec->rec->sync_rec);
       break;
-    case REC_star:
+    case REC_collect:
       SNetMemFree( rec->rec->sync_rec);
+      break;
+      
+    case REC_sort_begin:
+        SNetMemFree( rec->rec->sort_begin_rec);
+      break;
+    
+    case REC_sort_end:
+        SNetMemFree( rec->rec->sort_end_rec);
+      break;
+
     case REC_terminate:
       break;
       
@@ -186,6 +219,7 @@ extern void SNetRecDestroy( snet_record_t *rec) {
   }
   SNetMemFree( rec->rec);
   SNetMemFree( rec);
+ }
 }
 
 
@@ -201,7 +235,7 @@ extern snet_buffer_t *SNetRecGetBuffer( snet_record_t *rec) {
     case REC_sync:
       inbuf = rec->rec->sync_rec->inbuf;
       break;
-    case REC_star:
+    case REC_collect:
       inbuf = rec->rec->star_rec->outbuf;
       break;
     default:
@@ -330,6 +364,79 @@ extern int *SNetRecGetFieldNames( snet_record_t *rec) {
 
 
 
+extern int SNetRecGetNum( snet_record_t *rec) {
+  
+  int counter;
+  
+  switch( rec->rec_descr) {
+    case REC_sort_begin:
+      counter = rec->rec->sort_begin_rec->num;  
+      break;
+    case REC_sort_end:
+      counter = rec->rec->sort_end_rec->num;
+      break;
+    default:
+      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", rec->rec_descr);
+      exit( 1);
+      break;
+  }  
+  
+  return( counter);
+}
+
+extern void SNetRecSetNum( snet_record_t *rec, int value) {
+  
+    switch( rec->rec_descr) {
+    case REC_sort_begin:
+      rec->rec->sort_begin_rec->num = value;  
+      break;
+    case REC_sort_end:
+      rec->rec->sort_end_rec->num = value;
+      break;
+    default:
+      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", rec->rec_descr);
+      exit( 1);
+      break;
+  }  
+}
+
+
+extern int SNetRecGetLevel( snet_record_t *rec) {
+  
+  int counter;
+  
+  switch( rec->rec_descr) {
+    case REC_sort_begin:
+      counter = rec->rec->sort_begin_rec->level;  
+      break;
+    case REC_sort_end:
+      counter = rec->rec->sort_end_rec->level;
+      break;
+    default:
+      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", rec->rec_descr);
+      exit( 1);
+      break;
+  }  
+  
+  return( counter);
+}
+
+
+extern void SNetRecSetLevel( snet_record_t *rec, int value) {
+  
+  switch( rec->rec_descr) {
+    case REC_sort_begin:
+      rec->rec->sort_begin_rec->level = value;  
+      break;
+    case REC_sort_end:
+      rec->rec->sort_end_rec->level = value;
+      break;
+    default:
+      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", rec->rec_descr);
+      exit( 1);
+      break;
+  }  
+}
 #define GET_UNCONSUMED_NAMES( RECNUM, RECNAMES)\
   int *names, i,j,k;\
   if( RECNUM( rec) == 0) {\

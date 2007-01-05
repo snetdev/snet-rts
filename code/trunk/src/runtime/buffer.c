@@ -183,6 +183,24 @@ extern void *SNetBufTryGet( snet_buffer_t *bf, snet_buffer_msg_t *msg) {
   return( ptr);
 }
 
+extern void *SNetBufShow( snet_buffer_t *buf) {
+ 
+  void *ptr;
+  
+  pthread_mutex_lock( buf->mxCounter );
+  
+  if( buf->bufferCapacity != buf->bufferSpaceLeft) {
+    ptr = (buf->ringBuffer[ buf->bufferEnd]);
+  }
+  else {
+   ptr = NULL; 
+  }
+  
+  pthread_mutex_unlock( buf->mxCounter);
+  
+  return( ptr);
+}
+
 
 extern unsigned int SNetBufGetCapacity( snet_buffer_t *bf) {
   return( bf->bufferCapacity);

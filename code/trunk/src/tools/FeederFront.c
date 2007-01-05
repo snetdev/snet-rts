@@ -122,7 +122,7 @@ void ClickedRelease( GtkWidget *widget, container_t *cont) {
       box = cont->check_boxes[i];
       entry = cont->enter_values[i];
 
-#ifdef FULL_FEATURED
+#ifndef AETHER_DEMO
 
       if( gtk_toggle_button_get_active( GTK_TOGGLE_BUTTON( box))) {
         itoa( i, tmp_str, 10);
@@ -279,7 +279,7 @@ int main( int argc, char **argv) {
   entire_box = gtk_vbox_new( FALSE, 0);
 
 
-#ifdef FULL_FEATURED
+#ifndef AETHER_DEMO
 
   cont->num = num_names;
   for( i=0; i<num_names; i++) {

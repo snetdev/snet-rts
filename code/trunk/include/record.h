@@ -25,7 +25,9 @@ typedef union record_types snet_record_types_t;
 typedef enum {
 	REC_data,
 	REC_sync,
-	REC_star,
+	REC_collect,
+  REC_sort_begin,
+  REC_sort_end,
 	REC_terminate
 } snet_record_descr_t;
 
@@ -276,6 +278,12 @@ extern bool SNetRecAddField( snet_record_t *rec, int name);
 extern void SNetRecRemoveTag( snet_record_t *rec, int name);
 extern void SNetRecRemoveBTag( snet_record_t *rec, int name);
 extern void SNetRecRemoveField( snet_record_t *rec, int name);
+
+
+extern void SNetRecSetNum( snet_record_t *rec, int value);
+extern void SNetRecSetLevel( snet_record_t *rec, int value);
+extern int SNetRecGetNum( snet_record_t *rec);
+extern int SNetRecGetLevel( snet_record_t *rec);
 
 
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec);

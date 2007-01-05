@@ -92,6 +92,9 @@ extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd);
        
 extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hndl);
 
+
+extern bool SNetHndIsIncarnate( snet_handle_t *hnd);
+
 extern void SNetHndDestroy( snet_handle_t *hndl);
 
 #endif

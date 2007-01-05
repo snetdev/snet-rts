@@ -6,11 +6,11 @@
 
 
 //#include <graphics.h>
-#include <buffer.h>
-#include <record.h>
-#include <typeencode.h>
+//#include <buffer.h>
+//#include <record.h>
+//#include <typeencode.h>
 #include <memfun.h>
-#include <constants.h>
+//#include <constants.h>
 
 
 #include <snetentities.h>
@@ -659,7 +659,7 @@ snet_buffer_t *starnet2( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf =  SNetStarIncarnate( inbuf, &SER_predicate_compute, &starnet2, 
+  outbuf =  SNetStarDetIncarnate( inbuf, &SER_predicate_compute, &starnet2, 
                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 0),
@@ -673,7 +673,7 @@ snet_buffer_t *starnet( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf =  SNetStar( inbuf, &SER_predicate_compute, &starnet2, 
+  outbuf =  SNetStarDet( inbuf, &SER_predicate_compute, &starnet2, 
                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 0),
@@ -917,7 +917,7 @@ int main() {
 
   printf("\n\n\n");
 
-  SNetBufPut( start_buf, SNetRecCreate( REC_terminate));
+ // SNetBufPut( start_buf, SNetRecCreate( REC_terminate));
   res_buf = SER_starnet_filter( start_buf);
 //  res_buf = starsync( start_buf);
 
