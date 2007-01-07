@@ -82,7 +82,7 @@ efence: make_efence
 
 ###############################################################################
 #
-# Auxiliary rules
+# Main rule
 #
 
 make_%: 
@@ -96,7 +96,7 @@ make_%:
 	@$(ECHO) "* revision $(REVISION)"
 	@$(ECHO) "* on $(OS) for $(ARCH)"
 	@$(ECHO) "************************************************************"
-	@touch make_track
+	@touch .make_track
 	$(HIDE) $(MAKE) -f $(PROJECT_ROOT)/src/makefiles/core.mkf \
                          DEPS="$(DEPS)" HIDE="$(HIDE)" \
                          TARGETDIR="$(SUBPROJECT_DIRS)" \
@@ -114,7 +114,7 @@ make_%:
 clean: 
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "* Cleaning $(SUBPROJECT)"
+	@$(ECHO) "* Cleaning S-Net $(SUBPROJECT)"
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "Cleaning directory $(targetdir)"
 	$(HIDE) $(RM) $(targets_devel) $(targets_prod) $(clean_also)
@@ -130,7 +130,7 @@ clean_dirs: $(addsuffix .clean,$(SUBPROJECT_DIRS))
 cleanprod: 
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "* Cleaning $(SUBPROJECT)  (product code only)"
+	@$(ECHO) "* Cleaning S-Net $(SUBPROJECT)  (product code only)"
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "Cleaning directory $(targetdir)"
 	$(HIDE) $(RM) $(targets_prod) $(clean_also_prod)
@@ -146,7 +146,7 @@ cleanprod_dirs: $(addsuffix .cleanprod,$(SUBPROJECT_DIRS))
 cleandevel: 
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "* Cleaning $(SUBPROJECT)  (developer code only)"
+	@$(ECHO) "* Cleaning S-Net $(SUBPROJECT)  (developer code only)"
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "Cleaning directory $(targetdir)"
 	$(HIDE) $(RM) $(targets_devel) $(clean_also_devel)

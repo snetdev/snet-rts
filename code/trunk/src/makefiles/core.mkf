@@ -72,7 +72,7 @@ DEPENDENCIES = $(foreach file,$(DEPENDENCY_FILES),$(dir $(file)).$(notdir $(file
 # Dummy rules
 #
 
-.PHONY: build_info %.track all
+.PHONY: all
 
 .PRECIOUS: %.c %.h %.o %.prod.o .%.d %.c %.lex.c %.tab.c %.tab.h
 
@@ -84,6 +84,10 @@ DEPENDENCIES = $(foreach file,$(DEPENDENCY_FILES),$(dir $(file)).$(notdir $(file
 #
 
 all: $(TARGETS)
+	@ if [ -f .done ] ; \
+          then $(RM) .done ; \
+          else $(ECHO) "S-Net $(SUBPROJECT) up to date !"; \
+          fi
 
 
 ###############################################################################
@@ -96,7 +100,8 @@ $(PROJECT_ROOT)/bin/snetc: global/build.o
 	@$(ECHO) "Linking $@ (developer version)"
 	$(HIDE) $(CC)  -o $@ $(TARGETDIRS_DEVEL) $< \
                 $(LIB) $(LIBS) $(LDDYNFLAG)
-	@$(RM) make_track
+	@$(RM) .make_track
+	@touch .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
@@ -104,7 +109,8 @@ $(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
 	@$(ECHO) "Linking $@ (product version)"
 	$(HIDE) $(CCPROD) -o $@ $(TARGETDIRS_PROD) $< \
                 $(LIB) $(LIBS) $(LDDYNFLAG)
-	@$(RM) make_track
+	@$(RM) .make_track
+	@touch .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/bin/snetc.efence: global/build.o
@@ -112,7 +118,8 @@ $(PROJECT_ROOT)/bin/snetc.efence: global/build.o
 	@$(ECHO) "Linking $@ (efence version)"
 	$(HIDE) $(CC) -o $@ $(TARGETDIRS_DEVEL) $< \
                 $(LIB) $(LIBS) $(LDDYNFLAG) $(EFLIBS)
-	@$(RM) make_track
+	@$(RM) .make_track
+	@touch .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 
@@ -121,14 +128,18 @@ $(PROJECT_ROOT)/src/lib/libcommon.a: $(TARGETDIRS_DEVEL)
 	@$(ECHO) "Creating $@ (developer version)"
 	$(HIDE) ar rc $@ $^
 	$(HIDE) ranlib $@
-	@$(RM) make_track
+	@$(RM) .make_track
+	@touch .done
+	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/src/lib/libcommon.prod.a:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $@ (product version)"
 	$(HIDE) ar rc $@ $^
 	$(HIDE) ranlib $@
-	@$(RM) make_track
+	@$(RM) .make_track
+	@touch .done
+	@$(CLOCK_SKEW_ELIMINATION)  
 
 
 $(PROJECT_ROOT)/src/bin/%.devel: $(TARGETDIRS_DEVEL) 
@@ -137,7 +148,9 @@ $(PROJECT_ROOT)/src/bin/%.devel: $(TARGETDIRS_DEVEL)
 	$(HIDE) $(CC) -o $@ \
                 $(filter $*/%,$^) \
                 $(LIB) $(LIBS)
-	@$(RM) make_track
+	@$(RM) .make_track
+	@touch .done
+	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
@@ -145,7 +158,9 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
 	$(HIDE) $(CCPROD) -o $@ \
                 $(filter $*/%,$^) \
                 $(LIB) $(LIBS)
-	@$(RM) make_track
+	@$(RM) .make_track
+	@touch .done
+	@$(CLOCK_SKEW_ELIMINATION)  
 
 
 
@@ -200,8 +215,8 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 #
 
 %.o: %.c 
-	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
-         then $(ECHO) "$(dir $*)" > make_track; \
+	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > .make_track; \
               $(ECHO) ""; \
               $(ECHO) "Compiling files in directory $(dir $@)" ; \
          fi
@@ -210,8 +225,8 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	@$(CLOCK_SKEW_ELIMINATION) 
 
 %.prod.o: %.c 
-	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
-         then $(ECHO) "$(dir $*)" > make_track; \
+	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > .make_track; \
               $(ECHO) ""; \
               $(ECHO) "Compiling files in directory $(dir $@)" ; \
          fi
@@ -225,9 +240,9 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 # Pattern rules for source code generation
 #
 
-%.h: %.h.xsl $(XML_DIR)/ast.xml $(XML_COMMONS) # %.track
-	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
-         then $(ECHO) "$(dir $*)" > make_track; \
+%.h: %.h.xsl $(XML_DIR)/ast.xml $(XML_COMMONS) 
+	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > .make_track; \
               $(ECHO) ""; \
               $(ECHO) "Generating header files in directory $(dir $@)" ; \
          fi
@@ -235,9 +250,9 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	$(HIDE)$(XSLTENGINE) $< $(XML_DIR)/ast.xml | $(CODE_BEAUTIFIER) >$@
 	@$(CLOCK_SKEW_ELIMINATION)  
 
-%.c: %.c.xsl $(XML_DIR)/ast.xml $(XML_COMMONS) # %.track
-	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
-         then $(ECHO) "$(dir $*)" > make_track; \
+%.c: %.c.xsl $(XML_DIR)/ast.xml $(XML_COMMONS) 
+	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > .make_track; \
               $(ECHO) ""; \
               $(ECHO) "Generating source files in directory $(dir $@)" ; \
          fi
@@ -246,9 +261,9 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 
-%.lex.c: %.l # %.track
-	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
-         then $(ECHO) "$(dir $*)" > make_track; \
+%.lex.c: %.l 
+	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > .make_track; \
               $(ECHO) ""; \
               $(ECHO) "Generating source files in directory $(dir $@)" ; \
          fi
@@ -257,9 +272,9 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	$(HIDE)mv lex.yy.c $@
 	@$(CLOCK_SKEW_ELIMINATION) 
 
-%.tab.c: %.y # %.track
-	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
-         then $(ECHO) "$(dir $*)" > make_track; \
+%.tab.c: %.y 
+	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > .make_track; \
               $(ECHO) ""; \
               $(ECHO) "Generating source files in directory $(dir $@)" ; \
          fi
@@ -270,9 +285,9 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	$(HIDE)mv y.output $(dir $@)
 	@$(CLOCK_SKEW_ELIMINATION) 
 
-%.tab.h: %.y # %.track
-	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
-         then $(ECHO) "$(dir $*)" > make_track; \
+%.tab.h: %.y 
+	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > .make_track; \
               $(ECHO) ""; \
               $(ECHO) "Generating header files in directory $(dir $@)" ; \
          fi
@@ -283,14 +298,6 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	$(HIDE)mv y.output $(dir $@)
 	@$(CLOCK_SKEW_ELIMINATION) 
 
-%.track: 
-	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
-         then $(ECHO) "$(dir $*)" > make_track; \
-              $(ECHO) ""; \
-              $(ECHO) "Generating files in directory $(dir $@)" ; \
-         fi
-
-
 
 #######################################################################################
 #
@@ -298,8 +305,8 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 #
 
 .%.d: %.c $(GENERATED_FILES) 
-	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
-        then $(ECHO) "$(dir $*)" > make_track; \
+	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
+        then $(ECHO) "$(dir $*)" > .make_track; \
              $(ECHO) ""; \
              $(ECHO) "Checking dependencies in directory $(dir $@)" ; \
         fi
