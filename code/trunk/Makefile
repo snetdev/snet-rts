@@ -69,7 +69,7 @@ include $(PROJECT_ROOT)/src/makefiles/config.mkf
 default devel prod: 
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "* Building S-Net system started"
+	@$(ECHO) "* Building S-Net"
 	@$(ECHO) "************************************************************"
 	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" $@
 	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" $@
@@ -78,14 +78,14 @@ default devel prod:
 #	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" $@
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "* Building S-Net system completed"
+	@$(ECHO) "* Building S-Net completed"
 	@$(ECHO) "************************************************************"
 	@$(ECHO) ""
  
 clean cleandevel cleanprod: 
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "* Cleaning S-Net system started"
+	@$(ECHO) "* Cleaning S-Net"
 	@$(ECHO) "************************************************************"
 	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" $@
 	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" $@
@@ -94,7 +94,7 @@ clean cleandevel cleanprod:
 #	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" $@
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "* Cleaning S-Net system completed"
+	@$(ECHO) "* Cleaning S-Net completed"
 	@$(ECHO) "************************************************************"
 	@$(ECHO) ""
 

@@ -97,7 +97,7 @@ make_%:
 	@$(ECHO) "* on $(OS) for $(ARCH)"
 	@$(ECHO) "************************************************************"
 	@touch make_track
-	$(HIDE) $(MAKE) -f $(PROJECT_ROOT)/src/makefiles/snetc.mkf \
+	$(HIDE) $(MAKE) -f $(PROJECT_ROOT)/src/makefiles/core.mkf \
                          DEPS="$(DEPS)" HIDE="$(HIDE)" \
                          TARGETDIR="$(SUBPROJECT_DIRS)" \
                          TARGETS="$(targets_$*)" 

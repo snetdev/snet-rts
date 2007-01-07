@@ -64,14 +64,14 @@ default: devel
 devel:
 	@$(ECHO) ""
 	@$(ECHO) "Making current subdirectory (developer version)"
-	$(HIDE) $(MAKE) -C .. -f ../makefiles/snetc.mkf \
+	$(HIDE) $(MAKE) -C .. -f ../makefiles/core.mkf \
                         TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         makesubdir.devel
 
 prod:
 	@$(ECHO) ""
 	@$(ECHO) "Making current subdirectory (product version)"
-	$(HIDE) $(MAKE) -C .. -f ../makefiles/snetc.mkf \
+	$(HIDE) $(MAKE) -C .. -f ../makefiles/core.mkf \
                         TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         makesubdir.prod
 
