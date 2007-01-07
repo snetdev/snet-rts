@@ -18,7 +18,7 @@
 #    cleanprod  cleanup only compiled files (product code)
 #
 #  Parameters:
-#    DEPS="no"  de-activate dependency checking meachanism
+#    DEPS="no"  de-activate dependency checking meachanism 
 #    HIDE=""    show important commands issued by make (debugging)
 #
 ###############################################################################
