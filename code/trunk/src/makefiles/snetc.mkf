@@ -1,0 +1,326 @@
+
+#
+# $Id$
+#
+#
+
+#######################################################################################
+#
+# Comment:
+#
+# This makefile is never called directly by the user nor is it included by other 
+# makefiles. Instead, it is used in recursive calls to make by both the top-level
+# makefile and the local src directory makefile.
+#
+# Hence, we can expect variables to be preset from the outside:
+#
+#  TARGETDIR : The compilation target directory. These are either all src directories
+#           when called by the top-level directory or just the one directory itself
+#           when called locally.
+#
+#
+
+
+#######################################################################################
+#
+# general setup:
+#
+
+PROJECT_ROOT := ../..
+
+HIDE := @
+DEPS := yes
+
+include $(PROJECT_ROOT)/src/makefiles/config.mkf
+include $(PROJECT_ROOT)/src/makefiles/targets.mkf
+
+SUBPROJECT       := $(notdir $(CURDIR))
+SUBPROJECT_DIRS  := $($(SUBPROJECT))
+
+SOURCE_DIRS      := $(TARGETDIR)
+
+TARGETDIRS_DEVEL := $(foreach target,$(TARGETDIR),$(addprefix $(target)/,$($(target))))
+TARGETDIRS_PROD  := $(patsubst %.o,%.prod.o,$(TARGETDIRS_DEVEL))
+TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
+
+
+LIB  := -L$(PROJECT_ROOT)/src/lib -lcommon
+INCS := -I$(PROJECT_ROOT)/src/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
+
+REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
+
+XML_DIR     = $(PROJECT_ROOT)/src/compiler/xml
+XML_COMMONS = $(wildcard $(XML_DIR)/common_*.xsl)
+
+GENERATED_INCLUDE_FILES = $(patsubst %.xsl,%,$(foreach dir,$(SOURCE_DIRS),$(wildcard $(dir)/*.h.xsl))) \
+                          $(patsubst %.y,%.tab.h,$(foreach dir,$(SOURCE_DIRS),$(wildcard $(dir)/*.y)))
+
+GENERATED_SOURCE_FILES = $(patsubst %.xsl,%,$(foreach dir,$(SOURCE_DIRS),$(wildcard $(dir)/*.c.xsl))) \
+                         $(patsubst %.y,%.tab.c,$(foreach dir,$(SOURCE_DIRS),$(wildcard $(dir)/*.y))) \
+                         $(patsubst %.l,%.lex.c,$(foreach dir,$(SOURCE_DIRS),$(wildcard $(dir)/*.l))) \
+
+GENERATED_FILES = $(GENERATED_INCLUDE_FILES) $(GENERATED_SOURCE_FILES)
+
+DEPENDENCY_FILES = $(patsubst %.o,%.d,$(TARGETDIRS_DEVEL))
+
+DEPENDENCIES = $(foreach file,$(DEPENDENCY_FILES),$(dir $(file)).$(notdir $(file)))
+
+
+  
+###############################################################################
+#
+# Dummy rules
+#
+
+.PHONY: build_info %.track all
+
+.PRECIOUS: %.c %.h %.o %.prod.o .%.d %.c %.lex.c %.tab.c %.tab.h
+
+
+
+###############################################################################
+#
+# Start rule
+#
+
+all: $(TARGETS)
+
+
+###############################################################################
+#
+# Build rules
+#
+
+$(PROJECT_ROOT)/bin/snetc: global/build.o 
+	@$(ECHO) ""
+	@$(ECHO) "Linking $@ (developer version)"
+	$(HIDE) $(CC)  -o $@ $(TARGETDIRS_DEVEL) $< \
+                $(LIB) $(LIBS) $(LDDYNFLAG)
+	@$(RM) make_track
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+$(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
+	@$(ECHO) ""
+	@$(ECHO) "Linking $@ (product version)"
+	$(HIDE) $(CCPROD) -o $@ $(TARGETDIRS_PROD) $< \
+                $(LIB) $(LIBS) $(LDDYNFLAG)
+	@$(RM) make_track
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+$(PROJECT_ROOT)/bin/snetc.efence: global/build.o
+	@$(ECHO) ""
+	@$(ECHO) "Linking $@ (efence version)"
+	$(HIDE) $(CC) -o $@ $(TARGETDIRS_DEVEL) $< \
+                $(LIB) $(LIBS) $(LDDYNFLAG) $(EFLIBS)
+	@$(RM) make_track
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+
+$(PROJECT_ROOT)/src/lib/libcommon.a: $(TARGETDIRS_DEVEL) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $@ (developer version)"
+	$(HIDE) ar rc $@ $^
+	$(HIDE) ranlib $@
+	@$(RM) make_track
+
+$(PROJECT_ROOT)/src/lib/libcommon.prod.a:  $(TARGETDIRS_PROD) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $@ (product version)"
+	$(HIDE) ar rc $@ $^
+	$(HIDE) ranlib $@
+	@$(RM) make_track
+
+
+$(PROJECT_ROOT)/src/bin/%.devel: $(TARGETDIRS_DEVEL) 
+	@$(ECHO) ""
+	@$(ECHO) "Linking $@ (developer version)"
+	$(HIDE) $(CC) -o $@ \
+                $(filter $*/%,$^) \
+                $(LIB) $(LIBS)
+	@$(RM) make_track
+
+$(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD) 
+	@$(ECHO) ""
+	@$(ECHO) "Linking $@ (product version)"
+	$(HIDE) $(CCPROD) -o $@ \
+                $(filter $*/%,$^) \
+                $(LIB) $(LIBS)
+	@$(RM) make_track
+
+
+
+###############################################################################
+#
+# Creating the revision data file
+#
+# We make snetc depend on the revision data file and in turn the revision data
+# file depend on all target object files. By this dependency chain we achieve
+# that only if one of the object files needs to be remade, if also remake the
+# revision data file and, thereupon, relink snetc.
+#
+
+global/build.c: $(TARGETDIRS_DEVEL) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating revision data file:  $@"
+	@$(ECHO) "char build_date[] = \"`date`\";"  >  $@
+	@$(ECHO) "char build_user[] = \"$(USER)\";" >> $@
+	@$(ECHO) "char build_host[] = \"`hostname`\";" >> $@
+	@$(ECHO) "char build_os[]   = \"$(OS)\";"   >> $@
+	@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+global/build_prod.c: $(TARGETDIRS_PROD)
+	@$(ECHO) ""
+	@$(ECHO) "Creating revision data file:  $@"
+	@$(ECHO) "char build_date[] = \"`date`\";"  >  $@
+	@$(ECHO) "char build_user[] = \"$(USER)\";" >> $@
+	@$(ECHO) "char build_host[] = \"`hostname`\";" >> $@
+	@$(ECHO) "char build_os[]   = \"$(OS)\";"   >> $@
+	@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+
+
+###############################################################################
+#
+# Rules for making subdirectories
+#
+
+makesubdir.devel: $(TARGETDIRS_DEVEL)
+	@$(ECHO) ""
+
+makesubdir.prod: $(TARGETDIRS_PROD)
+	@$(ECHO) ""
+
+
+
+###############################################################################
+#
+# Pattern rules for compilation
+#
+
+%.o: %.c 
+	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > make_track; \
+              $(ECHO) ""; \
+              $(ECHO) "Compiling files in directory $(dir $@)" ; \
+         fi
+	@$(ECHO) "  Compiling developer code:  $(notdir $<)"
+	$(HIDE) $(CC) $(CCFLAGS) $(CFLAGS) $(YYFLAGS) $(INCS) -o $@ -c $<
+	@$(CLOCK_SKEW_ELIMINATION) 
+
+%.prod.o: %.c 
+	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > make_track; \
+              $(ECHO) ""; \
+              $(ECHO) "Compiling files in directory $(dir $@)" ; \
+         fi
+	@$(ECHO) "  Compiling product code:  $(notdir $<)"
+	$(HIDE) $(CCPROD) $(CCPROD_FLAGS) $(CPROD_FLAGS) $(YYFLAGS) $(INCS) -o $@ -c $<
+	@$(CLOCK_SKEW_ELIMINATION) 
+
+
+###############################################################################
+#
+# Pattern rules for source code generation
+#
+
+%.h: %.h.xsl $(XML_DIR)/ast.xml $(XML_COMMONS) # %.track
+	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > make_track; \
+              $(ECHO) ""; \
+              $(ECHO) "Generating header files in directory $(dir $@)" ; \
+         fi
+	@$(ECHO) "  Generating header file from XML specification:  $(notdir $@)"
+	$(HIDE)$(XSLTENGINE) $< $(XML_DIR)/ast.xml | $(CODE_BEAUTIFIER) >$@
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+%.c: %.c.xsl $(XML_DIR)/ast.xml $(XML_COMMONS) # %.track
+	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > make_track; \
+              $(ECHO) ""; \
+              $(ECHO) "Generating source files in directory $(dir $@)" ; \
+         fi
+	@$(ECHO) "  Generating source code from XML specification:  $(notdir $@)"
+	$(HIDE)$(XSLTENGINE) $< $(XML_DIR)/ast.xml | $(CODE_BEAUTIFIER) >$@
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+
+%.lex.c: %.l # %.track
+	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > make_track; \
+              $(ECHO) ""; \
+              $(ECHO) "Generating source files in directory $(dir $@)" ; \
+         fi
+	@$(ECHO) "  Generating source code from LEX specification:  $(notdir $@)"
+	$(HIDE)$(LEX) $<
+	$(HIDE)mv lex.yy.c $@
+	@$(CLOCK_SKEW_ELIMINATION) 
+
+%.tab.c: %.y # %.track
+	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > make_track; \
+              $(ECHO) ""; \
+              $(ECHO) "Generating source files in directory $(dir $@)" ; \
+         fi
+	@$(ECHO) "  Generating source code from YACC specification:  $(notdir $@)"
+	$(HIDE)$(YACC) $<
+	$(HIDE)mv y.tab.c $@
+	$(HIDE)$(RM) y.tab.h
+	$(HIDE)mv y.output $(dir $@)
+	@$(CLOCK_SKEW_ELIMINATION) 
+
+%.tab.h: %.y # %.track
+	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > make_track; \
+              $(ECHO) ""; \
+              $(ECHO) "Generating header files in directory $(dir $@)" ; \
+         fi
+	@$(ECHO) "  Generating header file from YACC specification:  $(notdir $@)"
+	$(HIDE)$(YACC) $<
+	$(HIDE)mv y.tab.h $@
+	$(HIDE)$(RM) y.tab.c 
+	$(HIDE)mv y.output $(dir $@)
+	@$(CLOCK_SKEW_ELIMINATION) 
+
+%.track: 
+	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
+         then $(ECHO) "$(dir $*)" > make_track; \
+              $(ECHO) ""; \
+              $(ECHO) "Generating files in directory $(dir $@)" ; \
+         fi
+
+
+
+#######################################################################################
+#
+# Pattern rules for dependency tracking mechanism:
+#
+
+.%.d: %.c $(GENERATED_FILES) 
+	@if [ ! -f make_track -o "$(dir $*)" != "`cat make_track`" ] ; \
+        then $(ECHO) "$(dir $*)" > make_track; \
+             $(ECHO) ""; \
+             $(ECHO) "Checking dependencies in directory $(dir $@)" ; \
+        fi
+	@$(ECHO) "  Checking dependencies of source file: $(notdir $<)"
+	$(HIDE) if $(CC) $(CCDEPS_FLAGS) $(CFLAGS) $(INCS) $<  > $@d ; \
+	 then sed 's/\($(notdir $*)\)\.o[ :]*/$(subst /,\/,$*)\.o $(subst /,\/,$@)\: ..\/makefiles\/config.mkf /'  <$@d >$@; \
+	      $(RM) $@d ; \
+	 else $(RM) $@d ; \
+	      exit 1 ;  \
+	 fi
+	@$(CLOCK_SKEW_ELIMINATION) 
+
+
+
+###############################################################################
+#
+# Includes for dependency tracking mechanism
+#
+
+ifeq ($(DEPS),yes)
+  ifneq ($(DEPENDENCIES),)
+    -include $(sort $(DEPENDENCIES))
+  endif
+endif

@@ -1,0 +1,70 @@
+#
+# $Id$
+#
+
+
+################################################################################
+#
+# OS setup:
+#
+
+OS=@OS@
+ARCH=@ARCH@
+
+
+################################################################################
+#
+# svn setup:
+#
+
+REV := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
+
+
+################################################################################
+#
+# general setup:
+#
+
+CC           := @CC@
+CCPROD       := @CC@
+CCFLAGS      := @MKCCFLAGS@ @OSFLAGS@
+CCDEPS_FLAGS := @DEPSFLAG@ $(CCFLAGS)
+CCPROD_FLAGS := @PDCCFLAGS@ @OSFLAGS@
+CFLAGS       := -DSHOW_MALLOC -DCLEANMEM
+CPROD_FLAGS  := -DDBUG_OFF -DPRODUCTION 
+LIBTOOL      := # $(PROJECT_ROOT)/libtool --silent --mode=link 
+
+XSLTENGINE   := @XSLT@
+M4PROC       := @M4@
+
+MAKE_NORM    := $(MAKE) CC="$(CC)" CCFLAGS="$(CCFLAGS)" CFLAGS="$(CFLAGS)"
+MAKE_PROD    := $(MAKE) CC="$(CCPROD)" CCFLAGS="$(CCPROD_FLAGS)" CFLAGS="$(CPROD_FLAGS)"
+MAKE_CLEAN   := $(MAKE) TARGET="clean" clean
+MAKEFLAGS    += --no-print-directory
+LDDYNFLAG    := # -export-dynamic
+
+TAR          := tar
+EXCLUDE_INCS := xml
+INCS         := -I../../inc \
+                $(patsubst %,-I../%,$(filter-out $(EXCLUDE_INCS),\
+                                  $(notdir $(wildcard ../*))))
+LIBS         := @LIBS@@LEXLIB@ -lm
+EFLIBS       := -lefence
+RM           := rm -f
+GZIP         := gzip -f
+ECHO         := echo
+LEX          := @LEX@ -n
+YACC         := @YACC@ -dv
+
+ifeq ($(OS),solaris2.8)
+  YYFLAGS   := -DYYDEBUG=1 -DYYLMAX=8192
+else
+  YYFLAGS   := -DYYLMAX=8192
+endif
+
+CLOCK_SKEW_ELIMINATION   := if [ -x $(PROJECT_ROOT)/src/bin/cse ] ; \
+                            then $(PROJECT_ROOT)/src/bin/cse $@ ; \
+                            fi
+
+CODE_BEAUTIFIER          := @CB@
+

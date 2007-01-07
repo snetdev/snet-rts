@@ -1,0 +1,116 @@
+#
+# $Id$
+#
+#
+
+###############################################################################
+#
+# Makefile for snetc source directories
+#
+# This Makefile is copied on demand into source directories.
+# Be sure not to edit these copies.
+#
+###############################################################################
+
+
+###############################################################################
+#
+# Calling conventions:
+#
+#  Start rules: 
+#    devel  compile developer code (default)
+#    prod   compile product code
+#    clean  cleanup derived files
+#
+#  Parameters:
+#    CHECK_DEPS="no"  de-activate dependency checking meachanism
+#    HIDE=""          show important commands issued by make (debugging)
+#
+###############################################################################
+
+
+###############################################################################
+#
+# General settings
+#
+
+PROJECT_ROOT = ../../..
+
+include $(PROJECT_ROOT)/src/makefiles/config.mkf
+include $(PROJECT_ROOT)/src/makefiles/targets.mkf
+
+TARGETDIR := $(notdir $(CURDIR))
+
+DEPS := yes
+HIDE := @
+
+
+###############################################################################
+#
+# Dummy rules
+#
+
+.PHONY: default devel prod clean cleanprod  cleandevel check
+
+
+
+###############################################################################
+#
+# Start rules
+#
+
+default: devel
+
+devel:
+	@$(ECHO) ""
+	@$(ECHO) "Making current subdirectory (developer version)"
+	$(HIDE) $(MAKE) -C .. -f ../makefiles/snetc.mkf \
+                        TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        makesubdir.devel
+
+prod:
+	@$(ECHO) ""
+	@$(ECHO) "Making current subdirectory (product version)"
+	$(HIDE) $(MAKE) -C .. -f ../makefiles/snetc.mkf \
+                        TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        makesubdir.prod
+
+
+
+###############################################################################
+#
+# Rules for XML processing
+#
+
+check:
+	$(XSLTENGINE) check_integrity.xsl ast.xml
+
+%.html: %2html.xsl %.xml
+	$(XSLTENGINE) %< ast.xml > $@
+
+
+
+###############################################################################
+#
+# Rules for debugging 
+#
+
+TARGETDIRS_DEVEL := $(addprefix ../,$(foreach target,$(src),$(addprefix $(target)/,$($(target)))))
+
+
+###############################################################################
+#
+# Rules for directory cleaning
+#
+
+clean:
+	$(HIDE) $(RM) *.o *.a *.bak *~ .*.d
+	$(HIDE) $(RM) $(patsubst %.xsl,%,$(wildcard *.xsl))
+	$(HIDE) $(RM) -r .sb SunWS_cache
+	$(HIDE) $(RM) *.lex.c *.tab.c *.tab.h y.output
+
+cleanprod:
+	$(HIDE) $(RM) *.prod.o
+
+cleandevel:
+	$(HIDE) $(RM) *.o
