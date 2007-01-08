@@ -127,7 +127,7 @@ $(PROJECT_ROOT)/src/lib/libcommon.a: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)src/lib/libcommon.a (developer version)"
 	$(HIDE) ar rc $@ $^
-	$(HIDE) ranlib $@
+	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
 	@touch .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -136,7 +136,7 @@ $(PROJECT_ROOT)/src/lib/libcommon.prod.a:  $(TARGETDIRS_PROD)
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)src/lib/libcommon.prod.a (product version)"
 	$(HIDE) ar rc $@ $^
-	$(HIDE) ranlib $@
+	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
 	@touch .done
 	@$(CLOCK_SKEW_ELIMINATION)  

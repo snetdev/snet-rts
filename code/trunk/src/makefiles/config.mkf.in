@@ -55,6 +55,7 @@ GZIP         := gzip -f
 ECHO         := echo
 LEX          := @LEX@ -n
 YACC         := @YACC@ -dv
+RANLIB       := @RANLIB@
 
 ifeq ($(OS),solaris2.8)
   YYFLAGS   := -DYYDEBUG=1 -DYYLMAX=8192
