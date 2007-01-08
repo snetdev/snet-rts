@@ -71,11 +71,16 @@ default devel prod:
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Building S-Net"
 	@$(ECHO) "************************************************************"
-	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" $@
-	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" $@
-	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" $@
-#	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" $@
-#	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" $@
+	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/commonlib/" PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/maketools/" PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
+#	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
+#	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Building S-Net completed"
@@ -87,11 +92,16 @@ clean cleandevel cleanprod:
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Cleaning S-Net"
 	@$(ECHO) "************************************************************"
-	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" $@
-	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" $@
-	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" $@
-#	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" $@
-#	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" $@
+	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/commonlib/" PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/maketools/" PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
+#	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
+#	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Cleaning S-Net completed"

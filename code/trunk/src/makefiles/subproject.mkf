@@ -2,7 +2,7 @@
 #
 # $Id$
 #
-#
+
 
 
 ###############################################################################
@@ -34,8 +34,11 @@ PROJECT_ROOT := ../..
 
 REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
 
-HIDE := @
-DEPS := yes
+HIDE   := @
+DEPS   := yes
+
+PREFIX_LOCAL := 
+PREFIX_ROOT  := $(PROJECT_ROOT)/
 
 include $(PROJECT_ROOT)/src/makefiles/config.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets.mkf
@@ -43,7 +46,8 @@ include $(PROJECT_ROOT)/src/makefiles/targets.mkf
 SUBPROJECT       := $(notdir $(CURDIR))
 SUBPROJECT_DIRS  := $($(SUBPROJECT))
 
-targetdir        := $(targetdir_$(SUBPROJECT))
+targetdirname    := $(targetdir_$(SUBPROJECT))
+targetdir        := $(PROJECT_ROOT)/$(targetdirname)
 
 targets_devel    := $(addprefix $(targetdir)/,$(targets_$(SUBPROJECT)_devel))
 targets_prod     := $(addprefix $(targetdir)/,$(targets_$(SUBPROJECT)_prod))
@@ -99,8 +103,11 @@ make_%:
 	@touch .make_track
 	$(HIDE) $(MAKE) -f $(PROJECT_ROOT)/src/makefiles/core.mkf \
                          DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                         PREFIX_LOCAL="$(PREFIX_LOCAL)" \
+                         PREFIX_ROOT="$(PREFIX_ROOT)" \
                          TARGETDIR="$(SUBPROJECT_DIRS)" \
                          TARGETS="$(targets_$*)" 
+	@$(ECHO) ""
 
 
 
@@ -116,14 +123,15 @@ clean:
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Cleaning S-Net $(SUBPROJECT)"
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "Cleaning directory $(targetdir)"
+	@$(ECHO) "Cleaning directory $(PREFIX_ROOT)$(targetdirname)"
 	$(HIDE) $(RM) $(targets_devel) $(targets_prod) $(clean_also)
 	@$(MAKE) HIDE="$(HIDE)" clean_dirs
+	@$(ECHO) ""
 
 clean_dirs: $(addsuffix .clean,$(SUBPROJECT_DIRS))
 
 %.clean:
-	@$(ECHO) "Cleaning directory $*"
+	@$(ECHO) "Cleaning directory $(PREFIX_LOCAL)$*"
 	$(HIDE) $(MAKE) -C $* HIDE="$(HIDE)" clean
 
 
@@ -132,14 +140,15 @@ cleanprod:
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Cleaning S-Net $(SUBPROJECT)  (product code only)"
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "Cleaning directory $(targetdir)"
+	@$(ECHO) "Cleaning directory $(PREFIX_ROOT)$(targetdirname)"
 	$(HIDE) $(RM) $(targets_prod) $(clean_also_prod)
 	@$(MAKE) HIDE="$(HIDE)" cleanprod_dirs
+	@$(ECHO) ""
 
 cleanprod_dirs: $(addsuffix .cleanprod,$(SUBPROJECT_DIRS))
 
 %.cleanprod:
-	@$(ECHO) "Cleaning directory $*"
+	@$(ECHO) "Cleaning directory (PREFIX_LOCAL)$*"
 	$(HIDE) $(MAKE) -C $* HIDE="$(HIDE)" cleanprod
 
 
@@ -148,25 +157,15 @@ cleandevel:
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Cleaning S-Net $(SUBPROJECT)  (developer code only)"
 	@$(ECHO) "************************************************************"
-	@$(ECHO) "Cleaning directory $(targetdir)"
+	@$(ECHO) "Cleaning directory $(PREFIX_ROOT)$(targetdirname)"
 	$(HIDE) $(RM) $(targets_devel) $(clean_also_devel)
 	@$(MAKE) HIDE="$(HIDE)" cleandevel_dirs
+	@$(ECHO) ""
 
 cleandevel_dirs: $(addsuffix .cleandevel,$(SUBPROJECT_DIRS))
 
 %.cleandevel:
-	@$(ECHO) "Cleaning directory $*"
+	@$(ECHO) "Cleaning directory (PREFIX_LOCAL)$*"
 	$(HIDE) $(MAKE) -C $* HIDE="$(HIDE)" cleandevel
 
-
-
-
-
-
-oldclean: $(addsuffix .clean,$(SUBPROJECT_DIRS))
-	$(RM) snetc
-	$(RM) snetc.prod
-	$(RM) snetc.efence
-	$(RM) -r .sb SunWS_cache
-	$(RM) global/build.c
 

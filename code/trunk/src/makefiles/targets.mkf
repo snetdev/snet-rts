@@ -28,9 +28,9 @@ targets_compiler_default  := $(targets_compiler_devel)
 # Collection of target directories
 #
 
-targetdir_commonlib       := $(PROJECT_ROOT)/src/lib
-targetdir_maketools       := $(PROJECT_ROOT)/src/bin
-targetdir_compiler        := $(PROJECT_ROOT)/bin
+targetdir_commonlib       := src/lib
+targetdir_maketools       := src/bin
+targetdir_compiler        := bin
 
 
 ###############################################################################
