@@ -43,7 +43,7 @@ AC_TRY_COMPILE(,
 AC_MSG_RESULT(yes)
 SUNC=yes,
 AC_MSG_RESULT(no)
-SUNC=no
+suNC=no
 )
 
 dnl check whether its compaqs (or dec) cc
@@ -134,6 +134,11 @@ AC_CHECK_PROGS(XSLT, [xsltproc sabcmd], [!fail])
 dnl search for m4 macro processor
 AC_CHECK_PROGS(M4, [gm4 m4], [!fail])
 
+dnl search for pk gtk configuration script 
+AC_CHECK_PROGS(PKGCONF, [pkg-config], [!fail])
+AC_SUBST(GTKLIBS, `pkg-config --libs gtk+-2.0`)
+AC_SUBST(GTKFLAGS, `pkg-config --cflags gtk+-2.0`)
+
 dnl search for malloc.h
 AC_CHECK_HEADERS(malloc.h)
 
@@ -184,7 +189,7 @@ dnl check for pthread flag on gcc
 if test "$GCC" = yes; then
   AC_MSG_CHECKING([existence of pthread flag])
   echo "int main(){return 0;}" > .sac_configure_temp.c
-  if test "`gcc -o .sac_configure_temp -pthread .sac_configure_temp.c 2>&1 | grep "unrecognized option"`" = ""; then
+  if test "`gcc -o .snet_configure_temp -pthread .snet_configure_temp.c 2>&1 | grep "unrecognized option"`" = ""; then
     AC_MSG_RESULT([supported])
     GCC_PTHREADS="-pthread"
   else
@@ -194,9 +199,21 @@ if test "$GCC" = yes; then
   rm -f .sac_configure_temp.c .sac_configure_temp
 fi
 
+dnl check whether we need to link libm
+AC_CHECK_LIB(,sqrt,
+    AC_SUBST( LIB_M, ""),
+    AC_SUBST( LIB_M, "-lm"))
+
+dnl check for socket libs
+AC_CHECK_LIB(,bind,
+    AC_SUBST( LIB_SOCKET, "").
+    AC_CHECK_LIB(socket,bind,
+      AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),
+      [!fail]))
+
 dnl test for compiler flags
 dnl for sac2crc
-AC_MSG_CHECKING([sac2crc compiler flags])
+AC_MSG_CHECKING([compiler flags])
 if [ test "$GCC" = yes ]; then
   AC_SUBST(OPT_O0, [""])
   AC_SUBST(OPT_O1, [-O1])

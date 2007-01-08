@@ -22,6 +22,18 @@ targets_compiler_prod     := snetc.prod
 targets_compiler_efence   := snetc.efence
 targets_compiler_default  := $(targets_compiler_devel)
 
+targets_runtime_devel     := libsnet.a
+targets_runtime_prod      := libsnet.prod.a
+targets_runtime_default   := $(targets_runtime_devel)
+
+targets_tools_devel       := FeederFront RecordInspector
+targets_tools_prod        := FeederFront.prod RecordInspector.prod
+targets_tools_default     := $(target_tools_devel)
+
+targets_demo_devel        := factorial graphicFactorial
+targets_demo_prod         := factorial.prod graphicFactorial.prod
+targets_demo_default      := $(target_demo_devel)
+
 
 ###############################################################################
 #
@@ -31,6 +43,9 @@ targets_compiler_default  := $(targets_compiler_devel)
 targetdir_commonlib       := src/lib
 targetdir_maketools       := src/bin
 targetdir_compiler        := bin
+targetdir_runtime         := lib
+targetdir_rttools         := bin
+targetdir_demo            := bin
 
 
 ###############################################################################
@@ -55,22 +70,36 @@ clean_compiler_devel      := snetc.efence \
 
 clean_compiler_prod       := ../src/compiler/global/build_prod.c
 
+clean_runtime             :=
+clean_runtime_devel       :=
+clean_runtime_prod        :=
+
+clean_tools               :=
+clean_tools_devel         :=
+clean_tools_prod          :=
+
+clean_demo                :=
+clean_demo_devel          :=
+clean_demo_prod           :=
+
 
 ###############################################################################
 #
 # Collection of source directories
 #
 
-commonlib   = dbug getoptions
+commonlib       = dbug getoptions
 
-maketools   = cse cb
+maketools       = cse cb
 
-compiler    = tree global support parse preproc flat typeinf opt postproc \
-              codegen print
+compiler        = tree global support parse preproc flat typeinf opt postproc \
+                  codegen print
 
-runtime     = 
+runtime         = common posix
 
-tools       = 
+tools           = graphics
+
+demo            = factorial graphicFactorial
 
 
 ###############################################################################
@@ -80,9 +109,9 @@ tools       =
 # Note that the variable names must coincide with the directory names above.
 #
 
-dbug        = dbug.o
+dbug            = dbug.o
 
-getoptions  = getoptions.o
+getoptions      = getoptions.o
 
 
 ###############################################################################
@@ -92,9 +121,9 @@ getoptions  = getoptions.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-cse         = cse.o
+cse             = cse.o
 
-cb          = cb.o
+cb              = cb.o
 
 
 ###############################################################################
@@ -104,31 +133,31 @@ cb          = cb.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-global      = main.o setup.o config_file.o init.o usage.o memory.o globals.o \
-              options.o ctinfo.o phase.o lookup_table.o
+global          = main.o setup.o config_file.o init.o usage.o memory.o \
+                  globals.o options.o ctinfo.o phase.o lookup_table.o
 
-support     = buffer.o list.o str.o system.o 
+support         = buffer.o list.o str.o system.o 
 
-tree        = check.o check_attribs.o check_lib.o check_mem.o check_node.o \
-              checktst.o free.o free_attribs.o free_node.o node_basic.o \
-              traverse.o traverse_helper.o traverse_tables.o tree_basic.o \
-              tree_compound.o
+tree            = check.o check_attribs.o check_lib.o check_mem.o \
+                  check_node.o checktst.o free.o free_attribs.o free_node.o \
+                  node_basic.o traverse.o traverse_helper.o traverse_tables.o \
+                  tree_basic.o tree_compound.o
 
-parse       = snet.tab.o snet.lex.o scanparse.o load.o
+parse           = snet.tab.o snet.lex.o scanparse.o load.o
 
-preproc     = preproc.o
+preproc         = preproc.o
 
-flat        =
+flat            =
 
-typeinf     = 
+typeinf         = 
 
-opt         = 
+opt             = 
 
-postproc    = 
+postproc        = 
 
-codegen     =
+codegen         =
 
-print       = print.o 
+print           = print.o 
 
 
 ###############################################################################
@@ -138,6 +167,10 @@ print       = print.o
 # Note that the variable names must coincide with the directory names above.
 #
 
+common          = memfun.o
+
+posix           = buffer.o record.o handle.o typeencode.o graphics.o \
+                  snetentities.o
 
 
 ###############################################################################
@@ -146,3 +179,19 @@ print       = print.o
 #
 # Note that the variable names must coincide with the directory names above.
 #
+
+graphics        = FeederFront.o RecordInspector.o
+
+
+###############################################################################
+#
+# Collection of demo object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+factorial       = factorial.o
+
+graphicFactorial = graphicFactorial.o
+
+

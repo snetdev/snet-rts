@@ -27,7 +27,7 @@ REV := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
 
 CC           := @CC@
 CCPROD       := @CC@
-CCFLAGS      := @MKCCFLAGS@ @OSFLAGS@
+CCFLAGS      := @MKCCFLAGS@ @OSFLAGS@ @GTKFLAGS@
 CCDEPS_FLAGS := @DEPSFLAG@ $(CCFLAGS)
 CCPROD_FLAGS := @PDCCFLAGS@ @OSFLAGS@
 CFLAGS       := -DSHOW_MALLOC -DCLEANMEM

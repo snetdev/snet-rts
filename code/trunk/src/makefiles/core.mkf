@@ -45,7 +45,7 @@ TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
 
 
 LIB  := -L$(PROJECT_ROOT)/src/lib -lcommon
-INCS := -I$(PROJECT_ROOT)/src/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
+INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
 REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
 
@@ -163,6 +163,26 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 
+$(PROJECT_ROOT)/lib/libsnet.a: $(TARGETDIRS_DEVEL) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.a (developer version)"
+	$(HIDE) ar rc $@ $^
+	$(HIDE) $(RANLIB) $@
+	@$(RM) .make_track
+	@touch .done
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+$(PROJECT_ROOT)/lib/libsnet.prod.a:  $(TARGETDIRS_PROD) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.prod.a (product version)"
+	$(HIDE) ar rc $@ $^
+	$(HIDE) $(RANLIB) $@
+	@$(RM) .make_track
+	@touch .done
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+
+
 
 ###############################################################################
 #
@@ -170,7 +190,7 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
 #
 # We make snetc depend on the revision data file and in turn the revision data
 # file depend on all target object files. By this dependency chain we achieve
-# that only if one of the object files needs to be remade, if also remake the
+# that only if one of the object files needs to be remade, we also remake the
 # revision data file and, thereupon, relink snetc.
 #
 
@@ -331,3 +351,4 @@ ifeq ($(DEPS),yes)
     -include $(sort $(DEPENDENCIES))
   endif
 endif
+

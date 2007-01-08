@@ -77,10 +77,12 @@ default devel prod:
                         PREFIX_LOCAL="src/maketools/" PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
-#	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
-#	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
+	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/demo     DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/demo/"     PREFIX_ROOT="" $@												
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Building S-Net completed"
@@ -98,10 +100,13 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/maketools/" PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
-#	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
-#	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
+	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/demo     DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/demo/"     PREFIX_ROOT="" $@
+												
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Cleaning S-Net completed"
@@ -128,6 +133,7 @@ configure: configure.ac
 	autoconf
 	autoheader
 	svn commit -m "Reconfigured" configure src/global/config.h.in
+
 
 
 
