@@ -44,18 +44,20 @@ MAKEFLAGS    += --no-print-directory
 LDDYNFLAG    := # -export-dynamic
 
 TAR          := tar
-EXCLUDE_INCS := xml
-INCS         := -I../../inc \
-                $(patsubst %,-I../%,$(filter-out $(EXCLUDE_INCS),\
-                                  $(notdir $(wildcard ../*))))
-LIBS         := @LIBS@@LEXLIB@ -lm
-EFLIBS       := -lefence
+AR           := ar rc
 RM           := rm -f
 GZIP         := gzip -f
 ECHO         := echo
 LEX          := @LEX@ -n
 YACC         := @YACC@ -dv
 RANLIB       := @RANLIB@
+
+EXCLUDE_INCS := xml
+INCS         := -I../../inc \
+                $(patsubst %,-I../%,$(filter-out $(EXCLUDE_INCS),\
+                                  $(notdir $(wildcard ../*))))
+LIBS         := @LIBS@@LEXLIB@ -lm
+EFLIBS       := -lefence
 
 ifeq ($(OS),solaris2.8)
   YYFLAGS   := -DYYDEBUG=1 -DYYLMAX=8192
