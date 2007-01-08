@@ -1,7 +1,7 @@
 #
 # $Id$
 #
-#
+
 
 ###############################################################################
 #
@@ -18,13 +18,15 @@
 # Calling conventions:
 #
 #  Start rules: 
-#    devel  compile developer code (default)
-#    prod   compile product code
-#    clean  cleanup derived files
+#    devel      compile developer code (default)
+#    prod       compile product code
+#    clean      cleanup derived files
+#    cleandevel cleanup compiled files (developer code only)
+#    cleanprod  cleanup compiled files (product code only)
 #
 #  Parameters:
-#    CHECK_DEPS="no"  de-activate dependency checking meachanism
-#    HIDE=""          show important commands issued by make (debugging)
+#    DEPS="no"  de-activate dependency checking meachanism
+#    HIDE=""    show important commands issued by make (debugging)
 #
 ###############################################################################
 
@@ -64,16 +66,20 @@ default: devel
 devel:
 	@$(ECHO) ""
 	@$(ECHO) "Making current subdirectory (developer version)"
+	@touch .make_track
 	$(HIDE) $(MAKE) -C .. -f ../makefiles/core.mkf \
                         TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         makesubdir.devel
+	@$(RM) .make_track
 
 prod:
 	@$(ECHO) ""
 	@$(ECHO) "Making current subdirectory (product version)"
+	@touch .make_track
 	$(HIDE) $(MAKE) -C .. -f ../makefiles/core.mkf \
                         TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         makesubdir.prod
+	@$(RM) .make_track
 
 
 
@@ -104,13 +110,16 @@ TARGETDIRS_DEVEL := $(addprefix ../,$(foreach target,$(src),$(addprefix $(target
 #
 
 clean:
+	@$(ECHO) "Cleaning current subdirectory"
 	$(HIDE) $(RM) *.o *.a *.bak *~ .*.d
 	$(HIDE) $(RM) $(patsubst %.xsl,%,$(wildcard *.xsl))
 	$(HIDE) $(RM) -r .sb SunWS_cache
 	$(HIDE) $(RM) *.lex.c *.tab.c *.tab.h y.output
 
 cleanprod:
+	@$(ECHO) "Cleaning current subdirectory (product version only)"
 	$(HIDE) $(RM) *.prod.o
 
 cleandevel:
+	@$(ECHO) "Cleaning current subdirectory (developer version only)"
 	$(HIDE) $(RM) *.o
