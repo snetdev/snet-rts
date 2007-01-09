@@ -1,5 +1,10 @@
 /*
- * File: main_args.h
+ * $Id$
+ */
+
+
+/*
+ * File: get_options.h
  *
  * Description:
  *
@@ -103,18 +108,17 @@
  */
 
 
-#ifndef _main_args_h
-
-#define _main_args_h
+#ifndef _GETOPTIONS_H_
+#define _GETOPTIONS_H_
 
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-extern int ARGS_CheckOption(char *pattern, char *argv1, char *argv2, 
+extern int GOPTcheckOption(char *pattern, char *argv1, char *argv2, 
                             char **option, char **argument);
 
-extern int ARGS_StringEqual(char *s1, char *s2, int case_sensitive);
+extern int GOPTstringEqual(char *s1, char *s2, int case_sensitive);
 
 
 #define ARGS_BEGIN(argc, argv)                          \
@@ -133,7 +137,7 @@ extern int ARGS_StringEqual(char *s1, char *s2, int case_sensitive);
 
 #define ARGS_FLAG(s, action)                                    \
     if ((ARGS_argv[ARGS_i][0]=='-')                             \
-        && ARGS_StringEqual(s, ARGS_argv[ARGS_i]+1, 1))         \
+        && GOPTstringEqual(s, ARGS_argv[ARGS_i]+1, 1))          \
     {                                                           \
       OPT=ARGS_argv[ARGS_i]+1;                                  \
       ARG=NULL;                                                 \
@@ -145,7 +149,7 @@ extern int ARGS_StringEqual(char *s1, char *s2, int case_sensitive);
 
 #define ARGS_OPTION(s, action)                                                          \
     if ((ARGS_shift                                                                     \
-         = ARGS_CheckOption(s, ARGS_argv[ARGS_i],                                       \
+         = GOPTcheckOption(s, ARGS_argv[ARGS_i],                                        \
                             ARGS_i<ARGS_argc-1?ARGS_argv[ARGS_i+1]:NULL,                \
                             &OPT, &ARG)))                                               \
     {                                                                                   \
@@ -163,7 +167,7 @@ extern int ARGS_StringEqual(char *s1, char *s2, int case_sensitive);
 
 #define ARGS_OPTION_BEGIN(s)                                                            \
     if ((ARGS_shift                                                                     \
-         = ARGS_CheckOption(s, ARGS_argv[ARGS_i],                                       \
+         = GOPTcheckOption(s, ARGS_argv[ARGS_i],                                        \
                             ARGS_i<ARGS_argc-1?ARGS_argv[ARGS_i+1]:NULL,                \
                             &OPT, &ARG)))                                               \
     {                                                                                   \
@@ -221,7 +225,7 @@ extern int ARGS_StringEqual(char *s1, char *s2, int case_sensitive);
   int ARGS_not_chosen = 1;
   
 #define ARG_CHOICE(choice, action)                              \
-  if (ARGS_not_chosen && ARGS_StringEqual(ARG, choice, 0)) {    \
+  if (ARGS_not_chosen && GOPTstringEqual(ARG, choice, 0)) {     \
     ARGS_not_chosen = 0;                                        \
     action;                                                     \
   }
@@ -324,5 +328,5 @@ extern int ARGS_StringEqual(char *s1, char *s2, int case_sensitive);
 
 
 
-#endif /* _main_args_h */
+#endif /* _GETOPTIONS_H_ */
 

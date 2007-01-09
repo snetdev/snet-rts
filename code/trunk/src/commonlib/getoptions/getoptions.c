@@ -1,37 +1,11 @@
 /*
- *
- * $Log$
- * Revision 3.4  2005/06/28 15:43:29  sah
- * added missing include
- *
- * Revision 3.3  2005/04/07 16:16:27  cg
- * Added string compare function with case sensitivity flag.
- *
- * Revision 3.2  2001/05/15 13:50:19  cg
- * Bug fixed in handling of option copy buffer.
- *
- * Revision 3.1  2000/11/20 18:02:05  sacbase
- * new release made
- *
- * Revision 2.3  1999/06/01 12:54:38  cg
- * added #include <string.h> for usage of function strncpy.
- *
- * Revision 2.2  1999/05/12 14:24:44  cg
- * old comment eliminated.
- *
- * Revision 2.1  1999/05/12 14:23:35  cg
- * new release made
- *
- * Revision 1.1  1999/05/12 13:49:44  cg
- * Initial revision
- *
- *
+ * $Id$
  */
 
 
 /*****************************************************************************
  * 
- * file:    main_args.c
+ * file:    getoptions.c
  *
  * prefix:        
  *
@@ -57,7 +31,7 @@ static char buffer[MAX_OPT_LEN];
 /******************************************************************************
  *
  * function:
- *   int ARGS_CheckOption(char *pattern, char *argv1, char *argv2, 
+ *   int GOPTcheckOption(char *pattern, char *argv1, char *argv2, 
  *                        char **option, char **argument)
  *
  * description:
@@ -80,7 +54,7 @@ static char buffer[MAX_OPT_LEN];
  *
  ******************************************************************************/
 
-int ARGS_CheckOption(char *pattern, char *argv1, char *argv2, 
+int GOPTcheckOption(char *pattern, char *argv1, char *argv2, 
                      char **option, char **argument)
 {
   int i=0;
@@ -158,7 +132,7 @@ int ARGS_CheckOption(char *pattern, char *argv1, char *argv2,
 /******************************************************************************
  *
  * function:
- *   bool ARGS_StringCompare( char *s1, char *s2, int case_sensitive)
+ *   bool GOPTstringEqual( char *s1, char *s2, int case_sensitive)
  *
  * description:
  * 
@@ -167,7 +141,7 @@ int ARGS_CheckOption(char *pattern, char *argv1, char *argv2,
  *
  ******************************************************************************/
 
-int ARGS_StringEqual( char *s1, char *s2, int case_sensitive)
+int GOPTstringEqual( char *s1, char *s2, int case_sensitive)
 {
   int i;
   
