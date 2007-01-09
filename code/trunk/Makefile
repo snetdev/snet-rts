@@ -42,7 +42,7 @@ include $(PROJECT_ROOT)/src/makefiles/config.mkf
 # Dummy rules
 #
 
-.PHONY: default devel prod clean cleandevel cleanprod efence
+.PHONY: default devel prod clean cleandevel cleanprod efence 
 
 
 ###############################################################################
@@ -66,7 +66,7 @@ include $(PROJECT_ROOT)/src/makefiles/config.mkf
 # enforcing dependency checks.
 #
 
-default devel prod: 
+default devel prod: checks
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Building S-Net"
@@ -82,7 +82,7 @@ default devel prod:
 	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/demo     DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/demo/"     PREFIX_ROOT="" $@												
+                        PREFIX_LOCAL="src/demo/"     PREFIX_ROOT="" $@ 
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Building S-Net completed"
@@ -106,7 +106,6 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/demo     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/demo/"     PREFIX_ROOT="" $@
-												
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Cleaning S-Net completed"
@@ -121,19 +120,19 @@ efence:
 #
 # Rules for configure mechanism
 #
-# These rules are mainly here as a reminder what exactly to do when 
-# reconfiguring.
-#
 
-$(PROJECT_ROOT)/src/makefiles/config.mkf: $(PROJECT_ROOT)/src/makefiles/config.mkf.in
-	(cd $(PROJECT_ROOT); ./configure)
-
-configure: configure.ac
-	svn lock configure src/global/config.h.in
+config: 
+	svn lock configure $(AUTOHEADERED)
 	autoconf
 	autoheader
-	svn commit -m "Reconfigured" configure src/global/config.h.in
+	svn commit configure $(AUTOHEADERED)
 
 
+###############################################################################
+#
+# Rules for consistency checks
+#
+
+include $(PROJECT_ROOT)/src/makefiles/check.mkf
 
 

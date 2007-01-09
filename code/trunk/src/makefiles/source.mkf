@@ -18,11 +18,12 @@
 # Calling conventions:
 #
 #  Start rules: 
-#    devel      compile developer code (default)
-#    prod       compile product code
-#    clean      cleanup derived files
-#    cleandevel cleanup compiled files (developer code only)
-#    cleanprod  cleanup compiled files (product code only)
+#    devel       compile developer code (default)
+#    prod        compile product code
+#    clean       cleanup derived files
+#    cleandevel  cleanup compiled files (developer code only)
+#    cleanprod   cleanup compiled files (product code only)
+#    checkxml    check integrity of XML file
 #
 #  Parameters:
 #    DEPS="no"  de-activate dependency checking meachanism
@@ -52,7 +53,7 @@ HIDE := @
 # Dummy rules
 #
 
-.PHONY: default devel prod clean cleanprod  cleandevel check
+.PHONY: default devel prod clean cleanprod cleandevel checkxml
 
 
 
@@ -63,19 +64,19 @@ HIDE := @
 
 default: devel
 
-devel:
+devel: checks
 	@$(ECHO) ""
 	@$(ECHO) "Making current subdirectory (developer version)"
-	@touch .make_track
+	@$(TOUCH) .make_track
 	$(HIDE) $(MAKE) -C .. -f ../makefiles/core.mkf \
                         TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         makesubdir.devel
 	@$(RM) .make_track
 
-prod:
+prod: checks
 	@$(ECHO) ""
 	@$(ECHO) "Making current subdirectory (product version)"
-	@touch .make_track
+	@$(TOUCH) .make_track
 	$(HIDE) $(MAKE) -C .. -f ../makefiles/core.mkf \
                         TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         makesubdir.prod
@@ -88,7 +89,7 @@ prod:
 # Rules for XML processing
 #
 
-check:
+checkxml:
 	$(XSLTENGINE) check_integrity.xsl ast.xml
 
 %.html: %2html.xsl %.xml
@@ -123,3 +124,11 @@ cleanprod:
 cleandevel:
 	@$(ECHO) "Cleaning current subdirectory (developer version only)"
 	$(HIDE) $(RM) *.o
+
+
+###############################################################################
+#
+# Rules for consistency checks
+#
+
+include $(PROJECT_ROOT)/src/makefiles/check.mkf

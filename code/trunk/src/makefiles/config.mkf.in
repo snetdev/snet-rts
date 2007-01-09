@@ -17,7 +17,7 @@ ARCH=@ARCH@
 # svn setup:
 #
 
-REV := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
+REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
 
 
 ################################################################################
@@ -51,6 +51,7 @@ ECHO         := echo
 LEX          := @LEX@ -n
 YACC         := @YACC@ -dv
 RANLIB       := @RANLIB@
+TOUCH        := touch
 
 EXCLUDE_INCS := xml
 INCS         := -I../../inc \
@@ -58,6 +59,11 @@ INCS         := -I../../inc \
                                   $(notdir $(wildcard ../*))))
 LIBS         := @LIBS@@LEXLIB@ -lm
 EFLIBS       := -lefence
+
+CONFIGURED   := $(PROJECT_ROOT)/src/makefiles/config.mkf \
+                $(PROJECT_ROOT)/src/compiler/global/config.h \
+                $(PROJECT_ROOT)/configure
+AUTOHEADERED := $(PROJECT_ROOT)/src/compiler/global/config.h.in
 
 ifeq ($(OS),solaris2.8)
   YYFLAGS   := -DYYDEBUG=1 -DYYLMAX=8192

@@ -32,8 +32,6 @@
 
 PROJECT_ROOT := ../..
 
-REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
-
 HIDE   := @
 DEPS   := yes
 
@@ -89,18 +87,14 @@ efence: make_efence
 # Main rule
 #
 
-make_%: 
-	@ if [ "$(OS)" = "" -o "$(ARCH)" = "" ]; \
-	  then $(ECHO) "*** Unknown OS or unknown ARCH! Please specify!"; \
-	       exit 1; \
-	  fi
+make_%: checks
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Building S-Net $(SUBPROJECT) "
 	@$(ECHO) "* revision $(REVISION)"
 	@$(ECHO) "* on $(OS) for $(ARCH)"
 	@$(ECHO) "************************************************************"
-	@touch .make_track
+	@$(TOUCH) .make_track
 	$(HIDE) $(MAKE) -f $(PROJECT_ROOT)/src/makefiles/core.mkf \
                          DEPS="$(DEPS)" HIDE="$(HIDE)" \
                          PREFIX_LOCAL="$(PREFIX_LOCAL)" \
@@ -169,3 +163,9 @@ cleandevel_dirs: $(addsuffix .cleandevel,$(SUBPROJECT_DIRS))
 	$(HIDE) $(MAKE) -C $* HIDE="$(HIDE)" cleandevel
 
 
+###############################################################################
+#
+# Rules for consistency checks
+#
+
+include $(PROJECT_ROOT)/src/makefiles/check.mkf

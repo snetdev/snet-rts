@@ -2,7 +2,6 @@
 #
 # $Id$
 #
-#
 
 #######################################################################################
 #
@@ -46,8 +45,6 @@ TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
 
 LIB  := -L$(PROJECT_ROOT)/src/lib -lcommon
 INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
-
-REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
 
 XML_DIR     = $(PROJECT_ROOT)/src/compiler/xml
 XML_COMMONS = $(wildcard $(XML_DIR)/common_*.xsl)
@@ -101,7 +98,7 @@ $(PROJECT_ROOT)/bin/snetc: global/build.o
 	$(HIDE) $(CC)  -o $@ $(TARGETDIRS_DEVEL) $< \
                 $(LIB) $(LIBS) $(LDDYNFLAG)
 	@$(RM) .make_track
-	@touch .done
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
@@ -110,7 +107,7 @@ $(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
 	$(HIDE) $(CCPROD) -o $@ $(TARGETDIRS_PROD) $< \
                 $(LIB) $(LIBS) $(LDDYNFLAG)
 	@$(RM) .make_track
-	@touch .done
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/bin/snetc.efence: global/build.o
@@ -119,7 +116,7 @@ $(PROJECT_ROOT)/bin/snetc.efence: global/build.o
 	$(HIDE) $(CC) -o $@ $(TARGETDIRS_DEVEL) $< \
                 $(LIB) $(LIBS) $(LDDYNFLAG) $(EFLIBS)
 	@$(RM) .make_track
-	@touch .done
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 
@@ -129,7 +126,7 @@ $(PROJECT_ROOT)/src/lib/libcommon.a: $(TARGETDIRS_DEVEL)
 	$(HIDE) ar rc $@ $^
 	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
-	@touch .done
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/src/lib/libcommon.prod.a:  $(TARGETDIRS_PROD) 
@@ -138,7 +135,7 @@ $(PROJECT_ROOT)/src/lib/libcommon.prod.a:  $(TARGETDIRS_PROD)
 	$(HIDE) ar rc $@ $^
 	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
-	@touch .done
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 
@@ -149,7 +146,7 @@ $(PROJECT_ROOT)/src/bin/%.devel: $(TARGETDIRS_DEVEL)
                 $(filter $*/%,$^) \
                 $(LIB) $(LIBS)
 	@$(RM) .make_track
-	@touch .done
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD) 
@@ -159,26 +156,26 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
                 $(filter $*/%,$^) \
                 $(LIB) $(LIBS)
 	@$(RM) .make_track
-	@touch .done
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 
 $(PROJECT_ROOT)/lib/libsnet.a: $(TARGETDIRS_DEVEL) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.a (developer version)"
-	$(HIDE) ar rc $@ $^
+	$(HIDE) $(AR) $@ $^
 	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
-	@touch .done
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/lib/libsnet.prod.a:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.prod.a (product version)"
-	$(HIDE) ar rc $@ $^
+	$(HIDE) $(AR) $@ $^
 	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
-	@touch .done
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 
