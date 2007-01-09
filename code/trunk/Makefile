@@ -42,7 +42,7 @@ include $(PROJECT_ROOT)/src/makefiles/config.mkf
 # Dummy rules
 #
 
-.PHONY: default devel prod clean cleandevel cleanprod efence 
+.PHONY: default devel prod clean cleandevel cleanprod efence config
 
 
 ###############################################################################
