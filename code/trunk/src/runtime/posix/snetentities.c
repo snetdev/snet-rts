@@ -1449,7 +1449,7 @@ static void *DetStarBoxThread( void *hndl) {
   snet_typeencoding_t *exit_tags;
   snet_record_t *rec;
  
-  snet_record_t *sort_begin, *sort_end;
+  snet_record_t *sort_begin = NULL, *sort_end;
   int counter = 0;
 
 

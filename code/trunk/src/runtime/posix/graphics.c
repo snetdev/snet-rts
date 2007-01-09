@@ -105,7 +105,7 @@ static void *GraphicBoxThread( void *hndl) {
   struct sockaddr_in addr;
   int s;
   snet_buffer_msg_t buf_msg;
-  snet_record_t *rec;
+  snet_record_t *rec = NULL;
   int state;
   bool terminate = false;
 
@@ -442,7 +442,7 @@ static void *FeederThread( void *hndl) {
   struct sockaddr_in addr;
   int s;
   bool terminate = false;
-  snet_record_t *rec;
+  snet_record_t *rec = NULL;
   
 
   /* fork the process */
@@ -546,6 +546,7 @@ extern void SNetInitGraphicalSystem() {
   
   return;
 }
+
 
 
 
