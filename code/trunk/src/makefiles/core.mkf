@@ -200,7 +200,6 @@ $(PROJECT_ROOT)/bin/FeederFront: graphics/FeederFront.prod.o
 	@$(CLOCK_SKEW_ELIMINATION)	
 
 $(PROJECT_ROOT)/bin/RecordInspector.devel: graphics/RecordInspector.o 
-	@$(ECHO) "HRE"
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/RecordInspector.devel (developer version)"
 	$(HIDE) $(CC) -o $@ $< $(RUNTIMELIB) $(GTKLIBS)
 	@$(RM) .make_track
