@@ -57,8 +57,8 @@ EXCLUDE_INCS := xml
 INCS         := -I../../inc \
                 $(patsubst %,-I../%,$(filter-out $(EXCLUDE_INCS),\
                                   $(notdir $(wildcard ../*))))
-LIBS         := @LIBS@@LEXLIB@ -lm
-GKTLIBS			 := @GTKLIBS@
+LIBS         := @LIBS@ @LEXLIB@ -lm
+GTKLIBS			 := @GTKLIBS@
 EFLIBS       := -lefence
 
 CONFIGURED   := $(PROJECT_ROOT)/src/makefiles/config.mkf \

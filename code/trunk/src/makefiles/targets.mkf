@@ -26,13 +26,13 @@ targets_runtime_devel     := libsnet.a
 targets_runtime_prod      := libsnet.prod.a
 targets_runtime_default   := $(targets_runtime_devel)
 
-#targets_tools_devel       := FeederFront.devel RecordInspector.devel
-#targets_tools_prod        := FeederFront RecordInspector
-#targets_tools_default     := $(targets_tools_devel)
+targets_tools_devel       := FeederFront.devel RecordInspector.devel
+targets_tools_prod        := FeederFront RecordInspector
+targets_tools_default     := $(targets_tools_devel)
 
-#targets_demo_devel        := factorial.devel graphicFactorial.devel
-#targets_demo_prod         := factorial graphicFactorial
-#targets_demo_default      := $(targets_demo_devel)
+targets_demo_devel        := factorial.devel graphicFactorial.devel
+targets_demo_prod         := factorial graphicFactorial
+targets_demo_default      := $(targets_demo_devel)
 
 
 ###############################################################################
