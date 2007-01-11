@@ -206,7 +206,7 @@ AC_CHECK_LIB(,sqrt,
 
 dnl check for socket libs
 AC_CHECK_LIB(,bind,
-    AC_SUBST( LIB_SOCKET, "")
+    AC_SUBST( LIB_SOCKET, ""),
     AC_CHECK_LIB(socket,bind,
       AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),
       [!fail]))

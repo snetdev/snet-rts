@@ -59,6 +59,7 @@ INCS         := -I../../inc \
                                   $(notdir $(wildcard ../*))))
 LIBS         := @LIBS@ @LEXLIB@ -lm
 GTKLIBS			 := @GTKLIBS@
+SOCKETLIBS	 := @LIB_SOCKET@
 EFLIBS       := -lefence
 
 CONFIGURED   := $(PROJECT_ROOT)/src/makefiles/config.mkf \

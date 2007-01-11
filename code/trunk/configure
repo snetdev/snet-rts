@@ -4228,7 +4228,8 @@ echo "${ECHO_T}$ac_cv_lib__bind" >&6
 if test $ac_cv_lib__bind = yes; then
   LIB_SOCKET=""
 
-    echo "$as_me:$LINENO: checking for bind in -lsocket" >&5
+else
+  echo "$as_me:$LINENO: checking for bind in -lsocket" >&5
 echo $ECHO_N "checking for bind in -lsocket... $ECHO_C" >&6
 if test "${ac_cv_lib_socket_bind+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
