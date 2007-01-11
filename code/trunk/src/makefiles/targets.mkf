@@ -133,8 +133,8 @@ cb              = cb.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-global          = main.o setup.o config_file.o init.o usage.o memory.o \
-                  globals.o options.o ctinfo.o phase.o lookup_table.o
+global          = main.o config_file.o init.o usage.o memory.o lookup_table.o \
+                  globals.o options.o ctinfo.o phase.o phase_drivers.o                  
 
 support         = buffer.o list.o str.o system.o 
 
@@ -143,9 +143,9 @@ tree            = check.o check_attribs.o check_lib.o check_mem.o \
                   node_basic.o traverse.o traverse_helper.o traverse_tables.o \
                   tree_basic.o tree_compound.o
 
-parse           = snet.tab.o snet.lex.o scanparse.o load.o
+parse           = snet.tab.o snet.lex.o scanparse.o
 
-preproc         = preproc.o
+preproc         = 
 
 flat            =
 
@@ -155,7 +155,7 @@ opt             =
 
 postproc        = 
 
-codegen         = codegen.o
+codegen         = 
 
 print           = print.o 
 
