@@ -150,7 +150,7 @@ snet_handle_t *condif( snet_handle_t *hnd, void *field_p) {
 
 void boxcondif( snet_handle_t *hnd) {
 
-   snet_record_t *rec;
+  snet_record_t *rec;
   void *field_p;
 
   rec = SNetHndGetRecord( hnd);
@@ -659,7 +659,7 @@ snet_buffer_t *starnet2( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf =  SNetStarDetIncarnate( inbuf, &SER_predicate_compute, &starnet2, 
+  outbuf =  SNetStarIncarnate( inbuf, &SER_predicate_compute, &starnet2, 
                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 0),
@@ -673,7 +673,7 @@ snet_buffer_t *starnet( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf =  SNetStarDet( inbuf, &SER_predicate_compute, &starnet2, 
+  outbuf =  SNetStar( inbuf, &SER_predicate_compute, &starnet2, 
                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 0),
