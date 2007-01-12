@@ -155,7 +155,7 @@ opt             =
 
 postproc        = 
 
-codegen         = 
+codegen         = codegen.o
 
 print           = print.o 
 
