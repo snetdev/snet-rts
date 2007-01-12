@@ -211,6 +211,12 @@ AC_CHECK_LIB(,bind,
       AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),
       [!fail]))
 
+dnl check if we need -lrt
+AC_CHECK_LIB(,sem_init,
+    AC_SUBST( LIB_RT, ""),
+    AC_SUBST( LIB_RT, "-lrt"))
+
+
 dnl test for compiler flags
 dnl for sac2crc
 AC_MSG_CHECKING([compiler flags])

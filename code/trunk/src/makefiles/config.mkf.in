@@ -60,6 +60,7 @@ INCS         := -I../../inc \
 LIBS         := @LIBS@ @LEXLIB@ -lm
 GTKLIBS			 := @GTKLIBS@
 SOCKETLIBS	 := @LIB_SOCKET@
+RTLIBS			 := @LIB_RT@
 EFLIBS       := -lefence
 
 CONFIGURED   := $(PROJECT_ROOT)/src/makefiles/config.mkf \

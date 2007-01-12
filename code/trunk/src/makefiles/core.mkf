@@ -46,7 +46,7 @@ TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
 LIB  := -L$(PROJECT_ROOT)/src/lib -lcommon 
 INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
-RUNTIMELIB  := -L$(PROJECT_ROOT)/lib -lpthread -lsnet $(GTKLIBS) $(SOCKETLIBS)
+RUNTIMELIB  := -L$(PROJECT_ROOT)/lib -lpthread -lsnet $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS)
 RUNTIMEINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) $(GTKFLAGS)
 
 
