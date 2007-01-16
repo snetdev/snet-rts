@@ -12,7 +12,7 @@ net example {
     box examine((P,Q) -> (A,B) | (Y,Z));
 
     net compute {
-        net compAB(compAB_t)
+        net compAB
         connect compABC;
 
         net syncPQ
