@@ -658,7 +658,6 @@ snet_buffer_t *SER_predicate_compute( snet_buffer_t *inbuf) {
 snet_buffer_t *starnet2( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
-
   outbuf =  SNetStarIncarnate( inbuf, &SER_predicate_compute, &starnet2, 
                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
@@ -954,3 +953,4 @@ int main() {
   
   return( 0);
 }
+

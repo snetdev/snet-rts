@@ -58,8 +58,8 @@ extern snet_buffer_t *SNetRecGetBuffer( snet_record_t *rec);
  * Creates copy of given record.
  * RETURN: pointer to copy
  */
-
-extern snet_record_t *RECcopy( snet_record_t *rec);
+                      
+extern snet_record_t *SNetRecCopy( snet_record_t *rec);
 
 
 

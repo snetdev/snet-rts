@@ -520,21 +520,34 @@ extern void SNetRecRemoveField( snet_record_t *rec, int name) {
 }
 
 
-extern snet_record_t *RECcopy( snet_record_t *rec) {
+extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
 
   int i;
   snet_record_t *new_rec;
+  switch( rec->rec_descr) {
+  
+    case REC_data:
+      new_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( GetVEnc( rec)));
 
-  new_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( GetVEnc( rec)));
-
-  for( i=0; i<SNetRecGetNumTags( rec); i++) {
-    new_rec->rec->data_rec->tags[i] = rec->rec->data_rec->tags[i]; 
-  }
-  for( i=0; i<SNetRecGetNumBTags( rec); i++) {
-    new_rec->rec->data_rec->btags[i] = rec->rec->data_rec->btags[i]; 
-  }
-  for( i=0; i<SNetRecGetNumFields( rec); i++) {
-    new_rec->rec->data_rec->fields[i] = rec->rec->data_rec->fields[i]; 
+      for( i=0; i<SNetRecGetNumTags( rec); i++) {
+        new_rec->rec->data_rec->tags[i] = rec->rec->data_rec->tags[i]; 
+      }
+      for( i=0; i<SNetRecGetNumBTags( rec); i++) {
+        new_rec->rec->data_rec->btags[i] = rec->rec->data_rec->btags[i]; 
+      }
+      for( i=0; i<SNetRecGetNumFields( rec); i++) {
+        new_rec->rec->data_rec->fields[i] = rec->rec->data_rec->fields[i]; 
+      }
+      break;
+    case REC_sort_begin:
+      new_rec = SNetRecCreate( rec->rec_descr,  rec->rec->sort_begin_rec->level,  rec->rec->sort_begin_rec->num);
+      break;
+    case REC_sort_end:
+      new_rec = SNetRecCreate( rec->rec_descr,  rec->rec->sort_end_rec->level,  rec->rec->sort_end_rec->num);    
+      break;
+    default:
+      printf("\n\n ** Fatal Error ** : Can't copy record of that type [%d]\n\n", (int)rec->rec_descr);
+      exit( 1);
   }
 
   return( new_rec);

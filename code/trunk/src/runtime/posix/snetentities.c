@@ -462,6 +462,41 @@ static int LLSTgetCount( linked_list_t *lst) {
 /* ============================================================= */
 /* ============================================================= */
 
+
+
+typedef struct {
+  snet_buffer_t *buf;
+  snet_record_t *current;
+} snet_collect_elem_t;
+
+static bool CompareSortRecords( snet_record_t *rec1, snet_record_t *rec2) {
+
+  bool res;
+
+  if( ( rec1 == NULL) || ( rec2 == NULL)) {  
+    if( ( rec1 == NULL) && ( rec2 == NULL)) {
+      res = true;
+    }
+    else {
+      res = false;
+    }
+  }
+  else {
+    if( ( SNetRecGetLevel( rec1) == SNetRecGetLevel( rec2)) &&
+        ( SNetRecGetNum( rec1) == SNetRecGetNum( rec2)))  {
+     res = true;
+   }
+   else {
+      res = false;
+    }
+  }
+
+  return( res);
+}
+
+
+
+#ifdef old_collector_implementation
 static void *DetCollector( void *info) {
 
   dispatch_info_t *inf = (dispatch_info_t*)info;
@@ -494,7 +529,7 @@ static void *DetCollector( void *info) {
         current_buf = (snet_buffer_t*)LLSTget( lst);
 
         sem_wait( sem);
-        sem_post( sem); /* wait here if all buffers are empty, sem_post because */
+        sem_post( sem);  /* wait here if all buffers are empty, sem_post because */
         rec = SNetBufShow( current_buf); /* sem_wait is called again in switch() */
   
         if( rec != NULL) {
@@ -597,6 +632,190 @@ static void *DetCollector( void *info) {
   SNetMemFree( inf);
   return( NULL);
 }
+#else
+
+
+static void *DetCollector( void *info) {
+
+  dispatch_info_t *inf = (dispatch_info_t*)info;
+  snet_buffer_t *outbuf = inf->to_buf;
+  snet_buffer_t *current_buf;
+  sem_t *sem;
+  snet_record_t *rec;
+  linked_list_t *lst;
+  bool terminate = false;
+  bool got_record;
+  snet_collect_elem_t *tmp_elem, *new_elem, *elem;
+
+  snet_record_t *current_sort_rec = NULL;
+  
+  int counter = 0; 
+  int sort_end_counter = 0;
+
+  sem = SNetMemAlloc( sizeof( sem_t));
+  sem_init( sem, 0, 0);
+
+  SNetBufRegisterDispatcher( inf->from_buf, sem);
+  
+  elem = SNetMemAlloc( sizeof( snet_collect_elem_t));
+  elem->buf = inf->from_buf;
+  elem->current = NULL;
+
+  lst = LLSTcreate( elem);
+
+  while( !( terminate)) {
+    got_record = false;
+    sem_wait( sem);
+    while( !( got_record)) {
+      tmp_elem = LLSTget( lst);
+      rec = SNetBufShow( tmp_elem->buf);
+      if( rec != NULL) { 
+       
+        got_record = true;
+        
+        switch( SNetRecGetDescriptor( rec)) {
+          case REC_data:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+              rec = SNetBufGet( tmp_elem->buf);
+              SNetBufPut( outbuf, rec);
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+                
+            //rec = SNetBufGet( current_buf);
+            //SNetBufPut( outbuf, rec);
+            break;
+  
+          case REC_sync:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+             rec = SNetBufGet( tmp_elem->buf);
+             tmp_elem->buf = SNetRecGetBuffer( rec);
+             LLSTset( lst, tmp_elem);
+             SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
+             SNetRecDestroy( rec);
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+            break;
+  
+          case REC_collect:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+             rec = SNetBufGet( tmp_elem->buf);
+             new_elem = SNetMemAlloc( sizeof( snet_collect_elem_t));
+             new_elem->buf = SNetRecGetBuffer( rec);
+// !!             tmp_elem->current = NULL;
+             if( current_sort_rec == NULL) {
+               new_elem->current = NULL;
+             }
+             else {
+               new_elem->current = SNetRecCopy( current_sort_rec);
+             }
+             LLSTadd( lst, new_elem);
+             SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
+             SNetRecDestroy( rec);
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }            
+            break;
+          case REC_sort_begin:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+              rec = SNetBufGet( tmp_elem->buf);
+              tmp_elem->current = SNetRecCopy( rec);
+              counter += 1;
+
+              if( counter == LLSTgetCount( lst)) {
+                counter = 0;
+                current_sort_rec = SNetRecCopy( rec);
+
+                if( SNetRecGetLevel( rec) != 0) {
+                  SNetRecSetLevel( rec, SNetRecGetLevel( rec) - 1);
+                  SNetBufPut( outbuf, rec);
+                }
+                else {
+                  // destroy the record, if level is 0 then the collector just consumes it
+                }
+              }
+              else {
+                //SNetRecDestroy( rec);
+              }
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+            break;
+          case REC_sort_end:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+              rec = SNetBufGet( tmp_elem->buf);
+//              tmp_elem->current = SNetRecCopy( rec);
+              sort_end_counter += 1;
+
+              if( sort_end_counter == LLSTgetCount( lst)) {
+                sort_end_counter = 0;
+
+                if( SNetRecGetLevel( rec) != 0) {
+                  SNetRecSetLevel( rec, SNetRecGetLevel( rec) - 1);
+                  SNetBufPut( outbuf, rec);
+                }
+                else {
+                  // destroy the record, if level is 0 then the collector just consumes it
+                }
+              }
+              else {
+                //SNetRecDestroy( rec);
+              }
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+            break;
+          case REC_terminate:
+            tmp_elem = LLSTget( lst);
+            if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
+              rec = SNetBufGet( tmp_elem->buf);
+              tmp_elem = LLSTget( lst);
+              SNetBufDestroy( tmp_elem->buf);
+              LLSTremoveCurrent( lst);
+              SNetMemFree( tmp_elem);
+              if( LLSTgetCount( lst) == 0) {
+                terminate = true;
+                SNetBufPut( outbuf, rec);
+               SNetBufBlockUntilEmpty( outbuf);
+               SNetBufDestroy( outbuf);
+              }
+            }
+            else {
+              sem_post( sem);
+              LLSTnext( lst);
+            }
+
+            break;
+        } // switch
+      } // if
+      else {
+        LLSTnext( lst);
+      }
+    } // while !got_record
+  } // while !terminate
+
+  SNetMemFree( inf);
+  return( NULL);
+}
+
+#endif
+
 /* ============================================================= */
 /* ============================================================= */
 
@@ -682,38 +901,6 @@ static void *Collector( void *info) {
 }
 */
 
-static bool CompareSortRecords( snet_record_t *rec1, snet_record_t *rec2) {
-
-  bool res;
-
-  if( ( rec1 == NULL) || ( rec2 == NULL)) {  
-    if( ( rec1 == NULL) && ( rec2 == NULL)) {
-      res = true;
-    }
-    else {
-      res = false;
-    }
-  }
-  else {
-    if( ( SNetRecGetLevel( rec1) == SNetRecGetLevel( rec2)) &&
-        ( SNetRecGetNum( rec1) == SNetRecGetNum( rec2)))  {
-     res = true;
-   }
-   else {
-      res = false;
-    }
-  }
-
-  return( res);
-}
-
-
-
-typedef struct {
-  snet_buffer_t *buf;
-  snet_record_t *current;
-} snet_collect_elem_t;
-
 static void *Collector( void *info) {
 
   dispatch_info_t *inf = (dispatch_info_t*)info;
@@ -756,7 +943,7 @@ static void *Collector( void *info) {
           case REC_data:
             tmp_elem = LLSTget( lst);
             if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
-              rec = SNetBufGet( current_buf);
+              rec = SNetBufGet( tmp_elem->buf);
               SNetBufPut( outbuf, rec);
             }
             else {
@@ -771,7 +958,7 @@ static void *Collector( void *info) {
           case REC_sync:
             tmp_elem = LLSTget( lst);
             if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
-             rec = SNetBufGet( current_buf);
+             rec = SNetBufGet( tmp_elem->buf);
              tmp_elem = LLSTget( lst);
              tmp_elem->buf = SNetRecGetBuffer( rec);
              LLSTset( lst, tmp_elem);
@@ -787,7 +974,7 @@ static void *Collector( void *info) {
           case REC_collect:
             tmp_elem = LLSTget( lst);
             if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
-              rec = SNetBufGet( current_buf);
+             rec = SNetBufGet( tmp_elem->buf);
              tmp_elem = SNetMemAlloc( sizeof( snet_collect_elem_t));
              tmp_elem->buf = SNetRecGetBuffer( rec);
 // !!             tmp_elem->current = NULL;
@@ -810,7 +997,7 @@ static void *Collector( void *info) {
           case REC_sort_begin:
             tmp_elem = LLSTget( lst);
             if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
-              rec = SNetBufGet( current_buf);
+              rec = SNetBufGet( tmp_elem->buf);
               tmp_elem->current = rec;
               counter += 1;
 
@@ -831,7 +1018,7 @@ static void *Collector( void *info) {
           case REC_sort_end:
             tmp_elem = LLSTget( lst);
             if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
-              rec = SNetBufGet( current_buf);
+              rec = SNetBufGet( tmp_elem->buf);
               sort_end_counter += 1;
               if( sort_end_counter == LLSTgetCount( lst)) {
                 SNetBufPut( outbuf, rec);
@@ -849,7 +1036,7 @@ static void *Collector( void *info) {
           case REC_terminate:
             tmp_elem = LLSTget( lst);
             if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
-              rec = SNetBufGet( current_buf);
+              rec = SNetBufGet( tmp_elem->buf);
               tmp_elem = LLSTget( lst);
               SNetBufDestroy( tmp_elem->buf);
               LLSTremoveCurrent( lst);
@@ -1149,8 +1336,6 @@ static void *DetParallelBoxThread( void *hndl) {
           SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
           SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));          
         }
-
-       
        counter += 1;
        SNetMemFree( match_a); SNetMemFree( match_b);
       break;
@@ -1163,22 +1348,24 @@ static void *DetParallelBoxThread( void *hndl) {
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
+//        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
         SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
-        SNetBufPut( SNetHndGetOutbufferA( hnd), rec);
-        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));
-        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
-        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_end, 0, counter));
-        counter += 1;
+        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCopy( rec));
+        SNetBufPut( SNetHndGetOutbufferB( hnd), rec);
+//        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));
+//        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+//        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_end, 0, counter));
+//        counter += 1;
         break;
       case REC_sort_end:
+//        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
         SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
-        SNetBufPut( SNetHndGetOutbufferA( hnd), rec);
-        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));
-        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
-        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_end, 0, counter));
-        counter += 1;
+        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCopy( rec));
+        SNetBufPut( SNetHndGetOutbufferB( hnd), rec);
+//        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));
+//        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
+//        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_end, 0, counter));
+//        counter += 1;
         break;
       case REC_terminate:
 
@@ -1223,7 +1410,7 @@ extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf, snet_buffer_t* (*bo
   SNetBufPut( outbuf_a, SNetRecCreate( REC_sort_begin, 0, 0));
   SNetBufPut( outbuf_a, SNetRecCreate( REC_collect, outbuf_b));
   SNetBufPut( outbuf_a, SNetRecCreate( REC_sort_end, 0, 0));
-  SNetBufPut( outbuf_b, SNetRecCreate( REC_sort_begin, 0, 0));
+//  SNetBufPut( outbuf_b, SNetRecCreate( REC_sort_begin, 0, 0));
   SNetBufPut( outbuf_b, SNetRecCreate( REC_sort_end, 0, 0));  
   box_thread = SNetMemAlloc( sizeof( pthread_t));
   pthread_create( box_thread, NULL, DetParallelBoxThread, (void*)hnd);
@@ -1472,7 +1659,7 @@ static void *DetStarBoxThread( void *hndl) {
         
           SNetBufPut( real_outbuf, sort_begin);
           if( starbuf != NULL) {
-            SNetBufPut( our_outbuf, sort_begin);
+            SNetBufPut( our_outbuf, SNetRecCopy( sort_begin));
           }
           
           if( MatchesExitPattern( rec, exit_tags)) {
@@ -1482,14 +1669,14 @@ static void *DetStarBoxThread( void *hndl) {
             if( starbuf == NULL) {
               starbuf = SNetSerial( our_outbuf, box, self);        
               SNetBufPut( real_outbuf, SNetRecCreate( REC_collect, starbuf));
-              SNetBufPut( our_outbuf, sort_begin); 
+//              SNetBufPut( our_outbuf, sort_begin); 
             }
             SNetBufPut( our_outbuf, rec);
           }
 
           SNetBufPut( real_outbuf, sort_end);
           if( starbuf != NULL) {
-            SNetBufPut( our_outbuf, sort_end);
+            SNetBufPut( our_outbuf, SNetRecCopy( sort_end));
           }
           counter += 1;
         }
@@ -1503,7 +1690,7 @@ static void *DetStarBoxThread( void *hndl) {
              // starbuf is returned by self, which is SNetStarIncarnate
              starbuf = SNetSerial( our_outbuf, box, self);        
              SNetBufPut( real_outbuf, SNetRecCreate( REC_collect, starbuf));
-             SNetBufPut( our_outbuf, sort_begin); /* sort_begin is set in "case REC_sort_xxx" */
+//             SNetBufPut( our_outbuf, sort_begin); /* sort_begin is set in "case REC_sort_xxx" */
           }
           SNetBufPut( our_outbuf, rec);
          }
@@ -1526,14 +1713,14 @@ static void *DetStarBoxThread( void *hndl) {
         }
         SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
         if( starbuf != NULL) {
-          SNetBufPut( our_outbuf, rec);
+          SNetBufPut( our_outbuf, SNetRecCopy( rec));
         }
         else {
           if( SNetRecGetDescriptor( rec) == REC_sort_begin) {
-            sort_begin = rec;
+            sort_begin = SNetRecCopy( rec);
           }
           else {
-            sort_end = rec;
+            sort_end = SNetRecCopy( rec);
           }
         }
         break;
@@ -1906,7 +2093,7 @@ static void *SplitBoxThread( void *hndl) {
             SNetBufPut( elem->buf, rec); // last rec is not copied.
           }
           else {
-            SNetBufPut( elem->buf, RECcopy( rec)); // COPY
+            SNetBufPut( elem->buf, SNetRecCopy( rec)); // COPY
           }
         } 
         break;
@@ -2024,7 +2211,7 @@ static void *DetSplitBoxThread( void *hndl) {
           
           tmp = boxfun( elem->buf);
           SNetBufPut( initial, SNetRecCreate( REC_collect, tmp));
-          SNetBufPut( tmp, SNetRecCreate( REC_sort_begin, 0, 0));
+//          SNetBufPut( tmp, SNetRecCreate( REC_sort_begin, 0, 0));
           SNetBufPut( tmp, SNetRecCreate( REC_sort_end, 0, 0));
 
           SNetBufPut( initial, SNetRecCreate( REC_sort_end, 0, 0));
@@ -2047,13 +2234,13 @@ static void *DetSplitBoxThread( void *hndl) {
             elem->buf = SNetBufCreate( BUFFER_SIZE);
             LLSTadd( repos, elem);
             SNetBufPut( initial, SNetRecCreate( REC_collect, boxfun( elem->buf)));
-            SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter));
+//            SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter));
           }
           if( i == utag_val) {
             SNetBufPut( elem->buf, rec); // last rec is not copied.
           }
           else {
-            SNetBufPut( elem->buf, RECcopy( rec)); // COPY
+            SNetBufPut( elem->buf, SNetRecCopy( rec)); // COPY
           }
         }
 
