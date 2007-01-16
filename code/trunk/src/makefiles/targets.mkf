@@ -136,7 +136,7 @@ cb              = cb.o
 global          = main.o config_file.o init.o usage.o memory.o lookup_table.o \
                   globals.o options.o ctinfo.o phase.o phase_drivers.o                  
 
-support         = buffer.o list.o str.o system.o maths.o
+support         = buffer.o str.o system.o maths.o
 
 tree            = check.o check_attribs.o check_lib.o check_mem.o \
                   check_node.o checktst.o free.o free_attribs.o free_node.o \
