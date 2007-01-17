@@ -172,7 +172,7 @@ extern snet_handle_t *SNetOut( snet_handle_t *hnd, int variant_num, ...) {
 
   // set values from box
 
-  if( variant_num > 0) { /* if variant_num == 0 => box produced nothing (empty to empty) */
+  if( variant_num > 0) { /* if variant_num == 0 => box produced nothing (empty) */
 
    venc = SNetTencGetVariant( SNetHndGetType( hnd), variant_num);
    out_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( venc));
@@ -639,7 +639,6 @@ static void *DetCollector( void *info) {
 
   dispatch_info_t *inf = (dispatch_info_t*)info;
   snet_buffer_t *outbuf = inf->to_buf;
-  snet_buffer_t *current_buf;
   sem_t *sem;
   snet_record_t *rec;
   linked_list_t *lst;
@@ -710,7 +709,6 @@ static void *DetCollector( void *info) {
              rec = SNetBufGet( tmp_elem->buf);
              new_elem = SNetMemAlloc( sizeof( snet_collect_elem_t));
              new_elem->buf = SNetRecGetBuffer( rec);
-// !!             tmp_elem->current = NULL;
              if( current_sort_rec == NULL) {
                new_elem->current = NULL;
              }
@@ -742,11 +740,11 @@ static void *DetCollector( void *info) {
                   SNetBufPut( outbuf, rec);
                 }
                 else {
-                  // destroy the record, if level is 0 then the collector just consumes it
+                   SNetRecDestroy( rec);
                 }
               }
               else {
-                //SNetRecDestroy( rec);
+                 SNetRecDestroy( rec);
               }
             }
             else {
@@ -758,7 +756,6 @@ static void *DetCollector( void *info) {
             tmp_elem = LLSTget( lst);
             if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
               rec = SNetBufGet( tmp_elem->buf);
-//              tmp_elem->current = SNetRecCopy( rec);
               sort_end_counter += 1;
 
               if( sort_end_counter == LLSTgetCount( lst)) {
@@ -769,11 +766,11 @@ static void *DetCollector( void *info) {
                   SNetBufPut( outbuf, rec);
                 }
                 else {
-                  // destroy the record, if level is 0 then the collector just consumes it
+                  SNetRecDestroy( rec);
                 }
               }
               else {
-                //SNetRecDestroy( rec);
+                SNetRecDestroy( rec);
               }
             }
             else {
@@ -982,8 +979,7 @@ static void *Collector( void *info) {
                tmp_elem->current = NULL;
              }
              else {
-               tmp_elem->current = SNetRecCreate( REC_sort_begin, 
-                                  SNetRecGetLevel( current_sort_rec), SNetRecGetNum( current_sort_rec));
+               tmp_elem->current = SNetRecCopy( current_sort_rec);
              }
              LLSTadd( lst, tmp_elem);
              SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
@@ -998,16 +994,17 @@ static void *Collector( void *info) {
             tmp_elem = LLSTget( lst);
             if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
               rec = SNetBufGet( tmp_elem->buf);
-              tmp_elem->current = rec;
+              tmp_elem->current = SNetRecCopy( rec);
               counter += 1;
 
               if( counter == LLSTgetCount( lst)) {
-                current_sort_rec = rec;
+                SNetRecDestroy( current_sort_rec);
+                current_sort_rec = SNetRecCopy( rec);
                 counter = 0;
                 SNetBufPut( outbuf, rec);
               }
               else {
-                //SNetRecDestroy( rec);
+                SNetRecDestroy( rec);
               }
             }
             else {
@@ -1025,7 +1022,7 @@ static void *Collector( void *info) {
                 sort_end_counter = 0;
               }
               else {
-                //SNetRecDestroy( rec);
+                SNetRecDestroy( rec);
               }
             }
             else {
@@ -1043,7 +1040,7 @@ static void *Collector( void *info) {
               SNetMemFree( tmp_elem);
               if( LLSTgetCount( lst) == 0) {
                 terminate = true;
-                SNetBufPut( outbuf, rec);
+               SNetBufPut( outbuf, rec);
                SNetBufBlockUntilEmpty( outbuf);
                SNetBufDestroy( outbuf);
               }
@@ -1636,7 +1633,7 @@ static void *DetStarBoxThread( void *hndl) {
   snet_typeencoding_t *exit_tags;
   snet_record_t *rec;
  
-  snet_record_t *sort_begin = NULL, *sort_end;
+  snet_record_t *sort_begin = NULL, *sort_end = NULL;
   int counter = 0;
 
 
@@ -1654,10 +1651,11 @@ static void *DetStarBoxThread( void *hndl) {
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
         if( !( SNetHndIsIncarnate( hnd))) { 
+          SNetRecDestroy( sort_begin); SNetRecDestroy( sort_end);
           sort_begin = SNetRecCreate( REC_sort_begin, 0, counter);
           sort_end = SNetRecCreate( REC_sort_end, 0, counter);
         
-          SNetBufPut( real_outbuf, sort_begin);
+          SNetBufPut( real_outbuf, SNetRecCopy( sort_begin));
           if( starbuf != NULL) {
             SNetBufPut( our_outbuf, SNetRecCopy( sort_begin));
           }
@@ -1674,7 +1672,7 @@ static void *DetStarBoxThread( void *hndl) {
             SNetBufPut( our_outbuf, rec);
           }
 
-          SNetBufPut( real_outbuf, sort_end);
+          SNetBufPut( real_outbuf, SNetRecCopy( sort_end));
           if( starbuf != NULL) {
             SNetBufPut( our_outbuf, SNetRecCopy( sort_end));
           }
@@ -1711,18 +1709,21 @@ static void *DetStarBoxThread( void *hndl) {
         if( !( SNetHndIsIncarnate( hnd))) {
           SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
         }
-        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        SNetBufPut( SNetHndGetOutbuffer( hnd), SNetRecCopy( rec));
         if( starbuf != NULL) {
           SNetBufPut( our_outbuf, SNetRecCopy( rec));
         }
         else {
           if( SNetRecGetDescriptor( rec) == REC_sort_begin) {
+            SNetRecDestroy( sort_begin);
             sort_begin = SNetRecCopy( rec);
           }
           else {
+            SNetRecDestroy( sort_end);
             sort_end = SNetRecCopy( rec);
           }
         }
+        SNetRecDestroy( rec);
         break;
       case REC_terminate:
 

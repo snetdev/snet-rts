@@ -43,6 +43,7 @@ typedef struct {
   void **fields;
   int *tags;
   int *btags;
+  snet_lang_descr_t lang;
 } data_rec_t;
 
 typedef struct {
@@ -145,8 +146,8 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
       rec->rec->data_rec->tags = SNetMemAlloc( SNetTencGetNumTags( v_enc) * sizeof( int));
       rec->rec->data_rec->btags = SNetMemAlloc( SNetTencGetNumBTags( v_enc) * sizeof( int));
       rec->rec->data_rec->v_enc = v_enc;
+      rec->rec->data_rec->lang = snet_lang_sac;
       break;
-
     case REC_sync:
       rec->rec = SNetMemAlloc( sizeof( snet_record_types_t));
       rec->rec->sync_rec = SNetMemAlloc( sizeof( sync_rec_t));
@@ -538,6 +539,7 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
       for( i=0; i<SNetRecGetNumFields( rec); i++) {
         new_rec->rec->data_rec->fields[i] = rec->rec->data_rec->fields[i]; 
       }
+      new_rec->rec->data_rec->lang = rec->rec->data_rec->lang;
       break;
     case REC_sort_begin:
       new_rec = SNetRecCreate( rec->rec_descr,  rec->rec->sort_begin_rec->level,  rec->rec->sort_begin_rec->num);
@@ -552,6 +554,38 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
 
   return( new_rec);
 }
+
+extern snet_lang_descr_t SNetRecGetLanguage( snet_record_t *rec) {
+
+  snet_lang_descr_t res;
+
+  switch( rec->rec_descr) {
+    case REC_data:
+      res = rec->rec->data_rec->lang;
+      break;
+    default:
+      printf("\n\n ** Fatal Error ** : Wrong type in SNetGetLanguage() (%d)"
+             "\n\n", rec->rec_descr);
+      exit( 1);
+      break;
+  }  
+  return( res);
+}
+
+extern void SNetRecSetLanguage( snet_record_t *rec, snet_lang_descr_t lang) {
+
+  switch( rec->rec_descr) {
+    case REC_data:
+      rec->rec->data_rec->lang = lang;
+      break;
+    default:
+      printf("\n\n ** Fatal Error ** : Wrong type in SNetSetLanguage() (%d)"
+             "\n\n", rec->rec_descr);
+      exit( 1);
+      break;
+  }  
+}
+
 
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec) {
   return( GetVEnc( rec));
