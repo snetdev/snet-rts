@@ -167,10 +167,9 @@ print           = print.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-common          = memfun.o
+common          = memfun.o handle.o record.o typeencode.o
 
-posix           = buffer.o record.o handle.o typeencode.o graphics.o \
-                  snetentities.o
+posix           = buffer.o graphics.o snetentities.o
 
 
 ###############################################################################

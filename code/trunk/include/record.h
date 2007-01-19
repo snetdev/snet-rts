@@ -32,6 +32,19 @@ typedef enum {
 } snet_record_descr_t;
 
 
+
+/*
+ * descriptor for records
+ * describes which language was used to create the fields in this record.
+ */
+
+typedef enum {
+	snet_lang_sac,
+	snet_lang_c
+} snet_lang_descr_t;
+
+
+
 /*
  * Allocates memory for a record and initialises
  * the datastructe. 
@@ -285,6 +298,9 @@ extern void SNetRecSetLevel( snet_record_t *rec, int value);
 extern int SNetRecGetNum( snet_record_t *rec);
 extern int SNetRecGetLevel( snet_record_t *rec);
 
+
+extern snet_lang_descr_t SNetRecGetLanguage( snet_record_t *rec);
+extern void SNetRecSetLanguage( snet_record_t *rec, snet_lang_descr_t lang);
 
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec);
 

@@ -658,7 +658,7 @@ snet_buffer_t *SER_predicate_compute( snet_buffer_t *inbuf) {
 snet_buffer_t *starnet2( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
-  outbuf =  SNetStarIncarnate( inbuf, &SER_predicate_compute, &starnet2, 
+  outbuf =  SNetStarDetIncarnate( inbuf, &SER_predicate_compute, &starnet2, 
                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 0),
@@ -672,7 +672,7 @@ snet_buffer_t *starnet( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf =  SNetStar( inbuf, &SER_predicate_compute, &starnet2, 
+  outbuf =  SNetStarDet( inbuf, &SER_predicate_compute, &starnet2, 
                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 0),
