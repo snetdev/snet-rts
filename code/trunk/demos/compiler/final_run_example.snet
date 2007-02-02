@@ -30,10 +30,8 @@ connect compB;
 net compABC___SR__SR ({C} -> {P})
 connect compC;
 
-/* Optimization is not yet implemented
 net compABC ({A} -> {P}, {B} -> {Q}, {C} -> {P})
 connect || compABC___SL compABC___SR__SL compABC___SR__SR;
-*/
 
 net example__split ({A,B,<T>} -> {A,<T>} | {B,<T>})
 connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
