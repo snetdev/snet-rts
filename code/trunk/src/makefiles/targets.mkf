@@ -22,8 +22,8 @@ targets_compiler_prod     := snetc.prod
 targets_compiler_efence   := snetc.efence
 targets_compiler_default  := $(targets_compiler_devel)
 
-targets_runtime_devel     := libsnet.a
-targets_runtime_prod      := libsnet.prod.a
+targets_runtime_devel     := libsnet.a 
+targets_runtime_prod      := libsnet.prod.a 
 targets_runtime_default   := $(targets_runtime_devel)
 
 targets_tools_devel       := FeederFront.devel RecordInspector.devel
@@ -95,9 +95,9 @@ maketools       = cse cb
 compiler        = tree global support parse preproc flat typeinf opt postproc \
                   codegen print
 
-runtime         = common posix
+runtime         = common posix  
 
-tools           = graphics
+tools           = RecordInspector FeederFront 
 
 demo            = factorial graphicFactorial
 
@@ -167,10 +167,9 @@ print           = print.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-common          = memfun.o handle.o record.o typeencode.o
+common          = memfun.o handle.o record.o typeencode.o 
 
 posix           = buffer.o graphics.o snetentities.o
-
 
 ###############################################################################
 #
@@ -179,7 +178,8 @@ posix           = buffer.o graphics.o snetentities.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-graphics        = FeederFront.o RecordInspector.o
+FeederFront        = FeederFront.o 
+RecordInspector	   = RecordInspector.o
 
 
 ###############################################################################

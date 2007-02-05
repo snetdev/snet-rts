@@ -5,7 +5,8 @@
 // TODO: remove union from vector (not needed anymore)
 
 
-
+#include <stdio.h>
+#include <stdlib.h>
 #include <memfun.h>
 
 #include <typeencode.h>
@@ -29,10 +30,6 @@
           va_end( args);
 
           
-
-#define TENC_DESTROY_VEC( NAME) \
-          SNetMemFree( vect->fields.NAME);\
-          SNetMemFree( vect);         
 
 
 #define REMOVE_FROM_TENC( NAMES, TENCNUM, TENCNAMES)\
@@ -122,13 +119,11 @@ struct patternset {
 /* *********************************************************** */
 
 static void DestroyFieldVector( snet_vector_t *vect) {
-  TENC_DESTROY_VEC( ints)
+
+  SNetMemFree( vect->fields.ints);
+  SNetMemFree( vect);         
 }
 
-
-/*static void DestroyVariantVector( snet_vector_t *vect) {
-  TENC_DESTROY_VEC( v_encodes)
-}*/
 
 
 static int *GetIntField( snet_vector_t *vect) {
@@ -156,7 +151,6 @@ static void Rename( snet_vector_t *vec, int name, int newName) {
 
   int i;
 
-
   i = 0; 
   while( (vec->num > i) &&
          (vec->fields.ints[ i] != name)) {
@@ -164,7 +158,9 @@ static void Rename( snet_vector_t *vec, int name, int newName) {
   }
 
   if( i == vec->num) {
-    //TODO: handle this error (not found)
+    printf("\n\n ** Fatal Error ** : Couldn't find name in vector.\n"
+           "                     This is a bug in the runtime system.\n\n");
+    exit( 1);
   }
 
   vec->fields.ints[ i] = newName;
@@ -389,6 +385,11 @@ extern snet_variantencoding_t *SNetTencGetVariant( snet_typeencoding_t *type, in
 
 extern void SNetDestroyTypeEncoding( snet_typeencoding_t *t_enc) {
 
+  int i;
+
+  for( i=0; i<t_enc->num; i++) {
+    SNetTencDestroyVariantEncoding( ( t_enc->variants)[i]);
+  }
   SNetMemFree( t_enc->variants);
   SNetMemFree( t_enc);
 }

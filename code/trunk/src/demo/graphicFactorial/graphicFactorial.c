@@ -75,7 +75,7 @@ snet_handle_t *leq1( snet_handle_t *hnd, void *field_x) {
     *p = false;
   }
   
-  SNetOut( hnd, 1, (void*)f_x, (void*)p);
+  SNetOutRaw( hnd, 1, (void*)f_x, (void*)p);
 
   return( hnd);
 }
@@ -116,10 +116,10 @@ snet_handle_t *condif( snet_handle_t *hnd, void *field_p) {
    bool *p = (bool*) field_p;
 
   if( *p) {
-    SNetOut( hnd, 1, 0);
+    SNetOutRaw( hnd, 1, 0);
   }
   else {
-    SNetOut( hnd, 2, 0);
+    SNetOutRaw( hnd, 2, 0);
   }
 
   SNetMemFree( p);
@@ -236,8 +236,8 @@ snet_handle_t *dupl( snet_handle_t *hnd, void *field_x, void *field_r) {
   *f_r = *(int*)field_r;
 
 
-  SNetOut( hnd, 1, (void*)f_x1);
-  SNetOut( hnd, 2, (void*)f_x2, (void*)f_r);
+  SNetOutRaw( hnd, 1, (void*)f_x1);
+  SNetOutRaw( hnd, 2, (void*)f_x2, (void*)f_r);
 
   return( hnd);
 }
@@ -285,7 +285,7 @@ snet_handle_t *sub( snet_handle_t *hnd, void *field_x) {
   a = SNetMemAlloc( sizeof( int));
 
   *a = *((int*)field_x) - 1;
-  SNetOut( hnd, 1, (void*)a);
+  SNetOutRaw( hnd, 1, (void*)a);
 
   return( hnd);
 }
@@ -328,7 +328,7 @@ snet_handle_t *mult( snet_handle_t *hnd, void *field_x, void *field_r) {
   b = SNetMemAlloc( sizeof( int));
 
   *b = *((int*)field_x) * *((int*)field_r);
-  SNetOut( hnd, 1, (void*)b);
+  SNetOutRaw( hnd, 1, (void*)b);
 
   return( hnd);
 }
@@ -430,12 +430,12 @@ snet_buffer_t *SER_sync_filter( snet_buffer_t *inbuf) {
 snet_buffer_t *starsync2( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
-  outbuf =  SNetStarIncarnate( inbuf, &SYNC_a_b, &starsync2, 
-                        SNetTencTypeEncode( 1,
+  outbuf =  SNetStarIncarnate( inbuf,                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 2, F_xx, F_rr),
                             SNetTencCreateVector( 0),
-                            SNetTencCreateVector( 0))));
+                            SNetTencCreateVector( 0))),
+      &SYNC_a_b, &starsync2);
 
   return( outbuf);
 }
@@ -444,12 +444,12 @@ snet_buffer_t *starsync( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
  
-  outbuf =  SNetStar( inbuf, &SYNC_a_b, &starsync2, 
-                        SNetTencTypeEncode( 1,
+  outbuf =  SNetStar( inbuf,                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 2, F_xx, F_rr),
                             SNetTencCreateVector( 0),
-                            SNetTencCreateVector( 0))));
+                            SNetTencCreateVector( 0))),
+      &SYNC_a_b, &starsync2);
 
   return( outbuf);
 }
@@ -533,8 +533,8 @@ snet_buffer_t *PAR_comp( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-    outbuf = SNetParallel( inbuf, &boxboxsub, &boxboxmult,
-                         SNetTencTypeEncode( 2,
+    outbuf = SNetParallel( inbuf, 
+                        SNetTencTypeEncode( 2,
                            SNetTencVariantEncode( 
                              SNetTencCreateVector( 1, F_x),
                              SNetTencCreateVector( 0),
@@ -542,7 +542,8 @@ snet_buffer_t *PAR_comp( snet_buffer_t *inbuf) {
                            SNetTencVariantEncode(
                              SNetTencCreateVector( 2, F_x, F_r),
                              SNetTencCreateVector( 0),
-                             SNetTencCreateVector( 0))));
+                             SNetTencCreateVector( 0))),
+                           &boxboxsub, &boxboxmult);
  
   return( outbuf);
 }
@@ -635,8 +636,8 @@ snet_buffer_t *PAR_TorF( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-    outbuf = SNetParallel( inbuf, &filterTasSTOP, &SER_case_false,
-                         SNetTencTypeEncode( 2,
+    outbuf = SNetParallel( inbuf, 
+                        SNetTencTypeEncode( 2,
                            SNetTencVariantEncode( 
                              SNetTencCreateVector( 0),
                              SNetTencCreateVector( 1, T_T),
@@ -644,7 +645,8 @@ snet_buffer_t *PAR_TorF( snet_buffer_t *inbuf) {
                            SNetTencVariantEncode(
                              SNetTencCreateVector( 0),
                              SNetTencCreateVector( 1, T_F),
-                             SNetTencCreateVector( 0))));
+                             SNetTencCreateVector( 0))),
+                          &filterTasSTOP, &SER_case_false);
  
   return( outbuf);
 }
@@ -673,12 +675,13 @@ snet_buffer_t *starnet2( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf =  SNetStarIncarnate( inbuf, &SER_predicate_compute, &starnet2, 
-                        SNetTencTypeEncode( 1,
+  outbuf =  SNetStarIncarnate( inbuf, 
+      SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 0),
                             SNetTencCreateVector( 1, T_stop),
-                            SNetTencCreateVector( 0))));
+                            SNetTencCreateVector( 0))),
+      &SER_predicate_compute, &starnet2);
 
   return( outbuf);
 }
@@ -687,12 +690,12 @@ snet_buffer_t *starnet( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf =  SNetStar( inbuf, &SER_predicate_compute, &starnet2, 
-                        SNetTencTypeEncode( 1,
+  outbuf =  SNetStar( inbuf,                         SNetTencTypeEncode( 1,
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 0),
                             SNetTencCreateVector( 1, T_stop),
-                            SNetTencCreateVector( 0))));
+                            SNetTencCreateVector( 0))),
+      &SER_predicate_compute, &starnet2);
 
   return( outbuf);
 }

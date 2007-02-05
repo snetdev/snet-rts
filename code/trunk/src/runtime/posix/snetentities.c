@@ -14,7 +14,7 @@
 
 #include <memfun.h>
 #include <record.h>
-
+#include <lbindings.h>
 #include <bool.h>
 
 
@@ -56,6 +56,9 @@
 int warn_parallel = 0, warn_star = 0;
 
 
+
+#define MC_ISMATCH( name) name->is_match
+#define MC_COUNT( name) name->match_count
 typedef struct {
   bool is_match;
   int match_count;
@@ -162,7 +165,14 @@ for( i=0; i<TENCNUM( venc); i++) {\
 /* ------------------------------------------------------------------------- */
 
 
-extern snet_handle_t *SNetOut( snet_handle_t *hnd, int variant_num, ...) {
+extern snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec) {
+
+  /* empty ... */
+  return( hnd);
+}
+
+
+extern snet_handle_t *SNetOutRaw( snet_handle_t *hnd, int variant_num, ...) {
 
   int i, *names;
   va_list args;
@@ -226,6 +236,8 @@ extern snet_handle_t *SNetOut( snet_handle_t *hnd, int variant_num, ...) {
 
   return( hnd);
 }
+
+
 
 
 /* ------------------------------------------------------------------------- */
@@ -453,6 +465,19 @@ static void LLSTremoveCurrent( linked_list_t *lst) {
 static int LLSTgetCount( linked_list_t *lst) {
   return( lst->elem_count);
 }
+
+static void LLSTdestroy( linked_list_t *lst) {
+
+  if( LLSTgetCount( lst) > 0) {
+    printf(" ** Note ** : Destroying non-empty list. [%d elements]\n\n", 
+           LLSTgetCount( lst));
+  }
+  while( LLSTgetCount( lst) != 0) {
+    LLSTremoveCurrent( lst);
+    LLSTnext( lst);
+  }
+  SNetMemFree( lst);
+}
 /* ========================================================================= */
 
 
@@ -598,6 +623,7 @@ static void *DetCollector( void *info) {
 			               SNetBufPut( outbuf, rec);
 			               SNetBufBlockUntilEmpty( outbuf);
 			               SNetBufDestroy( outbuf);
+                     LLSTdestroy( lst);
 			             }
 			             break;
 			         } // switch
@@ -791,6 +817,7 @@ static void *DetCollector( void *info) {
                 SNetBufPut( outbuf, rec);
                SNetBufBlockUntilEmpty( outbuf);
                SNetBufDestroy( outbuf);
+               LLSTdestroy( lst);
               }
             }
             else {
@@ -974,7 +1001,6 @@ static void *Collector( void *info) {
              rec = SNetBufGet( tmp_elem->buf);
              tmp_elem = SNetMemAlloc( sizeof( snet_collect_elem_t));
              tmp_elem->buf = SNetRecGetBuffer( rec);
-// !!             tmp_elem->current = NULL;
              if( current_sort_rec == NULL) {
                tmp_elem->current = NULL;
              }
@@ -1043,6 +1069,7 @@ static void *Collector( void *info) {
                SNetBufPut( outbuf, rec);
                SNetBufBlockUntilEmpty( outbuf);
                SNetBufDestroy( outbuf);
+               LLSTdestroy( lst);
               }
             }
             else {
@@ -1069,7 +1096,7 @@ static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer,
                                         bool is_det) {
                                           
   snet_buffer_t *outbuf;
-  pthread_t *thread;
+  pthread_t thread;
   dispatch_info_t *buffers;
 
   buffers = SNetMemAlloc( sizeof( dispatch_info_t));
@@ -1079,15 +1106,15 @@ static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer,
   buffers->to_buf = outbuf;
 
 
-  thread = SNetMemAlloc( sizeof( pthread_t));
+//  thread = SNetMemAlloc( sizeof( pthread_t));
   
   if( is_det) {
-    pthread_create( thread, NULL, DetCollector, (void*)buffers);
+    pthread_create( &thread, NULL, DetCollector, (void*)buffers);
   }
   else {
-    pthread_create( thread, NULL, Collector, (void*)buffers);
+    pthread_create( &thread, NULL, Collector, (void*)buffers);
   }
-  pthread_detach( *thread);
+  pthread_detach( thread);
 
   return( outbuf);
 }
@@ -1125,24 +1152,23 @@ static bool ContainsName( int name, int *names, int num) {
   return( found);
 }
 
-static match_count_t *CheckMatch( snet_record_t *rec, snet_variantencoding_t *venc) {
+static void *CheckMatch( snet_record_t *rec, snet_variantencoding_t *venc, match_count_t *mc) {
 
   int i;
-  match_count_t *mc;
 
-  mc = SNetMemAlloc( sizeof( match_count_t));
-
-  mc->match_count = 0;
-  mc->is_match = true;
+  MC_COUNT( mc) = 0;
+  MC_ISMATCH( mc) = true;
 
   if( ( SNetRecGetNumFields( rec) < SNetTencGetNumFields( venc)) ||
       ( SNetRecGetNumTags( rec) < SNetTencGetNumTags( venc)) ||
       ( SNetRecGetNumBTags( rec) != SNetTencGetNumBTags( venc))) {
-    mc->is_match = false;
+    MC_ISMATCH( mc) = false;
   }
   else { // is_match is set to value inside the macros
-    FIND_NAME_LOOP( SNetRecGetNumFields, SNetTencGetNumFields, SNetRecGetFieldNames, SNetTencGetFieldNames);
-    FIND_NAME_LOOP( SNetRecGetNumTags, SNetTencGetNumTags, SNetRecGetTagNames, SNetTencGetTagNames);
+    FIND_NAME_LOOP( SNetRecGetNumFields, SNetTencGetNumFields,
+        SNetRecGetFieldNames, SNetTencGetFieldNames);
+    FIND_NAME_LOOP( SNetRecGetNumTags, SNetTencGetNumTags, 
+        SNetRecGetTagNames, SNetTencGetTagNames);
 
     for( i=0; i<SNetRecGetNumBTags( rec); i++) {
        if( !( ContainsName( 
@@ -1152,10 +1178,10 @@ static match_count_t *CheckMatch( snet_record_t *rec, snet_variantencoding_t *ve
                )
              )
            ) {
-        mc->is_match = false;
+        MC_ISMATCH( mc) = false;
       }
       else {
-        mc->match_count += 1;
+       MC_COUNT( mc) += 1;
       }
     }
 
@@ -1166,23 +1192,65 @@ static match_count_t *CheckMatch( snet_record_t *rec, snet_variantencoding_t *ve
 
 // Checks for "best match" and decides which buffer to dispatch to
 // in case of a draw.
-static snet_buffer_t *BestMatch( match_count_t *a, match_count_t *b,
-                              snet_buffer_t *buf_a, snet_buffer_t *buf_b) {
+static int BestMatch( match_count_t **counter, int num) {
 
-  snet_buffer_t *ret_buf;
+  int i;
+  int res, max;
   
-  ret_buf = (a->match_count >= b->match_count) ? buf_a : buf_b;
+  res = -1;
+  max = 0;
+  for( i=0; i<num; i++) {
+    res = (MC_COUNT( counter[i]) > max) ? i : res;
+  }
 
-  return( ret_buf);
+  return( res);
+}
+
+
+static void PutToBuffers( snet_buffer_t **buffers, int num, 
+                          int idx, snet_record_t *rec, int counter, bool det) {
+
+  int i;
+
+  for( i=0; i<num; i++) {
+    if( det) {
+      SNetBufPut( buffers[i], SNetRecCreate( REC_sort_begin, 0, counter));
+    }
+
+    if( i == idx) {
+      SNetBufPut( buffers[i], rec);
+    }
+
+    if( det) {
+      SNetBufPut( buffers[i], SNetRecCreate( REC_sort_end, 0, counter));
+    }
+  }
 }
 
 static void *ParallelBoxThread( void *hndl) {
 
+  int i, num, buf_index;
   snet_handle_t *hnd = (snet_handle_t*) hndl;
   snet_record_t *rec;
   snet_buffer_t *go_buffer = NULL;
-  match_count_t *match_a, *match_b;
+  match_count_t **matchcounter;
+  snet_buffer_t **buffers;
+  snet_typeencoding_t *types;
+
+  bool is_det = SNetHndIsDet( hnd);
+  
   bool terminate = false;
+  int counter = 1;
+
+  buffers = SNetHndGetOutbuffers( hnd);
+
+  types = SNetHndGetType( hnd);
+  num = SNetTencGetNumVariants( types);
+  matchcounter = SNetMemAlloc( num * sizeof( match_count_t*));
+
+  for( i=0; i<num; i++) {
+    matchcounter[i] = SNetMemAlloc( sizeof( match_count_t));
+  }
 
   while( !( terminate)) {
     
@@ -1190,28 +1258,16 @@ static void *ParallelBoxThread( void *hndl) {
 
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
-        match_a = CheckMatch( rec, SNetTencGetVariant( SNetHndGetType( hnd), 1));
-        match_b = CheckMatch( rec, SNetTencGetVariant( SNetHndGetType( hnd), 2));
+        for( i=0; i<num; i++) {
+          CheckMatch( rec, SNetTencGetVariant( types, i+1), matchcounter[i]);
+        }
  
-        // this is for testing only and may be deleted once we have
-        // a proper type checker
-        if( !( match_a->is_match) && !( match_b->is_match)) {
-          printf("\n\n ** Fatal Error ** : Record doesn't match! (SNETparallel)\n\n");
-          exit( 1);
-        }
-  
-        if( match_a->is_match && match_b->is_match) {
-          go_buffer = BestMatch( match_a, match_b, 
-                                 SNetHndGetOutbufferA( hnd), SNetHndGetOutbufferB( hnd));
-        }
-        else if( match_a->is_match) {
-          go_buffer = SNetHndGetOutbufferA( hnd);
+        buf_index = BestMatch( matchcounter, num);
+        printf("\nindex: %d\n", buf_index);
+        go_buffer = buffers[ buf_index];
 
-        } else {
-         go_buffer = SNetHndGetOutbufferB( hnd);
-        } 
-       SNetBufPut( go_buffer, rec); 
-       SNetMemFree( match_a); SNetMemFree( match_b);
+        PutToBuffers( buffers, num, buf_index, rec, counter, is_det); 
+        counter += 1;
       break;
       case REC_sync:
         SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
@@ -1222,23 +1278,32 @@ static void *ParallelBoxThread( void *hndl) {
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
-        SNetBufPut( SNetHndGetOutbufferA( hnd), 
-            SNetRecCreate( REC_sort_begin, SNetRecGetLevel( rec), SNetRecGetNum( rec)));
-        SNetBufPut( SNetHndGetOutbufferB( hnd), rec);
-        break;
       case REC_sort_end:
-        SNetBufPut( SNetHndGetOutbufferA( hnd), 
-            SNetRecCreate( REC_sort_end, SNetRecGetLevel( rec), SNetRecGetNum( rec)));
-        SNetBufPut( SNetHndGetOutbufferB( hnd), rec);        
+        if( is_det) {
+          SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        }
+        for( i=0; i<(num-1); i++) {
+
+          SNetBufPut( buffers[i], SNetRecCopy( rec));
+        }
+        SNetBufPut( buffers[num-1], rec);
         break;
       case REC_terminate:
         terminate = true;
-        SNetBufPut( SNetHndGetOutbufferA( hnd), rec);
-        SNetBufPut( SNetHndGetOutbufferB( hnd), rec);
-        SNetBufBlockUntilEmpty( SNetHndGetOutbufferA( hnd));
-        SNetBufBlockUntilEmpty( SNetHndGetOutbufferB( hnd));
-        SNetBufDestroy( SNetHndGetOutbufferA( hnd));
-        SNetBufDestroy( SNetHndGetOutbufferB( hnd));
+        if( is_det) {
+          for( i=0; i<num; i++) {
+            SNetBufPut( buffers[i], 
+                SNetRecCreate( REC_sort_begin, 0, counter));
+          }
+        }
+        for( i=0; i<num; i++) {
+          SNetBufPut( buffers[i], rec);
+          SNetBufBlockUntilEmpty( buffers[i]);
+          SNetBufDestroy( buffers[i]);
+          SNetMemFree( matchcounter[i]);
+        }
+        SNetMemFree( buffers);
+        SNetMemFree( matchcounter);
         SNetHndDestroy( hnd);
         break;
     }
@@ -1248,25 +1313,45 @@ static void *ParallelBoxThread( void *hndl) {
 }
 
 
+/*
+extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf, 
+                                    snet_typeencoding_t *types, 
+                                    ...) {
 
-extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),
-                                   snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *outtype) {
+  int i, num;
+  va_list args;
+
   snet_handle_t *hnd;
   snet_buffer_t *outbuf;
-  snet_buffer_t *transit_a, *transit_b;
-  snet_buffer_t *outbuf_a, *outbuf_b;
+  snet_buffer_t **transits;
+  snet_buffer_t **outbufs;
+  snet_buffer_t* (*fun)(snet_buffer_t*);
   pthread_t *box_thread;
-
-  transit_a = SNetBufCreate( BUFFER_SIZE);
-  transit_b = SNetBufCreate( BUFFER_SIZE);
-
-  hnd = SNetHndCreate( HND_parallel, inbuf, transit_a, transit_b, outtype);
   
-  outbuf_a = (*box_a)( transit_a);
-  outbuf_b = (*box_b)( transit_b);
 
-  outbuf = CreateCollector( outbuf_a);
-  SNetBufPut( outbuf_a, SNetRecCreate( REC_collect, outbuf_b));
+  num = SNetTencGetNumVariants( types);
+  outbufs = SNetMemAlloc( num * sizeof( snet_buffer_t*));
+  transits = SNetMemAlloc( num * sizeof( snet_buffer_t*));
+
+  va_start( args, types);
+
+  
+  transits[0] = SNetBufCreate( BUFFER_SIZE);
+  fun = va_arg( args, void*);
+  outbufs[0] = (*fun)( transits[0]);
+
+  outbuf = CreateCollector( outbufs[0]);
+  
+  for( i=1; i<num; i++) {
+
+    transits[i] = SNetBufCreate( BUFFER_SIZE);
+
+    fun = va_arg( args, snet_buffer_t*);
+    outbufs[i] = (*fun)( transits[i]);
+    SNetBufPut( outbufs[0], SNetRecCreate( REC_collect, outbufs[i]));
+  }
+
+  hnd = SNetHndCreate( HND_parallel, inbuf, transits, types);
 
   box_thread = SNetMemAlloc( sizeof( pthread_t));
   pthread_create( box_thread, NULL, ParallelBoxThread, (void*)hnd);
@@ -1274,16 +1359,17 @@ extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf, snet_buffer_t* (*box_a
  
   return( outbuf);
 }
-
+*/
 
 /* B------------------------------------------------------- */
 /* B Det Parallel Playground ------------------------------ */
 /* B------------------------------------------------------- */
 
 
-
+/*
 static void *DetParallelBoxThread( void *hndl) {
 
+  
   snet_handle_t *hnd = (snet_handle_t*) hndl;
   snet_record_t *rec;
   snet_buffer_t *go_buffer = NULL;
@@ -1319,7 +1405,7 @@ static void *DetParallelBoxThread( void *hndl) {
          go_buffer = SNetHndGetOutbufferB( hnd);
         } 
         
-        if( go_buffer == SNetHndGetOutbufferA( hnd)) { /* !!! implement this properly !!! */ 
+        if( go_buffer == SNetHndGetOutbufferA( hnd)) {
           SNetBufPut( go_buffer, SNetRecCreate( REC_sort_begin, 0, counter));
           SNetBufPut( go_buffer, rec); 
           SNetBufPut( go_buffer, SNetRecCreate( REC_sort_end, 0, counter));
@@ -1345,24 +1431,14 @@ static void *DetParallelBoxThread( void *hndl) {
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
-//        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
         SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
         SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCopy( rec));
         SNetBufPut( SNetHndGetOutbufferB( hnd), rec);
-//        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));
-//        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
-//        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_end, 0, counter));
-//        counter += 1;
         break;
       case REC_sort_end:
-//        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
         SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
         SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCopy( rec));
         SNetBufPut( SNetHndGetOutbufferB( hnd), rec);
-//        SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_end, 0, counter));
-//        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
-//        SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_end, 0, counter));
-//        counter += 1;
         break;
       case REC_terminate:
 
@@ -1370,7 +1446,6 @@ static void *DetParallelBoxThread( void *hndl) {
 
         SNetBufPut( SNetHndGetOutbufferA( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
         SNetBufPut( SNetHndGetOutbufferA( hnd), rec);
-        // counter += 1;
         SNetBufPut( SNetHndGetOutbufferB( hnd), SNetRecCreate( REC_sort_begin, 0, counter));
         SNetBufPut( SNetHndGetOutbufferB( hnd), rec);         
         
@@ -1385,8 +1460,8 @@ static void *DetParallelBoxThread( void *hndl) {
 
   return( NULL);
 }
-
-
+*/
+/*
 extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),
                                    snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *outtype) {
   snet_handle_t *hnd;
@@ -1415,8 +1490,114 @@ extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf, snet_buffer_t* (*bo
  
   return( outbuf);
 }
+*/
 
 
+static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf, 
+                                           snet_typeencoding_t *types, 
+                                           void **funs, bool is_det) {
+
+  int i;
+  int num;
+  snet_handle_t *hnd;
+  snet_buffer_t *outbuf;
+  snet_buffer_t **transits;
+  snet_buffer_t **outbufs;
+  snet_buffer_t* (*fun)(snet_buffer_t*);
+  pthread_t *box_thread;
+  
+
+  num = SNetTencGetNumVariants( types);
+  outbufs = SNetMemAlloc( num * sizeof( snet_buffer_t*));
+  transits = SNetMemAlloc( num * sizeof( snet_buffer_t*));
+
+
+  transits[0] = SNetBufCreate( BUFFER_SIZE);
+  fun = funs[0];
+  outbufs[0] = (*fun)( transits[0]);
+
+  if( is_det) {
+    outbuf = CreateDetCollector( outbufs[0]);
+  }
+  else {
+    outbuf = CreateCollector( outbufs[0]);
+  }
+ 
+  if( is_det) {
+    SNetBufPut( outbufs[0], SNetRecCreate( REC_sort_begin, 0, 0));
+  }
+  for( i=1; i<num; i++) {
+
+    transits[i] = SNetBufCreate( BUFFER_SIZE);
+
+    fun = funs[i];
+    outbufs[i] = (*fun)( transits[i]);
+    SNetBufPut( outbufs[0], SNetRecCreate( REC_collect, outbufs[i]));
+    if( is_det) {
+      SNetBufPut( outbufs[i], SNetRecCreate( REC_sort_end, 0, 0));
+    }
+  }
+  
+  if( is_det) {
+    SNetBufPut( outbufs[0], SNetRecCreate( REC_sort_end, 0, 0));
+  }
+  hnd = SNetHndCreate( HND_parallel, inbuf, transits, types, is_det);
+
+  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  pthread_create( box_thread, NULL, ParallelBoxThread, (void*)hnd);
+  pthread_detach( *box_thread);
+
+  SNetMemFree( funs);
+
+  return( outbuf);
+}
+
+
+extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf,
+                                    snet_typeencoding_t *types,
+                                    ...) {
+
+
+  va_list args;
+  int i, num;
+  void **funs;
+
+  num = SNetTencGetNumVariants( types);
+
+  funs = SNetMemAlloc( num * sizeof( void*)); 
+
+  va_start( args, types);
+  
+  for( i=0; i<num; i++) {
+    funs[i] = va_arg( args, void*);
+  }
+  va_end( args);
+
+  return( SNetParallelStartup( inbuf, types, funs, false));
+}
+
+extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf,
+                                       snet_typeencoding_t *types,
+                                       ...) {
+
+
+  va_list args;
+  int i, num;
+  void **funs;
+
+  num = SNetTencGetNumVariants( types);
+
+  funs = SNetMemAlloc( num * sizeof( void*)); 
+
+  va_start( args, types);
+  
+  for( i=0; i<num; i++) {
+    funs[i] = va_arg( args, void*);
+  }
+  va_end( args);
+
+  return( SNetParallelStartup( inbuf, types, funs, true));
+}
 
 /* E------------------------------------------------------- */
 /* E------------------------------------------------------- */
@@ -1427,17 +1608,6 @@ extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf, snet_buffer_t* (*bo
 /*  SNetParallelDet                                                          */
 /* ------------------------------------------------------------------------- */
 
-
-
-extern snet_buffer_t *SNetParallelDet_BACKUP_( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),
-                                  snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *outtype) {
-
-
-
-
-
-  return( SNetParallel( inbuf, box_a, box_b, outtype));
-}
 
 
 /* ------------------------------------------------------------------------- */
@@ -1572,8 +1742,10 @@ static void *StarBoxThread( void *hndl) {
   return( NULL);
 }
 
-extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),  
-                           snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *type) {
+extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf, 
+                                snet_typeencoding_t *type,
+                                snet_buffer_t* (*box_a)(snet_buffer_t*),
+                                snet_buffer_t* (*box_b)(snet_buffer_t*)) {
 
     
   snet_buffer_t *star_outbuf, *dispatch_outbuf;
@@ -1596,8 +1768,9 @@ extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(sn
 }
 
 
-extern snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),
-                              snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *type) {
+extern snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf,
+                                         snet_typeencoding_t *type,
+                                         snet_buffer_t* (*box_a)(snet_buffer_t*),                                                 snet_buffer_t* (*box_b)(snet_buffer_t*)) {
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
@@ -1746,8 +1919,10 @@ static void *DetStarBoxThread( void *hndl) {
   return( NULL);
 }
 
-extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),  
-                           snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *type) {
+extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf,
+                                   snet_typeencoding_t *type,
+                                   snet_buffer_t* (*box_a)(snet_buffer_t*),
+                                   snet_buffer_t* (*box_b)(snet_buffer_t*)) {
 
     
   snet_buffer_t *star_outbuf, *dispatch_outbuf;
@@ -1768,9 +1943,10 @@ extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)
 }
 
 
-extern snet_buffer_t *SNetStarDetIncarnate( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)(snet_buffer_t*),
-                              snet_buffer_t* (*box_b)(snet_buffer_t*), snet_typeencoding_t *type) {
-
+extern snet_buffer_t *SNetStarDetIncarnate( snet_buffer_t *inbuf,
+                                            snet_typeencoding_t *type,  
+                                            snet_buffer_t* (*box_a)(snet_buffer_t*),
+                                            snet_buffer_t* (*box_b)(snet_buffer_t*)) {
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
   pthread_t *box_thread;
@@ -2137,8 +2313,15 @@ static void *SplitBoxThread( void *hndl) {
         for( i=0; i<LLSTgetCount( repos); i++) {
           elem = LLSTget( repos);
           SNetBufPut( (snet_buffer_t*)elem->buf, rec);
+
           LLSTnext( repos);
         }
+        while( LLSTgetCount( repos) > 0) {
+          LLSTremoveCurrent( repos);
+          LLSTnext( repos);
+        }
+        LLSTdestroy( repos);
+
         SNetBufPut( initial, rec);
         break;
     }
@@ -2279,6 +2462,12 @@ static void *DetSplitBoxThread( void *hndl) {
           SNetBufPut( (snet_buffer_t*)elem->buf, rec);
           LLSTnext( repos);
         }
+        while( LLSTgetCount( repos) > 0) {
+          LLSTremoveCurrent( repos);
+          LLSTnext( repos);
+        }
+        LLSTdestroy( repos);
+
         SNetBufPut( initial, SNetRecCreate( REC_sort_begin, 0, counter)); 
         SNetBufPut( initial, rec);
         break;
@@ -2440,6 +2629,9 @@ static void *FilterThread( void *hndl) {
               SNetTencRemoveTag( names, instr->data[0]);
               break;
             case FLT_strip_field:
+//              SNetFreeField( 
+//                  SNetRecGetField( in_rec, instr->data[0]),
+//                  SNetRecGetLanguage( in_rec));
               SNetTencRemoveField( names, instr->data[0]);
               break;
             case FLT_add_tag:
@@ -2459,6 +2651,10 @@ static void *FilterThread( void *hndl) {
               SNetTencRemoveField( names, instr->data[0]);
               break;
             case FLT_copy_field:
+//              SNetRecSetField( out_rec, instr->data[0],
+//                SNetCopyField( 
+//                  SNetRecGetField( in_rec, instr->data[0]),
+//                  SNetRecGetLanguage( in_rec)));
               break;
             case FLT_use_tag:
               SNetRecSetTag( out_rec, instr->data[0],
@@ -2473,6 +2669,9 @@ static void *FilterThread( void *hndl) {
         // flow inherit, remove everthing that is already present in the 
         // outrecord. Renamed fields/tags are removed above.
         for( j=0; j<SNetTencGetNumFields( variant); j++) {
+//          SNetFreeField( 
+//              SNetRecGetField( in_rec, SNetTencGetFieldNames( variant)[j]),
+//              SNetRecGetLanguage( in_rec));
           SNetTencRemoveField( names, SNetTencGetFieldNames( variant)[j]);
         }
         for( j=0; j<SNetTencGetNumTags( variant); j++) {
@@ -2548,8 +2747,7 @@ extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf, snet_typeencoding_t *in_
   }
   va_end( args);
 
-//  outbuf = SNetBufCreate( BUFFER_SIZE);
-  BUF_CREATE( outbuf, BUFFER_SIZE);
+  outbuf = SNetBufCreate( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_filter, inbuf, outbuf, in_type, out_type, set);
 
   box_thread = SNetMemAlloc( sizeof( pthread_t));

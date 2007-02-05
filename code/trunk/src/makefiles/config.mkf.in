@@ -33,7 +33,7 @@ CCPROD_FLAGS := @PDCCFLAGS@ @OSFLAGS@
 CFLAGS       := -DSHOW_MALLOC -DCLEANMEM
 CPROD_FLAGS  := -DDBUG_OFF -DPRODUCTION 
 LIBTOOL      := # $(PROJECT_ROOT)/libtool --silent --mode=link 
-GTKFLAGS		 := @GTKFLAGS@
+GTKFLAGS     := @GTKFLAGS@
 XSLTENGINE   := @XSLT@
 M4PROC       := @M4@
 
@@ -58,9 +58,10 @@ INCS         := -I../../inc \
                 $(patsubst %,-I../%,$(filter-out $(EXCLUDE_INCS),\
                                   $(notdir $(wildcard ../*))))
 LIBS         := @LIBS@ @LEXLIB@ -lm
-GTKLIBS			 := @GTKLIBS@
-SOCKETLIBS	 := @LIB_SOCKET@
-RTLIBS			 := @LIB_RT@
+GTKLIBS	     := @GTKLIBS@
+SOCKETLIBS   := @LIB_SOCKET@
+RTLIBS	     := @LIB_RT@
+MTLIBS	     := @CCMTLINK@
 EFLIBS       := -lefence
 
 CONFIGURED   := $(PROJECT_ROOT)/src/makefiles/config.mkf \

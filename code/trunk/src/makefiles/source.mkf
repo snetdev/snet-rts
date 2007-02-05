@@ -45,7 +45,7 @@ include $(PROJECT_ROOT)/src/makefiles/targets.mkf
 TARGETDIR := $(notdir $(CURDIR))
 
 DEPS := yes
-HIDE := @
+HIDE := 
 
 
 ###############################################################################

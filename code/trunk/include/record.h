@@ -12,7 +12,7 @@
 #include <bool.h>
 #include <constants.h>
 #include <buffer.h>
-
+#include <languages.h>
 
 /* 
  * data structure for the record
@@ -26,22 +26,10 @@ typedef enum {
 	REC_data,
 	REC_sync,
 	REC_collect,
-  REC_sort_begin,
-  REC_sort_end,
+	REC_sort_begin,
+	REC_sort_end,
 	REC_terminate
 } snet_record_descr_t;
-
-
-
-/*
- * descriptor for records
- * describes which language was used to create the fields in this record.
- */
-
-typedef enum {
-	snet_lang_sac,
-	snet_lang_c
-} snet_lang_descr_t;
 
 
 

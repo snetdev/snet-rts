@@ -7,11 +7,12 @@
 #define BUFFER_SIZE 500
 #endif
 
+
 // define initial size of repository for
 // buffers in SNetSplit()
-#ifndef INITIAL_REPOSITORY_SIZE
-#define INITIAL_REPOSITORY_SIZE 10
-#endif
+//#ifndef INITIAL_REPOSITORY_SIZE
+//#define INITIAL_REPOSITORY_SIZE 10
+//#endif
 
 // Used for record entries
 #ifndef UNSET

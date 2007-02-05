@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
-
+#include <unistd.h>
 #include <memfun.h>
 #include <snetentities.h>
 #include <handle.h>
@@ -43,7 +43,11 @@
 
 
 
-
+typedef struct {
+  int num;
+  char **string_names;
+  int *int_names;
+} name_mapping_t;
 
 typedef struct {
   snet_buffer_t *inbuf;
@@ -51,13 +55,14 @@ typedef struct {
   snet_record_t *rec;
   void (*boxfun_a)( snet_handle_t*);
   snet_typeencoding_t *type;
+  name_mapping_t *mapping;
 } box_handle_t;
 
 typedef struct {
   snet_buffer_t *inbuf;
-  snet_buffer_t *outbuf_a;
-  snet_buffer_t *outbuf_b;
+  snet_buffer_t **buffers;
   snet_typeencoding_t *type;
+  bool is_det;
 } parallel_handle_t;
 
 typedef struct {
@@ -107,6 +112,7 @@ struct handle {
   hnd_collection_t *hnd;
 };
 
+
 /*
 struct handle {
   snet_buffer_t *inbuf;
@@ -133,7 +139,15 @@ static void WrongHandleType() {
 
 /* ------------------------------------------------------------------------- */
 
-#define HANDLE hnd->hnd
+#define HANDLE( type) hnd->hnd->type
+#define BOX_HND( component) HANDLE( box_hnd)->component
+#define BOX_HND_MAPPING( component) HANDLE( box_hnd)->mapping->component
+#define PAR_HND( component) HANDLE( parallel_hnd)->component
+#define STAR_HND( component) HANDLE( star_hnd)->component
+#define SYNC_HND( component) HANDLE( sync_hnd)->component
+#define SPLIT_HND( component) HANDLE( split_hnd)->component
+#define FILTER_HND( component) HANDLE( filter_hnd)->component
+
 extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 
   snet_handle_t *hnd;
@@ -148,86 +162,71 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 
   switch( desc) {
 
-    //FILL_HANDLE( PREFIX, INBUF, OUTBUFA, OUTBUFB, REC, FUNA, FUNB, TYPE, PATTERNS, TAGA, TAGB, FILTER)
     case HND_box: {
-            HANDLE->box_hnd = SNetMemAlloc( sizeof( box_handle_t));
-            HANDLE->box_hnd->inbuf = va_arg( args, snet_buffer_t*);
-            HANDLE->box_hnd->outbuf_a = va_arg( args, snet_buffer_t*);
-            HANDLE->box_hnd->rec = va_arg( args, snet_record_t*);
-            HANDLE->box_hnd->boxfun_a = va_arg( args, void*);
-            HANDLE->box_hnd->type = va_arg( args, snet_typeencoding_t*);
-//            FILL_HANDLE( box_hnd, true, true, false, true, true, 
-//                         false, true, false, false, false, false);
+            HANDLE( box_hnd) = SNetMemAlloc( sizeof( box_handle_t));
+            BOX_HND( inbuf) = va_arg( args, snet_buffer_t*);
+            BOX_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
+            BOX_HND( rec) = va_arg( args, snet_record_t*);
+            BOX_HND( boxfun_a) = va_arg( args, void*);
+            BOX_HND( type) = va_arg( args, snet_typeencoding_t*);
+            BOX_HND( mapping) = NULL;
             break;
     }
     case HND_parallel: {
 
-            HANDLE->parallel_hnd = SNetMemAlloc( sizeof( parallel_handle_t));
-            HANDLE->parallel_hnd->inbuf = va_arg( args, snet_buffer_t*);
-            HANDLE->parallel_hnd->outbuf_a = va_arg( args, snet_buffer_t*);
-            HANDLE->parallel_hnd->outbuf_b = va_arg( args, snet_buffer_t*);
-            HANDLE->parallel_hnd->type = va_arg( args, snet_typeencoding_t*);
-//            FILL_HANDLE( parallel_hnd, true, true, true, false, false, 
-//                         false, true, false, false, false, false);
-
+            HANDLE( parallel_hnd) = SNetMemAlloc( sizeof( parallel_handle_t));
+            PAR_HND( inbuf) = va_arg( args, snet_buffer_t*);
+            PAR_HND( buffers) = va_arg( args, snet_buffer_t**);
+            PAR_HND( type) = va_arg( args, snet_typeencoding_t*);
+            PAR_HND( is_det) = va_arg( args, bool);
             break;
     }
     
     case HND_star: {
 
-            HANDLE->star_hnd = SNetMemAlloc( sizeof( star_handle_t));
-            HANDLE->star_hnd->inbuf = va_arg( args, snet_buffer_t*);
-            HANDLE->star_hnd->outbuf_a = va_arg( args, snet_buffer_t*);
-            HANDLE->star_hnd->boxfun_a = va_arg( args, void*);
-            HANDLE->star_hnd->boxfun_b = va_arg( args, void*);
-            HANDLE->star_hnd->type = va_arg( args, snet_typeencoding_t*);
-            HANDLE->star_hnd->is_incarnate = va_arg( args, bool);
+            HANDLE( star_hnd) = SNetMemAlloc( sizeof( star_handle_t));
+            STAR_HND( inbuf) = va_arg( args, snet_buffer_t*);
+            STAR_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
+            STAR_HND( boxfun_a) = va_arg( args, void*);
+            STAR_HND( boxfun_b) = va_arg( args, void*);
+            STAR_HND( type) = va_arg( args, snet_typeencoding_t*);
+            STAR_HND(is_incarnate) = va_arg( args, bool);
 
-//            FILL_HANDLE( star_hnd, true, true, false, false, true,
-//                         true, true, false, false, false, false);
             break;
     }
 
     case HND_sync: {
 
-            HANDLE->sync_hnd = SNetMemAlloc( sizeof( sync_handle_t));
-            HANDLE->sync_hnd->inbuf = va_arg( args, snet_buffer_t*);
-            HANDLE->sync_hnd->outbuf_a = va_arg( args, snet_buffer_t*);
-            HANDLE->sync_hnd->type = va_arg( args, snet_typeencoding_t*);
-            HANDLE->sync_hnd->patterns = va_arg( args, snet_typeencoding_t*);
-//            HANDLE->sync_hnd->tag_a = va_arg( args, int); 
-//            HANDLE->sync_hnd->tag_b = va_arg( args, int);             
+            HANDLE( sync_hnd) = SNetMemAlloc( sizeof( sync_handle_t));
+            SYNC_HND( inbuf) = va_arg( args, snet_buffer_t*);
+            SYNC_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
+            SYNC_HND( type) = va_arg( args, snet_typeencoding_t*);
+            SYNC_HND( patterns) = va_arg( args, snet_typeencoding_t*);
 
-//             FILL_HANDLE( sync_hnd, true, true, false, false, false,
-//                          false, true, true, true, true, false);
              break;
     }
     
     case HND_split: {
 
-            HANDLE->split_hnd = SNetMemAlloc( sizeof( split_handle_t));
-            HANDLE->split_hnd->inbuf = va_arg( args, snet_buffer_t*);
-            HANDLE->split_hnd->outbuf_a = va_arg( args, snet_buffer_t*);
-            HANDLE->split_hnd->boxfun_a = va_arg( args, void*);
-            HANDLE->split_hnd->tag_a = va_arg( args, int); 
-            HANDLE->split_hnd->tag_b = va_arg( args, int);   
+            HANDLE( split_hnd) = SNetMemAlloc( sizeof( split_handle_t));
+            SPLIT_HND( inbuf) = va_arg( args, snet_buffer_t*);
+            SPLIT_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
+            SPLIT_HND( boxfun_a) = va_arg( args, void*);
+            SPLIT_HND( tag_a) = va_arg( args, int); 
+            SPLIT_HND( tag_b) = va_arg( args, int);   
 
-//            FILL_HANDLE( split_hnd, true, true, false, false, true, 
-//                         false, false, false, true, true, false);
             break;
     }
  
     case HND_filter: {
 
-            HANDLE->filter_hnd = SNetMemAlloc( sizeof( filter_handle_t));
-            HANDLE->filter_hnd->inbuf = va_arg( args, snet_buffer_t*);
-            HANDLE->filter_hnd->outbuf_a = va_arg( args, snet_buffer_t*);
-            HANDLE->filter_hnd->in_type = va_arg( args, snet_typeencoding_t*);
-            HANDLE->filter_hnd->out_type = va_arg( args, snet_typeencoding_t*);
-            HANDLE->filter_hnd->instr_set = va_arg( args, snet_filter_instruction_set_t**);
+            HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
+            FILTER_HND( inbuf) = va_arg( args, snet_buffer_t*);
+            FILTER_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
+            FILTER_HND( in_type) = va_arg( args, snet_typeencoding_t*);
+            FILTER_HND( out_type) = va_arg( args, snet_typeencoding_t*);
+            FILTER_HND( instr_set) = va_arg( args, snet_filter_instruction_set_t**);
 
-//            FILL_HANDLE( filter_hnd, true, true, false, false, false,
-//                         false, false, false, false, false, true);
             break;
     }
     default: {
@@ -245,13 +244,34 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 
 extern void SNetHndDestroy( snet_handle_t *hnd) {
 
+  int i;
+
   switch( hnd->descr) {
-    case HND_box: SNetMemFree( HANDLE->box_hnd); break;
-    case HND_parallel: SNetMemFree( HANDLE->parallel_hnd); break;
-    case HND_sync: SNetMemFree( HANDLE->sync_hnd); break;
-    case HND_split: SNetMemFree( HANDLE->split_hnd); break;
-    case HND_filter: SNetMemFree( HANDLE->filter_hnd); break;
-    case HND_star: SNetMemFree( HANDLE->star_hnd); break;
+    case HND_box: 
+      if( BOX_HND( mapping) != NULL) {
+        for( i=0; i<BOX_HND_MAPPING( num); i++) {
+          SNetMemFree( BOX_HND_MAPPING( string_names[i]));
+        }
+        SNetMemFree( BOX_HND_MAPPING( string_names));
+        SNetMemFree( BOX_HND_MAPPING( int_names));
+      }
+      SNetMemFree( HANDLE( box_hnd)); 
+      break;
+    case HND_parallel: 
+      SNetMemFree( HANDLE( parallel_hnd)); 
+      break;
+    case HND_sync: 
+      SNetMemFree( HANDLE( sync_hnd)); 
+      break;
+    case HND_split: 
+      SNetMemFree( HANDLE( split_hnd)); 
+    break;
+    case HND_filter: 
+      SNetMemFree( HANDLE( filter_hnd)); 
+    break;
+    case HND_star: 
+      SNetMemFree( HANDLE( star_hnd)); 
+    break;
   }
 
   SNetMemFree( hnd->hnd);
@@ -259,12 +279,12 @@ extern void SNetHndDestroy( snet_handle_t *hnd) {
 }
 
 
-extern snet_record_t *SNetHndGetRecord( snet_handle_t *hndl) {
+extern snet_record_t *SNetHndGetRecord( snet_handle_t *hnd) {
  
   snet_record_t *rec;
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_box: 
-      rec = hndl->hnd->box_hnd->rec; 
+      rec = BOX_HND( rec); 
       break;
     default: WrongHandleType();
   }
@@ -272,62 +292,62 @@ extern snet_record_t *SNetHndGetRecord( snet_handle_t *hndl) {
   return( rec);
 }
 
-extern void SNetHndSetRecord( snet_handle_t *hndl, snet_record_t *rec) {
- switch( hndl->descr) {
+extern void SNetHndSetRecord( snet_handle_t *hnd, snet_record_t *rec) {
+ switch( hnd->descr) {
     case HND_box: 
-      hndl->hnd->box_hnd->rec = rec; 
+      BOX_HND( rec) = rec; 
       break;
     default: WrongHandleType();
  }
 }
 
 
-extern void SNetHndSetInbuffer( snet_handle_t *hndl, snet_buffer_t *inbuf) {
-  switch( hndl->descr) {
+extern void SNetHndSetInbuffer( snet_handle_t *hnd, snet_buffer_t *inbuf) {
+  switch( hnd->descr) {
     case HND_box: 
-      hndl->hnd->box_hnd->inbuf = inbuf; 
+      BOX_HND( inbuf) = inbuf; 
       break;
     case HND_parallel: 
-      hndl->hnd->parallel_hnd->inbuf = inbuf; 
+      PAR_HND( inbuf) = inbuf; 
       break;
     case HND_star: 
-      hndl->hnd->star_hnd->inbuf = inbuf; 
+      STAR_HND( inbuf) = inbuf; 
       break;
     case HND_split: 
-      hndl->hnd->split_hnd->inbuf = inbuf; 
+      SPLIT_HND( inbuf) = inbuf; 
       break;
     case HND_sync: 
-      hndl->hnd->sync_hnd->inbuf = inbuf; 
+      SYNC_HND( inbuf) = inbuf; 
       break;
     case HND_filter: 
-      hndl->hnd->filter_hnd->inbuf = inbuf; 
+      FILTER_HND( inbuf) = inbuf; 
       break;
     default: WrongHandleType();
   }
 }
 
-extern snet_buffer_t *SNetHndGetInbuffer( snet_handle_t *hndl) {
+extern snet_buffer_t *SNetHndGetInbuffer( snet_handle_t *hnd) {
   
   snet_buffer_t *inbuf;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_box: 
-      inbuf = hndl->hnd->box_hnd->inbuf; 
+      inbuf = BOX_HND( inbuf); 
       break;
     case HND_parallel: 
-      inbuf = hndl->hnd->parallel_hnd->inbuf; 
+      inbuf = PAR_HND( inbuf); 
       break;
     case HND_star: 
-      inbuf = hndl->hnd->star_hnd->inbuf; 
+      inbuf = STAR_HND( inbuf); 
       break;
     case HND_split: 
-      inbuf = hndl->hnd->split_hnd->inbuf; 
+      inbuf = SPLIT_HND( inbuf); 
       break;
     case HND_sync: 
-      inbuf = hndl->hnd->sync_hnd->inbuf; 
+      inbuf = SYNC_HND( inbuf); 
       break;
     case HND_filter: 
-      inbuf = hndl->hnd->filter_hnd->inbuf; 
+      inbuf = FILTER_HND( inbuf); 
       break;
     default: WrongHandleType();
   }
@@ -336,25 +356,25 @@ extern snet_buffer_t *SNetHndGetInbuffer( snet_handle_t *hndl) {
 }
 
 
-extern snet_buffer_t *SNetHndGetOutbuffer( snet_handle_t *hndl){
+extern snet_buffer_t *SNetHndGetOutbuffer( snet_handle_t *hnd){
 
   snet_buffer_t *buf;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_box: 
-      buf = hndl->hnd->box_hnd->outbuf_a; 
+      buf = BOX_HND( outbuf_a); 
       break;
     case HND_star: 
-      buf = hndl->hnd->star_hnd->outbuf_a; 
+      buf = STAR_HND( outbuf_a); 
       break;
     case HND_split: 
-      buf = hndl->hnd->split_hnd->outbuf_a; 
+      buf = SPLIT_HND( outbuf_a); 
       break;
     case HND_sync: 
-      buf = hndl->hnd->sync_hnd->outbuf_a; 
+      buf = SYNC_HND( outbuf_a); 
       break;
     case HND_filter: 
-      buf = hndl->hnd->filter_hnd->outbuf_a; 
+      buf = FILTER_HND( outbuf_a); 
       break;
     default: WrongHandleType();
   }
@@ -362,13 +382,13 @@ extern snet_buffer_t *SNetHndGetOutbuffer( snet_handle_t *hndl){
   return( buf);
 }
 
-extern snet_buffer_t *SNetHndGetOutbufferA( snet_handle_t *hndl){
+extern snet_buffer_t **SNetHndGetOutbuffers( snet_handle_t *hnd){
 
-  snet_buffer_t *buf;
+  snet_buffer_t **buf;
  
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_parallel: 
-      buf = hndl->hnd->parallel_hnd->outbuf_a; 
+      buf = PAR_HND( buffers); 
       break;
     default: WrongHandleType();
   }
@@ -376,31 +396,31 @@ extern snet_buffer_t *SNetHndGetOutbufferA( snet_handle_t *hndl){
   return( buf);
 }
 
-extern snet_buffer_t *SNetHndGetOutbufferB( snet_handle_t *hndl){
+extern bool SNetHndIsDet( snet_handle_t *hnd) {
 
-  snet_buffer_t *buf;
- 
-  switch( hndl->descr) {
+  bool res;
+
+  switch( hnd->descr) {
     case HND_parallel: 
-      buf = hndl->hnd->parallel_hnd->outbuf_b; 
+      res = PAR_HND( is_det); 
       break;
     default: WrongHandleType();
   }
 
-  return( buf);
+  return( res);
 }
 
 
-extern void *SNetHndGetBoxfun( snet_handle_t *hndl){
+extern void *SNetHndGetBoxfun( snet_handle_t *hnd){
 
   void *fun;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_box: 
-      fun =  hndl->hnd->box_hnd->boxfun_a; 
+      fun =  BOX_HND( boxfun_a); 
       break;
     case HND_split: 
-      fun =  hndl->hnd->split_hnd->boxfun_a; 
+      fun =  SPLIT_HND( boxfun_a); 
       break;
     default: WrongHandleType();
   }
@@ -408,13 +428,13 @@ extern void *SNetHndGetBoxfun( snet_handle_t *hndl){
   return( fun);
 }
 
-extern void *SNetHndGetBoxfunA( snet_handle_t *hndl){
+extern void *SNetHndGetBoxfunA( snet_handle_t *hnd){
 
   void *fun;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_star: 
-      fun =  hndl->hnd->star_hnd->boxfun_a; 
+      fun =  STAR_HND( boxfun_a); 
       break;
     default: WrongHandleType();
   }
@@ -422,13 +442,13 @@ extern void *SNetHndGetBoxfunA( snet_handle_t *hndl){
   return( fun);
 }
 
-extern void *SNetHndGetBoxfunB( snet_handle_t *hndl){
+extern void *SNetHndGetBoxfunB( snet_handle_t *hnd){
 
   void *fun;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_star: 
-      fun =  hndl->hnd->star_hnd->boxfun_b; 
+      fun =  STAR_HND( boxfun_b); 
       break;
     default: WrongHandleType();
   }
@@ -436,13 +456,13 @@ extern void *SNetHndGetBoxfunB( snet_handle_t *hndl){
   return( fun);
 }
 
-extern int SNetHndGetTagA( snet_handle_t *hndl) {
+extern int SNetHndGetTagA( snet_handle_t *hnd) {
  
   int tag;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_split: 
-      tag = hndl->hnd->split_hnd->tag_a; 
+      tag = SPLIT_HND( tag_a); 
       break;
     default: WrongHandleType();
   }
@@ -450,13 +470,13 @@ extern int SNetHndGetTagA( snet_handle_t *hndl) {
   return( tag);
 }
 
-extern int SNetHndGetTagB( snet_handle_t *hndl) {
+extern int SNetHndGetTagB( snet_handle_t *hnd) {
 
   int tag;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_split: 
-      tag = hndl->hnd->split_hnd->tag_b; 
+      tag = SPLIT_HND( tag_b); 
       break;
     default: WrongHandleType();
   }
@@ -465,13 +485,13 @@ extern int SNetHndGetTagB( snet_handle_t *hndl) {
 }
 
 
-extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hndl) {
+extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hnd) {
 
   snet_filter_instruction_set_t **instr;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_filter: 
-      instr = hndl->hnd->filter_hnd->instr_set; 
+      instr = FILTER_HND( instr_set); 
       break;
     default: WrongHandleType();
   }
@@ -479,22 +499,22 @@ extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle
   return( instr);
 }
 
-extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hndl) {
+extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hnd) {
  
   snet_typeencoding_t *type;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_box: 
-      type = hndl->hnd->box_hnd->type; 
+      type = BOX_HND( type); 
       break;
     case HND_parallel: 
-      type = hndl->hnd->parallel_hnd->type; 
+      type = PAR_HND( type); 
       break;
     case HND_star: 
-      type = hndl->hnd->star_hnd->type; 
+      type = STAR_HND( type); 
       break;
     case HND_sync: 
-      type = hndl->hnd->sync_hnd->type; 
+      type = SYNC_HND( type); 
       break;
    default: WrongHandleType();
   }
@@ -508,7 +528,7 @@ extern snet_typeencoding_t *SNetHndGetInType( snet_handle_t *hnd) {
   snet_typeencoding_t *type;
   switch( hnd->descr) {
     case HND_filter: 
-      type = HANDLE->filter_hnd->in_type; 
+      type = FILTER_HND( in_type); 
       break;
    default: WrongHandleType();
   }
@@ -522,7 +542,7 @@ extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd) {
   snet_typeencoding_t *type;
   switch( hnd->descr) {
     case HND_filter: 
-      type = HANDLE->filter_hnd->out_type; 
+      type = FILTER_HND( out_type); 
       break;
    default: WrongHandleType();
   }
@@ -531,13 +551,13 @@ extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd) {
 }
 
 
-extern snet_typeencoding_t *SNetHndGetPatterns( snet_handle_t *hndl) {
+extern snet_typeencoding_t *SNetHndGetPatterns( snet_handle_t *hnd) {
   
   snet_typeencoding_t *patterns;
 
-  switch( hndl->descr) {
+  switch( hnd->descr) {
     case HND_sync: 
-      patterns = hndl->hnd->sync_hnd->patterns; 
+      patterns = SYNC_HND( patterns); 
       break;
     default: WrongHandleType();
   }
@@ -552,10 +572,40 @@ extern bool SNetHndIsIncarnate( snet_handle_t *hnd) {
 
   switch( hnd->descr) {
     case HND_star: 
-      res = hnd->hnd->star_hnd->is_incarnate; 
+      res = STAR_HND( is_incarnate); 
       break;
     default: WrongHandleType();
   }
 
   return( res);
 }
+
+
+extern void SNetHndSetStringNames( snet_handle_t *hnd, int num, ...) {
+
+  int i;
+  va_list args;
+
+  va_start( args, num);
+ 
+  switch( hnd->descr) {
+    case HND_box:
+      BOX_HND( mapping) = SNetMemAlloc( sizeof( name_mapping_t));
+      BOX_HND_MAPPING( num) = num;
+      BOX_HND_MAPPING( int_names) = SNetMemAlloc( num * sizeof( int));
+      BOX_HND_MAPPING( string_names) = SNetMemAlloc( num * sizeof( char*));
+      for( i=0; i<num; i++) {
+        char *str;
+
+        BOX_HND_MAPPING( int_names[i]) = va_arg( args, int);
+        str = va_arg( args, char*);
+        BOX_HND_MAPPING( string_names[i]) = 
+          SNetMemAlloc( (strlen( str) + 1) * sizeof( char));
+        strcpy( BOX_HND_MAPPING( string_names[i]), str);
+      }
+      break;
+    default: WrongHandleType();
+  }
+}
+
+

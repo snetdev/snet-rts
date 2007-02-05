@@ -5,6 +5,8 @@
 #ifndef HANDLE_H
 #define HANDLE_H
 
+#include <string.h>
+
 #include <typeencode.h>
 #include <record.h>
 #include <buffer.h>
@@ -74,8 +76,7 @@ extern void SNetHndSetInbuffer( snet_handle_t *hnd, snet_buffer_t *inbuf);
 extern snet_buffer_t *SNetHndGetInbuffer( snet_handle_t *hndl);
 
 extern snet_buffer_t *SNetHndGetOutbuffer( snet_handle_t *hndl);
-extern snet_buffer_t *SNetHndGetOutbufferA( snet_handle_t *hndl);
-extern snet_buffer_t *SNetHndGetOutbufferB( snet_handle_t *hndl);
+extern snet_buffer_t **SNetHndGetOutbuffers( snet_handle_t *hndl);
 
 extern void *SNetHndGetBoxfun( snet_handle_t *handle);
 extern void *SNetHndGetBoxfunA( snet_handle_t *handle);
@@ -95,6 +96,10 @@ extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle
 
 extern bool SNetHndIsIncarnate( snet_handle_t *hnd);
 
+extern void SNetHndSetStringNames( snet_handle_t *hnd, int num, ...);
+
 extern void SNetHndDestroy( snet_handle_t *hndl);
+
+extern bool SNetHndIsDet( snet_handle_t *hnd);
 
 #endif

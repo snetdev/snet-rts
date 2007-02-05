@@ -46,10 +46,10 @@ TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
 LIB  := -L$(PROJECT_ROOT)/src/lib -lcommon 
 INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
-RUNTIMELIB  := -L$(PROJECT_ROOT)/lib -lpthread -lsnet $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS)
-RUNTIMEINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) $(GTKFLAGS)
-
-
+RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS)  \
+	       -L$(SAC2CBASE)/lib -lsnet 
+RUNTIMEINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) $(GTKFLAGS) \
+	       -I$(SAC2CBASE)/src/runtime/interface_h
 
 XML_DIR     = $(PROJECT_ROOT)/src/compiler/xml
 XML_COMMONS = $(wildcard $(XML_DIR)/common_*.xsl)
@@ -149,7 +149,7 @@ $(PROJECT_ROOT)/src/bin/%.devel: $(TARGETDIRS_DEVEL)
 	@$(ECHO) "Linking $(PREFIX_ROOT)src/bin/$*.devel (developer version)"
 	$(HIDE) $(CC) -o $@ \
                 $(filter $*/%,$^) \
-                $(LIB) $(LIBS)
+                $(LIB) $(LIBS) 
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -183,37 +183,37 @@ $(PROJECT_ROOT)/lib/libsnet.prod.a:  $(TARGETDIRS_PROD)
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
-$(PROJECT_ROOT)/bin/FeederFront.devel: graphics/FeederFront.o 
-	@$(ECHO) ""
-	@$(ECHO) "Linking $(PREFIX_ROOT)bin/FeederFront.devel (developer version)"
-	$(HIDE) $(CC) -o $@ $< $(RUNTIMELIB) $(GTKLIBS)
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)	
-
-$(PROJECT_ROOT)/bin/FeederFront: graphics/FeederFront.prod.o 
-	@$(ECHO) ""
-	@$(ECHO) "Linking $(PREFIX_ROOT)bin/FeederFront (product version)"
-	$(HIDE) $(CC) -o $@ $< $(RUNTIMELIB) $(GTKLIBS)
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)	
-
-$(PROJECT_ROOT)/bin/RecordInspector.devel: graphics/RecordInspector.o 
-	@$(ECHO) "Linking $(PREFIX_ROOT)bin/RecordInspector.devel (developer version)"
-	$(HIDE) $(CC) -o $@ $< $(RUNTIMELIB) $(GTKLIBS)
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)
-
-$(PROJECT_ROOT)/bin/RecordInspector: graphics/RecordInspector.prod.o 
-	@$(ECHO) ""
-	@$(ECHO) "Linking $(PREFIX_ROOT)bin/RecordInspector.devel (product version)"
-	$(HIDE) $(CC) -o $@ $< $(RUNTIMELIB) $(GTKLIBS)
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)
-
+#$(PROJECT_ROOT)/bin/FeederFront.devel: graphics/FeederFront.o 
+#	@$(ECHO) ""
+#	@$(ECHO) "Linking $(PREFIX_ROOT)bin/FeederFront.devel (developer version)"
+#	$(HIDE) $(CC) -o $@ $< $(RUNTIMELIB) $(GTKLIBS)
+#	@$(RM) .make_track
+#	@$(TOUCH) .done
+#	@$(CLOCK_SKEW_ELIMINATION)	
+#
+#$(PROJECT_ROOT)/bin/FeederFront: graphics/FeederFront.prod.o 
+#	@$(ECHO) ""
+#	@$(ECHO) "Linking $(PREFIX_ROOT)bin/FeederFront (product version)"
+#	$(HIDE) $(CC) -o $@ $< $(RUNTIMELIB) $(GTKLIBS)
+#	@$(RM) .make_track
+#	@$(TOUCH) .done
+#	@$(CLOCK_SKEW_ELIMINATION)	
+#
+#$(PROJECT_ROOT)/bin/RecordInspector.devel: graphics/RecordInspector.o 
+#	@$(ECHO) "Linking $(PREFIX_ROOT)bin/RecordInspector.devel (developer version)"
+#	$(HIDE) $(CC) -o $@ $< $(RUNTIMELIB) $(GTKLIBS)
+#	@$(RM) .make_track
+#	@$(TOUCH) .done
+#	@$(CLOCK_SKEW_ELIMINATION)
+#
+#$(PROJECT_ROOT)/bin/RecordInspector: graphics/RecordInspector.prod.o 
+#	@$(ECHO) ""
+#	@$(ECHO) "Linking $(PREFIX_ROOT)bin/RecordInspector.devel (product version)"
+#	$(HIDE) $(CC) -o $@ $< $(RUNTIMELIB) $(GTKLIBS)
+#	@$(RM) .make_track
+#	@$(TOUCH) .done
+#	@$(CLOCK_SKEW_ELIMINATION)
+#
 $(PROJECT_ROOT)/bin/%.devel: $(TARGETDIRS_DEVEL) $(PROJECT_ROOT)/lib/libsnet.a
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/$*.devel (developer version)"
@@ -292,7 +292,8 @@ makesubdir.prod: $(TARGETDIRS_PROD)
               $(ECHO) "Compiling files in directory $(PREFIX_LOCAL)$(dir $@)" ; \
          fi
 	@$(ECHO) "  Compiling developer code:  $(notdir $<)"
-	$(HIDE) $(CC) $(CCFLAGS) $(CFLAGS) $(YYFLAGS) $(INCS) $(RUNTIMEINCS) -o $@ -c $<
+	$(HIDE) $(CC) $(CCFLAGS) $(CFLAGS) $(YYFLAGS) $(INCS) $(RUNTIMEINCS) \
+	 -o $@ -c $<
 	@$(CLOCK_SKEW_ELIMINATION) 
 
 %.prod.o: %.c 
@@ -302,7 +303,8 @@ makesubdir.prod: $(TARGETDIRS_PROD)
               $(ECHO) "Compiling files in directory $(PREFIX_LOCAL)$(dir $@)" ; \
          fi
 	@$(ECHO) "  Compiling product code:  $(notdir $<)"
-	$(HIDE) $(CCPROD) $(CCPROD_FLAGS) $(CPROD_FLAGS) $(YYFLAGS) $(INCS) $(RUNTIMEINCS) -o $@ -c $<
+	$(HIDE) $(CCPROD) $(CCPROD_FLAGS) $(CPROD_FLAGS) $(YYFLAGS) $(INCS) \
+	 $(RUNTIMEINCS) -o $@ -c $<
 	@$(CLOCK_SKEW_ELIMINATION) 
 
 

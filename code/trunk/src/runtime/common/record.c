@@ -11,7 +11,7 @@
 #include <memfun.h>
 #include <record.h>
 
-
+#include <lbindings.h>
 
 #define GETNUM( N, M)   int i;\
                          i = N( GetVEnc( rec));\
@@ -36,6 +36,21 @@
   TENCREMOVE( GetVEnc( rec), name);\
   SNetMemFree( rec->rec->data_rec->NAME);\
   rec->rec->data_rec->NAME = new;
+
+
+
+/* macros for record datastructure */
+#define REC_DESCR( name) name->rec_descr
+#define RECPTR( name) name->rec
+#define RECORD( name, type) RECPTR( name)->type
+
+#define DATA_REC( name, component) RECORD( name, data_rec)->component
+#define SYNC_REC( name, component) RECORD( name, sync_rec)->component
+#define SORT_B_REC( name, component) RECORD( name, sort_begin_rec)->component
+#define SORT_E_REC( name, component) RECORD( name, sort_end_rec)->component
+#define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
+#define STAR_REC( name, component) RECORD( name, star_rec)->component
+
 
 
 typedef struct {
@@ -103,7 +118,7 @@ static int FindName( int *names, int count, int val) {
 
 static snet_variantencoding_t *GetVEnc( snet_record_t *rec) {
   
-  return( rec->rec->data_rec->v_enc);
+  return( DATA_REC( rec, v_enc));
 }
 
 
@@ -131,7 +146,7 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
   snet_variantencoding_t *v_enc;
 
   rec = SNetMemAlloc( sizeof( snet_record_t));
-  rec->rec_descr = descr;
+  REC_DESCR( rec) = descr;
   
 
   va_start( args, descr);
@@ -140,37 +155,38 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
     case REC_data:
       v_enc = va_arg( args, snet_variantencoding_t*);
 
-      rec->rec = SNetMemAlloc( sizeof( snet_record_types_t));
-      rec->rec->data_rec = SNetMemAlloc( sizeof( data_rec_t));
-      rec->rec->data_rec->fields = SNetMemAlloc( SNetTencGetNumFields( v_enc) * sizeof( void*));
-      rec->rec->data_rec->tags = SNetMemAlloc( SNetTencGetNumTags( v_enc) * sizeof( int));
-      rec->rec->data_rec->btags = SNetMemAlloc( SNetTencGetNumBTags( v_enc) * sizeof( int));
-      rec->rec->data_rec->v_enc = v_enc;
-      rec->rec->data_rec->lang = snet_lang_sac;
+      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+      RECORD( rec, data_rec) = SNetMemAlloc( sizeof( data_rec_t));
+      DATA_REC( rec, fields) = SNetMemAlloc( SNetTencGetNumFields( v_enc) * sizeof( void*));
+      DATA_REC( rec, tags) = SNetMemAlloc( SNetTencGetNumTags( v_enc) * sizeof( int));
+      DATA_REC( rec, btags) = SNetMemAlloc( SNetTencGetNumBTags( v_enc) * sizeof( int));
+      DATA_REC( rec, v_enc) = v_enc;
+      DATA_REC( rec, lang) = snet_lang_sac;
       break;
     case REC_sync:
-      rec->rec = SNetMemAlloc( sizeof( snet_record_types_t));
-      rec->rec->sync_rec = SNetMemAlloc( sizeof( sync_rec_t));
-      rec->rec->sync_rec->inbuf = va_arg( args, snet_buffer_t*);
+      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+      RECORD( rec, sync_rec) = SNetMemAlloc( sizeof( sync_rec_t));
+      SYNC_REC( rec, inbuf) = va_arg( args, snet_buffer_t*);
       break;
     case REC_collect:
-      rec->rec = SNetMemAlloc( sizeof( snet_record_types_t));
-      rec->rec->star_rec = SNetMemAlloc( sizeof( star_rec_t));
-      rec->rec->star_rec->outbuf = va_arg( args, snet_buffer_t*);
+      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+      RECORD( rec, star_rec) = SNetMemAlloc( sizeof( star_rec_t));
+      STAR_REC( rec, outbuf) = va_arg( args, snet_buffer_t*);
       break;
     case REC_terminate:
+      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
       break;
     case REC_sort_begin:
-      rec->rec = SNetMemAlloc( sizeof( snet_record_types_t));
-      rec->rec->sort_begin_rec = SNetMemAlloc( sizeof( sort_begin_t));
-      rec->rec->sort_begin_rec->level = va_arg( args, int);
-      rec->rec->sort_begin_rec->num =   va_arg( args, int);    
+      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+      RECORD( rec, sort_begin_rec) = SNetMemAlloc( sizeof( sort_begin_t));
+      SORT_B_REC( rec, level) = va_arg( args, int);
+      SORT_B_REC( rec, num) =   va_arg( args, int);    
       break;
     case REC_sort_end:
-      rec->rec = SNetMemAlloc( sizeof( snet_record_types_t));
-      rec->rec->sort_end_rec = SNetMemAlloc( sizeof( sort_end_t));
-      rec->rec->sort_end_rec->level = va_arg( args, int);
-      rec->rec->sort_end_rec->num = va_arg( args, int);
+      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+      RECORD( rec, sort_end_rec) = SNetMemAlloc( sizeof( sort_end_t));
+      SORT_E_REC( rec, level) = va_arg( args, int);
+      SORT_E_REC( rec, num) = va_arg( args, int);
       break;
 
     default:
@@ -185,29 +201,38 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
 
 
 extern void SNetRecDestroy( snet_record_t *rec) {
- if( rec != NULL) {
-  switch( rec->rec_descr) {
+
+  int i, num, *names;
+  
+  if( rec != NULL) {
+  switch( REC_DESCR( rec)) {
     case REC_data:
-      SNetTencDestroyVariantEncoding( rec->rec->data_rec->v_enc);
-      SNetMemFree( rec->rec->data_rec->fields);
-      SNetMemFree( rec->rec->data_rec->tags);
-      SNetMemFree( rec->rec->data_rec->btags);
-      SNetMemFree( rec->rec->data_rec);
+      num = SNetTencGetNumFields( DATA_REC( rec, v_enc));
+      names = SNetTencGetFieldNames( DATA_REC( rec, v_enc));
+//      for( i=0; i<num; i++) {
+//        SNetFreeField( SNetRecGetField( rec, names[i]), 
+//                       SNetRecGetLanguage( rec));
+//      }
+      SNetTencDestroyVariantEncoding( DATA_REC( rec, v_enc));
+      SNetMemFree( DATA_REC( rec, fields));
+      SNetMemFree( DATA_REC( rec, tags));
+      SNetMemFree( DATA_REC( rec, btags));
+      SNetMemFree( RECORD( rec, data_rec));
       break;
 
     case REC_sync:
-      SNetMemFree( rec->rec->sync_rec);
+      SNetMemFree( RECORD( rec, sync_rec));
       break;
     case REC_collect:
-      SNetMemFree( rec->rec->sync_rec);
+      SNetMemFree( RECORD( rec, star_rec));
       break;
       
     case REC_sort_begin:
-        SNetMemFree( rec->rec->sort_begin_rec);
+        SNetMemFree( RECORD( rec, sort_begin_rec));
       break;
     
     case REC_sort_end:
-        SNetMemFree( rec->rec->sort_end_rec);
+        SNetMemFree( RECORD( rec, sort_end_rec));
       break;
 
     case REC_terminate:
@@ -218,29 +243,29 @@ extern void SNetRecDestroy( snet_record_t *rec) {
       exit( 1);
       break;
   }
-  SNetMemFree( rec->rec);
+  SNetMemFree( RECPTR( rec));
   SNetMemFree( rec);
  }
 }
 
 
 extern snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec) {
-  return( rec->rec_descr);
+  return( REC_DESCR( rec));
 }
 
 extern snet_buffer_t *SNetRecGetBuffer( snet_record_t *rec) {
  
   snet_buffer_t *inbuf;
 
-  switch( rec->rec_descr) {
+  switch( REC_DESCR( rec)) {
     case REC_sync:
-      inbuf = rec->rec->sync_rec->inbuf;
+      inbuf = SYNC_REC( rec, inbuf);
       break;
     case REC_collect:
-      inbuf = rec->rec->star_rec->outbuf;
+      inbuf = STAR_REC( rec, outbuf);
       break;
     default:
-      printf("\n\n ** Fatal Error ** : Wrong type in RECgetBuffer() (%d) \n\n", rec->rec_descr);
+      printf("\n\n ** Fatal Error ** : Wrong type in RECgetBuffer() (%d) \n\n", REC_DESCR( rec));
       exit( 1);
       break;
   }
@@ -254,7 +279,7 @@ extern void SNetRecSetTag( snet_record_t *rec, int name, int val) {
   int offset=0;
 
   offset = FindName( SNetTencGetTagNames( GetVEnc( rec)), SNetTencGetNumTags( GetVEnc( rec)), name);
-  rec->rec->data_rec->tags[offset] = val;
+  DATA_REC( rec, tags[offset]) = val;
 }
 
 extern void SNetRecSetBTag( snet_record_t *rec, int name, int val) {
@@ -262,7 +287,7 @@ extern void SNetRecSetBTag( snet_record_t *rec, int name, int val) {
   int offset;
   
   offset = FindName( SNetTencGetBTagNames( GetVEnc( rec)), SNetTencGetNumBTags( GetVEnc( rec)), name);
-  rec->rec->data_rec->btags[offset] = val;
+  DATA_REC( rec, btags[offset]) = val;
 }
 
 
@@ -271,7 +296,7 @@ extern void SNetRecSetField( snet_record_t *rec, int name, void *val) {
   int offset;
   
   offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)), SNetTencGetNumFields( GetVEnc( rec)), name);
-  rec->rec->data_rec->fields[offset] = val;
+  DATA_REC( rec, fields[offset]) = val;
 }
 
 
@@ -281,7 +306,7 @@ extern int SNetRecGetTag( snet_record_t *rec, int name) {
   int offset;
 
   offset = FindName( SNetTencGetTagNames( GetVEnc( rec)), SNetTencGetNumTags( GetVEnc( rec)), name);
-  return( rec->rec->data_rec->tags[offset]);
+  return( DATA_REC( rec, tags[offset]));
 }
 
 
@@ -290,7 +315,7 @@ extern int SNetRecGetBTag( snet_record_t *rec, int name) {
   int offset;
   
   offset = FindName( SNetTencGetBTagNames( GetVEnc( rec)), SNetTencGetNumBTags( GetVEnc( rec)), name);
-  return( rec->rec->data_rec->btags[offset]);
+  return( DATA_REC( rec, btags[offset]));
 }
 
 extern void *SNetRecGetField( snet_record_t *rec, int name) {
@@ -298,7 +323,7 @@ extern void *SNetRecGetField( snet_record_t *rec, int name) {
   int offset;
   
   offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)), SNetTencGetNumFields( GetVEnc( rec)), name);
-  return( rec->rec->data_rec->fields[offset]);
+  return( DATA_REC( rec, fields[offset]));
 }
 
 extern int SNetRecTakeTag( snet_record_t *rec, int name) {
@@ -307,7 +332,7 @@ extern int SNetRecTakeTag( snet_record_t *rec, int name) {
  
   offset = FindName( SNetTencGetTagNames( GetVEnc( rec)), SNetTencGetNumTags( GetVEnc( rec)), name);
   SNetTencRenameTag( GetVEnc( rec), name, CONSUMED);  
-  return( rec->rec->data_rec->tags[offset]);
+  return( DATA_REC( rec, tags[offset]));
 }
 
 
@@ -317,7 +342,7 @@ extern int SNetRecTakeBTag( snet_record_t *rec, int name) {
  
   offset = FindName( SNetTencGetBTagNames( GetVEnc( rec)), SNetTencGetNumBTags( GetVEnc( rec)), name);
   SNetTencRenameBTag( GetVEnc( rec), name, CONSUMED);  
-  return( rec->rec->data_rec->btags[offset]);
+  return( DATA_REC( rec, btags[offset]));
 }
 
 
@@ -327,7 +352,7 @@ extern void *SNetRecTakeField( snet_record_t *rec, int name) {
  
   offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)), SNetTencGetNumFields( GetVEnc( rec)), name);
   SNetTencRenameField( GetVEnc( rec), name, CONSUMED);  
-  return( rec->rec->data_rec->fields[offset]);
+  return( DATA_REC( rec, fields[offset]));
 }
 
 
@@ -369,15 +394,15 @@ extern int SNetRecGetNum( snet_record_t *rec) {
   
   int counter;
   
-  switch( rec->rec_descr) {
+  switch( REC_DESCR( rec)) {
     case REC_sort_begin:
-      counter = rec->rec->sort_begin_rec->num;  
+      counter = SORT_B_REC( rec, num);  
       break;
     case REC_sort_end:
-      counter = rec->rec->sort_end_rec->num;
+      counter = SORT_E_REC( rec, num);
       break;
     default:
-      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", rec->rec_descr);
+      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", REC_DESCR( rec));
       exit( 1);
       break;
   }  
@@ -387,15 +412,15 @@ extern int SNetRecGetNum( snet_record_t *rec) {
 
 extern void SNetRecSetNum( snet_record_t *rec, int value) {
   
-    switch( rec->rec_descr) {
+    switch( REC_DESCR( rec)) {
     case REC_sort_begin:
-      rec->rec->sort_begin_rec->num = value;  
+      SORT_B_REC( rec, num) = value;  
       break;
     case REC_sort_end:
-      rec->rec->sort_end_rec->num = value;
+      SORT_E_REC( rec, num) = value;
       break;
     default:
-      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", rec->rec_descr);
+      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", REC_DESCR( rec));
       exit( 1);
       break;
   }  
@@ -406,15 +431,15 @@ extern int SNetRecGetLevel( snet_record_t *rec) {
   
   int counter;
   
-  switch( rec->rec_descr) {
+  switch( REC_DESCR( rec)) {
     case REC_sort_begin:
-      counter = rec->rec->sort_begin_rec->level;  
+      counter = SORT_B_REC( rec, level);  
       break;
     case REC_sort_end:
-      counter = rec->rec->sort_end_rec->level;
+      counter = SORT_E_REC( rec, level);
       break;
     default:
-      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", rec->rec_descr);
+      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", REC_DESCR( rec));
       exit( 1);
       break;
   }  
@@ -425,15 +450,15 @@ extern int SNetRecGetLevel( snet_record_t *rec) {
 
 extern void SNetRecSetLevel( snet_record_t *rec, int value) {
   
-  switch( rec->rec_descr) {
+  switch( REC_DESCR( rec)) {
     case REC_sort_begin:
-      rec->rec->sort_begin_rec->level = value;  
+      SORT_B_REC( rec, level) = value;  
       break;
     case REC_sort_end:
-      rec->rec->sort_end_rec->level = value;
+      SORT_E_REC( rec, level) = value;
       break;
     default:
-      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", rec->rec_descr);
+      printf("\n\n ** Fatal Error ** : Wrong type in RECgetCounter() (%d) \n\n", REC_DESCR( rec));
       exit( 1);
       break;
   }  
@@ -525,30 +550,34 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
 
   int i;
   snet_record_t *new_rec;
-  switch( rec->rec_descr) {
+  switch( REC_DESCR( rec)) {
   
     case REC_data:
       new_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( GetVEnc( rec)));
 
       for( i=0; i<SNetRecGetNumTags( rec); i++) {
-        new_rec->rec->data_rec->tags[i] = rec->rec->data_rec->tags[i]; 
+        DATA_REC( new_rec, tags[i]) = DATA_REC( rec, tags[i]); 
       }
       for( i=0; i<SNetRecGetNumBTags( rec); i++) {
-        new_rec->rec->data_rec->btags[i] = rec->rec->data_rec->btags[i]; 
+        DATA_REC( new_rec, btags[i]) = DATA_REC( rec, btags[i]); 
       }
-      for( i=0; i<SNetRecGetNumFields( rec); i++) {
-        new_rec->rec->data_rec->fields[i] = rec->rec->data_rec->fields[i]; 
-      }
-      new_rec->rec->data_rec->lang = rec->rec->data_rec->lang;
+//      for( i=0; i<SNetRecGetNumFields( rec); i++) {
+//        DATA_REC( rec, fields[i]) = 
+//          SNetCopyField( DATA_REC( rec, fields[i]), 
+//              SNetRecGetLanguage( rec)); 
+//      }
+      DATA_REC( new_rec, lang) = DATA_REC( rec, lang);
       break;
     case REC_sort_begin:
-      new_rec = SNetRecCreate( rec->rec_descr,  rec->rec->sort_begin_rec->level,  rec->rec->sort_begin_rec->num);
+      new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_B_REC( rec, level),
+                               SORT_B_REC( rec, num));
       break;
     case REC_sort_end:
-      new_rec = SNetRecCreate( rec->rec_descr,  rec->rec->sort_end_rec->level,  rec->rec->sort_end_rec->num);    
+      new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_E_REC( rec, level),  
+                               SORT_E_REC( rec, num));    
       break;
     default:
-      printf("\n\n ** Fatal Error ** : Can't copy record of that type [%d]\n\n", (int)rec->rec_descr);
+      printf("\n\n ** Fatal Error ** : Can't copy record of that type [%d]\n\n", (int)REC_DESCR( rec));
       exit( 1);
   }
 
@@ -559,13 +588,13 @@ extern snet_lang_descr_t SNetRecGetLanguage( snet_record_t *rec) {
 
   snet_lang_descr_t res;
 
-  switch( rec->rec_descr) {
+  switch( REC_DESCR( rec)) {
     case REC_data:
-      res = rec->rec->data_rec->lang;
+      res = DATA_REC( rec, lang);
       break;
     default:
       printf("\n\n ** Fatal Error ** : Wrong type in SNetGetLanguage() (%d)"
-             "\n\n", rec->rec_descr);
+             "\n\n", REC_DESCR( rec));
       exit( 1);
       break;
   }  
@@ -574,13 +603,13 @@ extern snet_lang_descr_t SNetRecGetLanguage( snet_record_t *rec) {
 
 extern void SNetRecSetLanguage( snet_record_t *rec, snet_lang_descr_t lang) {
 
-  switch( rec->rec_descr) {
+  switch( REC_DESCR( rec)) {
     case REC_data:
-      rec->rec->data_rec->lang = lang;
+      DATA_REC( rec, lang) = lang;
       break;
     default:
       printf("\n\n ** Fatal Error ** : Wrong type in SNetSetLanguage() (%d)"
-             "\n\n", rec->rec_descr);
+             "\n\n", REC_DESCR( rec));
       exit( 1);
       break;
   }  
