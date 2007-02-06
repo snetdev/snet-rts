@@ -1,0 +1,87 @@
+//! snet netren
+
+net tag::tag ({tag::A,tag::B} -> {tag::A,tag::B,<tag::T>});
+
+net tag ({A,B} -> {A,B,<T>}) {
+  net tag__translate_in ({A,B} -> {tag::A,tag::B})
+  connect [(A,B) -> (tag::A,tag::B)];
+
+  net tag__translate_out ({tag::A,tag::B,<tag::T>} -> {A,B,<T>})
+  connect [(tag::A,tag::B,<tag::T>) -> (A,B,<T>)];
+
+  net tag__tag ({tag::A,tag::B} -> {tag::A,tag::B,<tag::T>})
+  connect tag::tag;
+
+  net tag__in ({A,B} -> {tag::A,tag::B,<tag::T>})
+  connect tag__translate_in .. tag__tag;
+}
+connect tag__in .. tag__translate_out;
+
+net compABC ({A} -> {P}, {B} -> {Q}, {C} -> {P}) {
+  box compA ((A) -> (P));
+  box compB ((B) -> (Q));
+  box compC ((C) -> (P));
+
+  net compABC___SL ({A} -> {P})
+  connect compA;
+
+  net compABC___SR__SL ({B} -> {Q})
+  connect compB;
+
+  net compABC___SR__SR ({C} -> {P})
+  connect compC;
+}
+connect || compABC___SL compABC___SR__SL compABC___SR__SR;
+
+net example ({A,B} -> {Y,Z}) {
+  net example__split ({A,B,<T>} -> {A,<T>} | {B,<T>})
+  connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
+
+  box examine ((P,Q) -> (A,B) | (Y,Z));
+
+  net example__compute ({A,<T>} -> {P,Q}, {B,<T>} -> {P,Q}) {
+    net example__compute__compAB ({A} -> {P}, {B} -> {Q}) {
+      net example__compute__compAB__compABC ({A} -> {P}, {B} -> {Q}) {
+        box compA ((A) -> (P));
+        box compB ((B) -> (Q));
+
+        net example__compute__compAB__compABC___SL ({A} -> {P})
+        connect compA;
+
+        net example__compute__compAB__compABC___SR__SL ({B} -> {Q})
+        connect compB;
+      }
+      connect example__compute__compAB__compABC___SL || example__compute__compAB__compABC___SR__SL;
+    }
+    connect example__compute__compAB__compABC;
+
+    net example__compute__syncPQ ({P} -> {P,Q}, {Q} -> {P,Q}) {
+      net example__compute__syncPQ___ST ({P} -> {P} | {P,Q}, {Q} -> {Q} | {P,Q})
+      connect [|{P},{Q}|];
+    }
+    connect example__compute__syncPQ___ST ** ({P,Q});
+
+    net example__compute___IS ({A,<T>} -> {P,Q}, {B,<T>} -> {P,Q}) {
+      net example__compute___IS___SL ({<T>} -> {})
+      connect [{<T>} -> {}];
+
+      net example__compute___IS___SR ({A} -> {P,Q}, {B} -> {P,Q})
+      connect example__compute__compAB .. example__compute__syncPQ;
+    }
+    connect example__compute___IS___SL .. example__compute___IS___SR;
+  }
+  connect example__compute___IS !! (<T>);
+
+  net example___ST ({A,B} -> {A,B} | {Y,Z}) {
+    net example___ST___SR ({A,B,<T>} -> {A,B} | {Y,Z}) {
+      net example___ST___SR___SR ({A,<T>} -> {A,B} | {Y,Z}, {B,<T>} -> {A,B} | {Y,Z}) {
+        net example___ST___SR___SR___SR ({P,Q} -> {A,B} | {Y,Z})
+        connect examine;
+      }
+      connect example__compute .. example___ST___SR___SR___SR;
+    }
+    connect example__split .. example___ST___SR___SR;
+  }
+  connect tag .. example___ST___SR;
+}
+connect example___ST ** ({Y,Z});
