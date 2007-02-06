@@ -1263,7 +1263,6 @@ static void *ParallelBoxThread( void *hndl) {
         }
  
         buf_index = BestMatch( matchcounter, num);
-        printf("\nindex: %d\n", buf_index);
         go_buffer = buffers[ buf_index];
 
         PutToBuffers( buffers, num, buf_index, rec, counter, is_det); 
@@ -2728,14 +2727,42 @@ static void *FilterThread( void *hndl) {
 
 
 
+static snet_buffer_t *CreateFilter( snet_buffer_t *inbuf, 
+                                    snet_typeencoding_t *in_type,
+                                    snet_typeencoding_t *out_type,
+                                    snet_filter_instruction_set_t **set,
+                                    bool is_translator) {
 
-extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf, snet_typeencoding_t *in_type, 
-                             snet_typeencoding_t *out_type, ...) {
   int i;
-  va_list args;
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
   pthread_t *box_thread;
+
+  outbuf = SNetBufCreate( BUFFER_SIZE);
+  hnd = SNetHndCreate( HND_filter, inbuf, outbuf, in_type, out_type, set);
+
+  box_thread = SNetMemAlloc( sizeof( pthread_t));
+
+  if( is_translator) { // for the time being, a translator is just a filter
+    pthread_create( box_thread, NULL, FilterThread, (void*)hnd);
+  } 
+  else {
+    pthread_create( box_thread, NULL, FilterThread, (void*)hnd);
+  }
+  
+  pthread_detach( *box_thread);
+
+  return( outbuf);
+
+
+}
+
+
+extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf, 
+                                  snet_typeencoding_t *in_type,   
+                                  snet_typeencoding_t *out_type, ...) {
+  int i;
+  va_list args;
 
   snet_filter_instruction_set_t **set;
 
@@ -2747,12 +2774,24 @@ extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf, snet_typeencoding_t *in_
   }
   va_end( args);
 
-  outbuf = SNetBufCreate( BUFFER_SIZE);
-  hnd = SNetHndCreate( HND_filter, inbuf, outbuf, in_type, out_type, set);
+  return( CreateFilter( inbuf, in_type, out_type, set, false));
+}
 
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  pthread_create( box_thread, NULL, FilterThread, (void*)hnd);
-  pthread_detach( *box_thread);
+extern snet_buffer_t *SNetTranslate( snet_buffer_t *inbuf, 
+                                     snet_typeencoding_t *in_type,   
+                                     snet_typeencoding_t *out_type, ...) {
+  int i;
+  va_list args;
 
-  return( outbuf);
+  snet_filter_instruction_set_t **set;
+
+  set = SNetMemAlloc( SNetTencGetNumVariants( out_type) * sizeof( snet_filter_instruction_set_t*));
+
+  va_start( args, out_type);
+  for( i=0; i<SNetTencGetNumVariants( out_type); i++) {
+    set[i] = va_arg( args, snet_filter_instruction_set_t*);
+  }
+  va_end( args);
+
+  return( CreateFilter( inbuf, in_type, out_type, set, true));
 }
