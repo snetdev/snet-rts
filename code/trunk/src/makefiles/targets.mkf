@@ -93,7 +93,7 @@ commonlib       = dbug getoptions
 maketools       = cse cb
 
 compiler        = tree global support parse preproc flat typeinf opt postproc \
-                  codegen print
+                  codegen invokecc print
 
 runtime         = common posix  
 
@@ -156,6 +156,8 @@ opt             =
 postproc        = 
 
 codegen         = codegen.o codefile.o
+
+invokecc        = invokecc.o
 
 print           = print.o 
 
