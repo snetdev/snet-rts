@@ -153,7 +153,7 @@ typeinf         =
 
 opt             = 
 
-postproc        = 
+postproc        = netflat.o
 
 codegen         = codegen.o codefile.o
 
