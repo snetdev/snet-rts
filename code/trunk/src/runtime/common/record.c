@@ -11,7 +11,7 @@
 #include <memfun.h>
 #include <record.h>
 
-#include <lbindings.h>
+//#include <lbindings.h>
 
 #define GETNUM( N, M)   int i;\
                          i = N( GetVEnc( rec));\
@@ -58,7 +58,7 @@ typedef struct {
   void **fields;
   int *tags;
   int *btags;
-  snet_lang_descr_t lang;
+//  snet_lang_descr_t lang;
 } data_rec_t;
 
 typedef struct {
@@ -161,7 +161,7 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
       DATA_REC( rec, tags) = SNetMemAlloc( SNetTencGetNumTags( v_enc) * sizeof( int));
       DATA_REC( rec, btags) = SNetMemAlloc( SNetTencGetNumBTags( v_enc) * sizeof( int));
       DATA_REC( rec, v_enc) = v_enc;
-      DATA_REC( rec, lang) = snet_lang_sac;
+//      DATA_REC( rec, lang) = snet_lang_sac;
       break;
     case REC_sync:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
@@ -566,7 +566,7 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
 //          SNetCopyField( DATA_REC( rec, fields[i]), 
 //              SNetRecGetLanguage( rec)); 
 //      }
-      DATA_REC( new_rec, lang) = DATA_REC( rec, lang);
+      // DATA_REC( new_rec, lang) = DATA_REC( rec, lang);
       break;
     case REC_sort_begin:
       new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_B_REC( rec, level),
@@ -583,7 +583,7 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
 
   return( new_rec);
 }
-
+/*
 extern snet_lang_descr_t SNetRecGetLanguage( snet_record_t *rec) {
 
   snet_lang_descr_t res;
@@ -614,7 +614,7 @@ extern void SNetRecSetLanguage( snet_record_t *rec, snet_lang_descr_t lang) {
       break;
   }  
 }
-
+*/
 
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec) {
   return( GetVEnc( rec));

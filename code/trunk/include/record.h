@@ -286,8 +286,8 @@ extern int SNetRecGetNum( snet_record_t *rec);
 extern int SNetRecGetLevel( snet_record_t *rec);
 
 
-extern snet_lang_descr_t SNetRecGetLanguage( snet_record_t *rec);
-extern void SNetRecSetLanguage( snet_record_t *rec, snet_lang_descr_t lang);
+//extern snet_lang_descr_t SNetRecGetLanguage( snet_record_t *rec);
+//extern void SNetRecSetLanguage( snet_record_t *rec, snet_lang_descr_t lang);
 
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec);
 
