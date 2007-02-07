@@ -32,6 +32,9 @@ extern snet_buffer_t *SNetBox( snet_buffer_t *inbuf,
 			       void (*boxfun)( snet_handle_t*), 
 			       snet_typeencoding_t *outspec);
 
+	
+extern snet_buffer_t *SNetAlias( snet_buffer_t *inbuf,
+                                 snet_buffer_t *(*net)(snet_buffer_t*));
 
 extern snet_buffer_t *SNetSerial( snet_buffer_t *inbuf, 
 				  snet_buffer_t* (*box_a)( snet_buffer_t*), 
