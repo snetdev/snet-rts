@@ -561,11 +561,12 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
       for( i=0; i<SNetRecGetNumBTags( rec); i++) {
         DATA_REC( new_rec, btags[i]) = DATA_REC( rec, btags[i]); 
       }
-//      for( i=0; i<SNetRecGetNumFields( rec); i++) {
-//        DATA_REC( rec, fields[i]) = 
+      printf("Don't use copy!\n");
+      for( i=0; i<SNetRecGetNumFields( rec); i++) {
+        DATA_REC( new_rec, fields[i]) = NULL;
 //          SNetCopyField( DATA_REC( rec, fields[i]), 
 //              SNetRecGetLanguage( rec)); 
-//      }
+      }
       // DATA_REC( new_rec, lang) = DATA_REC( rec, lang);
       break;
     case REC_sort_begin:

@@ -191,6 +191,23 @@ snet_buffer_t *stripF( snet_buffer_t *inbuf) {
 }
 
 
+snet_buffer_t *graphicStripF( snet_buffer_t *inbuf) {
+  
+  snet_buffer_t *outbuf; 
+
+  outbuf = SNetGraphicalBox( inbuf, 0, names, "After Filter StripF");
+
+  return( outbuf);
+
+}
+
+snet_buffer_t *graphicStripFBox( snet_buffer_t *inbuf) {
+
+  snet_buffer_t *outbuf;
+
+  outbuf = SNetSerial( inbuf, &stripF, &graphicStripF);
+  return( outbuf);
+}
 snet_buffer_t *filterTasSTOP( snet_buffer_t *inbuf) {
   
   snet_buffer_t *outbuf;
@@ -276,7 +293,20 @@ snet_buffer_t *boxboxdupl( snet_buffer_t *inbuf) {
 }
 
 
+snet_buffer_t *graphicdupl( snet_buffer_t *inbuf) {
+  
+  snet_buffer_t *outbuf; 
 
+  outbuf = SNetGraphicalBox( inbuf, 0, names, "After Box Dupl");
+
+  return( outbuf);
+}
+
+snet_buffer_t *duplbox( snet_buffer_t *inbuf) {
+  snet_buffer_t *outbuf;
+  outbuf = SNetSerial( inbuf, &boxboxdupl, &graphicdupl);
+  return( outbuf);
+}
 
 snet_handle_t *sub( snet_handle_t *hnd, void *field_x) {
 
@@ -529,6 +559,29 @@ snet_buffer_t *filterAasX_BasR( snet_buffer_t *inbuf) {
 }
 
 
+
+snet_buffer_t *graphicAasX( snet_buffer_t *inbuf) {
+  
+  snet_buffer_t *outbuf; 
+
+  outbuf = SNetGraphicalBox( inbuf, 0, names, "After Filter xx->x, rr->r");
+
+  return( outbuf);
+
+}
+
+
+snet_buffer_t *AasX( snet_buffer_t *inbuf) {
+  snet_buffer_t *outbuf;
+  
+  outbuf = SNetSerial( inbuf, &filterAasX_BasR, &graphicAasX);
+
+  return( outbuf);
+}
+
+
+
+
 snet_buffer_t *PAR_comp( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
@@ -553,7 +606,7 @@ snet_buffer_t *SER_filterF_dupl( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf = SNetSerial( inbuf, &stripF, &boxboxdupl);
+  outbuf = SNetSerial( inbuf, &graphicStripFBox, &duplbox);
 
   return( outbuf);
 }
@@ -565,7 +618,6 @@ snet_buffer_t *graphicBox1( snet_buffer_t *inbuf) {
   outbuf = SNetGraphicalBox( inbuf, 0, names, "After the SyncStar");
 
   return( outbuf);
-
 }
 
 
@@ -583,7 +635,7 @@ snet_buffer_t *SER_sync_filterAB( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf = SNetSerial( inbuf, &SER_syncstar_filter_graph, &filterAasX_BasR);
+  outbuf = SNetSerial( inbuf, &SER_syncstar_filter_graph, &AasX);
 
 //  outbuf = SNetSerial( inbuf, &SER_syncstar_filter, &filterAasX_BasR);
 

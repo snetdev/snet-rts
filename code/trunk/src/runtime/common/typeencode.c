@@ -158,8 +158,15 @@ static void Rename( snet_vector_t *vec, int name, int newName) {
   }
 
   if( i == vec->num) {
+    printf("\n\n :: DEBUG INF :: num: %d, name: %d, new: %d names: ",
+            vec->num, name, newName);
+    for( i=0; i<vec->num; i++) {
+      printf("%d ", vec->fields.ints[i]);
+    }
+ 
     printf("\n\n ** Fatal Error ** : Couldn't find name in vector.\n"
            "                     This is a bug in the runtime system.\n\n");
+
     exit( 1);
   }
 

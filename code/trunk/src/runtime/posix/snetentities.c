@@ -118,10 +118,10 @@ typedef struct {
 #define FIND_NAME_LOOP( RECNUM, TENCNUM, RECNAMES, TENCNAMES)\
 for( i=0; i<TENCNUM( venc); i++) {\
        if( !( ContainsName( TENCNAMES( venc)[i], RECNAMES( rec), RECNUM( rec)))) {\
-        mc->is_match = false;\
+        MC_ISMATCH( mc) = false;\
       }\
       else {\
-        mc->match_count += 1;\
+        MC_COUNT( mc) += 1;\
       }\
     }
 
@@ -181,7 +181,6 @@ extern snet_handle_t *SNetOutRaw( snet_handle_t *hnd, int variant_num, ...) {
 
 
   // set values from box
-
   if( variant_num > 0) { /* if variant_num == 0 => box produced nothing (empty) */
 
    venc = SNetTencGetVariant( SNetHndGetType( hnd), variant_num);
@@ -1152,7 +1151,7 @@ static bool ContainsName( int name, int *names, int num) {
   return( found);
 }
 
-static void *CheckMatch( snet_record_t *rec, snet_variantencoding_t *venc, match_count_t *mc) {
+static match_count_t *CheckMatch( snet_record_t *rec, snet_variantencoding_t *venc, match_count_t *mc) {
 
   int i;
 
@@ -1200,7 +1199,9 @@ static int BestMatch( match_count_t **counter, int num) {
   res = -1;
   max = 0;
   for( i=0; i<num; i++) {
-    res = (MC_COUNT( counter[i]) > max) ? i : res;
+    if( MC_ISMATCH( counter[i])) {
+      res = (MC_COUNT( counter[i]) > max) ? i : res;
+    }
   }
 
   return( res);

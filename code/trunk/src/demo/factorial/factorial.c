@@ -109,9 +109,6 @@ void boxleq1( snet_handle_t *hnd) {
   snet_record_t *rec;
   void *field_x;
   rec = SNetHndGetRecord( hnd);
-
-  SNetHndSetStringNames( hnd, 1, F_x, "F_x");
-
   field_x = SNetRecTakeField( rec, F_x);
 
   leq1( hnd, field_x);
@@ -202,16 +199,7 @@ snet_buffer_t *stripF( snet_buffer_t *inbuf) {
           SNetTencCreateVector( 0))),
       SNetCreateFilterInstructionSet( 1,
         SNetCreateFilterInstruction( FLT_strip_tag, T_F)));
-
   
-  
-  /*  int *instr;
-
-  instr = SNetMemAlloc( 3 * sizeof( int));
-  instr[0] = -2; instr[1] = T_F; instr[2] = -10; 
- 
-  outbuf = SNetFilter( inbuf, instr);
-*/
   return( outbuf);
 }
 
