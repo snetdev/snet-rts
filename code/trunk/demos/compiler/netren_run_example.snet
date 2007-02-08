@@ -1,5 +1,7 @@
 //! snet netren
 
+/**************** External net not yet implemented ************
+
 net tag::tag ({tag::A,tag::B} -> {tag::A,tag::B,<tag::T>});
 
 net tag ({A,B} -> {A,B,<T>}) {
@@ -16,6 +18,8 @@ net tag ({A,B} -> {A,B,<T>}) {
   connect tag__translate_in .. tag__tag;
 }
 connect tag__in .. tag__translate_out;
+
+**************** External net not yet implemented ************/
 
 net compABC ({A} -> {P}, {B} -> {Q}, {C} -> {P}) {
   box compA ((A) -> (P));
@@ -82,6 +86,9 @@ net example ({A,B} -> {Y,Z}) {
     }
     connect example__split .. example___ST___SR___SR;
   }
+/**************** External net not yet implemented ************
   connect tag .. example___ST___SR;
+**************** External net not yet implemented ************/
+  connect example___ST___SR;
 }
 connect example___ST ** ({Y,Z});
