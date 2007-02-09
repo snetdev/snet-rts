@@ -1,0 +1,19 @@
+/* This is an example box-snet 
+ * source file just for testing compiler.
+*/
+
+// This is a test comment line 
+
+box BoxTest ((A)->(B)) {
+  <<< C-Language /* | just a test */ | 
+        /* This is a code part of box */
+        // This is a test comment line inside code
+        int i;
+        for(i = 0; i < 10; ++i) {
+          printf("i=%d\n", i);
+        }
+  >>>
+}
+
+
+
