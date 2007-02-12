@@ -1,0 +1,87 @@
+//! snet disam
+
+net tag::tag ({tag::A,tag::B} -> {tag::A,tag::B,<tag::T>});
+
+net tag ({A,B} -> {A,B,<T>}) {
+  net translate_in ({A,B} -> {tag::A,tag::B})
+  connect [(A,B) -> (tag::A,tag::B)];
+
+  net translate_out ({tag::A,tag::B,<tag::T>} -> {A,B,<T>})
+  connect [(tag::A,tag::B,<tag::T>) -> (A,B,<T>)];
+
+  net tag ({tag::A,tag::B} -> {tag::A,tag::B,<tag::T>})
+  connect tag::tag;
+
+  net in ({A,B} -> {tag::A,tag::B,<tag::T>})
+  connect translate_in .. tag;
+}
+connect in .. translate_out;
+
+net compABC ({A} -> {P}, {B} -> {Q}, {C} -> {P}) {
+  box compA ((A) -> (P));
+  box compB ((B) -> (Q));
+  box compC ((C) -> (P));
+
+  net _SL ({A} -> {P})
+  connect compA;
+
+  net _SR__SL ({B} -> {Q})
+  connect compB;
+
+  net _SR__SR ({C} -> {P})
+  connect compC;
+}
+connect || _SL _SR__SL _SR__SR;
+
+net example ({A,B} -> {Y,Z}) {
+  net split ({A,B,<T>} -> {A,<T>} | {B,<T>})
+  connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
+
+  box examine ((P,Q) -> (A,B) | (Y,Z));
+
+  net compute ({A,<T>} -> {P,Q}, {B,<T>} -> {P,Q}) {
+    net compAB ({A} -> {P}, {B} -> {Q}) {
+      net compABC ({A} -> {P}, {B} -> {Q}) {
+/*        box compA ((A) -> (P)); */
+/*        box compB ((B) -> (Q)); */
+
+        net _SL ({A} -> {P})
+        connect compA;
+
+        net _SR__SL ({B} -> {Q})
+        connect compB;
+      }
+      connect _SL || _SR__SL;
+    }
+    connect compABC;
+
+    net syncPQ ({P} -> {P,Q}, {Q} -> {P,Q}) {
+      net _ST ({P} -> {P} | {P,Q}, {Q} -> {Q} | {P,Q})
+      connect [|{P},{Q}|];
+    }
+    connect _ST ** ({P,Q});
+
+    net _IS ({A,<T>} -> {P,Q}, {B,<T>} -> {P,Q}) {
+      net _SL ({<T>} -> {})
+      connect [{<T>} -> {}];
+
+      net _SR ({A} -> {P,Q}, {B} -> {P,Q})
+      connect compAB .. syncPQ;
+    }
+    connect _SL .. _SR;
+  }
+  connect _IS !! (<T>);
+
+  net _ST ({A,B} -> {A,B} | {Y,Z}) {
+    net _SR ({A,B,<T>} -> {A,B} | {Y,Z}) {
+      net _SR ({A,<T>} -> {A,B} | {Y,Z}, {B,<T>} -> {A,B} | {Y,Z}) {
+        net _SR ({P,Q} -> {A,B} | {Y,Z})
+        connect examine;
+      }
+      connect compute .. _SR;
+    }
+    connect split .. _SR;
+  }
+  connect tag .. _SR;
+}
+connect _ST ** ({Y,Z});
