@@ -38,9 +38,6 @@ connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
 
 box examine ((P,Q) -> (A,B) | (Y,Z));
 
-/* box compA ((A) -> (P)); */
-/* box compB ((B) -> (Q)); */
-
 net example__compute__compAB__compABC___SL ({A} -> {P})
 connect compA;
 
