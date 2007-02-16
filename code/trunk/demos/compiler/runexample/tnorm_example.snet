@@ -1,0 +1,23 @@
+net compABC ({A,B} | {C} -> {D}, {E} -> {F}, {<G>} | {H,I} -> {J,<K>}) {
+    box compA ((A) -> (P));
+    box compB ((B) -> (Q));
+    box compC ((C) -> (P));
+}
+connect compA || compB || compC;
+
+net tnorm_example {
+    net split
+    connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
+
+    box examine((P,Q) -> (A,B) | (Y,Z));
+
+    net compute {
+        net compAB
+        connect compABC;
+
+        net syncPQ
+        connect [|{P},{Q}|] ** ({P,Q});
+    }
+    connect ([{<T>} -> {}] .. compAB .. syncPQ) !! (<T>);
+}
+connect (tag .. split .. compute .. examine) ** ({Y,Z});
