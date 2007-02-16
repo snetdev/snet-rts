@@ -1,4 +1,8 @@
-net compABC ({A,B} | {C} -> {D}, {E} -> {F}, {<G>} | {H,I} -> {J,<K>}) {
+//!snet tres
+
+net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
+    net test ({A,B} | {C} -> {D}, {E} -> {F}, {<G>} | {H,I} -> {J,<K>})
+    connect [{A} -> {B}];
     box compA ((A) -> (P));
     box compB ((B) -> (Q));
     box compC ((C) -> (P));
