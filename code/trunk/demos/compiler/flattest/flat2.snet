@@ -1,0 +1,8 @@
+//! snet core
+
+net test {
+    box a ((A) -> (B));
+    box b ((A) -> (B));
+    box c ((A) -> (B));
+}
+connect ((a .. b) .. c);
