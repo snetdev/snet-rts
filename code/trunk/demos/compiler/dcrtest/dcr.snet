@@ -12,7 +12,7 @@ connect compA || compB || compC;
 net testNotRef2
 connect compABC;
 
-net dcr_example {
+net dcr {
     net split
     connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
 

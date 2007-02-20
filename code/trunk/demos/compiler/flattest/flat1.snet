@@ -1,6 +1,6 @@
 //! snet core
 
-net test {
+net flat1 {
     box a ((A) -> (B));
     box b ((A) -> (B));
     box c ((A) -> (B));

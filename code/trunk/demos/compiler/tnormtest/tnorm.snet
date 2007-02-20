@@ -9,7 +9,7 @@ net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
 }
 connect compA || compB || compC;
 
-net tnorm_example {
+net tnorm {
     net split
     connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
 
