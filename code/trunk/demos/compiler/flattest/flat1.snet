@@ -1,8 +1,0 @@
-//! snet core
-
-net flat1 {
-    box a ((A) -> (B));
-    box b ((A) -> (B));
-    box c ((A) -> (B));
-}
-connect (a .. (b .. c));
