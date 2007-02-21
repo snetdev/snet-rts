@@ -1,3 +1,8 @@
+/* Example dead code removal, just for testing compiler.
+* Run:
+* $ snetc -b2:dcr dcrtest.snet
+*/
+
 net testNotRef1
 connect [{A} -> {B}];
 
@@ -12,7 +17,7 @@ connect compA || compB || compC;
 net testNotRef2
 connect compABC;
 
-net dcr {
+net dcrtest {
     net split
     connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
 
