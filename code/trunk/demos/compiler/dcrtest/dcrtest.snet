@@ -1,7 +1,18 @@
-/* Example dead code removal, just for testing compiler.
-* Run:
-* $ snetc -b2:dcr dcrtest.snet
-*/
+
+/*****************************************************************
+ *
+ * Example snet source file.
+ * Just for testing dead code removal of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
+ * Run:
+ *
+ *         $ snetc -b2:dcr dcrtest.snet
+ * 
+ ****************************************************************/
 
 net testNotRef1
 connect [{A} -> {B}];

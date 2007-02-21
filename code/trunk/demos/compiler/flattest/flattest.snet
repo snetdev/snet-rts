@@ -1,9 +1,19 @@
 //! snet core
 
-/* Example flattening, just for testing compiler.
-* Run:
-* $ snetc -b3 flattest.snet
-*/
+/*****************************************************************
+ *
+ * Example snet source file.
+ * Just for testing network flattening of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
+ * Run:
+ *
+ *         $ snetc -b3 flattest.snet
+ * 
+ ****************************************************************/
 
 net flat1 {
     box a ((A) -> (B));

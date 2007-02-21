@@ -1,9 +1,19 @@
 //!snet tres
 
-/* Example type normalization, just for testing compiler.
-* Run:
-* $ snetc -b2:tnorm tnormtest.snet
-*/
+/*****************************************************************
+ *
+ * Example snet source file.
+ * Just for testing type normalization of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
+ * Run:
+ *
+ *         $ snetc -b2:tnorm tnormtest.snet
+ * 
+ ****************************************************************/
 
 net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
     net test ({A,B} | {C} -> {D}, {E} -> {F}, {<G>} | {H,I} -> {J,<K>})

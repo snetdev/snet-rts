@@ -1,7 +1,18 @@
-/* Example box code extraction, just for testing compiler.
-* Run:
-* $ snetc -b2:boxex boxextest.snet
-*/
+
+/*****************************************************************
+ *
+ * Example snet source file.
+ * Just for testing box code extraction of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
+ * Run:
+ *
+ *         $ snetc -b2:boxex boxextest.snet
+ * 
+ ****************************************************************/
 
 net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
     box compA ((A) -> (P)) {

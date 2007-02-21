@@ -1,8 +1,18 @@
-/* This is an example box-snet 
- * source file just for testing compiler.
+
+/*****************************************************************
+ *
+ * Example snet source file.
+ * Just for testing parser of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
  * Run:
- * $ snetc -b1 boxbodytest.snet
- */
+ *
+ *         $ snetc -b1 boxbodytest.snet
+ * 
+ ****************************************************************/
 
 // This is a test comment line 
 
