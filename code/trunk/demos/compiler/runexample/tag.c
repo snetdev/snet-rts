@@ -14,6 +14,14 @@
  * Run module loader:
  *
  *         $ snetc -b2 example.snet
+ *
+ *         or if libtag.so resides somewhere else than current directory
+ *
+ *         $ snetc -b2 example.snet -Llibdir1 -Llibdir2
+ *
+ *         or specifying environment variable for locations of libraries
+ *
+ *         $ export LIBRARY_PATH="libdir1 libdir2"; snetc -b2 example.snet
  * 
  ****************************************************************/
 
