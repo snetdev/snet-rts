@@ -1,6 +1,8 @@
 /* This is an example box-snet 
  * source file just for testing compiler.
-*/
+ * Run:
+ * $ snetc -b1 boxbodytest.snet
+ */
 
 // This is a test comment line 
 
