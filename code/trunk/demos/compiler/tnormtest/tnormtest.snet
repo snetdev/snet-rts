@@ -1,5 +1,10 @@
 //!snet tres
 
+/* Example type normalization, just for testing compiler.
+* Run:
+* $ snetc -b2:tnorm tnormtest.snet
+*/
+
 net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
     net test ({A,B} | {C} -> {D}, {E} -> {F}, {<G>} | {H,I} -> {J,<K>})
     connect [{A} -> {B}];
@@ -9,7 +14,7 @@ net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
 }
 connect compA || compB || compC;
 
-net tnorm {
+net tnormtest {
     net split
     connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
 
