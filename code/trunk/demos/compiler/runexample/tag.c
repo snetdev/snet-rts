@@ -10,6 +10,10 @@
  * Make library:
  * 
  *         $ gcc -shared -Wl,-soname,libtag.so -o libtag.so tag.c
+ *
+ * Run module loader:
+ *
+ *         $ snetc -b2 example.snet
  * 
  ****************************************************************/
 
