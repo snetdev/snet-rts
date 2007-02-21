@@ -1,3 +1,18 @@
+
+/*****************************************************************
+ *
+ * Original run-example source file from SNet compiler's implementation guide. 
+ * Just for testing parsing of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
+ * Run:
+ *         $ snetc -b1 example.snet
+ * 
+ ****************************************************************/
+
 net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
     box compA ((A) -> (P));
     box compB ((B) -> (Q));

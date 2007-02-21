@@ -1,5 +1,26 @@
 //! snet final
 
+/*****************************************************************
+ *
+ * Final run-example source file from SNet compiler's implementation guide. 
+ * Just for testing code generation of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
+ * Run:
+ * 
+ *     Code generation:
+ *
+ *         $ snetc -c final_runexample.snet
+ *
+ *     Linking:
+ *
+ *         $ snetc final_runexample.snet -I../../../include/ -L../../../lib/
+ * 
+ ****************************************************************/
+
 net tag::tag ({tag::A,tag::B} -> {tag::A,tag::B,<tag::T>});
 
 net tag__translate_in ({A,B} -> {tag::A,tag::B})

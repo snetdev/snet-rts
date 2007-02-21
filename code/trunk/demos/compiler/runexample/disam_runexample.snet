@@ -1,5 +1,20 @@
 //! snet disam
 
+/*****************************************************************
+ *
+ * Disambiguated run-example source file from SNet compiler implementation guide.
+ * Just for testing network renaming of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
+ * Run:
+ *
+ *         $ snetc -b6:netren disam_runexample.snet
+ * 
+ ****************************************************************/
+
 net tag::tag ({tag::A,tag::B} -> {tag::A,tag::B,<tag::T>});
 
 net tag ({A,B} -> {A,B,<T>}) {
