@@ -15,10 +15,34 @@
  *
  *         $ snetc -c final_runexample.snet
  *
+ *         or specifying command line include directories
+ *
+ *         $ snetc -b2 example.snet -Iincdir1 -Iincdir2
+ *
+ *         or specifying include directories with environment variable
+ *
+ *         $ export CPATH="incdir1 incdir2"; snetc -b2 example.snet
+ * 
+ *         Example:
+ *
+ *         $ snetc -c final_runexample.snet -I../../../include/
+ *
  *     Linking:
  *
- *         $ snetc final_runexample.snet -I../../../include/ -L../../../lib/
+ *         $ snetc final_runexample.snet
  * 
+ *         or specifying command line library directories
+ *
+ *         $ snetc final_runexample.snet -Llibdir1 -Llibdir2
+ *
+ *         or specifying library directories with environment variable
+ *
+ *         $ export LIBRARY_PATH="libdir1 libdir2"; snetc final_runexample.snet
+ *
+ *         Example:
+ *
+ *         $ snetc final_runexample.snet -I../../../include/ -L../../../lib
+ *     
  ****************************************************************/
 
 net tag::tag ({tag::A,tag::B} -> {tag::A,tag::B,<tag::T>});
