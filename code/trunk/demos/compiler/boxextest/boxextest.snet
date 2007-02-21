@@ -1,3 +1,8 @@
+/* Example box code extraction, just for testing compiler.
+* Run:
+* $ snetc -b2:boxex boxextest.snet
+*/
+
 net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
     box compA ((A) -> (P)) {
         <<< c |
