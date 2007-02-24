@@ -1,6 +1,6 @@
 /*
  * This implements S-Net entities.
- *
+ * .
  * NOTE: all created threads are detached.
  */
 
