@@ -13,6 +13,9 @@
 #include <gtk/gtk.h>
 
 
+#define AETHER_DEMO 1
+
+
 #define MAX_BOXTITLE_LEN  100
 #define BUF_SIZE 4096
 
