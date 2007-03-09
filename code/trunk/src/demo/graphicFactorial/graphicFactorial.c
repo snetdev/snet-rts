@@ -606,7 +606,7 @@ snet_buffer_t *SER_filterF_dupl( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf = SNetSerial( inbuf, &graphicStripFBox, &duplbox);
+  outbuf = SNetSerial( inbuf, &stripF, &duplbox);
 
   return( outbuf);
 }
@@ -635,7 +635,7 @@ snet_buffer_t *SER_sync_filterAB( snet_buffer_t *inbuf) {
 
   snet_buffer_t *outbuf;
 
-  outbuf = SNetSerial( inbuf, &SER_syncstar_filter_graph, &AasX);
+  outbuf = SNetSerial( inbuf, &SER_syncstar_filter_graph, &filterAasX_BasR);
 
 //  outbuf = SNetSerial( inbuf, &SER_syncstar_filter, &filterAasX_BasR);
 
@@ -674,7 +674,7 @@ snet_buffer_t *SER_case_false( snet_buffer_t *inbuf) {
   snet_buffer_t *outbuf;
 
 //  outbuf = SNetSerial( inbuf, &SER_dupl_comp, &SER_sync_filterAB);
-  outbuf = SNetSerial( inbuf, &SER_dupl_comp, &SER_graphic_sync);
+  outbuf = SNetSerial( inbuf, &SER_dupl_comp, &SER_sync_filterAB);
 
 
   return( outbuf);
