@@ -202,7 +202,7 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
 
 extern void SNetRecDestroy( snet_record_t *rec) {
 
-  int i, num, *names;
+  int num, *names;
   
   if( rec != NULL) {
   switch( REC_DESCR( rec)) {

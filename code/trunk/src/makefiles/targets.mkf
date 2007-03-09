@@ -191,7 +191,7 @@ RecordInspector	   = RecordInspector.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-factorial       = factorial.o
+factorial       = boxfun.o run.o factorial.o
 
 graphicFactorial = graphicFactorial.o
 
