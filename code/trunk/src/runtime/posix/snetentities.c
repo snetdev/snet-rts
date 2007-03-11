@@ -2743,7 +2743,6 @@ static snet_buffer_t *CreateFilter( snet_buffer_t *inbuf,
                                     snet_filter_instruction_set_t **set,
                                     bool is_translator) {
 
-  int i;
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
   pthread_t *box_thread;

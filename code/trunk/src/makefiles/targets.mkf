@@ -193,6 +193,6 @@ RecordInspector	   = RecordInspector.o
 
 factorial       = boxfun.o run.o factorial.o
 
-graphicFactorial = graphicFactorial.o
+graphicFactorial = boxfun.o run.o graphicFactorial.o
 
 
