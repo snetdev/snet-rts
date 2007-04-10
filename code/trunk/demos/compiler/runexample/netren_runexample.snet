@@ -33,18 +33,18 @@ net tag ({A,B} -> {A,B,<T>}) {
 connect tag__in .. tag__translate_out;
 
 net compABC ({A} -> {P}, {B} -> {Q}, {C} -> {P}) {
-  box compA ((A) -> (P));
-  box compB ((B) -> (Q));
-  box compC ((C) -> (P));
+  box compABC__compA compA ((A) -> (P));
+  box compABC__compB compB ((B) -> (Q));
+  box compABC__compC compC ((C) -> (P));
 
   net compABC___SL ({A} -> {P})
-  connect compA;
+  connect compABC__compA;
 
   net compABC___SR__SL ({B} -> {Q})
-  connect compB;
+  connect compABC__compB;
 
   net compABC___SR__SR ({C} -> {P})
-  connect compC;
+  connect compABC__compC;
 }
 connect || compABC___SL compABC___SR__SL compABC___SR__SR;
 
@@ -52,19 +52,19 @@ net example ({A,B} -> {Y,Z}) {
   net example__split ({A,B,<T>} -> {A,<T>} | {B,<T>})
   connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
 
-  box examine ((P,Q) -> (A,B) | (Y,Z));
+  box example__examine examine ((P,Q) -> (A,B) | (Y,Z));
 
   net example__compute ({A,<T>} -> {P,Q}, {B,<T>} -> {P,Q}) {
     net example__compute__compAB ({A} -> {P}, {B} -> {Q}) {
       net example__compute__compAB__compABC ({A} -> {P}, {B} -> {Q}) {
-/*        box compA ((A) -> (P)); */
-/*        box compB ((B) -> (Q)); */
+        box example__compute__compAB__compABC__compA compA ((A) -> (P));
+        box example__compute__compAB__compABC__compB compB ((B) -> (Q));
 
         net example__compute__compAB__compABC___SL ({A} -> {P})
-        connect compA;
+        connect example__compute__compAB__compABC__compA;
 
         net example__compute__compAB__compABC___SR__SL ({B} -> {Q})
-        connect compB;
+        connect example__compute__compAB__compABC__compB;
       }
       connect example__compute__compAB__compABC___SL || example__compute__compAB__compABC___SR__SL;
     }
@@ -91,7 +91,7 @@ net example ({A,B} -> {Y,Z}) {
     net example___ST___SR ({A,B,<T>} -> {A,B} | {Y,Z}) {
       net example___ST___SR___SR ({A,<T>} -> {A,B} | {Y,Z}, {B,<T>} -> {A,B} | {Y,Z}) {
         net example___ST___SR___SR___SR ({P,Q} -> {A,B} | {Y,Z})
-        connect examine;
+        connect example__examine;
       }
       connect example__compute .. example___ST___SR___SR___SR;
     }
