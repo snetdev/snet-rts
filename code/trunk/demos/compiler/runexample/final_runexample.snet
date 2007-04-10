@@ -21,7 +21,7 @@
  *
  *         or specifying include directories with environment variable
  *
- *         $ export CPATH="incdir1 incdir2"; snetc -b2 example.snet
+ *         $ export CPATH=incdir1:incdir2; snetc -b2 example.snet
  * 
  *         Example:
  *
@@ -37,7 +37,7 @@
  *
  *         or specifying library directories with environment variable
  *
- *         $ export LIBRARY_PATH="libdir1 libdir2"; snetc final_runexample.snet
+ *         $ export LIBRARY_PATH=libdir1:libdir2; snetc final_runexample.snet
  *
  *         Example:
  *
@@ -62,18 +62,18 @@ connect tag__translate_in .. tag__tag;
 net tag ({A,B} -> {A,B,<T>})
 connect tag__in .. tag__translate_out;
 
-box compA ((A) -> (P));
-box compB ((B) -> (Q));
-box compC ((C) -> (P));
+box compABC__compA compA ((A) -> (P));
+box compABC__compB compB ((B) -> (Q));
+box compABC__compC compC ((C) -> (P));
 
 net compABC___SL ({A} -> {P})
-connect compA;
+connect compABC__compA;
 
 net compABC___SR__SL ({B} -> {Q})
-connect compB;
+connect compABC__compB;
 
 net compABC___SR__SR ({C} -> {P})
-connect compC;
+connect compABC__compC;
 
 net compABC ({A} -> {P}, {B} -> {Q}, {C} -> {P})
 connect || compABC___SL compABC___SR__SL compABC___SR__SR;
@@ -81,13 +81,16 @@ connect || compABC___SL compABC___SR__SL compABC___SR__SR;
 net example__split ({A,B,<T>} -> {A,<T>} | {B,<T>})
 connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
 
-box examine ((P,Q) -> (A,B) | (Y,Z));
+box example__examine examine ((P,Q) -> (A,B) | (Y,Z));
+
+box example__compute__compAB__compABC__compA compA ((A) -> (P));
+box example__compute__compAB__compABC__compB compB ((B) -> (Q));
 
 net example__compute__compAB__compABC___SL ({A} -> {P})
-connect compA;
+connect example__compute__compAB__compABC__compA;
 
 net example__compute__compAB__compABC___SR__SL ({B} -> {Q})
-connect compB;
+connect example__compute__compAB__compABC__compB;
 
 net example__compute__compAB__compABC ({A} -> {P}, {B} -> {Q})
 connect example__compute__compAB__compABC___SL || example__compute__compAB__compABC___SR__SL;
@@ -114,7 +117,7 @@ net example__compute ({A,<T>} -> {P,Q}, {B,<T>} -> {P,Q})
 connect example__compute___IS !! (<T>);
 
 net example___ST___SR___SR___SR ({P,Q} -> {A,B} | {Y,Z})
-connect examine;
+connect example__examine;
 
 net example___ST___SR___SR ({A,<T>} -> {A,B} | {Y,Z}, {B,<T>} -> {A,B} | {Y,Z})
 connect example__compute .. example___ST___SR___SR___SR;
