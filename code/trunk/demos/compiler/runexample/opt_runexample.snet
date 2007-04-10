@@ -42,8 +42,8 @@ net example ({A,B} -> {Y,Z}) {
   net compute ({A,<T>} -> {P,Q}, {B,<T>} -> {P,Q}) {
     net compAB ({A} -> {P}, {B} -> {Q}) {
       net compABC ({A} -> {P}, {B} -> {Q}) {
-/*        box compA ((A) -> (P)); */
-/*        box compB ((B) -> (Q)); */
+        box compA ((A) -> (P));
+        box compB ((B) -> (Q));
 
         net _SL ({A} -> {P})
         connect compA;
