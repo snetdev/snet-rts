@@ -143,7 +143,7 @@ tree            = check.o check_attribs.o check_lib.o check_mem.o \
                   node_basic.o traverse.o traverse_helper.o traverse_tables.o \
                   tree_basic.o tree_compound.o
 
-parse           = snet.tab.o snet.lex.o scanparse.o
+parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o
 
 preproc         = dcr.o boxex.o boxexfile.o tnorm.o mod.o
 
