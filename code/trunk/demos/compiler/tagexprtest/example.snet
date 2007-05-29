@@ -1,0 +1,16 @@
+/*****************************************************************
+ *
+ * Test for TagExpr parsing.
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ *
+ * Date:   24.05.2007
+ *
+ * Run:
+ *         $ snetc -b1 example.snet
+ *
+ ****************************************************************/
+
+net compA ({A} -> ){
+   box compA ((A) -> (A));
+} connect compA * { } if < 1 + 2 > 0 ? 1 : 2>;
