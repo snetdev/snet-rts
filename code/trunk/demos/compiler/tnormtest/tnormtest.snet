@@ -35,8 +35,8 @@ net tnormtest {
         connect compABC;
 
         net syncPQ
-        connect [|{P},{Q}|] ** ({P,Q});
+        connect [|{P},{Q}|] ** {P,Q};
     }
-    connect ([{<T>} -> {}] .. compAB .. syncPQ) !! (<T>);
+    connect ([{<T>} -> {}] .. compAB .. syncPQ) !! <T>;
 }
-connect (tag .. split .. compute .. examine) ** ({Y,Z});
+connect (tag .. split .. compute .. examine) ** {Y,Z};

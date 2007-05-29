@@ -52,33 +52,33 @@ net flat5 {
 connect (((a .. b) || c) .. d);
 
 net flat6
-connect ([|{A},{B}|] ** ({A,B}));
+connect ([|{A},{B}|] ** {A,B});
 
 net flat7 {
     box a ((A) -> (B));
 }
-connect (a .. ([|{A},{B}|] ** ({A,B})));
+connect (a .. ([|{A},{B}|] ** {A,B}));
 
 net flat8 {
     box a ((A) -> (B));
 }
-connect (([|{A},{B}|] ** ({A,B})) | a);
+connect (([|{A},{B}|] ** {A,B}) | a);
 
 net flat9
-connect (([|{A},{B}|] ** ({A,B})) .. ([|{C},{D}|] ** ({C,D})));
+connect (([|{A},{B}|] ** {A,B}) .. ([|{C},{D}|] ** {C,D}));
 
 net flat10
-connect ([{<T>} -> {}] !! (<T>));
+connect ([{<T>} -> {}] !! <T>);
 
 net flat11 {
     box a ((A) -> (B));
 }
-connect (a .. ([{<T>} -> {}] !! (<T>)));
+connect (a .. ([{<T>} -> {}] !! <T>));
 
 net flat12 {
     box a ((A) -> (B));
 }
-connect (([{<T>} -> {}] !! (<T>)) | a);
+connect (([{<T>} -> {}] !! <T>) | a);
 
 net flat13
-connect (([{<T1>} -> {}] !! (<T2>)) .. ([{<T3>} -> {}] !! (<T4>)));
+connect (([{<T1>} -> {}] !! <T2>) .. ([{<T3>} -> {}] !! <T4>));
