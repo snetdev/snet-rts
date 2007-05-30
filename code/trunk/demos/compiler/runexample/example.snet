@@ -13,7 +13,7 @@
  * 
  ****************************************************************/
 
-type compAB_t = {A,<T>};
+type compAB_t = {<T>};
 
 net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
     box compA ((A) -> (P));
@@ -23,13 +23,14 @@ net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
 connect compA || compB || compC;
 
 net example {
+	
     net split
     connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
 
     box examine((P,Q) -> (A,B) | (Y,Z));
 
     net compute {
-        net compAB (compAB_t)
+	net compAB (compAB_t ->)	
         connect compABC;
 
         net syncPQ
