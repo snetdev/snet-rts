@@ -145,7 +145,7 @@ tree            = check.o check_attribs.o check_lib.o check_mem.o \
 
 parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o
 
-preproc         = dcr.o boxex.o boxexfile.o tnorm.o mod.o
+preproc         = dcr.o boxex.o boxexfile.o tnorm.o mod.o tres.o
 
 flat            = flat.o
 
