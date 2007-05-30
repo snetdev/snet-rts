@@ -1,0 +1,39 @@
+/*****************************************************************
+ *
+ * Test for typedefs and typesigdefs
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ *
+ * Date:   24.05.2007
+ *
+ * Run:
+ *         $ snetc -b1 typesigtest.snet
+ *
+ ****************************************************************/
+
+
+type testA_t = {A};
+type testB_t = {B};
+type testC_t = {testA_t, <T>}|{C};
+
+//typesig sigA = testA_t -> testB_t;
+typesig sigA = {A} -> {B};
+typesig sigB = testB_t -> testC_t;
+
+net outerA{
+
+    net innerA (sigA)
+    connect outerA;
+
+   typesig sigA = testA_t -> {C};	
+
+    net innerB (sigA){
+
+	net inmostA (sigB, {A} -> testB_t)
+        connect innerA;
+
+    }
+    connect inmostA;
+
+}
+connect innerB;
