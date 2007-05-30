@@ -25,7 +25,8 @@ net outerA{
     net innerA (sigA)
     connect outerA;
 
-   typesig sigA = testA_t -> {C};	
+    type testB_t = {B};
+    typesig sigA = testA_t -> {C};	
 
     net innerB (sigA){
 
