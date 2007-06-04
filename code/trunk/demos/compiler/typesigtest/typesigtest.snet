@@ -19,7 +19,7 @@ type refC_t = {<T>}|{C};
 type refnorefA_t = {B};
 type refnorefB_t = {<T>}|{C};
 
-typesig refA = refA_t -> refB_t;
+typesig refA = refA_t | {B} -> refB_t;
 typesig norefA = refnorefA_t -> refnorefB_t;
 
 typesig refB = refB_t -> refC_t;
@@ -51,7 +51,7 @@ net typesigtest{
     }
     connect net2A;
 
-    typesig refA = refA_t -> {C};
+    typesig refA = refA, refA_t -> {C};
 
     net net1B (refA)
     connect net1A;
