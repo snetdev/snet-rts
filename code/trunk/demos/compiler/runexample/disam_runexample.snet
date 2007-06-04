@@ -74,7 +74,7 @@ net example ({A,B} -> {Y,Z}) {
       net _ST ({P} -> {P} | {P,Q}, {Q} -> {Q} | {P,Q})
       connect [|{P},{Q}|];
     }
-    connect _ST ** ({P,Q});
+    connect _ST ** {P,Q};
 
     net _IS ({A,<T>} -> {P,Q}, {B,<T>} -> {P,Q}) {
       net _SL ({<T>} -> {})
@@ -85,7 +85,7 @@ net example ({A,B} -> {Y,Z}) {
     }
     connect _SL .. _SR;
   }
-  connect _IS !! (<T>);
+  connect _IS !! <T>;
 
   net _ST ({A,B} -> {A,B} | {Y,Z}) {
     net _SR ({A,B,<T>} -> {A,B} | {Y,Z}) {
@@ -99,4 +99,4 @@ net example ({A,B} -> {Y,Z}) {
   }
   connect tag .. _SR;
 }
-connect _ST ** ({Y,Z});
+connect _ST ** {Y,Z};
