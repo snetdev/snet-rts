@@ -141,7 +141,7 @@ support         = buffer.o str.o system.o maths.o
 tree            = check.o check_attribs.o check_lib.o check_mem.o \
                   check_node.o checktst.o free.o free_attribs.o free_node.o \
                   node_basic.o traverse.o traverse_helper.o traverse_tables.o \
-                  tree_basic.o tree_compound.o
+                  tree_basic.o tree_compound.o copy.o copy_node.o
 
 parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o
 
