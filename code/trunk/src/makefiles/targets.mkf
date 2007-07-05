@@ -149,7 +149,7 @@ preproc         = dcr.o boxex.o boxexfile.o tnorm.o mod.o tres.o
 
 flat            = flat.o
 
-typeinf         = 
+typeinf         = typeinf.o
 
 opt             = 
 
