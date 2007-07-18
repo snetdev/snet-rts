@@ -26,17 +26,6 @@ typesig refB = refB_t -> refC_t;
 
 net typesigtest{
 
-    box boxA((A)->(B)){
-        <<< c |
-            #include <stdlib.h>
-            int compA() {
-                printf("Hello compA\n");
-                return 0;
-            }
-
-        >>>
-    }
-
     type refB_t = {B};
 
     type norefC_t = refC_t;
@@ -50,7 +39,7 @@ net typesigtest{
            net net3A (refB, {A} -> refB_t){
 
            }
-           connect extnetA .. boxA;
+           connect extnetA;
         }
         connect net3A;
 
