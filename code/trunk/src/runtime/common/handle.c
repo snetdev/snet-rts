@@ -254,7 +254,7 @@ extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionList( int 
 
   va_start( args, num);
   for( i=0; i<num; i++) {
-    lst->lst[i] = va_arg( args, snet_filter_instruction_set_t*);
+    (lst->lst)[i] = va_arg( args, snet_filter_instruction_set_t*);
   }
   va_end( args);
   
