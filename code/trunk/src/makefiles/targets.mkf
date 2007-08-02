@@ -169,7 +169,7 @@ print           = print.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-common          = memfun.o handle.o record.o typeencode.o 
+common          = memfun.o handle.o record.o typeencode.o expression.o
 
 posix           = buffer.o graphics.o snetentities.o
 
@@ -191,8 +191,8 @@ RecordInspector	   = RecordInspector.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-factorial       = boxfun.o run.o factorial.o
+factorial       = boxfun.o main.o factorial.o
 
-graphicFactorial = boxfun.o run.o graphicFactorial.o
+graphicFactorial = boxfun.o main.o graphicFactorial.o
 
 

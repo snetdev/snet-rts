@@ -241,6 +241,40 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
   return( hnd);
 }
 
+/****/
+
+extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionList( int num, ...) {
+  int i;
+  va_list args;
+  snet_filter_instruction_set_list_t *lst;
+
+  lst = SNetMemAlloc( sizeof( snet_filter_instruction_set_list_t));
+  lst->num = num;
+  lst->lst = SNetMemAlloc( num * sizeof( snet_filter_instruction_set_t*));
+
+  va_start( args, num);
+  for( i=0; i<num; i++) {
+    lst->lst[i] = va_arg( args, snet_filter_instruction_set_t*);
+  }
+  va_end( args);
+  
+  return( lst);
+}
+
+
+extern int SNetFilterInstructionsGetNumSets( snet_filter_instruction_set_list_t *lst) {
+  return( lst->num);  
+}
+
+extern snet_filter_instruction_set_t **SNetFilterInstructionsGetSets( snet_filter_instruction_set_list_t *lst) {
+  return( lst->lst);
+}
+
+
+
+/****/
+
+
 
 extern void SNetHndDestroy( snet_handle_t *hnd) {
 

@@ -12,6 +12,7 @@
 typedef struct vector snet_vector_t;
 
 typedef struct typeencode snet_typeencoding_t;
+typedef struct typeencoding_list snet_typeencoding_list_t;
 
 typedef struct variantencode snet_variantencoding_t;
 
@@ -246,9 +247,9 @@ extern void SNetTencRemoveField( snet_variantencoding_t *v_enc, int name);
 
 extern snet_typeencoding_t *SNetTencTypeEncode( int num, ...);
 
-
-
-
+extern snet_typeencoding_list_t *SNetTencCreateTypeEncodingList( int num, ...);
+extern int SNetTencGetNumTypes( snet_typeencoding_list_t *lst);
+extern snet_typeencoding_t *SNetTencGetTypeEncoding( snet_typeencoding_list_t *lst, int num); 
 
 /*
  * RETURNS: number of variants

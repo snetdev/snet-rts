@@ -53,12 +53,21 @@ typedef struct filter_instruction_set {
   snet_filter_instruction_t **instructions;
 } snet_filter_instruction_set_t;
 
+typedef struct filter_instruction_set_list {
+  int num;
+  snet_filter_instruction_set_t **lst;
+} snet_filter_instruction_set_list_t;
+
+
+extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionList( int num, ...);
+extern int SNetFilterInstructionsGetNumSets( snet_filter_instruction_set_list_t *lst);
+extern snet_filter_instruction_set_t **SNetFilterInstructionsGetSets( snet_filter_instruction_set_list_t *lst);
 
 // TODO: Add accepted descriptors to function comments
-// TODO: Write the mentioned comments (or other way round?;)
+// TODO: Write the mentioned comments (or the other way round?;)
 
 
-/* Creates a handle, first parameter defines sort of handle.
+/* Creates a handle, first parameter defines type of handle.
  *  HND_box:			inbuf, outbuf, record, boxfun, outtype
  *	HND_parallel: inbuf, outbuf_a, outbuf_b, outtype
  *  HND_star: inbuf, outbuf, boxfun_a, boxfun_self(=boxfun_b), outtype   

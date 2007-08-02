@@ -76,13 +76,13 @@ snet_buffer_t *stripF( snet_buffer_t *inbuf) {
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 1, T_F),
           SNetTencCreateVector( 0))),
-      SNetTencTypeEncode( 1,
+      SNetTencCreateTypeEncodingList( 1, SNetTencTypeEncode( 1,
         SNetTencVariantEncode( 
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 0),
-          SNetTencCreateVector( 0))),
-      SNetCreateFilterInstructionSet( 1,
-        SNetCreateFilterInstruction( FLT_strip_tag, T_F)));
+          SNetTencCreateVector( 0)))), NULL,
+      SNetCreateFilterInstructionSetList( 1, SNetCreateFilterInstructionSet( 1,
+        SNetCreateFilterInstruction( FLT_strip_tag, T_F))));
   
   return( outbuf);
 }
@@ -98,13 +98,13 @@ snet_buffer_t *filterTasSTOP( snet_buffer_t *inbuf) {
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 1, T_T),
           SNetTencCreateVector( 0))),
-      SNetTencTypeEncode( 1,
+      SNetTencCreateTypeEncodingList( 1, SNetTencTypeEncode( 1,
         SNetTencVariantEncode( 
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 1, T_stop),
-          SNetTencCreateVector( 0))),
-      SNetCreateFilterInstructionSet( 1,
-        SNetCreateFilterInstruction( FLT_rename_tag, T_T, T_stop)));
+          SNetTencCreateVector( 0)))), NULL,
+      SNetCreateFilterInstructionSetList( 1, SNetCreateFilterInstructionSet( 1,
+        SNetCreateFilterInstruction( FLT_rename_tag, T_T, T_stop))));
   
   return( outbuf);
 }
@@ -220,7 +220,7 @@ snet_buffer_t *SYNC_a_b( snet_buffer_t *inbuf) {
                        SNetTencVariantEncode(
                          SNetTencCreateVector( 1, F_rr),
                          SNetTencCreateVector( 0),
-                         SNetTencCreateVector( 0))));
+                         SNetTencCreateVector( 0))), NULL);
 
   return( outbuf);
 }
@@ -236,13 +236,13 @@ snet_buffer_t *filterOFL( snet_buffer_t *inbuf) {
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 1, T_ofl),
           SNetTencCreateVector( 0))),
-      SNetTencTypeEncode( 1,
+      SNetTencCreateTypeEncodingList( 1, SNetTencTypeEncode( 1,
         SNetTencVariantEncode( 
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 0),
-          SNetTencCreateVector( 0))),
-      SNetCreateFilterInstructionSet( 1,
-        SNetCreateFilterInstruction( FLT_strip_tag, T_ofl)));
+          SNetTencCreateVector( 0)))), NULL,
+      SNetCreateFilterInstructionSetList( 1, SNetCreateFilterInstructionSet( 1,
+        SNetCreateFilterInstruction( FLT_strip_tag, T_ofl))));
   
 
   return( outbuf);
@@ -269,7 +269,7 @@ snet_buffer_t *starsync2( snet_buffer_t *inbuf) {
                                  SNetTencVariantEncode(
                                   SNetTencCreateVector( 2, F_xx, F_rr),
                                   SNetTencCreateVector( 0),
-                                  SNetTencCreateVector( 0))),
+                                  SNetTencCreateVector( 0))),NULL,
                                &SYNC_a_b, &starsync2);
 
 
@@ -284,7 +284,7 @@ snet_buffer_t *starsync( snet_buffer_t *inbuf) {
                         SNetTencVariantEncode(
                            SNetTencCreateVector( 2, F_xx, F_rr),
                            SNetTencCreateVector( 0),
-                           SNetTencCreateVector( 0))),
+                           SNetTencCreateVector( 0))),NULL,
                        &SYNC_a_b, &starsync2);
 
 
@@ -300,13 +300,13 @@ snet_buffer_t *filterOUT( snet_buffer_t *inbuf) {
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 1, T_out),
           SNetTencCreateVector( 0))),
-      SNetTencTypeEncode( 1,
+      SNetTencCreateTypeEncodingList( 1, SNetTencTypeEncode( 1,
         SNetTencVariantEncode( 
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 0),
-          SNetTencCreateVector( 0))),
-      SNetCreateFilterInstructionSet( 1,
-        SNetCreateFilterInstruction( FLT_strip_tag, T_out)));
+          SNetTencCreateVector( 0)))), NULL,
+      SNetCreateFilterInstructionSetList( 1, SNetCreateFilterInstructionSet( 1,
+        SNetCreateFilterInstruction( FLT_strip_tag, T_out))));
 
   
   return( outbuf);
@@ -335,14 +335,14 @@ snet_buffer_t *filterAasX_BasR( snet_buffer_t *inbuf) {
           SNetTencCreateVector( 2, F_xx, F_rr),
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 0))),
-      SNetTencTypeEncode( 1,
+      SNetTencCreateTypeEncodingList( 1, SNetTencTypeEncode( 1,
         SNetTencVariantEncode( 
           SNetTencCreateVector( 2, F_x, F_r),
           SNetTencCreateVector( 0),
-          SNetTencCreateVector( 0))),
-      SNetCreateFilterInstructionSet( 2,
+          SNetTencCreateVector( 0)))), NULL,
+      SNetCreateFilterInstructionSetList( 1, SNetCreateFilterInstructionSet( 2,
         SNetCreateFilterInstruction( FLT_rename_field, F_xx, F_x),
-        SNetCreateFilterInstruction( FLT_rename_field, F_rr, F_r)));
+        SNetCreateFilterInstruction( FLT_rename_field, F_rr, F_r))));
 
   
   return( outbuf);
@@ -461,7 +461,7 @@ snet_buffer_t *starnet2( snet_buffer_t *inbuf) {
                                     SNetTencVariantEncode(
                                       SNetTencCreateVector( 0),
                                       SNetTencCreateVector( 1, T_stop),
-                                      SNetTencCreateVector( 0))),
+                                      SNetTencCreateVector( 0))),NULL,
                                   &SER_predicate_compute, &starnet2);
 
   return( outbuf);
@@ -475,7 +475,7 @@ snet_buffer_t *starnet( snet_buffer_t *inbuf) {
                           SNetTencVariantEncode(
                             SNetTencCreateVector( 0),
                             SNetTencCreateVector( 1, T_stop),
-                            SNetTencCreateVector( 0))),
+                            SNetTencCreateVector( 0))),NULL,
                          &SER_predicate_compute, &starnet2);
 
 
@@ -493,14 +493,14 @@ snet_buffer_t *filterX( snet_buffer_t *inbuf) {
           SNetTencCreateVector( 1, F_x),
           SNetTencCreateVector( 1, T_stop),
           SNetTencCreateVector( 0))),
-      SNetTencTypeEncode( 1,
+      SNetTencCreateTypeEncodingList( 1, SNetTencTypeEncode( 1,
         SNetTencVariantEncode( 
           SNetTencCreateVector( 0),
           SNetTencCreateVector( 0),
-          SNetTencCreateVector( 0))),
-      SNetCreateFilterInstructionSet( 2,
+          SNetTencCreateVector( 0)))), NULL,
+      SNetCreateFilterInstructionSetList( 1, SNetCreateFilterInstructionSet( 2,
         SNetCreateFilterInstruction( FLT_strip_tag, T_stop),
-        SNetCreateFilterInstruction( FLT_strip_field, F_x)));
+        SNetCreateFilterInstruction( FLT_strip_field, F_x))));
   
 
   return( outbuf);

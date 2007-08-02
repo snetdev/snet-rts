@@ -322,8 +322,9 @@ extern snet_buffer_t *SNetAlias( snet_buffer_t *inbuf,
 /*  SNetSerial                                                               */
 /* ------------------------------------------------------------------------- */
 
-extern snet_buffer_t *SNetSerial( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)( snet_buffer_t*), 
-                                              snet_buffer_t* (*box_b)( snet_buffer_t*)) {
+extern snet_buffer_t *SNetSerial( snet_buffer_t *inbuf, 
+                                  snet_buffer_t* (*box_a)( snet_buffer_t*),
+                                  snet_buffer_t* (*box_b)( snet_buffer_t*)) {
 
   snet_buffer_t *internal_buf;
   snet_buffer_t *outbuf;
@@ -1753,6 +1754,7 @@ static void *StarBoxThread( void *hndl) {
 
 extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf, 
                                 snet_typeencoding_t *type,
+                                snet_expr_list_t *guards,
                                 snet_buffer_t* (*box_a)(snet_buffer_t*),
                                 snet_buffer_t* (*box_b)(snet_buffer_t*)) {
 
@@ -1779,7 +1781,8 @@ extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf,
 
 extern snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf,
                                          snet_typeencoding_t *type,
-                                         snet_buffer_t* (*box_a)(snet_buffer_t*),                                                 snet_buffer_t* (*box_b)(snet_buffer_t*)) {
+                                         snet_expr_list_t *guards,
+                                         snet_buffer_t* (*box_a)(snet_buffer_t*),                                               snet_buffer_t* (*box_b)(snet_buffer_t*)) {
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
@@ -1930,6 +1933,7 @@ static void *DetStarBoxThread( void *hndl) {
 
 extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf,
                                    snet_typeencoding_t *type,
+                                   snet_expr_list_t *guards,
                                    snet_buffer_t* (*box_a)(snet_buffer_t*),
                                    snet_buffer_t* (*box_b)(snet_buffer_t*)) {
 
@@ -1954,6 +1958,7 @@ extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf,
 
 extern snet_buffer_t *SNetStarDetIncarnate( snet_buffer_t *inbuf,
                                             snet_typeencoding_t *type,  
+                                            snet_expr_list_t *guards,
                                             snet_buffer_t* (*box_a)(snet_buffer_t*),
                                             snet_buffer_t* (*box_b)(snet_buffer_t*)) {
   snet_buffer_t *outbuf;
@@ -2184,7 +2189,8 @@ static void *SyncBoxThread( void *hndl) {
 
 
 extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf, snet_typeencoding_t *outtype, 
-                          snet_typeencoding_t *patterns ) {
+                          snet_typeencoding_t *patterns, 
+                          snet_expr_list_t *guards ) {
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
@@ -2341,8 +2347,9 @@ static void *SplitBoxThread( void *hndl) {
 
 
 
-extern snet_buffer_t *SNetSplit( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)( snet_buffer_t*),
-                            int ltag, int utag) {
+extern snet_buffer_t *SNetSplit( snet_buffer_t *inbuf, 
+                                 snet_buffer_t* (*box_a)( snet_buffer_t*),
+                                 int ltag, int utag) {
 
   snet_buffer_t *initial, *outbuf;
   snet_handle_t *hnd;
@@ -2585,7 +2592,24 @@ extern snet_filter_instruction_set_t *SNetCreateFilterInstructionSet( int num, .
   return( set);
 }
 
+extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList( int num, ...) {
+  va_list args;
+  int i;
+  snet_filter_instruction_set_list_t *lst;
 
+  lst = SNetMemAlloc( sizeof( snet_filter_instruction_set_list_t));
+  lst->num = num;
+  lst->lst = SNetMemAlloc( num * sizeof( snet_filter_instruction_set_t*));
+  
+  va_start( args, num);
+  for( i=0; i<num; i++) {
+    lst->lst[i] = va_arg( args, snet_filter_instruction_set_t*);
+  }
+
+  va_end( args);
+
+  return( lst);
+}
 
 
 extern void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set) {
@@ -2769,17 +2793,30 @@ static snet_buffer_t *CreateFilter( snet_buffer_t *inbuf,
 
 extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf, 
                                   snet_typeencoding_t *in_type,   
-                                  snet_typeencoding_t *out_type, ...) {
+                                  snet_typeencoding_list_t *out_types, 
+                                  snet_expr_list_t *guards,  ...) {
   int i;
   va_list args;
 
+  snet_filter_instruction_set_list_t *lst;
   snet_filter_instruction_set_t **set;
+  snet_typeencoding_t *out_type;
 
-  set = SNetMemAlloc( SNetTencGetNumVariants( out_type) * sizeof( snet_filter_instruction_set_t*));
+  // *
+  if( SNetTencGetNumTypes( out_types) > 1) {
+    printf("\n\n ** Error ** : Requested feature not implemented yet (filter)\n\n");
+    exit( 1);
+  }
 
-  va_start( args, out_type);
-  for( i=0; i<SNetTencGetNumVariants( out_type); i++) {
-    set[i] = va_arg( args, snet_filter_instruction_set_t*);
+  out_type = SNetTencGetTypeEncoding( out_types, 0);
+
+//  set = SNetMemAlloc( SNetTencGetNumVariants( out_type) * sizeof( snet_filter_instruction_set_t*));
+  va_start( args, guards);
+  for( i=0; SNetTencGetNumTypes( out_types); i++) {
+    printf("num: %d\n", SNetTencGetNumTypes( out_types));
+    lst = va_arg( args, snet_filter_instruction_set_list_t*);
+    printf("numsets: %d\n",SNetFilterInstructionsGetNumSets( lst));
+    set = SNetFilterInstructionsGetSets( lst); // !!!!!
   }
   va_end( args);
 

@@ -101,6 +101,11 @@ struct typeencode {
   snet_variantencoding_t **variants;
 };
 
+struct typeencoding_list {
+  int num;
+  snet_typeencoding_t **types;
+};
+
 struct patternencoding {
   int num_tags;
   int *tag_names;
@@ -376,6 +381,34 @@ extern snet_typeencoding_t *SNetTencTypeEncode( int num, ...) {
   
   return( t_encode);
 }
+extern snet_typeencoding_list_t *SNetTencCreateTypeEncodingList( int num, ...) {
+
+  int i;
+  va_list args;
+ 
+  snet_typeencoding_list_t *lst;
+
+  lst = SNetMemAlloc( sizeof( snet_typeencoding_list_t));
+  lst->types = SNetMemAlloc( num * sizeof( snet_typeencoding_t*));
+  lst->num = num;
+
+  va_start(args, num);
+  
+  for( i=0; i < num; i++) {
+    (lst->types)[i] = va_arg(args, snet_typeencoding_t*);
+  }
+  va_end( args);
+  
+  return( lst);
+}
+extern int SNetTencGetNumTypes( snet_typeencoding_list_t *lst) {
+    return( lst->num);
+}
+extern snet_typeencoding_t *SNetTencGetTypeEncoding( snet_typeencoding_list_t *lst, int num) {
+    return( lst->types[num]);
+}
+
+
 
 extern int SNetTencGetNumVariants( snet_typeencoding_t *type) {
   int num;
