@@ -10,7 +10,7 @@
 #include <typeencode.h>
 #include <record.h>
 #include <buffer.h>
-
+#include <expression.h>
 
 
 
@@ -46,6 +46,7 @@ typedef struct handle snet_handle_t;
 typedef struct filter_instruction {
   snet_filter_opcode_t opcode;
   int *data;
+	snet_expr_t *expr;
 } snet_filter_instruction_t;
 
 typedef struct filter_instruction_set {

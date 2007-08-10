@@ -2533,6 +2533,8 @@ extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcod
 
   instr = SNetMemAlloc( sizeof( snet_filter_instruction_t));
   instr->opcode = opcode;
+  instr->data = NULL;
+  instr->expr = NULL;
 
   va_start( args, opcode);   
 
@@ -2546,6 +2548,11 @@ extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcod
       instr->data[0] = va_arg( args, int);
       break;
     case FLT_set_tag:
+      instr->data = SNetMemAlloc( sizeof( int));
+      //instr->expr = SNetMemAlloc( sizeof( snet_expr_t*));
+      instr->data[0] = va_arg( args, int);
+      instr->expr = va_arg( args, snet_expr_t*);
+      break;
     case FLT_rename_tag:
     case FLT_rename_field:
       instr->data = SNetMemAlloc( 2 * sizeof( int));
@@ -2567,6 +2574,7 @@ extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcod
 extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr) {
   
   SNetMemFree( instr->data);
+  //SNetMemFree( instr->expr);
   SNetMemFree( instr);
 }
 
@@ -2670,7 +2678,8 @@ static void *FilterThread( void *hndl) {
               SNetRecSetTag( out_rec, instr->data[0], 0); 
               break;
             case FLT_set_tag:
-              SNetRecSetTag( out_rec, instr->data[0], instr->data[1]);
+              // expressions are ignored for now!
+              SNetRecSetTag( out_rec, instr->data[0], 0);
               break;
             case FLT_rename_tag:
               SNetRecSetTag( out_rec, instr->data[1], 
