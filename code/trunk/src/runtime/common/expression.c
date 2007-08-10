@@ -16,6 +16,7 @@ typedef enum {
   CONSTB,
   TAG,
   BTAG,
+  ABS,
   MIN,
   MAX,
   ADD,
@@ -72,6 +73,7 @@ static snet_expr_t *CreateExpr( snet_expr_type_t t) {
     case COND:
       new->content.expr = SNetMemAlloc( 3 * sizeof( snet_expr_t*));
       break;
+    case ABS:
     case NOT:
       new->content.expr = SNetMemAlloc( sizeof( snet_expr_t*));
       break;
@@ -101,6 +103,7 @@ static void DestroyExpr( snet_expr_t *expr) {
       }
       break;
     case NOT:
+    case ABS:
       SNetMemFree( expr->content.expr[0]);
       break;
     default:
@@ -211,6 +214,10 @@ extern snet_expr_t *SNetEmod( snet_expr_t *a, snet_expr_t *b) {
 
 extern snet_expr_t *SNetEmin( snet_expr_t *a, snet_expr_t *b) {
   return( CreateBinOp( MIN, a, b));
+}
+
+extern snet_expr_t *SNetEabs( snet_expr_t *a) {
+  return( CreateMonOp( ABS, a));
 }
 
 extern snet_expr_t *SNetEmax( snet_expr_t *a, snet_expr_t *b) {

@@ -32,6 +32,7 @@ extern snet_expr_t *SNetEmod( snet_expr_t *a, snet_expr_t *b);
 
 
 /* *** */
+extern snet_expr_t *SNetEabs( snet_expr_t *a);
 extern snet_expr_t *SNetEmin( snet_expr_t *a, snet_expr_t *b);
 extern snet_expr_t *SNetEmax( snet_expr_t *a, snet_expr_t *b);
 
