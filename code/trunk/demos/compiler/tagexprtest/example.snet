@@ -11,6 +11,25 @@
  *
  ****************************************************************/
 
-net example ({A} -> {A}){
+net example ({A,B,<T>} -> {A,<Y>}){
    box compA ((A) -> (A));
-} connect compA * {A},{ } if < 1 > stag + #btag >= 3 || 4 && 5 > 6 ? 7 ? 7 * 5 - abs (4 + 4): 8 : 9 || ! 10 > 11 > .. [{A} if < 8 / 6> -> {A,<stag = btag>}];
+} connect compA * {A},{ } if < 1 > T >= 3 || 4 && 5 > 6 ? 7 ? 7 * 5 - abs (4 + 4): 8 : 9 || ! 10 > 11 > .. 
+[{A,B,<T>} 
+if <T == 1> -> {A,B,<T>}          // use
+if <T == 2> -> {A,B}              // strip tag
+if <T == 3> -> {A,<T>}            // strip field
+if <T == 4> -> {A, <T>};{B,<T>}   // split
+if <T == 5> -> {A = B,B,<T>}      // copy field       
+if <T == 6> -> {K = A,B,<T>}      // rename field  
+if <T == 6> -> {K = A,A,B,<T>}    // copy field 
+if <T == 7> -> {A = B,<T>};{B}    // copy field + split     
+if <T == 8> -> {K = A,B,<T>};{A}  // rename + split        
+if <T == 11> -> {A,B,<T>,<Y>}     // add tag, 0  
+if <T == 12> -> {A,B,<Y=T>}       // rename tag
+if <T == 14> -> {A,B,<T=1>}       // set tag
+if <T == 14> -> {A,B,<T>,<Y=1>}   // add tag, set expr
+if <T == 15> -> {A,B,<T>,<Y=T+1>} // add tag, set expr (tag) 
+if <T == 16> -> {A,B,<T>,<Y=T>}   // add tag, set tag 
+if <T == 17> -> {A = B, B}        // copy field   
+-> {}                             // strip
+-> ];                             // none
