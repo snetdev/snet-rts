@@ -13,10 +13,9 @@
  * 
  ****************************************************************/
 
-type typeA_t = {A};
-type typeB_t = {B};
-typesig sigAP_s = typeA_t -> {P};
-typesig compAB_s = sigAP_s, typeB_t -> {Q};
+type A = {A};
+typesig A2P = A -> {P};
+typesig compAB_t = A2P, {B} -> {Q};
 
 net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
     box compA ((A) -> (P));
@@ -33,7 +32,7 @@ net example {
     box examine((P,Q) -> (A,B) | (Y,Z));
 
     net compute {
-	net compAB (compAB_s)	
+	net compAB (compAB_t)	
         connect compABC;
 
         net syncPQ

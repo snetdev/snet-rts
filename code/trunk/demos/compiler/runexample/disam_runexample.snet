@@ -37,16 +37,16 @@ net compABC ({A} -> {P}, {B} -> {Q}, {C} -> {P}) {
   box compB ((B) -> (Q));
   box compC ((C) -> (P));
 
-  net _SL ({A} -> {P})
+  net _PL ({A} -> {P})
   connect compA;
 
-  net _SR__SL ({B} -> {Q})
+  net _PR__PL ({B} -> {Q})
   connect compB;
 
-  net _SR__SR ({C} -> {P})
+  net _PR__PR ({C} -> {P})
   connect compC;
 }
-connect || _SL _SR__SL _SR__SR;
+connect || _PL _PR__PL _PR__PR;
 
 net example ({A,B} -> {Y,Z}) {
   net split ({A,B,<T>} -> {A,<T>} | {B,<T>})

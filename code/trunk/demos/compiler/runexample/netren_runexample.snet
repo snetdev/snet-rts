@@ -37,16 +37,16 @@ net compABC ({A} -> {P}, {B} -> {Q}, {C} -> {P}) {
   box compABC__compB compB ((B) -> (Q));
   box compABC__compC compC ((C) -> (P));
 
-  net compABC___SL ({A} -> {P})
+  net compABC___PL ({A} -> {P})
   connect compABC__compA;
 
-  net compABC___SR__SL ({B} -> {Q})
+  net compABC___PR__PL ({B} -> {Q})
   connect compABC__compB;
 
-  net compABC___SR__SR ({C} -> {P})
+  net compABC___PR__PR ({C} -> {P})
   connect compABC__compC;
 }
-connect || compABC___SL compABC___SR__SL compABC___SR__SR;
+connect || compABC___PL compABC___PR__PL compABC___PR__PR;
 
 net example ({A,B} -> {Y,Z}) {
   net example__split ({A,B,<T>} -> {A,<T>} | {B,<T>})
