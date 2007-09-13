@@ -1,0 +1,135 @@
+/*****************************************************************
+ *
+ * Test for metadata xml-parsing
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ *
+ * Date:   20.08.2007
+ * 
+ * Run:
+ *         $ snetc -b1 metadatatest.snet
+ *
+ *************************************************************** */   
+
+    <metadata xmlns="snet.feis.herts.ac.uk">
+      <net name="metadatatest/split" >
+         <snet:observer type="after" xmlns="nosuchnamespace">
+            <snet:stag>T</snet:stag>
+         </snet:observer>
+      </net>
+    </metadata>
+
+    <snet:metadata xmlns="snet.feis.herts.ac.uk">
+      <snet:net name="metadatatest/compute" >
+    	 <net name="syncPQ" >
+           <snet:observer type="both">
+           </snet:observer>
+   	</net>
+      </snet:net>
+      <snet:box name="metadata">
+        <snet:observer type="before" >
+        </snet:observer>
+        <snet:threads>5</snet:threads> 
+      </snet:box >
+
+      <snet:net name="metadatatest" >
+        <snet:observer type="both" >
+        </snet:observer>
+        <snet:net name="compute" >
+          <snet:observer type="both" >
+          </snet:observer>
+        </snet:net>
+        <snet:box name="examine" >
+          <snet:threads number="9">
+          </snet:threads> 
+        </snet:box>
+      </snet:net >
+      <snet:net name="metadata" >
+        <snet:box name="examine" >
+          <snet:threads>9</snet:threads> 
+        </snet:box>
+      </snet:net >
+    </snet:metadata >
+
+
+box metadata ((A)->(B));
+
+
+net metadata {
+
+    <snet:metadata xmlns="snet.feis.herts.ac.uk">
+      <snet:box name="examine" >
+       <snet:interface ></snet:interface>
+        <snet:compiler>
+        </snet:compiler>
+        <snet:flags></snet:flags>
+        <observer type="before">
+           <field name="P" />
+           <field name="Q" />
+         </observer>
+      </snet:box>
+    </snet:metadata >
+
+    box examine((P,Q) -> (A,B) | (Y,Z));
+}
+connect metadata .. examine;
+
+net metadatatest {
+
+    <snet:metadata >
+      <snet:box name="examine" >
+
+        <snet:observer type="after">
+           <snet:field name="A" />
+           <snet:field>
+              Y
+           </snet:field>
+         </snet:observer>
+
+        <metaedit:api>
+          <metaedit:area id="1_1234"></metaedit:area> 
+          <metaedit:object>1_1235</metaedit:object> 
+          <metaedit:property name="boxname" value="2" /> 
+        </metaedit:api>
+  
+        <snet:interface >C</snet:interface>
+        <snet:compiler name="gcc">
+        </snet:compiler>
+        <snet:flags>-Wall -Werror</snet:flags>
+      </snet:box>
+    </snet:metadata >
+
+    <snet:metadata >
+      <snet:box name="examine" >
+        <snet:observer type="before">
+           <snet:field name="P" >
+           </snet:field>
+           <snet:field name="Q" />
+         </snet:observer>
+      </snet:box>
+    </snet:metadata >
+
+    box examine((P,Q) -> (A,B) | (Y,Z));
+
+    <snet:net name="compute">
+      <snet:net name="syncPQ" >
+        <metaedit:api>
+          <metaedit:area id="1_1236"></metaedit:area> 
+          <metaedit:object>1_1237</metaedit:object> 
+          <metaedit:property name="netname" value="2" /> 
+        </metaedit:api>
+      </snet:net>
+    </snet:net>
+
+    net split
+    connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
+
+    net compute {
+        net syncPQ
+        connect [|{P},{Q}|] ** {P,Q};
+    }
+    connect ([{<T>} if <T < 34>-> {}] .. examine .. syncPQ) !! <T>;
+
+}
+connect (split .. compute .. examine) ** {Y,Z} .. metadata;
+
