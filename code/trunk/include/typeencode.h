@@ -214,8 +214,6 @@ extern void SNetTencRenameBTag( snet_variantencoding_t *v_enc, int name, int new
 extern void SNetTencRenameField( snet_variantencoding_t *v_enc, int name, int newName);
 
 
-// simply copies all entries to new vector and replaces
-// tag_vector TODO: replace comment
 extern bool SNetTencAddTag( snet_variantencoding_t *venc, int name);
 extern bool SNetTencAddBTag( snet_variantencoding_t *venc, int name);
 extern bool SNetTencAddField( snet_variantencoding_t *venc, int name);
@@ -245,11 +243,25 @@ extern void SNetTencRemoveField( snet_variantencoding_t *v_enc, int name);
  * RETURNS: pointer to type encoding
  */
 
-extern snet_typeencoding_t *SNetTencTypeEncode( int num, ...);
+extern snet_typeencoding_t 
+*SNetTencTypeEncode( int num, ...);
 
-extern snet_typeencoding_list_t *SNetTencCreateTypeEncodingList( int num, ...);
-extern int SNetTencGetNumTypes( snet_typeencoding_list_t *lst);
-extern snet_typeencoding_t *SNetTencGetTypeEncoding( snet_typeencoding_list_t *lst, int num); 
+extern snet_typeencoding_list_t 
+*SNetTencCreateTypeEncodingList( int num, ...);
+
+extern snet_typeencoding_list_t 
+*SNetTencCreateTypeEncodingListFromArray( int num, snet_typeencoding_t **t);
+
+extern int 
+SNetTencGetNumTypes( snet_typeencoding_list_t *lst);
+
+extern snet_typeencoding_t 
+*SNetTencGetTypeEncoding( snet_typeencoding_list_t *lst, int num); 
+
+extern snet_typeencoding_t 
+*SNetTencAddVariant( snet_typeencoding_t *t,
+                     snet_variantencoding_t *v);
+
 
 /*
  * RETURNS: number of variants

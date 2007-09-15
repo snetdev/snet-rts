@@ -266,8 +266,29 @@ extern snet_expr_t *SNetEcond( snet_expr_t *a, snet_expr_t *b, snet_expr_t *c) {
 
 
 extern snet_expr_list_t *SNetEcreateList( int num, ...) {
-  /* empty */
   
-  return( NULL);
+  int i;
+  snet_expr_list_t *lst;
+  va_list args;
+
+  lst = SNetMemAlloc( sizeof( snet_expr_list_t));
+  lst->num = num;
+  lst->list = SNetMemAlloc( num * sizeof( snet_expr_t*));
+
+  va_start( args, num);
+  for( i=0; i<num; i++) {
+    lst->list[i] = va_arg( args, snet_expr_t*);
+  }
+  va_end( args);
+
+
+  return( lst);
 }
+
+
+extern int SNetElistGetNum( snet_expr_list_t *lst) {
+  return( lst->num);
+}
+
+
 

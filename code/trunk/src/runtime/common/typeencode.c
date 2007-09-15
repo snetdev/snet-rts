@@ -22,12 +22,17 @@
           int i;\
           VEC = SNetMemAlloc( sizeof( snet_vector_t));\
           VEC->num = NUM;\
-          VEC->fields.NAME = SNetMemAlloc( ( NUM + 1) * sizeof( TYPE));\
-          va_start(args, NUM);\
-          for( i=0; i < NUM; i++) {\
-            VEC->fields.NAME[i] = va_arg(args, TYPE);\
+          if( NUM == 0) {\
+             VEC->fields.NAME = NULL;\
           }\
-          va_end( args);
+          else {\
+            VEC->fields.NAME = SNetMemAlloc( ( NUM) * sizeof( TYPE));\
+            va_start(args, NUM);\
+            for( i=0; i < NUM; i++) {\
+              VEC->fields.NAME[i] = va_arg(args, TYPE);\
+            }\
+            va_end( args);\
+          }
 
           
 
@@ -124,30 +129,48 @@ struct patternset {
 /* *********************************************************** */
 
 static void DestroyFieldVector( snet_vector_t *vect) {
-
-  SNetMemFree( vect->fields.ints);
+  if( vect != NULL) {
+    SNetMemFree( vect->fields.ints);
+  }
   SNetMemFree( vect);         
 }
 
 
 
 static int *GetIntField( snet_vector_t *vect) {
-  return( vect->fields.ints);
+  if( vect != NULL) {
+    return( vect->fields.ints);
+  }
+  else {
+    return( NULL);
+  }
 }
 
 static snet_vector_t *GetFieldVector( snet_variantencoding_t *v_enc) {
-
-  return( v_enc->field_names);
+  if( v_enc != NULL) {
+    return( v_enc->field_names);
+  } 
+  else {
+    return( NULL);
+  }
 }
 
 static snet_vector_t *GetTagVector( snet_variantencoding_t *v_enc) {
-  
-  return( v_enc->tag_names);
+  if( v_enc != NULL) {
+    return( v_enc->tag_names);
+  }
+  else {
+    return( NULL);
+  }
 }
 
 static snet_vector_t *GetBTagVector( snet_variantencoding_t *v_enc) {
-
-  return( v_enc->btag_names);
+  if( v_enc != NULL) {
+    return( v_enc->btag_names);
+  }
+  else {
+    return( NULL);
+  }
 }
 
 
@@ -198,7 +221,7 @@ extern snet_vector_t *SNetTencCreateEmptyVector( int num) {
 
   vect = SNetMemAlloc( sizeof( snet_vector_t));
   vect->num = num;
-  vect->fields.ints = SNetMemAlloc( (num + 1) * sizeof( int));
+  vect->fields.ints = SNetMemAlloc( num * sizeof( int));
   
   for( i=0; i<num; i++) {
     vect->fields.ints[i] = UNSET;
@@ -214,8 +237,12 @@ extern void SNetTencSetVectorEntry( snet_vector_t *vect, int num, int val) {
 }
 
 extern int SNetTencGetNumVectorEntries( snet_vector_t *vec) {
-
-  return( vec->num);
+  if( vec == NULL) {
+    return( -1);
+  }
+  else {
+    return( vec->num);
+  }
 }
 
 extern void SNetTencRemoveUnsetEntries( snet_vector_t *vec) {
@@ -381,26 +408,64 @@ extern snet_typeencoding_t *SNetTencTypeEncode( int num, ...) {
   
   return( t_encode);
 }
-extern snet_typeencoding_list_t *SNetTencCreateTypeEncodingList( int num, ...) {
+
+extern snet_typeencoding_t 
+*SNetTencAddVariant( snet_typeencoding_t *t,
+                     snet_variantencoding_t *v)
+{
+  int i;
+  snet_variantencoding_t **variants;
+
+  variants = SNetMemAlloc( (t->num + 1) * sizeof( snet_variantencoding_t*));
+  for( i=0; i<t->num; i++) {
+    variants[i] = t->variants[i];
+  } 
+  variants[t->num] = v;
+  t->num += 1;
+
+  SNetMemFree( t->variants);
+  t->variants = variants;
+
+  return( t);
+}
+
+
+extern snet_typeencoding_list_t 
+*SNetTencCreateTypeEncodingListFromArray( int num, snet_typeencoding_t **t) {
+
+  snet_typeencoding_list_t *lst;
+  
+  lst = SNetMemAlloc( sizeof( snet_typeencoding_list_t));
+  lst->types = t;
+  lst->num = num;
+
+  return( lst);  
+}
+
+
+
+extern snet_typeencoding_list_t 
+*SNetTencCreateTypeEncodingList( int num, ...) {
 
   int i;
   va_list args;
- 
-  snet_typeencoding_list_t *lst;
-
-  lst = SNetMemAlloc( sizeof( snet_typeencoding_list_t));
-  lst->types = SNetMemAlloc( num * sizeof( snet_typeencoding_t*));
-  lst->num = num;
+  snet_typeencoding_t **t;
+  
+  t = SNetMemAlloc( num * sizeof( snet_typeencoding_t*));
 
   va_start(args, num);
   
   for( i=0; i < num; i++) {
-    (lst->types)[i] = va_arg(args, snet_typeencoding_t*);
+    t[i] = va_arg(args, snet_typeencoding_t*);
   }
   va_end( args);
   
-  return( lst);
+  return( SNetTencCreateTypeEncodingListFromArray( num, t));
 }
+
+
+
+
 extern int SNetTencGetNumTypes( snet_typeencoding_list_t *lst) {
     return( lst->num);
 }
@@ -419,8 +484,12 @@ extern int SNetTencGetNumVariants( snet_typeencoding_t *type) {
 }
 
 extern snet_variantencoding_t *SNetTencGetVariant( snet_typeencoding_t *type, int num) {
- 
-  return( type->variants[num-1]);  
+  if( type->num < 1) {
+    return( NULL);
+  }
+  else {
+    return( type->variants[num-1]);  
+  }
 }
 
 extern void SNetDestroyTypeEncoding( snet_typeencoding_t *t_enc) {

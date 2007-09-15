@@ -13,7 +13,9 @@
 #include <constants.h>
 #include <expression.h>
 
-
+extern snet_typeencoding_list_t 
+*FilterComputeTypes( int num, 
+                     snet_filter_instruction_set_list_t **lst);
 
 
 extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...);
@@ -21,7 +23,7 @@ extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr);
 extern snet_filter_instruction_set_t *SNetCreateFilterInstructionSet( int num, ...);	
 extern void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set); 
 extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList( int num, ...);
-
+extern int SNetFilterGetNumInstructions( snet_filter_instruction_set_t *set);
 
 extern snet_handle_t *SNetOutRaw( snet_handle_t *hnd, int variant_num, ...);
 
@@ -94,20 +96,27 @@ extern snet_buffer_t *SNetSplitDet( snet_buffer_t *inbuf,
 				    snet_buffer_t* (*box_a)( snet_buffer_t*),
                             	    int ltag, int utag);
 
+#ifdef FILTER_VERSION_2
+extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf,
+		                  snet_typeencoding_t *in_type,
+		                  snet_expr_list_t *guards, ... );
+
+#else
+
 extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf,
 				  snet_typeencoding_t *in_type,
 				  snet_typeencoding_list_t *out_types,
 				  snet_expr_list_t *guards,  ...);
-/*
-extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf, 
-				  snet_typeencoding_t *in_type,
-				  snet_typeencoding_t *out_type, 
-				  snet_filter_instruction_set_list_t *instr,
-				  snet_expr_list_t *guards);
-*/
+
+//extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf, 
+//				  snet_typeencoding_t *in_type,
+//				  snet_typeencoding_t *out_type, 
+//				  snet_filter_instruction_set_list_t *instr,
+//				  snet_expr_list_t *guards);
+#endif
+
 extern snet_buffer_t *SNetTranslate( snet_buffer_t *inbuf, 
 				     snet_typeencoding_t *in_type,
 				     snet_typeencoding_t *out_type, ...);
-
 
 #endif

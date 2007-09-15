@@ -24,6 +24,9 @@ typedef enum {
 } snet_handledescriptor_t;
 
 typedef enum {
+	snet_tag,
+	snet_btag,
+	snet_field,
 	FLT_strip_tag,
 	FLT_strip_field,
 	FLT_add_tag,		
@@ -46,7 +49,7 @@ typedef struct handle snet_handle_t;
 typedef struct filter_instruction {
   snet_filter_opcode_t opcode;
   int *data;
-	snet_expr_t *expr;
+  snet_expr_t *expr;
 } snet_filter_instruction_t;
 
 typedef struct filter_instruction_set {

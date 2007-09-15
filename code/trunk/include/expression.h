@@ -11,6 +11,8 @@
 
 
 #include <bool.h>
+#include <stdarg.h>
+
 
 typedef struct expression snet_expr_t;
 typedef struct expression_list snet_expr_list_t;
@@ -61,6 +63,6 @@ extern snet_expr_list_t *SNetEcreateList( int num, ...);
 
 
 /* *** */
-extern int SNetEgetNumExpressions( snet_expr_list_t *l);
+extern int SNetElistGetNum( snet_expr_list_t *l);
 
 #endif

@@ -1,5 +1,7 @@
-	Repairs:
+Repairs:
 ---------
+
+- repair collector 
 
 - Write comments 
 
@@ -8,17 +10,23 @@
 To Implement:
 --------------
 
-- det. combinators
-
 - SNET interface for in/out
 
 - memory managment
 
+- SAC integration
+
+- Evaluator for expressions
 
 
 
 Resolved (History):
 --------------------
+
+01.02.07
+- det. combinators
+
+
 20.11.06
 - SNETsync: use typeenoding instead of TENCpattern, 
             remove ofl- and out-tag.
