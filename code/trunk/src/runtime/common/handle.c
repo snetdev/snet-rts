@@ -89,6 +89,16 @@ typedef struct {
   int tag_b;
 } split_handle_t;
 
+
+#ifdef FILTER_VERSION_2
+typedef struct {
+  snet_buffer_t *inbuf;
+  snet_buffer_t *outbuf_a;
+  snet_typeencoding_t *in_type;
+  snet_typeencoding_list_t *out_types;
+  snet_filter_instruction_list_t *instr_list;
+} filter_handle_t;
+#else
 typedef struct {
   snet_buffer_t *inbuf;
   snet_buffer_t *outbuf_a;
@@ -96,7 +106,7 @@ typedef struct {
   snet_typeencoding_t *out_type;
   snet_filter_instruction_set_t **instr_set;
 } filter_handle_t;
-
+#endif
 
 typedef union {
   box_handle_t *box_hnd;
@@ -242,7 +252,6 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 }
 
 /****/
-
 extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionList( int num, ...) {
   int i;
   va_list args;
@@ -269,7 +278,6 @@ extern int SNetFilterInstructionsGetNumSets( snet_filter_instruction_set_list_t 
 extern snet_filter_instruction_set_t **SNetFilterInstructionsGetSets( snet_filter_instruction_set_list_t *lst) {
   return( lst->lst);
 }
-
 
 
 /****/
@@ -444,7 +452,6 @@ extern bool SNetHndIsDet( snet_handle_t *hnd) {
   return( res);
 }
 
-
 extern void *SNetHndGetBoxfun( snet_handle_t *hnd){
 
   void *fun;
@@ -519,6 +526,22 @@ extern int SNetHndGetTagB( snet_handle_t *hnd) {
 }
 
 
+#ifdef FILTER_VERSION_2
+extern snet_filter_instruction_set_list_t
+**SNetHndGetFilterInstructionSetList( snet_handle_t *hnd) 
+{
+  snet_filter_instruction_set_list_t **lst;  
+
+  switch( hnd->descr) {
+    case HND_filter: 
+      lst = FILTER_HND( instr_list); 
+      break;
+    default: WrongHandleType();
+  }
+
+  return( lst);
+}
+#else
 extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hnd) {
 
   snet_filter_instruction_set_t **instr;
@@ -532,6 +555,7 @@ extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle
  
   return( instr);
 }
+#endif
 
 extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hnd) {
  

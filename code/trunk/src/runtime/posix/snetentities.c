@@ -2640,19 +2640,11 @@ extern void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set)
   SNetMemFree( set);
 }
 
-
-
-#ifdef FILTER_VERSION_2
-static void *FilterThread( void *hndl) {
-  return( NULL);
-}
-#endif
 //### change back to static! ####
 extern snet_typeencoding_list_t 
 *FilterComputeTypes( int num, 
                      snet_filter_instruction_set_list_t **lst) 
 {
-
   int i, j, k;
   snet_typeencoding_t **type_array;
   snet_filter_instruction_set_t **sets;
@@ -2704,6 +2696,16 @@ extern snet_typeencoding_list_t
 }
 
 #ifdef FILTER_VERSION_2
+
+static void *FilterThread( void *hndl) 
+{
+  
+    
+  
+  return( NULL);
+}
+
+
 extern snet_buffer_t 
 *SNetFilter( snet_buffer_t *inbuf,
              snet_typeencoding_t *in_type,
@@ -2713,6 +2715,7 @@ extern snet_buffer_t
 
   int i;
   int num_outtypes;
+  snet_handle_t *hnd;
   snet_filter_instruction_set_list_t **instr_list;
   snet_typeencoding_list_t* outtypes;
   va_list args;
@@ -2728,7 +2731,8 @@ extern snet_buffer_t
   va_end( args);
 
   outtypes = FilterComputeTypes( num_outtypes, inst_list);
-  
+
+  hnd = SNetHndCreate( );
 
 }
                        
@@ -2815,6 +2819,7 @@ static void *FilterThread( void *hndl) {
         }
         // flow inherit, remove everthing that is already present in the 
         // outrecord. Renamed fields/tags are removed above.
+        // TODO: remove everything that is present in in_type but not in out_type
         for( j=0; j<SNetTencGetNumFields( variant); j++) {
 //          SNetFreeField( 
 //              SNetRecGetField( in_rec, SNetTencGetFieldNames( variant)[j]),
