@@ -11,54 +11,13 @@
  *
  *************************************************************** */   
 
-    <metadata xmlns="snet.feis.herts.ac.uk">
-      <net name="metadatatest/split" >
-         <snet:observer type="after" xmlns="nosuchnamespace">
-            <snet:stag>T</snet:stag>
-         </snet:observer>
-      </net>
-    </metadata>
-
-    <snet:metadata xmlns="snet.feis.herts.ac.uk">
-      <snet:net name="metadatatest/compute" >
-    	 <net name="syncPQ" >
-           <snet:observer type="both">
-           </snet:observer>
-   	</net>
-      </snet:net>
-      <snet:box name="metadata">
-        <snet:observer type="before" >
-        </snet:observer>
-        <snet:threads>5</snet:threads> 
-      </snet:box >
-
-      <snet:net name="metadatatest" >
-        <snet:observer type="both" >
-        </snet:observer>
-        <snet:net name="compute" >
-          <snet:observer type="both" >
-          </snet:observer>
-        </snet:net>
-        <snet:box name="examine" >
-          <snet:threads number="9">
-          </snet:threads> 
-        </snet:box>
-      </snet:net >
-      <snet:net name="metadata" >
-        <snet:box name="examine" >
-          <snet:threads>9</snet:threads> 
-        </snet:box>
-      </snet:net >
-    </snet:metadata >
-
-
 box metadata ((A)->(B));
 
 
 net metadata {
 
     <snet:metadata xmlns="snet.feis.herts.ac.uk">
-      <snet:box name="examine" >
+      <snet:box name="examine " >
        <snet:interface ></snet:interface>
         <snet:compiler>
         </snet:compiler>
@@ -68,7 +27,7 @@ net metadata {
            <field name="Q" />
          </observer>
       </snet:box>
-    </snet:metadata >
+    </snet:metadata>
 
     box examine((P,Q) -> (A,B) | (Y,Z));
 }
@@ -99,20 +58,10 @@ net metadatatest {
       </snet:box>
     </snet:metadata >
 
-    <snet:metadata >
-      <snet:box name="examine" >
-        <snet:observer type="before">
-           <snet:field name="P" >
-           </snet:field>
-           <snet:field name="Q" />
-         </snet:observer>
-      </snet:box>
-    </snet:metadata >
-
     box examine((P,Q) -> (A,B) | (Y,Z));
 
     <snet:net name="compute">
-      <snet:net name="syncPQ" >
+      <snet:net name="syncPQö" >
         <metaedit:api>
           <metaedit:area id="1_1236"></metaedit:area> 
           <metaedit:object>1_1237</metaedit:object> 
