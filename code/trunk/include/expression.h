@@ -13,6 +13,7 @@
 #include <bool.h>
 #include <stdarg.h>
 
+#include <record.h>
 
 typedef struct expression snet_expr_t;
 typedef struct expression_list snet_expr_list_t;
@@ -56,6 +57,14 @@ extern snet_expr_t *SNetEor( snet_expr_t *a, snet_expr_t *b);
 
 /* *** */
 extern snet_expr_t *SNetEcond( snet_expr_t *a, snet_expr_t *b, snet_expr_t *c);
+
+
+/* *** */
+extern int SNetEevaluateInt( snet_expr_t *expr, snet_record_t *rec); 
+extern bool SNetEevaluateBool( snet_expr_t *expr, snet_record_t *rec); 
+
+
+
 
 
 /* *** */

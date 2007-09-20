@@ -5,10 +5,14 @@
  *
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
 #include <expression.h>
 
 #include <memfun.h>
+
 
 
 typedef enum {
@@ -61,7 +65,7 @@ static snet_expr_t *CreateExpr( snet_expr_type_t t) {
 
   new = SNetMemAlloc( sizeof( snet_expr_t));
   new->type = t;
-/*  
+  
   switch( t) {
     case CONSTI:
     case TAG:
@@ -81,7 +85,7 @@ static snet_expr_t *CreateExpr( snet_expr_type_t t) {
     default:
       new->content.expr = SNetMemAlloc( 2 * sizeof( snet_expr_t*));
   }
-*/
+
   return( new);
 }
 
@@ -303,8 +307,9 @@ extern snet_expr_t *SNetEgetExpr( snet_expr_list_t *l, int num)
 --------------------------------------------------------------------------------
 */
 
+#define EXPR_OP( obj, num) obj->content.expr[num]
 
-static bool isBoolean( snet_expression_t *expr) 
+static bool isBoolean( snet_expr_t *expr) 
 {
   bool result;
 
@@ -324,7 +329,65 @@ static bool isBoolean( snet_expression_t *expr)
 }
 
 
-extern bool SNetEevaluateBool( snet_expression_t *expr, snet_record_t *rec) 
+static int maxOp( int a, int b) 
+{
+  int res;
+
+  res = a>b?a:b;
+
+  return( res);
+}
+
+static int minOp( int a, int b) 
+{
+  int res;
+
+  res = a<b?a:b;
+
+  return( res);
+}
+
+static bool isEqualOp( snet_expr_t *expr, snet_record_t *rec) 
+{
+  
+  bool result;
+
+  if( isBoolean( expr->content.expr[0])) {
+          result = 
+            ( SNetEevaluateBool( EXPR_OP( expr, 0), rec) ==
+              SNetEevaluateBool( EXPR_OP( expr, 1), rec));
+        }
+        else {
+          result = 
+            ( SNetEevaluateInt( EXPR_OP( expr, 0), rec) ==
+              SNetEevaluateInt( EXPR_OP( expr, 1), rec));
+        }
+  return( result);
+}
+
+static bool isGreaterOp( snet_expr_t *expr, snet_record_t *rec) 
+{
+  bool result;
+
+  result = 
+    ( SNetEevaluateInt( EXPR_OP( expr, 0), rec) > 
+      SNetEevaluateInt( EXPR_OP( expr, 1), rec));
+
+  return( result);
+}
+
+static bool isLessOp( snet_expr_t *expr, snet_record_t *rec) 
+{
+  bool result;
+
+  result = 
+    ( SNetEevaluateInt( EXPR_OP( expr, 0), rec) <
+      SNetEevaluateInt( EXPR_OP( expr, 1), rec));
+
+  return( result);
+}
+
+extern bool SNetEevaluateBool( snet_expr_t *expr, snet_record_t *rec) 
 {
   bool result;
   
@@ -338,53 +401,39 @@ extern bool SNetEevaluateBool( snet_expression_t *expr, snet_record_t *rec)
       case CONSTB:
         result = *( expr->content.bval);
       break;
-      case TAG:
-      break;
-      case BTAG:
-      break;
-      case ABS:
-      break;
-      case MIN:
-      break;
-      case MAX:
-      break;
-      case ADD:
-      break;
-      case MUL:
-      break;
-      case SUB:
-      break;
-      case DIV:
-      break;
       case EQ:
-        if( isBoolean( expr->content.expr[0])) {
-          result = 
-            ( SNetEevaluateBool( expr->content.expr[0]) ==
-              SNetEevaluateBool( expr->content.expr[1]));
-        }
-        else {
-          result = 
-            ( SNetEevaluateInt( expr->content.expr[0]) ==
-              SNetEevaluateInt( expr->content.expr[1]));
-        }
+        result = isEqualOp( expr, rec);
       break;
       case NE:
+        result = !( isEqualOp( expr, rec));
       break;
       case GT:
+        result = isGreaterOp( expr, rec);
       break;
       case GE:
+        result = ( isGreaterOp( expr, rec) || isEqualOp( expr, rec));
       break;
       case LT:
+        result = isLessOp( expr, rec);
       break;
       case LE:
+        result = ( isLessOp( expr, rec) || isEqualOp( expr, rec));
       break;
       case AND:
+        result = ( SNetEevaluateBool( EXPR_OP( expr, 0), rec) &&
+                   SNetEevaluateBool( EXPR_OP( expr, 1), rec));
       break;
       case OR:
+        result = ( SNetEevaluateBool( EXPR_OP( expr, 0), rec) ||
+                   SNetEevaluateBool( EXPR_OP( expr, 1), rec));
       break;
       case NOT:
+        result = !( SNetEevaluateBool( EXPR_OP( expr, 0), rec));
       break;
-      case COND:
+      default:
+        printf("\n\n ** Runtime Error ** : Operation not handled "
+               " in SNetEevaluateBool. [%d]\n\n", expr->type);
+        exit( 1);
       break;
     }
   }
@@ -393,4 +442,71 @@ extern bool SNetEevaluateBool( snet_expression_t *expr, snet_record_t *rec)
   return( result);
 }
 
+extern int SNetEevaluateInt( snet_expr_t *expr, snet_record_t *rec) 
+{
+  int result;
+  
+  if( expr == NULL) {
+    result = true;
+  }
+  else {
+    switch( expr->type) {
+      case CONSTI:
+        result = *( expr->content.ival);
+      break;
+      case TAG:
+        result = SNetRecGetTag( rec, *(expr->content.ival));
+      break;
+      case BTAG:
+        result = SNetRecGetBTag( rec, *(expr->content.ival));
+      break;
+      case ABS:
+        result = abs( SNetEevaluateInt( EXPR_OP( expr, 0), rec));
+      break;
+      case MIN:
+        result = minOp(
+          SNetEevaluateInt( EXPR_OP( expr, 0), rec),
+          SNetEevaluateInt( EXPR_OP( expr, 1), rec));
+      break;
+      case MAX:
+        result = maxOp(
+          SNetEevaluateInt( EXPR_OP( expr, 0), rec),
+          SNetEevaluateInt( EXPR_OP( expr, 1), rec));
+      break;
+      case ADD:
+        result =  
+          SNetEevaluateInt( EXPR_OP( expr, 0), rec) +
+          SNetEevaluateInt( EXPR_OP( expr, 1), rec);
+      break;
+      case MUL:
+        result =  
+          SNetEevaluateInt( EXPR_OP( expr, 0), rec) *
+          SNetEevaluateInt( EXPR_OP( expr, 1), rec);
+      break;
+      case SUB:
+        result =  
+          SNetEevaluateInt( EXPR_OP( expr, 0), rec) -
+          SNetEevaluateInt( EXPR_OP( expr, 1), rec);
+      break;
+      case DIV:
+        result =  
+          SNetEevaluateInt( EXPR_OP( expr, 0), rec) /
+          SNetEevaluateInt( EXPR_OP( expr, 1), rec);
+      break;
+      case MOD:
+        result =  
+          SNetEevaluateInt( EXPR_OP( expr, 0), rec) %
+          SNetEevaluateInt( EXPR_OP( expr, 1), rec);
+      break;
+      default:
+        printf("\n\n ** Runtime Error ** : Operation not handled "
+               " in SNetEevaluateInt. [%d]\n\n", expr->type);
+        exit( 1);
+      break;
+    }
+  }
+
+
+  return( result);
+}
 
