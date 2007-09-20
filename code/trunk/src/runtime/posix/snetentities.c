@@ -2697,11 +2697,105 @@ extern snet_typeencoding_list_t
 
 #ifdef FILTER_VERSION_2
 
-static void *FilterThread( void *hndl) 
+static void *FilterThread( void *hnd) 
 {
+  int i,j,k,l;
+  bool done, terminate;
+  snet_buffer_t *inbuf;
+  snet_record_t *in_rec;
+  snet_expr_list_t *guard_list;
+  snet_typeencoding_t *out_type;
+  snet_typeencoding_list_t *type_list;
+  snet_filter_instruction_t *current_instr;
+  snet_filter_instruction_set_t **instr_sets, *current_set; 
+
+  done = false;
+  terminate = false;
   
+  inbuf = SNetHndGetInbuffer( hnd);
+  guard_list = SNetHndGetGuardList( hnd);
+  type_list = SNetHndGetTypeList( hnd); ##########
+  instr_sets = SNetHndGetInstructionSets( hnd); #########
+
+  while( !( terminate)) {
+    in_rec = SNetBufGet( inbuf);
+
+    switch( SNetRecGetDescriptor( in_rec)) {
+      case REC_data:
+        for( i=0; i<SNetElistGetNum( guard_list); i++) {
+          if( ( EVAL( SNetEgetExpr( guard_list, i)))) && !( done) { 
+            done = true;
+            out_type = SNetTencGetTypeEncoding( type_list, i);
+            for( j=0; j<SNetTencNumVariants( out_type); j++) {
+              snet_record_t *out_rec;
+              out_rec = SNetRecCreate( REC_data, 
+                                       SNetTencCopyVariantEncoding( 
+                                         SNetTencGetVariant( out_type, j+1)));
+              current_set = instr_sets[j];
+              for( k=0; k<SNetFilterGetNumInstructions( current_set); k++) {
+                current_instr = SNetFilterGetInstruction( current_set, k); #####
+                switch( SNetFilterGetOpcode( current_instr)) {
+                  case snet_tag:
+                    SNetRecSetTag( 
+                        out_rec, 
+                        SNetFilterInstrGetTagName( current_instr),
+                        SNetFilterInstrGetTagValue( current_instr, in_rec));
+                    break;
+                  case snet_btag:
+                    SNetRecSetBTag( 
+                        out_rec, 
+                        SNetFilterInstrGetBTagName( current_instr),
+                        SNetFilterInstrGetBTagValue( current_instr, in_rec));
+                    break;
+                  case snet_field:
+                    SNetRecSetField( 
+                        out_rec, 
+                        SNetFilterInstrGetFieldName( current_instr),
+                        SNetFilterInstrGetFieldValue( current_instr, in_rec));
+                    break;
+                  default:
+                    printf("\n\n ** Fatal Error ** : Unknown opcode in filter"
+                           " instruction. [%d]\n\n", current_instr->opcode);
+                    exit( 1);
+                } 
+              } // forall instructions of current_set
+              SNetBufPut( outbuf, out_rec);
+            } // forall variants of selected out_type
+            SNetRecDestroy( in_rec);
+          } // if guard is true
+        } // forall guards
+        if( !( done)) {
+          printf("\n\n ** Runtime Error ** : All guards "
+                 "evluated to FALSE. [Filter]\n\n");
+          exit( 1);
+        }
+        break; // case rec_data
+        case REC_sync:
+          SNetHndSetInbuffer( hnd, SNetRecGetBuffer( in_rec));
+          inbuf = SNetRecGetBuffer( in_rec);
+          SNetRecDestroy( in_rec);
+        break;
+        case REC_collect:
+          printf("\nDBG::Unhandled control record, destroying it.\n\n");
+          SNetRecDestroy( in_rec);
+        break;
+        case REC_sort_begin:
+          SNetBufPut( SNetHndGetOutbuffer( hnd), in_rec);
+        break;
+        case REC_sort_end:
+          SNetBufPut( SNetHndGetOutbuffer( hnd), in_rec);
+        break;
+        case REC_terminate:
+          terminate = true;
+          SNetBufPut( outbuf, in_rec);
+          SNetBufBlockUntilEmpty( outbuf);
+          SNetBufDestroy( outbuf);
+          SNetHndDestroy( hnd);
+        break;
+    } // switch rec_descr
     
-  
+  } // while not terminate
+    
   return( NULL);
 }
 

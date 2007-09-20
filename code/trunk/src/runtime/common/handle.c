@@ -541,6 +541,21 @@ extern snet_filter_instruction_set_list_t
 
   return( lst);
 }
+
+extern snet_typeencoding_list_t *SNetHndGetTypeList( snet_handle_t *hnd) 
+{
+ 
+  snet_typeencoding_list_t *lst;
+
+  switch( hnd->descr) {
+    case HND_filter: 
+      type = SYNC_HND( typelist); 
+      break;
+   default: WrongHandleType();
+  }
+ 
+  return( lst);
+}
 #else
 extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hnd) {
 
@@ -579,6 +594,7 @@ extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hnd) {
  
   return( type);
 }
+
 
 
 extern snet_typeencoding_t *SNetHndGetInType( snet_handle_t *hnd) {

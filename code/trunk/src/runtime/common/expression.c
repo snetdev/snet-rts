@@ -61,6 +61,7 @@ static snet_expr_t *CreateExpr( snet_expr_type_t t) {
 
   new = SNetMemAlloc( sizeof( snet_expr_t));
   new->type = t;
+/*  
   switch( t) {
     case CONSTI:
     case TAG:
@@ -80,7 +81,7 @@ static snet_expr_t *CreateExpr( snet_expr_type_t t) {
     default:
       new->content.expr = SNetMemAlloc( 2 * sizeof( snet_expr_t*));
   }
-
+*/
   return( new);
 }
 
@@ -263,9 +264,12 @@ extern snet_expr_t *SNetEnot( snet_expr_t *a) {
 extern snet_expr_t *SNetEcond( snet_expr_t *a, snet_expr_t *b, snet_expr_t *c) {
   return( CreateTriOp( COND, a, b, c));
 }
+/*
+--------------------------------------------------------------------------------
+*/
 
-
-extern snet_expr_list_t *SNetEcreateList( int num, ...) {
+extern snet_expr_list_t *SNetEcreateList( int num, ...) 
+{
   
   int i;
   snet_expr_list_t *lst;
@@ -285,10 +289,108 @@ extern snet_expr_list_t *SNetEcreateList( int num, ...) {
   return( lst);
 }
 
-
-extern int SNetElistGetNum( snet_expr_list_t *lst) {
+extern int SNetElistGetNum( snet_expr_list_t *lst) 
+{
   return( lst->num);
 }
 
+extern snet_expr_t *SNetEgetExpr( snet_expr_list_t *l, int num)
+{
+  return( l->list[num]);
+}
+
+/*
+--------------------------------------------------------------------------------
+*/
+
+
+static bool isBoolean( snet_expression_t *expr) 
+{
+  bool result;
+
+  result = 
+      ( expr->type == CONSTB) ||
+      ( expr->type == EQ) ||
+      ( expr->type == NE) ||
+      ( expr->type == GT) ||
+      ( expr->type == GE) ||
+      ( expr->type == LT) ||
+      ( expr->type == LE) ||
+      ( expr->type == AND)||
+      ( expr->type == OR) ||
+      ( expr->type == NOT);    
+
+  return( result);
+}
+
+
+extern bool SNetEevaluateBool( snet_expression_t *expr, snet_record_t *rec) 
+{
+  bool result;
+  
+  if( expr == NULL) {
+    result = true;
+  }
+  else {
+    switch( expr->type) {
+      case CONSTI:
+      break;
+      case CONSTB:
+        result = *( expr->content.bval);
+      break;
+      case TAG:
+      break;
+      case BTAG:
+      break;
+      case ABS:
+      break;
+      case MIN:
+      break;
+      case MAX:
+      break;
+      case ADD:
+      break;
+      case MUL:
+      break;
+      case SUB:
+      break;
+      case DIV:
+      break;
+      case EQ:
+        if( isBoolean( expr->content.expr[0])) {
+          result = 
+            ( SNetEevaluateBool( expr->content.expr[0]) ==
+              SNetEevaluateBool( expr->content.expr[1]));
+        }
+        else {
+          result = 
+            ( SNetEevaluateInt( expr->content.expr[0]) ==
+              SNetEevaluateInt( expr->content.expr[1]));
+        }
+      break;
+      case NE:
+      break;
+      case GT:
+      break;
+      case GE:
+      break;
+      case LT:
+      break;
+      case LE:
+      break;
+      case AND:
+      break;
+      case OR:
+      break;
+      case NOT:
+      break;
+      case COND:
+      break;
+    }
+  }
+
+
+  return( result);
+}
 
 

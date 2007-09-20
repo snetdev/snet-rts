@@ -106,6 +106,17 @@ extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd);
        
 extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hndl);
 
+#ifdef FILTER_VERSION_2
+extern snet_filter_instruction_set_list_t
+**SNetHndGetFilterInstructionSetList( snet_handle_t *hnd);	
+
+extern snet_
+
+#else
+
+
+#endif
+
 
 extern bool SNetHndIsIncarnate( snet_handle_t *hnd);
 
