@@ -396,8 +396,6 @@ extern bool SNetEevaluateBool( snet_expr_t *expr, snet_record_t *rec)
   }
   else {
     switch( expr->type) {
-      case CONSTI:
-      break;
       case CONSTB:
         result = *( expr->content.bval);
       break;

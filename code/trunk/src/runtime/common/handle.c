@@ -227,7 +227,15 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 
             break;
     }
- 
+  
+    #ifdef FILTER_VERSION_2
+    case HND_filter:
+      HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
+      FILTER_HND( inbuf) = va_arg( args, snet_buffer_t*);
+      FILTER_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
+      FILTER_HND( in_type) = va_arg( args, snet_typeencoding_t*);      
+      
+    #else
     case HND_filter: {
 
             HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
@@ -239,9 +247,11 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 
             break;
     }
+    #endif
     default: {
-            // this should never be reached.
-               exit( 1);
+      printf("\n\n ** Fatal Error ** : Cannot create requested handle type."
+             " This is a bug in the runtime system. \n\n");         
+      exit( 1);
     }
     
   }

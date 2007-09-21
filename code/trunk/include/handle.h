@@ -24,9 +24,11 @@ typedef enum {
 } snet_handledescriptor_t;
 
 typedef enum {
+#ifdef FILTER_VERSION_2
 	snet_tag,
 	snet_btag,
 	snet_field,
+#else
 	FLT_strip_tag,
 	FLT_strip_field,
 	FLT_add_tag,		
@@ -36,6 +38,7 @@ typedef enum {
 	FLT_copy_field,
 	FLT_use_tag,
 	FLT_use_field
+#endif
 } snet_filter_opcode_t;
 
 

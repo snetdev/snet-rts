@@ -2696,7 +2696,21 @@ extern snet_typeencoding_list_t
 }
 
 #ifdef FILTER_VERSION_2
+static int getNameFromInstr( snet_filter_instruction_t *instr) 
+{
+  return( instr->data[0]);
+}
 
+static int getFieldNameFromInstr( snet_filter_instruction_t *instr) 
+{
+  return( instr->data[1]);
+}
+
+static snet_expr_t *getExprFromInstr( snet_filter_instruction_t *instr) 
+{
+  return( instr->expr);
+}
+ 
 static void *FilterThread( void *hnd) 
 {
   int i,j,k,l;
@@ -2708,14 +2722,15 @@ static void *FilterThread( void *hnd)
   snet_typeencoding_list_t *type_list;
   snet_filter_instruction_t *current_instr;
   snet_filter_instruction_set_t **instr_sets, *current_set; 
+  snet_filter_instruction_set_list_t **instr_lst;
 
   done = false;
   terminate = false;
   
   inbuf = SNetHndGetInbuffer( hnd);
   guard_list = SNetHndGetGuardList( hnd);
-  type_list = SNetHndGetTypeList( hnd); ##########
-  instr_sets = SNetHndGetInstructionSets( hnd); #########
+  type_list = SNetHndGetTypeList( hnd); 
+  instr_lst = SNetHndGetFilterInstructionSetList( hnd);
 
   while( !( terminate)) {
     in_rec = SNetBufGet( inbuf);
@@ -2723,7 +2738,7 @@ static void *FilterThread( void *hnd)
     switch( SNetRecGetDescriptor( in_rec)) {
       case REC_data:
         for( i=0; i<SNetElistGetNum( guard_list); i++) {
-          if( ( EVAL( SNetEgetExpr( guard_list, i)))) && !( done) { 
+          if( ( SNetEevaluateBool( SNetEgetExpr( guard_list, i)))) && !( done) { 
             done = true;
             out_type = SNetTencGetTypeEncoding( type_list, i);
             for( j=0; j<SNetTencNumVariants( out_type); j++) {
@@ -2738,20 +2753,22 @@ static void *FilterThread( void *hnd)
                   case snet_tag:
                     SNetRecSetTag( 
                         out_rec, 
-                        SNetFilterInstrGetTagName( current_instr),
-                        SNetFilterInstrGetTagValue( current_instr, in_rec));
+                        getNameFromInstr( current_instr),
+                        SNetEevaluateInt( 
+                          getExprFromInstr( current_instr), in_rec));
                     break;
                   case snet_btag:
                     SNetRecSetBTag( 
                         out_rec, 
-                        SNetFilterInstrGetBTagName( current_instr),
-                        SNetFilterInstrGetBTagValue( current_instr, in_rec));
+                        getNameFromInstr( current_instr),
+                        SNetEevaluateInt( getExprFromInstr( current_instr), in_rec));
                     break;
                   case snet_field:
                     SNetRecSetField( 
                         out_rec, 
-                        SNetFilterInstrGetFieldName( current_instr),
-                        SNetFilterInstrGetFieldValue( current_instr, in_rec));
+                        getNameFromInstr( current_instr),
+                        SNetRecGetField( in_rec, getFieldNameFromInstr( current_instr)));
+                        // *** COPY *** 
                     break;
                   default:
                     printf("\n\n ** Fatal Error ** : Unknown opcode in filter"
@@ -2805,7 +2822,6 @@ extern snet_buffer_t
              snet_typeencoding_t *in_type,
              snet_expr_list_t *guards, ... ) 
 {
-
 
   int i;
   int num_outtypes;
