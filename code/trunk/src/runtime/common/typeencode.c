@@ -434,10 +434,14 @@ extern snet_typeencoding_list_t
 *SNetTencCreateTypeEncodingListFromArray( int num, snet_typeencoding_t **t) {
 
   snet_typeencoding_list_t *lst;
-  
-  lst = SNetMemAlloc( sizeof( snet_typeencoding_list_t));
-  lst->types = t;
-  lst->num = num;
+  if( num == 0) {
+    lst = NULL;
+  }
+  else {
+    lst = SNetMemAlloc( sizeof( snet_typeencoding_list_t));
+    lst->types = t;
+    lst->num = num;
+  }
 
   return( lst);  
 }

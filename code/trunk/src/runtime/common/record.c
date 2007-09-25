@@ -110,7 +110,6 @@ static int FindName( int *names, int count, int val) {
   }
 
   if( i == count) {
-    // Handle this error here?
     i = NOT_FOUND;
   }
    return( i);
@@ -620,3 +619,33 @@ extern void SNetRecSetLanguage( snet_record_t *rec, snet_lang_descr_t lang) {
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec) {
   return( GetVEnc( rec));
 }
+
+
+
+extern bool SNetRecHasTag( snet_record_t *rec, int name) {
+  bool result;
+
+  result = ( FindName( SNetRecGetTagNames( rec), 
+             SNetRecGetNumTags( rec), name) == NOT_FOUND) ? false : true;
+
+  return( result);
+}
+
+extern bool SNetRecHasBTag( snet_record_t *rec, int name) {
+  bool result;
+
+  result = ( FindName( SNetRecGetBTagNames( rec), 
+             SNetRecGetNumBTags( rec), name) == NOT_FOUND) ? false : true;
+
+  return( result);
+}
+
+extern bool SNetRecHasField( snet_record_t *rec, int name) {
+  bool result;
+
+  result = ( FindName( SNetRecGetFieldNames( rec), 
+             SNetRecGetNumTags( rec), name) == NOT_FOUND) ? false : true;
+
+  return( result);
+}
+

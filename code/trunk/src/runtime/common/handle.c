@@ -96,7 +96,8 @@ typedef struct {
   snet_buffer_t *outbuf_a;
   snet_typeencoding_t *in_type;
   snet_typeencoding_list_t *out_types;
-  snet_filter_instruction_list_t *instr_list;
+  snet_expr_list_t *guard_list;
+  snet_filter_instruction_set_list_t **instr_lists;
 } filter_handle_t;
 #else
 typedef struct {
@@ -234,18 +235,20 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
       FILTER_HND( inbuf) = va_arg( args, snet_buffer_t*);
       FILTER_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
       FILTER_HND( in_type) = va_arg( args, snet_typeencoding_t*);      
-      
+      FILTER_HND( out_types) = va_arg( args, snet_typeencoding_list_t*);
+      FILTER_HND( guard_list) = va_arg( args, snet_expr_list_t*);
+      FILTER_HND( instr_lists) = va_arg( args, snet_filter_instruction_set_list_t**);
+      break;
     #else
     case HND_filter: {
 
-            HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
-            FILTER_HND( inbuf) = va_arg( args, snet_buffer_t*);
-            FILTER_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
-            FILTER_HND( in_type) = va_arg( args, snet_typeencoding_t*);
-            FILTER_HND( out_type) = va_arg( args, snet_typeencoding_t*);
-            FILTER_HND( instr_set) = va_arg( args, snet_filter_instruction_set_t**);
-
-            break;
+      HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
+      FILTER_HND( inbuf) = va_arg( args, snet_buffer_t*);
+      FILTER_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
+      FILTER_HND( in_type) = va_arg( args, snet_typeencoding_t*);
+      FILTER_HND( out_type) = va_arg( args, snet_typeencoding_t*);
+      FILTER_HND( instr_set) = va_arg( args, snet_filter_instruction_set_t**);
+      break;
     }
     #endif
     default: {
@@ -538,13 +541,13 @@ extern int SNetHndGetTagB( snet_handle_t *hnd) {
 
 #ifdef FILTER_VERSION_2
 extern snet_filter_instruction_set_list_t
-**SNetHndGetFilterInstructionSetList( snet_handle_t *hnd) 
+**SNetHndGetFilterInstructionSetLists( snet_handle_t *hnd) 
 {
   snet_filter_instruction_set_list_t **lst;  
 
   switch( hnd->descr) {
     case HND_filter: 
-      lst = FILTER_HND( instr_list); 
+      lst = FILTER_HND( instr_lists); 
       break;
     default: WrongHandleType();
   }
@@ -552,19 +555,34 @@ extern snet_filter_instruction_set_list_t
   return( lst);
 }
 
-extern snet_typeencoding_list_t *SNetHndGetTypeList( snet_handle_t *hnd) 
+extern snet_typeencoding_list_t *SNetHndGetOutTypeList( snet_handle_t *hnd) 
 {
  
-  snet_typeencoding_list_t *lst;
+  snet_typeencoding_list_t *types;
 
   switch( hnd->descr) {
     case HND_filter: 
-      type = SYNC_HND( typelist); 
+      types = FILTER_HND( out_types); 
       break;
    default: WrongHandleType();
   }
  
-  return( lst);
+  return( types);
+}
+
+extern snet_expr_list_t *SNetHndGetGuardList( snet_handle_t *hnd) 
+{
+ 
+  snet_expr_list_t *guards;
+
+  switch( hnd->descr) {
+    case HND_filter: 
+      guards = FILTER_HND( guard_list); 
+      break;
+   default: WrongHandleType();
+  }
+ 
+  return( guards);
 }
 #else
 extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hnd) {
@@ -580,6 +598,20 @@ extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle
  
   return( instr);
 }
+extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd) {
+  
+  snet_typeencoding_t *type;
+  switch( hnd->descr) {
+    case HND_filter: 
+      type = FILTER_HND( out_type); 
+      break;
+   default: WrongHandleType();
+  }
+
+  return( type);
+}
+
+
 #endif
 
 extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hnd) {
@@ -613,20 +645,6 @@ extern snet_typeencoding_t *SNetHndGetInType( snet_handle_t *hnd) {
   switch( hnd->descr) {
     case HND_filter: 
       type = FILTER_HND( in_type); 
-      break;
-   default: WrongHandleType();
-  }
-
-  return( type);
-}
-
-
-extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd) {
-  
-  snet_typeencoding_t *type;
-  switch( hnd->descr) {
-    case HND_filter: 
-      type = FILTER_HND( out_type); 
       break;
    default: WrongHandleType();
   }

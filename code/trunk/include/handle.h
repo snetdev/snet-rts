@@ -105,19 +105,20 @@ extern snet_typeencoding_t *SNetHndGetPatterns( snet_handle_t *hndl);
 
 extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hndl);
 extern snet_typeencoding_t *SNetHndGetInType( snet_handle_t *hnd);
-extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd);
        
 extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hndl);
 
 #ifdef FILTER_VERSION_2
 extern snet_filter_instruction_set_list_t
-**SNetHndGetFilterInstructionSetList( snet_handle_t *hnd);	
+**SNetHndGetFilterInstructionSetLists( snet_handle_t *hnd);	
 
-extern snet_
+extern snet_typeencoding_list_t
+*SNetHndGetOutTypeList( snet_handle_t *hnd);
 
+extern snet_expr_list_t 
+*SNetHndGetGuardList( snet_handle_t *hnd);
 #else
-
-
+extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd);
 #endif
 
 

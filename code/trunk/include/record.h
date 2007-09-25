@@ -272,7 +272,9 @@ extern bool SNetRecAddTag( snet_record_t *rec, int name);
 extern bool SNetRecAddBTag( snet_record_t *rec, int name);
 extern bool SNetRecAddField( snet_record_t *rec, int name);
 
-
+extern bool SNetRecHasTag( snet_record_t *rec, int name);
+extern bool SNetRecHasBTag( snet_record_t *rec, int name);
+extern bool SNetRecHasField( snet_record_t *rec, int name);
 
 
 extern void SNetRecRemoveTag( snet_record_t *rec, int name);

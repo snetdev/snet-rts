@@ -72,6 +72,6 @@ extern snet_expr_list_t *SNetEcreateList( int num, ...);
 
 
 /* *** */
-extern int SNetElistGetNum( snet_expr_list_t *l);
+extern int SNetElistGetNumExpressions( snet_expr_list_t *l);
 extern snet_expr_t *SNetEgetExpr( snet_expr_list_t *l, int num);
 #endif

@@ -293,14 +293,24 @@ extern snet_expr_list_t *SNetEcreateList( int num, ...)
   return( lst);
 }
 
-extern int SNetElistGetNum( snet_expr_list_t *lst) 
+extern int SNetElistGetNumExpressions( snet_expr_list_t *lst) 
 {
-  return( lst->num);
+  if( lst == NULL) {
+    return( 0);
+  }
+  else {
+    return( lst->num);
+  }
 }
 
 extern snet_expr_t *SNetEgetExpr( snet_expr_list_t *l, int num)
 {
-  return( l->list[num]);
+  if( l != NULL) {
+    return( l->list[num]);  
+  }
+  else {
+    return( NULL);
+  }
 }
 
 /*
@@ -507,4 +517,5 @@ extern int SNetEevaluateInt( snet_expr_t *expr, snet_record_t *rec)
 
   return( result);
 }
+
 
