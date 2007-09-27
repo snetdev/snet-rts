@@ -7,19 +7,17 @@
  * Date:   20.08.2007
  * 
  * Run:
- *         $ snetc -b1 metadatatest.snet
+ *         $ snetc -b1 -mm1.dm -m2.md metadatatest.snet
  *
  *************************************************************** */   
 
 box metadata ((A)->(B));
 
-
 net metadata {
-
     <snet:metadata xmlns="snet.feis.herts.ac.uk">
-      <snet:box name="examine " >
-       <snet:interface ></snet:interface>
-        <snet:compiler>
+      <snet:box name="examine" >
+       <snet:interface >C</snet:interface>
+        <snet:compiler>gcc
         </snet:compiler>
         <snet:flags></snet:flags>
         <observer type="before">
@@ -37,14 +35,12 @@ net metadatatest {
 
     <snet:metadata >
       <snet:box name="examine" >
-
         <snet:observer type="after">
            <snet:field name="A" />
            <snet:field>
               Y
            </snet:field>
          </snet:observer>
-
         <metaedit:api>
           <metaedit:area id="1_1234"></metaedit:area> 
           <metaedit:object>1_1235</metaedit:object> 
@@ -61,7 +57,7 @@ net metadatatest {
     box examine((P,Q) -> (A,B) | (Y,Z));
 
     <snet:net name="compute">
-      <snet:net name="syncPQö" >
+      <snet:net name="syncPQ" >
         <metaedit:api>
           <metaedit:area id="1_1236"></metaedit:area> 
           <metaedit:object>1_1237</metaedit:object> 
