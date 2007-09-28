@@ -115,11 +115,12 @@ extern snet_filter_instruction_set_list_t
 extern snet_typeencoding_list_t
 *SNetHndGetOutTypeList( snet_handle_t *hnd);
 
-extern snet_expr_list_t 
-*SNetHndGetGuardList( snet_handle_t *hnd);
 #else
 extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd);
 #endif
+
+extern snet_expr_list_t 
+*SNetHndGetGuardList( snet_handle_t *hnd);
 
 
 extern bool SNetHndIsIncarnate( snet_handle_t *hnd);

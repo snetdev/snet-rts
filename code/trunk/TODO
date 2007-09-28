@@ -16,12 +16,15 @@ To Implement:
 
 - SAC integration
 
-- Evaluator for expressions
-
 
 
 Resolved (History):
 --------------------
+
+27.09.07
+ - Evaluator for expressions
+ - New filter implementation
+
 
 01.02.07
 - det. combinators

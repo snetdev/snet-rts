@@ -1,4 +1,10 @@
+/*
+ * Comment
+ *
+ *
+ */
 
+ 
 #include <bool.h>
 #include <memfun.h>
 #include <snetentities.h>
@@ -242,7 +248,10 @@ snet_buffer_t *SYNC_a_b( snet_buffer_t *inbuf) {
                        SNetTencVariantEncode(
                          SNetTencCreateVector( 1, F_rr),
                          SNetTencCreateVector( 0),
-                         SNetTencCreateVector( 0))), NULL);
+                         SNetTencCreateVector( 0))), 
+                     SNetEcreateList( 2,
+                       SNetEconstb( true),
+                       SNetEconstb( true)));
 
   return( outbuf);
 }
@@ -300,7 +309,8 @@ snet_buffer_t *starsync2( snet_buffer_t *inbuf) {
                                  SNetTencVariantEncode(
                                   SNetTencCreateVector( 2, F_xx, F_rr),
                                   SNetTencCreateVector( 0),
-                                  SNetTencCreateVector( 0))),NULL,
+                                  SNetTencCreateVector( 0))),
+                               SNetEcreateList( 1, SNetEconstb( true)),
                                &SYNC_a_b, &starsync2);
 
 
@@ -315,7 +325,8 @@ snet_buffer_t *starsync( snet_buffer_t *inbuf) {
                         SNetTencVariantEncode(
                            SNetTencCreateVector( 2, F_xx, F_rr),
                            SNetTencCreateVector( 0),
-                           SNetTencCreateVector( 0))),NULL,
+                           SNetTencCreateVector( 0))),
+                       SNetEcreateList( 1, SNetEconstb( true)),
                        &SYNC_a_b, &starsync2);
 
 
@@ -380,8 +391,8 @@ snet_buffer_t *filterAasX_BasR( snet_buffer_t *inbuf) {
         NULL,
         SNetCreateFilterInstructionSetList( 1,
           SNetCreateFilterInstructionSet( 2,
-            SNetCreateFilterInstruction( snet_field, F_xx, F_x),
-            SNetCreateFilterInstruction( snet_field, F_rr, F_r))));
+            SNetCreateFilterInstruction( snet_field, F_x, F_xx),
+            SNetCreateFilterInstruction( snet_field, F_r, F_rr))));
 #else
   outbuf = SNetFilter( inbuf,
       SNetTencTypeEncode( 1,

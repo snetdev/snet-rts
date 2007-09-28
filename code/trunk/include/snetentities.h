@@ -101,6 +101,9 @@ extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf,
 		                  snet_typeencoding_t *in_type,
 		                  snet_expr_list_t *guards, ... );
 
+extern snet_buffer_t *SNetTranslate( snet_buffer_t *inbuf,
+		                     snet_typeencoding_t *in_type,
+		                     snet_expr_list_t *guards, ... );
 #else
 
 extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf,
@@ -113,10 +116,10 @@ extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf,
 //				  snet_typeencoding_t *out_type, 
 //				  snet_filter_instruction_set_list_t *instr,
 //				  snet_expr_list_t *guards);
-#endif
-
 extern snet_buffer_t *SNetTranslate( snet_buffer_t *inbuf, 
 				     snet_typeencoding_t *in_type,
 				     snet_typeencoding_t *out_type, ...);
+#endif
+
 
 #endif

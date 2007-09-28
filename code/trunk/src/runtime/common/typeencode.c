@@ -186,7 +186,7 @@ static void Rename( snet_vector_t *vec, int name, int newName) {
   }
 
   if( i == vec->num) {
-    printf("\n\n :: DEBUG INF :: num: %d, name: %d, new: %d names: ",
+    printf("\n\n :: DEBUG INFO :: num: %d, name: %d, new: %d names: ",
             vec->num, name, newName);
     for( i=0; i<vec->num; i++) {
       printf("%d ", vec->fields.ints[i]);

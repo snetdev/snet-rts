@@ -71,6 +71,7 @@ typedef struct {
   void (*boxfun_a)( snet_handle_t*);
   void (*boxfun_b)( snet_handle_t*);
   snet_typeencoding_t *type;
+  snet_expr_list_t *guard_list;
   bool is_incarnate;
 } star_handle_t;
 
@@ -79,6 +80,7 @@ typedef struct {
   snet_buffer_t *outbuf_a;
   snet_typeencoding_t *patterns;
   snet_typeencoding_t *type;
+  snet_expr_list_t *guard_list;
 } sync_handle_t;
 
 typedef struct {
@@ -106,6 +108,8 @@ typedef struct {
   snet_typeencoding_t *in_type;
   snet_typeencoding_t *out_type;
   snet_filter_instruction_set_t **instr_set;
+  snet_expr_list_t *guard_list;
+
 } filter_handle_t;
 #endif
 
@@ -201,7 +205,8 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
             STAR_HND( boxfun_a) = va_arg( args, void*);
             STAR_HND( boxfun_b) = va_arg( args, void*);
             STAR_HND( type) = va_arg( args, snet_typeencoding_t*);
-            STAR_HND(is_incarnate) = va_arg( args, bool);
+            STAR_HND( guard_list) = va_arg( args, snet_expr_list_t*);
+            STAR_HND( is_incarnate) = va_arg( args, bool);
 
             break;
     }
@@ -213,8 +218,8 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
             SYNC_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
             SYNC_HND( type) = va_arg( args, snet_typeencoding_t*);
             SYNC_HND( patterns) = va_arg( args, snet_typeencoding_t*);
-
-             break;
+            SYNC_HND( guard_list) = va_arg( args, snet_expr_list_t*);
+            break;
     }
     
     case HND_split: {
@@ -570,20 +575,6 @@ extern snet_typeencoding_list_t *SNetHndGetOutTypeList( snet_handle_t *hnd)
   return( types);
 }
 
-extern snet_expr_list_t *SNetHndGetGuardList( snet_handle_t *hnd) 
-{
- 
-  snet_expr_list_t *guards;
-
-  switch( hnd->descr) {
-    case HND_filter: 
-      guards = FILTER_HND( guard_list); 
-      break;
-   default: WrongHandleType();
-  }
- 
-  return( guards);
-}
 #else
 extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hnd) {
 
@@ -610,9 +601,29 @@ extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd) {
 
   return( type);
 }
-
-
 #endif
+
+extern snet_expr_list_t *SNetHndGetGuardList( snet_handle_t *hnd) 
+{
+ 
+  snet_expr_list_t *guards;
+
+  switch( hnd->descr) {
+    case HND_filter: 
+      guards = FILTER_HND( guard_list); 
+      break;
+    case HND_star: 
+      guards = STAR_HND( guard_list); 
+      break;
+    case HND_sync: 
+      guards = SYNC_HND( guard_list); 
+      break;
+   default: WrongHandleType();
+  }
+ 
+  return( guards);
+}
+
 
 extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hnd) {
  
