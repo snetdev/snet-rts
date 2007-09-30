@@ -246,6 +246,7 @@ extern void SNetBufDestroyByDispatcher( snet_buffer_t *bf) {
 
 extern void SNetBufDestroy( snet_buffer_t *bf) {
   if( !( bf->dispatcher_registered)) {
+
    pthread_mutex_destroy( bf->mxCounter);
    pthread_cond_destroy( bf->condEmpty);
    pthread_cond_destroy( bf->condFull);

@@ -215,10 +215,9 @@ int main() {
   printf("\n");
 
   printf("\n\n\n");
-
   SNetBufPut( start_buf, SNetRecCreate( REC_terminate));
+
   res_buf = SER_starnet_filter( start_buf);
-//  res_buf = starsync( start_buf);
 
 
 
@@ -243,7 +242,7 @@ int main() {
     else {
       printf("\n - Control Record, Type: %d\n", SNetRecGetDescriptor( resrec));
     }
-    SNetRecDestroy( resrec);
+   // SNetRecDestroy( resrec);
   }
   
   SNetBufDestroy( start_buf);

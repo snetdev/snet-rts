@@ -13,10 +13,6 @@
 #include <constants.h>
 #include <expression.h>
 
-extern snet_typeencoding_list_t 
-*FilterComputeTypes( int num, 
-                     snet_filter_instruction_set_list_t **lst);
-
 
 extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...);
 extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr);

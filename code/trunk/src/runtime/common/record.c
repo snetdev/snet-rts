@@ -576,6 +576,9 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
       new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_E_REC( rec, level),  
                                SORT_E_REC( rec, num));    
       break;
+    case REC_terminate:
+      new_rec = SNetRecCreate( REC_terminate);
+      break;
     default:
       printf("\n\n ** Fatal Error ** : Can't copy record of that type [%d]\n\n", (int)REC_DESCR( rec));
       exit( 1);
