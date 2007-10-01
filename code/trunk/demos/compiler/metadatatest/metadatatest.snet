@@ -11,8 +11,6 @@
  *
  *************************************************************** */   
 
-box metadata ((A)->(B));
-
 net metadata {
     <snet:metadata xmlns="snet.feis.herts.ac.uk">
       <snet:box name="examine" >
@@ -29,7 +27,7 @@ net metadata {
 
     box examine((P,Q) -> (A,B) | (Y,Z));
 }
-connect metadata .. examine;
+connect examine;
 
 net metadatatest {
 
