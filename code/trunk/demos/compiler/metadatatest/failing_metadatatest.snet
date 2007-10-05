@@ -8,13 +8,15 @@
  * Date:   5.10.2007
  * 
  * Run:
- *         $ snetc -mm1.md -mm2.md -b1 metadata.snet
+ *         $ snetc -mm1.md -mm2.md -b1 failingmetadata.snet
+ *
+ * Notice: This should produce 6 warnings!
  * 
  ****************************************************************/
 
 <!-- Test for namespaces and observer -->
-<metadata xmlns="snet.feis.herts.ac.uk">
-  <net name="metadatatest/split" >
+<metadata xmlns="snet.feis.herts.ac.u"><!-- Wrong namespace-->
+  <net name="failingmetadatatest/split" >
      <observer type="after">
        <snet:stag>T</snet:stag>
      </observer>
@@ -32,24 +34,28 @@ net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
 }
 connect compA || compB || compC;
 
-net metadatatest {
-	
+net failingmetadatatest {
+
     <?xml version="1.0"?>
-    <!-- Test for box-->
     <snet:metadata >
       <snet:box name="examine" >
-        <snet:observer type="before">
-          <snet:field>P</snet:field>
-          <snet:field>Q</snet:field>
-        </snet:observer>
         <snet:observer type="after">
-          <snet:field>A</snet:field>
+          <snet:field>I</snet:field> <!-- Unknown field -->
           <snet:field>Y</snet:field>
+        </snet:observer>
+        <snet:observer type="both"> <!-- Conflict in types -->
+          <snet:field>Q</snet:field>
         </snet:observer>
       </snet:box>
       <snet:net name="compute">
         <snet:net name="syncPQ">
-          <snet:observer type="both" />
+          <snet:observer type="before" />
+        </snet:net>
+      </snet:net>
+      <snet:net name="compute">
+        <snet:net name="syncPQ">
+          <snet:observer type="after" />
+          <snet:observer /> <!-- No type attribute -->
         </snet:net>
       </snet:net>
     </snet:metadata>
