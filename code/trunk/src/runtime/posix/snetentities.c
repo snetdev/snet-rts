@@ -171,6 +171,70 @@ extern snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec) {
   return( hnd);
 }
 
+/* MERGE THE SNET_OUTS! */
+extern snet_handle_t 
+*SNetOutRawArray( snet_handle_t *hnd, 
+                  int variant_num,
+                  void **fields,
+                  int *tags,
+                  int *btags) 
+{
+  
+
+  int i, *names;
+  snet_record_t *out_rec, *old_rec;
+  snet_variantencoding_t *venc;
+
+  venc = SNetTencGetVariant( SNetHndGetType( hnd), variant_num);
+  
+  if( variant_num > 0) {
+    out_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( venc));
+
+    names = SNetTencGetFieldNames( venc);
+    for( i=0; i<SNetTencGetNumFields( venc); i++) {
+      SNetRecSetField( out_rec, names[i], fields[i]);
+    }
+    names = SNetTencGetTagNames( venc);
+    for( i=0; i<SNetTencGetNumTags( venc); i++) {
+      SNetRecSetTag( out_rec, names[i], tags[i]);
+    }
+    names = SNetTencGetBTagNames( venc);
+    for( i=0; i<SNetTencGetNumBTags( venc); i++) {
+      SNetRecSetBTag( out_rec, names[i], btags[i]);
+    }
+  }
+  else {
+    venc = SNetTencVariantEncode( SNetTencCreateVector( 0),
+                                  SNetTencCreateVector( 0),
+                                  SNetTencCreateVector( 0));
+    out_rec = SNetRecCreate( REC_data, venc);
+  }
+  
+  old_rec = SNetHndGetRecord( hnd);
+
+  names = SNetRecGetUnconsumedFieldNames( old_rec);
+  for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
+    if( SNetRecAddField( out_rec, names[i])) {
+      SNetRecSetField( out_rec, names[i], SNetRecGetField( old_rec, names[i]));
+    }
+  }
+  SNetMemFree( names);
+
+  names = SNetRecGetUnconsumedTagNames( old_rec);
+  for( i=0; i<SNetRecGetNumTags( old_rec); i++) {
+    if( SNetRecAddTag( out_rec, names[i])) {
+      SNetRecSetTag( out_rec, names[i], SNetRecGetTag( old_rec, names[i]));
+    }
+  }
+  SNetMemFree( names);
+
+
+  // output record
+  SNetBufPut( SNetHndGetOutbuffer( hnd), out_rec);
+
+  return( hnd);
+}
+
 
 extern snet_handle_t *SNetOutRaw( snet_handle_t *hnd, int variant_num, ...) {
 

@@ -25,6 +25,13 @@ extern snet_handle_t *SNetOutRaw( snet_handle_t *hnd, int variant_num, ...);
 
 extern snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec);
 
+extern snet_handle_t 
+*SNetOutRawArray( snet_handle_t *hnd, 
+                  int var_num,
+                  void **fields,
+                  int *tags,
+                  int *btags);
+
 
 extern snet_buffer_t *SNetBox( snet_buffer_t *inbuf, 
 			       void (*boxfun)( snet_handle_t*), 
