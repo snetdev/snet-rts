@@ -21,6 +21,73 @@
 #include <snetentities.h>
 
 
+/* ************************************************************************* */
+/* GLOBAL STRUCTURE                                                          */
+
+#define INITIAL_INTERFACE_TABLE_SIZE    5
+
+typedef struct {
+ int id;
+ void (*freefun)( void*);
+ void* (*copyfun)( void*);
+} snet_global_interface_functions_t;
+
+typedef struct {
+  int num;
+  snet_global_interface_functions_t *interface;
+} snet_global_info_structure_t;
+
+snet_global_info_structure_t *snet_global = NULL;
+
+extern bool SNetGlobalInitialise() 
+{
+  bool success = false;
+
+  if( snet_global == NULL) {
+    snet_global = SNetMemAlloc( sizeof( snet_global_info_structure_t));
+    snet_global->interface =
+      SNetMemAlloc( 
+          INITIAL_INTERFACE_TABLE_SIZE * 
+          sizeof( snet_global_interface_functions_t));
+    snet_global->num = 0;
+    success = true;
+  }
+  else {
+    printf("\n\n ** Fatal Error ** : Runtime System already initialised!\n\n");
+    exit( 1);
+  }
+  return( success);
+}
+
+static bool RuntimeInitialsed()
+{
+  if( snet_global == NULL) {
+    printf("\n\n ** Fatal Error ** : Runtime System not initialised!\n\n");
+    exit( 1);
+  }
+  return( true);
+}
+
+extern bool 
+SNetGlobalRegisterInterface( int id, 
+                             void (*freefun)( void*),
+                             void* (*copyfun)( void*)) 
+{
+  if( snet_global->num == ( INITIAL_INTERFACE_TABLE_SIZE -1)) {
+    /* TODO replace this with proper code!!!! */
+    printf("\n\n ** Runtime Error ** : Lookup table is full!\n\n");
+    exit( 1);
+  }
+  else {
+    /* ... */
+    snet_global->num += 1;
+  }
+
+  return( true);
+}
+
+/* END -- GLOBALS                                                            */
+/* ************************************************************************* */
 
 /* --------------------------------------------------------
  * Syncro Cell: Flow Inheritance, uncomment desired variant
@@ -535,7 +602,12 @@ static void LLSTremoveCurrent( linked_list_t *lst) {
 } 
 
 static int LLSTgetCount( linked_list_t *lst) {
-  return( lst->elem_count);
+  if( lst != NULL) {
+    return( lst->elem_count);
+  }
+  else {
+    return( -1);
+  }
 }
 
 static void LLSTdestroy( linked_list_t *lst) {
@@ -598,7 +670,7 @@ static void *DetCollector( void *info) {
   snet_buffer_t *outbuf = inf->to_buf;
   sem_t *sem;
   snet_record_t *rec;
-  linked_list_t *lst;
+  linked_list_t *lst = NULL;
   bool terminate = false;
   bool got_record;
   snet_collect_elem_t *tmp_elem, *new_elem, *elem;
@@ -798,7 +870,7 @@ static void *Collector( void *info) {
   snet_buffer_t *current_buf;
   sem_t *sem;
   snet_record_t *rec;
-  linked_list_t *lst;
+  linked_list_t *lst = NULL;
   bool terminate = false;
   bool got_record;
   bool processed_record;
@@ -2283,6 +2355,7 @@ extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcod
 #ifdef FILTER_VERSION_2
     case snet_field:
 #endif
+
       instr->data = SNetMemAlloc( 2 * sizeof( int));
       instr->data[0] = va_arg( args, int);
       instr->data[1] = va_arg( args, int);
