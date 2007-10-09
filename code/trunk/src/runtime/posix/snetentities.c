@@ -2278,6 +2278,7 @@ extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcod
       break;
     case FLT_rename_tag:
     case FLT_rename_field:
+    case FLT_copy_field:
 #endif
 #ifdef FILTER_VERSION_2
     case snet_field:
