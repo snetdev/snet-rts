@@ -131,6 +131,6 @@ extern snet_buffer_t *SNetTranslate( snet_buffer_t *inbuf,
 				     snet_typeencoding_t *in_type,
 				     snet_typeencoding_t *out_type, ...);
 #endif
-
-
+extern void *SNetGetCopyFun( snet_record_t *rec);
+extern void *SNetGetFreeFun( snet_record_t *rec);
 #endif

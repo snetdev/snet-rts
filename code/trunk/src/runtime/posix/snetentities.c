@@ -84,6 +84,11 @@ static snet_global_interface_functions_t *GetInterface( int id)
       result = snet_global->interface[i];
     }
   }
+  if( result == NULL) {
+    printf("\n\n ** Runtime Error ** : Interface ID (%d) not found!\n\n", id);
+    exit( 1);
+  }
+
   return( result);
 }
 
@@ -143,6 +148,16 @@ SNetGlobalRegisterInterface( int id,
   }
 
   return( true);
+}
+
+extern void *SNetGetFreeFun( snet_record_t *rec) 
+{
+  return( GetFreeFun( GetInterface( SNetRecGetInterfaceId( rec))));
+}
+
+extern void *SNetGetCopyFun( snet_record_t *rec) 
+{
+  return( GetCopyFun( GetInterface( SNetRecGetInterfaceId( rec))));
 }
 
 /* END -- GLOBALS                                                            */
@@ -2510,7 +2525,6 @@ extern void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set)
 }
 #ifdef FILTER_VERSION_2
 
-//### change back to static! ####
 // pass at least one set!! -> lst must not be NULL!
 static snet_typeencoding_list_t 
 *FilterComputeTypes( int num, 
@@ -2663,11 +2677,13 @@ static snet_record_t
   int *names;
 
   names = SNetRecGetFieldNames( in_rec);
+  void* (*copyfun)(void*);
+  copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
   for( i=0; i<SNetRecGetNumFields( in_rec); i++) {
     if( !( FilterInTypeHasField( in_type, SNetRecGetFieldNames( in_rec)[i]))) {
       SNetRecAddField( out_rec, names[i]);
       SNetRecSetField( out_rec, names[i], 
-                       SNetRecGetField( in_rec, names[i])); // COPY
+                       copyfun( SNetRecGetField( in_rec, names[i]))); 
     }
   }
 
@@ -2723,6 +2739,8 @@ static void *FilterThread( void *hnd)
                 out_rec = SNetRecCreate( REC_data, 
                                          SNetTencCopyVariantEncoding( 
                                            SNetTencGetVariant( out_type, j+1)));
+                SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
+
                 current_set = FilterGetInstructionSet( current_lst, j);
                 for( k=0; k<SNetFilterGetNumInstructions( current_set); k++) {
                   current_instr = FilterGetInstruction( current_set, k);
@@ -2740,12 +2758,14 @@ static void *FilterThread( void *hnd)
                           getNameFromInstr( current_instr),
                           SNetEevaluateInt( getExprFromInstr( current_instr), in_rec));
                       break;
-                    case snet_field:
+                    case snet_field: {
+                      void* (*copyfun)(void*);
+                      copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
                       SNetRecSetField( 
                           out_rec, 
                           getNameFromInstr( current_instr),
-                          SNetRecGetField( in_rec, getFieldNameFromInstr( current_instr)));
-                          // *** COPY *** 
+                          copyfun( SNetRecGetField( in_rec, getFieldNameFromInstr( current_instr))));
+                      }
                       break;
                     default:
                       printf("\n\n ** Fatal Error ** : Unknown opcode in filter"
@@ -2980,11 +3000,13 @@ static void *FilterThread( void *hndl) {
         }
   
        // add everything that is left.
-       for( j=0; j<SNetTencGetNumFields( names); j++) {
+        void* (*copyfun)(void*);
+        copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
+        for( j=0; j<SNetTencGetNumFields( names); j++) {
          if( SNetRecAddField( out_rec, SNetTencGetFieldNames( names)[j])) {
             SNetRecSetField( out_rec, 
                 SNetTencGetFieldNames( names)[j],
-                SNetRecGetField( in_rec, SNetTencGetFieldNames( names)[j]));
+                copyfun( SNetRecGetField( in_rec, SNetTencGetFieldNames( names)[j])));
          }
        }  
       for( j=0; j<SNetTencGetNumTags( names); j++) {

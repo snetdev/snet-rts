@@ -10,7 +10,7 @@
 
 #include <memfun.h>
 #include <record.h>
-
+#include <snetentities.h>
 //#include <lbindings.h>
 
 #define GETNUM( N, M)   int i;\
@@ -201,22 +201,25 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
 
 extern void SNetRecDestroy( snet_record_t *rec) {
 
+  int i;
   int num, *names;
   
   if( rec != NULL) {
   switch( REC_DESCR( rec)) {
-    case REC_data:
+    case REC_data: {
+      void (*freefun)(void*);
       num = SNetTencGetNumFields( DATA_REC( rec, v_enc));
       names = SNetTencGetFieldNames( DATA_REC( rec, v_enc));
-//      for( i=0; i<num; i++) {
-//        SNetFreeField( SNetRecGetField( rec, names[i]), 
-//                       SNetRecGetLanguage( rec));
-//      }
+      freefun = SNetGetFreeFun( rec);
+      for( i=0; i<num; i++) {
+        //freefun( SNetRecGetField( rec, names[i])); 
+      }
       SNetTencDestroyVariantEncoding( DATA_REC( rec, v_enc));
       SNetMemFree( DATA_REC( rec, fields));
       SNetMemFree( DATA_REC( rec, tags));
       SNetMemFree( DATA_REC( rec, btags));
       SNetMemFree( RECORD( rec, data_rec));
+      }
       break;
 
     case REC_sync:
@@ -594,12 +597,12 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
       for( i=0; i<SNetRecGetNumBTags( rec); i++) {
         DATA_REC( new_rec, btags[i]) = DATA_REC( rec, btags[i]); 
       }
-      printf("Don't use copy!\n");
+      void* (*copyfun)(void*);      
+      copyfun = SNetGetCopyFun( rec);
       for( i=0; i<SNetRecGetNumFields( rec); i++) {
-        DATA_REC( new_rec, fields[i]) = NULL;
-//          SNetCopyField( DATA_REC( rec, fields[i]), 
-//              SNetRecGetLanguage( rec)); 
+        DATA_REC( new_rec, fields[i]) = copyfun( DATA_REC( rec, fields[i])); 
       }
+      SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
       // DATA_REC( new_rec, lang) = DATA_REC( rec, lang);
       break;
     case REC_sort_begin:
