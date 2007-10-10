@@ -34,10 +34,68 @@ typedef struct {
 
 typedef struct {
   int num;
-  snet_global_interface_functions_t *interface;
+  snet_global_interface_functions_t **interface;
 } snet_global_info_structure_t;
 
 snet_global_info_structure_t *snet_global = NULL;
+
+
+static void SetFreeFun( snet_global_interface_functions_t *f,
+                        void (*freefun)( void*))
+{
+  f->freefun = freefun;
+}
+
+static void SetCopyFun( snet_global_interface_functions_t *f,
+                        void* (*copyfun)( void*))
+{
+  f->copyfun = copyfun;
+}
+
+static void *GetCopyFun( snet_global_interface_functions_t *f)
+{
+  return( f->copyfun);
+}
+
+static void *GetFreeFun( snet_global_interface_functions_t *f)
+{
+  return( f->freefun);
+}
+
+static void SetId( snet_global_interface_functions_t *f, int id)
+{
+  f->id = id;
+}
+
+static int GetId( snet_global_interface_functions_t *f)
+{
+  return( f->id);
+}
+
+
+
+static snet_global_interface_functions_t *GetInterface( int id) 
+{
+  int i;
+  snet_global_interface_functions_t *result = NULL;
+
+  for( i=0; i<snet_global->num; i++) {
+    if( GetId( snet_global->interface[i]) == id) {
+      result = snet_global->interface[i];
+    }
+  }
+  return( result);
+}
+
+
+static bool RuntimeInitialised()
+{
+  if( snet_global == NULL) {
+    printf("\n\n ** Fatal Error ** : Runtime System not initialised!\n\n");
+    exit( 1);
+  }
+  return( true);
+}
 
 extern bool SNetGlobalInitialise() 
 {
@@ -48,7 +106,7 @@ extern bool SNetGlobalInitialise()
     snet_global->interface =
       SNetMemAlloc( 
           INITIAL_INTERFACE_TABLE_SIZE * 
-          sizeof( snet_global_interface_functions_t));
+          sizeof( snet_global_interface_functions_t*));
     snet_global->num = 0;
     success = true;
   }
@@ -59,27 +117,28 @@ extern bool SNetGlobalInitialise()
   return( success);
 }
 
-static bool RuntimeInitialsed()
-{
-  if( snet_global == NULL) {
-    printf("\n\n ** Fatal Error ** : Runtime System not initialised!\n\n");
-    exit( 1);
-  }
-  return( true);
-}
 
 extern bool 
 SNetGlobalRegisterInterface( int id, 
                              void (*freefun)( void*),
                              void* (*copyfun)( void*)) 
 {
-  if( snet_global->num == ( INITIAL_INTERFACE_TABLE_SIZE -1)) {
+  int num = snet_global->num;
+  snet_global_interface_functions_t *new_if;
+  
+  RuntimeInitialised();
+
+  if( num == ( INITIAL_INTERFACE_TABLE_SIZE -1)) {
     /* TODO replace this with proper code!!!! */
     printf("\n\n ** Runtime Error ** : Lookup table is full!\n\n");
     exit( 1);
   }
   else {
-    /* ... */
+    new_if = SNetMemAlloc( sizeof( snet_global_interface_functions_t));  
+    SetId( new_if, id);
+    SetFreeFun( new_if, freefun);
+    SetCopyFun( new_if, copyfun);   
+    snet_global->interface[num] = new_if;
     snet_global->num += 1;
   }
 
@@ -241,6 +300,7 @@ extern snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec) {
 /* MERGE THE SNET_OUTS! */
 extern snet_handle_t 
 *SNetOutRawArray( snet_handle_t *hnd, 
+                  int if_id,
                   int variant_num,
                   void **fields,
                   int *tags,
@@ -251,6 +311,7 @@ extern snet_handle_t
   int i, *names;
   snet_record_t *out_rec, *old_rec;
   snet_variantencoding_t *venc;
+  void* (*copyfun)(void*);
 
   venc = SNetTencGetVariant( SNetHndGetType( hnd), variant_num);
   
@@ -277,12 +338,16 @@ extern snet_handle_t
     out_rec = SNetRecCreate( REC_data, venc);
   }
   
+  SNetRecSetInterfaceId( out_rec, if_id);
+  
   old_rec = SNetHndGetRecord( hnd);
+  
+  copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( old_rec)));
 
   names = SNetRecGetUnconsumedFieldNames( old_rec);
   for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
     if( SNetRecAddField( out_rec, names[i])) {
-      SNetRecSetField( out_rec, names[i], SNetRecGetField( old_rec, names[i]));
+      SNetRecSetField( out_rec, names[i], copyfun( SNetRecGetField( old_rec, names[i])));
     }
   }
   SNetMemFree( names);
@@ -2852,6 +2917,7 @@ static void *FilterThread( void *hndl) {
         names = SNetTencCopyVariantEncoding( SNetRecGetVariantEncoding( in_rec));
         variant = SNetTencCopyVariantEncoding( SNetTencGetVariant( out_type, i+1));
         out_rec = SNetRecCreate( REC_data, variant);
+        SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
         set = instructions[i];
         // this runs for each filter instruction 
         for( j=0; j<set->num; j++) {
@@ -2883,11 +2949,12 @@ static void *FilterThread( void *hndl) {
                   SNetRecGetField( in_rec, instr->data[0]));
               SNetTencRemoveField( names, instr->data[0]);
               break;
-            case FLT_copy_field:
-//              SNetRecSetField( out_rec, instr->data[0],
-//                SNetCopyField( 
-//                  SNetRecGetField( in_rec, instr->data[0]),
-//                  SNetRecGetLanguage( in_rec)));
+            case FLT_copy_field: {
+              void* (*copyfun)(void*);
+              copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
+              SNetRecSetField( out_rec, instr->data[0],
+                copyfun( SNetRecGetField( in_rec, instr->data[0])));
+              }
               break;
             case FLT_use_tag:
               SNetRecSetTag( out_rec, instr->data[0],

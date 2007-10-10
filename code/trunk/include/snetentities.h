@@ -14,6 +14,13 @@
 #include <expression.h>
 
 
+extern bool SNetGlobalInitialise();
+extern bool 
+SNetGlobalRegisterInterface( int id, 
+                             void (*freefun)( void*),
+                             void* (*copyfun)( void*));
+
+
 extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...);
 extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr);
 extern snet_filter_instruction_set_t *SNetCreateFilterInstructionSet( int num, ...);	
@@ -27,6 +34,7 @@ extern snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec);
 
 extern snet_handle_t 
 *SNetOutRawArray( snet_handle_t *hnd, 
+		  int if_id,
                   int var_num,
                   void **fields,
                   int *tags,

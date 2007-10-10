@@ -58,7 +58,7 @@ typedef struct {
   void **fields;
   int *tags;
   int *btags;
-//  snet_lang_descr_t lang;
+  int interface_id;
 } data_rec_t;
 
 typedef struct {
@@ -252,8 +252,42 @@ extern snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec) {
   return( REC_DESCR( rec));
 }
 
-extern snet_buffer_t *SNetRecGetBuffer( snet_record_t *rec) {
- 
+extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id) 
+{
+
+  switch( REC_DESCR( rec)) {
+    case REC_data:
+      DATA_REC( rec, interface_id) = id;
+      break;
+    default:
+      printf("\n\n ** Fatal Error ** : Wrong type in RECSetId() (%d) \n\n", REC_DESCR( rec));
+      exit( 1);
+      break;
+  }
+
+  return( rec);
+}
+
+extern int SNetRecGetInterfaceId( snet_record_t *rec) 
+{
+
+  int result;
+
+  switch( REC_DESCR( rec)) {
+    case REC_data:
+      result = DATA_REC( rec, interface_id);
+      break;
+    default:
+      printf("\n\n ** Fatal Error ** : Wrong type in RECGetId() (%d) \n\n", REC_DESCR( rec));
+      exit( 1);
+      break;
+  }
+
+  return( result);
+}
+
+extern snet_buffer_t *SNetRecGetBuffer( snet_record_t *rec) 
+{
   snet_buffer_t *inbuf;
 
   switch( REC_DESCR( rec)) {

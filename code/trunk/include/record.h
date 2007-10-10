@@ -293,5 +293,11 @@ extern int SNetRecGetLevel( snet_record_t *rec);
 
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec);
 
+extern int SNetRecGetInterfaceId( snet_record_t *rec);
+extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id); 
+
+
+
+
 #endif
 
