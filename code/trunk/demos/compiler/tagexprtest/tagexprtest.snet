@@ -1,0 +1,35 @@
+/*****************************************************************
+ *
+ * Test for TagExpr parsing.
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ *
+ * Date:   24.05.2007
+ *
+ * Run:
+ *         $ snetc -b1 tagexprtest.snet
+ *
+ ****************************************************************/
+
+net tagexprtest ({A,B,<T>} -> {A,<Y>}){
+   box compA ((A) -> (A));
+} connect compA * {A},{<T>} if < (1 > 1 || (T >= 3) || (4 != T) && 5 > 6 ? 7 == T ? 7 * 5 - abs (4 + 4): 8 : 9 + 8 / 5) == 0 > .. 
+[{A,B,<T>} 
+if <T == 1> -> {A,B,<T>}    
+if <T == 2> -> {A,B}             
+if <T == 3> -> {A,<T>}            
+if <T == 4> -> {A, <T>};{B,<T>}  
+if <T == 5> -> {A = B,B,<T>}           
+if <T == 6> -> {K = A,B,<T>}      
+if <T == 6> -> {K = A,A,B,<T>}    
+if <T == 7> -> {A = B,<T>};{B}        
+if <T == 8> -> {K = A,B,<T>};{A}       
+if <T == 11> -> {A,B,<T>,<Y>}    
+if <T == 12> -> {A,B,<Y=T>}       
+if <T == 14> -> {A,B,<T=1>}      
+if <T == 14> -> {A,B,<T>,<Y=1>}  
+if <T == 15> -> {A,B,<T>,<Y=T+1>} 
+if <T == 16> -> {A,B,<T>,<Y=T>}   
+if <T == 17> -> {A = B, B}   
+-> {}                             
+-> ];                           

@@ -24,7 +24,7 @@ typesig norefA = refnorefA_t -> refnorefB_t;
 
 typesig refB = refB_t -> refC_t;
 
-net typesigtest{
+net trestest{
 
     type refB_t = {B};
 
