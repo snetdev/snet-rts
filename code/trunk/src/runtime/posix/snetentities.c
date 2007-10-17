@@ -2729,62 +2729,67 @@ static void *FilterThread( void *hnd)
 
     switch( SNetRecGetDescriptor( in_rec)) {
       case REC_data:
-        for( i=0; i<SNetElistGetNumExpressions( guard_list); i++) {
-            if( ( SNetEevaluateBool( SNetEgetExpr( guard_list, i), in_rec)) && !( done)) { 
-              done = true;
-              out_type = SNetTencGetTypeEncoding( type_list, i);
-              current_lst = instr_lst[i];
-              for( j=0; j<SNetTencGetNumVariants( out_type); j++) {
-                snet_record_t *out_rec;
-                out_rec = SNetRecCreate( REC_data, 
-                                         SNetTencCopyVariantEncoding( 
+        if( in_type == NULL) { // consume everything, generate no output
+          SNetRecDestroy( in_rec);
+        }
+        else {
+          for( i=0; i<SNetElistGetNumExpressions( guard_list); i++) {
+              if( ( SNetEevaluateBool( SNetEgetExpr( guard_list, i), in_rec)) && !( done)) { 
+                done = true;
+                out_type = SNetTencGetTypeEncoding( type_list, i);
+                current_lst = instr_lst[i];
+                for( j=0; j<SNetTencGetNumVariants( out_type); j++) {
+                  snet_record_t *out_rec;
+                  out_rec = SNetRecCreate( REC_data, 
+                                           SNetTencCopyVariantEncoding( 
                                            SNetTencGetVariant( out_type, j+1)));
-                SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
+                  SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
+  
+                  current_set = FilterGetInstructionSet( current_lst, j);
+                  for( k=0; k<SNetFilterGetNumInstructions( current_set); k++) {
+                    current_instr = FilterGetInstruction( current_set, k);
+                    switch( current_instr->opcode) {
+                      case snet_tag:
+                        SNetRecSetTag( 
+                            out_rec, 
+                            getNameFromInstr( current_instr),
+                            SNetEevaluateInt( 
+                              getExprFromInstr( current_instr), in_rec));
+                        break;
+                      case snet_btag:
+                        SNetRecSetBTag( 
+                            out_rec, 
+                            getNameFromInstr( current_instr),
+                            SNetEevaluateInt( getExprFromInstr( current_instr), in_rec));
+                        break;
+                      case snet_field: {
+                        void* (*copyfun)(void*);
+                        copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
+                        SNetRecSetField( 
+                            out_rec, 
+                            getNameFromInstr( current_instr),
+                            copyfun( SNetRecGetField( in_rec, getFieldNameFromInstr( current_instr))));
+                        }
+                        break;
+                      default:
+                        printf("\n\n ** Fatal Error ** : Unknown opcode in filter"
+                               " instruction. [%d]\n\n", current_instr->opcode);
+                        exit( 1);
+                    } 
+                  } // forall instructions of current_set
 
-                current_set = FilterGetInstructionSet( current_lst, j);
-                for( k=0; k<SNetFilterGetNumInstructions( current_set); k++) {
-                  current_instr = FilterGetInstruction( current_set, k);
-                  switch( current_instr->opcode) {
-                    case snet_tag:
-                      SNetRecSetTag( 
-                          out_rec, 
-                          getNameFromInstr( current_instr),
-                          SNetEevaluateInt( 
-                            getExprFromInstr( current_instr), in_rec));
-                      break;
-                    case snet_btag:
-                      SNetRecSetBTag( 
-                          out_rec, 
-                          getNameFromInstr( current_instr),
-                          SNetEevaluateInt( getExprFromInstr( current_instr), in_rec));
-                      break;
-                    case snet_field: {
-                      void* (*copyfun)(void*);
-                      copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
-                      SNetRecSetField( 
-                          out_rec, 
-                          getNameFromInstr( current_instr),
-                          copyfun( SNetRecGetField( in_rec, getFieldNameFromInstr( current_instr))));
-                      }
-                      break;
-                    default:
-                      printf("\n\n ** Fatal Error ** : Unknown opcode in filter"
-                             " instruction. [%d]\n\n", current_instr->opcode);
-                      exit( 1);
-                  } 
-                } // forall instructions of current_set
-
-                SNetBufPut( outbuf, 
-                            FilterInheritFromInrec( in_type, in_rec, out_rec));
-              } // forall variants of selected out_type
-            SNetRecDestroy( in_rec);
-            } // if guard is true
-          } // forall guards
-          if( !( done)) {
-            printf("\n\n ** Runtime Error ** : All guards "
-                   "evluated to FALSE. [Filter]\n\n");
-            exit( 1);
-          }
+                  SNetBufPut( outbuf, 
+                              FilterInheritFromInrec( in_type, in_rec, out_rec));
+                } // forall variants of selected out_type
+              SNetRecDestroy( in_rec);
+              } // if guard is true
+            } // forall guards
+            if( !( done)) {
+              printf("\n\n ** Runtime Error ** : All guards "
+                     "evluated to FALSE. [Filter]\n\n");
+              exit( 1);
+            }
+        } // else (intype != NULL)
         break; // case rec_data
         case REC_sync:
           SNetHndSetInbuffer( hnd, SNetRecGetBuffer( in_rec));
