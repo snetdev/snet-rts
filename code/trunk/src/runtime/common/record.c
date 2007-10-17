@@ -212,7 +212,9 @@ extern void SNetRecDestroy( snet_record_t *rec) {
       names = SNetTencGetFieldNames( DATA_REC( rec, v_enc));
       freefun = SNetGetFreeFun( rec);
       for( i=0; i<num; i++) {
-        //freefun( SNetRecGetField( rec, names[i])); 
+        if( names[i] >= 0) { // not UNSET 
+          freefun( SNetRecGetField( rec, names[i])); 
+        }
       }
       SNetTencDestroyVariantEncoding( DATA_REC( rec, v_enc));
       SNetMemFree( DATA_REC( rec, fields));

@@ -645,7 +645,7 @@ static void LLSTremoveCurrent( linked_list_t *lst) {
 
   // just one element left
   if( lst->head == lst->last) {
-    free( lst->curr);
+    SNetMemFree( lst->curr);
     lst->head = NULL;
     lst->curr = NULL;
     lst->last = NULL;
@@ -657,7 +657,7 @@ static void LLSTremoveCurrent( linked_list_t *lst) {
       tmp = lst->curr;
       lst->head = lst->curr->next;
       lst->curr = lst->curr->next;
-      free( tmp);
+      SNetMemFree( tmp);
     } 
     else {
       // deleting last element
@@ -666,7 +666,7 @@ static void LLSTremoveCurrent( linked_list_t *lst) {
         tmp = lst->curr;
         lst->last = lst->curr->prev;
         lst->curr = lst->curr->prev;
-        free( tmp);
+        SNetMemFree( tmp);
       }
       // delete ordinary element
       else {
@@ -674,7 +674,7 @@ static void LLSTremoveCurrent( linked_list_t *lst) {
       ((list_elem_t*)lst->curr->prev)->next = lst->curr->next;
       tmp = lst->curr;
       lst->curr = lst->curr->prev;
-      free( tmp);
+      SNetMemFree( tmp);
       }
     } 
   }
@@ -693,7 +693,7 @@ static int LLSTgetCount( linked_list_t *lst) {
 static void LLSTdestroy( linked_list_t *lst) {
 
   if( LLSTgetCount( lst) > 0) {
-    printf(" ** Note ** : Destroying non-empty list. [%d elements]\n\n", 
+    printf(" ** Info ** : Destroying non-empty list. [%d elements]\n\n", 
            LLSTgetCount( lst));
   }
   while( LLSTgetCount( lst) != 0) {
@@ -779,7 +779,7 @@ static void *DetCollector( void *info) {
     do {
     processed_record = false;
     j = LLSTgetCount( lst);
-    for( i=0; i<j; i++) {
+    for( i=0; (i<j) && !(terminate); i++) {
 //    while( !( got_record)) {
       tmp_elem = LLSTget( lst);
       rec = SNetBufShow( tmp_elem->buf);
@@ -931,7 +931,7 @@ static void *DetCollector( void *info) {
       }
 //    } // while !got_record
     }
-    } while( processed_record);
+    } while( processed_record && !(terminate));
   } // while !terminate
 
   SNetMemFree( inf);
@@ -979,7 +979,7 @@ static void *Collector( void *info) {
     got_record=false;
     processed_record = false;
     j = LLSTgetCount( lst);
-    for( i=0; i<j; i++) {
+    for( i=0; (i<j) && !(terminate); i++) {
 //    while( !( got_record)) {
       current_buf = ((snet_collect_elem_t*) LLSTget( lst))->buf;
       rec = SNetBufShow( current_buf);
@@ -1118,7 +1118,7 @@ static void *Collector( void *info) {
       }
 //    } // while !got_record
     } // for getCount
-    } while( processed_record);
+    } while( processed_record && !(terminate));
   } // while !terminate
 
   SNetMemFree( inf);
@@ -1130,7 +1130,7 @@ static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer,
                                         bool is_det) {
                                           
   snet_buffer_t *outbuf;
-  pthread_t thread;
+  pthread_t *thread;
   dispatch_info_t *buffers;
 
   buffers = SNetMemAlloc( sizeof( dispatch_info_t));
@@ -1140,15 +1140,15 @@ static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer,
   buffers->to_buf = outbuf;
 
 
-//  thread = SNetMemAlloc( sizeof( pthread_t));
+  thread = SNetMemAlloc( sizeof( pthread_t));
   
   if( is_det) {
-    pthread_create( &thread, NULL, DetCollector, (void*)buffers);
+    pthread_create( thread, NULL, DetCollector, (void*)buffers);
   }
   else {
-    pthread_create( &thread, NULL, Collector, (void*)buffers);
+    pthread_create( thread, NULL, Collector, (void*)buffers);
   }
-  pthread_detach( thread);
+  pthread_detach( *thread);
 
   return( outbuf);
 }
