@@ -30,9 +30,9 @@ targets_tools_devel       := FeederFront.devel RecordInspector.devel
 targets_tools_prod        := FeederFront RecordInspector
 targets_tools_default     := $(targets_tools_devel)
 
-targets_demo_devel        := factorial.devel graphicFactorial.devel
-targets_demo_prod         := factorial graphicFactorial
-targets_demo_default      := $(targets_demo_devel)
+#targets_demo_devel        := factorial.devel graphicFactorial.devel
+#targets_demo_prod         := factorial graphicFactorial
+#targets_demo_default      := $(targets_demo_devel)
 
 
 ###############################################################################
@@ -45,7 +45,7 @@ targetdir_maketools       := src/bin
 targetdir_compiler        := bin
 targetdir_runtime         := lib
 targetdir_tools           := bin
-targetdir_demo            := bin
+#targetdir_demo            := bin
 
 
 ###############################################################################
@@ -191,8 +191,8 @@ RecordInspector	   = RecordInspector.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-factorial       = boxfun.o main.o factorial.o
+#factorial       = boxfun.o main.o factorial.o
 
-graphicFactorial = boxfun.o main.o graphicFactorial.o
+#graphicFactorial = boxfun.o main.o graphicFactorial.o
 
 

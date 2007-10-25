@@ -28,9 +28,6 @@
     rec_names = RECNAMES( rec);\
     for( i=0; i<RECNUM( rec); i++) {\
       strcat( text, names[ rec_names[i] ]);\
-      strcat( text, "=");\
-      itoa( DATA, num_to_str, 10);\
-      strcat( text, num_to_str);\
       strcat( text, "  ");\
     }\
     strcat(text, "\n"); 
@@ -255,7 +252,7 @@ static void *GraphicBoxThread( void *hndl) {
 
 
 
-extern snet_buffer_t *SNetGraphicalBox( snet_buffer_t *inbuf, int inc_num, char **names, char *name) {
+extern snet_buffer_t *SNetGraphicalBox( snet_buffer_t *inbuf, char **names, char *name) {
 
   snet_buffer_t *outbuf;
   pthread_t *box_thread;
