@@ -1,0 +1,9 @@
+
+
+
+net sudokusolve {
+
+	box computeOpts( (board) -> (board,opts));
+	box solveOneLevel( (board, opts) -> (board, opts) | (board, <done>) );
+
+} connect computeOpts .. ( solveOneLevel)*{<done>};
