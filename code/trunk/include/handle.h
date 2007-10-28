@@ -1,5 +1,5 @@
 /*
- * this implements a handle and its accessor functions
+ * 
  */
 
 #ifndef HANDLE_H
@@ -28,6 +28,7 @@ typedef enum {
 	snet_tag,
 	snet_btag,
 	snet_field,
+	create_record
 #else
 	FLT_strip_tag,
 	FLT_strip_field,
