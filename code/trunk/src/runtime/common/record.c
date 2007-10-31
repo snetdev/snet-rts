@@ -135,6 +135,12 @@ static int GetConsumedCount( int *names, int num) {
   return( counter);
 }
 
+static void NotFoundError( int name, char *action, char *type) 
+{
+    printf("\n\n ** Runtime Error ** : Attempt to '%s' non-existend"
+           " %s [%d].\n\n", action, type, name);
+    exit( 1);
+}
 /* *********************************************************** */
 
 
@@ -344,6 +350,9 @@ extern int SNetRecGetTag( snet_record_t *rec, int name) {
   int offset;
 
   offset = FindName( SNetTencGetTagNames( GetVEnc( rec)), SNetTencGetNumTags( GetVEnc( rec)), name);
+  if( offset == NOT_FOUND) {
+    NotFoundError( name, "get","tag");
+  }
   return( DATA_REC( rec, tags[offset]));
 }
 
@@ -353,6 +362,9 @@ extern int SNetRecGetBTag( snet_record_t *rec, int name) {
   int offset;
   
   offset = FindName( SNetTencGetBTagNames( GetVEnc( rec)), SNetTencGetNumBTags( GetVEnc( rec)), name);
+  if( offset == NOT_FOUND) {
+    NotFoundError( name, "get","binding tag");
+  }
   return( DATA_REC( rec, btags[offset]));
 }
 
@@ -361,6 +373,9 @@ extern void *SNetRecGetField( snet_record_t *rec, int name) {
   int offset;
   
   offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)), SNetTencGetNumFields( GetVEnc( rec)), name);
+  if( offset == NOT_FOUND) {
+    NotFoundError( name, "get", "field");
+  }
   return( DATA_REC( rec, fields[offset]));
 }
 
@@ -369,6 +384,9 @@ extern int SNetRecTakeTag( snet_record_t *rec, int name) {
   int offset;
  
   offset = FindName( SNetTencGetTagNames( GetVEnc( rec)), SNetTencGetNumTags( GetVEnc( rec)), name);
+  if( offset == NOT_FOUND) {
+    NotFoundError( name, "take", "tag");
+  }
   SNetTencRenameTag( GetVEnc( rec), name, CONSUMED);  
   return( DATA_REC( rec, tags[offset]));
 }
@@ -379,6 +397,9 @@ extern int SNetRecTakeBTag( snet_record_t *rec, int name) {
   int offset;
  
   offset = FindName( SNetTencGetBTagNames( GetVEnc( rec)), SNetTencGetNumBTags( GetVEnc( rec)), name);
+  if( offset == NOT_FOUND) {
+    NotFoundError( name, "take","binding tag");
+  }
   SNetTencRenameBTag( GetVEnc( rec), name, CONSUMED);  
   return( DATA_REC( rec, btags[offset]));
 }
@@ -389,6 +410,9 @@ extern void *SNetRecTakeField( snet_record_t *rec, int name) {
   int offset;
  
   offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)), SNetTencGetNumFields( GetVEnc( rec)), name);
+  if( offset == NOT_FOUND) {
+    NotFoundError( name, "take","field");
+  }
   SNetTencRenameField( GetVEnc( rec), name, CONSUMED);  
   return( DATA_REC( rec, fields[offset]));
 }
