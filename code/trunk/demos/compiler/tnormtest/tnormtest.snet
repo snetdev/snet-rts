@@ -11,7 +11,7 @@
  * 
  * Run:
  *
- *         $ snetc -b2:tnorm tnormtest.snet
+ *         $ snetc -b4:tinorm tnormtest.snet
  * 
  ****************************************************************/
 
@@ -22,7 +22,7 @@ net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
     box compB ((B) -> (Q));
     box compC ((C) -> (P));
 }
-connect compA || compB || compC;
+connect test || compA || compB || compC;
 
 net tnormtest {
     net split
@@ -39,4 +39,4 @@ net tnormtest {
     }
     connect ([{<T>} -> {}] .. compAB .. syncPQ) !! <T>;
 }
-connect (tag .. split .. compute .. examine) ** {Y,Z};
+connect (split .. compute .. examine) ** {Y,Z};
