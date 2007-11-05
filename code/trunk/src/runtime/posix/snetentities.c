@@ -2538,6 +2538,7 @@ static snet_typeencoding_list_t
 
   type_array = SNetMemAlloc( num * sizeof( snet_typeencoding_t*));
 
+  /*
   if( ( num == 1) && ( lst[0] == NULL)) {
     type_array[0] = SNetTencTypeEncode( 1,
                           SNetTencVariantEncode( 
@@ -2546,36 +2547,77 @@ static snet_typeencoding_list_t
                             SNetTencCreateEmptyVector( 0)));
   }
   else
-  {
+  */
+
     for( i=0; i<num; i++) {
       
       sets = SNetFilterInstructionsGetSets( lst[i]);
       type_array[i] = SNetTencTypeEncode( 0);
       for( j=0; j<SNetFilterInstructionsGetNumSets( lst[i]); j++) {
-        SNetTencAddVariant( type_array[i], 
-                            SNetTencVariantEncode( 
-                              SNetTencCreateEmptyVector( 0),
-                              SNetTencCreateEmptyVector( 0),
-                              SNetTencCreateEmptyVector( 0)));
-
+        bool variant_created = false;
         current_set = sets[j];
         for( k=0; k<current_set->num; k++) {
           current_instr = current_set->instructions[k];
           switch( current_instr->opcode) {
             case snet_tag:
+              if( variant_created) {
                 SNetTencAddTag( 
                     SNetTencGetVariant( type_array[i], j+1), 
                     current_instr->data[0]);
+              }
+              else {
+                 SNetTencAddVariant( type_array[i], 
+                                      SNetTencVariantEncode( 
+                                        SNetTencCreateEmptyVector( 0),
+                                        SNetTencCreateEmptyVector( 0),
+                                        SNetTencCreateEmptyVector( 0)));
+                variant_created = true;               
+              }
               break;
             case snet_btag:
+              if( variant_created) {
                 SNetTencAddBTag( 
                     SNetTencGetVariant( type_array[i], j+1), 
                     current_instr->data[0]);
+              }
+              else {
+                 SNetTencAddVariant( type_array[i], 
+                                      SNetTencVariantEncode( 
+                                        SNetTencCreateEmptyVector( 0),
+                                        SNetTencCreateEmptyVector( 0),
+                                        SNetTencCreateEmptyVector( 0)));
+                variant_created = true;               
+              }                
               break;
             case snet_field:
-              SNetTencAddField( 
-                    SNetTencGetVariant( type_array[i], j+1), 
-                    current_instr->data[0]);
+              if( variant_created) {
+                SNetTencAddField( 
+                      SNetTencGetVariant( type_array[i], j+1), 
+                      current_instr->data[0]);
+              }
+              else {
+                 SNetTencAddVariant( type_array[i], 
+                                      SNetTencVariantEncode( 
+                                        SNetTencCreateEmptyVector( 0),
+                                        SNetTencCreateEmptyVector( 0),
+                                        SNetTencCreateEmptyVector( 0)));
+                variant_created = true;               
+              }              
+              break;
+            case create_record:
+              if( !variant_created) {
+                SNetTencAddVariant( type_array[i], 
+                                      SNetTencVariantEncode( 
+                                        SNetTencCreateEmptyVector( 0),
+                                        SNetTencCreateEmptyVector( 0),
+                                        SNetTencCreateEmptyVector( 0)));
+                variant_created = true;
+              }
+              else {
+                printf("\n\n ** Runtime Error ** : record_create applied to non-empty"
+                       " type variant. [Filter]\n\n");
+                exit( 1);
+              }
               break;
             default:
               printf("\n\n ** Fatal Error ** : Unknown opcode"
@@ -2585,7 +2627,6 @@ static snet_typeencoding_list_t
         }
       }
     }
-  } //else
   
   return( SNetTencCreateTypeEncodingListFromArray( num, type_array));
 }
@@ -2729,17 +2770,13 @@ static void *FilterThread( void *hnd)
 
     switch( SNetRecGetDescriptor( in_rec)) {
       case REC_data:
-        if( in_type == NULL) { // consume everything, generate no output
-          SNetRecDestroy( in_rec);
-        }
-        else {
           for( i=0; i<SNetElistGetNumExpressions( guard_list); i++) {
               if( ( SNetEevaluateBool( SNetEgetExpr( guard_list, i), in_rec)) && !( done)) { 
+                snet_record_t *out_rec = NULL;
                 done = true;
                 out_type = SNetTencGetTypeEncoding( type_list, i);
                 current_lst = instr_lst[i];
                 for( j=0; j<SNetTencGetNumVariants( out_type); j++) {
-                  snet_record_t *out_rec;
                   out_rec = SNetRecCreate( REC_data, 
                                            SNetTencCopyVariantEncoding( 
                                            SNetTencGetVariant( out_type, j+1)));
@@ -2789,7 +2826,6 @@ static void *FilterThread( void *hnd)
                      "evluated to FALSE. [Filter]\n\n");
               exit( 1);
             }
-        } // else (intype != NULL)
         break; // case rec_data
         case REC_sync:
           SNetHndSetInbuffer( hnd, SNetRecGetBuffer( in_rec));
