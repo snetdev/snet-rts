@@ -1,0 +1,35 @@
+net des {
+
+  box xor( (Op1, Op2) -> (Result));
+
+  box InitialP( (Pt) -> (L, R));
+  box FinalP( (L, R) -> (Ct));
+
+  net desRound {
+
+    net feistel {
+      box BitExpand( (R) -> (R'));
+      box SubKey( (Key, <C>) -> (NextKey, <C>));
+      box BitSplit( (BitStr) -> (s1),(s2),(s3),(s4),(s5),(s6),(s7),(s8));
+      box S1( (s1) -> (p1));
+      box S2( (s2) -> (p2));
+      box S3( (s3) -> (p3));
+      box S4( (s4) -> (p4));
+      box S5( (s5) -> (p5));
+      box S6( (s6) -> (p6));
+      box S7( (s7) -> (p7));
+      box S8( (s8) -> (p8));
+      box PBox( (s1,s2,s3,s4,s5,s6,s7,s8) -> (Rf));
+    } 
+    connect [{R,<C>} -> {R}, {<C>}] .. (BitExpand | Subkey) .. 
+      [| {NextKey}, {R'} |]*{Nextkey, R'} .. [{NextKey, R'} -> {Op1=NextKey, Op2=R'}] ..
+        xor .. [{Result} -> {BitStr=Result}] .. BitSplit .. (S1|S2|S3|S4|S5|S6|S7|S8) .. 
+    	  [| {p1},{p2},{p3},{p4},{p5},{p6},{p7},{p8} |]*{p1,p2,p3,p4,p5,p6,p7,p8} .. Pbox;
+
+   } 
+   connect [{L,R,Key,<C>} -> {L,R,Key,<C>};{Rn=R}] .. 
+     ([{Rn} -> {L=Rn}] | ([{L}->{L}] | feistel)) .. [|{L},{Rf}|}*{L,Rf} ..
+       [{L, Rf} -> {Op1=L, Op2=Rf}] .. xor .. [{Result} -> {R=Result}] ..
+         [|{L}, {R}|];
+
+} InitialP .. [{L,R,Key} -> {L,R,Key,<C=0>}] .. desRound*{<C==15>} .. FinalP;
