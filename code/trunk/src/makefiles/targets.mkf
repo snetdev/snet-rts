@@ -134,7 +134,7 @@ cb              = cb.o
 #
 
 global          = main.o config_file.o init.o usage.o memory.o lookup_table.o \
-                  globals.o options.o ctinfo.o phase.o phase_drivers.o                  
+                  globals.o options.o ctinfo.o phase.o phase_drivers.o set.o
 
 support         = buffer.o str.o system.o maths.o
 
@@ -149,7 +149,7 @@ preproc         = dcr.o tcheck.o boxex.o boxexfile.o mod.o tres.o
 
 flat            = flat.o
 
-typeinf         = tinorm.o
+typeinf         = tinorm.o typing.o
 
 opt             = 
 
