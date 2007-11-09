@@ -12,45 +12,40 @@ net des {
         box BitExpand( (R) -> (Rx));
         box SubKey( (KeySet, <C>) -> (KeySet, NextKey, <C>));
       } 
-      connect (BitExpand | Subkey) .. [| {NextKey}, {Rx} |]*{Nextkey, Rx};
+      connect [{R, KeySet, <C>} -> {R}; {KeySet, <C>}] .. 
+              ( 
+                BitExpand 
+                |
+                SubKey
+              ) .. [| {NextKey}, {Rx} |]*{NextKey, Rx};
 
       net KeyMix 
       connect [{NextKey, Rx} -> {Op1=NextKey, Op2=Rx}] .. 
               xor .. [{Result} -> {BitStr=Result}];
 
-#ifdef SEPARATE_SBOXES
-      net Substitute {
-        box BitSplit( (BitStr) -> (s1,s2,s3,s4,s5,s6,s7,s8));
-        box S1( (s1) -> (p1));
-        box S2( (s2) -> (p2));
-        box S3( (s3) -> (p3));
-        box S4( (s4) -> (p4));
-        box S5( (s5) -> (p5));
-        box S6( (s6) -> (p6));
-        box S7( (s7) -> (p7));
-        box S8( (s8) -> (p8));
-      }
-      connect BitSplit .. 
-              [{s1,s2,s3,s4,s5,s6,s7,s8} -> {s1},{s2},{s3},{s4},{s5},{s6},{s7},{s8}] ..
-              ( S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8) .. 
-              [| {p1},{p2},{p3},{p4},{p5},{p6},{p7},{p8} |]*{p1,p2,p3,p4,p5,p6,p7,p8};
-     
-      box PBox( (s1,s2,s3,s4,s5,s6,s7,s8) -> (Rf));
-#else
       box Substitute( (BitStr) -> (SStr)); 
       box Pbox( (SStr) -> (Rf));
-#endif      
     } 
-    connect [{R,<C>} -> {R}, {<C>}] .. 
-            ExpandAndKeySlect .. KeyMix .. Substitute .. Pbox;
+    connect ExpandAndKeySelect .. KeyMix .. Substitute .. Pbox;
 
      net XorHalfBlocks 
      connect [{L, Rf} -> {Op1=L, Op2=Rf}] .. xor .. [{Result} -> {R=Result}];
    } 
-   connect [{L,R,KeySet,<C>} -> {L,R,KeySet,<C>};{Rn=R}] .. 
-           ( [{Rn} -> {L=Rn}] | ( [{L}->{L}] | feistel) .. [|{L},{Rf}|}*{L,Rf}) ..
-        .. XorHAlfBlocks .. [|{L}, {R}|]*{L,R};
+   connect [{L,R,KeySet,<C>} -> {L,R,KeySet,<C=C+1>};{Rn=R}] .. 
+           ( 
+             [{Rn} -> {L=Rn}] 
+             | 
+             (  
+                [{L,R,KeySet,<C>} -> {L}; {R, KeySet, <C>}] .. 
+                ( 
+                  [{L}->{L}] 
+                  | 
+                  feistel
+                ) 
+                .. [|{L},{Rf}|]*{L,Rf} .. XorHalfBlocks
+             )
+           ) .. [|{L}, {R}|]*{L,R};
 
-} InitialP .. genSubKeys ..
-    [{L,R,KeySet} -> {L,R,KeySet,<C=0>}] .. desRound*{<C==15>} .. 
-  FinalP;
+} connect InitialP .. genSubKeys ..
+               [{L,R,KeySet} -> {L,R,KeySet,<C=(0-1)>}] .. desRound*{<C>} if <C==15> .. 
+          FinalP .. [{KeySet, <C>} -> {}];
