@@ -342,17 +342,12 @@ extern snet_variantencoding_t *SNetTencVariantEncode( snet_vector_t *field_v, sn
   return( v_encode);
 }
 
-extern snet_variantencoding_t *SNetTencCopyVariantEncoding( snet_variantencoding_t *venc) {
+extern snet_variantencoding_t 
+*SNetTencCopyVariantEncoding( snet_variantencoding_t *venc) {
 
-  snet_variantencoding_t *new_venc;
-
-  new_venc = SNetMemAlloc( sizeof( snet_variantencoding_t));
-
-  new_venc->field_names = SNetTencCopyVector( venc->field_names);
-  new_venc->tag_names   = SNetTencCopyVector( venc->tag_names);
-  new_venc->btag_names  = SNetTencCopyVector( venc->btag_names);
-
-  return( new_venc);
+  return( SNetTencVariantEncode( SNetTencCopyVector( venc->field_names),
+                                 SNetTencCopyVector( venc->tag_names),
+                                 SNetTencCopyVector( venc->btag_names)));
 }
 
 extern void SNetTencDestroyVariantEncoding( snet_variantencoding_t *v_enc) {

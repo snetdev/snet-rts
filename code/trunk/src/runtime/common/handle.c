@@ -338,6 +338,12 @@ extern void SNetHndDestroy( snet_handle_t *hnd) {
   SNetMemFree( hnd);
 }
 
+extern snet_handle_t *SNetHndCopy( snet_handle_t *hnd) 
+{
+  printf("\n\n ** Runtime Error ** : Thou shall not copy! [Handle] \n\n");
+  exit( 1);
+  return( NULL);
+}
 
 extern snet_record_t *SNetHndGetRecord( snet_handle_t *hnd) {
  

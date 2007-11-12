@@ -23,7 +23,11 @@
 
 /* ************************************************************************* */
 /* GLOBAL STRUCTURE                                                          */
-
+//#define DEBUG
+#ifdef DEBUG
+int tcount=0;
+pthread_mutex_t *t_count_mtx;
+#endif
 #define INITIAL_INTERFACE_TABLE_SIZE    5
 
 typedef struct {
@@ -105,6 +109,11 @@ extern bool SNetGlobalInitialise()
 {
   bool success = false;
 
+#ifdef DEBUG
+  t_count_mtx = SNetMemAlloc( sizeof( pthread_mutex_t));
+  pthread_mutex_init( t_count_mtx, NULL);
+#endif
+
   if( snet_global == NULL) {
     snet_global = SNetMemAlloc( sizeof( snet_global_info_structure_t));
     snet_global->interface =
@@ -163,7 +172,7 @@ extern void *SNetGetCopyFun( snet_record_t *rec)
 /* ************************************************************************* */
 
 
-static void ThreadCreate( pthread_t *thread, 
+inline static void ThreadCreate( pthread_t *thread, 
                           pthread_attr_t *attrib, 
                           void *(*fun)(void*),
                           void *f_args) 
@@ -171,7 +180,13 @@ static void ThreadCreate( pthread_t *thread,
   int res;
 
   res = pthread_create( thread, attrib, fun, f_args);
-
+#ifdef DEBUG
+  pthread_mutex_lock( t_count_mtx);
+  tcount += 1;
+  printf("\n<DEBUG_INF::Threads> Thread created: %d\n", tcount);
+  pthread_mutex_unlock( t_count_mtx);
+#endif
+#undef DEBUG
   if( res != 0) {
     printf("\n\n  ** Fatal Error ** : Failed to create new "
            "thread [error %d].\n\n", res);
@@ -226,9 +241,6 @@ static void ThreadDetach( pthread_t thread)
 
   #define BUF_SET_NAME( PTR, NAME)
 #endif
-
-int warn_parallel = 0, warn_star = 0;
-
 
 
 #define MC_ISMATCH( name) name->is_match
@@ -536,17 +548,17 @@ extern snet_buffer_t *SNetBox( snet_buffer_t *inbuf, void (*boxfun)( snet_handle
 
   snet_buffer_t *outbuf;
   snet_handle_t *hndl;
-  pthread_t *box_thread;
+  pthread_t box_thread;
   
 
 //  outbuf = SNetBufCreate( BUFFER_SIZE);
   BUF_CREATE( outbuf, BUFFER_SIZE);
   hndl = SNetHndCreate( HND_box, inbuf, outbuf, NULL, boxfun, outspec);
 
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( box_thread, NULL, (void*)BoxThread, (void*)hndl );
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  ThreadCreate( &box_thread, NULL, (void*)BoxThread, (void*)hndl );
   
-  ThreadDetach( *box_thread);
+  ThreadDetach( box_thread);
 
   return( outbuf);
 }
@@ -1162,7 +1174,7 @@ static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer,
                                         bool is_det) {
                                           
   snet_buffer_t *outbuf;
-  pthread_t *thread;
+  pthread_t thread;
   dispatch_info_t *buffers;
 
   buffers = SNetMemAlloc( sizeof( dispatch_info_t));
@@ -1172,15 +1184,15 @@ static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer,
   buffers->to_buf = outbuf;
 
 
-  thread = SNetMemAlloc( sizeof( pthread_t));
+//  thread = SNetMemAlloc( sizeof( pthread_t));
   
   if( is_det) {
-    ThreadCreate( thread, NULL, DetCollector, (void*)buffers);
+    ThreadCreate( &thread, NULL, DetCollector, (void*)buffers);
   }
   else {
-    ThreadCreate( thread, NULL, Collector, (void*)buffers);
+    ThreadCreate( &thread, NULL, Collector, (void*)buffers);
   }
-  ThreadDetach( *thread);
+  ThreadDetach( thread);
 
   return( outbuf);
 }
@@ -1399,7 +1411,7 @@ static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf,
   snet_buffer_t **transits;
   snet_buffer_t **outbufs;
   snet_buffer_t* (*fun)(snet_buffer_t*);
-  pthread_t *box_thread;
+  pthread_t box_thread;
   
 
   num = SNetTencGetNumVariants( types);
@@ -1438,9 +1450,9 @@ static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf,
   }
   hnd = SNetHndCreate( HND_parallel, inbuf, transits, types, is_det);
 
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( box_thread, NULL, ParallelBoxThread, (void*)hnd);
-  ThreadDetach( *box_thread);
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  ThreadCreate( &box_thread, NULL, ParallelBoxThread, (void*)hnd);
+  ThreadDetach( box_thread);
 
   SNetMemFree( funs);
 
@@ -1654,15 +1666,15 @@ extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf,
     
   snet_buffer_t *star_outbuf, *dispatch_outbuf;
   snet_handle_t *hnd;
-  pthread_t *box_thread;
+  pthread_t box_thread;
 
   star_outbuf = SNetBufCreate( BUFFER_SIZE);
   
   hnd = SNetHndCreate( HND_star, inbuf, star_outbuf, box_a, box_b, type, guards, false);
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
 
-  ThreadCreate( box_thread, NULL, StarBoxThread, hnd);
-  ThreadDetach( *box_thread);
+  ThreadCreate( &box_thread, NULL, StarBoxThread, hnd);
+  ThreadDetach( box_thread);
 
   dispatch_outbuf = CreateCollector( star_outbuf);
   
@@ -1677,16 +1689,16 @@ extern snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf,
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
-  pthread_t *box_thread;
+  pthread_t box_thread;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
 
 
   hnd = SNetHndCreate( HND_star, inbuf, outbuf, box_a, box_b, type, guards, true);
   
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( box_thread, NULL, StarBoxThread, hnd);
-  ThreadDetach( *box_thread);
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  ThreadCreate( &box_thread, NULL, StarBoxThread, hnd);
+  ThreadDetach( box_thread);
 
   return( outbuf);
 }
@@ -1833,15 +1845,15 @@ extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf,
     
   snet_buffer_t *star_outbuf, *dispatch_outbuf;
   snet_handle_t *hnd;
-  pthread_t *box_thread;
+  pthread_t box_thread;
 
   star_outbuf = SNetBufCreate( BUFFER_SIZE);
   
   hnd = SNetHndCreate( HND_star, inbuf, star_outbuf, box_a, box_b, type, guards, false);
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
 
-  ThreadCreate( box_thread, NULL, DetStarBoxThread, hnd);
-  ThreadDetach( *box_thread);
+  ThreadCreate( &box_thread, NULL, DetStarBoxThread, hnd);
+  ThreadDetach( box_thread);
 
   dispatch_outbuf = CreateDetCollector( star_outbuf);
   
@@ -1856,15 +1868,15 @@ extern snet_buffer_t *SNetStarDetIncarnate( snet_buffer_t *inbuf,
                                             snet_buffer_t* (*box_b)(snet_buffer_t*)) {
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
-  pthread_t *box_thread;
+  pthread_t box_thread;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
 
   hnd = SNetHndCreate( HND_star, inbuf, outbuf, box_a, box_b, type, guards, true);
   
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( box_thread, NULL, DetStarBoxThread, hnd);
-  ThreadDetach( *box_thread);
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  ThreadCreate( &box_thread, NULL, DetStarBoxThread, hnd);
+  ThreadDetach( box_thread);
 
   return( outbuf);
 }
@@ -2106,16 +2118,16 @@ extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf, snet_typeencoding_t *outty
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
-  pthread_t *box_thread;
+  pthread_t box_thread;
 
 //  outbuf = SNetBufCreate( BUFFER_SIZE);
   BUF_CREATE( outbuf, BUFFER_SIZE);
   hnd = SNetHndCreate( HND_sync, inbuf, outbuf, outtype, patterns, guards);
 
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
 
-  ThreadCreate( box_thread, NULL, SyncBoxThread, (void*)hnd);
-  ThreadDetach( *box_thread);
+  ThreadCreate( &box_thread, NULL, SyncBoxThread, (void*)hnd);
+  ThreadDetach( box_thread);
 
   return( outbuf);
 }
@@ -2264,16 +2276,16 @@ extern snet_buffer_t *SNetSplit( snet_buffer_t *inbuf,
 
   snet_buffer_t *initial, *outbuf;
   snet_handle_t *hnd;
-  pthread_t *box_thread;
+  pthread_t box_thread;
 
   initial = SNetBufCreate( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_split, inbuf, initial, box_a, ltag, utag);
  
   outbuf = CreateCollector( initial);
 
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( box_thread, NULL, SplitBoxThread, (void*)hnd);
-  ThreadDetach( *box_thread);
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  ThreadCreate( &box_thread, NULL, SplitBoxThread, (void*)hnd);
+  ThreadDetach( box_thread);
 
   return( outbuf);
 }
@@ -2412,16 +2424,16 @@ extern snet_buffer_t *SNetSplitDet( snet_buffer_t *inbuf, snet_buffer_t* (*box_a
 
   snet_buffer_t *initial, *outbuf;
   snet_handle_t *hnd;
-  pthread_t *box_thread;
+  pthread_t box_thread;
 
   initial = SNetBufCreate( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_split, inbuf, initial, box_a, ltag, utag);
  
   outbuf = CreateDetCollector( initial);
 
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( box_thread, NULL, DetSplitBoxThread, (void*)hnd);
-  ThreadDetach( *box_thread);
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
+  ThreadCreate( &box_thread, NULL, DetSplitBoxThread, (void*)hnd);
+  ThreadDetach( box_thread);
 
   return( outbuf);
 }
@@ -2860,15 +2872,18 @@ static void *FilterThread( void *hnd)
                         SNetRecSetBTag( 
                             out_rec, 
                             getNameFromInstr( current_instr),
-                            SNetEevaluateInt( getExprFromInstr( current_instr), in_rec));
+                            SNetEevaluateInt( 
+                              getExprFromInstr( current_instr), in_rec));
                         break;
                       case snet_field: {
                         void* (*copyfun)(void*);
-                        copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
+                        copyfun = GetCopyFun( 
+                                   GetInterface( SNetRecGetInterfaceId( in_rec)));
                         SNetRecSetField( 
                             out_rec, 
                             getNameFromInstr( current_instr),
-                            copyfun( SNetRecGetField( in_rec, getFieldNameFromInstr( current_instr))));
+                            copyfun( SNetRecGetField( in_rec, 
+                                     getFieldNameFromInstr( current_instr))));
                         }
                         break;
                         case create_record: //noop
@@ -2883,9 +2898,9 @@ static void *FilterThread( void *hnd)
                   SNetBufPut( outbuf, 
                               FilterInheritFromInrec( in_type, in_rec, out_rec));
                 } // forall variants of selected out_type
-              SNetRecDestroy( in_rec);
               } // if guard is true
             } // forall guards
+            SNetRecDestroy( in_rec);
             if( !( done)) {
               printf("\n\n ** Runtime Error ** : All guards "
                      "evluated to FALSE. [Filter]\n\n");
@@ -2936,7 +2951,7 @@ extern snet_buffer_t
   snet_expr_list_t *guard_expr;
   snet_filter_instruction_set_list_t **instr_list;
   snet_typeencoding_list_t *out_types;
-  pthread_t *filter_thread;
+  pthread_t filter_thread;
   va_list args;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
@@ -2961,9 +2976,9 @@ extern snet_buffer_t
 
   hnd = SNetHndCreate( HND_filter, inbuf, outbuf, in_type, out_types, guard_expr, instr_list);
 
-  filter_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( filter_thread, NULL, FilterThread, (void*)hnd);
-  ThreadDetach( *filter_thread);
+//  filter_thread = SNetMemAlloc( sizeof( pthread_t));
+  ThreadCreate( &filter_thread, NULL, FilterThread, (void*)hnd);
+  ThreadDetach( filter_thread);
 
   return( outbuf);
 }
@@ -2983,7 +2998,7 @@ extern snet_buffer_t
   snet_expr_list_t *guard_expr;
   snet_filter_instruction_set_list_t **instr_list;
   snet_typeencoding_list_t *out_types;
-  pthread_t *filter_thread;
+  pthread_t filter_thread;
   va_list args;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
@@ -3008,9 +3023,9 @@ extern snet_buffer_t
 
   hnd = SNetHndCreate( HND_filter, inbuf, outbuf, in_type, out_types, guard_expr, instr_list);
 
-  filter_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( filter_thread, NULL, FilterThread, (void*)hnd);
-  ThreadDetach( *filter_thread);
+//  filter_thread = SNetMemAlloc( sizeof( pthread_t));
+  ThreadCreate( &filter_thread, NULL, FilterThread, (void*)hnd);
+  ThreadDetach( filter_thread);
 
   return( outbuf);
 }
@@ -3164,21 +3179,21 @@ static snet_buffer_t *CreateFilter( snet_buffer_t *inbuf,
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
-  pthread_t *box_thread;
+  pthread_t box_thread;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_filter, inbuf, outbuf, in_type, out_type, set);
 
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
+//  box_thread = SNetMemAlloc( sizeof( pthread_t));
 
-  if( is_translator) { // for the time being, a translator is just a filter
-    ThreadCreate( box_thread, NULL, FilterThread, (void*)hnd);
-  } 
-  else {
-    ThreadCreate( box_thread, NULL, FilterThread, (void*)hnd);
-  }
+//  if( is_translator) { // for the time being, a translator is just a filter
+    ThreadCreate( &box_thread, NULL, FilterThread, (void*)hnd);
+//  } 
+//  else {
+//    ThreadCreate( &box_thread, NULL, FilterThread, (void*)hnd);
+//  }
   
-  ThreadDetach( *box_thread);
+  ThreadDetach( box_thread);
 
   return( outbuf);
 
