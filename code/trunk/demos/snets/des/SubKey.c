@@ -5,19 +5,17 @@
 void *SubKey( void *hnd, void *ptr_1, int tag)
 {
   SACarg *sac_res1, *sac_res2, *sac_res3;
-  
+  int c_tag; 
 
   desboxes__SubKey2( &sac_res1, 
                      &sac_res2, 
                      &sac_res3, 
-                     (SACarg*)ptr_1, 
+                     ptr_1, 
                      SACARGconvertFromIntScalar( tag));
 
-  // this is cheating: tag is returned by sacfun
-  // and should be properly converted...
-  SACARGconvertToIntArray( sac_res3);
-  SAC2SNet_outRaw( hnd, 1, sac_res1, sac_res2, tag);
+  c_tag = SACARGconvertToIntArray( sac_res3)[0];
   
+  SAC2SNet_outRaw( hnd, 1, sac_res1, sac_res2, c_tag);
 
   return( hnd);
 }

@@ -31,8 +31,10 @@ static void SNet__des__xor(snet_handle_t *hnd) {
   field_Op1 = SNetRecTakeField(rec, F__des__Op1);
 
   field_Op2 = SNetRecTakeField(rec, F__des__Op2);
-
+  //printf("->xor\n");
   xor(hnd, field_Op1, field_Op2);
+  //printf("xor->\n");
+
 }
 
 static void SNet__des__InitialP(snet_handle_t *hnd) {
@@ -42,8 +44,10 @@ static void SNet__des__InitialP(snet_handle_t *hnd) {
   rec = SNetHndGetRecord(hnd);
 
   field_Pt = SNetRecTakeField(rec, F__des__Pt);
+  //printf("->InitialP\n");
 
   InitialP(hnd, field_Pt);
+  //printf("InitialP->\n");
 }
 
 static void SNet__des__genSubKeys(snet_handle_t *hnd) {
@@ -53,8 +57,9 @@ static void SNet__des__genSubKeys(snet_handle_t *hnd) {
   rec = SNetHndGetRecord(hnd);
 
   field_Key = SNetRecTakeField(rec, F__des__Key);
-
+  //printf("->genSubKeys\n");
   genSubKeys(hnd, field_Key);
+  //printf("genSubKeys->\n");
 }
 
 static void SNet__des__FinalP(snet_handle_t *hnd) {
@@ -67,8 +72,10 @@ static void SNet__des__FinalP(snet_handle_t *hnd) {
   field_L = SNetRecTakeField(rec, F__des__L);
 
   field_R = SNetRecTakeField(rec, F__des__R);
+  //printf("->FinalP\n");
 
   FinalP(hnd, field_L, field_R);
+  //printf("FinalP->\n");
 }
 
 static void SNet__des__desRound__feistel__ExpandAndKeySelect__BitExpand(snet_handle_t *hnd) {
@@ -76,10 +83,11 @@ static void SNet__des__desRound__feistel__ExpandAndKeySelect__BitExpand(snet_han
   void *field_R = NULL;
 
   rec = SNetHndGetRecord(hnd);
-
+  //printf("->BitExpand\n");
   field_R = SNetRecTakeField(rec, F__des__R);
 
   BitExpand(hnd, field_R);
+  //printf("BitExpand->\n");
 }
 
 static void SNet__des__desRound__feistel__ExpandAndKeySelect__SubKey(snet_handle_t *hnd) {
@@ -92,8 +100,9 @@ static void SNet__des__desRound__feistel__ExpandAndKeySelect__SubKey(snet_handle
   field_KeySet = SNetRecTakeField(rec, F__des__KeySet);
 
   stag_C = SNetRecTakeTag(rec, T__des__C);
-
+  //printf("->SubKey\n");
   SubKey(hnd, field_KeySet, stag_C);
+  //printf("SubKey->\n");
 }
 
 static snet_buffer_t *SNet__des__desRound__feistel__ExpandAndKeySelect___SL(snet_buffer_t *in_buf) {
@@ -160,8 +169,8 @@ static snet_buffer_t *SNet__des__desRound__feistel__ExpandAndKeySelect___SR___SL
         SNetTencCreateVector( 0),
         SNetTencCreateVector( 0)),
       SNetTencVariantEncode(
-        SNetTencCreateVector( 2, F__des__KeySet, T__des__C),
-        SNetTencCreateVector( 0),
+        SNetTencCreateVector( 1, F__des__KeySet),
+        SNetTencCreateVector( 1, T__des__C),
         SNetTencCreateVector( 0))),
               &SNet__des__desRound__feistel__ExpandAndKeySelect___SR___SL___PL, 
               &SNet__des__desRound__feistel__ExpandAndKeySelect___SR___SL___PR);
@@ -325,7 +334,9 @@ static void SNet__des__desRound__feistel__Substitute(snet_handle_t *hnd) {
 
   field_BitStr = SNetRecTakeField(rec, F__des__BitStr);
 
+  //printf("->Substitute\n");
   Substitute(hnd, field_BitStr);
+  //printf("Substitute->\n");
 }
 
 static void SNet__des__desRound__feistel__Pbox(snet_handle_t *hnd) {
@@ -336,7 +347,9 @@ static void SNet__des__desRound__feistel__Pbox(snet_handle_t *hnd) {
 
   field_SStr = SNetRecTakeField(rec, F__des__SStr);
 
+  //printf("->Pbox\n");
   Pbox(hnd, field_SStr);
+  //printf("Pbox->\n");
 }
 
 static snet_buffer_t *SNet__des__desRound__feistel___SR___SR___SL(snet_buffer_t *in_buf) {
@@ -571,8 +584,8 @@ static snet_buffer_t *SNet__des__desRound___SR___SL___PR___SR___SL(snet_buffer_t
         SNetTencCreateVector( 0),
         SNetTencCreateVector( 0)),
       SNetTencVariantEncode(
-        SNetTencCreateVector( 3, F__des__KeySet, F__des__R, T__des__C),
-        SNetTencCreateVector( 0),
+        SNetTencCreateVector( 2, F__des__KeySet, F__des__R),
+        SNetTencCreateVector( 1, T__des__C),
         SNetTencCreateVector( 0))),
               &SNet__des__desRound___SR___SL___PR___SR___SL___PL, 
               &SNet__des__desRound__feistel);
@@ -827,7 +840,7 @@ static snet_buffer_t *SNet____STAR_INCARNATE_des___SR___SR___SR___SL(snet_buffer
               SNetEcreateList(1, 
                 SNetEeq( 
                   SNetEtag( T__des__C), 
-                  SNetEconsti( 15))), 
+                  SNetEconsti( 5))), 
               &SNet__des__desRound, 
               &SNet____STAR_INCARNATE_des___SR___SR___SR___SL);
 
@@ -846,7 +859,7 @@ static snet_buffer_t *SNet__des___SR___SR___SR___SL(snet_buffer_t *in_buf) {
               SNetEcreateList(1, 
                 SNetEeq( 
                   SNetEtag( T__des__C), 
-                  SNetEconsti( 15))), 
+                  SNetEconsti( 5))), 
               &SNet__des__desRound, 
               &SNet____STAR_INCARNATE_des___SR___SR___SR___SL);
 

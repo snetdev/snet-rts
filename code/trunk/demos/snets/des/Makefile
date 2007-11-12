@@ -12,7 +12,7 @@ LIBS      = -lpthread -lsnet -lSAC2SNet
 SACTARGET = desboxes
 # - - - - - - - - - - - - - - - - - - - -
 SAC2C     = sac2c
-S2CFLAGS  = -v1
+S2CFLAGS  = -v1 -check c
 SAC4C     = sac4c
 S4CFLAGS  = -v1 -incdir include -libdir lib
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
@@ -26,8 +26,8 @@ TARGET    = des
 
 
 all: 
-	$(SAC2C) $(S2CFLAGS) $(SACTARGET).sac
-	$(SAC4C) $(S4CFLAGS) $(SACTARGET)
+#	$(SAC2C) $(S2CFLAGS) $(SACTARGET).sac
+#	$(SAC4C) $(S4CFLAGS) $(SACTARGET)
 	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) -c *.c
 	$(CC) $(LIBDIRS) -o $(TARGET) *.o $(LIBS) $(S4CLIBS) $(FIBREOBJS)
 

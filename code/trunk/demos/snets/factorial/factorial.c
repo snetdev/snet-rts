@@ -76,10 +76,10 @@ static snet_buffer_t *SNet__factorial__compute___SL(snet_buffer_t *in_buf) {
                   SNetTencCreateVector(0))), 
               NULL, 
               SNetCreateFilterInstructionSetList(2, 
-                SNetCreateFilterInstructionSet(2, 
+                SNetCreateFilterInstructionSet(3, SNetCreateFilterInstruction( create_record), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__x, F__factorial__x), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__r, F__factorial__r)), 
-                SNetCreateFilterInstructionSet(1, 
+                SNetCreateFilterInstructionSet(2,SNetCreateFilterInstruction( create_record), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__x, F__factorial__x))));
 
   return (out_buf);
@@ -202,7 +202,7 @@ static snet_buffer_t *SNet__factorial__compute___SR___SR___SR(snet_buffer_t *in_
                   SNetTencCreateVector(0))), 
               NULL, 
               SNetCreateFilterInstructionSetList(1, 
-                SNetCreateFilterInstructionSet(2, 
+                SNetCreateFilterInstructionSet(3, SNetCreateFilterInstruction( create_record), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__x, F__factorial__xx), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__r, F__factorial__rr))));
 
@@ -285,7 +285,7 @@ static snet_buffer_t *SNet__factorial___ST___SR___SR___PL(snet_buffer_t *in_buf)
                   SNetTencCreateVector(0))), 
               NULL, 
               SNetCreateFilterInstructionSetList(1, 
-                SNetCreateFilterInstructionSet(1, 
+                SNetCreateFilterInstructionSet(2, SNetCreateFilterInstruction( create_record), 
                   SNetCreateFilterInstruction(snet_tag, T__factorial__stop, 
                     SNetEtag( T__factorial__T)))));
 

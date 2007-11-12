@@ -12,7 +12,7 @@
 #include <buffer.h>
 #include <bool.h>
 #include <memfun.h>
-
+#include <record.h>
 
 #ifdef DEBUG
   #include <debug.h>
@@ -39,7 +39,37 @@ struct buffer  {
   pthread_cond_t  *condEmpty;
 };
 
-
+#ifdef DEBUG
+static void printRec( snet_buffer_t *b, snet_record_t *rec)
+{
+  int k;
+  
+  printf("\n<DEBUG_INF::Buffer> ---------------- >");
+  printf("\n buffer [%p]", b);
+  printf("\n record [%p]\n", rec);
+  if( rec != NULL) {
+    switch( SNetRecGetDescriptor( rec)) {
+      case REC_data:
+       printf("\n  - %2d fields: ", SNetRecGetNumFields( rec));
+       for( k=0; k<SNetRecGetNumFields( rec); k++) {
+         printf(" %d ", SNetRecGetFieldNames( rec)[k]);
+       }
+       printf("\n  - %2d tags  : ", SNetRecGetNumTags( rec));
+       for( k=0; k<SNetRecGetNumTags( rec); k++) {
+        printf(" %d ", SNetRecGetTagNames( rec)[k]);
+       }
+       printf("\n  - %2d btags : ", SNetRecGetNumBTags( rec));
+       for( k=0; k<SNetRecGetNumBTags( rec); k++) {
+        printf(" %d ", SNetRecGetBTagNames( rec)[k]);
+       }  
+      break;
+      default:
+      printf("\n Control record: type %d", SNetRecGetDescriptor( rec));
+    }
+  }
+  printf("\n<----------------------------------- <\n\n");
+}
+#endif
 
 extern snet_buffer_t *SNetBufCreate( unsigned int size) {
   snet_buffer_t *theBuffer;
@@ -79,6 +109,9 @@ extern snet_buffer_t *SNetBufPut( snet_buffer_t *bf, void* elem) {
     
   /* put pointer into the stack */
   bf->ringBuffer[ bf->bufferHead ] = elem;  
+#ifdef DEBUG
+  printRec( bf, (snet_record_t*)elem);
+#endif
   bf->bufferHead += 1;
   bf->bufferHead %= bf->bufferCapacity;
   bf->bufferSpaceLeft -= 1;

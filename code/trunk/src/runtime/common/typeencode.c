@@ -173,8 +173,6 @@ static snet_vector_t *GetBTagVector( snet_variantencoding_t *v_enc) {
   }
 }
 
-
-
 static void Rename( snet_vector_t *vec, int name, int newName) {
 
   int i;
@@ -329,6 +327,7 @@ extern void SNetTencRenameBTag( snet_variantencoding_t *v_enc, int name, int new
 
   Rename( GetBTagVector( v_enc), name, newName); 
 }
+
 
 extern snet_variantencoding_t *SNetTencVariantEncode( snet_vector_t *field_v, snet_vector_t *tag_v, snet_vector_t *btag_v) {
 

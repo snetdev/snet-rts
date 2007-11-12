@@ -16,26 +16,20 @@ int byte2int( int[8] b)
   return( sum( b * [128,64,32,16,8,4,2,1]));
 }
 
-int[*] string2bitBlocks( String::string s)
+int[.] genKey( int[.] in) 
 {
+  key = reshape( [64], hex2bits( in));
 
-  len = strlen( s);
-printf( "len %d\n", len);
-  pad = ( len % 8 == 0 ? 0 : 8 - len % 8);
-printf( "pad %d\n", pad);
-  ints = toi( tochar( s) ++ genarray( [pad], ' '));
-  bytes = { [i] -> int2byte( ints[[i]]) };
-  res = reshape( [ (len+ pad) / 8, 64 ], bytes);
+  return( key);
+}
+
+int[*] ints2bitBlocks( int[.] input)
+{
+  bytes = { [i] -> int2byte( input[[i]]) };
+  res = reshape( [ 64 ], bytes);
   return( res);
 }
 
-String::string bitBlocks2string( int[.,.] bits)
-{
-  bytes = reshape( [shape(bits)[0]*8] ++ [8], bits);
-  ints = { [i] -> byte2int( bytes[[i]]) };
-  res = to_string( tochar( ints));
-  return( res);
-}
 
 int binPlus( int a, int b)
 {

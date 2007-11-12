@@ -104,7 +104,12 @@ struct record {
 static int FindName( int *names, int count, int val) {
 
   int i=0;
-
+ if( ( names == NULL)) {
+  printf("\n\n ** Runtime Error ** : Record contains no name encodings. This"
+         " is a \n"
+         "                       runtime-system bug. [FindName()]\n\n");
+  exit( 1);
+  }
   while( (names[i] != val) && (i < count) ) {
     i += 1;
   }
@@ -112,6 +117,7 @@ static int FindName( int *names, int count, int val) {
   if( i == count) {
     i = NOT_FOUND;
   }
+  
    return( i);
 }
 
@@ -137,7 +143,7 @@ static int GetConsumedCount( int *names, int num) {
 
 static void NotFoundError( int name, char *action, char *type) 
 {
-    printf("\n\n ** Runtime Error ** : Attempt to '%s' non-existend"
+    printf("\n\n ** Runtime Error ** : Attempted '%s' on non-existent"
            " %s [%d].\n\n", action, type, name);
     exit( 1);
 }
@@ -321,7 +327,7 @@ extern snet_buffer_t *SNetRecGetBuffer( snet_record_t *rec)
 extern void SNetRecSetTag( snet_record_t *rec, int name, int val) {
 
   int offset=0;
-
+  
   offset = FindName( SNetTencGetTagNames( GetVEnc( rec)), SNetTencGetNumTags( GetVEnc( rec)), name);
   DATA_REC( rec, tags[offset]) = val;
 }
@@ -348,7 +354,6 @@ extern void SNetRecSetField( snet_record_t *rec, int name, void *val) {
 extern int SNetRecGetTag( snet_record_t *rec, int name) {
   
   int offset;
-
   offset = FindName( SNetTencGetTagNames( GetVEnc( rec)), SNetTencGetNumTags( GetVEnc( rec)), name);
   if( offset == NOT_FOUND) {
     NotFoundError( name, "get","tag");
