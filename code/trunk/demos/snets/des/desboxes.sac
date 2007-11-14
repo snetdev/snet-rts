@@ -1,6 +1,8 @@
 module desboxes;
 
-use Structures: all;
+import String:{to_string};
+
+use Structures: all except { to_string};
 use StdIO: all;
 
 export all except { binPlus, overSel};
@@ -29,6 +31,27 @@ int[*] ints2bitBlocks( int[.] input)
   res = reshape( [ 64 ], bytes);
   return( res);
 }
+
+int[*] string2bitBlocks( String::string s)
+{
+
+  len = strlen( s);
+  pad = ( len % 8 == 0 ? 0 : 8 - len % 8);
+  ints = toi( tochar( s) ++ genarray( [pad], ' '));
+  bytes = { [i] -> int2byte( ints[[i]]) };
+/*  res = reshape( [ (len+ pad) / 8, 64 ], bytes);  !! */
+    res = reshape( [ 64 ], bytes);
+    return( res);
+}
+
+String::string bitBlocks2string( int[.] bits)
+{
+  bytes = reshape( [shape( bits)[0]*8] ++ [8], bits);
+  ints = { [i] -> byte2int( bytes[[i]]) };
+  res = to_string( tochar( ints));
+  return( res);
+}
+
 
 
 int binPlus( int a, int b)

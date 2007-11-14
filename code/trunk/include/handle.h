@@ -129,6 +129,7 @@ extern bool SNetHndIsIncarnate( snet_handle_t *hnd);
 extern void SNetHndSetStringNames( snet_handle_t *hnd, int num, ...);
 
 extern void SNetHndDestroy( snet_handle_t *hndl);
+extern snet_handle_t *SNetHndCopy( snet_handle_t *hnd);
 
 extern bool SNetHndIsDet( snet_handle_t *hnd);
 
