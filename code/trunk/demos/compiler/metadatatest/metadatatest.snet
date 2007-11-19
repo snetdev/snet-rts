@@ -13,10 +13,11 @@
 
 <?xml version="1.0"?>
 <!-- Test for namespaces and observer -->
-<metadata xmlns="snet.feis.herts.ac.uk">
+<metadata xmlns="snet.feis.herts.ac.uk"
+          xmlns:a="snet.feis.herts.ac.uk">
   <net name="metadatatest/split" >
      <observer type="after">
-       <snet:stag>T</snet:stag>
+       <a:stag>T</a:stag>
      </observer>
   </net>
 </metadata>
@@ -36,16 +37,15 @@ net metadatatest {
 	
     <?xml version="1.0"?>
     <!-- Test for box-->
-    <snet:metadata >
+    <snet:metadata xmlns:snet="snet.feis.herts.ac.uk">
       <snet:box name="examine" >
-        <snet:observer type="before">
-          <snet:field>P</snet:field>
-          <snet:field>Q</snet:field>
-        </snet:observer>
-        <snet:observer type="after">
-          <snet:field>A</snet:field>
-          <snet:field>Y</snet:field>
-        </snet:observer>
+        <snet:interface name="C2SNet" />
+        <snet:boxsource name="boxfuns.c" />
+        <snet:boxfunction name="funB" />
+        <snet:compiler name="gcc" />
+        <snet:compilerflags>-Wall -O2 -g -c</snet:compilerflags>
+        <snet:ldflags>-L/path/to/libs -lmylib1 -lmylib2</snet:ldflags>
+        <snet:threads>2</snet:threads>
       </snet:box>
       <snet:net name="compute">
         <snet:net name="syncPQ">
