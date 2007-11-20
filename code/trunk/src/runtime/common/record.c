@@ -172,7 +172,6 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
       DATA_REC( rec, tags) = SNetMemAlloc( SNetTencGetNumTags( v_enc) * sizeof( int));
       DATA_REC( rec, btags) = SNetMemAlloc( SNetTencGetNumBTags( v_enc) * sizeof( int));
       DATA_REC( rec, v_enc) = v_enc;
-//      DATA_REC( rec, lang) = snet_lang_sac;
       break;
     case REC_sync:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
@@ -220,14 +219,20 @@ extern void SNetRecDestroy( snet_record_t *rec) {
   switch( REC_DESCR( rec)) {
     case REC_data: {
       void (*freefun)(void*);
-      num = SNetTencGetNumFields( DATA_REC( rec, v_enc));
-      names = SNetTencGetFieldNames( DATA_REC( rec, v_enc));
+      num = SNetRecGetNumFields( rec);
+      names = SNetRecGetUnconsumedFieldNames( rec);
       freefun = SNetGetFreeFun( rec);
       for( i=0; i<num; i++) {
-        if( names[i] >= 0) { // not UNSET 
-          freefun( SNetRecGetField( rec, names[i])); 
-        }
+          void *f;
+//        if( names[i] >= 0) { 
+          printf("\nFreeing %d [%p]", names[i], rec);
+          f = SNetRecGetField( rec, names[i]);
+          printf(" field: %p\n", f);
+          fflush( stdout);
+          freefun( f);
+//        }
       }
+      SNetMemFree( names);
       SNetTencDestroyVariantEncoding( DATA_REC( rec, v_enc));
       SNetMemFree( DATA_REC( rec, fields));
       SNetMemFree( DATA_REC( rec, tags));

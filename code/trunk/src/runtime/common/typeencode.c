@@ -17,24 +17,6 @@
 
 
 
-#define TENC_CREATE_VEC( VEC, NUM, TYPE, NAME) \
-          va_list args;\
-          int i;\
-          VEC = SNetMemAlloc( sizeof( snet_vector_t));\
-          VEC->num = NUM;\
-          if( NUM == 0) {\
-             VEC->fields.NAME = NULL;\
-          }\
-          else {\
-            VEC->fields.NAME = SNetMemAlloc( ( NUM) * sizeof( TYPE));\
-            va_start(args, NUM);\
-            for( i=0; i < NUM; i++) {\
-              VEC->fields.NAME[i] = va_arg(args, TYPE);\
-            }\
-            va_end( args);\
-          }
-
-          
 
 
 #define REMOVE_FROM_TENC( NAMES, TENCNUM, TENCNAMES)\
@@ -205,8 +187,22 @@ static void Rename( snet_vector_t *vec, int name, int newName) {
 extern snet_vector_t *SNetTencCreateVector( int num, ...) {
 
   snet_vector_t *vect;
+  va_list args;
+  int i;
 
-  TENC_CREATE_VEC( vect, num, int, ints);
+  vect = SNetMemAlloc( sizeof( snet_vector_t));
+  vect->num = num;
+  if( num == 0) {
+    vect->fields.ints = NULL;
+  }
+  else {
+    vect->fields.ints = SNetMemAlloc( ( num) * sizeof( int));
+    va_start(args, num);
+    for( i=0; i < num; i++) {
+      vect->fields.ints[i] = va_arg(args, int);
+    }
+    va_end( args);
+  }
   
   return( vect);
 }

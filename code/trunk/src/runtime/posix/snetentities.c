@@ -385,14 +385,19 @@ extern snet_handle_t
     for( i=0; i<SNetTencGetNumFields( venc); i++) {
       SNetRecSetField( out_rec, names[i], fields[i]);
     }
+    SNetMemFree( fields); 
+
     names = SNetTencGetTagNames( venc);
     for( i=0; i<SNetTencGetNumTags( venc); i++) {
       SNetRecSetTag( out_rec, names[i], tags[i]);
     }
+    SNetMemFree( tags);
+
     names = SNetTencGetBTagNames( venc);
     for( i=0; i<SNetTencGetNumBTags( venc); i++) {
       SNetRecSetBTag( out_rec, names[i], btags[i]);
     }
+    SNetMemFree( btags);
   }
   else {
     printf("\n\n ** Runtime Error ** : Variant <= 0. [SNetOut]\n\n");
@@ -3048,7 +3053,7 @@ static void *FilterThread( void *hndl) {
   out_type =  SNetHndGetOutType( hnd);
 
   instructions = SNetHndGetFilterInstructions( hnd);
-
+  printf("\n\n ** Note ** : Use of filter v1 is deprecated.\n\n");
   while( !( terminate)) {
     in_rec = SNetBufGet( SNetHndGetInbuffer( hnd));
     switch( SNetRecGetDescriptor( in_rec)) {

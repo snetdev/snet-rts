@@ -209,7 +209,7 @@ AC_CHECK_LIB(,bind,
     AC_SUBST( LIB_SOCKET, ""),
     AC_CHECK_LIB(socket,bind,
       AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),
-      [!fail]))
+      AC_SUBST( LIB_SOCKET, "")))
 
 dnl check if we need -lrt
 AC_CHECK_LIB(,sem_init,
@@ -296,17 +296,17 @@ dnl generate specific flags for known os
 AC_MSG_CHECKING([sac2crc system flags])
 OSFLAGS=""
 case "$target_os" in
-  solaris*)     
-    OSFLAGS=["-D__EXTENSIONS__ -DMUST_INIT_YY -fPIC -DPIC"]
-    LD_DYNAMIC=["ld -dy -G"]
-    LD_PATH=["-R"]
-    AC_MSG_RESULT([solaris settings])
-    ;;
   *linux*)      
     OSFLAGS=["-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint"]
     LD_DYNAMIC=["ld -G -dy -shared -allow-shlib-undefined"]
     LD_PATH=["-Wl,-rpath,"]
     AC_MSG_RESULT([linux settings])
+    ;;
+  *solaris*)     
+    OSFLAGS=["-D__EXTENSIONS__ -DMUST_INIT_YY -fPIC -DPIC"]
+    LD_DYNAMIC=["ld -dy -G"]
+    LD_PATH=["-R"]
+    AC_MSG_RESULT([solaris settings])
     ;;
   *osf*)	
     OSFLAGS=["-D_OSF_SOURCE"]

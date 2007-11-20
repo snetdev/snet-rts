@@ -840,7 +840,7 @@ static snet_buffer_t *SNet____STAR_INCARNATE_des___SR___SR___SR___SL(snet_buffer
               SNetEcreateList(1, 
                 SNetEeq( 
                   SNetEtag( T__des__C), 
-                  SNetEconsti( 9))), 
+                  SNetEconsti( 3))), 
               &SNet__des__desRound, 
               &SNet____STAR_INCARNATE_des___SR___SR___SR___SL);
 
@@ -859,7 +859,7 @@ static snet_buffer_t *SNet__des___SR___SR___SR___SL(snet_buffer_t *in_buf) {
               SNetEcreateList(1, 
                 SNetEeq( 
                   SNetEtag( T__des__C), 
-                  SNetEconsti( 9))), 
+                  SNetEconsti( 3))), 
               &SNet__des__desRound, 
               &SNet____STAR_INCARNATE_des___SR___SR___SR___SL);
 
