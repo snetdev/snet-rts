@@ -33,19 +33,24 @@ connect [{B} if <1==2> -> {C=B}; {<d=3>}
 net syncwrap
 connect [|{A},{B,C},{<d>}|];
 
-net dotdot
-connect (syncwrap .. filtwrap);
+net dotdot {
+  net extLeft ({C}->{A,<#b>},{D}->{<#dead>}|{A});
+  net extRight ({A,B,<#b>}->{},{C,D}->{});
+} connect extLeft .. extRight;
 
-net bar
-connect (syncwrap | filtwrap);
+net bar {
+  net a ({A}->{B},{C}->{D});
+  net b ({A} -> {C}|{D});
+} connect a | b;
 
-net star
-connect bar*{A},{<d>};
+net nil {
+  net a connect [|{A},{B}|];
+  net b connect [{A,B}->];
+} connect a || b;
+
+net star {
+  net inner ( {A}->{B}, {B}->{A}|{C}|{D} );
+} connect inner * {D};
 
 net ex
 connect star!<d>;
-
-net signed ({A}->{B})
-connect boxwrap;
-
-net extsigned ({C}->{A});
