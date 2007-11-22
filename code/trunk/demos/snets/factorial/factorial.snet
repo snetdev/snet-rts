@@ -6,10 +6,10 @@ net factorial
         net compute
         {
                 box sub( (x) -> (xx));
-                box mult( (x,r) -> (rr));
+                box mult( (x,r) -> (rr, xx));
         }
         connect [{<F>,x,r} -> {x=x,r=r}; {x=x}] .. 
-					(sub|mult) .. 
+					(sub|(mult..[{xx} -> {}])) .. 
 					  ([|{xx},{rr} |]*{xx,rr}) ..
 					    [{xx,rr}->{x=xx,r=rr}];
 

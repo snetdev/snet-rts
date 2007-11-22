@@ -12,11 +12,10 @@
 */
 
 #include "factorial.h"
-//#include "leq1.h"
-//#include "condif.h"
-//#include "sub.h"
-//#include "mult.h"
-#include "boxfuns.h"
+#include "leq1.h"
+#include "condif.h"
+#include "sub.h"
+#include "mult.h"
 
 static void SNet__factorial__leq1(snet_handle_t *hnd) {
   snet_record_t *rec = NULL;
@@ -76,10 +75,12 @@ static snet_buffer_t *SNet__factorial__compute___SL(snet_buffer_t *in_buf) {
                   SNetTencCreateVector(0))), 
               NULL, 
               SNetCreateFilterInstructionSetList(2, 
-                SNetCreateFilterInstructionSet(3, SNetCreateFilterInstruction( create_record), 
+                SNetCreateFilterInstructionSet(3, 
+                  SNetCreateFilterInstruction(create_record), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__x, F__factorial__x), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__r, F__factorial__r)), 
-                SNetCreateFilterInstructionSet(2,SNetCreateFilterInstruction( create_record), 
+                SNetCreateFilterInstructionSet(2, 
+                  SNetCreateFilterInstruction(create_record), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__x, F__factorial__x))));
 
   return (out_buf);
@@ -87,12 +88,13 @@ static snet_buffer_t *SNet__factorial__compute___SL(snet_buffer_t *in_buf) {
 
 static snet_buffer_t *SNet__factorial__compute___SR___SL___PL(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
-  snet_typeencoding_t *out_type = 
-    SNetTencTypeEncode( 1, 
-      SNetTencVariantEncode(
-        SNetTencCreateVector( 1, F__factorial__xx),
-        SNetTencCreateVector( 0),
-        SNetTencCreateVector( 0)));
+  snet_typeencoding_t *out_type = NULL;
+
+  out_type = SNetTencTypeEncode(1, 
+              SNetTencVariantEncode(
+                SNetTencCreateVector(1, F__factorial__xx), 
+                SNetTencCreateVector(0), 
+                SNetTencCreateVector(0)));
 
   out_buf = SNetBox(in_buf, 
               &SNet__factorial__compute__sub, 
@@ -101,14 +103,15 @@ static snet_buffer_t *SNet__factorial__compute___SR___SL___PL(snet_buffer_t *in_
   return (out_buf);
 }
 
-static snet_buffer_t *SNet__factorial__compute___SR___SL___PR(snet_buffer_t *in_buf) {
+static snet_buffer_t *SNet__factorial__compute___SR___SL___PR___SL(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
-  snet_typeencoding_t *out_type = 
-    SNetTencTypeEncode( 1, 
-      SNetTencVariantEncode(
-        SNetTencCreateVector( 1, F__factorial__rr),
-        SNetTencCreateVector( 0),
-        SNetTencCreateVector( 0)));    
+  snet_typeencoding_t *out_type = NULL;
+
+  out_type = SNetTencTypeEncode(1, 
+              SNetTencVariantEncode(
+                SNetTencCreateVector(2, F__factorial__rr, F__factorial__xx), 
+                SNetTencCreateVector(0), 
+                SNetTencCreateVector(0)));
 
   out_buf = SNetBox(in_buf, 
               &SNet__factorial__compute__mult, 
@@ -117,19 +120,46 @@ static snet_buffer_t *SNet__factorial__compute___SR___SL___PR(snet_buffer_t *in_
   return (out_buf);
 }
 
+static snet_buffer_t *SNet__factorial__compute___SR___SL___PR___SR(snet_buffer_t *in_buf) {
+  snet_buffer_t *out_buf = NULL;
+
+  out_buf = SNetFilter(in_buf, 
+              SNetTencTypeEncode(1, 
+                SNetTencVariantEncode(
+                  SNetTencCreateVector(1, F__factorial__xx), 
+                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(0))), 
+              NULL, 
+              SNetCreateFilterInstructionSetList(1, 
+                SNetCreateFilterInstructionSet(1, 
+                  SNetCreateFilterInstruction(create_record))));
+
+  return (out_buf);
+}
+
+static snet_buffer_t *SNet__factorial__compute___SR___SL___PR(snet_buffer_t *in_buf) {
+  snet_buffer_t *out_buf = NULL;
+
+  out_buf = SNetSerial(in_buf, 
+              &SNet__factorial__compute___SR___SL___PR___SL, 
+              &SNet__factorial__compute___SR___SL___PR___SR);
+
+  return (out_buf);
+}
+
 static snet_buffer_t *SNet__factorial__compute___SR___SL(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
 
   out_buf = SNetParallel(in_buf, 
-              SNetTencTypeEncode( 2,
+              SNetTencTypeEncode(2, 
                 SNetTencVariantEncode(
-                  SNetTencCreateVector( 1, F__factorial__x),
-                  SNetTencCreateVector( 0),
-                  SNetTencCreateVector( 0)),
+                  SNetTencCreateVector(1, F__factorial__x), 
+                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(0)), 
                 SNetTencVariantEncode(
-                  SNetTencCreateVector( 2, F__factorial__x, F__factorial__r),
-                  SNetTencCreateVector( 0),
-                  SNetTencCreateVector( 0))),      
+                  SNetTencCreateVector(2, F__factorial__x, F__factorial__r), 
+                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(0))), 
               &SNet__factorial__compute___SR___SL___PL, 
               &SNet__factorial__compute___SR___SL___PR);
 
@@ -202,7 +232,8 @@ static snet_buffer_t *SNet__factorial__compute___SR___SR___SR(snet_buffer_t *in_
                   SNetTencCreateVector(0))), 
               NULL, 
               SNetCreateFilterInstructionSetList(1, 
-                SNetCreateFilterInstructionSet(3, SNetCreateFilterInstruction( create_record), 
+                SNetCreateFilterInstructionSet(3, 
+                  SNetCreateFilterInstruction(create_record), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__x, F__factorial__xx), 
                   SNetCreateFilterInstruction(snet_field, F__factorial__r, F__factorial__rr))));
 
@@ -241,12 +272,13 @@ static snet_buffer_t *SNet__factorial__compute(snet_buffer_t *in_buf) {
 
 static snet_buffer_t *SNet__factorial___ST___SL(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
-  snet_typeencoding_t *out_type =
-    SNetTencTypeEncode( 2, 
-      SNetTencVariantEncode(
-        SNetTencCreateVector( 2, F__factorial__x, F__factorial__p),
-        SNetTencCreateVector( 0),
-        SNetTencCreateVector( 0)));    
+  snet_typeencoding_t *out_type = NULL;
+
+  out_type = SNetTencTypeEncode(1, 
+              SNetTencVariantEncode(
+                SNetTencCreateVector(2, F__factorial__x, F__factorial__p), 
+                SNetTencCreateVector(0), 
+                SNetTencCreateVector(0)));
 
   out_buf = SNetBox(in_buf, 
               &SNet__factorial__leq1, 
@@ -257,16 +289,18 @@ static snet_buffer_t *SNet__factorial___ST___SL(snet_buffer_t *in_buf) {
 
 static snet_buffer_t *SNet__factorial___ST___SR___SL(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
-  snet_typeencoding_t *out_type = 
-    SNetTencTypeEncode( 2, 
-      SNetTencVariantEncode(
-        SNetTencCreateVector( 0),
-        SNetTencCreateVector( 1, T__factorial__T),
-        SNetTencCreateVector( 0)),
-      SNetTencVariantEncode(
-        SNetTencCreateVector( 0),
-        SNetTencCreateVector( 1, T__factorial__F),
-        SNetTencCreateVector( 0)));
+  snet_typeencoding_t *out_type = NULL;
+
+  out_type = SNetTencTypeEncode(2, 
+              SNetTencVariantEncode(
+                SNetTencCreateVector(0), 
+                SNetTencCreateVector(1, T__factorial__T), 
+                SNetTencCreateVector(0)), 
+              SNetTencVariantEncode(
+                SNetTencCreateVector(0), 
+                SNetTencCreateVector(1, T__factorial__F), 
+                SNetTencCreateVector(0)));
+
   out_buf = SNetBox(in_buf, 
               &SNet__factorial__condif, 
               out_type);
@@ -285,9 +319,10 @@ static snet_buffer_t *SNet__factorial___ST___SR___SR___PL(snet_buffer_t *in_buf)
                   SNetTencCreateVector(0))), 
               NULL, 
               SNetCreateFilterInstructionSetList(1, 
-                SNetCreateFilterInstructionSet(2, SNetCreateFilterInstruction( create_record), 
-                  SNetCreateFilterInstruction(snet_tag, T__factorial__stop, 
-                    SNetEtag( T__factorial__T)))));
+                SNetCreateFilterInstructionSet(2, 
+                  SNetCreateFilterInstruction(create_record), 
+                  SNetCreateFilterInstruction(snet_tag, T__factorial__stop, , 
+                    SNetEconsti( 0)))));
 
   return (out_buf);
 }
@@ -296,15 +331,19 @@ static snet_buffer_t *SNet__factorial___ST___SR___SR(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
 
   out_buf = SNetParallel(in_buf, 
-              SNetTencTypeEncode( 2,
+              SNetTencTypeEncode(3, 
                 SNetTencVariantEncode(
-                  SNetTencCreateVector( 0),
-                  SNetTencCreateVector( 1, T__factorial__T),
-                  SNetTencCreateVector( 0)),
+                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(1, T__factorial__T), 
+                  SNetTencCreateVector(0)), 
                 SNetTencVariantEncode(
-                  SNetTencCreateVector( 0),
-                  SNetTencCreateVector( 1, T__factorial__F),
-                  SNetTencCreateVector( 0))),              
+                  SNetTencCreateVector(2, F__factorial__x, F__factorial__r), 
+                  SNetTencCreateVector(1, T__factorial__F), 
+                  SNetTencCreateVector(0)), 
+                SNetTencVariantEncode(
+                  SNetTencCreateVector(3, F__factorial__x, F__factorial__r, F__factorial__rr), 
+                  SNetTencCreateVector(1, T__factorial__F), 
+                  SNetTencCreateVector(0))), 
               &SNet__factorial___ST___SR___SR___PL, 
               &SNet__factorial__compute);
 

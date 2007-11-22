@@ -26,7 +26,6 @@
 #define T__factorial__stop	8
 
 extern snet_buffer_t *SNet__factorial___factorial(snet_buffer_t *in_buf);
-extern snet_buffer_t *network( snet_buffer_t *inbuf);
 
 #endif
 

@@ -204,10 +204,10 @@ int main() {
   PRINT_RECORD( rec1);
   printf("\n");
 
- // SNetBufPut( start_buf, rec2);
-//  printf("\nPut record to Buffer:");
-//  PRINT_RECORD( rec2);
-//  printf("\n");
+ SNetBufPut( start_buf, rec2);
+ printf("\nPut record to Buffer:");
+ PRINT_RECORD( rec2);
+ printf("\n");
 
 /*
   SNetBufPut( start_buf, rec2);

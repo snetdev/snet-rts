@@ -51,18 +51,22 @@ void *leq1( void *hnd, C_Data *x)
 
 void *mult( void *hnd, C_Data *x, C_Data *r)
 {  
-  C_Data *result;
+  C_Data *result, *useless;
+  int int_x, int_r, *int_rr, *int_useless;
 
-  int int_x, int_r, *int_rr;
   int_rr = malloc( sizeof( int));
+  int_useless = malloc( sizeof( int));
 
   int_x = *(int*) C2SNet_cdataGetData( x);
   int_r = *(int*) C2SNet_cdataGetData( r);
   *int_rr = int_x * int_r;
+  *int_useless = 0;
 
   result = C2SNet_cdataCreate( int_rr, &myfree, &mycopy);
+  useless = C2SNet_cdataCreate( int_useless, &myfree, &mycopy);
 
-  C2SNet_outRaw( hnd, 1, result);
+
+  C2SNet_outRaw( hnd, 1, result, useless);
   return( hnd);
 }
 
