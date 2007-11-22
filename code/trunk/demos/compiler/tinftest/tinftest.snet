@@ -49,8 +49,9 @@ net nil {
 } connect a || b;
 
 net star {
-  net inner ( {A}->{B}, {B}->{A}|{C}|{D} );
-} connect inner * {D};
+  net inner ( {A}->{B}, {B}->{C}|{A} );
+} connect inner * {C};
 
-net ex
-connect star!<d>;
+net ex {
+  net inner ({<#b>,A} -> {<t>} | {B}, {} -> {});
+} connect inner ! <#b>:<t>;
