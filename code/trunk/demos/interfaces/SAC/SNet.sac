@@ -1,0 +1,13 @@
+class SNet;
+
+external classtype;
+  #pragma freefun "SNetHndDestroy"
+  #pragma copyfun "SNetHndCopy"
+  #pragma linkwith "snet"
+
+provide all;
+
+external void outRaw( SNet &handle, int variant, ...);
+  #pragma linkname "SAC2SNet_outRaw"
+  #pragma linksign [1,2]
+
