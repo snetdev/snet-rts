@@ -46,6 +46,10 @@ net des {
              )
            ) .. [|{L}, {R}|]*{L,R};
 
-} connect InitialP .. genSubKeys ..
-               [{L,R,KeySet} -> {L,R,KeySet,<C=(0-1)>}] .. desRound*{<C>} if <C==15> .. 
-          FinalP .. [{KeySet, <C>} -> {}];
+} connect InitialP .. 
+genSubKeys ..
+[{L,R,KeySet} -> {L,R,KeySet,<C=(0-1)>}] .. 
+desRound*{<C>} if <C==15> .. 
+
+FinalP .. 
+[{KeySet, <C>} -> {}];

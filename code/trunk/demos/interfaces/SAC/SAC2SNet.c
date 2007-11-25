@@ -14,6 +14,7 @@ extern void *SACARGcopy( void*);
 
 
 int my_interface_id;
+int snet_hnd_basetype;
 
 struct container {
   snet_handle_t *hnd;
@@ -30,12 +31,14 @@ void SAC2SNet_out( sac2snet_container_t *c)
   SNetOutRawArray( c->hnd, my_interface_id, c->variant, c->fields, c->tags, c->btags);
 }
 
-void SAC2SNet_outRaw( void *hnd, int variant, ...)
+void SAC2SNet_outRaw( void *h, int variant, ...)
 {
   int i;
   void **fields;
   int *tags, *btags;
   snet_variantencoding_t *v;
+  snet_handle_t *hnd = 
+    (snet_handle_t*)SACARGconvertToVoidPointer( snet_hnd_basetype, h);
   va_list args;
 
 
@@ -46,22 +49,23 @@ void SAC2SNet_outRaw( void *hnd, int variant, ...)
 
   va_start( args, variant);
   for( i=0; i<SNetTencGetNumFields( v); i++) {
-    fields[i] =  va_arg( args, void*);
+    fields[i] =  va_arg( args, SACarg*);
   }
   for( i=0; i<SNetTencGetNumTags( v); i++) {
-    tags[i] =  va_arg( args, int);
+    tags[i] =  SACARGconvertToIntArray( va_arg( args, SACarg*))[0];
   }
   for( i=0; i<SNetTencGetNumBTags( v); i++) {
-    btags[i] =  va_arg( args, int);
+    btags[i] =  SACARGconvertToIntArray( va_arg( args, SACarg*))[0];
   }
   va_end( args);
 
   SNetOutRawArray( hnd, my_interface_id, variant, fields, tags, btags);
 }
 
-void SAC2SNet_init( int id)
+void SAC2SNet_init( int id, int btype)
 {
   my_interface_id = id;
+  snet_hnd_basetype = btype;
   SNetGlobalRegisterInterface( id, &SACARGfree, &SACARGcopy);  
 }
 

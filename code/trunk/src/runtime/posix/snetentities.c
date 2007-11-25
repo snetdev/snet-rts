@@ -346,6 +346,23 @@ for( i=0; i<TENCNUM( venc); i++) {\
   }
 
 
+static bool ContainsName( int name, int *names, int num) {
+  
+  int i;
+  bool found;
+
+  found = false;
+
+  for( i=0; i<num; i++) {
+    if( names[i] == name) {
+      found = true;
+      break;
+    }
+  }
+
+  return( found);
+}
+
 /* ------------------------------------------------------------------------- */
 /*  SNetOut                                                                  */
 /* ------------------------------------------------------------------------- */
@@ -1217,23 +1234,6 @@ static snet_buffer_t *CreateDetCollector( snet_buffer_t *initial_buffer) {
 /* ------------------------------------------------------------------------- */
 
 
-
-static bool ContainsName( int name, int *names, int num) {
-  
-  int i;
-  bool found;
-
-  found = false;
-
-  for( i=0; i<num; i++) {
-    if( names[i] == name) {
-      found = true;
-      break;
-    }
-  }
-
-  return( found);
-}
 
 static match_count_t *CheckMatch( snet_record_t *rec, snet_variantencoding_t *venc, match_count_t *mc) {
 
@@ -2915,7 +2915,6 @@ static void *FilterThread( void *hnd)
         case REC_sync:
           SNetHndSetInbuffer( hnd, SNetRecGetBuffer( in_rec));
           inbuf = SNetRecGetBuffer( in_rec);
-          printf("\ninbuf\n");
           SNetRecDestroy( in_rec);
         break;
         case REC_collect:
@@ -3034,6 +3033,110 @@ extern snet_buffer_t
 
   return( outbuf);
 }
+
+
+static void *NameshiftThread( void *h) 
+{
+  bool terminate = false;
+  snet_handle_t *hnd = (snet_handle_t*)h;
+  snet_buffer_t *outbuf, *inbuf;
+  snet_variantencoding_t *untouched;
+  snet_record_t *rec;
+  int i, num, *names, offset;
+
+  inbuf = SNetHndGetInbuffer( hnd);
+  outbuf = SNetHndGetOutbuffer( hnd);
+  untouched = SNetTencGetVariant( SNetHndGetInType( hnd), 1);
+
+  // Guards are misused for offset 
+  offset = SNetEevaluateInt( SNetEgetExpr( SNetHndGetGuardList( hnd), 0), NULL);
+
+  while( !terminate) {
+    rec = SNetBufGet( inbuf);
+
+    switch( SNetRecGetDescriptor( rec)) {
+      case REC_data:
+        names = SNetRecGetUnconsumedFieldNames( rec);
+        num = SNetRecGetNumFields( rec);
+        for( i=0; i<num; i++) {
+          if( !ContainsName( names[i], SNetTencGetFieldNames( untouched), num)) {
+            SNetRecRenameField( rec, names[i], names[i] + offset);
+          }
+        }
+        SNetMemFree( names);
+
+        names = SNetRecGetUnconsumedTagNames( rec);
+        num = SNetRecGetNumTags( rec);
+        for( i=0; i<num; i++) {
+          if( !ContainsName( names[i], SNetTencGetTagNames( untouched), num)) {
+            SNetRecRenameTag( rec, names[i], names[i] + offset);
+          }
+        }
+        SNetMemFree( names);
+
+        names = SNetRecGetUnconsumedBTagNames( rec);
+        num = SNetRecGetNumBTags( rec);
+        for( i=0; i<num; i++) {
+          if( !ContainsName( names[i], SNetTencGetBTagNames( untouched), num)) {
+            SNetRecRenameBTag( rec, names[i], names[i] + offset);
+          }
+        }
+        SNetMemFree( names);
+
+        SNetBufPut( outbuf, rec);
+        break;
+      case REC_sync:
+        SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
+        inbuf = SNetRecGetBuffer( rec);
+        SNetRecDestroy( rec);
+      break;
+      case REC_collect:
+        printf("\n:: DEBUG INFO ::  Unhandled control record, destroying it.\n\n");
+        SNetRecDestroy( rec);
+      break;
+      case REC_sort_begin:
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+      break;
+      case REC_sort_end:
+        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+      break;
+      case REC_terminate:
+        terminate = true;
+        SNetBufPut( outbuf, rec);
+        SNetBufBlockUntilEmpty( outbuf);
+        SNetBufDestroy( outbuf);
+        SNetHndDestroy( hnd);
+      break;
+    }
+  }
+
+  return( NULL);
+}
+
+
+extern snet_buffer_t 
+*SNetNameShift( snet_buffer_t *inbuf, 
+                int offset,
+                snet_variantencoding_t *untouched) 
+{
+  pthread_t nameshift_thread;
+  snet_buffer_t *outbuf;
+  snet_handle_t *hnd;
+
+  outbuf = SNetBufCreate( BUFFER_SIZE);
+
+  hnd = SNetHndCreate( HND_filter, inbuf, outbuf, 
+                       SNetTencTypeEncode( 1, untouched), 
+                       NULL, // outtypes
+                       SNetEcreateList( 1, SNetEconsti( offset)),
+                       NULL); // instructions
+  
+  ThreadCreate( &nameshift_thread, NULL, NameshiftThread, (void*)hnd);
+  ThreadDetach( nameshift_thread);
+
+  return( outbuf);
+}
+
 #else
 static void *FilterThread( void *hndl) {
 

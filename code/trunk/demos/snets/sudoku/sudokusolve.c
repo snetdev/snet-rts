@@ -42,12 +42,13 @@ static void SNet__sudokusolve__solveOneLevel(snet_handle_t *hnd) {
 
 static snet_buffer_t *SNet__sudokusolve___SL(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
-  snet_typeencoding_t *out_type = 
-    SNetTencTypeEncode( 1,
-        SNetTencVariantEncode(
-          SNetTencCreateVector( 2, F__sudokusolve__board, F__sudokusolve__opts),
-          SNetTencCreateVector( 0),
-          SNetTencCreateVector( 0)));
+  snet_typeencoding_t *out_type = NULL;
+
+  out_type = SNetTencTypeEncode(1, 
+              SNetTencVariantEncode(
+                SNetTencCreateVector(2, F__sudokusolve__board, F__sudokusolve__opts), 
+                SNetTencCreateVector(0), 
+                SNetTencCreateVector(0)));
 
   out_buf = SNetBox(in_buf, 
               &SNet__sudokusolve__computeOpts, 
@@ -58,16 +59,17 @@ static snet_buffer_t *SNet__sudokusolve___SL(snet_buffer_t *in_buf) {
 
 static snet_buffer_t *SNet__sudokusolve___SR___ST(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
-  snet_typeencoding_t *out_type = 
-    SNetTencTypeEncode( 2,
-        SNetTencVariantEncode(
-          SNetTencCreateVector( 2, F__sudokusolve__board, F__sudokusolve__opts),
-          SNetTencCreateVector( 0),
-          SNetTencCreateVector( 0)),
-        SNetTencVariantEncode(
-          SNetTencCreateVector( 1, F__sudokusolve__board),
-          SNetTencCreateVector( 1, T__sudokusolve__done),
-          SNetTencCreateVector( 0)));
+  snet_typeencoding_t *out_type = NULL;
+
+  out_type = SNetTencTypeEncode(2, 
+              SNetTencVariantEncode(
+                SNetTencCreateVector(2, F__sudokusolve__board, F__sudokusolve__opts), 
+                SNetTencCreateVector(0), 
+                SNetTencCreateVector(0)), 
+              SNetTencVariantEncode(
+                SNetTencCreateVector(1, F__sudokusolve__board), 
+                SNetTencCreateVector(1, T__sudokusolve__done), 
+                SNetTencCreateVector(0)));
 
   out_buf = SNetBox(in_buf, 
               &SNet__sudokusolve__solveOneLevel, 

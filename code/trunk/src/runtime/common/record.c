@@ -225,10 +225,10 @@ extern void SNetRecDestroy( snet_record_t *rec) {
       for( i=0; i<num; i++) {
           void *f;
 //        if( names[i] >= 0) { 
-          printf("\nFreeing %d [%p]", names[i], rec);
+//          printf("\nFreeing %d [%p]", names[i], rec);
           f = SNetRecGetField( rec, names[i]);
-          printf(" field: %p\n", f);
-          fflush( stdout);
+//          printf(" field: %p\n", f);
+//          fflush( stdout);
           freefun( f);
 //        }
       }
