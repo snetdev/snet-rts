@@ -72,7 +72,7 @@ int main()
 
   /* Invoke network */
   SNetGlobalInitialise();
-  SAC2SNet_init( 0);
+  SAC2SNet_init( 0, 0);
   outbuf =  SNet__sudokusolve___sudokusolve( inbuf);
 
   /* Inspect results */

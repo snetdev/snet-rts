@@ -1,0 +1,3 @@
+net mini {
+  box A( (A) -> (B));
+} connect A;

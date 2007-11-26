@@ -1,0 +1,14 @@
+module mini;
+
+use Structures: all;
+export all;
+
+
+void A( SNet::SNet &hnd, int[.] A)
+{
+  B = A + 1;
+  C = B + 1;
+  
+  SNet::outRaw( hnd, 1, B);
+  SNet::outRaw( hnd, 1, C);
+}
