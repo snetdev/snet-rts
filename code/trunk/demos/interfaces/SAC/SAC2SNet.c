@@ -4,6 +4,7 @@
 #include <snetentities.h>
 #include <memfun.h>
 #include <typeencode.h>
+#include <stdio.h>
 
 #define F_COUNT( c) c->counter[0]
 #define T_COUNT( c) c->counter[1]
@@ -31,14 +32,14 @@ void SAC2SNet_out( sac2snet_container_t *c)
   SNetOutRawArray( c->hnd, my_interface_id, c->variant, c->fields, c->tags, c->btags);
 }
 
-void SAC2SNet_outRaw( void *h, int variant, ...)
+void SAC2SNet_outRaw( void *hnd, int variant, ...)
 {
   int i;
   void **fields;
   int *tags, *btags;
   snet_variantencoding_t *v;
-  snet_handle_t *hnd = 
-    (snet_handle_t*)SACARGconvertToVoidPointer( snet_hnd_basetype, h);
+//  snet_handle_t *hnd = 
+//    (snet_handle_t*)SACARGconvertToVoidPointer( snet_hnd_basetype, h);
   va_list args;
 
 
@@ -49,13 +50,13 @@ void SAC2SNet_outRaw( void *h, int variant, ...)
 
   va_start( args, variant);
   for( i=0; i<SNetTencGetNumFields( v); i++) {
-    fields[i] =  va_arg( args, SACarg*);
+    fields[i] =  SACARGnewReference( va_arg( args, SACarg*));
   }
   for( i=0; i<SNetTencGetNumTags( v); i++) {
-    tags[i] =  SACARGconvertToIntArray( va_arg( args, SACarg*))[0];
+    tags[i] =  va_arg( args, int);
   }
   for( i=0; i<SNetTencGetNumBTags( v); i++) {
-    btags[i] =  SACARGconvertToIntArray( va_arg( args, SACarg*))[0];
+    btags[i] = va_arg( args, int);
   }
   va_end( args);
 

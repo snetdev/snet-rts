@@ -8,24 +8,31 @@
 
 #include <cwrapper.h>
 
+
+#define SIZE 6
+
 int main()
 {
 
   int i;
-  int input[] = {1,2,3,4,5,6};
+  int *input;
   int *output;
 
   SACarg *in, *out;
   snet_record_t *rec;
   snet_buffer_t *inbuf, *outbuf;
 
+
+  input = SNetMemAlloc( sizeof( int) * SIZE);
+
   printf("\n\nInput: ");
-  for( i=0; i<5; i++) {
+  for( i=0; i<SIZE; i++) {
+    input[i] = i;
     printf("%d ", input[i]);
   }
   printf("\n\n");
 
-  in = SACARGconvertFromIntPointer( input, 1, 6);
+  in = SACARGconvertFromIntPointer( input, 1, SIZE);
 
   rec = SNetRecCreate( REC_data, 
                        SNetTencVariantEncode(
@@ -49,17 +56,20 @@ int main()
 
 
   while( true) {
-  
+    
     rec = SNetBufGet( outbuf);
     out = SNetRecTakeField( rec, 2);
     output = SACARGconvertToIntArray( out);
 
     printf("\n\nOutput: ");
-    for( i=0; i<5; i++) {
+    for( i=0; i<SIZE; i++) {
       printf("%d ", output[i]);
     }
     printf("\n\n");
   }
+
+printf("\n\nSurvived\n\n");
+fflush( stdout);
 
   return( 0);
 }

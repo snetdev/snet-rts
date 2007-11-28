@@ -7,27 +7,32 @@ LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/SAC\
 	    -L./lib
 LIBS      = -lpthread -lsnet -lSAC2SNet
 
-SAC2C     = sac2c
-S2CFLAGS  = -v1
-SAC4C     = sac4c
-S4CFLAGS  = -v1 -incdir include -libdir lib
-S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags sudoku`
-S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags sudoku`
-
 # SAC SimpleFibre library
 FIBREOBJS = $(SACBASE)/stdlib/world/stdio/src/FibreIO/*.o
 
+# - - - - - - - - - - - - - - - - - - - -
+SACTARGET = sudoku
+# - - - - - - - - - - - - - - - - - - - -
+
+SAC2C     = sac2c
+S2CFLAGS  = -v1 -g
+SAC4C     = sac4c
+S4CFLAGS  = -v3 -incdir include -libdir lib -g $(LIBDIRS) -d nocleanup -d cccall
+S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
+S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)` 
+
+
 # = = = = = = = = = = = = = = = = = = = =
-TARGET    = sudoku
+TARGET    = sudokusolve
 # = = = = = = = = = = = = = = = = = = = =
 
 
 
 all: 
-	$(SAC2C) $(S2CFLAGS) sudoku.sac
-	$(SAC4C) $(S4CFLAGS) sudoku
+#	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $(SACTARGET).sac
+#	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $(SACTARGET)
 	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) -c *.c
-	$(CC) $(LIBDIRS) -o $(TARGET) *.o $(LIBS) $(S4CLIBS) $(FIBREOBJS)
+	$(CC) $(LIBDIRS) -o $(TARGET) *.o $(LIBS) $(S4CLIBS) $(LIBS) $(FIBREOBJS)
 
 clean:
 	rm -f *.o *.so *.a  lib/*.so lib/*.a  include/cwrapper.h $(TARGET)

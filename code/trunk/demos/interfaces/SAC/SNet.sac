@@ -10,5 +10,4 @@ provide all;
 external void outRaw( SNet &handle, int variant, ...);
   #pragma linkname "SAC2SNet_outRaw"
   #pragma linksign [1,2]
-  #pragma refcountdots
 

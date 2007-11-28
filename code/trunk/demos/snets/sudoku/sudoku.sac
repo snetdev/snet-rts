@@ -32,12 +32,12 @@ int[*], bool[*] addNumber( int i, int j, int k, int[*] set, bool[*] opts)
   k = k-1;
   i_q = (i/3)*3;
   j_q = (j/3)*3;
-  opts = with(iv)
+  opts = with {
           ([i,j,0] <= iv <= [i,j,8]) : false;
           ([i,0,k] <= iv <= [i,8,k]) : false;
           ([0,j,k] <= iv <= [8,j,k]) : false;
           ([i_q,j_q,k] <= iv <= [i_q+2,j_q+2,k]) : false;
-         modarray( opts);
+  } : modarray( opts);
 
   return( set, opts);
 }
@@ -115,8 +115,29 @@ int[*], bool[*] solve( int[*] set, bool[*] opts)
 }
 
 
+void solveOneLevel( SNet::SNet &hnd, int[*] board, bool[*] opts)
+{
+  if ( !isStuck( board, opts)
+        && !isCompleted( board)) {
+    i,j = findMinTrues( opts);
+    mem_board = board;
+    mem_opts = opts;
+    for( k=1; (k<=9) && !isCompleted(board); k++) {
+      if( mem_opts[i,j,k-1] ) {
+        board, opts = addNumber( i, j, k,
+                                  mem_board, mem_opts);
+        if ( !isCompleted( board)) {
+          SNet::outRaw( hnd, 1, sacprelude::wrap( board), sacprelude::wrap(opts));
+        } else {
+          SNet::outRaw( hnd, 2, sacprelude::wrap( board), 0);
+        }
+      }
+    }
+  }
+}
 
 
+/*
 int[*], bool[*] solveOneLevel( int[*] board, bool[*] opts)
 {
  if ( !isStuck( board, opts)  && !isCompleted( board)) {
@@ -139,8 +160,9 @@ int[*], bool[*] solveOneLevel( int[*] board, bool[*] opts)
 
   return( board, resopts);
 }
+*/
 
-int[*], bool[*] computeOpts( int[*] board)
+void computeOpts( SNet::SNet &hnd, int[*] board)
 { 
   set = genarray( [9,9], 0);
   opts = genarray( [9,9,9], true);
@@ -154,5 +176,5 @@ int[*], bool[*] computeOpts( int[*] board)
     }
   }
 
-  return( set, opts);
+  SNet::outRaw( hnd, 1, sacprelude::wrap( set), sacprelude::wrap( opts));
 }

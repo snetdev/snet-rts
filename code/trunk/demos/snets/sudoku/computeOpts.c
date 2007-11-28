@@ -3,11 +3,11 @@
 
 void *computeOpts( void *hnd, void *ptr)
 {
-  SACarg *sac_board, *sac_opts;
-
-  sudoku__computeOpts1( &sac_board, &sac_opts, ptr);
+  SACarg *res, *handle;
   
-  SAC2SNet_outRaw( hnd, 1, sac_board, sac_opts);
+  handle = SACARGconvertFromVoidPointer( SACTYPE_SNet_SNet, hnd);
+  sudoku__computeOpts2( &res, handle, ptr);
+  SACARGconvertToVoidPointer( SACTYPE_SNet_SNet, res);  
 
   return( hnd);
 }

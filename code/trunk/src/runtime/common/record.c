@@ -223,14 +223,7 @@ extern void SNetRecDestroy( snet_record_t *rec) {
       names = SNetRecGetUnconsumedFieldNames( rec);
       freefun = SNetGetFreeFun( rec);
       for( i=0; i<num; i++) {
-          void *f;
-//        if( names[i] >= 0) { 
-//          printf("\nFreeing %d [%p]", names[i], rec);
-          f = SNetRecGetField( rec, names[i]);
-//          printf(" field: %p\n", f);
-//          fflush( stdout);
-          freefun( f);
-//        }
+          freefun( SNetRecTakeField( rec, names[i]));
       }
       SNetMemFree( names);
       SNetTencDestroyVariantEncoding( DATA_REC( rec, v_enc));
@@ -639,7 +632,6 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
         DATA_REC( new_rec, fields[i]) = copyfun( DATA_REC( rec, fields[i])); 
       }
       SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
-      // DATA_REC( new_rec, lang) = DATA_REC( rec, lang);
       break;
     case REC_sort_begin:
       new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_B_REC( rec, level),
