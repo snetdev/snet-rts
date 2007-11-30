@@ -153,7 +153,7 @@ typeinf         = typing.o typeinf.o
 
 opt             = 
 
-postproc        = ptran.o netren.o netflat.o
+postproc        = ptypcln.o ptran.o netren.o netflat.o
 
 codegen         = codegen.o codefile.o
 
