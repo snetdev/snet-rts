@@ -61,7 +61,7 @@ typedef struct {
 typedef struct {
   snet_buffer_t *inbuf;
   snet_buffer_t **buffers;
-  snet_typeencoding_t *type;
+  snet_typeencoding_list_t *type;
   bool is_det;
 } parallel_handle_t;
 
@@ -192,7 +192,7 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
             HANDLE( parallel_hnd) = SNetMemAlloc( sizeof( parallel_handle_t));
             PAR_HND( inbuf) = va_arg( args, snet_buffer_t*);
             PAR_HND( buffers) = va_arg( args, snet_buffer_t**);
-            PAR_HND( type) = va_arg( args, snet_typeencoding_t*);
+            PAR_HND( type) = va_arg( args, snet_typeencoding_list_t*);
             PAR_HND( is_det) = va_arg( args, bool);
             break;
     }
@@ -639,9 +639,6 @@ extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hnd) {
     case HND_box: 
       type = BOX_HND( type); 
       break;
-    case HND_parallel: 
-      type = PAR_HND( type); 
-      break;
     case HND_star: 
       type = STAR_HND( type); 
       break;
@@ -655,6 +652,19 @@ extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hnd) {
 }
 
 
+extern snet_typeencoding_list_t *SNetHndGetTypeList( snet_handle_t *hnd) {
+ 
+  snet_typeencoding_list_t *type;
+
+  switch( hnd->descr) {
+    case HND_parallel: 
+      type = PAR_HND( type); 
+      break;
+   default: WrongHandleType();
+  }
+ 
+  return( type);
+}
 
 extern snet_typeencoding_t *SNetHndGetInType( snet_handle_t *hnd) {
   

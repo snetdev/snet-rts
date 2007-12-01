@@ -1230,46 +1230,60 @@ static snet_buffer_t *CreateDetCollector( snet_buffer_t *initial_buffer) {
 }
 
 /* ------------------------------------------------------------------------- */
-/*  SNetParallel non-deterministic                                           */
+/*  SNetParallel                                                             */
 /* ------------------------------------------------------------------------- */
 
 
 
-static match_count_t *CheckMatch( snet_record_t *rec, snet_variantencoding_t *venc, match_count_t *mc) {
+static match_count_t 
+*CheckMatch( snet_record_t *rec, 
+             snet_typeencoding_t *tenc, 
+             match_count_t *mc) {
 
-  int i;
+  snet_variantencoding_t *venc;
+  int i,j,max=-1;
 
-  MC_COUNT( mc) = 0;
-  MC_ISMATCH( mc) = true;
+  for( j=0; j<SNetTencGetNumVariants( tenc); j++) {
+    venc = SNetTencGetVariant( tenc, j+1);
+    MC_COUNT( mc) = 0;
+    MC_ISMATCH( mc) = true;
 
-  if( ( SNetRecGetNumFields( rec) < SNetTencGetNumFields( venc)) ||
-      ( SNetRecGetNumTags( rec) < SNetTencGetNumTags( venc)) ||
-      ( SNetRecGetNumBTags( rec) != SNetTencGetNumBTags( venc))) {
-    MC_ISMATCH( mc) = false;
-  }
-  else { // is_match is set to value inside the macros
-    FIND_NAME_LOOP( SNetRecGetNumFields, SNetTencGetNumFields,
-        SNetRecGetFieldNames, SNetTencGetFieldNames);
-    FIND_NAME_LOOP( SNetRecGetNumTags, SNetTencGetNumTags, 
-        SNetRecGetTagNames, SNetTencGetTagNames);
-
-    for( i=0; i<SNetRecGetNumBTags( rec); i++) {
-       if( !( ContainsName( 
-               SNetRecGetBTagNames( rec)[i], 
-               SNetTencGetBTagNames( venc), 
-               SNetTencGetNumBTags( venc)
+    if( ( SNetRecGetNumFields( rec) < SNetTencGetNumFields( venc)) ||
+        ( SNetRecGetNumTags( rec) < SNetTencGetNumTags( venc)) ||
+        ( SNetRecGetNumBTags( rec) != SNetTencGetNumBTags( venc))) {
+      MC_ISMATCH( mc) = false;
+    }
+    else { // is_match is set to value inside the macros
+      FIND_NAME_LOOP( SNetRecGetNumFields, SNetTencGetNumFields,
+          SNetRecGetFieldNames, SNetTencGetFieldNames);
+      FIND_NAME_LOOP( SNetRecGetNumTags, SNetTencGetNumTags, 
+          SNetRecGetTagNames, SNetTencGetTagNames);
+  
+      for( i=0; i<SNetRecGetNumBTags( rec); i++) {
+         if( !( ContainsName( 
+                 SNetRecGetBTagNames( rec)[i], 
+                 SNetTencGetBTagNames( venc), 
+                 SNetTencGetNumBTags( venc)
+                 )
                )
-             )
-           ) {
-        MC_ISMATCH( mc) = false;
-      }
-      else {
-       MC_COUNT( mc) += 1;
+             ) {
+          MC_ISMATCH( mc) = false;
+        }
+        else {
+         MC_COUNT( mc) += 1;
+        }
       }
     }
+    if( MC_ISMATCH( mc)) {
+      max = MC_COUNT( mc) > max ? MC_COUNT( mc) : max;
+    }
+  } // for all variants
 
+  if( max >= 0) {
+    MC_ISMATCH( mc) = true;
+    MC_COUNT( mc) = max;
   }
-
+  
   return( mc);
 }
 
@@ -1320,7 +1334,7 @@ static void *ParallelBoxThread( void *hndl) {
   snet_buffer_t *go_buffer = NULL;
   match_count_t **matchcounter;
   snet_buffer_t **buffers;
-  snet_typeencoding_t *types;
+  snet_typeencoding_list_t *types;
 
   bool is_det = SNetHndIsDet( hnd);
   
@@ -1329,8 +1343,9 @@ static void *ParallelBoxThread( void *hndl) {
 
   buffers = SNetHndGetOutbuffers( hnd);
 
-  types = SNetHndGetType( hnd);
-  num = SNetTencGetNumVariants( types);
+  types = SNetHndGetTypeList( hnd);
+  num = SNetTencGetNumTypes( types);
+
   matchcounter = SNetMemAlloc( num * sizeof( match_count_t*));
 
   for( i=0; i<num; i++) {
@@ -1344,7 +1359,7 @@ static void *ParallelBoxThread( void *hndl) {
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
         for( i=0; i<num; i++) {
-          CheckMatch( rec, SNetTencGetVariant( types, i+1), matchcounter[i]);
+          CheckMatch( rec, SNetTencGetTypeEncoding( types, i), matchcounter[i]);
         }
  
         buf_index = BestMatch( matchcounter, num);
@@ -1406,7 +1421,7 @@ static void *ParallelBoxThread( void *hndl) {
 
 
 static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf, 
-                                           snet_typeencoding_t *types, 
+                                           snet_typeencoding_list_t *types, 
                                            void **funs, bool is_det) {
 
   int i;
@@ -1419,7 +1434,7 @@ static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf,
   pthread_t box_thread;
   
 
-  num = SNetTencGetNumVariants( types);
+  num = SNetTencGetNumTypes( types);
   outbufs = SNetMemAlloc( num * sizeof( snet_buffer_t*));
   transits = SNetMemAlloc( num * sizeof( snet_buffer_t*));
 
@@ -1438,6 +1453,7 @@ static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf,
   if( is_det) {
     SNetBufPut( outbufs[0], SNetRecCreate( REC_sort_begin, 0, 0));
   }
+
   for( i=1; i<num; i++) {
 
     transits[i] = SNetBufCreate( BUFFER_SIZE);
@@ -1466,7 +1482,7 @@ static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf,
 
 
 extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf,
-                                    snet_typeencoding_t *types,
+                                    snet_typeencoding_list_t *types,
                                     ...) {
 
 
@@ -1474,7 +1490,7 @@ extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf,
   int i, num;
   void **funs;
 
-  num = SNetTencGetNumVariants( types);
+  num = SNetTencGetNumTypes( types);
 
   funs = SNetMemAlloc( num * sizeof( void*)); 
 
@@ -1489,7 +1505,7 @@ extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf,
 }
 
 extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf,
-                                       snet_typeencoding_t *types,
+                                       snet_typeencoding_list_t *types,
                                        ...) {
 
 
@@ -1497,7 +1513,7 @@ extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf,
   int i, num;
   void **funs;
 
-  num = SNetTencGetNumVariants( types);
+  num = SNetTencGetNumTypes( types);
 
   funs = SNetMemAlloc( num * sizeof( void*)); 
 
