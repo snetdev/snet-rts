@@ -1298,7 +1298,7 @@ static int BestMatch( match_count_t **counter, int num) {
   max = 0;
   for( i=0; i<num; i++) {
     if( MC_ISMATCH( counter[i])) {
-      res = (MC_COUNT( counter[i]) > max) ? i : res;
+      res = (MC_COUNT( counter[i]) >= max) ? i : res;
     }
   }
 
@@ -1363,6 +1363,7 @@ static void *ParallelBoxThread( void *hndl) {
         }
  
         buf_index = BestMatch( matchcounter, num);
+        printf("index: %d\n", buf_index);
         go_buffer = buffers[ buf_index];
 
         PutToBuffers( buffers, num, buf_index, rec, counter, is_det); 
