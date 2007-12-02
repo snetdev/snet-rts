@@ -1363,7 +1363,6 @@ static void *ParallelBoxThread( void *hndl) {
         }
  
         buf_index = BestMatch( matchcounter, num);
-        printf("index: %d\n", buf_index);
         go_buffer = buffers[ buf_index];
 
         PutToBuffers( buffers, num, buf_index, rec, counter, is_det); 
