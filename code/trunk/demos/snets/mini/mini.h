@@ -18,8 +18,9 @@
 
 #define F__mini__A	1
 #define F__mini__B	2
+#define E__mini__OFFSET	3
 
-extern snet_buffer_t *SNet__mini(snet_buffer_t *in_buf);
+extern snet_buffer_t *SNet__mini___mini(snet_buffer_t *in_buf);
 
 #endif
 

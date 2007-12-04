@@ -21,7 +21,7 @@ int main()
   SACarg *in, *out;
   snet_record_t *rec;
   snet_buffer_t *inbuf, *outbuf;
-
+  bool terminate;
 
   input = SNetMemAlloc( sizeof( int) * SIZE);
 
@@ -50,26 +50,32 @@ int main()
   inbuf = SNetBufCreate( 10);
 
   SNetBufPut( inbuf, rec);
+  SNetBufPut( inbuf, SNetRecCreate( REC_terminate));
 
   outbuf = SNet__mini( inbuf);
 
 
-
-  while( true) {
+  terminate = false;
+  while( !terminate) {
     
     rec = SNetBufGet( outbuf);
-    out = SNetRecTakeField( rec, 2);
-    output = SACARGconvertToIntArray( out);
-
-    printf("\n\nOutput: ");
-    for( i=0; i<SIZE; i++) {
-      printf("%d ", output[i]);
+    if( SNetRecGetDescriptor( rec) == REC_terminate) {
+      terminate = true;
     }
-    printf("\n\n");
+    else {
+      out = SNetRecTakeField( rec, 2);
+      output = SACARGconvertToIntArray( out);
+
+      printf("\n\nOutput: ");
+      for( i=0; i<SIZE; i++) {
+        printf("%d ", output[i]);
+      }
+      printf("\n\n");
+    }
+    SNetRecDestroy( rec);
   }
 
-printf("\n\nSurvived\n\n");
-fflush( stdout);
+  SNetMemFree( input);
 
   return( 0);
 }

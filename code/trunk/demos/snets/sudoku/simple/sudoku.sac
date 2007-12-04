@@ -1,8 +1,5 @@
 module sudoku;
 
-
-use sacprelude: {wrap};
-
 use Structures: all;
 use StdIO: all;
 
@@ -89,13 +86,7 @@ bool isCompleted(  int[*] set)
   return( all(set != 0));
 }
 
-int getPlaced( int[*] board) 
-{
-  placed = { [i,j] -> board[i,j] != 0};
-  return( sum( toi( placed)));
-}
-
-int[*],bool[*] solveRec( int[*] set, bool[*] opts)
+int[*], bool[*] solve( int[*] set, bool[*] opts)
 {
   while( !( isStuck( set, opts) || isCompleted( set)) ) {
     i,j = findMinTrues( opts);
@@ -115,7 +106,7 @@ int[*],bool[*] solveRec( int[*] set, bool[*] opts)
       for( k=0; (k<9) && (!isCompleted(set)); k++) {
         if( mem_opts[i, j, k] ) {
           set, opts = addNumber( i, j, k+1, mem_set, mem_opts);
-          set, opts = solveRec( set, opts);
+          set, opts = solve( set, opts);
         }
       }
     }
@@ -123,44 +114,6 @@ int[*],bool[*] solveRec( int[*] set, bool[*] opts)
   return( set, opts);
 }
 
-void solve( SNet::SNet &hnd, int[*] set, bool[*] opts)
-{
-  set, opts = solveRec( set, opts);
-  if( isCompleted( set)) {
-    SNet::outRaw( hnd, 1, wrap( set));
-  }
-}
-/*****************************************************************************/ 
-
-void solver( SNet::SNet &hnd, int[*] board, bool[*] opts, int MAX, int m)
-{
-  if( !isStuck( board, opts)) {
-    if( !isCompleted( board)) {
-      if( m != 0) {
-        i,j = findMinTrues( opts);
-        numbers = [1,2,3,4,5,6,7,8,9];
-        tmp_board = board;
-        tmp_opts = opts;
-        for( k=0; k<m && k<=9; k++) {
-          board, opts = addNumber( i, j, numbers[k]+1, tmp_board, tmp_opts);
-          solver( hnd, board, opts, MAX, m/shape( numbers)[0]);
-        }
-      }
-      else { /* no more recursion */
-        SNet::outRaw( hnd, 1, wrap( board), wrap( opts), MAX);
-      }
-    }
-    else { /* Board completed*/
-      SNet::outRaw( hnd, 2, wrap( board), 0);
-    }
-  }
-}
-
-void solveLevels( SNet::SNet &hnd, int[*] board, bool[*] opts, int N) 
-{
-  solver( hnd, board, opts, N, N);
-}
-/*****************************************************************************/ 
 
 void solveOneLevel( SNet::SNet &hnd, int[*] board, bool[*] opts)
 {
@@ -171,12 +124,13 @@ void solveOneLevel( SNet::SNet &hnd, int[*] board, bool[*] opts)
     mem_opts = opts;
     for( k=1; (k<=9) && !isCompleted(board); k++) {
       if( mem_opts[i,j,k-1] ) {
-        board, opts = addNumber( i, j, k, mem_board, mem_opts);
-        SNet::outRaw( hnd, 1, 
-                      wrap( board), 
-                      wrap( opts),
-                      k,
-                      getPlaced( board));
+        board, opts = addNumber( i, j, k,
+                                  mem_board, mem_opts);
+        if ( !isCompleted( board)) {
+          SNet::outRaw( hnd, 1, sacprelude::wrap( board), sacprelude::wrap(opts));
+        } else {
+          SNet::outRaw( hnd, 2, sacprelude::wrap( board), 0);
+        }
       }
     }
   }
@@ -222,5 +176,5 @@ void computeOpts( SNet::SNet &hnd, int[*] board)
     }
   }
 
-  SNet::outRaw( hnd, 1, wrap( set), wrap( opts));
+  SNet::outRaw( hnd, 1, sacprelude::wrap( set), sacprelude::wrap( opts));
 }

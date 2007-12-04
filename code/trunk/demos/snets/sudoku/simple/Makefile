@@ -20,20 +20,20 @@ SACTARGET = sudoku
 # - - - - - - - - - - - - - - - - - - - -
 
 SAC2C     = sac2c
-S2CFLAGS  = -v1  -O3
+S2CFLAGS  = -v1 -g
 SAC4C     = sac4c
-S4CFLAGS  = -O3 -v1 -incdir include -libdir lib -g $(LIBDIRS) 
+S4CFLAGS  = -v1 -incdir include -libdir lib -g $(LIBDIRS) 
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)` 
 
 
 # = = = = = = = = = = = = = = = = = = = =
-TARGET    = sudoku
+TARGET    = sudokusolve
 # = = = = = = = = = = = = = = = = = = = =
 
 all: $(TARGET) 
 
-$(TARGET): libsudokuMod.a Objects
+$(TARGET): Objects libsudokuMod.a
 	$(CC) $(LIBDIRS) -o $(TARGET) *.o $(LIBS) $(S4CLIBS) $(LIBS) $(FIBREOBJS)
 
 libsudokuMod.a: sudoku.sac

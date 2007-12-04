@@ -38,8 +38,6 @@ void SAC2SNet_outRaw( void *hnd, int variant, ...)
   void **fields;
   int *tags, *btags;
   snet_variantencoding_t *v;
-//  snet_handle_t *hnd = 
-//    (snet_handle_t*)SACARGconvertToVoidPointer( snet_hnd_basetype, h);
   va_list args;
 
 

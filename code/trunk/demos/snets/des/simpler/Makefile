@@ -16,27 +16,27 @@ SCFLAGS   = -b7 -v1
 
 
 # - - - - - - - - - - - - - - - - - - - -
-SACTARGET = sudoku
+SACTARGET = simpleDesboxes
 # - - - - - - - - - - - - - - - - - - - -
 
 SAC2C     = sac2c
-S2CFLAGS  = -v1  -O3
+S2CFLAGS  = -v1 -g -nosaa
 SAC4C     = sac4c
-S4CFLAGS  = -O3 -v1 -incdir include -libdir lib -g $(LIBDIRS) 
+S4CFLAGS  = -v1 -incdir include -libdir lib -g $(LIBDIRS) 
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)` 
 
 
 # = = = = = = = = = = = = = = = = = = = =
-TARGET    = sudoku
+TARGET    = simpleDes
 # = = = = = = = = = = = = = = = = = = = =
 
 all: $(TARGET) 
 
-$(TARGET): libsudokuMod.a Objects
+$(TARGET): libsimpleDesboxesMod.a Objects
 	$(CC) $(LIBDIRS) -o $(TARGET) *.o $(LIBS) $(S4CLIBS) $(LIBS) $(FIBREOBJS)
 
-libsudokuMod.a: sudoku.sac
+libsimpleDesboxesMod.a: simpleDesboxes.sac
 	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $(SACTARGET).sac
 	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $(SACTARGET)
 

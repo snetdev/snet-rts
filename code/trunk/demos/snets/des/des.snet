@@ -17,7 +17,7 @@ net des {
                 BitExpand 
                 |
                 SubKey
-              ) .. [| {NextKey}, {Rx} |]*{NextKey, Rx};
+              ) .. [| {KeySet,NextKey,<C>}, {Rx} |]*{Rx,KeySet,NextKey,<C>};
 
       net KeyMix 
       connect [{NextKey, Rx} -> {Op1=NextKey, Op2=Rx}] .. 
@@ -42,14 +42,13 @@ net des {
                   | 
                   feistel
                 ) 
-                .. [|{L},{Rf}|]*{L,Rf} .. XorHalfBlocks
+                .. [|{L},{KeySet,Rf,<C>}|]*{L,KeySet,Rf,<C>} .. XorHalfBlocks
              )
-           ) .. [|{L}, {R}|]*{L,R};
+           ) .. [|{L}, {R,KeySet,<C>}|]*{L,R,KeySet,<C>};
 
 } connect InitialP .. 
 genSubKeys ..
 [{L,R,KeySet} -> {L,R,KeySet,<C=(0-1)>}] .. 
 desRound*{<C>} if <C==15> .. 
-
 FinalP .. 
 [{KeySet, <C>} -> {}];

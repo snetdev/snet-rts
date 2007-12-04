@@ -1,0 +1,12 @@
+net simpleDes {
+
+ box GenSubKeys( (Key) -> (KeySet));
+ box KeyInvert( (KeySet) -> (KeySet));
+ box InitialP( (Pt) -> (L, R));
+ box FinalP( (L, R) -> (Ct));
+ box DesRound( (L, R, KeySet, <C>) -> (L, R, KeySet, <C>));
+
+} connect GenSubKeys .. ( ([{<Decipher>} -> {}] .. KeyInvert)| [] ) ..
+  InitialP ..
+  [{} -> {<C=0>}] .. (DesRound*{<C>} if <C==16>) .. 
+  FinalP;

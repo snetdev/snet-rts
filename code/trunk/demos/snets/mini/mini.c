@@ -25,7 +25,7 @@ static void SNet__mini__A(snet_handle_t *hnd) {
   A(hnd, field_A);
 }
 
- snet_buffer_t *SNet__mini(snet_buffer_t *in_buf) {
+static snet_buffer_t *SNet__mini(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
   snet_typeencoding_t *out_type = NULL;
 

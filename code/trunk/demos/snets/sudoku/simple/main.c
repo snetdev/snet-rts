@@ -5,7 +5,7 @@
 #include <snetentities.h>
 #include <SAC2SNet.h>
 #include <pthread.h>
-#include <sudoku.h>
+#include <sudokusolve.h>
 #include <memfun.h>
 #include <constants.h>
 #include <cwrapper.h>
@@ -30,6 +30,8 @@ void *Feed( void *ptr) {
   for( i=0; i<ITERATIONS; i++) {
     SNetBufPut( inf->inbuf, inf->in_recs[i]);
   }
+  printf("Sending Control Record...\n");
+  SNetBufPut( inf->inbuf, SNetRecCreate( REC_terminate)); 
   return( NULL);
 }
 
@@ -44,20 +46,23 @@ void *Read( void *ptr)
 
   while( !terminate) {
     resrec = SNetBufGet( outbuf);
-    output = SNetRecTakeField( resrec,  F__sudoku__board);
-    resarray1 = SACARGconvertToIntArray( output);
-    printf("\nResult %d/%d\n", k+1, ITERATIONS);
-    for( i=0; i<SIZE; i++) {
-      for( j=0; j<SIZE; j++) {
-        printf(" %d ", resarray1[(i*SIZE)+j]);
+    if( SNetRecGetDescriptor( resrec) == REC_terminate) {
+      terminate = true;
+    }
+    else {
+      output = SNetRecTakeField( resrec,  F__sudokusolve__board);
+      resarray1 = SACARGconvertToIntArray( output);
+      printf("\nResult %d/%d\n", k+1, ITERATIONS);
+      for( i=0; i<SIZE; i++) {
+        for( j=0; j<SIZE; j++) {
+          printf(" %d ", resarray1[(i*SIZE)+j]);
+        }
+        printf("\n");
       }
-      printf("\n");
+      free( resarray1);
     }
-    free( resarray1);
     SNetRecDestroy( resrec);
-    if( ++k == ITERATIONS) {
-      terminate = true; 
-    }
+    k++;
   }
 
   return( NULL);
@@ -139,12 +144,12 @@ int main( int argc, char **argv)
 
   /* Build record */
   type1 = SNetTencVariantEncode( 
-            SNetTencCreateVector(1 , F__sudoku__board),
+            SNetTencCreateVector(1 , F__sudokusolve__board),
             SNetTencCreateVector( 0),
             SNetTencCreateVector( 0));
 
   rec1 = SNetRecCreate( REC_data, type1);
-  SNetRecSetField( rec1, F__sudoku__board, input);
+  SNetRecSetField( rec1, F__sudokusolve__board, input);
   SNetRecSetInterfaceId( rec1, 0);
 
 
@@ -168,7 +173,7 @@ int main( int argc, char **argv)
   pthread_create( &t, NULL, Feed, inf);
 
   /* Invoke network */
-  outbuf =  SNet__sudoku___sudoku( inbuf);
+  outbuf =  SNet__sudokusolve___sudokusolve( inbuf);
   printf("\n\nStarting to process input...\n\n");
 
   /* Start 'read' thread */
@@ -177,10 +182,7 @@ int main( int argc, char **argv)
   /* Wait for Feeder/Reader */
   pthread_join( t, NULL);
   pthread_join( t1, NULL);
-
-  printf("\nSending Control Record...\n");
-  SNetBufPut( inbuf, SNetRecCreate( REC_terminate)); 
-  SNetBufGet( outbuf);
+  
   printf("\nEnd.\n\n"); 
 
   return( 0);
