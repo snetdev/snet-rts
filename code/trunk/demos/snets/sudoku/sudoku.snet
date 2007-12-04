@@ -1,0 +1,11 @@
+net sudoku {
+
+  box computeOpts( (board) -> (board, opts));
+  box solve( (board, opts) -> (board));
+
+  net oneLevelStar {
+    box solveOneLevel( (board, opts) -> (board, opts, <k>, <level>));
+  } connect ([{<k>} -> {<k=k%4>}] .. 
+            (solveOneLevel!<k>))*{<level>} if <level >= 40>;
+
+} connect computeOpts .. [{} -> {<k=0>,<level=0>}] .. oneLevelStar .. solve;
