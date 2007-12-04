@@ -54,13 +54,13 @@ extern snet_buffer_t *SNetSerial( snet_buffer_t *inbuf,
                                   snet_buffer_t* (*box_b)( snet_buffer_t*)); 
 
 extern snet_buffer_t *SNetParallel( snet_buffer_t *inbuf,
-				    snet_typeencoding_t *types, 
+				    snet_typeencoding_list_t *types, 
 				    ...);
 
 
 
 extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf, 
-				       snet_typeencoding_t *types,
+				       snet_typeencoding_list_t *types,
 				       ...);
 
 

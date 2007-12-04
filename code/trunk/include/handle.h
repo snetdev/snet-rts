@@ -106,7 +106,8 @@ extern snet_typeencoding_t *SNetHndGetPatterns( snet_handle_t *hndl);
 
 extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hndl);
 extern snet_typeencoding_t *SNetHndGetInType( snet_handle_t *hnd);
-       
+extern snet_typeencoding_list_t *SNetHndGetTypeList( snet_handle_t *hnd);
+
 extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hndl);
 
 #ifdef FILTER_VERSION_2
