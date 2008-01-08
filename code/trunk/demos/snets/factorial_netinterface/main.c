@@ -14,10 +14,9 @@
 #include <myfuns.h>
 /*********************************/
 
-/*** THIS NEEDS TO BE GENERATED */
-#include "boxfuns.h"
+/*** THIS NEEDS TO BE GENERATED (directly to factorial.h ?)*/
 #include "factorial.h"
-
+/*
 #define NUMBER_OF_LABELS 9
 
 char *static_labels[NUMBER_OF_LABELS] = {"F_none", "F__factorial__x", 
@@ -25,6 +24,14 @@ char *static_labels[NUMBER_OF_LABELS] = {"F_none", "F__factorial__x",
 					  "F__factorial__r","F__factorial__rr",
 					  "T__factorial__T","T__factorial__F", 
 					  "T__factorial__stop"};
+*/
+
+#define NUMBER_OF_LABELS 6
+
+char *static_labels[NUMBER_OF_LABELS] = {"F_none", "F__factorial__x", 
+					 "F__factorial__p","T__factorial__T",
+					 "T__factorial__F","T__factorial__stop"};
+
 /*********************************/
 
 
@@ -35,12 +42,12 @@ char *static_labels[NUMBER_OF_LABELS] = {"F_none", "F__factorial__x",
  * - how and where this code should be generated?
  *   - compiler seems to be obvious choice
  * - error conditions?
- *   - pr.y, main.c
+ *   - parser.y, main.c
  * - other control records than terminate?
- *   - easy to implement
+ *   - what additional data is needed? (or are these needed at all?)
  * - serialization/deserialization functions?
  *   - are they ok
- *   - should they be added to runtime like  alloc/free functions
+ *   - should they be added to runtime like copy/free functions
  * - how should the different interfaces be handled?
  *   - switch clauses checking the interface
  *
@@ -72,7 +79,7 @@ void printRec(label_t * labels, snet_buffer_t *b, snet_record_t *rec)
 	 }
 	 
 	 if((label = searchLabelByIndex(labels, i)) != NULL){
-	   printf("<field label=\"%s\" interface=\"C\">%s</field>", label, data);
+	   printf("<field label=\"%s\" interface=\"C2SNet\">%s</field>", label, data);
 	 }
        	 if(i < labels->number_of_labels){
 	   SNetMemFree(data);
@@ -95,6 +102,14 @@ void printRec(label_t * labels, snet_buffer_t *b, snet_record_t *rec)
        }
        printf("</record>");
        break;
+    case REC_sync: /* TODO: What additional data is needed? */
+      printf("<record type=\"sync\" />");
+    case REC_collect: /* TODO: What additional data is needed? */
+      printf("<record type=\"collect\" />");
+    case REC_sort_begin: /* TODO: What additional data is needed? */
+      printf("<record type=\"sort_begin\" />");
+    case REC_sort_end: /* TODO: What additional data is needed? */
+      printf("<record type=\"sort_end\" />");
     case REC_terminate:
       printf("<record type=\"terminate\" />");
       break;
@@ -144,6 +159,7 @@ void *output(void* data)
   return NULL;
 }
 
+
 int main(int argc, char* argv[])
 {
   int inBufSize = 10;
@@ -151,7 +167,7 @@ int main(int argc, char* argv[])
   snet_buffer_t *in_buf = SNetBufCreate(inBufSize);
   snet_buffer_t *out_buf = NULL;
 
-  pthread_t thread;
+  pthread_t thread; 
 
   initialize();
 
@@ -160,7 +176,7 @@ int main(int argc, char* argv[])
   /********************************/
   
   if(pthread_create(&thread, NULL, (void *)output, (void *)out_buf) != 0){
-    return 0;
+    return 1;
     // error
   }
 
@@ -172,23 +188,20 @@ int main(int argc, char* argv[])
   while(i != PARSE_TERMINATE) {
     i = parserParse();
   }
-
-  if(pthread_join(thread, NULL) == 0){
-
-    //UNCOMMENT THIS LINE WHEN FACTORIAL IS NOT SHORT-CIRCUITED!
-    if(in_buf != NULL){
-      SNetBufDestroy(in_buf);
-    }
-
-    if(out_buf != NULL){
-      SNetBufDestroy(out_buf);
-    }
-
-    parserDelete();
-
-    cleanup();         
-  }  
   
+  if(in_buf != NULL){
+    SNetBufBlockUntilEmpty(in_buf);
+    SNetBufDestroy(in_buf);
+  }
+  
+  parserDelete();
+
+  if(pthread_join(thread, NULL) != 0){
+    //Error!
+    return 1;
+  }
+
+  cleanup();          
   
   return 0;
 }

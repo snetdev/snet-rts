@@ -1,6 +1,8 @@
 #ifndef LABEL_H_
 #define LABEL_H_
 
+#define LABEL_ERROR -1
+
 /* Struct to store temporary labels and their number mappings*/
 typedef struct temp_label{
   char *label;
@@ -44,6 +46,7 @@ extern void freeLabels(label_t *labels);
  * @param label The name to search for.
  *
  * @return Index of the given label.
+ * @return LABEL_ERROR, if the label parameter given was NULL.
  *
  */
 

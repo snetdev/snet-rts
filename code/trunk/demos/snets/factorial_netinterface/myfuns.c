@@ -18,6 +18,10 @@ void *mycopy( void *ptr)
 }
 
 void *mydeserialize(const char* value){
+  if(value == NULL){
+    return NULL;
+  }
+
   int *i = (int *)malloc(sizeof( int));
   *i = atoi(value);
   return (void *)i;
@@ -29,7 +33,11 @@ char *myserialize(const void* value){
   int i = 1;
   char *c = NULL;
   int ret = -1;
-
+  
+  if(value == NULL){
+    return NULL;
+  }
+  
   do{
     if(c != NULL){
       free(c);

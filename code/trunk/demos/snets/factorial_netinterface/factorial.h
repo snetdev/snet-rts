@@ -18,12 +18,9 @@
 
 #define F__factorial__x	1
 #define F__factorial__p	2
-#define F__factorial__xx	3
-#define F__factorial__r	4
-#define F__factorial__rr	5
-#define T__factorial__T	6
-#define T__factorial__F	7
-#define T__factorial__stop	8
+#define T__factorial__T	3
+#define T__factorial__F	4
+#define E__factorial__OFFSET	5
 
 extern snet_buffer_t *SNet__factorial___factorial(snet_buffer_t *in_buf);
 

@@ -35,7 +35,10 @@ void freeLabels(label_t *labels){
 
 int searchIndexByLabel(label_t *labels, const char *label){
   int i = 0;
-  int index = -1;
+  int index = LABEL_ERROR;
+  if(label == NULL || labels == NULL){
+    return index;
+  }
 
   //search static labels
   for(i = 0; i < labels->number_of_labels; i++) {
@@ -82,6 +85,10 @@ int searchIndexByLabel(label_t *labels, const char *label){
 }
 
 char *searchLabelByIndex(label_t *labels, int i){
+  if(labels == NULL || i < 0){
+    return NULL;
+  }
+
   //search static labels
   if(i < labels->number_of_labels){
     return STRcpy(labels->labels[i]);    
