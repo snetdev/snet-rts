@@ -1,13 +1,9 @@
 CC        = gcc
-BISON     = bison
-BFLAGS	  = -d
-FLEX      = flex
-FFLAGS	  =
 CCFLAGS   = -Wall -g -DFILTER_VERSION_2
 AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
-LIBS      = -lpthread -lsnet -lC2SNet
+INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C -I./include
+LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C -L./lib
+LIBS      = -lpthread -lsnet -lC2SNet -lsnetninter
 
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = factorial
@@ -15,11 +11,10 @@ TARGET    = factorial
 
 
 all: 
-	$(BISON) $(BFLAGS) *.y
-	$(FLEX) $(FFLAGS) *.l
+	$(MAKE) -Cnetinterface/
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
 	$(CC) $(LIBDIRS) -o $(TARGET) *.o $(LIBS)
 	rm -f *.tab.* lex.yy.c *.o
 
 clean:
-	rm -f *.o $(TARGET)
+	$(HIDE) rm -f *.o $(TARGET)
