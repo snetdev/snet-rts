@@ -1,6 +1,23 @@
 #ifndef STR_H_
 #define STR_H_
 
+/*******************************************************************************
+ *
+ * $Id$
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ * -------
+ *
+ * Date:   10.1.2008
+ * -----
+ *
+ * Description:
+ * ------------
+ *
+ * String functions for S-NET network interface.
+ *
+ *******************************************************************************/
+
 /* Copy string.
  *
  * @param text String to be copied.

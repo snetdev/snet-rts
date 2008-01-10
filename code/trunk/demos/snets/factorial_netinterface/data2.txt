@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<data mode="textual" xmlns="snet.feis.herts.ac.uk" >
+  <record type="data" >
+    <field label="F__factorial__x" interface="C2SNet" >1</field>
+    <field label="F__factorial__o" interface="C2SNet" >abc</field>
+  </record>
+  <record type="data" >
+    <field label="F__factorial__x" interface="C2SNet" >1</field>
+    <field label="F" interface="C2SNet" >1</field>
+  </record>
+</data>
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<data mode="textual" xmlns="snet.feis.herts.ac.uk" >
+  <record type="terminate" />
+</data>

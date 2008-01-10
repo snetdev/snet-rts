@@ -1,6 +1,23 @@
 #ifndef LABEL_H_
 #define LABEL_H_
 
+/*******************************************************************************
+ *
+ * $Id$
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ * -------
+ *
+ * Date:   10.1.2008
+ * -----
+ *
+ * Description:
+ * ------------
+ *
+ * Label functions for S-NET network interface.
+ *
+ *******************************************************************************/
+
 #define LABEL_ERROR -1
 
 /* Struct to store temporary labels and their number mappings*/
@@ -13,7 +30,7 @@ typedef struct temp_label{
 
 /* Struct to store the static and current temporary names */
 typedef struct label_data{
-  char **labels;             /* static labels*/
+  const char *const *labels; /* static labels*/
   int number_of_labels;      /* number of static labels*/
   pthread_mutex_t mutex;     /* mutex for access control to temporary labels */
   temp_label_t *temp_labels; /* temporary labels */
@@ -28,7 +45,7 @@ typedef struct label_data{
  *
  */
 
-extern label_t *initLabels(char **static_labels, int len);
+extern label_t *initLabels(const char *const *static_labels, int len);
 
 /* Free memory used in label structure.
  *
@@ -36,7 +53,7 @@ extern label_t *initLabels(char **static_labels, int len);
  *
  */
 
-extern void freeLabels(label_t *labels);
+extern void deleteLabels(label_t *labels);
 
 /* Search for index by given label from the structure.
  * If the given label is not found, a new label with 

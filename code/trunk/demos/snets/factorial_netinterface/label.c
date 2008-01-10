@@ -1,3 +1,20 @@
+/*******************************************************************************
+ *
+ * $Id$
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ * -------
+ *
+ * Date:   10.1.2008
+ * -----
+ *
+ * Description:
+ * ------------
+ *
+ * Label functions for S-NET network interface.
+ *
+ *******************************************************************************/
+
 #include <stdlib.h>
 #include "label.h"
 #include "str.h"
@@ -11,7 +28,7 @@
  * and adjust reference counting accordingly.
  */
 
-label_t *initLabels(char **labels, int len){
+label_t *initLabels(const char *const *labels, int len){
   label_t *temp = SNetMemAlloc(sizeof(label_t));
   temp->labels = labels;
   temp->number_of_labels = len;
@@ -21,7 +38,7 @@ label_t *initLabels(char **labels, int len){
   return temp;
 }
 
-void freeLabels(label_t *labels){
+void deleteLabels(label_t *labels){
   pthread_mutex_destroy(&labels->mutex);
 
   //remove are temporary labels

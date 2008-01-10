@@ -3,6 +3,7 @@
 
 #include <snetentities.h>
 #include "label.h"
+#include "interface.h"
 
 /* Return values of parserParse() */
 
@@ -14,6 +15,7 @@
  *
  * @param in_buf Buffer where the parsed records are put.
  * @param label  Label data to use while parsing.
+ * @param interfaces Interface mapping to be used for language interfaces.
  * @param fdeserialize Deserialization function for parsed data values.
  * @param ffree Free function for parsed data values.
  * @param fcopy Copy function for the parsed data values.
@@ -23,9 +25,7 @@
 
 extern void parserInit(snet_buffer_t *in_buf,
 		       label_t *label,
-		       void* (*fdeserialize)(const char*),
-		       void (*ffree)( void*),
-		       void* (*fcopy)( void*));
+		       interface_t *interfaces);
 
 
 /* Flush all data in parser. 

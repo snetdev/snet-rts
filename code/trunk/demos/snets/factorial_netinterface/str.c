@@ -1,3 +1,20 @@
+/*******************************************************************************
+ *
+ * $Id$
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ * -------
+ *
+ * Date:   10.1.2008
+ * -----
+ *
+ * Description:
+ * ------------
+ *
+ * String functions for S-NET network interface.
+ *
+ *******************************************************************************/
+
 #include "str.h"
 #include <string.h>
 #include <memfun.h>

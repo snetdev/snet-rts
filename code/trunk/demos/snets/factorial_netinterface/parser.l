@@ -11,7 +11,7 @@
  * Description:
  * ------------
  *
- * Scanner of S-Net net interface
+ * Scanner of S-Net network interface
  *
  *******************************************************************************/
 
@@ -51,7 +51,7 @@ extern void yyerror(char *error);
     /* Inside double quoted XML-attribute ("...") */
 %x IN_XML_DQUOTE 
     /* Inside single quoted XML-attribute ('...') */
-%x IN_XML_SQUOTE      
+%x IN_XML_SQUOTE  
 
 %%
 
@@ -85,18 +85,26 @@ extern void yyerror(char *error);
 }
 
 
-<IN_XML_ENDELEMENT>">" {
-                    yy_pop_state();
-                    return TAG_END;
-                  }
+<IN_XML_ENDELEMENT>{
+">"  {
+        yy_pop_state();
+        return TAG_END;
+     }
+}
 
 
-<IN_XML_ELEMENT,IN_XML_ENDELEMENT>(([A-Za-z\200-\377_]|"_"|":")([A-Za-z\200-\377_0-9.-]|":")*) {
+<IN_XML_ELEMENT,IN_XML_ENDELEMENT>(([A-Za-z\200-\377_^?]|"_"|":")([A-Za-z\200-\377_0-9.-]|":")*) {
              yylval.str = STRcpy(yytext);
              return NAME;
-          }                    
+          }                           
       
 <IN_XML_CONTENT>{
+ "</"   {
+          yy_pop_state();
+          yy_push_state(IN_XML_ENDELEMENT);
+          return ENDTAG_BEGIN;
+        }
+
  "<"    {          
           yy_push_state(IN_XML_ELEMENT);
           return STARTTAG_BEGIN;
@@ -109,12 +117,6 @@ extern void yyerror(char *error);
  [^<]*  { 
           yylval.str = STRcpy(yytext);
           return CHARDATA;
-        }
-
- "</"   {
-          yy_pop_state();
-          yy_push_state(IN_XML_ENDELEMENT);
-          return ENDTAG_BEGIN;
         }
 }
  
@@ -210,12 +212,16 @@ extern void yyerror(char *error);
 "<?xml" {
           BEGIN(IN_XML_DECL);
           return XMLDECL_BEGIN;
-
         }
 
  "<!--" {
           yy_push_state(IN_XML_COMMENT);
         }
+
+"</"    {
+          return ENDTAG_BEGIN;
+        }
+
 
  "<"    {
           yy_push_state(IN_XML_ELEMENT);

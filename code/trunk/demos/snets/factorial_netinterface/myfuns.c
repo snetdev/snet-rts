@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <myfuns.h>
+#include <C2SNet.h>
 
 void myfree( void *ptr)
 {
@@ -18,13 +19,18 @@ void *mycopy( void *ptr)
 }
 
 void *mydeserialize(const char* value){
-  if(value == NULL){
-    return NULL;
+  void *val = NULL;
+
+  if(value != NULL){
+    int *i = (int *)malloc(sizeof( int));
+    *i = atoi(value);
+    val = (void *)i;
   }
 
-  int *i = (int *)malloc(sizeof( int));
-  *i = atoi(value);
-  return (void *)i;
+  C_Data *field = C2SNet_cdataCreate(val, myfree, mycopy);
+
+
+  return (void *)field;
 }
 
 #define SER_BUF_SIZE 32
@@ -33,8 +39,14 @@ char *myserialize(const void* value){
   int i = 1;
   char *c = NULL;
   int ret = -1;
-  
+
   if(value == NULL){
+    return NULL;
+  }
+
+  void * val = C2SNet_cdataGetData((C_Data *)value);
+  
+  if(val == NULL){
     return NULL;
   }
   
@@ -47,7 +59,7 @@ char *myserialize(const void* value){
     
     c = (char *)malloc(sizeof(char) * SER_BUF_SIZE * i);
 
-    ret = snprintf(c, SER_BUF_SIZE * i, "%d", *((int *)value));
+    ret = snprintf(c, SER_BUF_SIZE * i, "%d", *((int *)val));
     
   }while(ret <= 0 || ret >= SER_BUF_SIZE * i);
   
