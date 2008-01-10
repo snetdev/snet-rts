@@ -20,8 +20,8 @@
 
 #include <record.h>
 #include <buffer.h>
-#include "label.h"
-#include "interface.h"
+#include <label.h>
+#include <interface.h>
 
 /* Init output system to use given labels and language interfaces.
  *

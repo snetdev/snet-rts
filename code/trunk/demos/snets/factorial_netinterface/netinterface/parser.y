@@ -23,14 +23,14 @@
  *    - Should there be another deserialization function for binary data?
  */
 %{
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <memfun.h>
 #include <snetentities.h>
-
-#include "parser.h"
-#include "str.h"
-#include "interface.h"
+#include <parser.h>
+#include <str.h>
+#include <interface.h>
 
 /* Values to define state of the parser (in which kind of XML element) */
 #define STACK_ERROR       -2

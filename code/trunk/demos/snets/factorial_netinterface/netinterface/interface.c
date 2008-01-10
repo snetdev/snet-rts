@@ -15,9 +15,18 @@
  *
  *******************************************************************************/
 
-#include "interface.h"
-#include "str.h"
+#include <interface.h>
+#include <str.h>
 #include <memfun.h>
+
+/* Struct to store the interface names and (de)serialization functions */
+struct interface{
+  const char *const *names;
+  char *(*const* serialize_fun)(const void *); 
+  void *(*const* deserialize_fun)(const char*); 
+  int len;
+};
+
 
 interface_t *initInterfaces(const char *const *names, 
 			    char *(*const *serialize_fun)(const void *), 

@@ -20,21 +20,8 @@
 
 #define LABEL_ERROR -1
 
-/* Struct to store temporary labels and their number mappings*/
-typedef struct temp_label{
-  char *label;
-  int index;
-  int ref_count;
-  struct temp_label *next;
-}temp_label_t;
-
-/* Struct to store the static and current temporary names */
-typedef struct label_data{
-  const char *const *labels; /* static labels*/
-  int number_of_labels;      /* number of static labels*/
-  pthread_mutex_t mutex;     /* mutex for access control to temporary labels */
-  temp_label_t *temp_labels; /* temporary labels */
-}label_t;
+/* Struct to store the static and temporary names */
+typedef struct label label_t;
 
 /* Init new labels structure with given statistic names 
  *

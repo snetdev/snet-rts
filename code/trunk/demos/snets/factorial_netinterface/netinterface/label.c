@@ -15,18 +15,32 @@
  *
  *******************************************************************************/
 
-#include <stdlib.h>
-#include "label.h"
-#include "str.h"
+#include <label.h>
+#include <str.h>
 #include <pthread.h>
 #include <memfun.h>
-#include <stdio.h>
 
 /* TODO: 
  * The reference counting system might not work correctly if the
  * SNet runtime can copy unknown data fields. Check how this work
  * and adjust reference counting accordingly.
  */
+
+/* Struct to store temporary labels and their number mappings*/
+typedef struct temp_label{
+  char *label;
+  int index;
+  int ref_count;
+  struct temp_label *next;
+} temp_label_t;
+
+/* Struct to store the static and current temporary names */
+struct label{
+  const char *const *labels; /* static labels*/
+  int number_of_labels;      /* number of static labels*/
+  pthread_mutex_t mutex;     /* mutex for access control to temporary labels */
+  temp_label_t *temp_labels; /* temporary labels */
+};
 
 label_t *initLabels(const char *const *labels, int len){
   label_t *temp = SNetMemAlloc(sizeof(label_t));

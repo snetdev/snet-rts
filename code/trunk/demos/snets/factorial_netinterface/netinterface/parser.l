@@ -16,8 +16,8 @@
  *******************************************************************************/
 
 %{
+#include <str.h>
 #include "parser.tab.h"
-#include "str.h"
 
 #define LINEBUF_SIZE 256
 #define YY_NO_UNPUT

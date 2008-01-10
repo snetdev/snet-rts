@@ -2,8 +2,8 @@
 #define PARSER_H_
 
 #include <snetentities.h>
-#include "label.h"
-#include "interface.h"
+#include <label.h>
+#include <interface.h>
 
 /* Return values of parserParse() */
 

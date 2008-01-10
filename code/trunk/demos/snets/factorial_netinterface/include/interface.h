@@ -21,12 +21,7 @@
 #define INTERFACE_UNKNOWN -1
 
 /* Struct to store the interface names and (de)serialization functions */
-typedef struct interface{
-  const char *const *names;
-  char *(*const* serialize_fun)(const void *); 
-  void *(*const* deserialize_fun)(const char*); 
-  int len;
-} interface_t;
+typedef struct interface interface_t;
 
 
 /* Init interface structure. 

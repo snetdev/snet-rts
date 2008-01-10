@@ -17,8 +17,8 @@
 
 #include <stdio.h>
 #include <memfun.h>
-
-#include "output.h"
+#include <pthread.h>
+#include <output.h>
 
 /* Label mappings to use for output */
 label_t *output_labels = NULL;
