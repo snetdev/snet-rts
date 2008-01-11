@@ -148,7 +148,7 @@ int main(int argc, char **argv)
 
   /* Invoke network */
   SNetGlobalInitialise();
-  SAC2SNet_init( 0, SACTYPE_String_string);
+  SAC2SNet_init( 0);
   outbuf =  SNet__simpleDes___simpleDes( inbuf);
   
   /* Build record(s)  and feed to network */

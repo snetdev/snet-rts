@@ -68,7 +68,7 @@ int main()
 
   /* Invoke network */
   SNetGlobalInitialise();
-  SAC2SNet_init( 0, SACTYPE_String_string);
+  SAC2SNet_init( 0);
   outbuf =  SNet__des___des( inbuf);
 
   /* Inspect results */

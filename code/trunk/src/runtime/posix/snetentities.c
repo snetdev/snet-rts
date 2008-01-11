@@ -158,14 +158,24 @@ SNetGlobalRegisterInterface( int id,
   return( true);
 }
 
-extern void *SNetGetFreeFun( snet_record_t *rec) 
+extern void *SNetGetFreeFunFromRec( snet_record_t *rec) 
 {
   return( GetFreeFun( GetInterface( SNetRecGetInterfaceId( rec))));
 }
 
-extern void *SNetGetCopyFun( snet_record_t *rec) 
+extern void *SNetGetCopyFunFromRec( snet_record_t *rec) 
 {
   return( GetCopyFun( GetInterface( SNetRecGetInterfaceId( rec))));
+}
+
+extern void *SNetGetCopyFun( int id) 
+{
+  return( GetCopyFun( GetInterface( id)));
+}
+
+extern void *SNetGetFreeFun( int id) 
+{
+  return( GetFreeFun( GetInterface( id)));
 }
 
 /* END -- GLOBALS                                                            */

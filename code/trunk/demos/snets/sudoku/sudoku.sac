@@ -137,20 +137,27 @@ void solver( SNet::SNet &hnd, int[*] board, bool[*] opts, int MAX, int m)
   if( !isStuck( board, opts)) {
     if( !isCompleted( board)) {
       if( m != 0) {
+        c = 0;
         i,j = findMinTrues( opts);
-        numbers = [1,2,3,4,5,6,7,8,9];
+        numbers = genarray( shape( opts)[0], -1);
+        for( k=0; k<shape( opts)[0]; k++) {
+          if( opts[i,j,k]) { 
+            numbers[c] = k;
+            c++;
+          }
+        }
         tmp_board = board;
         tmp_opts = opts;
-        for( k=0; k<m && k<=9; k++) {
+        for( k=0; k<m && k<=c; k++) {
           board, opts = addNumber( i, j, numbers[k]+1, tmp_board, tmp_opts);
           solver( hnd, board, opts, MAX, m/shape( numbers)[0]);
         }
       }
-      else { /* no more recursion */
+      else { 
         SNet::outRaw( hnd, 1, wrap( board), wrap( opts), MAX);
       }
     }
-    else { /* Board completed*/
+    else { 
       SNet::outRaw( hnd, 2, wrap( board), 0);
     }
   }

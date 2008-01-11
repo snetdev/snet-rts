@@ -15,7 +15,6 @@ extern void *SACARGcopy( void*);
 
 
 int my_interface_id;
-int snet_hnd_basetype;
 
 struct container {
   snet_handle_t *hnd;
@@ -61,10 +60,9 @@ void SAC2SNet_outRaw( void *hnd, int variant, ...)
   SNetOutRawArray( hnd, my_interface_id, variant, fields, tags, btags);
 }
 
-void SAC2SNet_init( int id, int btype)
+void SAC2SNet_init( int id)
 {
   my_interface_id = id;
-  snet_hnd_basetype = btype;
   SNetGlobalRegisterInterface( id, &SACARGfree, &SACARGcopy);  
 }
 

@@ -102,7 +102,7 @@ int main( int argc, char **argv)
 
   /* Initialise S-Net runtime system */
   SNetGlobalInitialise();
-  SAC2SNet_init( 0, SACTYPE_SNet_SNet);
+  SAC2SNet_init( 0);
 
 
   /* Build SACarg from input board */

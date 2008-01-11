@@ -5,7 +5,7 @@
 
 typedef struct container sac2snet_container_t;
 
-void SAC2SNet_init( int id, int basetype);
+void SAC2SNet_init( int id);
 
 void SAC2SNet_out( sac2snet_container_t *c);
 void SAC2SNet_outRaw( void *hnd, int variant, ...);

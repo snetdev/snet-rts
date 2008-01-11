@@ -221,7 +221,7 @@ extern void SNetRecDestroy( snet_record_t *rec) {
       void (*freefun)(void*);
       num = SNetRecGetNumFields( rec);
       names = SNetRecGetUnconsumedFieldNames( rec);
-      freefun = SNetGetFreeFun( rec);
+      freefun = SNetGetFreeFunFromRec( rec);
       for( i=0; i<num; i++) {
           freefun( SNetRecTakeField( rec, names[i]));
       }
@@ -627,7 +627,7 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
         DATA_REC( new_rec, btags[i]) = DATA_REC( rec, btags[i]); 
       }
       void* (*copyfun)(void*);      
-      copyfun = SNetGetCopyFun( rec);
+      copyfun = SNetGetCopyFunFromRec( rec);
       for( i=0; i<SNetRecGetNumFields( rec); i++) {
         DATA_REC( new_rec, fields[i]) = copyfun( DATA_REC( rec, fields[i])); 
       }
