@@ -18,7 +18,9 @@ extern bool SNetGlobalInitialise();
 extern bool 
 SNetGlobalRegisterInterface( int id, 
                              void (*freefun)( void*),
-                             void* (*copyfun)( void*));
+                             void* (*copyfun)( void*),
+			     char *(*serfun)( void*),
+                             void* (*deserfun)( char*));
 
 
 extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...);
@@ -140,4 +142,8 @@ extern void *SNetGetCopyFun( int id);
 extern void *SNetGetCopyFunFromRec( snet_record_t *rec);
 extern void *SNetGetFreeFun( int id);
 extern void *SNetGetFreeFunFromRec( snet_record_t *rec);
+extern void *SNetGetSerializationFun( int id);
+extern void *SNetGetSerializationFunFromRec( snet_record_t *rec);
+extern void *SNetGetDeserializationFun( int id);
+extern void *SNetGetDeserializationFunFromRec( snet_record_t *rec);
 #endif

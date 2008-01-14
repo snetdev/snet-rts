@@ -19,18 +19,22 @@
 #include <memfun.h>
 #include <pthread.h>
 #include <output.h>
+#include <snetentities.h>
 
-/* Label mappings to use for output */
-label_t *output_labels = NULL;
-
-/* Interface mappings to use for output */
-interface_t *output_interfaces = NULL;
-
-/* Thread to do the output */
-pthread_t thread; 
+struct output{
+  /* Label mappings to use for output */
+  snetin_label_t *labels;
+  
+  /* Interface mappings to use for output */
+  snetin_interface_t *interfaces;
+  
+  /* Thread to do the output */
+  pthread_t thread; 
+  
+}output;
 
 /* This function prints records to stdout */
-static void outputRec(label_t * labels, interface_t *interfaces, snet_buffer_t *b, snet_record_t *rec)
+static void printRec(snet_record_t *rec)
 {
   int k = 0;
   int i = 0;
@@ -46,27 +50,40 @@ static void outputRec(label_t * labels, interface_t *interfaces, snet_buffer_t *
 
 	 int id = SNetRecGetInterfaceId(rec);
 
-	 data = serialize(interfaces, id, SNetRecGetField(rec, i));
-    
-	 if((label = searchLabelByIndex(labels, i)) != NULL){
-	   printf("<field label=\"%s\" interface=\"%s\">%s</field>", label, idToInterface(interfaces, id), data);
-	 }
+	 char *(*fun)(void *) = SNetGetSerializationFun(id);
 
+	 data = fun(SNetRecGetField(rec, i));
+
+	 if((label = SNetInSearchLabelByIndex(output.labels, i)) != NULL){
+	   printf("<field label=\"%s\" interface=\"%s\">%s</field>", label, 
+	   	  SNetInIdToInterface(output.interfaces, id), data);
+	 }else{
+	   // TODO: Error, unknown field!
+	 }
+	 
 	 SNetMemFree(data);	 
 	 SNetMemFree(label);
        }
        for( k=0; k<SNetRecGetNumTags( rec); k++) {
 	 i = SNetRecGetTagNames( rec)[k];
-	 if((label = searchLabelByIndex(labels, i)) != NULL){
+
+	 if((label = SNetInSearchLabelByIndex(output.labels, i)) != NULL){
 	   printf("<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
+	 }else{
+	   // TODO: Error, unknown tag!
 	 }
+
 	 SNetMemFree(label);
        }
        for( k=0; k<SNetRecGetNumBTags( rec); k++) {
 	 i = SNetRecGetBTagNames( rec)[k];
-	 if((label = searchLabelByIndex(labels, i)) != NULL){
+
+	 if((label = SNetInSearchLabelByIndex(output.labels, i)) != NULL){
 	   printf("<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
+	 }else{
+	   // TODO: Error, unknown btag!
 	 }
+
 	 SNetMemFree(label);
        }
        printf("</record>");
@@ -90,7 +107,7 @@ static void outputRec(label_t * labels, interface_t *interfaces, snet_buffer_t *
 }
 
 /* This is output function for the output thread */
-static void *output(void* data)
+static void *doOutput(void* data)
 {
   snet_buffer_t * out_buf = (snet_buffer_t *)data;
 
@@ -99,7 +116,7 @@ static void *output(void* data)
     while(1){
       rec = SNetBufGet(out_buf);
       if(rec != NULL) {
-      	outputRec(output_labels, output_interfaces, out_buf, rec);
+      	printRec(rec);
 	if(SNetRecGetDescriptor(rec) == REC_terminate){
 	  SNetRecDestroy(rec);
 	  break;
@@ -111,24 +128,23 @@ static void *output(void* data)
   return NULL;
 }
 
-void initOutput(label_t *labels, interface_t *interfaces){
-  output_labels = labels;
-  output_interfaces = interfaces;
-
+void SNetInOutputInit(snetin_label_t *labels, snetin_interface_t *interfaces){
+  output.labels = labels;
+  output.interfaces = interfaces;
 }
 
-int startOutput(snet_buffer_t *in_buf){
-  if(pthread_create(&thread, NULL, (void *)output, (void *)in_buf) != 0){
-    return 1;
-    // error
+int SNetInOutputBegin(snet_buffer_t *in_buf){
+  if(pthread_create(&output.thread, NULL, (void *)doOutput, (void *)in_buf) == 0){
+    return 0;
   }
-  return 0;
+  // error
+  return 1;
 }
 
-int blockUntilEndOfOutput(){
-  if(pthread_join(thread, NULL) != 0){
-    //Error!
-    return 1;
+int SNetInOutputBlockUntilEnd(){
+  if(pthread_join(output.thread, NULL) == 0){
+    return 0;
   }
-  return 0;
+  //error
+  return 1;
 }

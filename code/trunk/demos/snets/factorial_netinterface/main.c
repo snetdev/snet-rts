@@ -14,9 +14,10 @@ const char *const snet_static_labels[NUMBER_OF_LABELS] = {"F_none"         , "F_
                                                   
 const char *const snet_language_interfaces[NUMBER_OF_INTERFACES] = {"C2SNet"};
 
-char *(* const snet_serialization_funcs[NUMBER_OF_INTERFACES])(const void *)  = {myserialize};
-void *(* const snet_deserialization_funcs[NUMBER_OF_INTERFACES])(const char*) = {mydeserialize};
-
+// This could also be added to the language interface init call
+// or kept out of language interface as now. Including would probably be better
+// as not all interfaces need to have separate function.
+//void *(* const snet_deserialization_funcs[NUMBER_OF_INTERFACES])(const char*) = {mydeserialize};
 
 /**************************************************************/
 
@@ -61,15 +62,17 @@ void *(* const snet_deserialization_funcs[NUMBER_OF_INTERFACES])(const char*) = 
 
 #include "factorial.h"
 #include <C2SNet.h>
+#include <stdio.h>
 
 int main(int argc, char* argv[])
 {
   /** initialize **/
 
   int inBufSize = 10;
-  label_t *labels = initLabels(snet_static_labels, NUMBER_OF_LABELS);
-  interface_t *interfaces = initInterfaces(snet_language_interfaces, snet_serialization_funcs, 
-					   snet_deserialization_funcs, NUMBER_OF_INTERFACES);
+  snetin_label_t *labels = SNetInLabelInit(snet_static_labels, NUMBER_OF_LABELS);
+  snetin_interface_t *interfaces = SNetInInterfaceInit(snet_language_interfaces, 
+						       //snet_deserialization_funcs, 
+							NUMBER_OF_INTERFACES);
   snet_buffer_t *in_buf = SNetBufCreate(inBufSize);
   snet_buffer_t *out_buf = NULL;
 
@@ -81,20 +84,20 @@ int main(int argc, char* argv[])
   out_buf = SNet__factorial___factorial(in_buf);
   /********************************/
   
-  initOutput(labels, interfaces);
+  SNetInOutputInit(labels, interfaces);
 
-  if(startOutput(out_buf) != 0){
+  if(SNetInOutputBegin(out_buf) != 0){
     return 1;
   }
 
-  parserInit(in_buf, labels, interfaces);
+  SNetInParserInit(in_buf, labels, interfaces);
 
   /** action loop **/
 
   int i = PARSE_CONTINUE;
   while(i != PARSE_TERMINATE) {
-    i = parserParse();
-  }  
+    i = SNetInParserParse();
+   }  
 
   /** destroy **/
 
@@ -103,14 +106,14 @@ int main(int argc, char* argv[])
     SNetBufDestroy(in_buf);
   }
   
-  parserDelete();
+  SNetInParserDestroy();
 
-  if(blockUntilEndOfOutput() != 0){
+  if(SNetInOutputBlockUntilEnd() != 0){
     return 1;
   }
-
-  deleteLabels(labels);
-  deleteInterfaces(interfaces);         
+  
+  SNetInLabelDestroy(labels);
+  SNetInInterfaceDestroy(interfaces);         
   
   return 0;
 }

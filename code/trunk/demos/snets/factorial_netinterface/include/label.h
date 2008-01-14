@@ -21,7 +21,7 @@
 #define LABEL_ERROR -1
 
 /* Struct to store the static and temporary names */
-typedef struct label label_t;
+typedef struct label snetin_label_t;
 
 /* Init new labels structure with given statistic names 
  *
@@ -32,7 +32,7 @@ typedef struct label label_t;
  *
  */
 
-extern label_t *initLabels(const char *const *static_labels, int len);
+extern snetin_label_t *SNetInLabelInit(const char *const *static_labels, int len);
 
 /* Free memory used in label structure.
  *
@@ -40,7 +40,7 @@ extern label_t *initLabels(const char *const *static_labels, int len);
  *
  */
 
-extern void deleteLabels(label_t *labels);
+extern void SNetInLabelDestroy(snetin_label_t *labels);
 
 /* Search for index by given label from the structure.
  * If the given label is not found, a new label with 
@@ -54,7 +54,7 @@ extern void deleteLabels(label_t *labels);
  *
  */
 
-extern int searchIndexByLabel(label_t *labels, const char *label);
+extern int SNetInSearchIndexByLabel(snetin_label_t *labels, const char *label);
 
 /* Search for label by given index from the structure.
  *
@@ -67,7 +67,7 @@ extern int searchIndexByLabel(label_t *labels, const char *label);
  */
 
 
-extern char *searchLabelByIndex(label_t *labels, int index);
+extern char *SNetInSearchLabelByIndex(snetin_label_t *labels, int index);
 
 #endif /* LABEL_H_ */
 

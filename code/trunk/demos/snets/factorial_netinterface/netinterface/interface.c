@@ -16,41 +16,38 @@
  *******************************************************************************/
 
 #include <interface.h>
-#include <str.h>
+#include <string.h>
 #include <memfun.h>
 
 /* Struct to store the interface names and (de)serialization functions */
 struct interface{
   const char *const *names;
-  char *(*const* serialize_fun)(const void *); 
-  void *(*const* deserialize_fun)(const char*); 
+  //void *(*const* deserialize_fun)(const char*); 
   int len;
 };
 
 
-interface_t *initInterfaces(const char *const *names, 
-			    char *(*const *serialize_fun)(const void *), 
-			    void *(*const *deserialize_fun)(const char*),
-			    int len){
+snetin_interface_t *SNetInInterfaceInit(const char *const *names, 
+					//void *(*const *deserialize_fun)(const char*),
+					 int len){
 
-  interface_t *temp = SNetMemAlloc(sizeof(interface_t));
+  snetin_interface_t *temp = SNetMemAlloc(sizeof(snetin_interface_t));
   temp->names = names;
-  temp->serialize_fun = serialize_fun;
-  temp->deserialize_fun = deserialize_fun;
+  //temp->deserialize_fun = deserialize_fun;
   temp->len = len;
   return temp;
 }
 
-void deleteInterfaces(interface_t *interfaces){
+void SNetInInterfaceDestroy(snetin_interface_t *interfaces){
   SNetMemFree(interfaces);
 }
 
 
-int interfaceToId(const interface_t *interfaces, const char *interface){
+int SNetInInterfaceToId(const snetin_interface_t *interfaces, const char *interface){
   int id = INTERFACE_UNKNOWN;
   if(interfaces != NULL){
     for(id = 0; id < interfaces->len; id++){
-      if(STRcmp(interfaces->names[id], interface) == 0){
+      if(strcmp(interfaces->names[id], interface) == 0){
 	return id;
       }
     }
@@ -58,24 +55,17 @@ int interfaceToId(const interface_t *interfaces, const char *interface){
   return INTERFACE_UNKNOWN;
 }
 
-const char *idToInterface(const interface_t *interfaces, int id){
+const char *SNetInIdToInterface(const snetin_interface_t *interfaces, int id){
   if(interfaces == NULL || id < 0 || id >= interfaces->len){
     return NULL;
   }
   return interfaces->names[id];
 }
-
-
-char *serialize(const interface_t *interfaces, int id, const void *value){
-  if(interfaces == NULL || id < 0 || id >= interfaces->len){
-    return NULL;
-  }
-  return interfaces->serialize_fun[id](value);
-}
-
-void *deserialize(const interface_t *interfaces, int id, const char *value){
+/*
+void *SNetInDeserializeData(const snetin_interface_t *interfaces, int id, const char *value){
   if(interfaces == NULL || id < 0 || id >= interfaces->len){
     return NULL;
   }
   return interfaces->deserialize_fun[id](value);
 }
+*/

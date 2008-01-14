@@ -124,11 +124,10 @@
  /***** Global variables *****/
  struct{
    /* Labels for SNet fields/tags/btags and their mapping to numbers */
-   label_t *labels; 
-
+   snetin_label_t *labels; 
 
    /* Names for SNet language interfaces and their mapping to IDs */
-   interface_t *interfaces;
+   snetin_interface_t *interfaces;
 
    /* Value that tells if a terminate record has been encounterd in the input stream */
    unsigned int terminate;  
@@ -360,7 +359,7 @@
    if(name != NULL){
      attrib_t *temp = ats;
      while(temp != NULL){
-       if(STRcmp(temp->name, name) == 0){
+       if(strcmp(temp->name, name) == 0){
 	 return temp;
        }
        temp = temp->next;
@@ -583,7 +582,7 @@ Element:      PushNS EmptyElemTag
 		}else if($2 == FIELD){
 		  // Fields are added to the current record
 		  // TODO: EMPTY FIELD -> error report instead?
-		  int index = searchIndexByLabel(parser.labels, parser.current.label);
+		  int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
 		  if(index != LABEL_ERROR && parser.current.interface != INTERFACE_UNKNOWN){
 		    
 		    if(parser.current.record != NULL){
@@ -596,11 +595,13 @@ Element:      PushNS EmptyElemTag
 			void *field = NULL;
 
 			if(parser.current.mode == MODE_TEXTUAL){
-			  field = deserialize(parser.interfaces, parser.current.interface, NULL);
+			  void *(*desfun)(char *) = SNetGetDeserializationFun(parser.current.interface);
+			  field = desfun(NULL);
 			}else if(parser.current.mode == MODE_BINARY){
 			  yyerror("Deserialization of data in binary mode is not yet implemented!");
 			  //TODO: Does binary mode actually need separate function at all?
-			  field = deserialize(parser.interfaces, parser.current.interface, NULL);
+			  void *(*desfun)(char *) = SNetGetDeserializationFun(parser.current.interface);
+			  field = desfun(NULL);
 			}else{
 			  yyerror("Trying to deserialize data in unknown mode!");
 			}
@@ -627,7 +628,7 @@ Element:      PushNS EmptyElemTag
 
 		}else if($2 == TAG){
 		  // Tags are added to the current record (tag with no given value!)
-		  int index = searchIndexByLabel(parser.labels, parser.current.label);
+		  int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
 		  if(index != LABEL_ERROR){
 		    if(parser.current.record != NULL){
 		      SNetRecAddTag(parser.current.record, index);
@@ -643,7 +644,7 @@ Element:      PushNS EmptyElemTag
 
 		}else if($2 == BTAG){
 		  // BTags are added to the current record (btag with no given value!)
-		  int index = searchIndexByLabel(parser.labels, parser.current.label);
+		  int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
 		  if(index != LABEL_ERROR){
 		    if(parser.current.record != NULL){
 		      SNetRecAddBTag(parser.current.record, index);
@@ -696,7 +697,7 @@ Element:      PushNS EmptyElemTag
 		    $$ = RECORD_TERMINATE;
 		  }else if(getState() == FIELD){
 		    // Fields are added to the current record
-		    int index = searchIndexByLabel(parser.labels, parser.current.label);
+		    int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
 		    if(index != LABEL_ERROR && parser.current.interface != INTERFACE_UNKNOWN){
 
 		      if(parser.current.record != NULL){
@@ -708,11 +709,14 @@ Element:      PushNS EmptyElemTag
 
 			  void *field = NULL;
 			  if(parser.current.mode == MODE_TEXTUAL){
-			    field = deserialize(parser.interfaces, parser.current.interface, $3);
+			    void *(*desfun)(char *) = SNetGetDeserializationFun(parser.current.interface);
+			    field = desfun($3);
 			  }else if(parser.current.mode == MODE_BINARY){
 			    yyerror("Deserialization of data in binary mode is not yet implemented!");
 			    //TODO: Does binary mode actually need separate function at all?
-			    field = deserialize(parser.interfaces, parser.current.interface, $3);
+
+			    void *(*desfun)(char *) = SNetGetDeserializationFun(parser.current.interface);
+			    field = desfun($3);
 			  }else{
 			    yyerror("Trying to deserialize data in unknown mode!");
 			  }
@@ -741,7 +745,7 @@ Element:      PushNS EmptyElemTag
 
 		  }else if(getState() == TAG){
 		    // Tags are added to the current record
- 		    int index = searchIndexByLabel(parser.labels, parser.current.label);
+ 		    int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
 		    if(index != LABEL_ERROR){
 		      if(parser.current.record != NULL){
 			SNetRecAddTag(parser.current.record, index);			
@@ -760,7 +764,7 @@ Element:      PushNS EmptyElemTag
 		    $$ = TAG;
 		  }else if(getState() == BTAG){
 		    // BTags are added to the current record
- 		    int index = searchIndexByLabel(parser.labels, parser.current.label);
+ 		    int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
 		    if(index != LABEL_ERROR){
 		      if(parser.current.record != NULL){
 			SNetRecAddBTag(parser.current.record, index);
@@ -804,7 +808,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 
 		//At data element only the mode is stored
 
-		if(STRcmp(name, SNET_NS_DATA) == 0 && getState() == ROOT){
+		if(strcmp(name, SNET_NS_DATA) == 0 && getState() == ROOT){
 
 
 		    /* These should not matter as the data element is empty
@@ -816,9 +820,9 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		    }
 		    
 		    if(at != NULL){
-		      if(STRcmp(at->value, TEXTUAL) == 0){
+		      if(strcmp(at->value, TEXTUAL) == 0){
 			parser.current.mode = MODE_TEXTUAL;
-		      }else if(STRcmp(at->value, BINARY) == 0){
+		      }else if(strcmp(at->value, BINARY) == 0){
 			parser.current.mode = MODE_BINARY;
 		      }else{
 			parser.current.mode = MODE_UNKNOWN;
@@ -833,7 +837,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  $$ = DATA;
 
 	        }//New record is created according to the type of the record:
-	        else if(STRcmp(name, SNET_NS_RECORD) == 0 && getState() == DATA){
+	        else if(strcmp(name, SNET_NS_RECORD) == 0 && getState() == DATA){
 		  
 		  attrib_t *at = searchAttribute($3, TYPE);
 		  
@@ -899,7 +903,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  }
 		  
 		}//Fields label is stored:
-	        else if(STRcmp(name,SNET_NS_FIELD) == 0 && getState() == RECORD_DATA){
+	        else if(strcmp(name,SNET_NS_FIELD) == 0 && getState() == RECORD_DATA){
 		  
 		  attrib_t *at = searchAttribute($3, LABEL);
 		  
@@ -927,7 +931,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  
 		  if(at != NULL){
 		    
-		    int interface = interfaceToId(parser.interfaces, at->value);
+		    int interface = SNetInInterfaceToId(parser.interfaces, at->value);
 		    if(interface != INTERFACE_UNKNOWN){ 
 		      parser.current.interface = interface;
 		    }else{
@@ -944,7 +948,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  $$ = FIELD;
 		  
 	        }//Tags label is stored:
-	        else if(STRcmp(name, SNET_NS_TAG) == 0 && getState() == RECORD_DATA){
+	        else if(strcmp(name, SNET_NS_TAG) == 0 && getState() == RECORD_DATA){
 
 		  attrib_t *at = searchAttribute($3, LABEL);
 		    
@@ -966,7 +970,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  $$ = TAG;
 
 	        }//BTags label is stored:
-	        else if(STRcmp(name,SNET_NS_BTAG) == 0 && getState() == RECORD_DATA){
+	        else if(strcmp(name,SNET_NS_BTAG) == 0 && getState() == RECORD_DATA){
 		  
 		  attrib_t *at = searchAttribute($3, LABEL);
 		  
@@ -1018,7 +1022,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		}
 		//At data element only the mode is stored
 
-                if(STRcmp(name, SNET_NS_DATA) == 0 && getState() == ROOT){
+                if(strcmp(name, SNET_NS_DATA) == 0 && getState() == ROOT){
 
 		  attrib_t *at = searchAttribute($3, MODE);
 		  
@@ -1027,9 +1031,9 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		  }
 		  
 		  if(at != NULL){
-		    if(STRcmp(at->value, TEXTUAL) == 0){
+		    if(strcmp(at->value, TEXTUAL) == 0){
 		      parser.current.mode = MODE_TEXTUAL;
-		    }else if(STRcmp(at->value, BINARY) == 0){
+		    }else if(strcmp(at->value, BINARY) == 0){
 		      parser.current.mode = MODE_BINARY;
 		    }else{
 		      parser.current.mode = MODE_UNKNOWN;
@@ -1042,7 +1046,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		  pushState(DATA);
 		  
 	        }//New record is created according to the type of the record: 
-	        else if(STRcmp(name, SNET_NS_RECORD) == 0 && getState() == DATA){
+	        else if(strcmp(name, SNET_NS_RECORD) == 0 && getState() == DATA){
 		  
 		  attrib_t *at = searchAttribute($3, TYPE);
 		  
@@ -1099,7 +1103,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		  }
 		  
 	        }//Fields label is stored:
-	        else if(STRcmp(name, SNET_NS_FIELD) == 0 && getState() == RECORD_DATA){
+	        else if(strcmp(name, SNET_NS_FIELD) == 0 && getState() == RECORD_DATA){
 		  attrib_t *at = searchAttribute($3, LABEL);
 		  
 		  if(parser.current.label != NULL){
@@ -1125,7 +1129,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		  
 		  if(at != NULL){
 		    
-		    int interface = interfaceToId(parser.interfaces, at->value);
+		    int interface = SNetInInterfaceToId(parser.interfaces, at->value);
 		    if(interface != INTERFACE_UNKNOWN){ 
 		      parser.current.interface = interface;
 		    }else{
@@ -1140,7 +1144,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		  pushState(FIELD);
 		  
 	        }//Tags label is stored:
-	        else if(STRcmp(name, SNET_NS_TAG) == 0 && getState() == RECORD_DATA){
+	        else if(strcmp(name, SNET_NS_TAG) == 0 && getState() == RECORD_DATA){
 		  attrib_t *at = searchAttribute($3, LABEL);
 		  
 		  if(parser.current.label != NULL){
@@ -1159,7 +1163,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 
 		  pushState(TAG);
 	        }
-	        else if(STRcmp(name, SNET_NS_BTAG) == 0 && getState() == RECORD_DATA){
+	        else if(strcmp(name, SNET_NS_BTAG) == 0 && getState() == RECORD_DATA){
 		  attrib_t *at = searchAttribute($3, LABEL);
 		  
 		  if(parser.current.label != NULL){
@@ -1201,7 +1205,7 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
               {  
          
 		//Default namespace
-		if(STRcmp($1, "xmlns") == 0){
+		if(strcmp($1, "xmlns") == 0){
 		  setDefaultNS($4);
 		  SNetMemFree($1);
 		  $$ = $6;
@@ -1222,7 +1226,7 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
             | NAME EQ DQUOTE DATTVAL DQUOTE Attributes 
               {  
 		//Default namespace
-		if(STRcmp($1, "xmlns") == 0){
+		if(strcmp($1, "xmlns") == 0){
 		  setDefaultNS($4);
 		  SNetMemFree($1);
 		  $$ = $6;
@@ -1300,19 +1304,7 @@ void yyerror(char *error)
   printf("\nParse error: %s\n", error);
 }
 
-
-void parserInit(snet_buffer_t *in_buf,
-		label_t *label,
-		interface_t *interfaces){
-
-  parser.buffer = in_buf;
-  parser.labels = label;
-  parser.interfaces = interfaces;
-
-  parserFlush();
-}  
-
-void parserFlush(){
+static void flush(){
 
   parser.current.mode = MODE_UNKNOWN;
 
@@ -1356,21 +1348,31 @@ void parserFlush(){
   parser.terminate = PARSE_CONTINUE;
 }
 
+void SNetInParserInit(snet_buffer_t *in_buf,
+		      snetin_label_t *label,
+		      snetin_interface_t *interfaces){
+  
+  parser.buffer = in_buf;
+  parser.labels = label;
+  parser.interfaces = interfaces;
+  
+  flush();
+}  
 
-int parserParse(){
-  parserFlush();
+int SNetInParserParse(){
+  flush();
   
   yyparse();
 
   int temp = parser.terminate;
 
-  parserFlush();
+  flush();
 
   return temp;
 }
 
-void parserDelete(){
-  parserFlush();
+void SNetInParserDestroy(){
+  flush();
 
   popState();
   

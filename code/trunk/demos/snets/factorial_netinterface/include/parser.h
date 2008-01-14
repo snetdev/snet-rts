@@ -23,15 +23,9 @@
  * @notice parserInit should be the first call to the parser!
  */
 
-extern void parserInit(snet_buffer_t *in_buf,
-		       label_t *label,
-		       interface_t *interfaces);
-
-
-/* Flush all data in parser. 
- */
-
-extern void parserFlush();
+extern void SNetInParserInit(snet_buffer_t *in_buf,
+			     snetin_label_t *label,
+			     snetin_interface_t *interfaces);
 
 
 /* Parse the next data element from standard input stream 
@@ -43,7 +37,7 @@ extern void parserFlush();
  * @notice parserInit() MUST be called before the first call to parserParse()! 
  */
 
-extern int parserParse();
+extern int SNetInParserParse();
 
 
 /* Delete the parser and all data stored by it.
@@ -52,6 +46,6 @@ extern int parserParse();
  *         to unexpected results!
  */
 
-extern void parserDelete();
+extern void SNetInParserDestroy();
 
 #endif /* PR_H_ */

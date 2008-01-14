@@ -21,7 +21,7 @@
 #define INTERFACE_UNKNOWN -1
 
 /* Struct to store the interface names and (de)serialization functions */
-typedef struct interface interface_t;
+typedef struct interface snetin_interface_t;
 
 
 /* Init interface structure. 
@@ -38,10 +38,9 @@ typedef struct interface interface_t;
  *         arrays.
  */
 
-interface_t *initInterfaces(const char *const *names, 
-			    char *(*const* serialize_fun)(const void *), 
-			    void *(*const* deserialize_fun)(const char*),
-			    int len);
+snetin_interface_t *SNetInInterfaceInit(const char *const *names, 
+					//	void *(*const* deserialize_fun)(const char*),
+					int len);
 
 /* Free memory allocated to interface structure. 
  *
@@ -52,7 +51,7 @@ interface_t *initInterfaces(const char *const *names,
  *
  */
 
-void deleteInterfaces(interface_t *interfaces);
+void SNetInInterfaceDestroy(snetin_interface_t *interfaces);
 
 
 /* Maps textual language interface names to interface IDs.
@@ -65,7 +64,7 @@ void deleteInterfaces(interface_t *interfaces);
  *
  */
 
-int interfaceToId(const interface_t *interfaces, const char *interface);
+int SNetInInterfaceToId(const snetin_interface_t *interfaces, const char *interface);
 
 /* Maps language interface IDs to textual interface names.
  *
@@ -77,21 +76,7 @@ int interfaceToId(const interface_t *interfaces, const char *interface);
  *
  */
 
-const char *idToInterface(const interface_t *interfaces, int id);
-
-/* Serializes given data with serialization function corresponding to the
- * interface id.
- *
- * @param interfaces Interfaces to use
- * @param id ID of the interface the data uses
- * @param value Data to be serialized
- *
- * @return Serialized data.
- * @return NULL, if no serialization function was found. 
- *
- */
-
-char *serialize(const interface_t *interfaces, int id, const void *value);
+const char *SNetInIdToInterface(const snetin_interface_t *interfaces, int id);
 
 /* Serializes given data with serialization function corresponding to the
  * interface id.
@@ -105,6 +90,6 @@ char *serialize(const interface_t *interfaces, int id, const void *value);
  *
  */
 
-void *deserialize(const interface_t *interfaces, int id, const char *value);
+//void *SNetInDeserializeData(const snetin_interface_t *interfaces, int id, const char *value);
 
 #endif /* INTERFACE_H_ */

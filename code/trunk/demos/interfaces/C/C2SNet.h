@@ -7,6 +7,8 @@ typedef struct cdata {
  void *data;
  void (*freefun)( void*);
  void* (*copyfun)( void*);
+ char* (*serfun)( void*);
+
 } C_Data;
 
 
@@ -17,6 +19,8 @@ void C2SNet_outRaw( void *hnd, int variant, ...);
 
 void C2SNet_free( void *ptr);
 void *C2SNet_copy( void *ptr);
+char *C2SNet_serialize( void *ptr);
+void *C2SNet_deserialize( char *ptr);
 
 /* ************************************************************************* */
 
@@ -24,11 +28,13 @@ void *C2SNet_copy( void *ptr);
 
 C_Data *C2SNet_cdataCreate( void *data, 
 		     	    void (*freefun)( void*),
-		     	    void* (*copyfun)( void*));
+		     	    void* (*copyfun)( void*),
+			    char* (*serfun)( void*));
 
 void *C2SNet_cdataGetData( C_Data *c);
 void *C2SNet_cdataGetCopyFun( C_Data *c);
 void *C2SNet_cdataGetFreeFun( C_Data *c);
+void *C2SNet_cdataGetSerFun( C_Data *c);
 
 /* ************************************************************************* */
 

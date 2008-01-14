@@ -74,15 +74,35 @@ void *C2SNet_copy( void *ptr)
   new = SNetMemAlloc( sizeof( C_Data));
   new->copyfun = ((C_Data*)ptr)->copyfun;
   new->freefun = ((C_Data*)ptr)->freefun;
+  new->serfun = ((C_Data*)ptr)->serfun;
   new->data = copyfun( ((C_Data*)ptr)->data);
 
   return( new);
 }
 
+char *C2SNet_serialize( void *ptr)
+{
+  char *ser = NULL;;
+  char* (*serfun)(void*) = ((C_Data*)ptr)->serfun;
+
+  ser = serfun( ((C_Data*)ptr)->data);
+
+  return( ser);
+}
+
+void *C2SNet_deserialize(char *ptr)
+{
+  void *deser = NULL;;
+
+  /* TODO: Deserialization function */
+
+  return(deser);
+}
+
 void C2SNet_init( int id)
 {
   my_interface_id = id;
-  SNetGlobalRegisterInterface( id, &C2SNet_free, &C2SNet_copy);  
+  SNetGlobalRegisterInterface( id, &C2SNet_free, &C2SNet_copy, &C2SNet_serialize, &C2SNet_deserialize);  
 }
 
 
@@ -90,8 +110,9 @@ void C2SNet_init( int id)
 /* ************************************************************************* */
 
 C_Data *C2SNet_cdataCreate( void *data, 
-		                        void (*freefun)( void*),
-                   		      void* (*copyfun)( void*))
+			    void (*freefun)( void*),
+			    void* (*copyfun)( void*),
+			    char* (*serfun)( void*))			    
 {
   C_Data *c;
 
@@ -99,6 +120,7 @@ C_Data *C2SNet_cdataCreate( void *data,
   c->data = data;
   c->freefun = freefun;
   c->copyfun = copyfun;
+  c->serfun = serfun;
 
   return( c);
 }
@@ -117,6 +139,13 @@ void *C2SNet_cdataGetFreeFun( C_Data *c)
 { 
   return( c->freefun);
 }
+
+void *C2SNet_cdataGetSerializationFun( C_Data *c)
+{ 
+  return( c->serfun);
+}
+
+
 
 /* ************************************************************************* */
 

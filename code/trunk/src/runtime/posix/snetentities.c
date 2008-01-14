@@ -34,6 +34,8 @@ typedef struct {
  int id;
  void (*freefun)( void*);
  void* (*copyfun)( void*);
+ char* (*serfun)( void*);
+ void* (*deserfun)( char*);
 } snet_global_interface_functions_t;
 
 typedef struct {
@@ -63,6 +65,28 @@ static void *GetCopyFun( snet_global_interface_functions_t *f)
 static void *GetFreeFun( snet_global_interface_functions_t *f)
 {
   return( f->freefun);
+}
+
+static void SetSerializationFun( snet_global_interface_functions_t *f,
+				 char* (*serfun)( void*))
+{
+  f->serfun = serfun;
+}
+
+static void *GetSerializationFun( snet_global_interface_functions_t *f)
+{
+  return( f->serfun);
+}
+
+static void SetDeserializationFun( snet_global_interface_functions_t *f,
+				   void* (*deserfun)( char*))
+{
+  f->deserfun = deserfun;
+}
+
+static void *GetDeserializationFun( snet_global_interface_functions_t *f)
+{
+  return( f->deserfun);
 }
 
 static void SetId( snet_global_interface_functions_t *f, int id)
@@ -134,7 +158,9 @@ extern bool SNetGlobalInitialise()
 extern bool 
 SNetGlobalRegisterInterface( int id, 
                              void (*freefun)( void*),
-                             void* (*copyfun)( void*)) 
+                             void* (*copyfun)( void*), 
+                             char *(*serfun)( void*),
+                             void* (*deserfun)( char*)) 
 {
   int num; 
   snet_global_interface_functions_t *new_if;
@@ -150,7 +176,9 @@ SNetGlobalRegisterInterface( int id,
     new_if = SNetMemAlloc( sizeof( snet_global_interface_functions_t));  
     SetId( new_if, id);
     SetFreeFun( new_if, freefun);
-    SetCopyFun( new_if, copyfun);   
+    SetCopyFun( new_if, copyfun);  
+    SetSerializationFun( new_if, serfun);
+    SetDeserializationFun( new_if, deserfun);   
     snet_global->interface[num] = new_if;
     snet_global->num += 1;
   }
@@ -176,6 +204,26 @@ extern void *SNetGetCopyFun( int id)
 extern void *SNetGetFreeFun( int id) 
 {
   return( GetFreeFun( GetInterface( id)));
+}
+
+extern void *SNetGetSerializationFunFromRec( snet_record_t *rec) 
+{
+  return( GetSerializationFun( GetInterface( SNetRecGetInterfaceId( rec))));
+}
+
+extern void *SNetGetSerializationFun( int id) 
+{
+  return( GetSerializationFun( GetInterface( id)));
+}
+
+extern void *SNetGetDeserializationFunFromRec( snet_record_t *rec) 
+{
+  return( GetDeserializationFun( GetInterface( SNetRecGetInterfaceId( rec))));
+}
+
+extern void *SNetGetDeserializationFun( int id) 
+{
+  return( GetDeserializationFun( GetInterface( id)));
 }
 
 /* END -- GLOBALS                                                            */

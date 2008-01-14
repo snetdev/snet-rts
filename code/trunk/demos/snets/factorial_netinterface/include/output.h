@@ -30,7 +30,7 @@
  *
  */
 
-void initOutput(label_t *labels, interface_t *interfaces);
+void SNetInOutputInit(snetin_label_t *labels, snetin_interface_t *interfaces);
 
 
 /* Start output system.
@@ -41,16 +41,16 @@ void initOutput(label_t *labels, interface_t *interfaces);
  * @return -1 Error occured while starting the system.
  *
  */
-int startOutput(snet_buffer_t *in_buf);
+int SNetInOutputBegin(snet_buffer_t *in_buf);
 
 
-/* Stop the output system.
+/* Wait until stop of the output system.
  *
  * @return 0   Action is succesful.
  * @return -1 Error occured while stopping the system.
  *
  */
-int blockUntilEndOfOutput();
+int SNetInOutputBlockUntilEnd();
 
 
 #endif /* OUTPUT_H_ */

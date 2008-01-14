@@ -17,6 +17,7 @@
 
 #include <label.h>
 #include <str.h>
+#include <string.h>
 #include <pthread.h>
 #include <memfun.h>
 
@@ -42,8 +43,8 @@ struct label{
   temp_label_t *temp_labels; /* temporary labels */
 };
 
-label_t *initLabels(const char *const *labels, int len){
-  label_t *temp = SNetMemAlloc(sizeof(label_t));
+snetin_label_t *SNetInLabelInit(const char *const *labels, int len){
+  snetin_label_t *temp = SNetMemAlloc(sizeof(snetin_label_t));
   temp->labels = labels;
   temp->number_of_labels = len;
   pthread_mutex_init(&temp->mutex, NULL);
@@ -52,7 +53,7 @@ label_t *initLabels(const char *const *labels, int len){
   return temp;
 }
 
-void deleteLabels(label_t *labels){
+void SNetInLabelDestroy(snetin_label_t *labels){
   pthread_mutex_destroy(&labels->mutex);
 
   //remove are temporary labels
@@ -64,26 +65,26 @@ void deleteLabels(label_t *labels){
   SNetMemFree(labels);
 }
 
-int searchIndexByLabel(label_t *labels, const char *label){
+int SNetInSearchIndexByLabel(snetin_label_t *labels, const char *label){
   int i = 0;
   int index = LABEL_ERROR;
   if(label == NULL || labels == NULL){
     return index;
   }
-
+  
   //search static labels
   for(i = 0; i < labels->number_of_labels; i++) {
-    if(STRcmp(labels->labels[i], label) == 0) {
+    if(strcmp(labels->labels[i], label) == 0) {
       return i;
     }
   }
-
+  
   //search temporary labels
   pthread_mutex_lock(&labels->mutex);
 
   temp_label_t *templabel = labels->temp_labels;
   while(templabel != NULL){
-    if(STRcmp(templabel->label, label) == 0) {
+    if(strcmp(templabel->label, label) == 0) {
       templabel->ref_count++;
       index = templabel->index;
       
@@ -103,7 +104,7 @@ int searchIndexByLabel(label_t *labels, const char *label){
   else{
     new_label->index = labels->temp_labels->index + 1;
   }
-
+  
   new_label->next = labels->temp_labels;
   labels->temp_labels = new_label;
 
@@ -115,7 +116,7 @@ int searchIndexByLabel(label_t *labels, const char *label){
   return index;
 }
 
-char *searchLabelByIndex(label_t *labels, int i){
+char *SNetInSearchLabelByIndex(snetin_label_t *labels, int i){
   if(labels == NULL || i < 0){
     return NULL;
   }

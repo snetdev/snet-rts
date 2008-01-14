@@ -15,7 +15,7 @@ void *sub( void *hnd, C_Data *x)
   *int_x= *(int*)C2SNet_cdataGetData( x);
   *int_x -= 1;
 
-  result = C2SNet_cdataCreate( int_x, &myfree, &mycopy);
+  result = C2SNet_cdataCreate( int_x, &myfree, &mycopyInt,  &myserializeInt);
 
   c = C2SNet_containerCreate( hnd, 1);
   C2SNet_containerSetField( c, result);

@@ -24,10 +24,6 @@ char *STRcpy(const char *text){
   return strcpy(t, text);
 }
 
-int STRcmp(const char *a, const char *b){
-  return strcmp(a, b);
-}
-
 char *STRcat(const char *a, const char *b){
   char *t = SNetMemAlloc(sizeof(char) * (strlen(a) + strlen(b) + 1));
   strcpy(t, a);
