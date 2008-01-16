@@ -50,13 +50,18 @@ static void printRec(snet_record_t *rec)
 
 	 int id = SNetRecGetInterfaceId(rec);
 
-	 char *(*fun)(void *) = SNetGetSerializationFun(id);
+	 int (*fun)(void *, char **) = SNetGetSerializationFun(id);
 
-	 data = fun(SNetRecGetField(rec, i));
+	 int len = fun(SNetRecGetField(rec, i), &data);
 
 	 if((label = SNetInSearchLabelByIndex(output.labels, i)) != NULL){
-	   printf("<field label=\"%s\" interface=\"%s\">%s</field>", label, 
-	   	  SNetInIdToInterface(output.interfaces, id), data);
+	   int l = 0;
+	   printf("<field label=\"%s\" interface=\"%s\">", label, 
+	   	  SNetInIdToInterface(output.interfaces, id));
+	   for(l = 0; l < len; l++){
+	     putchar(data[l]);
+	   }
+	   printf("</field>");
 	 }else{
 	   // TODO: Error, unknown field!
 	 }

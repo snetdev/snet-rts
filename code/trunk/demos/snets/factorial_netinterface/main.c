@@ -1,7 +1,7 @@
 /*** THIS NEEDS TO BE GENERATED (directly to factorial.h ?) ***/
 // TODO: Better names for global variables!
 
-#include <myfuns.h>
+#include "myfuns.h"
 
 #define NUMBER_OF_LABELS 6
 
@@ -14,10 +14,6 @@ const char *const snet_static_labels[NUMBER_OF_LABELS] = {"F_none"         , "F_
                                                   
 const char *const snet_language_interfaces[NUMBER_OF_INTERFACES] = {"C2SNet"};
 
-// This could also be added to the language interface init call
-// or kept out of language interface as now. Including would probably be better
-// as not all interfaces need to have separate function.
-//void *(* const snet_deserialization_funcs[NUMBER_OF_INTERFACES])(const char*) = {mydeserialize};
 
 /**************************************************************/
 
@@ -71,15 +67,15 @@ int main(int argc, char* argv[])
   int inBufSize = 10;
   snetin_label_t *labels = SNetInLabelInit(snet_static_labels, NUMBER_OF_LABELS);
   snetin_interface_t *interfaces = SNetInInterfaceInit(snet_language_interfaces, 
-						       //snet_deserialization_funcs, 
-							NUMBER_OF_INTERFACES);
+						       NUMBER_OF_INTERFACES);
+
   snet_buffer_t *in_buf = SNetBufCreate(inBufSize);
   snet_buffer_t *out_buf = NULL;
 
   SNetGlobalInitialise();
 
   /*** THIS NEEDS TO BE GENERATED */
-  C2SNet_init(INTERFACE_C2SNET);
+  C2SNet_init(INTERFACE_C2SNET, mydeserialize);
 
   out_buf = SNet__factorial___factorial(in_buf);
   /********************************/

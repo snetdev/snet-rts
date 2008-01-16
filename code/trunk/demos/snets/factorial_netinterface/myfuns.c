@@ -31,50 +31,54 @@ void *mycopyInt( void *ptr)
 }
 
 
-char *myserializeChar(void* value){
-  return mycopyChar((char *)value);
+int myserializeChar(void* value, char **data){
+  *data = (char *)mycopyChar(value);
+  
+  return strlen(*data);
 }
 
 #define SER_BUF_SIZE 32
 
-char *myserializeInt(void* value){
+int myserializeInt(void* value, char **data){
   int i = 1;
-  char *c = NULL;
   int ret = -1;
+    if(*data != NULL){
+      free(*data);
+    }
+    *data = NULL;
+
 
   if(value == NULL){
-    return NULL;
+    return 0;
   }
 
   do{
-    if(c != NULL){
-      free(c);
-      c = NULL;
+    if(*data != NULL){
+      free(*data);
+      *data = NULL;
       i++;
     }
-    c = (char *)malloc(sizeof(char) * SER_BUF_SIZE * i);
-    ret = snprintf(c, SER_BUF_SIZE * i, "int:%d", *((int *)value));
+    *data = (char *)malloc(sizeof(char) * SER_BUF_SIZE * i);
+    ret = snprintf(*data, SER_BUF_SIZE * i, "int:%d", *((int *)value));
   }while(ret <= 0 || ret >= SER_BUF_SIZE * i);
-  
-  return c;
+
+  return ret;
 }
 
 #undef SER_BUF_SIZE
 
-void *mydeserialize(char* value){
-  C_Data *field = NULL;
+void *mydeserialize(char* value, int len){
   if(value != NULL){
-
-
-    if(strncmp(value, "int:", 4) == 0){
+    /* int */
+    if(len > 4 && strncmp(value, "int:", 4) == 0){
       int *i = (int *)malloc(sizeof( int));
       *i = atoi(value + 4);
-      field = C2SNet_cdataCreate((void *)i, myfree, mycopyInt, myserializeInt);
-    }else{
-      field = C2SNet_cdataCreate(mycopyChar((void *)value), myfree, 
-				 mycopyChar, myserializeChar);
+      return (void *)C2SNet_cdataCreate((void *)i, myfree, 
+					mycopyInt, myserializeInt);
     }
   }
-  return (void *)field;
+  /* char or unknown */
+  return (void *)C2SNet_cdataCreate(mycopyChar((void *)value), myfree, 
+				    mycopyChar, myserializeChar);
 }
 

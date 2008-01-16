@@ -20,26 +20,20 @@
 
 #define INTERFACE_UNKNOWN -1
 
-/* Struct to store the interface names and (de)serialization functions */
+/* Struct to store the interface names */
 typedef struct interface snetin_interface_t;
 
 
 /* Init interface structure. 
  *
  * @param names Textual names of the interfaces.
- * @param serialize_fun Array of serialization functions. One per interface.
- * @param deserialize_fun Array of deserialization functions. One per interface.
- * @param len Length of the parameter arrays.
+ * @param len Length of the parameter array.
  *
  * @return Initiated interface structure.
  *
- * @notice All the parameter arrays have to be of equal length and the
- *         interface name and the functions must have the same index in the
- *         arrays.
  */
 
 snetin_interface_t *SNetInInterfaceInit(const char *const *names, 
-					//	void *(*const* deserialize_fun)(const char*),
 					int len);
 
 /* Free memory allocated to interface structure. 
@@ -77,19 +71,5 @@ int SNetInInterfaceToId(const snetin_interface_t *interfaces, const char *interf
  */
 
 const char *SNetInIdToInterface(const snetin_interface_t *interfaces, int id);
-
-/* Serializes given data with serialization function corresponding to the
- * interface id.
- *
- * @param interfaces Interfaces to use
- * @param id ID of the interface the data uses
- * @param value Data to be deserialized
- *
- * @return deserialized data. Depends on language deserialization function.
- * @return NULL, if no deserialization function was found. 
- *
- */
-
-//void *SNetInDeserializeData(const snetin_interface_t *interfaces, int id, const char *value);
 
 #endif /* INTERFACE_H_ */

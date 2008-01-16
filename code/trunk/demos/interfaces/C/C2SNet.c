@@ -80,29 +80,26 @@ void *C2SNet_copy( void *ptr)
   return( new);
 }
 
-char *C2SNet_serialize( void *ptr)
+int C2SNet_serialize(void *ptr, char **serialized)
 {
-  char *ser = NULL;;
-  char* (*serfun)(void*) = ((C_Data*)ptr)->serfun;
+  int (*serfun)(void*, char **) = ((C_Data*)ptr)->serfun;
 
-  ser = serfun( ((C_Data*)ptr)->data);
-
-  return( ser);
+  return( serfun( ((C_Data*)ptr)->data, serialized) );
 }
 
-void *C2SNet_deserialize(char *ptr)
+void *C2SNet_deserialize(char *ptr, int len)
 {
-  void *deser = NULL;;
+  void *(*fun)(char **, int) = SNetGetDeserializationFun(my_interface_id);
 
-  /* TODO: Deserialization function */
-
-  return(deser);
+  return fun(((C_Data*)ptr)->data, len);
 }
-
-void C2SNet_init( int id)
+ 
+void C2SNet_init( int id, void *(*deserialization_fun)(char *, int))
 {
   my_interface_id = id;
-  SNetGlobalRegisterInterface( id, &C2SNet_free, &C2SNet_copy, &C2SNet_serialize, &C2SNet_deserialize);  
+  SNetGlobalRegisterInterface( id, &C2SNet_free, &C2SNet_copy,
+			       &C2SNet_serialize, 
+			       deserialization_fun);  
 }
 
 
@@ -112,7 +109,7 @@ void C2SNet_init( int id)
 C_Data *C2SNet_cdataCreate( void *data, 
 			    void (*freefun)( void*),
 			    void* (*copyfun)( void*),
-			    char* (*serfun)( void*))			    
+			    int (*serfun)( void*, char **))			    
 {
   C_Data *c;
 

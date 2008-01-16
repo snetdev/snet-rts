@@ -4,8 +4,8 @@
 void myfree( void *ptr);
 void *mycopyChar( void *ptr);
 void *mycopyInt( void *ptr);
-char *myserializeChar(void* value);
-char *myserializeInt(void* value);
-void *mydeserialize(char* value);
+int myserializeChar(void* value, char **serialized);
+int myserializeInt(void* value, char **serialized);
+void *mydeserialize(char* value, int len);
 
 #endif

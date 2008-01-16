@@ -19,8 +19,8 @@ extern bool
 SNetGlobalRegisterInterface( int id, 
                              void (*freefun)( void*),
                              void* (*copyfun)( void*),
-			     char *(*serfun)( void*),
-                             void* (*deserfun)( char*));
+			     int (*serfun)( void*, char **),
+                             void* (*deserfun)( char*, int));
 
 
 extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...);

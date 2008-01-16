@@ -595,13 +595,13 @@ Element:      PushNS EmptyElemTag
 			void *field = NULL;
 
 			if(parser.current.mode == MODE_TEXTUAL){
-			  void *(*desfun)(char *) = SNetGetDeserializationFun(parser.current.interface);
-			  field = desfun(NULL);
+			  void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
+			  field = desfun(NULL, 0);
 			}else if(parser.current.mode == MODE_BINARY){
 			  yyerror("Deserialization of data in binary mode is not yet implemented!");
 			  //TODO: Does binary mode actually need separate function at all?
-			  void *(*desfun)(char *) = SNetGetDeserializationFun(parser.current.interface);
-			  field = desfun(NULL);
+			  void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
+			  field = desfun(NULL, 0);
 			}else{
 			  yyerror("Trying to deserialize data in unknown mode!");
 			}
@@ -709,14 +709,14 @@ Element:      PushNS EmptyElemTag
 
 			  void *field = NULL;
 			  if(parser.current.mode == MODE_TEXTUAL){
-			    void *(*desfun)(char *) = SNetGetDeserializationFun(parser.current.interface);
-			    field = desfun($3);
+			    void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
+			    field = desfun($3, strlen($3));
 			  }else if(parser.current.mode == MODE_BINARY){
 			    yyerror("Deserialization of data in binary mode is not yet implemented!");
 			    //TODO: Does binary mode actually need separate function at all?
 
-			    void *(*desfun)(char *) = SNetGetDeserializationFun(parser.current.interface);
-			    field = desfun($3);
+			    void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
+			    field = desfun($3, strlen($3));
 			  }else{
 			    yyerror("Trying to deserialize data in unknown mode!");
 			  }

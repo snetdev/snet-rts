@@ -19,21 +19,18 @@
 #include <string.h>
 #include <memfun.h>
 
-/* Struct to store the interface names and (de)serialization functions */
+/* Struct to store the interface names */
 struct interface{
   const char *const *names;
-  //void *(*const* deserialize_fun)(const char*); 
   int len;
 };
 
 
 snetin_interface_t *SNetInInterfaceInit(const char *const *names, 
-					//void *(*const *deserialize_fun)(const char*),
-					 int len){
+					int len){
 
   snetin_interface_t *temp = SNetMemAlloc(sizeof(snetin_interface_t));
   temp->names = names;
-  //temp->deserialize_fun = deserialize_fun;
   temp->len = len;
   return temp;
 }
@@ -61,11 +58,3 @@ const char *SNetInIdToInterface(const snetin_interface_t *interfaces, int id){
   }
   return interfaces->names[id];
 }
-/*
-void *SNetInDeserializeData(const snetin_interface_t *interfaces, int id, const char *value){
-  if(interfaces == NULL || id < 0 || id >= interfaces->len){
-    return NULL;
-  }
-  return interfaces->deserialize_fun[id](value);
-}
-*/
