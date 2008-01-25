@@ -155,7 +155,7 @@ opt             =
 
 postproc        = ptypcln.o ptran.o netren.o netflat.o
 
-codegen         = codegen.o codefile.o
+codegen         = codegen.o codefile.o cchoice.o cexpr.o cfilt.o cserial.o cshield.o csplit.o cstar.o csync.o ctext.o ctrans.o cwrap.o
 
 invokecc        = invokecc.o
 
