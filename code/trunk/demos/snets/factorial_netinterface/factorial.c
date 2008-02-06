@@ -12,6 +12,7 @@
 */
 
 #include "factorial.h"
+#include "graphics.h"
 #include "leq1.h"
 #include "condif.h"
 
@@ -81,7 +82,7 @@ snet_buffer_t *SNet__factorial___factorial(snet_buffer_t *in_buf) {
   out_buf = SNetSerial(in_buf, 
               &SNet__factorial___SL, 
               &SNet__factorial___SR);
-	    
+
   return (out_buf);
 }
 

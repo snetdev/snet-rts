@@ -37,13 +37,13 @@ typedef struct temp_label{
 
 /* Struct to store the static and current temporary names */
 struct label{
-  const char *const *labels; /* static labels*/
+  char **labels; /* static labels*/
   int number_of_labels;      /* number of static labels*/
   pthread_mutex_t mutex;     /* mutex for access control to temporary labels */
   temp_label_t *temp_labels; /* temporary labels */
 };
 
-snetin_label_t *SNetInLabelInit(const char *const *labels, int len){
+snetin_label_t *SNetInLabelInit(char **labels, int len){
   snetin_label_t *temp = SNetMemAlloc(sizeof(snetin_label_t));
   temp->labels = labels;
   temp->number_of_labels = len;

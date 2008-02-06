@@ -33,7 +33,7 @@ typedef struct interface snetin_interface_t;
  *
  */
 
-snetin_interface_t *SNetInInterfaceInit(const char *const *names, 
+snetin_interface_t *SNetInInterfaceInit(char **names, 
 					int len);
 
 /* Free memory allocated to interface structure. 

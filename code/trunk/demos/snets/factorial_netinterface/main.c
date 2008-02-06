@@ -3,16 +3,11 @@
 
 #include "myfuns.h"
 
-#define NUMBER_OF_LABELS 6
+#define SNET__factorial__NUMBER_OF_INTERFACES 1
 
-const char *const snet_static_labels[NUMBER_OF_LABELS] = {"F_none"         , "F__factorial__x", 
-							  "F__factorial__p", "T__factorial__T",
-							  "T__factorial__F", "T__factorial__stop"};
-#define NUMBER_OF_INTERFACES 1
-
-#define INTERFACE_C2SNET     0
+#define I__factorial__C2SNET 0
                                                   
-const char *const snet_language_interfaces[NUMBER_OF_INTERFACES] = {"C2SNet"};
+char *snet_factorial_interfaces[SNET__factorial__NUMBER_OF_INTERFACES] = {"C2SNet"};
 
 
 /**************************************************************/
@@ -65,9 +60,12 @@ int main(int argc, char* argv[])
   /** initialize **/
 
   int inBufSize = 10;
-  snetin_label_t *labels = SNetInLabelInit(snet_static_labels, NUMBER_OF_LABELS);
-  snetin_interface_t *interfaces = SNetInInterfaceInit(snet_language_interfaces, 
-						       NUMBER_OF_INTERFACES);
+
+  /*** THIS NEEDS TO BE GENERATED */                              
+  snetin_label_t *labels = SNetInLabelInit(snet_factorial_labels, SNET__factorial__NUMBER_OF_LABELS);
+  snetin_interface_t *interfaces = SNetInInterfaceInit(snet_factorial_interfaces, 
+						       SNET__factorial__NUMBER_OF_INTERFACES);
+  /********************************/
 
   snet_buffer_t *in_buf = SNetBufCreate(inBufSize);
   snet_buffer_t *out_buf = NULL;
@@ -75,7 +73,7 @@ int main(int argc, char* argv[])
   SNetGlobalInitialise();
 
   /*** THIS NEEDS TO BE GENERATED */
-  C2SNet_init(INTERFACE_C2SNET, mydeserialize);
+  C2SNet_init(I__factorial__C2SNET, mydeserialize);
 
   out_buf = SNet__factorial___factorial(in_buf);
   /********************************/

@@ -32,7 +32,7 @@ typedef struct label snetin_label_t;
  *
  */
 
-extern snetin_label_t *SNetInLabelInit(const char *const *static_labels, int len);
+extern snetin_label_t *SNetInLabelInit(char **static_labels, int len);
 
 /* Free memory used in label structure.
  *
