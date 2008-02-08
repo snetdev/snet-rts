@@ -17,7 +17,7 @@
 // This is a test comment line 
 
 box bodytest ((A)->(B)) {
-  <<< C /* | just a test */ | 
+  <<< C | 
         /* This is a code part of box */
         // This is a test comment line inside code
         int i;

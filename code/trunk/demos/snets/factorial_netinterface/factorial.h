@@ -24,12 +24,7 @@
 
 #define SNET__factorial__NUMBER_OF_LABELS 5
 
-char *snet_factorial_labels[] = {
-	"E__factorial__None",
-	"F__factorial__x",
-	"F__factorial__p",
-	"T__factorial__T",
-	"T__factorial__F"};
+extern char *snet_factorial_labels[];
 
 extern snet_buffer_t *SNet__factorial___factorial(snet_buffer_t *in_buf);
 

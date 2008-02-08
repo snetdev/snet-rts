@@ -1,3 +1,18 @@
+<?xml version="1.0"?>
+<metadata xmlns="snet.feis.herts.ac.uk" >
+  <box name="factorial/leq1" >
+     <observer type="both" />
+  </box>
+  <box name="factorial/condif" >
+     <observer type="before" />
+     <observer type="after" />
+  </box>
+  <net name="factorial" >
+     <observer type="before" />
+     <observer type="after" />
+  </net>
+</metadata>
+
 net factorial
 {
         box leq1( (x) -> (x,p));

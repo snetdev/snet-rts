@@ -51,6 +51,7 @@ char *snet_factorial_interfaces[SNET__factorial__NUMBER_OF_INTERFACES] = {"C2SNe
 #include "interface.h"
 #include "output.h"
 
+#include <graphics.h>
 #include "factorial.h"
 #include <C2SNet.h>
 #include <stdio.h>
@@ -71,6 +72,7 @@ int main(int argc, char* argv[])
   snet_buffer_t *out_buf = NULL;
 
   SNetGlobalInitialise();
+  SNetInitGraphicalSystem();
 
   /*** THIS NEEDS TO BE GENERATED */
   C2SNet_init(I__factorial__C2SNET, mydeserialize);

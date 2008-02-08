@@ -34,7 +34,7 @@ net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
 }
 connect compA || compB || compC;
 
-net failingmetadatatest {
+net failing_metadatatest {
 
     <?xml version="1.0"?>
     <snet:metadata >
