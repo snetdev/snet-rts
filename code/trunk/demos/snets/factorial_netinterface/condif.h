@@ -1,5 +1,5 @@
-#ifndef _mult_h_
-#define _mult_h_
+#ifndef _condif_h_
+#define _condif_h_
 
 #include <C2SNet.h>
 
