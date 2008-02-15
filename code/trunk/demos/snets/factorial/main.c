@@ -16,7 +16,7 @@
 #define __PRINT_RECORD( NAME, FREE)\
      printf("\n - %2d fields: ", SNetRecGetNumFields( NAME));\
     for( k=0; k<SNetRecGetNumFields( NAME); k++) {\
-      printf(" %s=%d ", names[ SNetRecGetFieldNames( NAME)[k] ],\
+      printf(" %s=%d ", snet_factorial_labels[ SNetRecGetFieldNames( NAME)[k] ],\
                         *((int*)C2SNet_cdataGetData( SNetRecGetField( NAME, SNetRecGetFieldNames( NAME)[k]))));\
       if( FREE) {\
         SNetMemFree( SNetRecGetField( NAME, SNetRecGetFieldNames( NAME)[k]));\
@@ -24,45 +24,22 @@
     }\
     printf("\n - %2d tags  : ", SNetRecGetNumTags( NAME));\
     for( k=0; k<SNetRecGetNumTags( NAME); k++) {\
-      printf(" %s=%d ", names[ SNetRecGetTagNames( NAME)[k] ],\
+      printf(" %s=%d ", snet_factorial_labels[ SNetRecGetTagNames( NAME)[k] ],\
                                SNetRecGetTag( NAME, SNetRecGetTagNames( NAME)[k]));\
     }\
     printf("\n - %2d btags : ", SNetRecGetNumBTags( NAME));\
     for( k=0; k<SNetRecGetNumBTags( NAME); k++) {\
-      printf(" %s=%d ", names [ SNetRecGetBTagNames( NAME)[k] ],\
+      printf(" %s=%d ", snet_factorial_labels[ SNetRecGetBTagNames( NAME)[k] ],\
                         (int)SNetRecGetBTag( NAME, SNetRecGetBTagNames( NAME)[k]));\
     }
     
-#define NUM_NAMES 14
-
 char **names;
 
 void initialise() {
 
   SNetGlobalInitialise();
-  C2SNet_init( 0);
-
-  names = SNetMemAlloc( NUM_NAMES * sizeof( char*));
-  
-  names[0] = "F_none";
-  names[1] = "F_x";
-  names[2] = "F_p";
-  names[3] = "F_xx";
-  names[4] = "F_r";
-  names[5] = "F_rr";
-  names[6] = "T_T";
-  names[7] = "T_F";
-  names[8] = "T_stop";
-  names[9] = "T_ofl";
-  names[10] = "T_stop";
-  names[11] = "F_z";
-  names[12] = "T_s";
-  names[13] = "BT_tst";
- 
+  C2SNet_init( 0, NULL); 
 }
-#define F_x 1
-#define F_r 4
-#define F_z 99
 
 int main() {
 
@@ -84,37 +61,37 @@ int main() {
 
   enc1 = SNetTencTypeEncode( 1, 
           SNetTencVariantEncode( 
-            SNetTencCreateVector( 2, F_x, F_r), 
+            SNetTencCreateVector( 2, F__factorial__x, F__factorial__r), 
             SNetTencCreateVector( 0), 
             SNetTencCreateVector( 0)));
 
   enc2 = SNetTencTypeEncode( 1, 
           SNetTencVariantEncode( 
-            SNetTencCreateVector( 2, F_x, F_r), 
+            SNetTencCreateVector( 2, F__factorial__x, F__factorial__r), 
             SNetTencCreateVector( 0), 
             SNetTencCreateVector( 0)));
 
   enc3 = SNetTencTypeEncode( 1, 
           SNetTencVariantEncode( 
-            SNetTencCreateVector( 2, F_x, F_r), 
+            SNetTencCreateVector( 2, F__factorial__x, F__factorial__r), 
             SNetTencCreateVector( 0), 
             SNetTencCreateVector( 0)));
 
   enc4 = SNetTencTypeEncode( 1, 
           SNetTencVariantEncode( 
-            SNetTencCreateVector( 2, F_x, F_r), 
+            SNetTencCreateVector( 2, F__factorial__x, F__factorial__r), 
             SNetTencCreateVector( 0), 
             SNetTencCreateVector( 0)));
 
   enc5 = SNetTencTypeEncode( 1, 
           SNetTencVariantEncode( 
-            SNetTencCreateVector( 2, F_x, F_r), 
+            SNetTencCreateVector( 2, F__factorial__x, F__factorial__r), 
             SNetTencCreateVector( 0), 
             SNetTencCreateVector( 0)));
 
   enc6 = SNetTencTypeEncode( 1, 
           SNetTencVariantEncode( 
-            SNetTencCreateVector( 2, F_x, F_r), 
+            SNetTencCreateVector( 2, F__factorial__x, F__factorial__r), 
             SNetTencCreateVector( 0), 
             SNetTencCreateVector( 0)));
 
@@ -162,18 +139,18 @@ int main() {
 
   *F_z_1 = 42;
 
-  field1 = C2SNet_cdataCreate( F_x_1, &myfree, &mycopy);
-  field2 = C2SNet_cdataCreate( F_r_1, &myfree, &mycopy);
-  field3 = C2SNet_cdataCreate( F_x_3, &myfree, &mycopy);
-  field4 = C2SNet_cdataCreate( F_r_3, &myfree, &mycopy);
+  field1 = C2SNet_cdataCreate( F_x_1, &myfree, &mycopy, NULL);
+  field2 = C2SNet_cdataCreate( F_r_1, &myfree, &mycopy, NULL);
+  field3 = C2SNet_cdataCreate( F_x_3, &myfree, &mycopy, NULL);
+  field4 = C2SNet_cdataCreate( F_r_3, &myfree, &mycopy, NULL);
 
 
-  SNetRecSetField( rec1, F_x, (void*)field1);
-  SNetRecSetField( rec1, F_r, (void*)field2);
+  SNetRecSetField( rec1, F__factorial__x, (void*)field1);
+  SNetRecSetField( rec1, F__factorial__r, (void*)field2);
   SNetRecSetInterfaceId( rec1, 0);
 
-  SNetRecSetField( rec2, F_x, (void*)field3);
-  SNetRecSetField( rec2, F_r, (void*)field4);
+  SNetRecSetField( rec2, F__factorial__x, (void*)field3);
+  SNetRecSetField( rec2, F__factorial__r, (void*)field4);
   SNetRecSetInterfaceId( rec2, 0);
 
 

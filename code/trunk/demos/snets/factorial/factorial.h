@@ -16,14 +16,21 @@
 
 #include "snetentities.h"
 
-#define F__factorial__x	1
-#define F__factorial__p	2
-#define F__factorial__xx	3
-#define F__factorial__r	4
-#define F__factorial__rr	5
-#define T__factorial__T	6
-#define T__factorial__F	7
-#define T__factorial__stop	8
+#define E__factorial__NONE 0
+#define F__factorial__x 1
+#define F__factorial__p 2
+#define F__factorial__xx 3
+#define F__factorial__xm 4
+#define F__factorial__rm 5
+#define F__factorial__rrm 6
+#define F__factorial__r 7
+#define T__factorial__T 8
+#define T__factorial__F 9
+#define T__factorial__stop 10
+
+#define SNET__factorial__NUMBER_OF_LABELS 11
+
+extern char *snet_factorial_labels[];
 
 extern snet_buffer_t *SNet__factorial___factorial(snet_buffer_t *in_buf);
 
