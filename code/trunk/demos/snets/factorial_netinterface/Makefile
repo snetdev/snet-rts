@@ -1,5 +1,5 @@
 CC         = gcc
-CCFLAGS    = -Wall -g
+CCFLAGS  = -Wall -g -DFILTER_VERSION_2
 AR         = ar
 INCDIRS    = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C -I./include
 LIBDIRS    = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C -L./lib

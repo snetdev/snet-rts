@@ -16,7 +16,7 @@
 <metadata xmlns="snet.feis.herts.ac.uk"
           xmlns:a="snet.feis.herts.ac.uk">
   <net name="metadatatest/split" >
-     <observer type="after">
+     <observer type="after" code="123abc">
        <a:stag>T</a:stag>
      </observer>
   </net>
