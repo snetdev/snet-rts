@@ -6,7 +6,7 @@
   </net>
 </metadata>
 
-net factorial
+net factorial({x} -> {x,<stop>})
 {
         box leq1( (x) -> (x,p));
         box condif( (p) -> (<T>) | (<F>));
