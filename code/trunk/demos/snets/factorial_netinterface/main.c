@@ -49,12 +49,16 @@ char *snet_factorial_interfaces[SNET__factorial__NUMBER_OF_INTERFACES] = {"C2SNe
 #include "parser.h"
 #include "label.h"
 #include "interface.h"
+#include "globals.h"
 #include "output.h"
 
 #include <graphics.h>
 #include "factorial.h"
 #include <C2SNet.h>
 #include <stdio.h>
+
+snetin_label_t *globals_labels = NULL;
+snetin_interface_t *globals_interfaces = NULL;
 
 int main(int argc, char* argv[])
 {
@@ -63,8 +67,8 @@ int main(int argc, char* argv[])
   int inBufSize = 10;
 
   /*** THIS NEEDS TO BE GENERATED */                              
-  snetin_label_t *labels = SNetInLabelInit(snet_factorial_labels, SNET__factorial__NUMBER_OF_LABELS);
-  snetin_interface_t *interfaces = SNetInInterfaceInit(snet_factorial_interfaces, 
+  globals_labels = SNetInLabelInit(snet_factorial_labels, SNET__factorial__NUMBER_OF_LABELS);
+  globals_interfaces = SNetInInterfaceInit(snet_factorial_interfaces, 
 						       SNET__factorial__NUMBER_OF_INTERFACES);
   /********************************/
 
@@ -80,13 +84,13 @@ int main(int argc, char* argv[])
   out_buf = SNet__factorial___factorial(in_buf);
   /********************************/
   
-  SNetInOutputInit(labels, interfaces);
+  SNetInOutputInit();
 
   if(SNetInOutputBegin(out_buf) != 0){
     return 1;
   }
 
-  SNetInParserInit(in_buf, labels, interfaces);
+  SNetInParserInit(in_buf);
 
   /** action loop **/
 
@@ -108,8 +112,8 @@ int main(int argc, char* argv[])
     return 1;
   }
   
-  SNetInLabelDestroy(labels);
-  SNetInInterfaceDestroy(interfaces);         
+  SNetInLabelDestroy(globals_labels);
+  SNetInInterfaceDestroy(globals_interfaces);         
   
   return 0;
 }

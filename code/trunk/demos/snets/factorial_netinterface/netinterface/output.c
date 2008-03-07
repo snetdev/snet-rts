@@ -20,18 +20,11 @@
 #include <pthread.h>
 #include <output.h>
 #include <snetentities.h>
+#include <globals.h>
 
-struct output{
-  /* Label mappings to use for output */
-  snetin_label_t *labels;
-  
-  /* Interface mappings to use for output */
-  snetin_interface_t *interfaces;
-  
-  /* Thread to do the output */
-  pthread_t thread; 
-  
-}output;
+/* Thread to do the output */
+static pthread_t thread; 
+
 
 /* This function prints records to stdout */
 static void printRec(snet_record_t *rec)
@@ -54,10 +47,10 @@ static void printRec(snet_record_t *rec)
 
 	 int len = fun(SNetRecGetField(rec, i), &data);
 
-	 if((label = SNetInSearchLabelByIndex(output.labels, i)) != NULL){
+	 if((label = SNetInSearchLabelByIndex(globals_labels, i)) != NULL){
 	   int l = 0;
 	   printf("<field label=\"%s\" interface=\"%s\">", label, 
-	   	  SNetInIdToInterface(output.interfaces, id));
+	   	  SNetInIdToInterface(globals_interfaces, id));
 	   for(l = 0; l < len; l++){
 	     putchar(data[l]);
 	   }
@@ -72,7 +65,7 @@ static void printRec(snet_record_t *rec)
        for( k=0; k<SNetRecGetNumTags( rec); k++) {
 	 i = SNetRecGetTagNames( rec)[k];
 
-	 if((label = SNetInSearchLabelByIndex(output.labels, i)) != NULL){
+	 if((label = SNetInSearchLabelByIndex(globals_labels, i)) != NULL){
 	   printf("<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
 	 }else{
 	   // TODO: Error, unknown tag!
@@ -83,7 +76,7 @@ static void printRec(snet_record_t *rec)
        for( k=0; k<SNetRecGetNumBTags( rec); k++) {
 	 i = SNetRecGetBTagNames( rec)[k];
 
-	 if((label = SNetInSearchLabelByIndex(output.labels, i)) != NULL){
+	 if((label = SNetInSearchLabelByIndex(globals_labels, i)) != NULL){
 	   printf("<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
 	 }else{
 	   // TODO: Error, unknown btag!
@@ -133,13 +126,11 @@ static void *doOutput(void* data)
   return NULL;
 }
 
-void SNetInOutputInit(snetin_label_t *labels, snetin_interface_t *interfaces){
-  output.labels = labels;
-  output.interfaces = interfaces;
+void SNetInOutputInit(){
 }
 
 int SNetInOutputBegin(snet_buffer_t *in_buf){
-  if(pthread_create(&output.thread, NULL, (void *)doOutput, (void *)in_buf) == 0){
+  if(pthread_create(&thread, NULL, (void *)doOutput, (void *)in_buf) == 0){
     return 0;
   }
   // error
@@ -147,7 +138,7 @@ int SNetInOutputBegin(snet_buffer_t *in_buf){
 }
 
 int SNetInOutputBlockUntilEnd(){
-  if(pthread_join(output.thread, NULL) == 0){
+  if(pthread_join(thread, NULL) == 0){
     return 0;
   }
   //error

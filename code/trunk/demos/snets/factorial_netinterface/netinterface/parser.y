@@ -31,6 +31,7 @@
 #include <parser.h>
 #include <str.h>
 #include <interface.h>
+#include <globals.h>
 
 /* Values to define state of the parser (in which kind of XML element) */
 #define STACK_ERROR       -2
@@ -121,13 +122,8 @@
  }rq_t;
 
 
- /***** Global variables *****/
+ /***** Globals variables *****/
  struct{
-   /* Labels for SNet fields/tags/btags and their mapping to numbers */
-   snetin_label_t *labels; 
-
-   /* Names for SNet language interfaces and their mapping to IDs */
-   snetin_interface_t *interfaces;
 
    /* Value that tells if a terminate record has been encounterd in the input stream */
    unsigned int terminate;  
@@ -582,7 +578,7 @@ Element:      PushNS EmptyElemTag
 		}else if($2 == FIELD){
 		  // Fields are added to the current record
 		  // TODO: EMPTY FIELD -> error report instead?
-		  int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
+		  int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
 		  if(index != LABEL_ERROR && parser.current.interface != INTERFACE_UNKNOWN){
 		    
 		    if(parser.current.record != NULL){
@@ -628,7 +624,7 @@ Element:      PushNS EmptyElemTag
 
 		}else if($2 == TAG){
 		  // Tags are added to the current record (tag with no given value!)
-		  int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
+		  int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
 		  if(index != LABEL_ERROR){
 		    if(parser.current.record != NULL){
 		      SNetRecAddTag(parser.current.record, index);
@@ -644,7 +640,7 @@ Element:      PushNS EmptyElemTag
 
 		}else if($2 == BTAG){
 		  // BTags are added to the current record (btag with no given value!)
-		  int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
+		  int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
 		  if(index != LABEL_ERROR){
 		    if(parser.current.record != NULL){
 		      SNetRecAddBTag(parser.current.record, index);
@@ -697,7 +693,7 @@ Element:      PushNS EmptyElemTag
 		    $$ = RECORD_TERMINATE;
 		  }else if(getState() == FIELD){
 		    // Fields are added to the current record
-		    int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
+		    int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
 		    if(index != LABEL_ERROR && parser.current.interface != INTERFACE_UNKNOWN){
 
 		      if(parser.current.record != NULL){
@@ -745,7 +741,7 @@ Element:      PushNS EmptyElemTag
 
 		  }else if(getState() == TAG){
 		    // Tags are added to the current record
- 		    int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
+ 		    int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
 		    if(index != LABEL_ERROR){
 		      if(parser.current.record != NULL){
 			SNetRecAddTag(parser.current.record, index);			
@@ -764,7 +760,7 @@ Element:      PushNS EmptyElemTag
 		    $$ = TAG;
 		  }else if(getState() == BTAG){
 		    // BTags are added to the current record
- 		    int index = SNetInSearchIndexByLabel(parser.labels, parser.current.label);
+ 		    int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
 		    if(index != LABEL_ERROR){
 		      if(parser.current.record != NULL){
 			SNetRecAddBTag(parser.current.record, index);
@@ -931,7 +927,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  
 		  if(at != NULL){
 		    
-		    int interface = SNetInInterfaceToId(parser.interfaces, at->value);
+		    int interface = SNetInInterfaceToId(globals_interfaces, at->value);
 		    if(interface != INTERFACE_UNKNOWN){ 
 		      parser.current.interface = interface;
 		    }else{
@@ -1129,7 +1125,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		  
 		  if(at != NULL){
 		    
-		    int interface = SNetInInterfaceToId(parser.interfaces, at->value);
+		    int interface = SNetInInterfaceToId(globals_interfaces, at->value);
 		    if(interface != INTERFACE_UNKNOWN){ 
 		      parser.current.interface = interface;
 		    }else{
@@ -1348,13 +1344,9 @@ static void flush(){
   parser.terminate = PARSE_CONTINUE;
 }
 
-void SNetInParserInit(snet_buffer_t *in_buf,
-		      snetin_label_t *label,
-		      snetin_interface_t *interfaces){
+void SNetInParserInit(snet_buffer_t *in_buf){
   
   parser.buffer = in_buf;
-  parser.labels = label;
-  parser.interfaces = interfaces;
   
   flush();
 }  

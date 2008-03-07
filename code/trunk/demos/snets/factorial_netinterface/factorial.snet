@@ -4,6 +4,9 @@
      <observer type="before" />
      <observer type="after" />
   </net>
+  <net name="factorial/compute" >
+     <observer type="before" />
+  </net>
 </metadata>
 
 net factorial({x} -> {x,<stop>})

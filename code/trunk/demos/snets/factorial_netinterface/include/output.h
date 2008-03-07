@@ -20,17 +20,12 @@
 
 #include <record.h>
 #include <buffer.h>
-#include <label.h>
-#include <interface.h>
 
 /* Init output system to use given labels and language interfaces.
  *
- * @param labels Labels to be used for fields/tags/btags
- * @param interfaces Language interface mappings to be used.
- *
  */
 
-void SNetInOutputInit(snetin_label_t *labels, snetin_interface_t *interfaces);
+void SNetInOutputInit();
 
 
 /* Start output system.

@@ -23,6 +23,7 @@
 /* Struct to store the static and temporary names */
 typedef struct label snetin_label_t;
 
+
 /* Init new labels structure with given statistic names 
  *
  * @param static_labels Static labels to be used.
