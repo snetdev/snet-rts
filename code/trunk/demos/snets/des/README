@@ -1,0 +1,32 @@
+This directory contains several DES examples and test data:
+
+
+full-des
+--------------------------------------------------------------------------
+Full features DES network. Currently not working, but kept here
+for reference.
+
+
+
+simple 
+--------------------------------------------------------------------------
+Simpler network (less boxes), fully working.
+
+
+
+simpleWithDecipher 
+--------------------------------------------------------------------------
+Simpler network (less boxes), encrypts and decrypts data (for benchmarking).
+
+
+
+sac-des 
+--------------------------------------------------------------------------
+Pure SAC implementation (for benchmarking).
+
+
+
+test-data 
+--------------------------------------------------------------------------
+Text files which may be used as input for the DES networks.
+Useful for benchmarking. 
