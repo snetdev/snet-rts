@@ -1,4 +1,4 @@
-net simpleDes {
+net simpleDes( {Key, Pt} -> {Ct}) {
 
  box GenSubKeys( (Key) -> (KeySet));
  box KeyInvert( (KeySet) -> (KeySet));

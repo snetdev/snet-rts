@@ -8,7 +8,7 @@
 #include <memfun.h>
 #include <SAC2SNet.h>
 
-#include <cwrapper.h>
+#include <simpleDesboxes.h>
 #include <simpleDes.h>
 
 #define MAX_PT_LEN 65536 

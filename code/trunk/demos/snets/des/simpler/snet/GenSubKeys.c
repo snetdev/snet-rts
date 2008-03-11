@@ -1,13 +1,13 @@
-#include <FinalP.h>
-#include <cwrapper.h>
+#include <GenSubKeys.h>
+#include <simpleDesboxes.h>
 #include <sacinterface.h>
 
-void *FinalP( void *hnd, void *ptr_1, void *ptr_2)
+void *GenSubKeys( void *hnd, void *ptr_1)
 {
   SACarg *res1, *handle;
   
   handle = SACARGconvertFromVoidPointer( SACTYPE_SNet_SNet, hnd);
-  simpleDesboxes__FinalP3( &res1,  handle, ptr_1, ptr_2);
+  simpleDesboxes__genSubKeys2( &res1,  handle, ptr_1);
   SACARGconvertToVoidPointer( SACTYPE_SNet_SNet, res1);
   
   return( hnd);
