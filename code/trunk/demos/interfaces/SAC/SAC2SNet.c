@@ -63,7 +63,7 @@ void SAC2SNet_outRaw( void *hnd, int variant, ...)
 void SAC2SNet_init( int id)
 {
   my_interface_id = id;
-  SNetGlobalRegisterInterface( id, &SACARGfree, &SACARGcopy);  
+  SNetGlobalRegisterInterface( id, &SACARGfree, &SACARGcopy, NULL, NULL);  
 }
 
 
