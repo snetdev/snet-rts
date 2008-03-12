@@ -4,7 +4,7 @@
 
 // define initial size of buffers
 #ifndef BUFFER_SIZE
-#define BUFFER_SIZE 250
+#define BUFFER_SIZE 3 
 #endif
 
 

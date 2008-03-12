@@ -20,6 +20,8 @@
 #include <constants.h>
 
 
+bool initialised=false;
+
 #define PRINT_RECORD_CONTENTS( RECNUM, RECNAMES, DESCR, DATA)\
     strcat(text, " - ");\
     itoa( RECNUM( rec), num_to_str, 10);\
@@ -259,12 +261,12 @@ extern snet_buffer_t *SNetGraphicalBox( snet_buffer_t *inbuf, char **names, char
   graphic_handle_t *hnd;
 
   int my_port;
-  // -------------------
 
-
-
-  // ------------------
-
+  if( !initialised) {
+    printf("\n ** Fatal Error ** : Graphical Subsystem not"
+           " initialised.\n\n");
+    exit( 1);
+  }
 
   if( strlen( name) >= MAX_BOXTITLE_LEN) {
     printf("\n ** Fatal Error ** : Title for Box [%s] too long"
@@ -540,8 +542,7 @@ extern void SNetInitGraphicalSystem() {
 
   lock_port_counter = SNetMemAlloc( sizeof( pthread_mutex_t));
   pthread_mutex_init( lock_port_counter, NULL);
-  
-  return;
+  initialised = true;
 }
 
 

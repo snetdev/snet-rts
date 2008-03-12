@@ -340,7 +340,7 @@ extern void SNetHndDestroy( snet_handle_t *hnd) {
 
 extern snet_handle_t *SNetHndCopy( snet_handle_t *hnd) 
 {
-  printf("\n\n ** Runtime Error ** : Thou shall not copy! [Handle] \n\n");
+  printf("\n\n ** Runtime Error ** : Attempt to copy a handle. Handles must not be copied! (This is a runtime system bug.)\n\n");
   exit( 1);
   return( NULL);
 }
