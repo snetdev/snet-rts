@@ -1,4 +1,4 @@
-net des {
+net des ( {Key, Pt} -> {Ct}) {
 
   box xor( (Op1, Op2) -> (Result));
 
