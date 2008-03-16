@@ -17,4 +17,4 @@ all:
 	$(AR) r $(TARGET) *.o 
 
 clean:
-	rm -f *.o *.a
+	rm -f *.o *.a *.so
