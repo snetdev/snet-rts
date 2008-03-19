@@ -5,6 +5,32 @@
  */
 
 
+
+/* BEGIN DEBUG DEFINES */
+#ifdef DBG_ALL
+  #define DBG_RUNTIME_ALL
+#endif
+
+#ifdef DBG_RUNTIME_ALL
+  #define DBG_TRACE_TIMINGS
+  #define DBG_TRACE_THREAD_CREATE
+  #define DBG_TRACE_INIT
+#endif
+
+#ifdef DBG_TRACE_TIMINGS
+  #define DBG_TRACE_BOX_TIMINGS
+  #define DBG_TRACE_OUT_TIMINGS
+#endif
+
+#if ( defined DBG_TRACE_BOX_TIMINGS || \
+      defined DBG_TRACE_OUT_TIMINGS || \
+      defined DBG_TRACE_THREAD_CREATE )
+#include <sys/time.h>
+#include <time.h>
+#endif
+/* END DEBUG DEFINES */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -14,20 +40,20 @@
 
 #include <memfun.h>
 #include <record.h>
-//#include <lbindings.h>
 #include <bool.h>
-
 
 #include <snetentities.h>
 
 
+#ifdef DBG_TRACE_THREAD_CREATE
+  int tcount = 0;
+  pthread_mutex_t *t_count_mtx;
+#endif
+
+
 /* ************************************************************************* */
 /* GLOBAL STRUCTURE                                                          */
-//#define DEBUG
-#ifdef DEBUG
-int tcount=0;
-pthread_mutex_t *t_count_mtx;
-#endif
+
 #define INITIAL_INTERFACE_TABLE_SIZE    5
 
 typedef struct {
@@ -112,7 +138,9 @@ static snet_global_interface_functions_t *GetInterface( int id)
     }
   }
   if( result == NULL) {
-    printf("\n\n ** Runtime Error ** : Interface ID (%d) not found!\n\n", id);
+    fprintf( stderr, 
+             "\n\n ** Runtime Error ** : Interface ID (%d) not found!\n\n", 
+             id);
     exit( 1);
   }
 
@@ -123,7 +151,8 @@ static snet_global_interface_functions_t *GetInterface( int id)
 static bool RuntimeInitialised()
 {
   if( snet_global == NULL) {
-    printf("\n\n ** Fatal Error ** : Runtime System not initialised!\n\n");
+    fprintf( stderr, 
+             "\n\n ** Fatal Error ** : Runtime System not initialised!\n\n");
     exit( 1);
   }
   return( true);
@@ -132,8 +161,10 @@ static bool RuntimeInitialised()
 extern bool SNetGlobalInitialise() 
 {
   bool success = false;
-
-#ifdef DEBUG
+#ifdef DBG_TRACE_INIT
+  struct timeval t;
+#endif
+#ifdef DBG_TRACE_THREAD_CREATE
   t_count_mtx = SNetMemAlloc( sizeof( pthread_mutex_t));
   pthread_mutex_init( t_count_mtx, NULL);
 #endif
@@ -148,9 +179,17 @@ extern bool SNetGlobalInitialise()
     success = true;
   }
   else {
-    printf("\n\n ** Fatal Error ** : Runtime System already initialised!\n\n");
+    fprintf( stderr, 
+             "\n\n ** Fatal Error ** : Runtime System already"
+             " initialised!\n\n");
     exit( 1);
   }
+#ifdef DBG_TRACE_INIT
+  gettimeofday( &t, NULL);
+  fprintf( stderr,
+           "[DBG::RT::Global] Runtime System Initialised at              %lf\n",
+           t.tv_sec + t.tv_usec /1000000.0);
+#endif
   return( success);
 }
 
@@ -169,7 +208,8 @@ SNetGlobalRegisterInterface( int id,
   num = snet_global->num;
   if( num == ( INITIAL_INTERFACE_TABLE_SIZE -1)) {
     /* TODO replace this with proper code!!!! */
-    printf("\n\n ** Runtime Error ** : Lookup table is full!\n\n");
+    fprintf( stderr, 
+            "\n\n ** Runtime Error ** : Lookup table is full!\n\n");
     exit( 1);
   }
   else {
@@ -236,18 +276,25 @@ inline static void ThreadCreate( pthread_t *thread,
                           void *f_args) 
 {
   int res;
-
+#ifdef DBG_TRACE_THREAD_CREATE 
+  struct timeval t;
+#endif
   res = pthread_create( thread, attrib, fun, f_args);
-#ifdef DEBUG
+
+#ifdef DBG_TRACE_THREAD_CREATE 
+  gettimeofday( &t, NULL);
   pthread_mutex_lock( t_count_mtx);
   tcount += 1;
-  printf("\n<DEBUG_INF::Threads> Thread created: %d\n", tcount);
+  fprintf( stderr, 
+           "[DBG::RT::Threads] Thread #%3d created at                    %lf\n", 
+           tcount, t.tv_sec + t.tv_usec /1000000.0);
   pthread_mutex_unlock( t_count_mtx);
 #endif
-#undef DEBUG
+
   if( res != 0) {
-    printf("\n\n  ** Fatal Error ** : Failed to create new "
-           "thread [error %d].\n\n", res);
+    fprintf( stderr, "\n\n  ** Fatal Error ** : Failed to create new "
+                     "thread [error %d].\n\n", 
+             res);
     fflush( stdout);
     exit( 1);
   }
@@ -260,8 +307,9 @@ static void ThreadDetach( pthread_t thread)
   res = pthread_detach( thread);
 
   if( res != 0) {
-    printf("\n\n  ** Fatal Error ** : Failed to detach "
-           "thread [error %d].\n\n", res);
+    fprintf( stderr, "\n\n  ** Fatal Error ** : Failed to detach "
+                     "thread [error %d].\n\n", 
+             res);
     fflush( stdout);
     exit( 1);
   }
@@ -284,21 +332,10 @@ static void ThreadDetach( pthread_t thread)
  */
 
 
-#ifdef DEBUG
-  #include <debug.h>
-  extern debug_t *GLOBAL_OUTBUF_DBG;
-  #define BUF_CREATE( PTR, SIZE)\
-            PTR = SNetBufCreate( SIZE);\
-            DBGregisterBuffer( GLOBAL_OUTBUF_DBG, PTR);
-
-  #define BUF_SET_NAME( PTR, NAME)\
-            DBGsetName( GLOBAL_OUTBUF_DBG, PTR, NAME);
-#else
-  #define BUF_CREATE( PTR, SIZE)\
+#define BUF_CREATE( PTR, SIZE)\
             PTR = SNetBufCreate( SIZE);
 
-  #define BUF_SET_NAME( PTR, NAME)
-#endif
+#define BUF_SET_NAME( PTR, NAME)
 
 
 #define MC_ISMATCH( name) name->is_match
@@ -429,7 +466,7 @@ static bool ContainsName( int name, int *names, int num) {
 extern snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec) {
 
   /* empty ... */
-  printf("\n\n ** Fatal Error ** : Not implemented. [SNetOut]\n\n");
+  fprintf( stderr, "\n\n ** Fatal Error ** : Not implemented. [SNetOut]\n\n");
   exit( 1);
 
   return( hnd);
@@ -445,12 +482,23 @@ extern snet_handle_t
                   int *btags) 
 {
   
+#ifdef DBG_TRACE_OUT_TIMINGS
+  struct timeval tv_in;
+  struct timeval tv_out;
+#endif
 
   int i, *names;
   snet_record_t *out_rec, *old_rec;
   snet_variantencoding_t *venc;
   void* (*copyfun)(void*);
 
+
+#ifdef DBG_TRACE_OUT_TIMINGS
+  gettimeofday( &tv_in, NULL);
+  fprintf( stderr, 
+           "[DBG::RT::TimeTrace] SNetOut called from %p at        %lf\n", 
+           SNetHndGetBoxfun( hnd), tv_in.tv_sec + tv_in.tv_usec /1000000.0);
+#endif
   venc = SNetTencGetVariant( SNetHndGetType( hnd), variant_num);
   
   if( variant_num > 0) {
@@ -475,7 +523,8 @@ extern snet_handle_t
     SNetMemFree( btags);
   }
   else {
-    printf("\n\n ** Runtime Error ** : Variant <= 0. [SNetOut]\n\n");
+    fprintf( stderr, 
+             "\n\n ** Runtime Error ** : Variant <= 0. [SNetOut]\n\n");
     exit( 1);
   }
   
@@ -505,6 +554,15 @@ extern snet_handle_t
   // output record
   SNetBufPut( SNetHndGetOutbuffer( hnd), out_rec);
 
+#ifdef DBG_TRACE_OUT_TIMINGS
+  gettimeofday( &tv_out, NULL);
+  fprintf( stderr, 
+           "[DBG::RT::TimeTrace] SNetOut finished for %p at       %lf\n", 
+           SNetHndGetBoxfun( hnd), 
+           ( tv_out.tv_sec - tv_in.tv_sec) + 
+             ( tv_out.tv_usec-tv_in.tv_usec) /1000000.0);
+#endif
+
   return( hnd);
 }
 
@@ -515,7 +573,6 @@ extern snet_handle_t *SNetOutRaw( snet_handle_t *hnd, int variant_num, ...) {
   va_list args;
   snet_record_t *out_rec, *old_rec;
   snet_variantencoding_t *venc;
-
 
   // set values from box
   if( variant_num > 0) { 
@@ -539,7 +596,7 @@ extern snet_handle_t *SNetOutRaw( snet_handle_t *hnd, int variant_num, ...) {
    va_end( args);
   }
   else {
-    printf("\n\n ** Runtime Error ** : Variant <= 0. [SNetOut]\n\n");
+    fprintf( stderr, "\n\n ** Runtime Error ** : Variant <= 0. [SNetOut]\n\n");
     exit( 1);
   }
 
@@ -580,6 +637,11 @@ extern snet_handle_t *SNetOutRaw( snet_handle_t *hnd, int variant_num, ...) {
 
 static void *BoxThread( void *hndl) {
 
+#ifdef DBG_TRACE_BOX_TIMINGS
+  struct timeval tv_in;
+  struct timeval tv_out;
+#endif 
+
   snet_handle_t *hnd;
   snet_record_t *rec;
   void (*boxfun)( snet_handle_t*);
@@ -587,13 +649,32 @@ static void *BoxThread( void *hndl) {
   hnd = (snet_handle_t*) hndl;
   boxfun = SNetHndGetBoxfun( hnd);
 
+
   while( !( terminate)) {
     rec = SNetBufGet( SNetHndGetInbuffer( hnd));
 
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
         SNetHndSetRecord( hnd, rec);
+
+#ifdef DBG_TRACE_BOX_TIMINGS
+        gettimeofday( &tv_in, NULL);
+        fprintf( stderr, 
+                 "[DBG::RT::TimeTrace] SNetBox Calls %p at              %lf\n", 
+                 boxfun, 
+                 tv_in.tv_sec +  tv_in.tv_usec /1000000.0);
+#endif 
         (*boxfun)( hnd);
+
+#ifdef DBG_TRACE_BOX_TIMINGS
+        gettimeofday( &tv_out, NULL);
+        fprintf( stderr, 
+                 "[DBG::RT::TimeTrace] SNetBox Resumes from %p after    %lf\n\n",
+                 boxfun, 
+                 ( tv_out.tv_sec - tv_in.tv_sec) + 
+                   ( tv_out.tv_usec - tv_in.tv_usec) /1000000.0);
+#endif
+        
         SNetRecDestroy( rec);
         break;
       case REC_sync:
@@ -601,7 +682,7 @@ static void *BoxThread( void *hndl) {
         SNetRecDestroy( rec);
         break;
       case REC_collect:
-        printf("\nUnhandled control record, destroying it.\n\n");
+        fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -712,7 +793,7 @@ static void *LLSTget( linked_list_t *lst) {
     return( lst->curr->elem);
   }
   else {
-    printf("\nWarning, returning NULL (list empty)\n\n");
+    fprintf( stderr, "\nWarning, returning NULL (list empty)\n\n");
     return( NULL);
   }
 }
@@ -763,7 +844,8 @@ static void LLSTremoveCurrent( linked_list_t *lst) {
   list_elem_t *tmp;
 
   if( lst->elem_count == 0) {
-    printf("\n\n ** Fatal Error ** : Can't delete from empty list.\n\n");
+    fprintf( stderr, 
+             "\n\n ** Fatal Error ** : Can't delete from empty list.\n\n");
     exit( 1);
   }
 
@@ -817,7 +899,8 @@ static int LLSTgetCount( linked_list_t *lst) {
 static void LLSTdestroy( linked_list_t *lst) {
 
   if( LLSTgetCount( lst) > 0) {
-    printf(" ** Info ** : Destroying non-empty list. [%d elements]\n\n", 
+    fprintf( stderr, 
+             " ** Info ** : Destroying non-empty list. [%d elements]\n\n", 
            LLSTgetCount( lst));
   }
   while( LLSTgetCount( lst) != 0) {
@@ -1433,7 +1516,7 @@ static void *ParallelBoxThread( void *hndl) {
         SNetRecDestroy( rec);
         break;
       case REC_collect:
-        printf("\nUnhandled control record, destroying it.\n\n");
+        fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -1682,7 +1765,7 @@ static void *StarBoxThread( void *hndl) {
             starbuf = SNetSerial( our_outbuf, box, self);        
             SNetBufPut( real_outbuf, SNetRecCreate( REC_collect, starbuf));
 /*            if( current_sort_rec != NULL) {
-              printf("put\n");
+              fprintf( stderr, "put\n");
               SNetBufPut( our_outbuf, SNetRecCreate( REC_sort_begin, 
                               SNetRecGetLevel( current_sort_rec), 
                               SNetRecGetNum( current_sort_rec)));
@@ -1698,7 +1781,7 @@ static void *StarBoxThread( void *hndl) {
         break;
 
       case REC_collect:
-        printf("\nUnhandled control record, destroying it.\n\n");
+        fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -1872,7 +1955,7 @@ static void *DetStarBoxThread( void *hndl) {
         break;
 
       case REC_collect:
-        printf("\nUnhandled control record, destroying it.\n\n");
+        fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
       case REC_sort_end:
@@ -2164,7 +2247,7 @@ static void *SyncBoxThread( void *hndl) {
 
       break;
       case REC_collect:
-        printf("\nUnhandled control record, destroying it.\n\n");
+        fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -2174,8 +2257,10 @@ static void *SyncBoxThread( void *hndl) {
         SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
         break;
     case REC_terminate:
-        printf("\n ** Runtime Warning: ** : Synchro cell received termination record."
-               "\n                          Stored records are discarded! \n");
+        fprintf( stderr, 
+                "\n ** Runtime Warning: ** : Synchro cell received termination"
+                " record."
+                "\n                          Stored records are discarded! \n");
         terminate = true;
         SNetBufPut( outbuf, rec);
       break;
@@ -2300,7 +2385,7 @@ static void *SplitBoxThread( void *hndl) {
 
         break;
       case REC_collect:
-        printf("\nUnhandled control record, destroying it.\n\n");
+        fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -2462,7 +2547,7 @@ static void *DetSplitBoxThread( void *hndl) {
         SNetRecDestroy( rec);
         break;
       case REC_collect:
-        printf("\nUnhandled control record, destroying it.\n\n");
+        fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -2575,7 +2660,10 @@ extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcod
       instr->data[1] = va_arg( args, int);
       break;
     default:
-      printf("\n ** Fatal Error ** : Filter operation (%d) not implemented.\n\n", opcode);
+      fprintf( stderr, 
+               "\n ** Fatal Error ** : Filter operation (%d)"
+               " not implemented.\n\n", 
+               opcode);
       exit( 1);
   }
   
@@ -2737,49 +2825,21 @@ static snet_typeencoding_list_t
                 variant_created = true;
               }
               else {
-                printf("\n\n ** Runtime Error ** : record_create applied to"
+                fprintf( stderr, "\n\n ** Runtime Error ** : record_create applied to"
                        " non-empty type variant. [Filter]\n\n");
                 exit( 1);
               }
               break;
             default:
-              printf("\n\n ** Fatal Error ** : Unknown opcode"
-                     " in filter instruction. [%d]\n\n", current_instr->opcode);
+              fprintf( stderr, 
+                       "\n\n ** Fatal Error ** : Unknown opcode"
+                       " in filter instruction. [%d]\n\n", 
+                       current_instr->opcode);
               exit( 1);
           }
         }
       }
     }
-#ifdef DEBUG
-  printf("\n<DEBUG_INF::Filter> ---------------- >");
-  printf("\nNum types: %d\n", num);
-  for( i=0; i<num; i++) {
-    int num_vars;
-    snet_typeencoding_t *t;
-    snet_variantencoding_t *v;
-    
-    t = type_array[i];
-    num_vars = SNetTencGetNumVariants( t);
-    printf("Num variants in type %d: %d\n", i, num_vars);
-    for( j=0; j<num_vars; j++) {
-      printf("\nVariant %d:\n", j);
-      v = SNetTencGetVariant( t, j+1);
-      printf("\n  - %2d fields: ", SNetTencGetNumFields( v));
-      for( k=0; k<SNetTencGetNumFields( v); k++) {
-        printf(" %d ", SNetTencGetFieldNames( v)[k]);
-      }
-      printf("\n  - %2d tags  : ", SNetTencGetNumTags( v));
-      for( k=0; k<SNetTencGetNumTags( v); k++) {
-        printf(" %d ", SNetTencGetTagNames( v)[k]);
-      }
-      printf("\n  - %2d btags : ", SNetTencGetNumBTags( v));
-      for( k=0; k<SNetTencGetNumBTags( v); k++) {
-        printf(" %d ", SNetTencGetBTagNames( v)[k]);
-      }
-      printf("\n<----------------------------------- <\n\n");
-    }
-  }
-#endif
 
 
   return( SNetTencCreateTypeEncodingListFromArray( num, type_array));
@@ -2970,8 +3030,10 @@ static void *FilterThread( void *hnd)
                         case create_record: //noop
                         break;
                       default:
-                        printf("\n\n ** Fatal Error ** : Unknown opcode in filter"
-                               " instruction. [%d]\n\n", current_instr->opcode);
+                        fprintf( stderr, 
+                                 "\n\n ** Fatal Error ** : Unknown opcode in"
+                                 " filter instruction. [%d]\n\n", 
+                                 current_instr->opcode);
                         exit( 1);
                     } 
                   } // forall instructions of current_set
@@ -2983,8 +3045,9 @@ static void *FilterThread( void *hnd)
             } // forall guards
             SNetRecDestroy( in_rec);
             if( !( done)) {
-              printf("\n\n ** Runtime Error ** : All guards "
-                     "evluated to FALSE. [Filter]\n\n");
+              fprintf( stderr, 
+                       "\n\n ** Runtime Error ** : All guards evluated"
+                       " to FALSE. [Filter]\n\n");
               exit( 1);
             }
         break; // case rec_data
@@ -2994,7 +3057,7 @@ static void *FilterThread( void *hnd)
           SNetRecDestroy( in_rec);
         break;
         case REC_collect:
-          printf("\n:: DEBUG INFO ::  Unhandled control record, destroying it.\n\n");
+          fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
           SNetRecDestroy( in_rec);
         break;
         case REC_sort_begin:
@@ -3167,7 +3230,7 @@ static void *NameshiftThread( void *h)
         SNetRecDestroy( rec);
       break;
       case REC_collect:
-        printf("\n:: DEBUG INFO ::  Unhandled control record, destroying it.\n\n");
+        fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( rec);
       break;
       case REC_sort_begin:
@@ -3232,7 +3295,7 @@ static void *FilterThread( void *hndl) {
   out_type =  SNetHndGetOutType( hnd);
 
   instructions = SNetHndGetFilterInstructions( hnd);
-  printf("\n\n ** Note ** : Use of filter v1 is deprecated.\n\n");
+  fprintf( stderr, "\n\n ** Note ** : Use of filter v1 is deprecated.\n\n");
   while( !( terminate)) {
     in_rec = SNetBufGet( SNetHndGetInbuffer( hnd));
     switch( SNetRecGetDescriptor( in_rec)) {
@@ -3331,7 +3394,7 @@ static void *FilterThread( void *hndl) {
         SNetRecDestroy( in_rec);
       break;
       case REC_collect:
-        printf("\nUnhandled control record, destroying it.\n\n");
+        fprintf( stderr, "\nUnhandled control record, destroying it.\n\n");
         SNetRecDestroy( in_rec);
         break;
       case REC_sort_begin:
@@ -3398,7 +3461,7 @@ extern snet_buffer_t *SNetFilter( snet_buffer_t *inbuf,
 
   // *
   if( SNetTencGetNumTypes( out_types) > 1) {
-    printf("\n\n ** Error ** : Requested feature not implemented yet (filter)\n\n");
+    fprintf( stderr, "\n\n ** Error ** : Requested feature not implemented yet (filter)\n\n");
     exit( 1);
   }
 
