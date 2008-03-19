@@ -8,23 +8,23 @@
 
 /* BEGIN DEBUG DEFINES */
 #ifdef DBG_ALL
-  #define DBG_RUNTIME_ALL
+  #define DBG_RT_ALL
 #endif
 
-#ifdef DBG_RUNTIME_ALL
-  #define DBG_TRACE_TIMINGS
-  #define DBG_TRACE_THREAD_CREATE
-  #define DBG_TRACE_INIT
+#ifdef DBG_RT_ALL
+  #define DBG_RT_TRACE_TIMINGS
+  #define DBG_RT_TRACE_THREAD_CREATE
+  #define DBG_RT_TRACE_INIT
 #endif
 
-#ifdef DBG_TRACE_TIMINGS
-  #define DBG_TRACE_BOX_TIMINGS
-  #define DBG_TRACE_OUT_TIMINGS
+#ifdef DBG_RT_TRACE_TIMINGS
+  #define DBG_RT_TRACE_BOX_TIMINGS
+  #define DBG_RT_TRACE_OUT_TIMINGS
 #endif
 
-#if ( defined DBG_TRACE_BOX_TIMINGS || \
-      defined DBG_TRACE_OUT_TIMINGS || \
-      defined DBG_TRACE_THREAD_CREATE )
+#if ( defined DBG_RT_TRACE_BOX_TIMINGS || \
+      defined DBG_RT_TRACE_OUT_TIMINGS || \
+      defined DBG_RT_TRACE_THREAD_CREATE )
 #include <sys/time.h>
 #include <time.h>
 #endif
@@ -45,7 +45,7 @@
 #include <snetentities.h>
 
 
-#ifdef DBG_TRACE_THREAD_CREATE
+#ifdef DBG_RT_TRACE_THREAD_CREATE
   int tcount = 0;
   pthread_mutex_t *t_count_mtx;
 #endif
@@ -161,10 +161,10 @@ static bool RuntimeInitialised()
 extern bool SNetGlobalInitialise() 
 {
   bool success = false;
-#ifdef DBG_TRACE_INIT
+#ifdef DBG_RT_TRACE_INIT
   struct timeval t;
 #endif
-#ifdef DBG_TRACE_THREAD_CREATE
+#ifdef DBG_RT_TRACE_THREAD_CREATE
   t_count_mtx = SNetMemAlloc( sizeof( pthread_mutex_t));
   pthread_mutex_init( t_count_mtx, NULL);
 #endif
@@ -184,7 +184,7 @@ extern bool SNetGlobalInitialise()
              " initialised!\n\n");
     exit( 1);
   }
-#ifdef DBG_TRACE_INIT
+#ifdef DBG_RT_TRACE_INIT
   gettimeofday( &t, NULL);
   fprintf( stderr,
            "[DBG::RT::Global] Runtime System Initialised at              %lf\n",
@@ -276,12 +276,12 @@ inline static void ThreadCreate( pthread_t *thread,
                           void *f_args) 
 {
   int res;
-#ifdef DBG_TRACE_THREAD_CREATE 
+#ifdef DBG_RT_TRACE_THREAD_CREATE 
   struct timeval t;
 #endif
   res = pthread_create( thread, attrib, fun, f_args);
 
-#ifdef DBG_TRACE_THREAD_CREATE 
+#ifdef DBG_RT_TRACE_THREAD_CREATE 
   gettimeofday( &t, NULL);
   pthread_mutex_lock( t_count_mtx);
   tcount += 1;
@@ -482,7 +482,7 @@ extern snet_handle_t
                   int *btags) 
 {
   
-#ifdef DBG_TRACE_OUT_TIMINGS
+#ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
 #endif
@@ -493,7 +493,7 @@ extern snet_handle_t
   void* (*copyfun)(void*);
 
 
-#ifdef DBG_TRACE_OUT_TIMINGS
+#ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_in, NULL);
   fprintf( stderr, 
            "[DBG::RT::TimeTrace] SNetOut called from %p at        %lf\n", 
@@ -554,7 +554,7 @@ extern snet_handle_t
   // output record
   SNetBufPut( SNetHndGetOutbuffer( hnd), out_rec);
 
-#ifdef DBG_TRACE_OUT_TIMINGS
+#ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
   fprintf( stderr, 
            "[DBG::RT::TimeTrace] SNetOut finished for %p at       %lf\n", 
@@ -637,7 +637,7 @@ extern snet_handle_t *SNetOutRaw( snet_handle_t *hnd, int variant_num, ...) {
 
 static void *BoxThread( void *hndl) {
 
-#ifdef DBG_TRACE_BOX_TIMINGS
+#ifdef DBG_RT_TRACE_BOX_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
 #endif 
@@ -657,7 +657,7 @@ static void *BoxThread( void *hndl) {
       case REC_data:
         SNetHndSetRecord( hnd, rec);
 
-#ifdef DBG_TRACE_BOX_TIMINGS
+#ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_in, NULL);
         fprintf( stderr, 
                  "[DBG::RT::TimeTrace] SNetBox Calls %p at              %lf\n", 
@@ -666,7 +666,7 @@ static void *BoxThread( void *hndl) {
 #endif 
         (*boxfun)( hnd);
 
-#ifdef DBG_TRACE_BOX_TIMINGS
+#ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_out, NULL);
         fprintf( stderr, 
                  "[DBG::RT::TimeTrace] SNetBox Resumes from %p after    %lf\n\n",
