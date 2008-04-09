@@ -1,0 +1,2 @@
+<data mode="textual" xmlns="snet.feis.herts.ac.uk"><record type="data" ><field label="F__factorial__x" interface="C2SNet">int:11</field><field label="F__factorial__r" interface="C2SNet">int:1</field></record></data>
+<data mode="textual" xmlns="snet.feis.herts.ac.uk"><record type="terminate" /></data>
