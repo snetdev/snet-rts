@@ -127,7 +127,7 @@ void solve( SNet::SNet &hnd, int[*] set, bool[*] opts)
 {
   set, opts = solveRec( set, opts);
   if( isCompleted( set)) {
-    SNet::outRaw( hnd, 1, wrap( set));
+    SNet::out( hnd, 1, wrap( set));
   }
 }
 /*****************************************************************************/ 
@@ -154,11 +154,11 @@ void solver( SNet::SNet &hnd, int[*] board, bool[*] opts, int MAX, int m)
         }
       }
       else { 
-        SNet::outRaw( hnd, 1, wrap( board), wrap( opts), MAX);
+        SNet::out( hnd, 1, wrap( board), wrap( opts), MAX);
       }
     }
     else { 
-      SNet::outRaw( hnd, 2, wrap( board), 0);
+      SNet::out( hnd, 2, wrap( board), 0);
     }
   }
 }
@@ -179,7 +179,7 @@ void solveOneLevel( SNet::SNet &hnd, int[*] board, bool[*] opts)
     for( k=1; (k<=9) && !isCompleted(board); k++) {
       if( mem_opts[i,j,k-1] ) {
         board, opts = addNumber( i, j, k, mem_board, mem_opts);
-        SNet::outRaw( hnd, 1, 
+        SNet::out( hnd, 1, 
                       wrap( board), 
                       wrap( opts),
                       k,
@@ -229,5 +229,5 @@ void computeOpts( SNet::SNet &hnd, int[*] board)
     }
   }
 
-  SNet::outRaw( hnd, 1, wrap( set), wrap( opts));
+  SNet::out( hnd, 1, wrap( set), wrap( opts));
 }

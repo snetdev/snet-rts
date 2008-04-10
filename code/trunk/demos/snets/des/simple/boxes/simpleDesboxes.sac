@@ -229,14 +229,14 @@ void genSubKeys( SNet::SNet &hnd, int[.] key)
                      ++ rotate( 0, sum( take( iv+1, -ROTATES)), d0));
         } : genarray( [16], genarray( [48], 0 ) );
 
-  SNet::outRaw( hnd, 1, wrap( res));
+  SNet::out( hnd, 1, wrap( res));
 }
 
 void KeyInvert( SNet::SNet &hnd, int[.,.] KeySet)
 {
   decipher_keys = reverse( KeySet);
 
-  SNet::outRaw( hnd, 1, wrap( decipher_keys));
+  SNet::out( hnd, 1, wrap( decipher_keys));
 }
 
 void DesRound( SNet::SNet &hnd, int[.] l, int[.] r, int[.,.] keys, int round) 
@@ -249,7 +249,7 @@ void DesRound( SNet::SNet &hnd, int[.] l, int[.] r, int[.,.] keys, int round)
     
     next_round = round + 1;
 
-    SNet::outRaw( hnd, 1, wrap( l), wrap( r), wrap( subkeys), next_round);
+    SNet::out( hnd, 1, wrap( l), wrap( r), wrap( subkeys), next_round);
 }
 
 void InitialP( SNet::SNet &hnd, int[.] input)
@@ -267,7 +267,7 @@ void InitialP( SNet::SNet &hnd, int[.] input)
   l = take( shape( permutation)/2, permutation);
   r = drop( shape( permutation)/2, permutation);
   
-  SNet::outRaw( hnd, 1, wrap( l), wrap( r));
+  SNet::out( hnd, 1, wrap( l), wrap( r));
 }
 
 void FinalP( SNet::SNet &hnd, int[.] l, int[.] r)
@@ -283,7 +283,7 @@ void FinalP( SNet::SNet &hnd, int[.] l, int[.] r)
 
   output = overSel( IPinv-1, r++l);
 
-  SNet::outRaw( hnd, 1, wrap( output));
+  SNet::out( hnd, 1, wrap( output));
 }
 
 

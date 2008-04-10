@@ -7,7 +7,7 @@ external classtype;
 
 provide all;
 
-external void outRaw( SNet &handle, int variant, ...);
-  #pragma linkname "SAC2SNet_outRaw"
+external void out( SNet &handle, int variant, ...);
+  #pragma linkname "SAC2SNet_out"
   #pragma linksign [1,2]
 

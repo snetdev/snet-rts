@@ -26,12 +26,12 @@ struct container {
   int *btags;
 };
 
-void SAC2SNet_out( sac2snet_container_t *c) 
+void SAC2SNet_outCompound( sac2snet_container_t *c) 
 {
   SNetOutRawArray( c->hnd, my_interface_id, c->variant, c->fields, c->tags, c->btags);
 }
 
-void SAC2SNet_outRaw( void *hnd, int variant, ...)
+void SAC2SNet_out( void *hnd, int variant, ...)
 {
   int i;
   void **fields;

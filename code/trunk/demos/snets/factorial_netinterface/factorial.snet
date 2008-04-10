@@ -1,3 +1,4 @@
+/*
 <?xml version="1.0"?>
 <metadata xmlns="snet.feis.herts.ac.uk" >
   <net name="factorial" >
@@ -8,6 +9,7 @@
      <observer type="before" />
   </net>
 </metadata>
+*/
 
 net factorial({x} -> {x,<stop>})
 {
