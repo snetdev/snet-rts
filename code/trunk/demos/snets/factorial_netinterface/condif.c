@@ -26,7 +26,7 @@ void *condif( void *hnd, C_Data *p)
 
   C2SNet_containerSetTag( c, 0);
 
-  C2SNet_out( c);
+  C2SNet_outCompound( c);
 
   return( hnd);
 }

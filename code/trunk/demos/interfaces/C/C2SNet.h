@@ -14,8 +14,8 @@ typedef struct cdata {
 
 void C2SNet_init( int id, void *(*deserialization_fun)(char *, int));
 
-void C2SNet_out( c2snet_container_t *c);
-void C2SNet_outRaw( void *hnd, int variant, ...);
+void C2SNet_outCompound( c2snet_container_t *c);
+void C2SNet_out( void *hnd, int variant, ...);
 
 void C2SNet_free( void *ptr);
 void *C2SNet_copy( void *ptr);

@@ -17,6 +17,6 @@ void *mult( void *hnd, C_Data *x, C_Data *r)
 
   result = C2SNet_cdataCreate( int_rr, &myfree, &mycopy, NULL);
 
-  C2SNet_outRaw( hnd, 1, result);
+  C2SNet_out( hnd, 1, result);
   return( hnd);
 }

@@ -20,7 +20,7 @@ void *sub( void *hnd, C_Data *x)
   c = C2SNet_containerCreate( hnd, 1);
   C2SNet_containerSetField( c, result);
 
-  C2SNet_out( c);
+  C2SNet_outCompound( c);
   return( hnd);
 }
 

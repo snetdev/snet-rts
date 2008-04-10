@@ -20,6 +20,6 @@ void *leq1( void *hnd, C_Data *x)
   result = C2SNet_cdataCreate( bool_p, &myfree, &mycopyInt, &myserializeInt);
 
   
-  C2SNet_outRaw( hnd, 1, x, result);
+  C2SNet_out( hnd, 1, x, result);
   return( hnd);
 }
