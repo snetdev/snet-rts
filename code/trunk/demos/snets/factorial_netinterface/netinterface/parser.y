@@ -614,9 +614,8 @@ Element:      PushNS EmptyElemTag
 			if(field != NULL) {
 			  SNetRecAddField(parser.current.record, index);
 			  SNetRecSetField(parser.current.record, index, field);
-			}else{
-			  yyerror("Deserialization error: Field data == NULL!");
 			}
+
 		      }else{
 			yyerror("Record has fields with multiple interfaces!");
 			SNetRecDestroy(parser.current.record);
@@ -747,9 +746,8 @@ Element:      PushNS EmptyElemTag
 			  if(field != NULL) {
 			    SNetRecAddField(parser.current.record, index);
 			    SNetRecSetField(parser.current.record, index, field);
-			  }else {
-			    yyerror("Deserialization error: Field data == NULL!");
 			  }
+
 			}else{
 			  yyerror("Record has fields with multiple interfaces!");
 			  SNetRecDestroy(parser.current.record);
