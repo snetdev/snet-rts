@@ -65,9 +65,26 @@ int myserializeInt(void* value, char **data){
   return ret;
 }
 
+void myfreeNULL( void *ptr) {
+  return;
+}
+
+void *mycopyNULL( void *ptr) {
+  return NULL;
+}
+
+int myserializeNULL(void* value, char **data){
+  return 0;
+}
+
 #undef SER_BUF_SIZE
 
 void *mydeserialize(char* value, int len){
+  /* NULL */
+  if(len == 0 || value == NULL) {
+    return (void *)C2SNet_cdataCreate(NULL, myfreeNULL, 
+				      mycopyNULL, myserializeNULL);
+  }
   if(value != NULL){
     /* int */
     if(len > 4 && strncmp(value, "int:", 4) == 0){

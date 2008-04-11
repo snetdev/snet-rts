@@ -591,19 +591,32 @@ Element:      PushNS EmptyElemTag
 			void *field = NULL;
 
 			if(parser.current.mode == MODE_TEXTUAL){
-			  void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
-			  field = desfun(NULL, 0);
+			  void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);			
+			  if(desfun != NULL) {
+			    field = desfun(NULL, 0);
+			  }else {
+			    yyerror("Deserialization error!");
+			  }
+
 			}else if(parser.current.mode == MODE_BINARY){
 			  yyerror("Deserialization of data in binary mode is not yet implemented!");
 			  //TODO: Does binary mode actually need separate function at all?
-			  void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
-			  field = desfun(NULL, 0);
+			  void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);		
+			  if(desfun != NULL) {
+			    field = desfun(NULL, 0);
+			  }else {
+			    yyerror("Deserialization error!");
+			  }
+
 			}else{
 			  yyerror("Trying to deserialize data in unknown mode!");
 			}
-
-			SNetRecAddField(parser.current.record, index);
-			SNetRecSetField(parser.current.record, index, field);
+			if(field != NULL) {
+			  SNetRecAddField(parser.current.record, index);
+			  SNetRecSetField(parser.current.record, index, field);
+			}else{
+			  yyerror("Deserialization error: Field data == NULL!");
+			}
 		      }else{
 			yyerror("Record has fields with multiple interfaces!");
 			SNetRecDestroy(parser.current.record);
@@ -706,20 +719,37 @@ Element:      PushNS EmptyElemTag
 			  void *field = NULL;
 			  if(parser.current.mode == MODE_TEXTUAL){
 			    void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
-			    field = desfun($3, strlen($3));
+			    if(desfun != NULL && $3 != NULL) {
+			      field = desfun($3, strlen($3));
+			    }else if($3 == NULL) {
+			      field = desfun($3, 0);
+			    }else {
+			      yyerror("Deserialization error!");
+			    }
+
 			  }else if(parser.current.mode == MODE_BINARY){
 			    yyerror("Deserialization of data in binary mode is not yet implemented!");
 			    //TODO: Does binary mode actually need separate function at all?
 
-			    void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
-			    field = desfun($3, strlen($3));
+			    void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);			   
+			    if(desfun != NULL && $3 != NULL) {
+			      field = desfun($3, strlen($3));
+			    }else if($3 == NULL) {
+			      field = desfun($3, 0);
+			    }else {
+			      yyerror("Deserialization error!");
+			    }
+
 			  }else{
 			    yyerror("Trying to deserialize data in unknown mode!");
 			  }
 
-			  SNetRecAddField(parser.current.record, index);
-			  SNetRecSetField(parser.current.record, index, field);
-
+			  if(field != NULL) {
+			    SNetRecAddField(parser.current.record, index);
+			    SNetRecSetField(parser.current.record, index, field);
+			  }else {
+			    yyerror("Deserialization error: Field data == NULL!");
+			  }
 			}else{
 			  yyerror("Record has fields with multiple interfaces!");
 			  SNetRecDestroy(parser.current.record);
