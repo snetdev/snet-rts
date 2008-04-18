@@ -1,14 +1,6 @@
 /*** THIS NEEDS TO BE GENERATED (directly to factorial.h ?) ***/
-// TODO: Better names for global variables!
 
-#include "myfuns.h"
-
-#define SNET__factorial__NUMBER_OF_INTERFACES 1
-
-#define I__factorial__C2SNET 0
-                                                  
-char *snet_factorial_interfaces[SNET__factorial__NUMBER_OF_INTERFACES] = {"C2SNet"};
-
+#include "myfuns.h"                                           
 
 /**************************************************************/
 
@@ -48,11 +40,10 @@ char *snet_factorial_interfaces[SNET__factorial__NUMBER_OF_INTERFACES] = {"C2SNe
 #include <record.h>
 #include "parser.h"
 #include "label.h"
-#include "interface.h"
-#include "globals.h"
+#include "snetglobals.h"
 #include "output.h"
+#include "observers.h"
 
-#include <graphics.h>
 #include "factorial.h"
 #include <C2SNet.h>
 #include <stdio.h>
@@ -69,24 +60,22 @@ int main(int argc, char* argv[])
   /*** THIS NEEDS TO BE GENERATED */                              
   globals_labels = SNetInLabelInit(snet_factorial_labels, SNET__factorial__NUMBER_OF_LABELS);
   globals_interfaces = SNetInInterfaceInit(snet_factorial_interfaces, 
-						       SNET__factorial__NUMBER_OF_INTERFACES);
+					   SNET__factorial__NUMBER_OF_INTERFACES);
   /********************************/
 
   snet_buffer_t *in_buf = SNetBufCreate(inBufSize);
   snet_buffer_t *out_buf = NULL;
 
   SNetGlobalInitialise();
-  SNetInitGraphicalSystem();
+  SNetInitObserverSystem();
 
   /*** THIS NEEDS TO BE GENERATED */
-  C2SNet_init(I__factorial__C2SNET, mydeserialize);
+  C2SNet_init(I__factorial__C2SNet, mydeserialize);
 
   out_buf = SNet__factorial___factorial(in_buf);
   /********************************/
   
-  SNetInOutputInit();
-
-  if(SNetInOutputBegin(out_buf) != 0){
+  if(SNetInOutputInit(out_buf) != 0){
     return 1;
   }
 
@@ -99,18 +88,23 @@ int main(int argc, char* argv[])
     i = SNetInParserParse();
    }  
 
-  /** destroy **/
-
-  if(in_buf != NULL){
-    SNetBufBlockUntilEmpty(in_buf);
-    SNetBufDestroy(in_buf);
-  }
-  
-  SNetInParserDestroy();
-
-  if(SNetInOutputBlockUntilEnd() != 0){
+  /** wait until terminate record has passed the network. */
+  if(SNetInOutputDestroy() != 0){
     return 1;
   }
+
+  /** destroy **/
+  if(in_buf != NULL){
+    SNetBufDestroy(in_buf);
+  }
+
+  SNetInParserDestroy();
+
+  if(out_buf != NULL){
+    SNetBufDestroy(out_buf);
+  }
+
+  SNetDestroyObserverSystem();
   
   SNetInLabelDestroy(globals_labels);
   SNetInInterfaceDestroy(globals_interfaces);         

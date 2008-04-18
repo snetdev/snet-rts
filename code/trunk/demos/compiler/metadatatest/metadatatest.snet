@@ -13,11 +13,9 @@
 
 <?xml version="1.0"?>
 <!-- Test for namespaces and observer -->
-<metadata xmlns="snet.feis.herts.ac.uk"
-          xmlns:a="snet.feis.herts.ac.uk">
+<metadata xmlns="snet-home.org">
   <net name="metadatatest/split" >
      <observer type="after" code="123abc">
-       <a:stag>T</a:stag>
      </observer>
   </net>
 </metadata>
@@ -27,6 +25,18 @@ typesig A2P = A -> {P};
 typesig compAB_t = A2P, {B} -> {Q};
 
 net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
+   <metadata xmlns="snet-home.org">
+      <box name="compA" >
+        <interface name="C2SNet" />
+       </box>
+      <box name="compB" >
+        <interface name="C2SAC" />
+       </box>
+      <box name="compC" >
+        <interface name="C2SAC" />
+      </box>
+   </metadata>
+ 
     box compA ((A) -> (P));
     box compB ((B) -> (Q));
     box compC ((C) -> (P));
@@ -37,7 +47,7 @@ net metadatatest {
 	
     <?xml version="1.0"?>
     <!-- Test for box-->
-    <snet:metadata xmlns:snet="snet.feis.herts.ac.uk">
+    <snet:metadata xmlns:snet="snet-home.org">
       <snet:box name="examine" >
         <snet:interface name="C2SNet" />
         <snet:boxsource name="boxfuns.c" />

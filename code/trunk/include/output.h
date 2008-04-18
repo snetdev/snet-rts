@@ -21,14 +21,7 @@
 #include <record.h>
 #include <buffer.h>
 
-/* Init output system to use given labels and language interfaces.
- *
- */
-
-void SNetInOutputInit();
-
-
-/* Start output system.
+/* Init output system.
  *
  * @param in_buf Buffer from where the records to output are taken.
  *
@@ -36,16 +29,16 @@ void SNetInOutputInit();
  * @return -1 Error occured while starting the system.
  *
  */
-int SNetInOutputBegin(snet_buffer_t *in_buf);
+int SNetInOutputInit(snet_buffer_t *in_buf);
 
 
-/* Wait until stop of the output system.
+/* Wait until the end of output.
  *
  * @return 0   Action is succesful.
  * @return -1 Error occured while stopping the system.
  *
  */
-int SNetInOutputBlockUntilEnd();
+int SNetInOutputDestroy();
 
 
 #endif /* OUTPUT_H_ */

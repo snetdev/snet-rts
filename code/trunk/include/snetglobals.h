@@ -1,5 +1,5 @@
-#ifndef GLOBALS_H_
-#define GLOBALS_H_
+#ifndef SNETGLOBALS_H_
+#define SNETGLOBALS_H_
 
 /*******************************************************************************
  *
@@ -14,7 +14,7 @@
  * Description:
  * ------------
  *
- * Output functions for S-NET network interface.
+ * Global variable definitions
  *
  *******************************************************************************/
 
@@ -24,4 +24,4 @@
 extern snetin_label_t *globals_labels;
 extern snetin_interface_t *globals_interfaces;
 
-#endif /* GLOBALS_H_ */
+#endif /* SNETGLOBALS_H_ */

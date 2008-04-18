@@ -16,11 +16,17 @@
  *******************************************************************************/
 
 %{
-#include <str.h>
+#include <string.h>
 #include "parser.tab.h"
+#include <memfun.h>
 
 #define LINEBUF_SIZE 256
 #define YY_NO_UNPUT
+
+char *STRcpy(const char *text){
+  char *t = SNetMemAlloc(sizeof(char) * (strlen(text) + 1));
+  return strcpy(t, text);
+}
 
 extern void yyerror(char *error);
 %}

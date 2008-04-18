@@ -20,7 +20,9 @@
 #include <pthread.h>
 #include <output.h>
 #include <snetentities.h>
-#include <globals.h>
+#include <snetglobals.h>
+#include <label.h>
+#include <interface.h>
 
 /* Thread to do the output */
 static pthread_t thread; 
@@ -32,11 +34,13 @@ static void printRec(snet_record_t *rec)
   int k = 0;
   int i = 0;
   char *label = NULL;
-  printf("<data mode=\"textual\" xmlns=\"snet.feis.herts.ac.uk\">");
+  printf("<data mode=\"textual\" xmlns=\"snet-home.org\">");
   if( rec != NULL) {
     switch( SNetRecGetDescriptor( rec)) {
     case REC_data:
       printf("<record type=\"data\" >");
+
+       /* Fields */
        for( k=0; k<SNetRecGetNumFields( rec); k++) {
 	 i = SNetRecGetFieldNames( rec)[k];
 	 char *data = NULL;
@@ -47,7 +51,7 @@ static void printRec(snet_record_t *rec)
 
 	 int len = fun(SNetRecGetField(rec, i), &data);
 
-	 if((label = SNetInSearchLabelByIndex(globals_labels, i)) != NULL){
+	 if((label = SNetInIdToLabel(globals_labels, i)) != NULL){
 	   int l = 0;
 	   printf("<field label=\"%s\" interface=\"%s\">", label, 
 	   	  SNetInIdToInterface(globals_interfaces, id));
@@ -56,30 +60,34 @@ static void printRec(snet_record_t *rec)
 	   }
 	   printf("</field>");
 	 }else{
-	   // TODO: Error, unknown field!
+	   /* Error: unknown label! */
 	 }
 	 
 	 SNetMemFree(data);	 
 	 SNetMemFree(label);
        }
+
+       /* Tags */
        for( k=0; k<SNetRecGetNumTags( rec); k++) {
 	 i = SNetRecGetTagNames( rec)[k];
 
-	 if((label = SNetInSearchLabelByIndex(globals_labels, i)) != NULL){
+	 if((label = SNetInIdToLabel(globals_labels, i)) != NULL){
 	   printf("<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
 	 }else{
-	   // TODO: Error, unknown tag!
+	   /* Error: unknown label! */
 	 }
 
 	 SNetMemFree(label);
        }
+
+       /* BTags */
        for( k=0; k<SNetRecGetNumBTags( rec); k++) {
 	 i = SNetRecGetBTagNames( rec)[k];
 
-	 if((label = SNetInSearchLabelByIndex(globals_labels, i)) != NULL){
+	 if((label = SNetInIdToLabel(globals_labels, i)) != NULL){
 	   printf("<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
 	 }else{
-	   // TODO: Error, unknown btag!
+	   /* Error: unknown label! */
 	 }
 
 	 SNetMemFree(label);
@@ -126,21 +134,18 @@ static void *doOutput(void* data)
   return NULL;
 }
 
-void SNetInOutputInit(){
-}
-
-int SNetInOutputBegin(snet_buffer_t *in_buf){
-  if(pthread_create(&thread, NULL, (void *)doOutput, (void *)in_buf) == 0){
+int SNetInOutputInit(snet_buffer_t *in_buf){
+  if(in_buf == NULL || pthread_create(&thread, NULL, (void *)doOutput, (void *)in_buf) == 0){
     return 0;
   }
-  // error
+  /* error */
   return 1;
 }
 
-int SNetInOutputBlockUntilEnd(){
+int SNetInOutputDestroy(){
   if(pthread_join(thread, NULL) == 0){
     return 0;
   }
-  //error
+  /* Error */
   return 1;
 }

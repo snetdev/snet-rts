@@ -55,7 +55,7 @@ extern void SNetInLabelDestroy(snetin_label_t *labels);
  *
  */
 
-extern int SNetInSearchIndexByLabel(snetin_label_t *labels, const char *label);
+extern int SNetInLabelToId(snetin_label_t *labels, const char *label);
 
 /* Search for label by given index from the structure.
  *
@@ -68,7 +68,7 @@ extern int SNetInSearchIndexByLabel(snetin_label_t *labels, const char *label);
  */
 
 
-extern char *SNetInSearchLabelByIndex(snetin_label_t *labels, int index);
+extern char *SNetInIdToLabel(snetin_label_t *labels, int index);
 
 #endif /* LABEL_H_ */
 

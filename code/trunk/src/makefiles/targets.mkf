@@ -171,7 +171,7 @@ print           = print.o
 
 common          = memfun.o handle.o record.o typeencode.o expression.o
 
-posix           = buffer.o graphics.o snetentities.o
+posix           = buffer.o graphics.o snetentities.o observers.o dispatcher.o label.o output.o parser.tab.o parser.lex.o interface.o default_interface.o
 
 ###############################################################################
 #

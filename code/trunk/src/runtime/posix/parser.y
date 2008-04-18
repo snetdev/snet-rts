@@ -19,8 +19,6 @@
  * 1) Error reporting (most conditions commented to code with TODOs)
  * 2) Handling of malformed XML
  *    - If there is a missing end tag in some XML-element, the parsing of the data will never stop!
- * 3) Binary data mode is not working.
- *    - Should there be another deserialization function for binary data?
  */
 %{
 
@@ -29,9 +27,10 @@
 #include <memfun.h>
 #include <snetentities.h>
 #include <parser.h>
-#include <str.h>
+#include <label.h>
 #include <interface.h>
-#include <globals.h>
+#include <string.h>
+#include <snetglobals.h>
 
 /* Values to define state of the parser (in which kind of XML element) */
 #define STACK_ERROR       -2
@@ -50,17 +49,12 @@
 #define TAG               11
 #define BTAG              12
 
-/* Values to define mode of the data */
-#define MODE_UNKNOWN 0
-#define MODE_TEXTUAL 1
-#define MODE_BINARY  2
-
 /* Normalized XML element names */
-#define SNET_NS_DATA     "snet.feis.herts.ac.uk:data"
-#define SNET_NS_RECORD   "snet.feis.herts.ac.uk:record"
-#define SNET_NS_FIELD    "snet.feis.herts.ac.uk:field"
-#define SNET_NS_TAG      "snet.feis.herts.ac.uk:tag"
-#define SNET_NS_BTAG     "snet.feis.herts.ac.uk:btag"
+#define SNET_NS_DATA     "snet-home.org:data"
+#define SNET_NS_RECORD   "snet-home.org:record"
+#define SNET_NS_FIELD    "snet-home.org:field"
+#define SNET_NS_TAG      "snet-home.org:tag"
+#define SNET_NS_BTAG     "snet-home.org:btag"
 
 /* SNet record types */
 #define SNET_REC_DATA       "data" 
@@ -74,9 +68,6 @@
 /* SNet attribute names and values */
 #define LABEL     "label"
 #define INTERFACE "interface"
-#define MODE      "mode"
-#define TEXTUAL   "textual"
-#define BINARY    "binary"
 #define TYPE      "type"
 
  extern int yylex(void);
@@ -132,11 +123,8 @@
    struct{
      snet_record_t *record;
 
-     /* Mode of the data in the record */
-     unsigned int mode;
-
      /* Label of the fiel/tag/btag that is currently under parsing */
-     char *label;
+     int label;
 
      /* Interface of the field that is currently under parsing */
      int interface;
@@ -164,7 +152,13 @@
 
 
  /***** Auxiliary functions *****/
- 
+
+char *STRcat(const char *a, const char *b){
+  char *t = SNetMemAlloc(sizeof(char) * (strlen(a) + strlen(b) + 1));
+  strcpy(t, a);
+  strcat(t, b);
+  return t;
+}
 
  /** Record queue functions **
   *
@@ -369,12 +363,12 @@
   * before it's name.
   *
   * For example:
-  * if current namespace is "snet.feis.herts.ac.uk" and the element 
-  * name is "record", name "snet.feis.herts.ac.uk:record" is returned.
+  * if current namespace is "snet-home.org" and the element 
+  * name is "record", name "snet-home.org:record" is returned.
   *
   * if current namespace is "" and there is a binding of name "snet" to
-  * "snet.feis.herts.ac.uk" and the element name is "snet:record", 
-  * name "snet.feis.herts.ac.uk:record" is returned.
+  * "snet-home.org" and the element name is "snet:record", 
+  * name "snet-home.org:record" is returned.
   *
   */
  static char *normalizeName(char *name){
@@ -546,7 +540,6 @@ Element:      PushNS EmptyElemTag
 		$$ = UNKNOWN;
 
 		if($2 == DATA){
-		  parser.current.mode = MODE_UNKNOWN;
 
 		  if(parser.terminate != PARSE_ERROR){
 		    snet_record_t *temp = NULL;
@@ -560,7 +553,7 @@ Element:      PushNS EmptyElemTag
 		}else if($2 == RECORD){ 
 		  $$ = RECORD;
 		}else if($2 == RECORD_DATA){
-		  // Records are added to the buffer (empty record)
+		  /* Records are added to the buffer (empty record) */
 		  putRec(parser.current.record);
 		  parser.current.record = NULL;
 		  $$ = RECORD_DATA;
@@ -576,13 +569,12 @@ Element:      PushNS EmptyElemTag
 		  $$ = RECORD_TERMINATE;
 
 		}else if($2 == FIELD){
-		  // Fields are added to the current record
-		  // TODO: EMPTY FIELD -> error report instead?
-		  int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
-		  if(index != LABEL_ERROR && parser.current.interface != INTERFACE_UNKNOWN){
+		  /* Fields are added to the current record */
+
+		  if(parser.current.label != LABEL_ERROR && parser.current.interface != INTERFACE_ERROR){
 		    
 		    if(parser.current.record != NULL){
-		      if(SNetRecGetInterfaceId(parser.current.record) == INTERFACE_UNKNOWN){
+		      if(SNetRecGetInterfaceId(parser.current.record) == INTERFACE_ERROR){
 			SNetRecSetInterfaceId(parser.current.record, parser.current.interface);
 		      }
 		      
@@ -590,31 +582,15 @@ Element:      PushNS EmptyElemTag
 
 			void *field = NULL;
 
-			if(parser.current.mode == MODE_TEXTUAL){
-			  void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);			
-			  if(desfun != NULL) {
-			    field = desfun(NULL, 0);
-			  }else {
-			    yyerror("Deserialization error!");
-			  }
-
-			}else if(parser.current.mode == MODE_BINARY){
-			  yyerror("Deserialization of data in binary mode is not yet implemented!");
-			  //TODO: Does binary mode actually need separate function at all?
-			  void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);		
-			  if(desfun != NULL) {
-			    field = desfun(NULL, 0);
-			  }else {
-			    yyerror("Deserialization error!");
-			  }
-
-			}else{
-			  yyerror("Trying to deserialize data in unknown mode!");
+			void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
+			if(desfun != NULL) {
+			  field = desfun(NULL, 0);
+			}else {
+			  yyerror("Deserialization error!");
 			}
-			if(field != NULL) {
-			  SNetRecAddField(parser.current.record, index);
-			  SNetRecSetField(parser.current.record, index, field);
-			}
+
+			SNetRecAddField(parser.current.record, parser.current.label);
+			SNetRecSetField(parser.current.record, parser.current.label, field);
 
 		      }else{
 			yyerror("Record has fields with multiple interfaces!");
@@ -625,44 +601,34 @@ Element:      PushNS EmptyElemTag
 		      yyerror("No record to add the field!");	      
 		    }
 		  }
-		  if(parser.current.label != NULL){
-		    SNetMemFree(parser.current.label);
-		    parser.current.label = NULL;
-		  }
-		  
-		  parser.current.interface = INTERFACE_UNKNOWN;
+
+		  parser.current.label = LABEL_ERROR;
+		  parser.current.interface = INTERFACE_ERROR;
 
 		  $$ = FIELD;
 
 		}else if($2 == TAG){
-		  // Tags are added to the current record (tag with no given value!)
-		  int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
-		  if(index != LABEL_ERROR){
+		  /* Tags are added to the current record (tag with no given value!) */
+
+		  if(parser.current.label != LABEL_ERROR){
 		    if(parser.current.record != NULL){
-		      SNetRecAddTag(parser.current.record, index);
-		      if(parser.current.label != NULL){
-			SNetMemFree(parser.current.label);
-			parser.current.label = NULL;
-		      }
+		      SNetRecAddTag(parser.current.record, parser.current.label);
 		    }else{
 		      yyerror("No record to add the tag!");	      
 		    }
+		    parser.current.label = LABEL_ERROR;
 		  }
 		  $$ = TAG;
 
 		}else if($2 == BTAG){
-		  // BTags are added to the current record (btag with no given value!)
-		  int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
-		  if(index != LABEL_ERROR){
+		  /* BTags are added to the current record (btag with no given value!) */
+		  if(parser.current.label != LABEL_ERROR){
 		    if(parser.current.record != NULL){
-		      SNetRecAddBTag(parser.current.record, index);
-		      if(parser.current.label != NULL){
-			SNetMemFree(parser.current.label);
-			parser.current.label = NULL;
-		      }
+		      SNetRecAddBTag(parser.current.record, parser.current.label);
 		    }else{
 		      yyerror("No record to add the btag!");	      
 		    }
+		    parser.current.label = LABEL_ERROR;
 		  }
 		  $$ = BTAG;
 		}
@@ -676,7 +642,6 @@ Element:      PushNS EmptyElemTag
 
 		if(strcmp($2, $4) == 0){
 		  if(getState() == DATA){
-		    parser.current.mode = MODE_UNKNOWN;
 
 		    if(parser.terminate != PARSE_ERROR){
 		      snet_record_t *temp = NULL;
@@ -689,7 +654,7 @@ Element:      PushNS EmptyElemTag
 		  }else if(getState() == RECORD){
 		    $$ = RECORD;
 		  }else if(getState() == RECORD_DATA){
-		    // Records are added to the buffer
+		    /* Records are added to the buffer */
 		    putRec(parser.current.record);
 		    parser.current.record = NULL;
 		    $$ = RECORD_DATA;
@@ -704,49 +669,28 @@ Element:      PushNS EmptyElemTag
 		  }else if(getState() == RECORD_TERMINATE){
 		    $$ = RECORD_TERMINATE;
 		  }else if(getState() == FIELD){
-		    // Fields are added to the current record
-		    int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
-		    if(index != LABEL_ERROR && parser.current.interface != INTERFACE_UNKNOWN){
-
+		    /* Fields are added to the current record */
+		    if(parser.current.label != LABEL_ERROR && parser.current.interface != INTERFACE_ERROR){
 		      if(parser.current.record != NULL){
-			if(SNetRecGetInterfaceId(parser.current.record) == INTERFACE_UNKNOWN){
+			if(SNetRecGetInterfaceId(parser.current.record) == INTERFACE_ERROR){
 			  SNetRecSetInterfaceId(parser.current.record, parser.current.interface);
 			}
 
 			if(SNetRecGetInterfaceId(parser.current.record) == parser.current.interface){
 
 			  void *field = NULL;
-			  if(parser.current.mode == MODE_TEXTUAL){
-			    void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
-			    if(desfun != NULL && $3 != NULL) {
-			      field = desfun($3, strlen($3));
-			    }else if($3 == NULL) {
-			      field = desfun($3, 0);
-			    }else {
-			      yyerror("Deserialization error!");
-			    }
 
-			  }else if(parser.current.mode == MODE_BINARY){
-			    yyerror("Deserialization of data in binary mode is not yet implemented!");
-			    //TODO: Does binary mode actually need separate function at all?
-
-			    void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);			   
-			    if(desfun != NULL && $3 != NULL) {
-			      field = desfun($3, strlen($3));
-			    }else if($3 == NULL) {
-			      field = desfun($3, 0);
-			    }else {
-			      yyerror("Deserialization error!");
-			    }
-
-			  }else{
-			    yyerror("Trying to deserialize data in unknown mode!");
+			  void *(*desfun)(char *, int) = SNetGetDeserializationFun(parser.current.interface);
+			  if(desfun != NULL && $3 != NULL) {
+			    field = desfun($3, strlen($3));
+			  }else if($3 == NULL) {
+			    field = desfun($3, 0);
+			  }else {
+			    yyerror("Deserialization error!");
 			  }
 
-			  if(field != NULL) {
-			    SNetRecAddField(parser.current.record, index);
-			    SNetRecSetField(parser.current.record, index, field);
-			  }
+			  SNetRecAddField(parser.current.record, parser.current.label);
+			  SNetRecSetField(parser.current.record, parser.current.label, field);
 
 			}else{
 			  yyerror("Record has fields with multiple interfaces!");
@@ -758,57 +702,47 @@ Element:      PushNS EmptyElemTag
 		      }
 		    }
 		    
-		    if(parser.current.label != NULL){
-		      SNetMemFree(parser.current.label);
-		      parser.current.label = NULL;
-		    }
-		    
-		    parser.current.interface = INTERFACE_UNKNOWN;
+		    parser.current.label = LABEL_ERROR;
+		    parser.current.interface = INTERFACE_ERROR;
 		    
 		    $$ = FIELD;
 
 		  }else if(getState() == TAG){
-		    // Tags are added to the current record
- 		    int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
-		    if(index != LABEL_ERROR){
+		    /* Tags are added to the current record */
+
+		    if(parser.current.label != LABEL_ERROR){
 		      if(parser.current.record != NULL){
-			SNetRecAddTag(parser.current.record, index);			
+			SNetRecAddTag(parser.current.record, parser.current.label);			
 			if($3 != NULL){
-			  SNetRecSetTag(parser.current.record, index, atoi($3));
+			  SNetRecSetTag(parser.current.record, parser.current.label, atoi($3));
 			}	
 		      }else{
 			yyerror("No record to add the tag!");	      
 		      }
 		    }
-		    if(parser.current.label != NULL){
-		      SNetMemFree(parser.current.label);
-		      parser.current.label = NULL;
-		    }
+
+		    parser.current.label = LABEL_ERROR;
 		    
 		    $$ = TAG;
 		  }else if(getState() == BTAG){
-		    // BTags are added to the current record
- 		    int index = SNetInSearchIndexByLabel(globals_labels, parser.current.label);
-		    if(index != LABEL_ERROR){
+		    /* BTags are added to the current record */
+ 		    if(parser.current.label != LABEL_ERROR){
 		      if(parser.current.record != NULL){
-			SNetRecAddBTag(parser.current.record, index);
+			SNetRecAddBTag(parser.current.record, parser.current.label);
 			
 			if($3 != NULL){
-			  SNetRecSetBTag(parser.current.record, index, atoi($3));
+			  SNetRecSetBTag(parser.current.record, parser.current.label, atoi($3));
 			}
 		      }else{
 			yyerror("No record to add the btag!");	      
 		      }
 		    }
 		      
-		    if(parser.current.label != NULL){
-		      SNetMemFree(parser.current.label);
-		      parser.current.label = NULL;
-		    }
+		    parser.current.label = LABEL_ERROR;
 		    $$ = BTAG;
 		  }
 		}else{ 
-		  //Ignored data (Unknown element or known element under wrong scope).
+		  /* Ignored data (Unknown element or known element under wrong scope). */
 		  parser.terminate = PARSE_ERROR;
 		}
 
@@ -830,37 +764,14 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 
 		$$ = UNKNOWN;
 
-		//At data element only the mode is stored
+		/* At data element only the mode is stored */
 
 		if(strcmp(name, SNET_NS_DATA) == 0 && getState() == ROOT){
-
-
-		    /* These should not matter as the data element is empty
-		     * and will be ignored!
-		    attrib_t *at = searchAttribute($3, MODE);
-		    
-		    if(parser.current.mode != MODE_UNKNOWN){
-		      yyerror("Old mode found!");
-		    }
-		    
-		    if(at != NULL){
-		      if(strcmp(at->value, TEXTUAL) == 0){
-			parser.current.mode = MODE_TEXTUAL;
-		      }else if(strcmp(at->value, BINARY) == 0){
-			parser.current.mode = MODE_BINARY;
-		      }else{
-			parser.current.mode = MODE_UNKNOWN;
-			yyerror("Data element with unknown mode found!");
-		      }
-		    }else{
-		      yyerror("Data element with no mode found!");
-		    }
-		    */
 
 		  pushState(DATA);
 		  $$ = DATA;
 
-	        }//New record is created according to the type of the record:
+	        }/* New record is created according to the type of the record: */
 	        else if(strcmp(name, SNET_NS_RECORD) == 0 && getState() == DATA){
 		  
 		  attrib_t *at = searchAttribute($3, TYPE);
@@ -874,7 +785,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  
 		  if(at != NULL){
 		    if(strcmp(at->value, SNET_REC_DATA) == 0){
-		      // New (empty) data record
+		      /* New (empty) data record */
 		      pushState(RECORD_DATA);
 		      parser.current.record = SNetRecCreate(REC_data,
 						  SNetTencVariantEncode( 
@@ -882,7 +793,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 						      SNetTencCreateVector( 0), 
 						      SNetTencCreateVector( 0)));
 
-		      SNetRecSetInterfaceId(parser.current.record, INTERFACE_UNKNOWN);
+		      SNetRecSetInterfaceId(parser.current.record, LABEL_ERROR);
 		      $$ = RECORD_DATA;
 		    }else if(strcmp(at->value, SNET_REC_SYNC) == 0){
 		      pushState(RECORD_SYNC);
@@ -905,7 +816,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		      putRec(SNetRecCreate(REC_sort_end));
 		      $$ = RECORD_SORT_END;
 		    }else if(strcmp(at->value, SNET_REC_TERMINATE) == 0){
-		      // New control record: terminate
+		      /* New control record: terminate */
 		      pushState(RECORD_TERMINATE);
 		      putRec(SNetRecCreate(REC_terminate));
 		      if(parser.terminate != PARSE_ERROR){
@@ -926,26 +837,25 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		      // TODO: record with no type!
 		  }
 		  
-		}//Fields label is stored:
+		}/* Fields label is stored: */
 	        else if(strcmp(name,SNET_NS_FIELD) == 0 && getState() == RECORD_DATA){
 		  
 		  attrib_t *at = searchAttribute($3, LABEL);
 		  
-		  if(parser.current.label != NULL){
+		  if(parser.current.label != LABEL_ERROR){
 		    //TODO: This should be an error!
-		    SNetMemFree(parser.current.label);
-		    parser.current.label = NULL;
+		    parser.current.label = LABEL_ERROR;
 		    yyerror("Old label found!");
 		  }
 		  
-		  if(parser.current.interface != INTERFACE_UNKNOWN){
+		  if(parser.current.interface != INTERFACE_ERROR){
 		    //TODO: This should be an error!
-		    parser.current.interface = INTERFACE_UNKNOWN;
+		    parser.current.interface = INTERFACE_ERROR;
 		    yyerror("Old interface found!");
 		  }
 		  
 		  if(at != NULL){
-		    parser.current.label = STRcpy(at->value);
+		    parser.current.label = SNetInLabelToId(globals_labels, at->value);
 		  }else{
 		    //TODO: No label: This should be an error!
 		    yyerror("Field with no label found!");
@@ -954,14 +864,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  at = searchAttribute($3, INTERFACE);
 		  
 		  if(at != NULL){
-		    
-		    int interface = SNetInInterfaceToId(globals_interfaces, at->value);
-		    if(interface != INTERFACE_UNKNOWN){ 
-		      parser.current.interface = interface;
-		    }else{
-		      //TODO: Unknown interface: This should be an error!
-		      yyerror("Field with unknown interface found!");
-		    }
+		    parser.current.interface = SNetInInterfaceToId(globals_interfaces, at->value);	      
 		  }else{
 		    //TODO: No interface: This should be an error!
 		    yyerror("Field with no interface found!");
@@ -971,20 +874,19 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  pushState(FIELD);
 		  $$ = FIELD;
 		  
-	        }//Tags label is stored:
+	        }/* Tags label is stored: */
 	        else if(strcmp(name, SNET_NS_TAG) == 0 && getState() == RECORD_DATA){
 
 		  attrib_t *at = searchAttribute($3, LABEL);
 		    
-		  if(parser.current.label != NULL){
+		  if(parser.current.label != LABEL_ERROR){
 		    //TODO: This should be an error!
-		    SNetMemFree(parser.current.label);
-		    parser.current.label = NULL;
+		    parser.current.label = LABEL_ERROR;
 		    yyerror("Old label found!");
 		  }
 		  
 		  if(at != NULL){
-		    parser.current.label = STRcpy(at->value);
+		    parser.current.label = SNetInLabelToId(globals_labels, at->value);
 		  }else{
 		    //TODO: No label: This should be an error!
 		    yyerror("Tag with no label found!");
@@ -993,20 +895,19 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  pushState(TAG);
 		  $$ = TAG;
 
-	        }//BTags label is stored:
+	        }/* BTags label is stored: */
 	        else if(strcmp(name,SNET_NS_BTAG) == 0 && getState() == RECORD_DATA){
 		  
 		  attrib_t *at = searchAttribute($3, LABEL);
 		  
-		  if(parser.current.label != NULL){
+		  if(parser.current.label != LABEL_ERROR){
 		    //TODO: This should be an error!
-		    SNetMemFree(parser.current.label);
-		    parser.current.label = NULL;
+		    parser.current.label = LABEL_ERROR;
 		    yyerror("Old label found!");
 		  }
 		  
 		  if(at != NULL){
-		    parser.current.label = STRcpy(at->value);
+		    parser.current.label = SNetInLabelToId(globals_labels, at->value);
 		  }else{
 		    //TODO: No label: This should be an error!
 		    yyerror("BTag with no label found!");
@@ -1019,7 +920,7 @@ EmptyElemTag: STARTTAG_BEGIN NAME Attributes STARTTAG_SHORTEND
 		  $$ = UNKNOWN;
 		}
 
-		//Free memory
+		/* Free memory */
 		if(name != NULL){
 		  SNetMemFree(name);
 		  name = NULL;
@@ -1044,32 +945,13 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		if($2 != NULL && name != $2){
 		  SNetMemFree($2);
 		}
-		//At data element only the mode is stored
+		/* At data element only the mode is stored */
 
                 if(strcmp(name, SNET_NS_DATA) == 0 && getState() == ROOT){
 
-		  attrib_t *at = searchAttribute($3, MODE);
-		  
-		  if(parser.current.mode != MODE_UNKNOWN){
-		    yyerror("Old mode found!");
-		  }
-		  
-		  if(at != NULL){
-		    if(strcmp(at->value, TEXTUAL) == 0){
-		      parser.current.mode = MODE_TEXTUAL;
-		    }else if(strcmp(at->value, BINARY) == 0){
-		      parser.current.mode = MODE_BINARY;
-		    }else{
-		      parser.current.mode = MODE_UNKNOWN;
-		      yyerror("Data element with unknown mode found!");
-		    }
-		  }else{
-		    yyerror("Data element with no mode found!");
-		  }
-		  
 		  pushState(DATA);
 		  
-	        }//New record is created according to the type of the record: 
+	        }/* New record is created according to the type of the record: */ 
 	        else if(strcmp(name, SNET_NS_RECORD) == 0 && getState() == DATA){
 		  
 		  attrib_t *at = searchAttribute($3, TYPE);
@@ -1083,14 +965,14 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		  
 		  if(at != NULL){
 		    if(strcmp(at->value, SNET_REC_DATA) == 0){
-		      // New data record
+		      /* New data record */
 		      pushState(RECORD_DATA);
 		      parser.current.record = SNetRecCreate(REC_data, 
 						   SNetTencVariantEncode( 
 				                      SNetTencCreateVector( 0), 
 						      SNetTencCreateVector( 0), 
 						      SNetTencCreateVector( 0)));
-		      SNetRecSetInterfaceId(parser.current.record, INTERFACE_UNKNOWN);	      
+		      SNetRecSetInterfaceId(parser.current.record, LABEL_ERROR);	      
 		    }else if(strcmp(at->value, SNET_REC_SYNC) == 0){
 		      pushState(RECORD_SYNC);
 		      // TODO: What additional data is needed?
@@ -1108,7 +990,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		      // TODO: What additional data is needed?
 		      putRec(SNetRecCreate(REC_sort_end));
 		    }else if(strcmp(at->value, SNET_REC_TERMINATE) == 0){
-		      // New control record: terminate
+		      /* New control record: terminate */
 		      pushState(RECORD_TERMINATE);
 		      putRec(SNetRecCreate(REC_terminate));
 		      if(parser.terminate != PARSE_ERROR){
@@ -1126,24 +1008,23 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		    yyerror("Record with no type found!");
 		  }
 		  
-	        }//Fields label is stored:
+	        }/* Fields label is stored: */
 	        else if(strcmp(name, SNET_NS_FIELD) == 0 && getState() == RECORD_DATA){
 		  attrib_t *at = searchAttribute($3, LABEL);
 		  
-		  if(parser.current.label != NULL){
+		  if(parser.current.label != LABEL_ERROR){
 		    //TODO: This should be an error!
-		    SNetMemFree(parser.current.label);
-		    parser.current.label = NULL;
+		    parser.current.label = LABEL_ERROR;
 		    yyerror("Old label found!");
 		  }
-		  if(parser.current.interface != INTERFACE_UNKNOWN){
+		  if(parser.current.interface != INTERFACE_ERROR){
 		    //TODO: This should be an error!
-		    parser.current.interface = INTERFACE_UNKNOWN;
+		    parser.current.interface = INTERFACE_ERROR;
 		    yyerror("Old interface found!");
 		  }
 		  
 		  if(at != NULL){
-		    parser.current.label = STRcpy(at->value);
+		    parser.current.label = SNetInLabelToId(globals_labels, at->value);
 		  }else{
 		    //TODO: No label: This should be an error!
 		    yyerror("Field with no label found!");
@@ -1152,14 +1033,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		  at = searchAttribute($3, INTERFACE);
 		  
 		  if(at != NULL){
-		    
-		    int interface = SNetInInterfaceToId(globals_interfaces, at->value);
-		    if(interface != INTERFACE_UNKNOWN){ 
-		      parser.current.interface = interface;
-		    }else{
-		      //TODO: Unknown interface: This should be an error!
-		      yyerror("Field with unknown interface found!");
-		    }
+		    parser.current.interface = SNetInInterfaceToId(globals_interfaces, at->value);
 		  }else{
 		    //TODO: No interface: This should be an error!
 		    yyerror("Field with no interface found!");
@@ -1167,19 +1041,18 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 
 		  pushState(FIELD);
 		  
-	        }//Tags label is stored:
+	        }/* Tags label is stored: */
 	        else if(strcmp(name, SNET_NS_TAG) == 0 && getState() == RECORD_DATA){
 		  attrib_t *at = searchAttribute($3, LABEL);
 		  
-		  if(parser.current.label != NULL){
+		  if(parser.current.label != LABEL_ERROR){
 		    //TODO: This should be an error!
-		    SNetMemFree(parser.current.label);
-		    parser.current.label = NULL;
+		    parser.current.label = LABEL_ERROR;
 		    yyerror("Old label found!");
 		  }
 		  
 		  if(at != NULL){
-		    parser.current.label = STRcpy(at->value);
+		    parser.current.label = SNetInLabelToId(globals_labels, at->value);
 		  }else{
 		    //TODO: No label: This should be an error!
 		    yyerror("Tag with no label found!");
@@ -1189,16 +1062,15 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 	        }
 	        else if(strcmp(name, SNET_NS_BTAG) == 0 && getState() == RECORD_DATA){
 		  attrib_t *at = searchAttribute($3, LABEL);
-		  
-		  if(parser.current.label != NULL){
+
+		  if(parser.current.label != LABEL_ERROR){
 		    //TODO: This should be an error!
-		    SNetMemFree(parser.current.label);
-		    parser.current.label = NULL;
+		    parser.current.label = LABEL_ERROR;
 		    yyerror("Old label found!");
-		    }
-		  
+		  }
+		  		  		  
 		  if(at != NULL){
-		    parser.current.label = STRcpy(at->value);
+		    parser.current.label = SNetInLabelToId(globals_labels, at->value);
 		  }else{
 		    //TODO: No label: This should be an error!
 		    yyerror("BTag with no label found!");
@@ -1210,7 +1082,7 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 		  pushState(UNKNOWN);
 		}
 
-		//Free memory
+		/* Free memory */
 
 		if($3 != NULL){
 		  attrib_t *attr = $3;
@@ -1228,18 +1100,19 @@ StartTag:     STARTTAG_BEGIN NAME Attributes TAG_END
 Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes 
               {  
          
-		//Default namespace
+		/* Default namespace */
 		if(strcmp($1, "xmlns") == 0){
 		  setDefaultNS($4);
 		  SNetMemFree($1);
 		  $$ = $6;
-		}// Bound namespace 
+		}/* Bound namespace */
 		else if(strncmp($1, "xmlns:",6) == 0){
-		  char *t = STRcpy($1 + 6);
+		  char *t = SNetMemAlloc(sizeof(char) * (strlen($1 + 6) + 1));
+		  t =  strcpy(t, $1 + 6);
 		  initNS(t, $4);
 		  SNetMemFree($1);
 		  $$ = $6;
-		}// Normal attribute
+		}/* Normal attribute */
 		else{
 		  attrib_t *temp = initAttribute($1, $4);
 		  temp->next = $6;
@@ -1249,19 +1122,20 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
 
             | NAME EQ DQUOTE DATTVAL DQUOTE Attributes 
               {  
-		//Default namespace
+		/* Default namespace */
 		if(strcmp($1, "xmlns") == 0){
 		  setDefaultNS($4);
 		  SNetMemFree($1);
 		  $$ = $6;
-		}// Bound namespace  
+		}/* Bound namespace */
 		else if(strncmp($1, "xmlns:",6) == 0){
-		  char *t = STRcpy($1 + 6);
+		  char *t = SNetMemAlloc(sizeof(char) * (strlen($1 + 6) + 1));
+		  t =  strcpy(t, $1 + 6);
 		  initNS(t, $4);
 		  SNetMemFree($1);
 		  t = NULL;
 		  $$ = $6;
-		}// Normal attribute
+		}/* Normal attribute */
 		else{
 		  attrib_t *temp = initAttribute($1, $4);
 		  temp->next = $6;;
@@ -1330,21 +1204,15 @@ void yyerror(char *error)
 
 static void flush(){
 
-  parser.current.mode = MODE_UNKNOWN;
-
   if(parser.current.record != NULL){
     SNetMemFree(parser.current.record);
   }
   parser.current.record = NULL;
   
-
-  if(parser.current.label != NULL){
-    SNetMemFree(parser.current.label);
-  }
-  parser.current.label = NULL;
+  parser.current.label = LABEL_ERROR;
   
   
-  parser.current.interface = INTERFACE_UNKNOWN;
+  parser.current.interface = INTERFACE_ERROR;
 
   while(parser.bound_ns != NULL){
     ns_t *temp = parser.bound_ns->next;
@@ -1417,10 +1285,6 @@ void SNetInParserDestroy(){
 #undef TAG               
 #undef BTAG              
 
-#undef MODE_UNKNOWN 
-#undef MODE_TEXTUAL 
-#undef MODE_BINARY  
-
 #undef SNET_NS_DATA 
 #undef SNET_NS_RECORD  
 #undef SNET_NS_FIELD   
@@ -1436,7 +1300,4 @@ void SNetInParserDestroy(){
 
 #undef LABEL
 #undef INTERFACE
-#undef MODE
-#undef TEXTUAL
-#undef BINARY
 #undef TYPE

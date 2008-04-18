@@ -1,23 +1,42 @@
-/*
 <?xml version="1.0"?>
-<metadata xmlns="snet.feis.herts.ac.uk" >
+<metadata xmlns="snet-home.org" >
   <net name="factorial" >
-     <observer type="before" />
-     <observer type="after" />
+     <observer data="full" type="before" />
+     <observer data="full" type="after" interactive="true" />
   </net>
   <net name="factorial/compute" >
-     <observer type="before" />
+     <observer data="full" type="before" interactive="true" />
   </net>
 </metadata>
-*/
+
 
 net factorial({x} -> {x,<stop>})
 {
+	<?xml version="1.0"?>
+	<metadata xmlns="snet-home.org" >
+  	    <box name="leq1" >
+     		<interface name="C2SNet" />
+  	    </box>
+  	    <box name="condif" >
+     		<interface name="C2SNet" />
+  	    </box>
+	</metadata>
+
         box leq1( (x) -> (x,p));
         box condif( (p) -> (<T>) | (<F>));
 
         net compute
         {
+		<?xml version="1.0"?>
+		<metadata xmlns="snet-home.org" >
+  	    	    <box name="sub" >
+     			<interface name="C2SNet" />
+  	    	    </box>
+  	    	<box name="mult" >
+     			<interface name="C2SNet" />
+  	    	</box>
+		</metadata>
+
                 box sub( (x) -> (xx));
                 box mult( (xm,rm) -> (rrm));
         }
