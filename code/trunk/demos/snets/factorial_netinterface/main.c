@@ -1,10 +1,3 @@
-/*** THIS NEEDS TO BE GENERATED (directly to factorial.h ?) ***/
-
-#include "myfuns.h"                                           
-
-/**************************************************************/
-
-
 /*******************************************************************************
  *
  * $Id$
@@ -44,9 +37,15 @@
 #include "output.h"
 #include "observers.h"
 
-#include "factorial.h"
-#include <C2SNet.h>
 #include <stdio.h>
+
+/*** THIS NEEDS TO BE GENERATED ***/
+
+#include "myfuns.h"  
+#include "factorial.h"
+#include <C2SNet.h>                   
+
+/**********************************/
 
 snetin_label_t *globals_labels = NULL;
 snetin_interface_t *globals_interfaces = NULL;
