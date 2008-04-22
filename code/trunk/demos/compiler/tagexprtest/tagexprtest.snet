@@ -13,7 +13,7 @@
 
 net tagexprtest ({A,B,<T>} -> {A,<Y>}){
    box compA ((A) -> (A));
-} connect compA * {A},{<T>} if < (1 > 1 || (T >= 3) || (4 != T) && 5 > 6 ? 7 == T ? 7 * 5 - abs (4 + 4): 8 : 9 + 8 / 5) == 0 > .. 
+} connect compA * {A},{<T>} if < (10 > 0xa || (T >= 030) || (4 != T) && 5 > 6 ? 7 == T ? 7 * 5 - abs (4 + 4): 8 : 9 + 8 / 5) == 0 > .. 
 [{A,B,<T>} 
 if <T == 1> -> {A,B,<T>}    
 if <T == 2> -> {A,B}             
