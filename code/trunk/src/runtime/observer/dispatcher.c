@@ -59,12 +59,11 @@ typedef struct connection{
                              // if a part of the message received is missing.
 }connection_t;
 
+/* Thread for dispatcher. This is needed for pthread_join later. */
+static pthread_t *dispatcher_thread;
 
 /* Mutex to guard connections list */
 static pthread_mutex_t connection_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/* Mutex used when the dispatcher is stopped */
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Connections list */
 static connection_t *connections = NULL;
@@ -314,7 +313,7 @@ static void *dispatcher_dispatch(void *arg)
     }
   }
   pthread_mutex_unlock(&connection_mutex);
-  pthread_mutex_unlock(&mutex);
+
   return NULL;
 }
 
@@ -460,7 +459,6 @@ int SNetDispatcherSend(int self, int fid, const char *buffer, int buflen, bool i
 int SNetDispatcherInit()
 {
   /* Start dispatcher */ 
-  pthread_mutex_lock(&mutex);
   terminate = 0;
 
   preg = SNetMemAlloc(sizeof(regex_t));
@@ -479,9 +477,12 @@ int SNetDispatcherInit()
     return -1;
   }
 
-  pthread_t *new = SNetMemAlloc(sizeof(pthread_t));
-  pthread_create(new, NULL, dispatcher_dispatch, NULL);
-  pthread_detach(*new);
+  if((dispatcher_thread = SNetMemAlloc(sizeof(pthread_t))) == NULL)
+  {
+    return -1;
+  }
+
+  pthread_create(dispatcher_thread, NULL, dispatcher_dispatch, NULL);
 
   return 0;
 }
@@ -502,7 +503,13 @@ void SNetDispatcherDestroy()
   pthread_mutex_unlock(&connection_mutex);
 
   write(notification_pipe[1], "?", 1);
-  pthread_mutex_lock(&mutex);
+
+  if(pthread_join(*dispatcher_thread, NULL) != 0)
+  {
+    /* Error */
+  }
+
+  SNetMemFree(dispatcher_thread);
 
   con = connections;
 

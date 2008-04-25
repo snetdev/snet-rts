@@ -98,11 +98,11 @@ int main(int argc, char* argv[])
   }
 
   SNetInParserDestroy();
-
+  /*
   if(out_buf != NULL){
     SNetBufDestroy(out_buf);
   }
-
+  */
   SNetDestroyObserverSystem();
   
   SNetInLabelDestroy(globals_labels);

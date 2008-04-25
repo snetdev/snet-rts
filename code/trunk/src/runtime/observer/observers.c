@@ -210,6 +210,10 @@ static void *ObserverBoxThread( void *hndl) {
 
   /* Unregister observer */
   SNetDispatcherRemove(hnd->id, hnd->fdesc);
+
+  SNetBufBlockUntilEmpty(hnd->outbuf);
+  SNetBufDestroy(hnd->outbuf);
+
   SNetMemFree(hnd);
 
   return NULL;
@@ -221,7 +225,7 @@ static void *ObserverBoxThread( void *hndl) {
 snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf, const char *addr, int port, bool interactive, 
 			       const char *position, char type, char data_level, const char *code)
 {
-  pthread_t *box_thread;
+  pthread_t box_thread;
   observer_handle_t *hnd;
 
   hnd = SNetMemAlloc(sizeof(observer_handle_t));
@@ -238,7 +242,7 @@ snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf, const char *addr, int port,
   pthread_mutex_unlock(&id_pool_mutex);
 
   /* Register observer */
-  hnd->fdesc = SNetDispatcherAdd(hnd->id, addr, port, hnd->interactive);
+  hnd->fdesc = SNetDispatcherAdd(hnd->id, addr, port, interactive);
 
   /* If observer couldn't be registered, it can be ignored! */
   if(hnd->fdesc == -1){
@@ -253,9 +257,8 @@ snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf, const char *addr, int port,
   hnd->data_level = data_level;
   hnd->code = code;
 
-  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  pthread_create(box_thread, NULL, ObserverBoxThread, (void*)hnd);
-  pthread_detach(*box_thread);
+  pthread_create(&box_thread, NULL, ObserverBoxThread, (void*)hnd);
+  pthread_detach(box_thread);
 
   return(hnd->outbuf);
 }
