@@ -9,16 +9,22 @@
   </net>
 </metadata>
 
+<?xml version="1.0"?>
+<metadata xmlns="snet-home.org" >
+  <interface name="C2SNet" include="myfuns.h" arguments="mydeserialize" />
+</metadata>
+
 
 net factorial({x} -> {x,<stop>})
 {
+
 	<?xml version="1.0"?>
 	<metadata xmlns="snet-home.org" >
   	    <box name="leq1" >
-     		<interface name="C2SNet" />
+  		<interface name="C2SNet" />
   	    </box>
   	    <box name="condif" >
-     		<interface name="C2SNet" />
+     		 <interface name="C2SNet" />
   	    </box>
 	</metadata>
 
