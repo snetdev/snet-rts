@@ -43,6 +43,28 @@ typedef enum {
 extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...);
 
 
+/*
+ * returns the number of times this record was iterated in the current star
+ * RETURNS: amount of iterations
+ */
+extern int SNetRecGetIteration(snet_record_t *rec);
+
+/*
+ * Increments the times this record was iterated in the current star
+ * by 1.
+ */
+extern void SNetRecIncInteration(snet_record_t *rec);
+
+/*
+ * Adds a new iteration counter and initializes this counter with the given
+ * initial value. Iteration counters that are already present will be saved
+ */
+extern void SNetRecAddIteration(snet_record *rec, int inital_value);
+
+/*
+ * Removes the current iteration counter.
+ */
+extern void SNetRecRemoveIteration(snet_record *rec);
 
 /*
  * CREC_sync: snet_buffer_t *inbuf
