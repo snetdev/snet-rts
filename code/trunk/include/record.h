@@ -59,12 +59,12 @@ extern void SNetRecIncInteration(snet_record_t *rec);
  * Adds a new iteration counter and initializes this counter with the given
  * initial value. Iteration counters that are already present will be saved
  */
-extern void SNetRecAddIteration(snet_record *rec, int inital_value);
+extern void SNetRecAddIteration(snet_record_t *rec, int inital_value);
 
 /*
  * Removes the current iteration counter.
  */
-extern void SNetRecRemoveIteration(snet_record *rec);
+extern void SNetRecRemoveIteration(snet_record_t *rec);
 
 /*
  * CREC_sync: snet_buffer_t *inbuf
