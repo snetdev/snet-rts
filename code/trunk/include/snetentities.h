@@ -13,6 +13,7 @@
 #include <constants.h>
 #include <expression.h>
 
+#define SNET_STAR_COUNTERFIELD "star_counter"
 
 extern bool SNetGlobalInitialise();
 extern bool 
