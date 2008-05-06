@@ -13,7 +13,7 @@
 typedef enum fbckbufmessage snet_fbckbuffer_msg_t;
 typedef struct fbckbuffer snet_fbckbuffer_t; 
 
-enum fbkcbufmessage
+enum fbckbufmessage
 {
 	FBCKBUF_fatal = -1,
 	FBCKBUF_success,
@@ -44,7 +44,7 @@ extern snet_fbckbuffer_t *SNetFbckBufCreate();
  * RETURNS: pointer to the modified buffer.
  */
 
-extern snet_buffer_t *SNetFbckBufPut( snet_fbckbuffer_t *buf, void* elem);
+extern snet_fbckbuffer_t *SNetFbckBufPut( snet_fbckbuffer_t *buf, void* elem);
 
 
 
