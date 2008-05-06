@@ -51,7 +51,10 @@
 #define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
 #define STAR_REC( name, component) RECORD( name, star_rec)->component
 
-
+struct iteration_counters {
+  int counter;
+  struct *iteration_counters next;
+}
 
 typedef struct {
   snet_variantencoding_t *v_enc;
@@ -59,6 +62,7 @@ typedef struct {
   int *tags;
   int *btags;
   int interface_id;
+  snet_rec_itercount **counters;
 } data_rec_t;
 
 typedef struct {
@@ -148,7 +152,6 @@ static void NotFoundError( int name, char *action, char *type)
     exit( 1);
 }
 /* *********************************************************** */
-
 
 extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
 
@@ -260,6 +263,68 @@ extern void SNetRecDestroy( snet_record_t *rec) {
   SNetMemFree( RECPTR( rec));
   SNetMemFree( rec);
  }
+}
+
+extern int SNetRecGetIteration(snet_record_t *rec) {
+  int result;
+  switch(REC_DESCR(rec)) {
+    case REC_data:
+      if(DATA_REC(rec, counters) != NULL) {
+        result = DATA_REC(rec, counters)->counter;
+      } else {
+        printf("\n\n ** Fatal Error **: Iteration requested for data record with no initialized iterations!\n\n");
+      }
+      break;
+    default:
+      printf("\n\n ** Fatal Error **: Wrong type in RecGetIteration() (%d) \n\n", REC_DESCR(rec));
+      exit(1)
+    break;
+  }
+  return result;
+}
+
+extern void SNetRecIncIteration(snet_record_t *rec) {
+  switch(REC_DESCR(rec)) {
+    case REC_data:
+      if(DATA_REC(rec, counters) != NULL) {
+        DATA_REC(rec, counters)->counter++;
+      } else {
+        printf("\n\n ** Fatal Error **: IncIteration requested for data record with no inizialized iterations!\n\n");
+      }
+      break;
+    default:
+      printf("\n\n ** Fatal Error **: Wrong type in RecIncIteration() (%d) \n\n", REC_DESCR(rec));
+      exit(1);
+    break;
+  }
+}
+
+extern void SNetRecAddIteration(snet_record_t *rec, int initial_value) {
+  struct iteration_counters *new_iteration;
+  switch(REC_DESCR(rec)) {
+    case REC_data:
+      new_iteration = SNetMemAlloc(sizeof(iteration_counters));
+      new_iteration->counter = initial_value;
+      new_iteration->next = *DATA_REC(rec, counters);
+      DATA_REC(rec, counters) = &new_iteration;
+    break;
+    default:
+      printf("\n\n ** Fatal Error **: Wrong type in RecAddIteration() (%d) \n\n", REC_DESCR(rec));
+    break;
+  }
+}
+
+extern void SNetRecRemoveIteration(snet_record_t *rec) {
+  switch(REC_DESCR(rec)) {
+    case REC_data:
+      struct iteration_counters *to_delete = *DATA_DESCR(rec, counters);
+      DATA_DESCR(rec, counters) = &(to_delete->next);
+      SNetMemFree(to_delete);
+    break;
+    default:
+      printf("\n\n ** Fatal Error **: Wrong type in RecRemoveIteration() (%d) \n\n", REC_DESCR(rec));
+    break;
+  }
 }
 
 
