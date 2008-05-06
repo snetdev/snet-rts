@@ -26,7 +26,7 @@
 
 struct fbckbuffer_element {
   void *content;
-  fbckbuffer_element* next;
+  struct fbckbuffer_element* next;
 };
 
 struct fbckbuffer  {
@@ -35,8 +35,10 @@ struct fbckbuffer  {
   bool dispatcher_registered;
   sem_t *sem;
 
+  
   pthread_mutex_t *mxCounter;
-  pthread_cond_t  *condEmpty;
+  pthread_cond_t *elemRemoved;
+  pthread_cond_t *condEmpty;
 };
 
 #ifdef DEBUG
@@ -82,22 +84,19 @@ extern snet_fbckbuffer_t *SNetFbckBufCreate() {
   theBuffer->sem = NULL;
 
   theBuffer->mxCounter = SNetMemAlloc( sizeof( pthread_mutex_t));
-
-  theBuffer->condFull = SNetMemAlloc( sizeof( pthread_cond_t));
+  theBuffer->elemRemoved = SNetMemAlloc(sizeof(pthread_cond_t));
   theBuffer->condEmpty = SNetMemAlloc( sizeof( pthread_cond_t));
 
   pthread_mutex_init(theBuffer->mxCounter, NULL);
   pthread_cond_init(theBuffer->condEmpty, NULL);
+  pthread_cond_init(theBuffer->elemRemoved, NULL);
 
   return( theBuffer);
 }
 
 extern snet_fbckbuffer_t *SNetFbckBufPut( snet_fbckbuffer_t *bf, void* elem) {
-  int current_star_index = -1;
-  int current_record_iteration = -1;
-
-  fbckbuffer_element *current = NULL;
-  fbckbuffer_element *last = NULL;
+  struct fbckbuffer_element *current = NULL;
+  struct fbckbuffer_element *last = NULL;
 
   snet_record_t *rec = (snet_record_t*) elem;
  
@@ -105,13 +104,13 @@ extern snet_fbckbuffer_t *SNetFbckBufPut( snet_fbckbuffer_t *bf, void* elem) {
   pthread_mutex_lock( bf->mxCounter);
     
   /* put element into list */
-  struct fbckbuffer_element new_element = SNetMemAlloc(sizeof(struct fbckbuffer_element));
+  struct fbckbuffer_element *new_element = SNetMemAlloc(sizeof(struct fbckbuffer_element));
   new_element->content = elem;
 
   current = *(bf->first);
   last = NULL;
   while(current &&
-        SNetRecGetIteration((snet_record_t*) current->content) > SNetGetIteration(rec)) {
+        SNetRecGetIteration((snet_record_t*) current->content) > SNetRecGetIteration(rec)) {
     current = current->next;
     last = current;
   }
@@ -139,7 +138,7 @@ extern snet_fbckbuffer_t *SNetFbckBufPut( snet_fbckbuffer_t *bf, void* elem) {
 }
 
 extern void *SNetFbckBufGet( snet_fbckbuffer_t *bf) {
-  fbckbuffer_element* element;  
+  struct fbckbuffer_element* element;  
   void *ptr;
 
   /* lock the mutex */
@@ -157,6 +156,7 @@ extern void *SNetFbckBufGet( snet_fbckbuffer_t *bf) {
   ptr = element->content;
   SNetMemFree(element);
 
+  pthread_cond_signal(bf->elemRemoved);
   /* unlock the mutex */
   pthread_mutex_unlock( bf->mxCounter);
     
@@ -166,14 +166,14 @@ extern void *SNetFbckBufGet( snet_fbckbuffer_t *bf) {
 
 extern void *SNetFbckBufTryGet(snet_fbckbuffer_t *bf, snet_fbckbuffer_msg_t *msg) { 
   void *ptr=NULL;
-
+  struct fbckbuffer_element *element;
   /* return if the buffer is locked */	
   if( pthread_mutex_trylock( bf->mxCounter) == EBUSY ) {
-    *msg = BUF_blocked;	    
+    *msg = FBCKBUF_blocked;	    
   }
   else {   /* return if there are no elements in the buffer */
     if( *(bf->first) == NULL) {
-      *msg = BUF_empty;
+      *msg = FBCKBUF_empty;
       pthread_mutex_unlock( bf->mxCounter );
     } else { 
       /* get an element from the buffer*/
@@ -182,9 +182,9 @@ extern void *SNetFbckBufTryGet(snet_fbckbuffer_t *bf, snet_fbckbuffer_msg_t *msg
       ptr = element->content;
       SNetMemFree(element);
 
-      pthread_cond_signal( bf->condFull );
+      pthread_cond_signal(bf->elemRemoved);
       pthread_mutex_unlock( bf->mxCounter );
-      *msg = BUF_success;
+      *msg = FBCKBUF_success;
     }
   }
   return( ptr);
@@ -195,7 +195,7 @@ extern void *SNetFbckBufShow(snet_fbckbuffer_t *buf) {
   
   pthread_mutex_lock( buf->mxCounter );
  
-  ptr = *(bf->first); 
+  ptr = *(buf->first); 
   
   pthread_mutex_unlock( buf->mxCounter);
   
@@ -208,7 +208,7 @@ extern void SNetFbckBufBlockUntilEmpty(snet_fbckbuffer_t *bf) {
 
   while(*(bf->first)) {
     // wake up, if an item is removed from the buffer    
-    pthread_cond_wait( bf->condFull, bf->mxCounter);
+    pthread_cond_wait( bf->elemRemoved, bf->mxCounter);
   }
 
   pthread_mutex_unlock( bf->mxCounter);
@@ -217,8 +217,7 @@ extern void SNetFbckBufBlockUntilEmpty(snet_fbckbuffer_t *bf) {
 
 
 extern void SNetFbckBufRegisterDispatcher( snet_fbckbuffer_t *bf, sem_t *sem) {
-  int i;
-  fbckbuffer_element current;
+  struct fbckbuffer_element *current;
   pthread_mutex_lock( bf->mxCounter);
   bf->dispatcher_registered = true;
   bf->sem = sem;
@@ -237,17 +236,17 @@ extern void SNetFbckBufDestroyByDispatcher(snet_fbckbuffer_t *bf) {
 }
 
 extern void SNetFbckBufDestroy(snet_fbckbuffer_t *bf) {
-  fbckbuffer_element current;
+  struct fbckbuffer_element *current;
 
   if(!(bf->dispatcher_registered)) {
 
     pthread_mutex_destroy( bf->mxCounter);
     pthread_cond_destroy( bf->condEmpty);
-    pthread_cond_destroy( bf->condFull);
+    pthread_cond_destroy( bf->elemRemoved);
     
     SNetMemFree( bf->condEmpty);
     SNetMemFree( bf->mxCounter);
-    SNetMemFree( bf->condFull);
+    SNetMemFree( bf->elemRemoved);
     /* usually, this should be empty, but better be safe than leaky. */
     current = *(bf->first);
     while(current) {
