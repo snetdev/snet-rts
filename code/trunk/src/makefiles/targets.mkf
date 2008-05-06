@@ -97,6 +97,8 @@ compiler        = tree global support parse preproc flat typeinf opt postproc \
 
 runtime         = common posix netinterface observer
 
+runtime_new     = common posix_feedback netinterface observer
+
 tools           = RecordInspector FeederFront 
 
 demo            = factorial graphicFactorial
@@ -172,6 +174,8 @@ print           = print.o
 common          = memfun.o handle.o record.o typeencode.o expression.o
 
 posix           = buffer.o graphics.o snetentities.o 
+
+posix_feedback	= buffer.o graphics.o snetentities.o
 
 netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o default_interface.o
 
