@@ -1182,7 +1182,7 @@ static void *Collector( void *info) {
   while( !( terminate)) {
     got_record = false;
     sem_wait( sem);
-    do {
+    do { /* } while( processed_record && !(terminate)); */
     got_record=false;
     processed_record = false;
     j = LLSTgetCount( lst);

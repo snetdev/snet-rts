@@ -15,6 +15,7 @@
 #include <record.h>
 
 #ifdef DEBUG
+  /* debug.h is nowhere to be found */
   #include <debug.h>
   extern debug_t *GLOBAL_OUTBUF_DBG; 
   #define GET_TRACE( BUFFER)\
