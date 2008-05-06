@@ -5,21 +5,20 @@
 
 
 
-#ifndef BUFFER_H
-#define BUFFER_H
+#ifndef FEEDBACKBUFFER_H
+#define FEEDBACKBUFFER_H
 
 #include <pthread.h>
 #include <semaphore.h>
-typedef enum bufmessage snet_buffer_msg_t;
-typedef struct buffer  snet_buffer_t; 
+typedef enum fbckbufmessage snet_fbckbuffer_msg_t;
+typedef struct fbckbuffer snet_fbckbuffer_t; 
 
-enum bufmessage
+enum fbkcbufmessage
 {
-	BUF_fatal = -1,
-	BUF_success,
-	BUF_blocked,
-	BUF_full,
-	BUF_empty
+	FBCKBUF_fatal = -1,
+	FBCKBUF_success,
+	FBCKBUF_blocked,
+	FBCKBUF_empty
 };
 
 
@@ -28,13 +27,11 @@ enum bufmessage
 /*
  * Allocates memory for the buffer and initializes
  * the datastructure. 
- * This function creates a buffer with 'sizes'
- * spaces for pointers to elements. 
  * RETURNS: pointer to the buffer on success or NULL
  *          otherwise. 
  */
 
-extern snet_buffer_t *SNetBufCreate( unsigned int size); // TODO: add extern to all functions
+extern snet_fbckbuffer_t *SNetFbckBufCreate();
 
 
 
@@ -44,11 +41,10 @@ extern snet_buffer_t *SNetBufCreate( unsigned int size); // TODO: add extern to 
  * This function will block until succeeded.
  * Possible reasons for blocking are:
  * - buffer is in use by another thread
- * - no space left in the buffer  
  * RETURNS: pointer to the modified buffer.
  */
 
-extern snet_buffer_t *SNetBufPut( snet_buffer_t *buf, void* elem);
+extern snet_buffer_t *SNetFbckBufPut( snet_fbckbuffer_t *buf, void* elem);
 
 
 
@@ -62,28 +58,7 @@ extern snet_buffer_t *SNetBufPut( snet_buffer_t *buf, void* elem);
  * RETURNS: pointer to the element.  
  */
 
-extern void *SNetBufGet( snet_buffer_t *buf	); // TODO: returns element, not buffer
-
-
-
-
-/*
- * Puts the pointer given as second parameter to the buffer if possible.
- * This function will NOT block (returns immediately).
- * The function needs a third parameter to let the caller know if
- * the element was stored in the buffer or not. Possible values for
- * msg are:
- * - BUF_SUCCESS: element was stored in the buffer
- * - BUF_BLOCKED: buffer was blocked by another thread,
- *                element has not been added.
- * - BUF_FULL:    no space left in the buffer, element
- *                has not been added.               
- * RETURNS: pointer to the (modified) buffer.
- */
-
-extern snet_buffer_t *SNetBufTryPut( snet_buffer_t *buf, void* elem, snet_buffer_msg_t *msg); 
-
-
+extern void *SNetFbckBufGet( snet_fbckbuffer_t *buf); // TODO: returns element, not buffer
 
 
 /*
@@ -100,7 +75,7 @@ extern snet_buffer_t *SNetBufTryPut( snet_buffer_t *buf, void* elem, snet_buffer
  * RETURNS: an element or NULL pointer.
  */
 
-extern void *SNetBufTryGet( snet_buffer_t *buf, snet_buffer_msg_t *msg);
+extern void *SNetFbckBufTryGet( snet_fbckbuffer_t *buf, snet_fbckbuffer_msg_t *msg);
 
 
 
@@ -110,26 +85,7 @@ extern void *SNetBufTryGet( snet_buffer_t *buf, snet_buffer_msg_t *msg);
  * RETURNS: an element or NULL
  */
  
-extern void *SNetBufShow( snet_buffer_t *buf);
-
-
-
-
-/*
- * RETURNS: the overall capacity of the buffer.
- */
-
-extern unsigned int SNetBufGetCapacity( snet_buffer_t *bf);
-
-
-
-/*
- * This function does not lock the buffer!
- * RETURNS: the remaining capacity.
- */
-
-extern unsigned int SNetGetSpaceLeft( snet_buffer_t *bf);
-
+extern void *SNetFbckBufShow( snet_fbckbuffer_t *buf);
 
 
 
@@ -140,7 +96,7 @@ extern unsigned int SNetGetSpaceLeft( snet_buffer_t *bf);
  * with the mutex and cond.var. of the dispatcher.
  */
 
-extern void SNetBufRegisterDispatcher( snet_buffer_t *buf, sem_t *sem);
+extern void SNetFbckBufRegisterDispatcher( snet_fbckbuffer_t *buf, sem_t *sem);
 
 
 
@@ -149,7 +105,7 @@ extern void SNetBufRegisterDispatcher( snet_buffer_t *buf, sem_t *sem);
  * This function blocks, until the buffer is empty
  */
 
-extern void SNetBufBlockUntilEmpty( snet_buffer_t *bf);
+extern void SNetFbckBufBlockUntilEmpty( snet_fbckbuffer_t *bf);
 
 
 
@@ -163,9 +119,9 @@ extern void SNetBufBlockUntilEmpty( snet_buffer_t *bf);
  * RETURNS: nothing
  */
 
-extern void SNetBufDestroy( snet_buffer_t *bf);
+extern void SNetFbckBufDestroy( snet_fbckbuffer_t *bf);
 
-extern void SNetBufDestroyByDispatcher( snet_buffer_t *bf);
+extern void SNetFbckBufDestroyByDispatcher( snet_fbckbuffer_t *bf);
 
 
 #endif
