@@ -51,10 +51,11 @@
 #define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
 #define STAR_REC( name, component) RECORD( name, star_rec)->component
 
+/* DATA_REC(x, y) -> x->rec->data_rec->y */
 struct iteration_counters {
   int counter;
-  struct *iteration_counters next;
-}
+  struct iteration_counters *next;
+};
 
 typedef struct {
   snet_variantencoding_t *v_enc;
@@ -62,7 +63,7 @@ typedef struct {
   int *tags;
   int *btags;
   int interface_id;
-  snet_rec_itercount **counters;
+  struct iteration_counters **counters;
 } data_rec_t;
 
 typedef struct {
@@ -270,14 +271,14 @@ extern int SNetRecGetIteration(snet_record_t *rec) {
   switch(REC_DESCR(rec)) {
     case REC_data:
       if(DATA_REC(rec, counters) != NULL) {
-        result = DATA_REC(rec, counters)->counter;
+        result = (*(DATA_REC(rec, counters)))->counter;
       } else {
         printf("\n\n ** Fatal Error **: Iteration requested for data record with no initialized iterations!\n\n");
       }
       break;
     default:
       printf("\n\n ** Fatal Error **: Wrong type in RecGetIteration() (%d) \n\n", REC_DESCR(rec));
-      exit(1)
+      exit(1);
     break;
   }
   return result;
@@ -287,7 +288,7 @@ extern void SNetRecIncIteration(snet_record_t *rec) {
   switch(REC_DESCR(rec)) {
     case REC_data:
       if(DATA_REC(rec, counters) != NULL) {
-        DATA_REC(rec, counters)->counter++;
+        (*DATA_REC(rec, counters))->counter++;
       } else {
         printf("\n\n ** Fatal Error **: IncIteration requested for data record with no inizialized iterations!\n\n");
       }
@@ -303,7 +304,7 @@ extern void SNetRecAddIteration(snet_record_t *rec, int initial_value) {
   struct iteration_counters *new_iteration;
   switch(REC_DESCR(rec)) {
     case REC_data:
-      new_iteration = SNetMemAlloc(sizeof(iteration_counters));
+      new_iteration = SNetMemAlloc(sizeof(struct iteration_counters));
       new_iteration->counter = initial_value;
       new_iteration->next = *DATA_REC(rec, counters);
       DATA_REC(rec, counters) = &new_iteration;
@@ -315,10 +316,11 @@ extern void SNetRecAddIteration(snet_record_t *rec, int initial_value) {
 }
 
 extern void SNetRecRemoveIteration(snet_record_t *rec) {
+  struct iteration_counters *to_delete;
   switch(REC_DESCR(rec)) {
     case REC_data:
-      struct iteration_counters *to_delete = *DATA_DESCR(rec, counters);
-      DATA_DESCR(rec, counters) = &(to_delete->next);
+      to_delete = *DATA_REC(rec, counters);
+      DATA_REC(rec, counters) = &(to_delete->next);
       SNetMemFree(to_delete);
     break;
     default:
