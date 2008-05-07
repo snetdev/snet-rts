@@ -95,8 +95,7 @@ maketools       = cse cb
 compiler        = tree global support parse preproc flat typeinf opt postproc \
                   codegen invokecc print
 
-#runtime         = common posix netinterface observer posix_feedback
-runtime		= common posix_feedback netinterface observer
+runtime         = common posix netinterface observer 
 
 tools           = RecordInspector FeederFront 
 
