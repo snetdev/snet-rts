@@ -42,6 +42,11 @@ typedef enum {
 
 extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...);
 
+/*
+ * returns if we keep track of the iteration this record is in
+ * RETURNS: 1 if we do, 0 otherwise
+ */
+extern int SNetRecHasIteration(snet_record_t *rec);
 
 /*
  * returns the number of times this record was iterated in the current star

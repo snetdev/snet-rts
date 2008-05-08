@@ -176,6 +176,7 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
       DATA_REC( rec, tags) = SNetMemAlloc( SNetTencGetNumTags( v_enc) * sizeof( int));
       DATA_REC( rec, btags) = SNetMemAlloc( SNetTencGetNumBTags( v_enc) * sizeof( int));
       DATA_REC( rec, v_enc) = v_enc;
+      DATA_REC( rec, counters) = NULL;
       break;
     case REC_sync:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
@@ -222,19 +223,20 @@ extern void SNetRecDestroy( snet_record_t *rec) {
   if( rec != NULL) {
   switch( REC_DESCR( rec)) {
     case REC_data: {
-      void (*freefun)(void*);
-      num = SNetRecGetNumFields( rec);
-      names = SNetRecGetUnconsumedFieldNames( rec);
-      freefun = SNetGetFreeFunFromRec( rec);
-      for( i=0; i<num; i++) {
+        void (*freefun)(void*);
+        num = SNetRecGetNumFields( rec);
+        names = SNetRecGetUnconsumedFieldNames( rec);
+        freefun = SNetGetFreeFunFromRec( rec);
+        for( i=0; i<num; i++) {
           freefun( SNetRecTakeField( rec, names[i]));
-      }
-      SNetMemFree( names);
-      SNetTencDestroyVariantEncoding( DATA_REC( rec, v_enc));
-      SNetMemFree( DATA_REC( rec, fields));
-      SNetMemFree( DATA_REC( rec, tags));
-      SNetMemFree( DATA_REC( rec, btags));
-      SNetMemFree( RECORD( rec, data_rec));
+        }
+        SNetMemFree( names);
+        SNetTencDestroyVariantEncoding( DATA_REC( rec, v_enc));
+        SNetMemFree( DATA_REC( rec, fields));
+        SNetMemFree( DATA_REC( rec, tags));
+        SNetMemFree( DATA_REC( rec, btags));
+        SNetMemFree( RECORD( rec, data_rec));
+        while(DATA_REC(rec, counters)) SNetRecRemoveIteration(rec);
       }
       break;
 
@@ -264,6 +266,18 @@ extern void SNetRecDestroy( snet_record_t *rec) {
   SNetMemFree( RECPTR( rec));
   SNetMemFree( rec);
  }
+}
+
+extern int SNetRecHasIteration(snet_record_t *rec) {
+  switch(REC_DESCR(rec)) {
+    case REC_data:
+      return (DATA_REC(rec, counters) != NULL);
+    break;
+    default:
+      printf(" \n\n ** Fatal Error **: Wrong type in SNetRecHAsITeration() (%d) \n\n", REC_DESCR(rec));
+      exit(1);
+    break;
+  }
 }
 
 extern int SNetRecGetIteration(snet_record_t *rec) {
@@ -679,14 +693,15 @@ extern void SNetRecRemoveField( snet_record_t *rec, int name) {
 
 
 extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
-
+  struct iteration_counter *current;
+  struct iteration_counter *new_element;
   int i;
   snet_record_t *new_rec;
   switch( REC_DESCR( rec)) {
   
     case REC_data:
       new_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( GetVEnc( rec)));
-
+ 
       for( i=0; i<SNetRecGetNumTags( rec); i++) {
         DATA_REC( new_rec, tags[i]) = DATA_REC( rec, tags[i]); 
       }
@@ -699,6 +714,33 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
         DATA_REC( new_rec, fields[i]) = copyfun( DATA_REC( rec, fields[i])); 
       }
       SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
+
+      /*
+       * We have to copy the stack of iteration counters into the new array;
+       * assume, this counters are:
+       * |-i1-i2-...-i(n-1)-in, whereas | is the bottom of the stack, i1 is the
+       * element first added to the stack, i2 is added after i1, ...
+       * then we create a temporary stack with the elements reversed by traversing
+       * the stack in the given record and pushing a copy of each element onto the new
+       * stack, resulting in: |-in-i(n-1)-i(n-2)-...-i2-i1.
+       * After this, we have to traverse this stack top down and push every element 
+       * on the result stack, resulting in:
+       * |-i1-i2-...-i(n-1)-in 
+       */
+      struct iteration_counter *temp = NULL;
+      current = *DATA_REC(rec, counters);
+      while(current != NULL) {
+        new_element = SNetMemAlloc(sizeof(struct iteration_counter));
+        new_element->counter = current->counter;
+        new_element->next = temp;
+        temp = new_element;
+        current = current->next;
+      }
+      while(temp != NULL) {
+        temp->next = *DATA_REC(new_rec, counters);
+        DATA_REC(new_rec, counters) = &temp;
+        temp = temp->next;
+      }
       break;
     case REC_sort_begin:
       new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_B_REC( rec, level),
