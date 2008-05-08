@@ -408,23 +408,6 @@ for( i=0; i<TENCNUM( venc); i++) {\
 
 
 
-// used in SNetSync->IsMatch (depends on local variables!)
-#define FIND_NAME_IN_PATTERN( TENCNUM, RECNUM, TENCNAMES, RECNAMES)\
-  names = RECNAMES( rec);\
-  for( i=0; i<TENCNUM( pat); i++) {\
-    for( j=0; j<RECNUM( rec); j++) {\
-      if( names[j] == TENCNAMES( pat)[i]) {\
-        found_name = true;\
-        break;\
-      }\
-    }\
-    if ( !( found_name)) {\
-      is_match = false;\
-      break;\
-    }\
-    found_name = false;\
-  }\
-  SNetMemFree( names);
 
 
 #define FILL_NAME_VECTOR( RECNAMES, RECNUM, TENCNAMES, TENCNUM, VECT_NAME)\
@@ -2155,24 +2138,76 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
 #endif
 
 
+/*
+// used in SNetSync->IsMatch (depends on local variables!)
+#define FIND_NAME_IN_PATTERN( TENCNUM, RECNUM, TENCNAMES, RECNAMES)\
+  names = RECNAMES( rec);\
+  for( i=0; i<TENCNUM( pat); i++) {\
+    for( j=0; j<RECNUM( rec); j++) {\
+      if( names[j] == TENCNAMES( pat)[i]) {\
+        found_name = true;\
+        break;\
+      }\
+    }\
+    if ( !( found_name)) {\
+      is_match = false;\
+      break;\
+    }\
+    found_name = false;\
+  }\
+  SNetMemFree( names);
+*/
+static bool SNetRecArraySubset(int sub_l, int super_l, int *sub, int *super) {
+  int i; 
+  int j;
+  bool found_element; 
+
+  for(i = 0; i < sub_l; i++) { // forall elements sub[i] in sub:
+    for(j = 0; j < super_l; j++) { // superset contains sub[i]?
+      if(sub[i] == super[j]) {
+        found_element = true;
+        break; 
+      }
+    }
+    if(!found_element) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static bool 
 MatchPattern( snet_record_t *rec, 
               snet_variantencoding_t *pat,
               snet_expr_t *guard) {
 
-  int i,j, *names;
+  int *tag_names;
+  int *field_names;
   bool is_match, found_name;
   is_match = true;
 
   if( SNetEevaluateBool( guard, rec)) {
     found_name = false;
-    FIND_NAME_IN_PATTERN( SNetTencGetNumTags, SNetRecGetNumTags, 
-                          SNetTencGetTagNames, SNetRecGetUnconsumedTagNames);
+    tag_names = SNetRecGetUnconsumedTagNames(rec);
+    field_names = SNetRecGetUnconsumedFieldNames(rec);
 
-    if( is_match) {
-      FIND_NAME_IN_PATTERN( SNetTencGetNumFields, SNetRecGetNumFields, 
-                            SNetTencGetFieldNames, SNetRecGetUnconsumedFieldNames);
-    }
+    is_match = SNetRecArraySubset(SNetTencGetNumTags(pat), SNetRecGetNumTags(rec),
+                       SNetTencGetTagNames(pat), tag_names) &&
+               SNetRecArraySubset(SNetTencGetNumFields(pat), SNetRecGetNumFields(rec),
+                                  SNetTencGetFieldNames(pat), field_names);
+
+    SNetMemFree(tag_names);
+    SNetMemFree(field_names);
+/*
+ *   FIND_NAME_IN_PATTERN( SNetTencGetNumTags, SNetRecGetNumTags, 
+ *                         SNetTencGetTagNames, SNetRecGetUnconsumedTagNames);
+ *   if( is_match) {
+ *     is_match = SNetRecArraySubset(SNetTencGetNumFields(pat), SNetRecGetNumFields(rec),
+ *                                   SNetTencGetFieldNames(pat), SNetRecGetUncomsumedFieldNames(rec));
+ *     FIND_NAME_IN_PATTERN( SNetTencGetNumFields, SNetRecGetNumFields, 
+ *                           SNetTencGetFieldNames, SNetRecGetUnconsumedFieldNames); 
+ *  }
+ */
   }
   else {
     is_match = false;
