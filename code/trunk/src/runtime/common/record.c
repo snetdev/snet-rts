@@ -693,8 +693,8 @@ extern void SNetRecRemoveField( snet_record_t *rec, int name) {
 
 
 extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
-  struct iteration_counter *current;
-  struct iteration_counter *new_element;
+  struct iteration_counters *current;
+  struct iteration_counters *new_element;
   int i;
   snet_record_t *new_rec;
   switch( REC_DESCR( rec)) {
@@ -727,10 +727,10 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
        * on the result stack, resulting in:
        * |-i1-i2-...-i(n-1)-in 
        */
-      struct iteration_counter *temp = NULL;
+      struct iteration_counters *temp = NULL;
       current = *DATA_REC(rec, counters);
       while(current != NULL) {
-        new_element = SNetMemAlloc(sizeof(struct iteration_counter));
+        new_element = SNetMemAlloc(sizeof(struct iteration_counters));
         new_element->counter = current->counter;
         new_element->next = temp;
         temp = new_element;
