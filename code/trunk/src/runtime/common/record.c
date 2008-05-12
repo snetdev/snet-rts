@@ -235,8 +235,10 @@ extern void SNetRecDestroy( snet_record_t *rec) {
         SNetMemFree( DATA_REC( rec, fields));
         SNetMemFree( DATA_REC( rec, tags));
         SNetMemFree( DATA_REC( rec, btags));
+        while( DATA_REC( rec, counters)) {
+          SNetRecRemoveIteration(rec);
+        }
         SNetMemFree( RECORD( rec, data_rec));
-        while(DATA_REC(rec, counters)) SNetRecRemoveIteration(rec);
       }
       break;
 
