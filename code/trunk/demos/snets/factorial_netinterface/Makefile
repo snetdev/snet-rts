@@ -1,18 +1,17 @@
-CC         = gcc
-CCFLAGS    = -Wall -g -DFILTER_VERSION_2 -Dmain_factorial=main
-AR         = ar
-INCDIRS    = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
-LIBDIRS    = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C -L./lib
-LIBS       = -lpthread -lsnet -lC2SNet
-
 # = = = = = = = = = = = = = = = = = = = =
 TARGET     = factorial
 # = = = = = = = = = = = = = = = = = = = =
 
+SNETC      = $(SNETBASE)/bin/snetc
+CCFLAGS    = -DFILTER_VERSION_2 -Dmain_$(TARGET)=main
+AR         = ar
+INCDIRS    = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
+LIBDIRS    = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
+LIBS       = -lpthread -lsnet
+
 
 all: 
-	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
-	$(CC) $(LIBDIRS) -o $(TARGET) *.o $(LIBS)
+	$(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) $(TARGET).snet
 	rm -f *.o
 
 clean:
