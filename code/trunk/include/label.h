@@ -18,7 +18,7 @@
  *
  *******************************************************************************/
 
-#define LABEL_ERROR -1
+#define SNET_LABEL_ERROR -1
 
 /* Struct to store the static and temporary names */
 typedef struct label snetin_label_t;
@@ -51,7 +51,7 @@ extern void SNetInLabelDestroy(snetin_label_t *labels);
  * @param label The name to search for.
  *
  * @return Index of the given label.
- * @return LABEL_ERROR, if the label parameter given was NULL.
+ * @return SNET_LABEL_ERROR, if the label parameter given was NULL.
  *
  */
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <data mode="textual" xmlns="snet-home.org" >
   <record type="data" >
-    <field label="F__factorial__x" interface="C2SNet" >int:5</field>
-    <field label="F__factorial__r" interface="C2SNet" >int:2</field>
+    <field label="x" interface="C2SNet" >int:5</field>
+    <field label="r" interface="C2SNet" >int:2</field>
   </record>
 </data>
 <?xml version="1.0" encoding="ISO-8859-1" ?>

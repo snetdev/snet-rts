@@ -69,7 +69,7 @@ void SNetInLabelDestroy(snetin_label_t *labels){
 
 int SNetInLabelToId(snetin_label_t *labels, const char *label){
   int i = 0;
-  int index = LABEL_ERROR;
+  int index = SNET_LABEL_ERROR;
   if(label == NULL || labels == NULL){
     return index;
   }

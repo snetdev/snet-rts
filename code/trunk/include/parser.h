@@ -2,31 +2,34 @@
 #define PARSER_H_
 
 #include <snetentities.h>
+#include <label.h>
+#include <interface.h>
 
 /* Return values of parserParse() */
 
-#define PARSE_CONTINUE 0  /* Parsing can continue after this. */
-#define PARSE_TERMINATE 1 /* Parsing should terminate after this. */
-#define PARSE_ERROR 2     /* Error while parsing the last input data. */
+#define SNET_PARSE_CONTINUE 0  /* Parsing can continue after this. */
+#define SNET_PARSE_TERMINATE 1 /* Parsing should terminate after this. */
+#define SNET_PARSE_ERROR 2     /* Error while parsing the last input data. */
 
 /* Initialize the parse before parsing.
  *
+ * @param labels Set of labels to use.
+ * @param interfaces Set of interfaces to use.
  * @param in_buf Buffer where the parsed records are put.
- * @param fdeserialize Deserialization function for parsed data values.
- * @param ffree Free function for parsed data values.
- * @param fcopy Copy function for the parsed data values.
  *
  * @notice parserInit should be the first call to the parser!
  */
 
-extern void SNetInParserInit(snet_buffer_t *in_buf);
+extern void SNetInParserInit(snetin_label_t *labels,
+			     snetin_interface_t *interfaces,
+			     snet_buffer_t *in_buf);
 
 
 /* Parse the next data element from standard input stream 
  *
- * @return PARSE_CONTINUE Parsing can continue after this.
- * @return PARSE_TERMINATE Parsing should terminate after this.
- * @return PARSE_ERROR Error while parsing the last input data.
+ * @return SNET_PARSE_CONTINUE Parsing can continue after this.
+ * @return SNET_PARSE_TERMINATE Parsing should terminate after this.
+ * @return SNET_PARSE_ERROR Error while parsing the last input data.
  *
  * @notice parserInit() MUST be called before the first call to parserParse()! 
  */

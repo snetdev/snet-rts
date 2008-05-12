@@ -20,16 +20,22 @@
 
 #include <record.h>
 #include <buffer.h>
+#include <label.h>
+#include <interface.h>
 
 /* Init output system.
  *
+ * @param labels Set of labels to use.
+ * @param interfaces Set of interfaces to use.
  * @param in_buf Buffer from where the records to output are taken.
  *
  * @return 0   Action is succesful.
  * @return -1 Error occured while starting the system.
  *
  */
-int SNetInOutputInit(snet_buffer_t *in_buf);
+int SNetInOutputInit(snetin_label_t *labels, 
+		     snetin_interface_t *interfaces,
+		     snet_buffer_t *in_buf);
 
 
 /* Wait until the end of output.

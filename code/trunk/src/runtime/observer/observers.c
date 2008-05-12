@@ -35,12 +35,13 @@
 #include <memfun.h>
 #include <bool.h>
 #include <constants.h>
-#include <snetglobals.h>
 #include "dispatcher.h"
 
 /* These are used to provide instance specific IDs for observers */
 static int id_pool = 0;
 static pthread_mutex_t id_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
+static snetin_label_t *labels = NULL;
+static snetin_interface_t *interfaces = NULL;
 
 /* */
 typedef struct {
@@ -76,9 +77,9 @@ static int recToBuffer(observer_handle_t *handle, snet_record_t *rec, char *buf,
   sprintf(buf + strlen(buf),"<data xmlns=\"snet-home.org\">");
   sprintf(buf + strlen(buf),"<observer oid=\"%d\" position=\"%s\" type=\"", handle->id, handle->position);
 
-  if(handle->type == SNET_OBSERVER_TYPE_BEFORE) {
+  if(handle->type == SNET_OBSERVERS_TYPE_BEFORE) {
     sprintf(buf + strlen(buf),"before\" ");
-  } else if(handle->type == SNET_OBSERVER_TYPE_AFTER){
+  } else if(handle->type == SNET_OBSERVERS_TYPE_AFTER){
     sprintf(buf + strlen(buf),"after\" ");
   }
 
@@ -104,10 +105,10 @@ static int recToBuffer(observer_handle_t *handle, snet_record_t *rec, char *buf,
       
       int len = fun(SNetRecGetField(rec, i), &data);
       
-      if((label = SNetInIdToLabel(globals_labels, i)) != NULL){
+      if((label = SNetInIdToLabel(labels, i)) != NULL){
 	int l = 0;
-	if(handle->data_level == SNET_OBSERVER_DATA_LEVEL_FULL 
-	   && (interface = SNetInIdToInterface(globals_interfaces, id)) != NULL){
+	if(handle->data_level == SNET_OBSERVERS_DATA_LEVEL_FULL 
+	   && (interface = SNetInIdToInterface(interfaces, id)) != NULL){
 	  sprintf(buf + strlen(buf),"<field label=\"%s\" interface=\"%s\" >", label, interface);
 	  
 	  int ind = strlen(buf);
@@ -128,8 +129,8 @@ static int recToBuffer(observer_handle_t *handle, snet_record_t *rec, char *buf,
     for(k=0; k<SNetRecGetNumTags( rec); k++) {
       i = SNetRecGetTagNames( rec)[k];
       
-      if((label = SNetInIdToLabel(globals_labels, i)) != NULL){
-	if(handle->data_level == SNET_OBSERVER_DATA_LEVEL_NONE) {
+      if((label = SNetInIdToLabel(labels, i)) != NULL){
+	if(handle->data_level == SNET_OBSERVERS_DATA_LEVEL_NONE) {
 	  sprintf(buf + strlen(buf),"<tag label=\"%s\" />", label);
 	}else {
 	  sprintf(buf + strlen(buf),"<tag label=\"%s\" >%d</tag>", label, SNetRecGetTag(rec, i));	   
@@ -143,8 +144,8 @@ static int recToBuffer(observer_handle_t *handle, snet_record_t *rec, char *buf,
     for(k=0; k<SNetRecGetNumBTags( rec); k++) {
       i = SNetRecGetBTagNames( rec)[k];
       
-      if((label = SNetInIdToLabel(globals_labels, i)) != NULL){
-	if(handle->data_level == SNET_OBSERVER_DATA_LEVEL_NONE) {
+      if((label = SNetInIdToLabel(labels, i)) != NULL){
+	if(handle->data_level == SNET_OBSERVERS_DATA_LEVEL_NONE) {
 	sprintf(buf + strlen(buf),"<btag label=\"%s\" />", label); 
 	}else {
 	sprintf(buf + strlen(buf),"<btag label=\"%s\" >%d</btag>", label, SNetRecGetBTag(rec, i));
@@ -264,13 +265,16 @@ snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf, const char *addr, int port,
 }
 
 /* This function is used to initialize the observer system. */
-int SNetInitObserverSystem() {  
+int SNetObserverInit(snetin_label_t *labs, snetin_interface_t *interfs) {
+  labels = labs;
+  interfaces = interfs;  
+
   /* Nothing to do but start the dispatcher. */
   return SNetDispatcherInit();
 }
 
 /* This function is used to destroy te observer system. */
-void SNetDestroyObserverSystem() {
+void SNetObserverDestroy() {
   SNetDispatcherDestroy();
 
   pthread_mutex_destroy(&id_pool_mutex);

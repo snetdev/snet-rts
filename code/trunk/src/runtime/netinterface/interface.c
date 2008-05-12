@@ -71,7 +71,7 @@ void SNetInInterfaceDestroy(snetin_interface_t *interfaces){
 
 int SNetInInterfaceToId(snetin_interface_t *interfaces, const char *interface){
   int i = 0;
-  int index = INTERFACE_ERROR;
+  int index = SNET_INTERFACE_ERROR;
   if(interface == NULL || interfaces == NULL){
     return index;
   }

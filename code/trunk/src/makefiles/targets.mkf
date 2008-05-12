@@ -177,7 +177,7 @@ posix_feedback	= feedbackbuffer.o buffer.o graphics.o snetentities.o
 
 utility		= list.o 
 
-netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o default_interface.o
+netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o default_interface.o networkinterface.o
 
 observer	= observers.o dispatcher.o
 

@@ -18,7 +18,7 @@
  *
  *******************************************************************************/
 
-#define INTERFACE_ERROR -1
+#define SNET_INTERFACE_ERROR -1
 
 /* Struct to store the static and temporary names */
 typedef struct interface snetin_interface_t;
@@ -51,7 +51,7 @@ extern void SNetInInterfaceDestroy(snetin_interface_t *interfaces);
  * @param interface The name to search for.
  *
  * @return Index of the given interface.
- * @return INTERFACE_ERROR, if the interface parameter given was NULL.
+ * @return SNET_INTERFACE_ERROR, if the interface parameter given was NULL.
  *
  */
 

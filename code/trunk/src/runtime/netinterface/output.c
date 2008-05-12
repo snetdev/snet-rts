@@ -20,12 +20,13 @@
 #include <pthread.h>
 #include <output.h>
 #include <snetentities.h>
-#include <snetglobals.h>
 #include <label.h>
 #include <interface.h>
 
 /* Thread to do the output */
 static pthread_t thread; 
+static snetin_label_t *labels = NULL;
+static snetin_interface_t *interfaces = NULL;
 
 
 /* This function prints records to stdout */
@@ -51,10 +52,10 @@ static void printRec(snet_record_t *rec)
 
 	 int len = fun(SNetRecGetField(rec, i), &data);
 
-	 if((label = SNetInIdToLabel(globals_labels, i)) != NULL){
+	 if((label = SNetInIdToLabel(labels, i)) != NULL){
 	   int l = 0;
 	   printf("<field label=\"%s\" interface=\"%s\">", label, 
-	   	  SNetInIdToInterface(globals_interfaces, id));
+	   	  SNetInIdToInterface(interfaces, id));
 	   for(l = 0; l < len; l++){
 	     putchar(data[l]);
 	   }
@@ -71,7 +72,7 @@ static void printRec(snet_record_t *rec)
        for( k=0; k<SNetRecGetNumTags( rec); k++) {
 	 i = SNetRecGetTagNames( rec)[k];
 
-	 if((label = SNetInIdToLabel(globals_labels, i)) != NULL){
+	 if((label = SNetInIdToLabel(labels, i)) != NULL){
 	   printf("<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
 	 }else{
 	   /* Error: unknown label! */
@@ -84,7 +85,7 @@ static void printRec(snet_record_t *rec)
        for( k=0; k<SNetRecGetNumBTags( rec); k++) {
 	 i = SNetRecGetBTagNames( rec)[k];
 
-	 if((label = SNetInIdToLabel(globals_labels, i)) != NULL){
+	 if((label = SNetInIdToLabel(labels, i)) != NULL){
 	   printf("<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
 	 }else{
 	   /* Error: unknown label! */
@@ -134,8 +135,10 @@ static void *doOutput(void* data)
   return NULL;
 }
 
-int SNetInOutputInit(snet_buffer_t *in_buf){
+int SNetInOutputInit(snetin_label_t *labs, snetin_interface_t *interfs, snet_buffer_t *in_buf){
   if(in_buf == NULL || pthread_create(&thread, NULL, (void *)doOutput, (void *)in_buf) == 0){
+    labels = labs;
+    interfaces = interfs;
     return 0;
   }
   /* error */

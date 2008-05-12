@@ -15,21 +15,23 @@
  *
  *******************************************************************************/
 
-#ifndef SNET_OBSERVER_H_
-#define SNET_OBSERVER_H_
+#ifndef SNET_OBSERVERS_H_
+#define SNET_OBSERVERS_H_
 
 #include <buffer.h>
 #include <string.h>
 #include <bool.h>
+#include <label.h>
+#include <interface.h>
 
 /* Observer data levels. */
-#define SNET_OBSERVER_DATA_LEVEL_NONE 0
-#define SNET_OBSERVER_DATA_LEVEL_TAGS 1
-#define SNET_OBSERVER_DATA_LEVEL_FULL 2
+#define SNET_OBSERVERS_DATA_LEVEL_NONE 0
+#define SNET_OBSERVERS_DATA_LEVEL_TAGS 1
+#define SNET_OBSERVERS_DATA_LEVEL_FULL 2
 
 /* Observer types. */
-#define SNET_OBSERVER_TYPE_BEFORE 0
-#define SNET_OBSERVER_TYPE_AFTER 1
+#define SNET_OBSERVERS_TYPE_BEFORE 0
+#define SNET_OBSERVERS_TYPE_AFTER 1
 
 /** This function creates a new S-Net observer
  *
@@ -51,6 +53,9 @@ snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf, const char *addr, int port,
 
 /** This function initializes the observer system.
  *
+ * @param labels Set of labels to use.
+ * @param interfaces Set of interfaces to use.
+ *
  * @return 0, if the observer system was started correctly.
  *
  * @notice Any observers must NOT be created before this call!
@@ -58,7 +63,7 @@ snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf, const char *addr, int port,
  *
  */
 
-extern int SNetInitObserverSystem();
+extern int SNetObserverInit(snetin_label_t *labels, snetin_interface_t *interfaces);
 
 /** This function destroys the observer system.
  *
@@ -66,6 +71,6 @@ extern int SNetInitObserverSystem();
  *
  */
 
-extern void SNetDestroyObserverSystem();
+extern void SNetObserverDestroy();
 
-#endif /* SNET_OBSERVER_H_ */
+#endif /* SNET_OBSERVERS_H_ */
