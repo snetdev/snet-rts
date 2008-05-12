@@ -16,7 +16,7 @@ SCFLAGS   = -b7 -v1
 
 
 # - - - - - - - - - - - - - - - - - - - -
-SACTARGET = desboxes 
+SACTARGET = desboxes
 # - - - - - - - - - - - - - - - - - - - -
 
 SAC2C     = sac2c
@@ -42,8 +42,12 @@ libdesboxesMod.a:
 
 $(TARGET).c: $(TARGET).snet
 	$(SNETC) $(SCFLAGS) $(TARGET).snet
+	@echo
+	@echo "Deleting generated main.c..."
+	@rm -f main.c
+	@echo
 
-Objects: main.c $(TARGET).c
+Objects: deploy.c $(TARGET).c
 	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) -c *.c
 
 clean:

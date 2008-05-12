@@ -163,8 +163,8 @@ int[.] cipher( int[.] r, int[.]k)
                      };
 
   res = overSel( P-1, reshape( [32], soutput));
-  return( res);
 
+  return( res);
 }
 
 

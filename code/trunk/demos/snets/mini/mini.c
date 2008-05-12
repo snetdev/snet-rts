@@ -14,6 +14,13 @@
 #include "mini.h"
 #include "A.h"
 
+char *snet_mini_labels[] = {
+	"E__mini__None",
+	"F__mini__A",
+	"F__mini__B"};
+
+char *snet_mini_interfaces[] = {};
+
 static void SNet__mini__A(snet_handle_t *hnd) {
   snet_record_t *rec = NULL;
   void *field_A = NULL;
@@ -25,7 +32,7 @@ static void SNet__mini__A(snet_handle_t *hnd) {
   A(hnd, field_A);
 }
 
-static snet_buffer_t *SNet__mini(snet_buffer_t *in_buf) {
+snet_buffer_t *SNet__mini___mini(snet_buffer_t *in_buf) {
   snet_buffer_t *out_buf = NULL;
   snet_typeencoding_t *out_type = NULL;
 

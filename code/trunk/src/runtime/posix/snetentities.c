@@ -33,35 +33,30 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <semaphore.h>
 
-#include <memfun.h>
-#include <record.h>
-#include <bool.h>
+#include "constants.h"
+#include "memfun.h"
+#include "record.h"
+#include "bool.h"
+#include "threading.h"
 
-#include <snetentities.h>
+#include "snetentities.h"
 
-
-#ifdef DBG_RT_TRACE_THREAD_CREATE
-  int tcount = 0;
-  pthread_mutex_t *t_count_mtx;
-#endif
 
 
 /* ************************************************************************* */
 /* GLOBAL STRUCTURE                                                          */
 
-#define INITIAL_INTERFACE_TABLE_SIZE    5
 
 typedef struct {
- int id;
- void (*freefun)( void*);
- void* (*copyfun)( void*);
- int (*serfun)( void*, char **);
- void* (*deserfun)( char*, int);
+  int id;
+  void (*freefun)( void*);
+  void* (*copyfun)( void*);
+  int (*serfun)( void*, char **);
+  void* (*deserfun)( char*, int);
 } snet_global_interface_functions_t;
 
 typedef struct {
@@ -70,6 +65,31 @@ typedef struct {
 } snet_global_info_structure_t;
 
 snet_global_info_structure_t *snet_global = NULL;
+
+#ifdef DBG_RT_TRACE_THREAD_CREATE
+  int tcount = 0;
+  pthread_mutex_t *t_count_mtx;
+  
+  extern int SNetGetThreadCount()
+  {
+    return( tcount);
+  }
+
+  extern int SNetIncThreadCount()
+  {
+    tcount += 1;
+  }
+
+  extern void SNetLockThreadMutex()
+  {
+     pthread_mutex_lock( t_count_mtx);
+  }
+
+  extern void SNetUnlockThreadMutex()
+  {
+     pthread_mutex_unlock( t_count_mtx);
+  }
+#endif
 
 static void SetFreeFun( snet_global_interface_functions_t *f,
                         void (*freefun)( void*))
@@ -270,52 +290,6 @@ extern void *SNetGetDeserializationFun( int id)
 /* ************************************************************************* */
 
 
-inline static void ThreadCreate( pthread_t *thread, 
-                          pthread_attr_t *attrib, 
-                          void *(*fun)(void*),
-                          void *f_args) 
-{
-  int res;
-#ifdef DBG_RT_TRACE_THREAD_CREATE 
-  struct timeval t;
-#endif
-  res = pthread_create( thread, attrib, fun, f_args);
-
-#ifdef DBG_RT_TRACE_THREAD_CREATE 
-  gettimeofday( &t, NULL);
-  pthread_mutex_lock( t_count_mtx);
-  tcount += 1;
-  fprintf( stderr, 
-           "[DBG::RT::Threads] Thread #%3d created at                    %lf\n", 
-           tcount, t.tv_sec + t.tv_usec /1000000.0);
-  pthread_mutex_unlock( t_count_mtx);
-#endif
-
-  if( res != 0) {
-    fprintf( stderr, "\n\n  ** Fatal Error ** : Failed to create new "
-                     "thread [error %d].\n\n", 
-             res);
-    fflush( stdout);
-    exit( 1);
-  }
-}
-
-static void ThreadDetach( pthread_t thread)
-{
-  int res;
-
-  res = pthread_detach( thread);
-
-  if( res != 0) {
-    fprintf( stderr, "\n\n  ** Fatal Error ** : Failed to detach "
-                     "thread [error %d].\n\n", 
-             res);
-    fflush( stdout);
-    exit( 1);
-  }
-
-
-}
 
 /* --------------------------------------------------------
  * Syncro Cell: Flow Inheritance, uncomment desired variant
@@ -704,27 +678,23 @@ static void *BoxThread( void *hndl) {
  
 }
 
-extern snet_buffer_t *SNetBox( snet_buffer_t *inbuf, void (*boxfun)( snet_handle_t*), 
-                                   snet_typeencoding_t *outspec) {
+extern snet_buffer_t *SNetBox( snet_buffer_t *inbuf, 
+                                        void (*boxfun)( snet_handle_t*), 
+                         snet_typeencoding_t *outspec) {
 
   snet_buffer_t *outbuf;
   snet_handle_t *hndl;
-  pthread_t box_thread;
   
 
-//  outbuf = SNetBufCreate( BUFFER_SIZE);
   BUF_CREATE( outbuf, BUFFER_SIZE);
   hndl = SNetHndCreate( HND_box, inbuf, outbuf, NULL, boxfun, outspec);
 
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( &box_thread, NULL, (void*)BoxThread, (void*)hndl );
+  SNetThreadCreate( (void*)BoxThread, (void*)hndl, ENTITY_box);
   
-  ThreadDetach( box_thread);
-
   return( outbuf);
 }
 /* ------------------------------------------------------------------------- */
-/*  SNetAlias                                                               */
+/*  SNetAlias                                                                */
 /* ------------------------------------------------------------------------- */
 
 extern snet_buffer_t *SNetAlias( snet_buffer_t *inbuf, 
@@ -912,14 +882,6 @@ static void LLSTdestroy( linked_list_t *lst) {
 /* ========================================================================= */
 
 
-
-
-
-/* ============================================================= */
-/* ============================================================= */
-
-
-
 typedef struct {
   snet_buffer_t *buf;
   snet_record_t *current;
@@ -930,21 +892,11 @@ static bool CompareSortRecords( snet_record_t *rec1, snet_record_t *rec2) {
   bool res;
 
   if( ( rec1 == NULL) || ( rec2 == NULL)) {  
-    if( ( rec1 == NULL) && ( rec2 == NULL)) {
-      res = true;
-    }
-    else {
-      res = false;
-    }
+    res = ( rec1 == NULL) && ( rec2 == NULL);
   }
   else {
-    if( ( SNetRecGetLevel( rec1) == SNetRecGetLevel( rec2)) &&
-        ( SNetRecGetNum( rec1) == SNetRecGetNum( rec2)))  {
-     res = true;
-   }
-   else {
-      res = false;
-    }
+    res = ( ( SNetRecGetLevel( rec1) == SNetRecGetLevel( rec2)) &&
+            ( SNetRecGetNum( rec1) == SNetRecGetNum( rec2))); 
   }
 
   return( res);
@@ -1183,7 +1135,7 @@ static void *Collector( void *info) {
     got_record = false;
     sem_wait( sem);
     do {
-    got_record=false;
+    got_record = false;
     processed_record = false;
     j = LLSTgetCount( lst);
     for( i=0; (i<j) && !(terminate); i++) {
@@ -1337,7 +1289,6 @@ static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer,
                                         bool is_det) {
                                           
   snet_buffer_t *outbuf;
-  pthread_t thread;
   dispatch_info_t *buffers;
 
   buffers = SNetMemAlloc( sizeof( dispatch_info_t));
@@ -1347,15 +1298,12 @@ static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer,
   buffers->to_buf = outbuf;
 
 
-//  thread = SNetMemAlloc( sizeof( pthread_t));
-  
   if( is_det) {
-    ThreadCreate( &thread, NULL, DetCollector, (void*)buffers);
+    SNetThreadCreate( DetCollector, (void*)buffers, ENTITY_collect_det);
   }
   else {
-    ThreadCreate( &thread, NULL, Collector, (void*)buffers);
+    SNetThreadCreate( Collector, (void*)buffers, ENTITY_collect_nondet);
   }
-  ThreadDetach( thread);
 
   return( outbuf);
 }
@@ -1574,8 +1522,7 @@ static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf,
   snet_buffer_t **transits;
   snet_buffer_t **outbufs;
   snet_buffer_t* (*fun)(snet_buffer_t*);
-  pthread_t box_thread;
-  
+  snet_entity_id_t my_id;
 
   num = SNetTencGetNumTypes( types);
   outbufs = SNetMemAlloc( num * sizeof( snet_buffer_t*));
@@ -1588,15 +1535,14 @@ static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf,
 
   if( is_det) {
     outbuf = CreateDetCollector( outbufs[0]);
+    SNetBufPut( outbufs[0], SNetRecCreate( REC_sort_begin, 0, 0));
+    my_id = ENTITY_parallel_det;
   }
   else {
     outbuf = CreateCollector( outbufs[0]);
+    my_id = ENTITY_parallel_nondet;
   }
  
-  if( is_det) {
-    SNetBufPut( outbufs[0], SNetRecCreate( REC_sort_begin, 0, 0));
-  }
-
   for( i=1; i<num; i++) {
 
     transits[i] = SNetBufCreate( BUFFER_SIZE);
@@ -1614,9 +1560,7 @@ static snet_buffer_t *SNetParallelStartup( snet_buffer_t *inbuf,
   }
   hnd = SNetHndCreate( HND_parallel, inbuf, transits, types, is_det);
 
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( &box_thread, NULL, ParallelBoxThread, (void*)hnd);
-  ThreadDetach( box_thread);
+  SNetThreadCreate( ParallelBoxThread, (void*)hnd, my_id);
 
   SNetMemFree( funs);
 
@@ -1669,10 +1613,6 @@ extern snet_buffer_t *SNetParallelDet( snet_buffer_t *inbuf,
 
   return( SNetParallelStartup( inbuf, types, funs, true));
 }
-
-/* E------------------------------------------------------- */
-/* E------------------------------------------------------- */
-/* E------------------------------------------------------- */
 
 
 /* ------------------------------------------------------------------------- */
@@ -1830,39 +1770,33 @@ extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf,
     
   snet_buffer_t *star_outbuf, *dispatch_outbuf;
   snet_handle_t *hnd;
-  pthread_t box_thread;
 
   star_outbuf = SNetBufCreate( BUFFER_SIZE);
   
   hnd = SNetHndCreate( HND_star, inbuf, star_outbuf, box_a, box_b, type, guards, false);
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
 
-  ThreadCreate( &box_thread, NULL, StarBoxThread, hnd);
-  ThreadDetach( box_thread);
+  SNetThreadCreate( StarBoxThread, hnd, ENTITY_star_nondet);
 
   dispatch_outbuf = CreateCollector( star_outbuf);
   
   return( dispatch_outbuf);
 }
 
-
-extern snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf,
-                                         snet_typeencoding_t *type,
-                                         snet_expr_list_t *guards,
-                                         snet_buffer_t* (*box_a)(snet_buffer_t*),                                               snet_buffer_t* (*box_b)(snet_buffer_t*)) {
+extern
+snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf,
+                            snet_typeencoding_t *type,
+                               snet_expr_list_t *guards,
+                                  snet_buffer_t *(*box_a)(snet_buffer_t*),                                        snet_buffer_t *(*box_b)(snet_buffer_t*)) {
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
-  pthread_t box_thread;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
 
 
   hnd = SNetHndCreate( HND_star, inbuf, outbuf, box_a, box_b, type, guards, true);
   
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( &box_thread, NULL, StarBoxThread, hnd);
-  ThreadDetach( box_thread);
+  SNetThreadCreate( StarBoxThread, hnd, ENTITY_star_nondet);
 
   return( outbuf);
 }
@@ -2009,38 +1943,32 @@ extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf,
     
   snet_buffer_t *star_outbuf, *dispatch_outbuf;
   snet_handle_t *hnd;
-  pthread_t box_thread;
 
   star_outbuf = SNetBufCreate( BUFFER_SIZE);
   
   hnd = SNetHndCreate( HND_star, inbuf, star_outbuf, box_a, box_b, type, guards, false);
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
 
-  ThreadCreate( &box_thread, NULL, DetStarBoxThread, hnd);
-  ThreadDetach( box_thread);
+  SNetThreadCreate( DetStarBoxThread, hnd, ENTITY_star_det);
 
   dispatch_outbuf = CreateDetCollector( star_outbuf);
   
   return( dispatch_outbuf);
 }
 
-
-extern snet_buffer_t *SNetStarDetIncarnate( snet_buffer_t *inbuf,
-                                            snet_typeencoding_t *type,  
-                                            snet_expr_list_t *guards,
-                                            snet_buffer_t* (*box_a)(snet_buffer_t*),
-                                            snet_buffer_t* (*box_b)(snet_buffer_t*)) {
+extern
+snet_buffer_t *SNetStarDetIncarnate( snet_buffer_t *inbuf,
+                               snet_typeencoding_t *type,  
+                                  snet_expr_list_t *guards,
+                                     snet_buffer_t *(*box_a)(snet_buffer_t*),
+                                     snet_buffer_t *(*box_b)(snet_buffer_t*)) {
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
-  pthread_t box_thread;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
 
   hnd = SNetHndCreate( HND_star, inbuf, outbuf, box_a, box_b, type, guards, true);
   
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( &box_thread, NULL, DetStarBoxThread, hnd);
-  ThreadDetach( box_thread);
+  SNetThreadCreate( DetStarBoxThread, hnd, ENTITY_star_det);
 
   return( outbuf);
 }
@@ -2284,16 +2212,13 @@ extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf, snet_typeencoding_t *outty
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
-  pthread_t box_thread;
 
 //  outbuf = SNetBufCreate( BUFFER_SIZE);
   BUF_CREATE( outbuf, BUFFER_SIZE);
   hnd = SNetHndCreate( HND_sync, inbuf, outbuf, outtype, patterns, guards);
 
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
 
-  ThreadCreate( &box_thread, NULL, SyncBoxThread, (void*)hnd);
-  ThreadDetach( box_thread);
+  SNetThreadCreate( SyncBoxThread, (void*)hnd, ENTITY_sync);
 
   return( outbuf);
 }
@@ -2442,25 +2367,17 @@ extern snet_buffer_t *SNetSplit( snet_buffer_t *inbuf,
 
   snet_buffer_t *initial, *outbuf;
   snet_handle_t *hnd;
-  pthread_t box_thread;
 
   initial = SNetBufCreate( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_split, inbuf, initial, box_a, ltag, utag);
  
   outbuf = CreateCollector( initial);
 
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( &box_thread, NULL, SplitBoxThread, (void*)hnd);
-  ThreadDetach( box_thread);
+  SNetThreadCreate( SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
 
   return( outbuf);
 }
 
-
-
-/* B------------------------------------------------------- */
-/* B Det Split    Playground ------------------------------ */
-/* B------------------------------------------------------- */
 
 
 static void *DetSplitBoxThread( void *hndl) {
@@ -2584,22 +2501,21 @@ static void *DetSplitBoxThread( void *hndl) {
 
 
 
-
-extern snet_buffer_t *SNetSplitDet( snet_buffer_t *inbuf, snet_buffer_t* (*box_a)( snet_buffer_t*),
-                            int ltag, int utag) {
+extern
+snet_buffer_t *SNetSplitDet( snet_buffer_t *inbuf, 
+                             snet_buffer_t *(*box_a)( snet_buffer_t*),
+                                       int ltag, 
+                                       int utag) {
 
   snet_buffer_t *initial, *outbuf;
   snet_handle_t *hnd;
-  pthread_t box_thread;
 
   initial = SNetBufCreate( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_split, inbuf, initial, box_a, ltag, utag);
  
   outbuf = CreateDetCollector( initial);
 
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( &box_thread, NULL, DetSplitBoxThread, (void*)hnd);
-  ThreadDetach( box_thread);
+  SNetThreadCreate( DetSplitBoxThread, (void*)hnd, ENTITY_split_det);
 
   return( outbuf);
 }
@@ -2746,6 +2662,14 @@ extern void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set)
   SNetMemFree( set);
 }
 #ifdef FILTER_VERSION_2
+inline static void InitTypeArrayEntry( snet_typeencoding_t **type_array,
+                                                int i) {
+  SNetTencAddVariant( type_array[i], 
+    SNetTencVariantEncode( 
+      SNetTencCreateEmptyVector( 0),
+      SNetTencCreateEmptyVector( 0),
+      SNetTencCreateEmptyVector( 0)));
+}
 
 // pass at least one set!! -> lst must not be NULL!
 static snet_typeencoding_list_t 
@@ -2777,11 +2701,7 @@ static snet_typeencoding_list_t
                     current_instr->data[0]);
               }
               else {
-                 SNetTencAddVariant( type_array[i], 
-                                      SNetTencVariantEncode( 
-                                        SNetTencCreateEmptyVector( 0),
-                                        SNetTencCreateEmptyVector( 0),
-                                        SNetTencCreateEmptyVector( 0)));
+                InitTypeArrayEntry( type_array, i);
                 variant_created = true;               
               }
               break;
@@ -2792,11 +2712,7 @@ static snet_typeencoding_list_t
                     current_instr->data[0]);
               }
               else {
-                 SNetTencAddVariant( type_array[i], 
-                                      SNetTencVariantEncode( 
-                                        SNetTencCreateEmptyVector( 0),
-                                        SNetTencCreateEmptyVector( 0),
-                                        SNetTencCreateEmptyVector( 0)));
+                InitTypeArrayEntry( type_array, i);
                 variant_created = true;               
               }                
               break;
@@ -2807,21 +2723,13 @@ static snet_typeencoding_list_t
                       current_instr->data[0]);
               }
               else {
-                 SNetTencAddVariant( type_array[i], 
-                                      SNetTencVariantEncode( 
-                                        SNetTencCreateEmptyVector( 0),
-                                        SNetTencCreateEmptyVector( 0),
-                                        SNetTencCreateEmptyVector( 0)));
+                InitTypeArrayEntry( type_array, i);
                 variant_created = true;               
               }              
               break;
             case create_record:
               if( !variant_created) {
-                SNetTencAddVariant( type_array[i], 
-                                      SNetTencVariantEncode( 
-                                        SNetTencCreateEmptyVector( 0),
-                                        SNetTencCreateEmptyVector( 0),
-                                        SNetTencCreateEmptyVector( 0)));
+                InitTypeArrayEntry( type_array, i);
                 variant_created = true;
               }
               else {
@@ -3094,7 +3002,6 @@ extern snet_buffer_t
   snet_expr_list_t *guard_expr;
   snet_filter_instruction_set_list_t **instr_list;
   snet_typeencoding_list_t *out_types;
-  pthread_t filter_thread;
   va_list args;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
@@ -3119,9 +3026,7 @@ extern snet_buffer_t
 
   hnd = SNetHndCreate( HND_filter, inbuf, outbuf, in_type, out_types, guard_expr, instr_list);
 
-//  filter_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( &filter_thread, NULL, FilterThread, (void*)hnd);
-  ThreadDetach( filter_thread);
+  SNetThreadCreate( FilterThread, (void*)hnd, ENTITY_filter);
 
   return( outbuf);
 }
@@ -3141,7 +3046,6 @@ extern snet_buffer_t
   snet_expr_list_t *guard_expr;
   snet_filter_instruction_set_list_t **instr_list;
   snet_typeencoding_list_t *out_types;
-  pthread_t filter_thread;
   va_list args;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
@@ -3166,9 +3070,7 @@ extern snet_buffer_t
 
   hnd = SNetHndCreate( HND_filter, inbuf, outbuf, in_type, out_types, guard_expr, instr_list);
 
-//  filter_thread = SNetMemAlloc( sizeof( pthread_t));
-  ThreadCreate( &filter_thread, NULL, FilterThread, (void*)hnd);
-  ThreadDetach( filter_thread);
+  SNetThreadCreate( FilterThread, (void*)hnd, ENTITY_filter);
 
   return( outbuf);
 }
@@ -3258,7 +3160,6 @@ extern snet_buffer_t
                 int offset,
                 snet_variantencoding_t *untouched) 
 {
-  pthread_t nameshift_thread;
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
 
@@ -3270,8 +3171,7 @@ extern snet_buffer_t
                        SNetEcreateList( 1, SNetEconsti( offset)),
                        NULL); // instructions
   
-  ThreadCreate( &nameshift_thread, NULL, NameshiftThread, (void*)hnd);
-  ThreadDetach( nameshift_thread);
+  SNetThreadCreate( NameshiftThread, (void*)hnd, ENTITY_filter);
 
   return( outbuf);
 }
@@ -3426,21 +3326,18 @@ static snet_buffer_t *CreateFilter( snet_buffer_t *inbuf,
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
-  pthread_t box_thread;
 
   outbuf = SNetBufCreate( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_filter, inbuf, outbuf, in_type, out_type, set);
 
-//  box_thread = SNetMemAlloc( sizeof( pthread_t));
 
 //  if( is_translator) { // for the time being, a translator is just a filter
-    ThreadCreate( &box_thread, NULL, FilterThread, (void*)hnd);
+    SNetThreadCreate( FilterThread, (void*)hnd, ENTITY_filter);
 //  } 
 //  else {
-//    ThreadCreate( &box_thread, NULL, FilterThread, (void*)hnd);
+//    SNetThreadCreate( &box_thread, NULL, FilterThread, (void*)hnd);
 //  }
   
-  ThreadDetach( box_thread);
 
   return( outbuf);
 

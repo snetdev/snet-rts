@@ -15,6 +15,15 @@
 
 #define SNET_STAR_COUNTERFIELD "star_counter"
 
+
+#ifdef DBG_RT_TRACE_THREAD_CREATE
+  extern int SNetGetThreadCount();
+  extern int SNetIncThreadCount();
+  extern void SNetLockThreadMutex();
+  extern void SNetUnlockThreadMutex();
+#endif
+
+
 extern bool SNetGlobalInitialise();
 extern bool 
 SNetGlobalRegisterInterface( int id, 

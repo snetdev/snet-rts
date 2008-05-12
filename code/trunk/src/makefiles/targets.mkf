@@ -171,7 +171,7 @@ print           = print.o
 
 common          = memfun.o handle.o record.o typeencode.o expression.o
 
-posix           = buffer.o graphics.o snetentities.o 
+posix           = buffer.o graphics.o snetentities.o threading.o
 
 posix_feedback	= feedbackbuffer.o buffer.o graphics.o snetentities.o 
 

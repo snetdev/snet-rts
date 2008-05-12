@@ -16,9 +16,21 @@
 
 #include "snetentities.h"
 
-#define F__mini__A	1
-#define F__mini__B	2
-#define E__mini__OFFSET	3
+#define E__mini__NONE 0
+#define F__mini__A 1
+#define F__mini__B 2
+
+#define SNET__mini__NUMBER_OF_LABELS 3
+
+
+
+#define SNET__mini__NUMBER_OF_INTERFACES 0
+
+
+extern char *snet_mini_labels[];
+
+extern char *snet_mini_interfaces[];
+
 
 extern snet_buffer_t *SNet__mini___mini(snet_buffer_t *in_buf);
 
