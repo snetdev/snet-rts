@@ -39,14 +39,14 @@ int[*] string2bitBlocks( String::string s)
   pad = ( len % 8 == 0 ? 0 : 8 - len % 8);
   ints = toi( tochar( s) ++ genarray( [pad], ' '));
   bytes = { [i] -> int2byte( ints[[i]]) };
-/*  res = reshape( [ (len+ pad) / 8, 64 ], bytes);  !! */
-    res = reshape( [ 64 ], bytes);
-    return( res);
+  res = reshape( [ (len+ pad) / 8, 64 ], bytes);
+  
+  return( res);
 }
 
 String::string bitBlocks2string( int[.] bits)
 {
-  bytes = reshape( [shape( bits)[0]*8] ++ [8], bits);
+  bytes = reshape( [8] ++ [8], bits);
   ints = { [i] -> byte2int( bytes[[i]]) };
   res = to_string( tochar( ints));
   return( res);
