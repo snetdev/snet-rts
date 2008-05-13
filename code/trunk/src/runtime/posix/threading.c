@@ -1,4 +1,4 @@
-/* $Id */
+/* $Id$ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -9,11 +9,6 @@
 
 #include "threading.h"
 
-/* On some platforms PTHREAD_STACK_MIN is not defined in pthread.h -
- * chances are that it is defined in local_lim.h instead */
-#ifndef PTHREAD_STACK_MIN
-#include <bits/local_lim.h>
-#endif
 
 #ifdef DBG_RT_TRACE_THREAD_CREATE 
 #include <sys/time.h>
@@ -84,7 +79,7 @@ extern void SNetThreadCreate( void *(*fun)(void*),
   res = pthread_attr_init( attr);
   stack_size = ThreadStackSize( id);
 
-  if( stack_size > PTHREAD_STACK_MIN) {
+  if( stack_size > 0) {
     pthread_attr_setstacksize( attr, stack_size);
   }
   
