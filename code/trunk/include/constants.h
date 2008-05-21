@@ -3,7 +3,7 @@
 #define CONSTANTS_H
 
 // define initial size of buffers
-#define BUFFER_SIZE 3 
+#define BUFFER_SIZE 10 
 
 // initial table size for language interfaces
 #define INITIAL_INTERFACE_TABLE_SIZE   5

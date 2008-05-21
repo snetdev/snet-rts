@@ -289,11 +289,18 @@ extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionList( int 
 }
 
 
-extern int SNetFilterInstructionsGetNumSets( snet_filter_instruction_set_list_t *lst) {
-  return( lst->num);  
+extern int 
+SNetFilterInstructionsGetNumSets( snet_filter_instruction_set_list_t *lst) {
+  int res;
+
+  res = lst == NULL ? 0 : lst->num;
+  
+  return( res);  
 }
 
-extern snet_filter_instruction_set_t **SNetFilterInstructionsGetSets( snet_filter_instruction_set_list_t *lst) {
+extern snet_filter_instruction_set_t 
+**SNetFilterInstructionsGetSets( snet_filter_instruction_set_list_t *lst) {
+  
   return( lst->lst);
 }
 

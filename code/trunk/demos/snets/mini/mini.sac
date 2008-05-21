@@ -12,8 +12,6 @@ void A( SNet::SNet &hnd, int[.] A)
   B = A + 1;
   C = B + 1;
   
-  print( B);
-
   SNet::out( hnd, 1, sacprelude::wrap( B));
   SNet::out( hnd, 1, sacprelude::wrap( C));
 }

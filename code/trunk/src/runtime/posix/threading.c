@@ -14,7 +14,7 @@
 #include <sys/time.h>
 #endif
 
-inline static void ThreadDetach( pthread_t *thread)
+static void ThreadDetach( pthread_t *thread)
 {
   int res;
 
@@ -32,7 +32,7 @@ inline static void ThreadDetach( pthread_t *thread)
 /**
  * returns -1 if default stack size is to be used 
  */
-inline static size_t ThreadStackSize( snet_entity_id_t id)
+static size_t ThreadStackSize( snet_entity_id_t id)
 {
   size_t stack_size;
 

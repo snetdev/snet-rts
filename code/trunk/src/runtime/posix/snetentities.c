@@ -2206,9 +2206,10 @@ static void *SyncBoxThread( void *hndl) {
 }
 
 
-extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf, snet_typeencoding_t *outtype, 
-                          snet_typeencoding_t *patterns, 
-                          snet_expr_list_t *guards ) {
+extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf, 
+                                snet_typeencoding_t *outtype, 
+                                snet_typeencoding_t *patterns, 
+                                snet_expr_list_t *guards ) {
 
   snet_buffer_t *outbuf;
   snet_handle_t *hnd;
@@ -3000,6 +3001,7 @@ extern snet_buffer_t
   snet_handle_t *hnd;
   snet_buffer_t *outbuf;
   snet_expr_list_t *guard_expr;
+  snet_filter_instruction_set_list_t *lst;
   snet_filter_instruction_set_list_t **instr_list;
   snet_typeencoding_list_t *out_types;
   va_list args;
@@ -3017,7 +3019,8 @@ extern snet_buffer_t
   
   va_start( args, guards);
   for( i=0; i<num_outtypes; i++) {
-    instr_list[i] = va_arg( args, snet_filter_instruction_set_list_t*);
+    lst = va_arg( args, snet_filter_instruction_set_list_t*);
+    instr_list[i] = lst == NULL ? SNetCreateFilterInstructionList( 0) : lst;
   }
   va_end( args);
   
