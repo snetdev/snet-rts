@@ -1,54 +1,32 @@
-CC        = gcc
-CCFLAGS   = -Wall -g -DFILTER_VERSION_2
-AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/SAC\
-	    -I./include 
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/SAC\
-	    -L./lib
-LIBS      = -lpthread -lsnet -lSAC2SNet
+# S-Net DES demo
+# 
+# Stephan Herhut (s.a.herhut@herts.ac.uk)
+# Frank Penczek (f.penczek@herts.ac.uk)
+# 
+# $Id$
 
-# SAC SimpleFibre library
-FIBREOBJS = $(SACBASE)/stdlib/world/stdio/src/FibreIO/*.o
-
-
-SNETC	  = snetc
-SCFLAGS   = -b7 -v1
-
-
-# - - - - - - - - - - - - - - - - - - - -
-SACTARGET = desboxes
-# - - - - - - - - - - - - - - - - - - - -
-
-SAC2C     = sac2c
-S2CFLAGS  = -v1 -g
-SAC4C     = sac4c
-S4CFLAGS  = -v1 -incdir include -libdir lib -g $(LIBDIRS) 
-S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
-S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)` 
+#
+# SUBPROJECTS defines all the subdirectories to make. By default,
+# the target all will trigger a make all in the subdirectory,
+# whereas the target clean triggers a make clean.
+# To override this for a certain project, define projectname_all
+# or projectname_clean, respectively.
+#
+SUBPROJECTS := boxes snet deploy
 
 
-# = = = = = = = = = = = = = = = = = = = =
-TARGET    = des
-# = = = = = = = = = = = = = = = = = = = =
+# 
+# nothing to be configured bejond this line
+# 
 
-all: $(TARGET) 
+.PHONY: all clean %.all %.clean
 
-$(TARGET): Objects libdesboxesMod.a
-	$(CC) $(LIBDIRS) -o $(TARGET) *.o $(LIBS) $(S4CLIBS) $(LIBS) $(FIBREOBJS)
+all: $(foreach project, $(SUBPROJECTS), $(project).all)
 
-libdesboxesMod.a: 
-	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $(SACTARGET).sac
-	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $(SACTARGET)
+clean: $(foreach project, $(SUBPROJECTS), $(project).clean)
 
-$(TARGET).c: $(TARGET).snet
-	$(SNETC) $(SCFLAGS) $(TARGET).snet
-	@echo
-	@echo "Deleting generated main.c..."
-	@rm -f main.c
-	@echo
+%.all:
+	cd $*; $(MAKE) $(if $($*_all),$($*_all),all)
 
-Objects: deploy.c $(TARGET).c
-	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) -c *.c
-
-clean:
-	rm -f *.o *.so *.a  lib/*.so lib/*.a  include/cwrapper.h $(TARGET) $(TARGET).c $(TARGET).h 
+%.clean:
+	cd $*; $(MAKE) $(if $($*_clean),$($*_clean),clean)
