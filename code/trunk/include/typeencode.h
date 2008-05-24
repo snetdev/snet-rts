@@ -7,7 +7,6 @@
 #define TYPEENCODE_H
 
 #include <bool.h>
-
 typedef struct vector snet_vector_t;
 
 typedef struct typeencode snet_typeencoding_t;
@@ -19,6 +18,7 @@ typedef struct patternencoding snet_patternencoding_t;
 
 typedef struct patternset snet_patternset_t;
 
+struct record;
 /* ****************************************************************** */
 
 
@@ -26,7 +26,7 @@ typedef struct patternset snet_patternset_t;
 /* --- Vector Functions --- */
 
 /* returns true if the record matches the pattern. */
-/*extern bool SNetTencPatternMatches(snet_variantencoding_t *pat, snet_record_t *rec);*/
+extern bool SNetTencPatternMatches(snet_variantencoding_t *pat, struct record *rec);
 /*
  * Creates a vector with "num" entries. 
  * The entries must be given as parameter (exactly "num" of them).
