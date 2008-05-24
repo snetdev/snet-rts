@@ -200,6 +200,31 @@ static void Rename( snet_vector_t *vec, int name, int newName) {
 
 /* *********************************************************** */
 
+#define FIND_NAME_IN_RECORD( TENCNUM, TENCNAMES, RECNAMES, RECNUM)\
+    for( j=0; j<TENCNUM( pat); j++) {\
+      if( !( ContainsName( TENCNAMES( pat)[j],\
+                           RECNAMES( rec),\
+                           RECNUM( rec)))) {\
+        is_match = false;\
+        break;\
+      }\
+    }
+
+extern bool SNetTencPatternMatches(snet_variantencoding_t *pat,
+                                    snet_record *rec) {
+  bool is_match = true;
+  FIND_NAME_IN_RECORD( SNetTencGetNumFields, SNetTencGetFieldNames,
+                           SNetRecGetFieldNames, SNetRecGetNumFields);
+  if( is_match) {
+    FIND_NAME_IN_RECORD( SNetTencGetNumTags, SNetTencGetTagNames,
+                             SNetRecGetTagNames, SNetRecGetNumTags);
+    if( is_match) {
+      FIND_NAME_IN_RECORD( SNetTencGetNumBTags, SNetTencGetBTagNames,
+                               SNetRecGetBTagNames, SNetRecGetNumBTags);
+    }
+  }
+  return is_match;
+}
 
 extern snet_vector_t *SNetTencCreateVector( int num, ...) {
 
