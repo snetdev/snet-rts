@@ -12,7 +12,7 @@
 #include <typeencode.h>
 #include <stdarg.h>
 #include <constants.h>
-
+#include <record.h>
 
 
 
@@ -211,7 +211,8 @@ static void Rename( snet_vector_t *vec, int name, int newName) {
     }
 
 extern bool SNetTencPatternMatches(snet_variantencoding_t *pat,
-                                    snet_record *rec) {
+                                    snet_record_t *rec) {
+  int j;
   bool is_match = true;
   FIND_NAME_IN_RECORD( SNetTencGetNumFields, SNetTencGetFieldNames,
                            SNetRecGetFieldNames, SNetRecGetNumFields);
