@@ -155,6 +155,23 @@ static snet_vector_t *GetBTagVector( snet_variantencoding_t *v_enc) {
   }
 }
 
+static bool ContainsName( int name, int *names, int num) {
+  
+  int i;
+  bool found;
+
+  found = false;
+
+  for( i=0; i<num; i++) {
+    if( names[i] == name) {
+      found = true;
+      break;
+    }
+  }
+
+  return( found);
+}
+
 static void Rename( snet_vector_t *vec, int name, int newName) {
 
   int i;
@@ -276,6 +293,18 @@ extern void SNetTencDestroyVector( snet_vector_t *vec) {
   SNetMemFree( vec);
 }
 
+extern bool SNetTencContainsFieldName( snet_variantencoding_t *venc, int name) {
+  return ContainsName(name, SNetTencGetFieldNames(venc), 
+                            SNetTencGetNumFields(venc));
+}
+extern bool SNetTencContainsTagName( snet_variantencoding_t *venc, int name) {
+  return ContainsName(name, SNetTencGetTagNames(venc), 
+                            SNetTencGetNumTags(venc));
+}
+extern bool SNetTencContainsBTagName( snet_variantencoding_t *venc, int name) {
+  return ContainsName(name, SNetTencGetBTagNames(venc), 
+                            SNetTencGetNumBTags(venc));
+}
 extern int SNetTencGetNumFields( snet_variantencoding_t *v_enc) {
 
   return( SNetTencGetNumVectorEntries( GetFieldVector(v_enc)));

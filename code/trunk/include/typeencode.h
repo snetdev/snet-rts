@@ -110,6 +110,20 @@ extern snet_variantencoding_t *SNetTencCopyVariantEncoding( snet_variantencoding
 
 
 
+/*
+ * Return true if the name is contained in the fields, false otherwise
+ */
+extern bool SNetTencContainsFieldName(snet_variantencoding_t *v_enc, int name);
+
+/*
+ * Return true if the name is contained in the tags, false otherwise
+ */
+extern bool SNetTencContainsTagName(snet_variantencoding_t *v_enc, int name);
+
+/*
+ * Return true if the name is contained in the binding tags, false otherwise
+ */
+extern bool SNetTencContainsBTagName(snet_variantencoding_t *v_enc, int name);
 
 /* 
  * Returns the number of fields of a given variant encoding.
