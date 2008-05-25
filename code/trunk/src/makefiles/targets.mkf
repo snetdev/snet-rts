@@ -95,7 +95,8 @@ maketools       = cse cb
 compiler        = tree global support parse preproc flat typeinf opt postproc \
                   codegen invokecc print
 
-runtime         = common posix netinterface observer 
+#runtime         = common posix netinterface observer utility
+runtime         = common entites netinterface observer utility
 
 tools           = RecordInspector FeederFront 
 
@@ -171,11 +172,15 @@ print           = print.o
 
 common          = memfun.o handle.o record.o typeencode.o expression.o
 
-posix           = buffer.o graphics.o snetentities.o threading.o
+#posix           = buffer.o graphics.o snetentities.o threading.o
 
-posix_feedback	= feedbackbuffer.o buffer.o graphics.o snetentities.o 
+#posix_feedback	= feedbackbuffer.o buffer.o graphics.o snetentities.o 
 
-utility		= list.o 
+entities        = buffer.o filter.o feedbackbuffer.o graphics.o\
+                  interface_functions.o syncro.o out.o box.o alias.o\
+                  serial.o collectors.o parallel.o star.o split.o
+
+utility		= list.o debug.o threading.o
 
 netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o default_interface.o networkinterface.o
 
