@@ -3,84 +3,22 @@
  */
 #ifndef LIST_H
 
-typedef struct list *SNetUtilList;
+#include "bool.h"
 
-/*
- * Creates an empty list.
- */
-extern SNetUtilList SNetUtilListCreate();
-
-/*
- * Destroys a list. The argument can be any element of the
- * list.
- */
-extern void SNetUtilListDestroy(SNetUtilList target);
-
-/*
- * target->current has to point to an element of this list.
- * an element with content content will be added after this
- * element. target->current remains unchanged.
- */
-extern void SNetUtilListAddAfter(SNetUtilList pred, void* content);
-
-/*
- * adds an element before the element that target->current points to.
- * see AddAfter()
- */
-extern void SNetUtilListAddBefore(SNetUtilList succ, void* content);
-
-/*
- * adds an element to the beginning. target->current does not matter.
- */
-extern void SNetUtilListAddBeginning(SNetUtilList target, void* content);
-
-/*
- * adds an element to the end. target->current does not matter
- */
-
-extern void SNetUtilListAddEnd(SNetUtilList target, void* content);
-
-/*
- * sets the current element to the first element in the list.
- */
-extern void SNetUtilListGotoBeginning(SNetUtilList target);
-
-/*
- * sets the current element to the last element in the list.
- */
-extern void SNetUtilListGotoEnd(SNetUtilList target);
-
-/*
- * sets the element to the next element in list; if the current
- * element is the last element in list, nothing will happen
- */
-extern void SNetUtilListNext(SNetUtilList target);
-
-/*
- * sets the element to the previous element in list; if the current
- * element is the first element in list, nothing will happen
- */
-extern void SNetUtilListPrev(SNetUtilList target);
-
-/*
- * gets the current element from the list
- */
-extern void* SNetUtilListGet(SNetUtilList target); 
-
-/*
- * returns if a next element exists
- */
-extern int SNetUtilListHasNext(SNetUtilList target); 
-
-/*
- * returns if a previous element exists
- */
-extern int SNetUtilListHasPrev(SNetUtilList target);
-
-/*
- * deletes the element at the current position and sets
- * target->current to target->current->next (this is an arbitrary decision)
- */
-extern void SNetUtilListDeleteCurrent(SNetUtilList target);
+typedef struct list snet_util_list_t;
+extern snet_util_list_t *SNetUtilListCreate();
+extern void SNetUtilListDestroy(snet_util_list_t *target);
+extern void SNetUtilListAddAfter(snet_util_list_t *target, void* content);
+extern void SNetUtilListAddBefore(snet_util_list_t *target, void* content);
+extern void SNetUtilListAddBeginning(snet_util_list_t *target, void* content);
+extern void SNetUtilListAddEnd(snet_util_list_t *target, void* content);
+extern void SNetUtilListGotoBeginning(snet_util_list_t *target);
+extern void SNetUtilListGotoEnd(snet_util_list_t *target);
+extern void SNetUtilListNext(snet_util_list_t *target);
+extern void SNetUtilListPrev(snet_util_list_t *target);
+extern void* SNetUtilListGet(snet_util_list_t *target); 
+extern bool SNetUtilListHasNext(snet_util_list_t *target); 
+extern bool SNetUtilListHasPrev(snet_util_list_t *target);
+extern void SNetUtilListDeleteCurrent(snet_util_list_t *target);
 
 #endif
