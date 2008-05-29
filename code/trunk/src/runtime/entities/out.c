@@ -55,7 +55,7 @@ extern snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec) {
 }
 
 /* MERGE THE SNET_OUTS! */
-extern snet_handle_t 
+extern snet_handle_t
 *SNetOutRawArray( snet_handle_t *hnd, 
                   int if_id,
                   int variant_num,

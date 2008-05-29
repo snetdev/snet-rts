@@ -1,9 +1,9 @@
 
 #include <stdlib.h>
 #include "C2SNet.h"
-#include "snetentities.h"
 #include "memfun.h"
 #include "typeencode.h"
+#include "interface_functions.h"
 #include "out.h"
 
 
@@ -89,7 +89,7 @@ int C2SNet_serialize(FILE *file, void *ptr)
 }
 
 void *C2SNet_deserialize(FILE *file)
-{
+{                      
   void *(*fun)(FILE *) = SNetGetDeserializationFun(my_interface_id);
 
   return fun(file);

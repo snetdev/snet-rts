@@ -33,6 +33,12 @@ extern snet_global_info_structure_t *snet_global;
   void SNetGlobalUnlockThreadMutex();
 #endif
 
+bool SNetGlobalRegisterInterface( int id, 
+				  void (*freefun)( void*),
+				  void* (*copyfun)( void*), 
+				  int(*serfun)( FILE *,void *),
+				  void* (*deserfun)( FILE *)); 
+
 
 void SNetGlobalSetFreeFun(snet_global_interface_functions_t *f, 
                         void (*freefun) (void*));
@@ -67,5 +73,5 @@ bool SNetGlobalInitialise();
 void *SNetGetCopyFun(int id);
 void *SNetGetFreeFun(int id);
 void *SNetGetSerializationFun(int id);
-void *SNetGetDesrializationFun(int id);
+void *SNetGetDeserializationFun(int id);
 #endif
