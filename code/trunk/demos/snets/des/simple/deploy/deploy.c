@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 
+#include "buffer.h"
 #include <sacinterface.h>
 #include <snetentities.h>
 #include <memfun.h>

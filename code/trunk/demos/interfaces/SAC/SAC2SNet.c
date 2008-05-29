@@ -5,6 +5,7 @@
 #include <memfun.h>
 #include <typeencode.h>
 #include <stdio.h>
+#include "out.h"
 
 #define F_COUNT( c) c->counter[0]
 #define T_COUNT( c) c->counter[1]
