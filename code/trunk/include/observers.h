@@ -18,11 +18,11 @@
 #ifndef SNET_OBSERVERS_H_
 #define SNET_OBSERVERS_H_
 
-#include <buffer.h>
 #include <string.h>
-#include <bool.h>
-#include <label.h>
-#include <interface.h>
+#include "buffer.h"
+#include "bool.h"
+#include "label.h"
+#include "interface.h"
 
 /* Observer data levels. */
 #define SNET_OBSERVERS_DATA_LEVEL_NONE 0
@@ -38,7 +38,7 @@
  * @param inbuf Buffer for incoming records.
  * @param addr URL address of the listener.
  * @param port Port used by the listener.
- * @param interactive "true" if this is an interactive observer, false otherwise.
+ * @param interactive "true" if this is an interactive observer, false otherwise. 
  * @param position Position of this observer.
  * @param type Type of this observer. Must be one of the SNET_OBSERVER_TYPE_* values
  * @param data_level Data level provided by the observers. Must be one of the SNET_OBSERVER_LEVEL_* values.
@@ -48,8 +48,9 @@
  *
  */
 
-snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf, const char *addr, int port, bool interactive, 
-			       const char *position, char type, char data_level, const char *code);
+snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf, const char *addr, int port, 
+			       bool interactive, const char *position, char type, 
+			       char data_level, const char *code);
 
 /** This function initializes the observer system.
  *

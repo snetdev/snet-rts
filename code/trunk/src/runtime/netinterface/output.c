@@ -42,11 +42,14 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
   int i = 0;
   char *label = NULL;
 
-  printf("<data mode=\"textual\" xmlns=\"snet-home.org\">");
+  /* Change this to redirect the output! */
+  FILE *file = stdout;
+
+  fprintf(file, "<data mode=\"textual\" xmlns=\"snet-home.org\">");
   if( rec != NULL) {
     switch( SNetRecGetDescriptor( rec)) {
     case REC_data:
-      printf("<record type=\"data\" >");
+      fprintf(file, "<record type=\"data\" >");
 
        /* Fields */
        for( k=0; k<SNetRecGetNumFields( rec); k++) {
@@ -57,12 +60,12 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 	 int (*fun)(FILE *, void *) = SNetGetSerializationFun(id);
 
 	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	   printf("<field label=\"%s\" interface=\"%s\">", label, 
+	   fprintf(file, "<field label=\"%s\" interface=\"%s\">", label, 
 	   	  SNetInIdToInterface(hnd->interfaces, id));
 
-	   fun(stdout, SNetRecGetField(rec, i));
+	   fun(file, SNetRecGetField(rec, i));
 
-	   printf("</field>");
+	   fprintf(file, "</field>");
 	 }else{
 	   /* Error: unknown label! */
 	 }
@@ -75,7 +78,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 	 i = SNetRecGetTagNames( rec)[k];
 
 	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	   printf("<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
+	   fprintf(file, "<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
 	 }else{
 	   /* Error: unknown label! */
 	 }
@@ -88,31 +91,31 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 	 i = SNetRecGetBTagNames( rec)[k];
 
 	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	   printf("<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
+	   fprintf(file, "<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
 	 }else{
 	   /* Error: unknown label! */
 	 }
 
 	 SNetMemFree(label);
        }
-       printf("</record>");
+       fprintf(file, "</record>");
        break;
     case REC_sync: /* TODO: What additional data is needed? */
-      printf("<record type=\"sync\" />");
+      fprintf(file, "<record type=\"sync\" />");
     case REC_collect: /* TODO: What additional data is needed? */
-      printf("<record type=\"collect\" />");
+      fprintf(file, "<record type=\"collect\" />");
     case REC_sort_begin: /* TODO: What additional data is needed? */
-      printf("<record type=\"sort_begin\" />");
+      fprintf(file, "<record type=\"sort_begin\" />");
     case REC_sort_end: /* TODO: What additional data is needed? */
-      printf("<record type=\"sort_end\" />");
+      fprintf(file, "<record type=\"sort_end\" />");
     case REC_terminate:
-      printf("<record type=\"terminate\" />");
+      fprintf(file, "<record type=\"terminate\" />");
       break;
     default:
       break;
     }
   }
-  printf("</data>\n");
+  fprintf(file, "</data>\n");
 }
 
 /* This is output function for the output thread */

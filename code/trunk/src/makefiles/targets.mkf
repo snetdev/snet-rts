@@ -185,7 +185,7 @@ threading       = threading.o
 netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o\
                   networkinterface.o
 
-observer	= observers.o dispatcher.o
+observer	= observers.o
 
 ###############################################################################
 #
