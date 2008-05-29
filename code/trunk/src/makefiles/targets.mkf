@@ -173,9 +173,6 @@ util            = debug.o
 
 common          = memfun.o handle.o record.o typeencode.o expression.o
 
-#posix           = buffer.o graphics.o snetentities.o threading.o
-
-#posix_feedback	= feedbackbuffer.o buffer.o graphics.o snetentities.o 
 
 entities        = buffer.o filter.o feedbackbuffer.o graphics.o\
                   interface_functions.o syncro.o out.o box.o alias.o\
