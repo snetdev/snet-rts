@@ -1,26 +1,28 @@
 #ifndef _C2SNet_h_
 #define _C2SNet_h_
 
+#include <stdio.h>
+
 typedef struct container c2snet_container_t;
 
 typedef struct cdata {
  void *data;
  void (*freefun)( void*);
  void* (*copyfun)( void*);
- int (*serfun)( void*, char **);
+ int (*serfun)(FILE *, void*);
 
 } C_Data;
 
 
-void C2SNet_init( int id, void *(*deserialization_fun)(char *, int));
+void C2SNet_init( int id, void *(*deserialization_fun)(FILE *));
 
 void C2SNet_outCompound( c2snet_container_t *c);
 void C2SNet_out( void *hnd, int variant, ...);
 
 void C2SNet_free( void *ptr);
 void *C2SNet_copy( void *ptr);
-int C2SNet_serialize( void *ptr, char **serialized);
-void *C2SNet_deserialize( char *ptr, int len);
+int C2SNet_serialize( FILE *file, void *ptr);
+void *C2SNet_deserialize( FILE *file);
 
 /* ************************************************************************* */
 
@@ -29,7 +31,7 @@ void *C2SNet_deserialize( char *ptr, int len);
 C_Data *C2SNet_cdataCreate( void *data, 
 		     	    void (*freefun)( void*),
 		     	    void* (*copyfun)( void*),
-			    int (*serfun)( void*, char **));
+			    int (*serfun)( FILE *, void*));
 
 void *C2SNet_cdataGetData( C_Data *c);
 void *C2SNet_cdataGetCopyFun( C_Data *c);

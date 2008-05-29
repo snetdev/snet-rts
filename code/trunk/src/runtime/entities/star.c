@@ -8,6 +8,7 @@
 #include "handle.h"
 #include "serial.h"
 #include "debug.h"
+#include "collectors.h"
 /* ------------------------------------------------------------------------- */
 /*  SNetStar                                                                 */
 /* ------------------------------------------------------------------------- */
@@ -263,7 +264,7 @@ static void *DetStarBoxThread( void *hndl) {
         break;
 
       case REC_collect:
-        SNetUtilDebug("[STAR] Unhandled control record,"
+        SNetUtilDebugNotice("[STAR] Unhandled control record,"
                       " destroying it.\n\n");
         SNetRecDestroy( rec);
         break;

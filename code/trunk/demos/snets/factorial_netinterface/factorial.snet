@@ -11,7 +11,7 @@
 
 <?xml version="1.0"?>
 <metadata xmlns="snet-home.org" >
-  <interface name="C2SNet" include="myfuns.h" arguments="mydeserialize" default="true" />
+  <interface name="C2SNet" include="myfuns.h" arguments="C2SNetDeserialize" default="true" />
 </metadata>
 
 

@@ -4,85 +4,82 @@
 #include <C2SNet.h>
 #include <string.h>
 
-void myfree( void *ptr)
+void C2SNetFree( void *ptr)
 {
   free( ptr);
 }
 
-void *mycopyChar( void *ptr)
+void *C2SNetCopyFloat( void *ptr)
 {
-  char *chr_ptr = (char *)ptr;
+  float *float_ptr = NULL;
 
-  char *c = NULL;
-  c = (char *)malloc( sizeof(char) * strlen(chr_ptr));
-  c = strcpy(c, chr_ptr);
+  float_ptr = malloc( sizeof( float));
+  *float_ptr = *(float *)ptr;
   
-  return(c);
+  return( float_ptr);
 }
 
-void *mycopyInt( void *ptr)
+void *C2SNetCopyInt( void *ptr)
 {
   int *int_ptr = NULL;
 
   int_ptr = malloc( sizeof( int));
-  *int_ptr = *(int*)ptr;
+  *int_ptr = *(int *)ptr;
   
   return( int_ptr);
 }
 
 
-int myserializeChar(void* value, char **data){
-  *data = (char *)mycopyChar(value);
+int C2SNetSerializeFloat(FILE *file, void* value)
+{
+  return fprintf(file, "(float)%f", *(float *)value);
+}
+
+int C2SNetSerializeInt(FILE *file, void* value)
+{
+  return fprintf(file, "(int)%d", *(int*)value);
+}
+
+void *C2SNetDeserialize(FILE *file) 
+{
+  int i;
+  float f;
+  char buf[6];
+  int j;
+
+  for(j = 0; j < 5; j++) {
+    buf[j] = fgetc(file);
+  }
+
+  if(strncmp(buf, "(int)", 5) == 0) {
+    if(fscanf(file, "%d", &i) == 1) {
+      int *i_ptr = (int *)malloc(sizeof( int));
+      *i_ptr = i;
+      return (void *)C2SNet_cdataCreate((void *)i_ptr, 
+					C2SNetFree,
+					C2SNetCopyInt,
+					C2SNetSerializeInt);
+    }
+  }
+  else { 
+
+    buf[j++] = fgetc(file);
+    buf[j++] = fgetc(file);
   
-  return strlen(*data);
-}
+    if(strncmp(buf, "(float)", 7) == 0) {
 
-#define SER_BUF_SIZE 32
-
-int myserializeInt(void* value, char **data){
-  int i = 1;
-  int ret = -1;
-    if(*data != NULL){
-      free(*data);
-    }
-    *data = NULL;
-
-
-  if(value == NULL){
-    return 0;
-  }
-
-  do{
-    if(*data != NULL){
-      free(*data);
-      *data = NULL;
-      i++;
-    }
-    *data = (char *)malloc(sizeof(char) * SER_BUF_SIZE * i);
-    ret = snprintf(*data, SER_BUF_SIZE * i, "int:%d", *((int *)value));
-  }while(ret <= 0 || ret >= SER_BUF_SIZE * i);
-
-  return ret;
-}
-
-#undef SER_BUF_SIZE
-
-void *mydeserialize(char* value, int len){
-  /* NULL */
-  if(len == 0 || value == NULL) {
-    return NULL;
-  }
-  if(value != NULL){
-    /* int */
-    if(len > 4 && strncmp(value, "int:", 4) == 0){
-      int *i = (int *)malloc(sizeof( int));
-      *i = atoi(value + 4);
-      return (void *)C2SNet_cdataCreate((void *)i, myfree, 
-					mycopyInt, myserializeInt);
+      if(fscanf(file, "%f", &f) == 1) {
+	float *f_ptr = (float *)malloc(sizeof( float));
+	*f_ptr = f;
+	
+	return (void *)C2SNet_cdataCreate((void *)f_ptr, 
+					  C2SNetFree,
+					  C2SNetCopyFloat,
+					  C2SNetSerializeFloat);
+      }
     }
   }
-  /* char or unknown */
-  return (void *)C2SNet_cdataCreate(mycopyChar((void *)value), myfree, 
-				    mycopyChar, myserializeChar);
+  exit(1);
+  return NULL;
 }
 

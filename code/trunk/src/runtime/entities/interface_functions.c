@@ -2,6 +2,9 @@
 #include "debug.h"
 #include "memfun.h"
 
+/* hkr: TODO: consider if this can be removed *somehow*? */
+snet_global_info_structure_t *snet_global = NULL;
+
 void SNetGlobalSetFreeFun( snet_global_interface_functions_t *f,
                         void (*freefun)( void*))
 {
@@ -25,7 +28,7 @@ void *SNetGlobalGetFreeFun( snet_global_interface_functions_t *f)
 }
 
 void SNetGlobalSetSerializationFun( snet_global_interface_functions_t *f,
-				 int (*serfun)( void*, char **))
+				 int (*serfun)( FILE *, void *))
 {
   f->serfun = serfun;
 }
@@ -36,7 +39,7 @@ void *SNetGlobalGetSerializationFun(snet_global_interface_functions_t *f)
 }
 
 void SNetGlobalSetDeserializationFun( snet_global_interface_functions_t *f,
-				   void* (*deserfun)( char*, int))
+				   void* (*deserfun)(FILE *))
 {
   f->deserfun = deserfun;
 }
@@ -122,8 +125,8 @@ bool
 SNetGlobalRegisterInterface( int id, 
                              void (*freefun)( void*),
                              void* (*copyfun)( void*), 
-                             int(*serfun)( void*, char **),
-                             void* (*deserfun)( char*, int)) 
+                             int(*serfun)( FILE *,void *),
+                             void* (*deserfun)( FILE *)) 
 {
   int num; 
   snet_global_interface_functions_t *new_if;

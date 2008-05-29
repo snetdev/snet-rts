@@ -7,10 +7,10 @@ CCFLAGS    = -DFILTER_VERSION_2 -Dmain_$(TARGET)=main
 AR         = ar
 INCDIRS    = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
 LIBDIRS    = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
-LIBS       = -lpthread -lsnet
+LIBS       = -lpthread -lsnet -lC2SNet
 
 
-all: 
+all:
 	$(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) $(TARGET).snet
 	rm -f *.o
 

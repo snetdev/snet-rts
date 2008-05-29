@@ -12,6 +12,7 @@
 #include <typeencode.h>
 #include <constants.h>
 #include <expression.h>
+#include <stdio.h>
 
 #define SNET_STAR_COUNTERFIELD "star_counter"
 
@@ -29,8 +30,8 @@ extern bool
 SNetGlobalRegisterInterface( int id, 
                              void (*freefun)( void*),
                              void* (*copyfun)( void*),
-			     int (*serfun)( void*, char **),
-                             void* (*deserfun)( char*, int));
+			     int (*serfun)( FILE *, void*),
+                             void* (*deserfun)(FILE *));
 
 
 extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...);

@@ -15,7 +15,7 @@ void *mult( void *hnd, C_Data *x, C_Data *r)
   int_r = *(int*) C2SNet_cdataGetData( r);
   *int_rr = int_x * int_r;
 
-  result = C2SNet_cdataCreate( int_rr, &myfree, &mycopyInt, &myserializeInt);
+  result = C2SNet_cdataCreate( int_rr, &C2SNetFree, &C2SNetCopyInt, &C2SNetSerializeInt);
 
   C2SNet_out( hnd, 1, result);
   return( hnd);

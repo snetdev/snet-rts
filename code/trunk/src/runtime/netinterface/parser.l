@@ -28,6 +28,12 @@ char *STRcpy(const char *text){
   return strcpy(t, text);
 }
 
+#define YY_INPUT(buf,result,max_size) \
+ { \
+  int c = getchar(); \
+  result = (c == EOF) ? YY_NULL : (buf[0] = c, 1); \
+ }
+
 extern void yyerror(char *error);
 %}
    /* set positions to 6000 */         
@@ -57,8 +63,8 @@ extern void yyerror(char *error);
     /* Inside double quoted XML-attribute ("...") */
 %x IN_XML_DQUOTE 
     /* Inside single quoted XML-attribute ('...') */
-%x IN_XML_SQUOTE  
-
+%x IN_XML_SQUOTE 
+ 
 %%
 
 <*>{
@@ -66,7 +72,6 @@ extern void yyerror(char *error);
          /* Ignore */
        }
 }
-
 
 <IN_XML_ELEMENT>{
  "/>" {
@@ -99,23 +104,64 @@ extern void yyerror(char *error);
 }
 
 
-<IN_XML_ELEMENT,IN_XML_ENDELEMENT>(([A-Za-z\200-\377_^?]|"_"|":")([A-Za-z\200-\377_0-9.-]|":")*) {
+<IN_XML_ELEMENT>(([A-Za-z\200-\377_^?]|"_"|":")([A-Za-z\200-\377_0-9.-]|":")*) {
              yylval.str = STRcpy(yytext);
              return NAME;
           }                           
       
 <IN_XML_CONTENT>{
- "</"   {
+
+"</data" {
           yy_pop_state();
           yy_push_state(IN_XML_ENDELEMENT);
-          return ENDTAG_BEGIN;
+          return DATA_END_BEGIN;
+        }
+"</record" {
+          yy_pop_state();
+          yy_push_state(IN_XML_ENDELEMENT);
+          return RECORD_END_BEGIN;
+        }
+"</field" {
+          yy_pop_state();
+          yy_push_state(IN_XML_ENDELEMENT);
+          return FIELD_END_BEGIN;
+        }
+"</tag" {
+          yy_pop_state();
+          yy_push_state(IN_XML_ENDELEMENT);
+          return TAG_END_BEGIN;
+        }
+"</btag" {
+          yy_pop_state();
+          yy_push_state(IN_XML_ENDELEMENT);
+          return BTAG_END_BEGIN;
         }
 
- "<"    {          
+ "<data"    {
           yy_push_state(IN_XML_ELEMENT);
-          return STARTTAG_BEGIN;
+          return DATA_BEGIN;
         }
- 
+
+ "<record"    {
+          yy_push_state(IN_XML_ELEMENT);
+          return RECORD_BEGIN;
+        }
+
+ "<field"    {
+          yy_push_state(IN_XML_ELEMENT);
+          return FIELD_BEGIN;
+        }
+
+ "<tag"    {
+          yy_push_state(IN_XML_ELEMENT);
+          return TAG_BEGIN;
+        }
+
+ "<btag" {
+          yy_push_state(IN_XML_ELEMENT);
+          return BTAG_BEGIN;
+        }
+
  "<!--" {
           yy_push_state(IN_XML_COMMENT);
         }
@@ -224,17 +270,32 @@ extern void yyerror(char *error);
           yy_push_state(IN_XML_COMMENT);
         }
 
-"</"    {
-          return ENDTAG_BEGIN;
+
+ "<data"    {
+          yy_push_state(IN_XML_ELEMENT);
+          return DATA_BEGIN;
         }
 
-
- "<"    {
+ "<record"    {
           yy_push_state(IN_XML_ELEMENT);
-          return STARTTAG_BEGIN;
+          return RECORD_BEGIN;
+        }
+
+ "<field"    {
+          yy_push_state(IN_XML_ELEMENT);
+          return FIELD_BEGIN;
+        }
+
+ "<tag"    {
+          yy_push_state(IN_XML_ELEMENT);
+          return TAG_BEGIN;
+        }
+
+ "<btag" {
+          yy_push_state(IN_XML_ELEMENT);
+          return BTAG_BEGIN;
         }
 }
-
 
 <*>.    {
             yyerror("invalid character");

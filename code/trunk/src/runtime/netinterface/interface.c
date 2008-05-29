@@ -19,7 +19,6 @@
 #include <string.h>
 #include <pthread.h>
 #include <memfun.h>
-#include <default_interface.h>
 
 /* TODO: 
  * The reference counting system might not work correctly if the
@@ -97,9 +96,12 @@ int SNetInInterfaceToId(snetin_interface_t *interfaces, const char *interface){
     }
     tempinterface = tempinterface->next;
   }
+  
+  /* Some kind of default interface? */
 
   /* Unknown interface, create new one */
-  temp_interface_t *new_interface = SNetMemAlloc(sizeof(temp_interface_t)); 
+  /* 
+ temp_interface_t *new_interface = SNetMemAlloc(sizeof(temp_interface_t)); 
   char *t = SNetMemAlloc(sizeof(char) * (strlen(interface) + 1));
   new_interface->interface = strcpy(t, interface);
 
@@ -118,6 +120,8 @@ int SNetInInterfaceToId(snetin_interface_t *interfaces, const char *interface){
   index = new_interface->index;
   
   SNet_default_interface_init(index);
+*/
+  index = -1;
 
   pthread_mutex_unlock(&interfaces->mutex);
   return index;

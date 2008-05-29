@@ -16,25 +16,32 @@
  *******************************************************************************/
 
 #include <stdio.h>
-#include <memfun.h>
 #include <pthread.h>
-#include <output.h>
-#include <snetentities.h>
-#include <label.h>
-#include <interface.h>
+#include <unistd.h>
+
+#include "memfun.h"
+#include "output.h"
+#include "snetentities.h"
+#include "label.h"
+#include "interface.h"
 
 /* Thread to do the output */
 static pthread_t thread; 
-static snetin_label_t *labels = NULL;
-static snetin_interface_t *interfaces = NULL;
+
+typedef struct { 
+  snetin_label_t *labels;
+  snetin_interface_t *interfaces;
+  snet_buffer_t *buffer;
+} handle_t;
 
 
 /* This function prints records to stdout */
-static void printRec(snet_record_t *rec)
+static void printRec(snet_record_t *rec, handle_t *hnd)
 {
   int k = 0;
   int i = 0;
   char *label = NULL;
+
   printf("<data mode=\"textual\" xmlns=\"snet-home.org\">");
   if( rec != NULL) {
     switch( SNetRecGetDescriptor( rec)) {
@@ -44,27 +51,22 @@ static void printRec(snet_record_t *rec)
        /* Fields */
        for( k=0; k<SNetRecGetNumFields( rec); k++) {
 	 i = SNetRecGetFieldNames( rec)[k];
-	 char *data = NULL;
 
 	 int id = SNetRecGetInterfaceId(rec);
 
-	 int (*fun)(void *, char **) = SNetGetSerializationFun(id);
+	 int (*fun)(FILE *, void *) = SNetGetSerializationFun(id);
 
-	 int len = fun(SNetRecGetField(rec, i), &data);
-
-	 if((label = SNetInIdToLabel(labels, i)) != NULL){
-	   int l = 0;
+	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
 	   printf("<field label=\"%s\" interface=\"%s\">", label, 
-	   	  SNetInIdToInterface(interfaces, id));
-	   for(l = 0; l < len; l++){
-	     putchar(data[l]);
-	   }
+	   	  SNetInIdToInterface(hnd->interfaces, id));
+
+	   fun(stdout, SNetRecGetField(rec, i));
+
 	   printf("</field>");
 	 }else{
 	   /* Error: unknown label! */
 	 }
-	 
-	 SNetMemFree(data);	 
+	  
 	 SNetMemFree(label);
        }
 
@@ -72,7 +74,7 @@ static void printRec(snet_record_t *rec)
        for( k=0; k<SNetRecGetNumTags( rec); k++) {
 	 i = SNetRecGetTagNames( rec)[k];
 
-	 if((label = SNetInIdToLabel(labels, i)) != NULL){
+	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
 	   printf("<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
 	 }else{
 	   /* Error: unknown label! */
@@ -85,7 +87,7 @@ static void printRec(snet_record_t *rec)
        for( k=0; k<SNetRecGetNumBTags( rec); k++) {
 	 i = SNetRecGetBTagNames( rec)[k];
 
-	 if((label = SNetInIdToLabel(labels, i)) != NULL){
+	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
 	   printf("<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
 	 }else{
 	   /* Error: unknown label! */
@@ -116,14 +118,14 @@ static void printRec(snet_record_t *rec)
 /* This is output function for the output thread */
 static void *doOutput(void* data)
 {
-  snet_buffer_t * out_buf = (snet_buffer_t *)data;
+  handle_t *hnd = (handle_t *)data;
 
   snet_record_t *rec = NULL;
-  if(out_buf != NULL){
+  if(hnd->buffer != NULL){
     while(1){
-      rec = SNetBufGet(out_buf);
+      rec = SNetBufGet(hnd->buffer);
       if(rec != NULL) {
-      	printRec(rec);
+      	printRec(rec, hnd);
 	if(SNetRecGetDescriptor(rec) == REC_terminate){
 	  SNetRecDestroy(rec);
 	  break;
@@ -135,17 +137,26 @@ static void *doOutput(void* data)
   return NULL;
 }
 
-int SNetInOutputInit(snetin_label_t *labs, snetin_interface_t *interfs, snet_buffer_t *in_buf){
-  if(in_buf == NULL || pthread_create(&thread, NULL, (void *)doOutput, (void *)in_buf) == 0){
-    labels = labs;
-    interfaces = interfs;
+int SNetInOutputInit(snetin_label_t *labels, 
+		     snetin_interface_t *interfaces, 
+		     snet_buffer_t *in_buf)
+{
+  handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
+
+  hnd->labels = labels;
+  hnd->interfaces = interfaces;
+  hnd->buffer = in_buf;
+
+  if(in_buf == NULL || pthread_create(&thread, NULL, (void *)doOutput, (void *)hnd) == 0){
     return 0;
   }
+  
   /* error */
   return 1;
 }
 
-int SNetInOutputDestroy(){
+int SNetInOutputDestroy()
+{
   if(pthread_join(thread, NULL) == 0){
     return 0;
   }

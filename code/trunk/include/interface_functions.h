@@ -1,6 +1,7 @@
 #ifndef INTERFACE_FUNCTIONS_HEADER
 #define INTERFACE_FUNCTIONS_HEADER
 
+#include <stdio.h>
 #include "bool.h"
 #include "stdlib.h"
 #include "pthread.h"
@@ -10,8 +11,8 @@ typedef struct {
   int id;
   void (*freefun)( void*);
   void* (*copyfun)( void*);
-  int (*serfun)( void*, char **);
-  void* (*deserfun)( char*, int);
+  int (*serfun)( FILE *, void*);
+  void* (*deserfun)( FILE *);
 } snet_global_interface_functions_t;
 
 typedef struct {
@@ -20,7 +21,7 @@ typedef struct {
 } snet_global_info_structure_t;
 
 /* hkr: TODO: consider if this can be removed *somehow*? */
-snet_global_info_structure_t *snet_global = NULL;
+extern snet_global_info_structure_t *snet_global;
 
 #ifdef DBG_RT_TRACE_THREAD_CREATE
   int tcount = 0;
@@ -42,11 +43,11 @@ void SNetGlobalSetCopyFun(snet_global_interface_functions_t *f,
 void* SNetGlobalGetCopyFun(snet_global_interface_functions_t *f);
 
 void SNetGlobalSetSerializationFun(snet_global_interface_functions_t *f,
-                        int (*serfun) (void*, char**));
+                        int (*serfun) (FILE *, void*));
 void* SNetGlobalGetSerializationFun(snet_global_interface_functions_t *f);
 
 void SNetGlobalSetDeserializationFun(snet_global_interface_functions_t *f,
-                        void* (*deserfun) (char*, int));
+                        void* (*deserfun) (FILE *));
 
 void *SNetGlobalGetDeserializationFun(snet_global_interface_functions_t *f);
 

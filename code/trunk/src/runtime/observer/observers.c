@@ -185,11 +185,11 @@ static void *ObserverBoxThread( void *hndl) {
   char buf[BUF_SIZE];
   snet_record_t *rec = NULL;
 
-  bool terminate = true;
+  bool isTerminated = false;
   int len = 0;
  
   /* Do until terminate record is processed. */
-  while(terminate == true){ 
+  while(!isTerminated){ 
     rec = SNetBufGet(hnd->inbuf);
     if(rec != NULL) {
       
@@ -201,7 +201,7 @@ static void *ObserverBoxThread( void *hndl) {
       SNetDispatcherSend(hnd->id, hnd->fdesc, buf, len, hnd->interactive);
       
       if(SNetRecGetDescriptor(rec) == REC_terminate){
-	terminate = false;
+	isTerminated = true;
       }
       
       /* Pass the record to next component. */

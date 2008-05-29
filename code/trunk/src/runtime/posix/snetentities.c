@@ -55,8 +55,8 @@ typedef struct {
   int id;
   void (*freefun)( void*);
   void* (*copyfun)( void*);
-  int (*serfun)( void*, char **);
-  void* (*deserfun)( char*, int);
+  int (*serfun)(FILE *, void *);
+  void* (*deserfun)(FILE *);
 } snet_global_interface_functions_t;
 
 typedef struct {
@@ -114,7 +114,7 @@ static void *GetFreeFun( snet_global_interface_functions_t *f)
 }
 
 static void SetSerializationFun( snet_global_interface_functions_t *f,
-				 int (*serfun)( void*, char **))
+				 int (*serfun)( FILE *, void *))
 {
   f->serfun = serfun;
 }
@@ -125,7 +125,7 @@ static void *GetSerializationFun( snet_global_interface_functions_t *f)
 }
 
 static void SetDeserializationFun( snet_global_interface_functions_t *f,
-				   void* (*deserfun)( char*, int))
+				   void* (*deserfun)(FILE *))
 {
   f->deserfun = deserfun;
 }
@@ -218,7 +218,7 @@ extern bool
 SNetGlobalRegisterInterface( int id, 
                              void (*freefun)( void*),
                              void* (*copyfun)( void*), 
-                             int(*serfun)( void*, char **),
+                             int(*serfun)( void*, int),
                              void* (*deserfun)( char*, int)) 
 {
   int num; 

@@ -421,9 +421,9 @@ static void *FilterThread( void *hnd)
                         case create_record: //noop
                         break;
                       default:
-                        SNetUtilDebug("[Filter] Unknown opcode in filter" 
-                                      " instruction [%d]\n\n",
-                                        current_instr->opcode);
+                        SNetUtilDebugFatal("[Filter] Unknown opcode in filter" 
+					   " instruction [%d]\n\n",
+					   current_instr->opcode);
                     } 
                   } // forall instructions of current_set
 

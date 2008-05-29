@@ -1,9 +1,10 @@
 
 #include <stdlib.h>
-#include <C2SNet.h>
-#include <snetentities.h>
-#include <memfun.h>
-#include <typeencode.h>
+#include "C2SNet.h"
+#include "snetentities.h"
+#include "memfun.h"
+#include "typeencode.h"
+#include "out.h"
 
 
 #define F_COUNT( c) c->counter[0]
@@ -80,21 +81,21 @@ void *C2SNet_copy( void *ptr)
   return( new);
 }
 
-int C2SNet_serialize(void *ptr, char **serialized)
+int C2SNet_serialize(FILE *file, void *ptr)
 {
-  int (*serfun)(void*, char **) = ((C_Data*)ptr)->serfun;
+  int (*serfun)(FILE *, void*) = ((C_Data*)ptr)->serfun;
 
-  return( serfun( ((C_Data*)ptr)->data, serialized) );
+  return( serfun( file, ((C_Data*)ptr)->data) );
 }
 
-void *C2SNet_deserialize(char *ptr, int len)
+void *C2SNet_deserialize(FILE *file)
 {
-  void *(*fun)(char **, int) = SNetGetDeserializationFun(my_interface_id);
+  void *(*fun)(FILE *) = SNetGetDeserializationFun(my_interface_id);
 
-  return fun(((C_Data*)ptr)->data, len);
+  return fun(file);
 }
  
-void C2SNet_init( int id, void *(*deserialization_fun)(char *, int))
+void C2SNet_init( int id, void *(*deserialization_fun)(FILE *))
 {
   my_interface_id = id;
   SNetGlobalRegisterInterface( id, &C2SNet_free, &C2SNet_copy,
@@ -109,7 +110,7 @@ void C2SNet_init( int id, void *(*deserialization_fun)(char *, int))
 C_Data *C2SNet_cdataCreate( void *data, 
 			    void (*freefun)( void*),
 			    void* (*copyfun)( void*),
-			    int (*serfun)( void*, char **))			    
+			    int (*serfun)( FILE *, void*))			    
 {
   C_Data *c;
 

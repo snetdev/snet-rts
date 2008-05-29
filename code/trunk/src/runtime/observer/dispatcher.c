@@ -28,14 +28,14 @@
 #include <netdb.h>
 #include <regex.h>
 
-#include <memfun.h>
-#include <bool.h>
+#include "memfun.h"
+#include "bool.h"
 
 /* This struct stores information of sleeping observer. */
 typedef struct sleeper{
   int id;               // ID of the sleeping observer .
   pthread_cond_t cond;  // Condition that the observer is waiting for.
-  bool sleeping;        // This value tells if the observer is actually sleeping.
+  bool isSleeping;      // This value tells if the observer is actually sleeping.
   struct sleeper *next; // Next entry in sleeping queue.
 }sleeper_t;
 
@@ -131,7 +131,8 @@ static connection_t *init_socket(const char *addr, int port)
 
 
 /* Add sleeper entry to connection. */
-static void add_sleeper(int self, connection_t *con){
+static void add_sleeper(int self, connection_t *con)
+{
   sleeper_t *temp = SNetMemAlloc( sizeof(sleeper_t));
 
   if(temp == NULL){
@@ -140,7 +141,7 @@ static void add_sleeper(int self, connection_t *con){
 
   pthread_cond_init(&temp->cond, NULL);
   temp->id = self;
-  temp->sleeping = false;
+  temp->isSleeping = false;
   temp->next = NULL;
   
   temp->next = con->sleepers; 
@@ -149,7 +150,8 @@ static void add_sleeper(int self, connection_t *con){
 
 
 /* Remove sleeper entry from connection. */
-static void remove_sleeper(int self, connection_t *con){
+static void remove_sleeper(int self, connection_t *con)
+{
   sleeper_t *temp = con->sleepers;
   sleeper_t *prev = NULL;
 
@@ -260,16 +262,16 @@ static void *dispatcher_dispatch(void *arg)
 	while(temp != NULL){
 	  if(FD_ISSET(temp->fdesc, &fdr_set)){
 	    char buf[BUF_SIZE];
+	    int buflen;
 
 	    for(i = 0; i < strlen(temp->buffer); i++){
 	      buf[i] = temp->buffer[i];
 	    }
 
-	    for(; i < BUF_SIZE; i++){
-	      buf[i] = '\0';
-	    }
+	    buflen = strlen(buf);
+	    len = recv(temp->fdesc, buf + buflen, BUF_SIZE - buflen, 0);
 
-	    len = recv(temp->fdesc, buf + strlen(buf), BUF_SIZE - strlen(buf), 0);
+	    buf[buflen + len] = '\0';
 
 	    if(len > 0){
 	      int oid;
@@ -281,7 +283,8 @@ static void *dispatcher_dispatch(void *arg)
 		ret = parse_reply_msg(buf + offset, &oid);
 		offset += ret;
 
-		/* Nothing was parsed. Buffer the message to be used when the next messge arrives. */
+		/* Nothing was parsed. Buffer the message to be used 
+		 * when the next messge arrives. */
 		if(ret == 0 || oid == -1){
 		  for(i = 0; i < strlen(buf);i++){
 		    temp->buffer[i] = buf[offset + i];
@@ -296,7 +299,7 @@ static void *dispatcher_dispatch(void *arg)
 		/* Wake up sleeping observer */ 
 		sleeper_t *sleep = temp->sleepers;
 		while(sleep != NULL){
-		  if(sleep->id == oid && sleep->sleeping == true){
+		  if(sleep->id == oid && sleep->isSleeping == true){
 		    pthread_cond_signal(&sleep->cond);
 		    break;
 		  }
@@ -438,12 +441,13 @@ int SNetDispatcherSend(int self, int fid, const char *buffer, int buflen, bool i
 
     while(sleeper != NULL){
       if(sleeper->id == self){
-	sleeper->sleeping = true;
+	sleeper->isSleeping = true;
+
 	if(pthread_cond_wait(&sleeper->cond, &connection_mutex) != 0)
 	  {
 	    /* Error */
 	  }
-	sleeper->sleeping = false;
+	sleeper->isSleeping = false;
 	break;
       }
       sleeper = sleeper->next;
@@ -494,7 +498,6 @@ int SNetDispatcherInit()
 void SNetDispatcherDestroy()
 {
   connection_t *con; 
-  sleeper_t *sleep;
 
   /* Don't close connections before the dispatcher stops using them! */
   
@@ -519,17 +522,6 @@ void SNetDispatcherDestroy()
     
     close(con->fdesc);
     
-    /* Wake all sleepers. */
-    sleep = con->sleepers;
-    while(sleep != NULL) {
-      con->sleepers = sleep->next;
-      
-      pthread_cond_signal(&sleep->cond);
-      pthread_cond_destroy(&sleep->cond);
-      
-      sleep = con->sleepers;
-    }
-
     SNetMemFree(con);
     
     con = connections;

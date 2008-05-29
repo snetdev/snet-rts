@@ -17,7 +17,7 @@ void *leq1( void *hnd, C_Data *x)
   
   *bool_p = (int_x <= 1);
 
-  result = C2SNet_cdataCreate( bool_p, &myfree, &mycopyInt, &myserializeInt);
+  result = C2SNet_cdataCreate( bool_p, &C2SNetFree, &C2SNetCopyInt, &C2SNetSerializeInt);
 
   
   C2SNet_out( hnd, 1, x, result);
