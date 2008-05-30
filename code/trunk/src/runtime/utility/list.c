@@ -86,7 +86,7 @@ snet_util_list_t *SNetUtilListCreate() {
  *        happens. 
  *
  ******************************************************************************/
-extern void SNetUtilListDestroy(snet_util_list_t *target) {
+void SNetUtilListDestroy(snet_util_list_t *target) {
   struct list_elem *next = NULL;
   struct list_elem *current = NULL;
   if(target == NULL) return;
@@ -114,7 +114,7 @@ extern void SNetUtilListDestroy(snet_util_list_t *target) {
  * @param content the new content to add.
  *
  *****************************************************************************/
-extern void SNetUtilListAddAfter(snet_util_list_t *target, void *content) {
+void SNetUtilListAddAfter(snet_util_list_t *target, void *content) {
   struct list_elem *succ;
   struct list_elem *pred;
   struct list_elem *elem;
@@ -163,7 +163,7 @@ extern void SNetUtilListAddAfter(snet_util_list_t *target, void *content) {
  * @param content the new element to add
  *
  ******************************************************************************/
-extern void SNetUtilListAddBefore(snet_util_list_t *target, void *content) {
+void SNetUtilListAddBefore(snet_util_list_t *target, void *content) {
   struct list_elem *succ;
   struct list_elem *pred;
   struct list_elem *elem;
@@ -210,7 +210,7 @@ extern void SNetUtilListAddBefore(snet_util_list_t *target, void *content) {
  * @param content the new element to add
  *
  *****************************************************************************/
-extern void SNetUtilListAddBeginning(snet_util_list_t *target, void *content) {
+void SNetUtilListAddBeginning(snet_util_list_t *target, void *content) {
   struct list_elem *temp;
 
   if(target == NULL) {
@@ -237,7 +237,7 @@ extern void SNetUtilListAddBeginning(snet_util_list_t *target, void *content) {
  * @param content the new element to add
  *
  *****************************************************************************/
-extern void SNetUtilListAddEnd(snet_util_list_t *target, void *content) {
+void SNetUtilListAddEnd(snet_util_list_t *target, void *content) {
   struct list_elem *temp;
 
   if(target == NULL) {
@@ -262,7 +262,7 @@ extern void SNetUtilListAddEnd(snet_util_list_t *target, void *content) {
  * @param target the list to modify
  *
  *****************************************************************************/
-extern void SNetUtilListGotoBeginning(snet_util_list_t *target) {
+void SNetUtilListGotoBeginning(snet_util_list_t *target) {
   if(target == NULL) {
     SNetUtilDebugFatal("target == null in GotoBeginning!");
   }
@@ -282,7 +282,7 @@ extern void SNetUtilListGotoBeginning(snet_util_list_t *target) {
  * @param target the list to modify
  *
  *****************************************************************************/
-extern void SNetUtilListGotoEnd(snet_util_list_t *target) {
+void SNetUtilListGotoEnd(snet_util_list_t *target) {
   if(target == NULL) {
     SNetUtilDebugFatal("target == null in GotoEnd!");
   }
@@ -294,16 +294,19 @@ extern void SNetUtilListGotoEnd(snet_util_list_t *target) {
  *
  * @fn void SNetUtilListNext(snet_util_list_t *target)
  *
- * @brief makes the next element the current element if it exists
+ * @brief makes the next element the current element 
  *
  *        This function sets the current element to the next element of the old
  *        current element. If the current element is the last element in 
- *        the list, nothing happens.
+ *        the list, the current element goes in some undefined state. Further
+ *        calls to SNeTUtilListNext will keep the current element in this 
+ *        undefined state. It is not safe to call AddBefore or similar functions
+ *        while we are in this undefined state. 
  *
  * @param target the list to modify
  *
  ******************************************************************************/
-extern void SNetUtilListNext(snet_util_list_t *target) {
+void SNetUtilListNext(snet_util_list_t *target) {
   if(target == NULL) {
     SNetUtilDebugFatal("target == null in ListNext!");
   }
@@ -311,7 +314,7 @@ extern void SNetUtilListNext(snet_util_list_t *target) {
     SNetUtilDebugFatal("target->current == null in ListNext!");
   }
 
-  if(target->current->next != NULL) {
+  if(target->current != NULL) {
     target->current = target->current->next;
   }
 }
@@ -320,16 +323,20 @@ extern void SNetUtilListNext(snet_util_list_t *target) {
  *
  * @fn void SNetUtilListPrev(snet_util_list *target)
  *
- * @brief makes the previous element the current element if it exists
+ * @brief makes the previous element the current element
  * 
  *      This function sets the current element to the previous element of the
  *      old current element. If the current element is the first element of the
- *      list, nothing happens.
+ *      list, the current element goes into some undefined state. Further calls
+ *      to Prev with the current element in the undefined state keeps the 
+ *      current element in the undefined state. It is not safe to call functions
+ *      like AddAfter or similar functions with the current element in the 
+ *      undefined state.
  *
  * @param target the list to modify
  *
  *****************************************************************************/
-extern void SNetUtilListPrev(snet_util_list_t *target) {
+void SNetUtilListPrev(snet_util_list_t *target) {
   if(target == NULL) {
     SNetUtilDebugFatal("target == null in ListPrev!");
   }
@@ -337,7 +344,7 @@ extern void SNetUtilListPrev(snet_util_list_t *target) {
     SNetUtilDebugFatal("target->current == null in ListPrev");
   }
 
-  if(target->current->prev != NULL) {
+  if(target->current != NULL) {
     target->current = target->current->prev;
   }
 }
@@ -357,7 +364,7 @@ extern void SNetUtilListPrev(snet_util_list_t *target) {
  * @return the value of the current element.
  *
  *****************************************************************************/
-extern void* SNetUtilListGet(snet_util_list_t *target) {
+void* SNetUtilListGet(snet_util_list_t *target) {
   if(target == NULL) {
     SNetUtilDebugFatal("target == null in ListGet");
   }
@@ -379,7 +386,7 @@ extern void* SNetUtilListGet(snet_util_list_t *target) {
  * @return true if there is some next element, false otherwise
  *
  *****************************************************************************/
-extern bool SNetUtilListHasNext(snet_util_list_t *target) {
+bool SNetUtilListHasNext(snet_util_list_t *target) {
   if(target == NULL) { 
     SNetUtilDebugFatal("target == null in HasNext");
   }
@@ -401,7 +408,7 @@ extern bool SNetUtilListHasNext(snet_util_list_t *target) {
  * @return true if a previous element exists, false otherwise
  *
  *****************************************************************************/
-extern bool SNetUtilListHasPrev(snet_util_list_t *target) {
+bool SNetUtilListHasPrev(snet_util_list_t *target) {
   if(target == NULL) {
     SNetUtilDebugFatal("target == null in HasPrev");
   }
@@ -425,7 +432,7 @@ extern bool SNetUtilListHasPrev(snet_util_list_t *target) {
  * @param the list to modify
  *
  ***************************************************************************/
-extern void SNetUtilListDeleteCurrent(snet_util_list_t *target) {
+void SNetUtilListDeleteCurrent(snet_util_list_t *target) {
   struct list_elem* pred;
   struct list_elem* succ;
 
@@ -440,4 +447,41 @@ extern void SNetUtilListDeleteCurrent(snet_util_list_t *target) {
   Link(pred, succ);
   SNetMemFree(target->current);
   target->current = succ;
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn bool SNetUtilListIsEmpty(snet_util_list_t *target)
+ *
+ * @brief returns if the list is empty
+ *
+ * @param target the list to inspect
+ *
+ * @return true if the list is empty, false otherwise
+ *
+ *****************************************************************************/
+
+bool SNetUtilListIsEmpty(snet_util_list_t *target) {
+    return (target->first == NULL);
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn bool SNetUtilListCurrentDefined(snet_util_list *target)
+ *
+ * @brief returns true if current is in some defined state, false otherwise
+ *      
+ *      If the current element is defined, this is true, otherwise, this is
+ *      false. You can use this to iterate over all elements of a list by
+ *      checking this while calling Next or Prev after initializing the 
+ *      current element to the beginning or the end of the list.
+ *      Doing something like while(hasNext()) will not execute the loop 
+ *      body for the last or first element of the list, as those elements
+ *      have no next / previous element.
+ *
+ * @return true if the current element is defined
+ *
+ */
+bool SNetUtilListCurrentDefined(snet_util_list_t *target) {
+    return (target->current != NULL);
 }
