@@ -95,7 +95,7 @@ maketools       = cse cb
 compiler        = tree global support parse preproc flat typeinf opt postproc \
                   codegen invokecc print
 
-runtime         = common entities netinterface observer utility threading
+runtime         = common entities netinterface observer utility threading interfacing
 
 tools           = RecordInspector FeederFront 
 
@@ -175,12 +175,14 @@ common          = memfun.o handle.o record.o typeencode.o expression.o
 
 
 entities        = buffer.o filter.o feedbackbuffer.o graphics.o\
-                  interface_functions.o syncro.o out.o box.o alias.o\
+                  syncro.o out.o box.o alias.o\
                   serial.o collectors.o parallel.o star.o split.o
 
 utility		= list.o debug.o
 
 threading       = threading.o
+
+interfacing     = interface_functions.o
 
 netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o\
                   networkinterface.o
