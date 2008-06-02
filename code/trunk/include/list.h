@@ -14,6 +14,10 @@ void SNetUtilListAddBefore(snet_util_list_t *target, void* content);
 void SNetUtilListAddBeginning(snet_util_list_t *target, void* content);
 void SNetUtilListAddEnd(snet_util_list_t *target, void* content);
 
+void SNetUtilListDeleteFirst(snet_util_list_t *target);
+
+void *SNetUtilListGetFirst(snet_util_list_t *target);
+
 void SNetUtilListSet(snet_util_list_t *target, void *new_content);
 void SNetUtilListDelete(snet_util_list_t *target);
 

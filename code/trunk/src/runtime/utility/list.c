@@ -582,3 +582,67 @@ void SNetUtilListRotateForward(snet_util_list_t *target) {
     SNetUtilListGotoBeginning(target);
   }
 }
+
+/**<!--*********************************************************************-->
+ *
+ * @fn void SNetUtilListDeleteFirst(snet_util_list_t *target)
+ *
+ * @brief deletes the first element of a list
+ *
+ *    Delets the first element of the list. If the list is NULL or empty, a 
+ *    fatal error is signaled. If the current pointer pointed to the first 
+ *    element, it will be undefined after this.
+ *
+ * @param target the list to manipulate
+ *
+ *****************************************************************************/
+void SNetUtilListDeleteFirst(snet_util_list_t *target) {
+  struct list_elem *temp;
+
+  if(target == NULL) {
+    SNetUtilDebugFatal("SNetUtilListDeleteFirst: target == NULL");
+  }
+  if(SNetUtilListIsEmpty(target)) {
+    SNetUtilDebugFatal("SNetUtilListDeleteFirst: list is empty already!");
+  }
+
+  if(target->current == target->first) {
+    temp = NULL;
+  } else {
+    temp = target->current;
+  }
+  target->current = target->first;
+  SNetUtilListDelete(target);
+  target->current = temp;
+}
+
+/**<!--*********************************************************************-->
+ *
+ * @fn void SNetUtilListGetFirst(snet_util_list_t *target)
+ *
+ * @brief returns the first element of the list 
+ *
+ *    This returns the first element of the list. If the list is NULL or
+ *    undefined, a fatal error is signaled.
+ *
+ * @param target the list to inspect
+ *
+ *****************************************************************************/
+void *SNetUtilListGetFirst(snet_util_list_t *target) {
+  struct list_elem *temp;
+  void *result;
+
+  if(target == NULL) {
+    SNetUtilDebugFatal("SNetUtilListDeleteFirst: target == NULL");
+  }
+  if(SNetUtilListIsEmpty(target)) {
+    SNetUtilDebugFatal("SNetUtilListDeleteFirst: list is empty already!");
+  }
+
+  temp = target->current;
+  target->current = target->first;
+  result = SNetUtilListGet(target);
+  target->current = temp;
+
+  return result;
+}
