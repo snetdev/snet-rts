@@ -122,16 +122,14 @@ void SNetUtilListAddAfter(snet_util_list_t *target, void *content) {
   if(target == NULL) { 
     SNetUtilDebugFatal("target == null in AddAfter!"); 
   }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("target->current == null in AddAfter!");
-  }
   elem = SNetMemAlloc(sizeof(struct list_elem));
   elem->content = content;
 
-  if(target->current == NULL) {
+  if(target->first == NULL && target->last == NULL) {
     /* list is empty */
     target->first = elem;
     target->last = elem;
+    target->current = elem;
     elem->next = NULL;
     elem->prev = NULL;
   } else {
@@ -139,6 +137,7 @@ void SNetUtilListAddAfter(snet_util_list_t *target, void *content) {
       /* adding to end of list */
       target->last = elem;
       Link(target->current, elem);
+      elem->next = NULL;
     } else {
       /* adding somewhere in the list */
       pred = target->current;
@@ -171,15 +170,13 @@ void SNetUtilListAddBefore(snet_util_list_t *target, void *content) {
   if(target == NULL) {
     SNetUtilDebugFatal("target == null in AddBefore!");
   }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("target->current == null in AddBefore!");
-  }
   elem = SNetMemAlloc(sizeof(struct list_elem));
   elem->content = content;
-  if(target->current == NULL) {
+  if(target->first == NULL && target->last == NULL) {
     /* list is empty */
     target->first = elem;
     target->last = elem;
+    target->current = elem;
     elem->next = NULL;
     elem->prev = NULL;
   } else {
@@ -187,6 +184,7 @@ void SNetUtilListAddBefore(snet_util_list_t *target, void *content) {
       /* adding to beginning of list */
       target->first = elem;
       Link(elem, target->current);
+      elem->prev = NULL;
     } else {
       /* adding somewhere in the list */
       pred = target->current->prev;
@@ -421,7 +419,30 @@ bool SNetUtilListHasPrev(snet_util_list_t *target) {
 
 /** <!--********************************************************************-->
  *
- * @fn void SNetUtilListDeleteCurrent(snet_util_list_t *target)
+ * @fn void SNetUtilListSet(snet_util_list_t *target, void *new_content)
+ *
+ * @brief sets the content of the current element to the new content
+ *
+ *    If the current element is defined, this sets it's content to the new
+ *    content. Otherwise, some fatal error will be signalled.
+ *
+ * @param list the list to manipulate
+ * @param new_content the new content for the current element.
+ ******************************************************************************/
+void SNetUtilListSet(snet_util_list_t *target, void *new_content) {
+  if(target == NULL) {
+    SNetUtilDebugFatal("target == NULL in SNetUtilListSet!");
+  }
+  if(target->current == NULL) {
+    SNetUtilDebugFatal("current element of target list is undefined in"
+                       " SNetUtilListSet!");
+  }
+  target->current->content = new_content;
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn void SNetUtilListDelete(snet_util_list_t *target)
  *
  * @brief Deletes the current element
  *
@@ -432,19 +453,33 @@ bool SNetUtilListHasPrev(snet_util_list_t *target) {
  * @param the list to modify
  *
  ***************************************************************************/
-void SNetUtilListDeleteCurrent(snet_util_list_t *target) {
+void SNetUtilListDelete(snet_util_list_t *target) {
   struct list_elem* pred;
   struct list_elem* succ;
 
   if(target == NULL) {
-    SNetUtilDebugFatal("target == null in DeleteCurrent!");
+    SNetUtilDebugFatal("target == null in SNetUtilListDelete!");
   }
   if(target->current == NULL) {
-    SNetUtilDebugFatal("target->current == null in DeleteCurrent!");
+    SNetUtilDebugFatal("target->current == null in SNetUtilListDelete!");
   }
   pred = target->current->prev;
   succ = target->current->next;
-  Link(pred, succ);
+  if(pred != NULL && succ != NULL) {
+    Link(pred, succ);
+  } else if(pred == NULL && succ != NULL) {
+    // deleting first element of list
+    target->first = succ;
+    succ->prev = NULL;
+  } else if(pred != NULL &&  succ == NULL) {
+    // deleting last element of list
+    target->last = pred;
+    pred->next= NULL;
+  } else { //pred == succ == NULL
+    // deleting only element of the list
+    target->first = NULL;
+    target->last = NULL;
+  }
   SNetMemFree(target->current);
   target->current = succ;
 }
@@ -484,4 +519,66 @@ bool SNetUtilListIsEmpty(snet_util_list_t *target) {
  */
 bool SNetUtilListCurrentDefined(snet_util_list_t *target) {
     return (target->current != NULL);
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn int SNetUtilListCount(snet_util_list_t *target)
+ *
+ * @brief returns the amount of elements in the list
+ *    The elements in the list will be counted. If the list is NULL, a fatal
+ *    error will be signalled
+ *
+ * @param target the list 
+ *
+ * @return the number of elements
+ *
+ ******************************************************************************/
+int SNetUtilListCount(snet_util_list_t *target) {
+  struct list_elem *temp;
+  int counter;
+
+  if(target == NULL) {
+    SNetUtilDebugFatal("SnetUtilListCount: target == NULL!");
+  }
+
+  temp = target->current;
+
+  counter = 0;
+  for(SNetUtilListGotoBeginning(target);
+      SNetUtilListCurrentDefined(target);
+      SNetUtilListNext(target)) {
+    counter += 1;
+  }
+  target->current = temp;
+  return counter;
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn void SNetUtilListRotateFoward(snet_util_list_t *target)
+ *
+ * @brief sets the current element to the next element, wraps around at the end
+ *
+ *    This sets the current element to the next element. if the current element
+ *    would be undefined after this operation, the current element will be 
+ *    set to the first element of the list.
+ *    Neither target, nor the current element of target can be undefined and
+ *    will result in a fatal error.
+ *
+ * @param target the list to modify
+ *
+ *****************************************************************************/
+void SNetUtilListRotateForward(snet_util_list_t *target) {
+  if(target == NULL) {
+    SNetUtilDebugFatal("SNetUtilListRotateForward: target == NULL");
+  }
+  if(target->current == NULL) {
+    SNetUtilDebugFatal("SnetUtilListRotateForward: current element undefined");
+  }
+
+  SNetUtilListNext(target);
+  if(!SNetUtilListCurrentDefined(target)) {
+    SNetUtilListGotoBeginning(target);
+  }
 }
