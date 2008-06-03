@@ -178,7 +178,7 @@ entities        = buffer.o filter.o feedbackbuffer.o graphics.o\
                   syncro.o out.o box.o alias.o\
                   serial.o collectors.o parallel.o star.o split.o
 
-utility		= list.o debug.o
+utility		= list.o debug.o stack.o
 
 threading       = threading.o
 
