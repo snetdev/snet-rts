@@ -11,7 +11,7 @@
 
 <?xml version="1.0"?>
 <metadata xmlns="snet-home.org" >
-  <interface name="C2SNet" default="true" />
+  <interface name="C4SNet" default="true" />
 </metadata>
 
 
@@ -21,7 +21,7 @@ net factorial({x} -> {x,<stop>})
 	<?xml version="1.0"?>
 	<metadata xmlns="snet-home.org" >
   	    <box name="leq1" >
-		<interface name="C2SNet" />
+		<interface name="C4SNet" />
      	        <compiler>gcc</compiler>
 		<compilerflags>-c -I. -I../../interfaces/C/</compilerflags>
 		<boxsource>leq1.c myfuns.c</boxsource>

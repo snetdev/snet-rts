@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <data mode="textual" xmlns="snet-home.org" >
-  <record type="data">
-    <field label="x" interface="C2SNet" >(int)5</field>
-    <field label="r" interface="C2SNet" >(int)2</field>
+  <record type="data" interface="C4SNet" >
+    <field label="x" >(int)5</field>
+    <field label="r" >(int)2</field>
     <tag label="T">0</tag>
-    <btag label="B">0</btag>
+    <btag label="B">1</btag>
   </record>
   <record type="terminate" />
 </data>

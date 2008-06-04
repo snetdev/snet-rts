@@ -6,7 +6,7 @@ INCDIRS   = -I. -I$(SNETBASE)/include
 
 
 # = = = = = = = = = = = = = = = = = = = =
-TARGET    = libC2SNet.a
+TARGET    = libC4SNet.a
 # = = = = = = = = = = = = = = = = = = = =
 
 

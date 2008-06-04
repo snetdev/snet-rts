@@ -6,21 +6,21 @@
 void *sub( void *hnd, C_Data *x)
 {
   int *int_x;
-  c2snet_container_t *c;
+  c4snet_container_t *c;
   C_Data *result;
 
   int_x = malloc( sizeof( int));
 
-  *int_x= *(int*)C2SNet_cdataGetData( x);
+  *int_x= *(int*)C4SNet_cdataGetData( x);
   *int_x -= 1;
 
-  result = C2SNet_cdataCreate( int_x, &C2SNetFree, &C2SNetCopyInt,  
-			       &C2SNetSerializeInt, &C2SNetEncodeInt);
+  result = C4SNet_cdataCreate( int_x, &C4SNetFree, &C4SNetCopyInt,  
+			       &C4SNetSerializeInt, &C4SNetEncodeInt);
 
-  c = C2SNet_containerCreate( hnd, 1);
-  C2SNet_containerSetField( c, result);
+  c = C4SNet_containerCreate( hnd, 1);
+  C4SNet_containerSetField( c, result);
 
-  C2SNet_outCompound( c);
+  C4SNet_outCompound( c);
   return( hnd);
 }
 
