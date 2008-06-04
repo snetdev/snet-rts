@@ -1,6 +1,5 @@
 #include <leq1.h>
 #include <stdlib.h>
-#include <myfuns.h>
 #include <bool.h>
 #include <stdio.h>
 
@@ -17,7 +16,8 @@ void *leq1( void *hnd, C_Data *x)
   
   *bool_p = (int_x <= 1);
 
-  result = C2SNet_cdataCreate( bool_p, &C2SNetFree, &C2SNetCopyInt, &C2SNetSerializeInt);
+  result = C2SNet_cdataCreate( bool_p, &C2SNetFree, &C2SNetCopyInt, 
+			       &C2SNetSerializeInt, &C2SNetEncodeInt);
 
   
   C2SNet_out( hnd, 1, x, result);

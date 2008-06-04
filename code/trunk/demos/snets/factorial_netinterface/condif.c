@@ -1,6 +1,5 @@
 #include <condif.h>
 #include <stdlib.h>
-#include <myfuns.h>
 #include <bool.h>
 #include <stdio.h>
 

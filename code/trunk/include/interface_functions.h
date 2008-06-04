@@ -11,8 +11,10 @@ typedef struct {
   int id;
   void (*freefun)( void*);
   void* (*copyfun)( void*);
-  int (*serfun)( FILE *, void*);
-  void* (*deserfun)( FILE *);
+  int (*serialisefun)( FILE *, void*);
+  void* (*deserialisefun)( FILE *);
+  int (*encodefun)( FILE *, void*);
+  void* (*decodefun)( FILE *);
 } snet_global_interface_functions_t;
 
 typedef struct {
@@ -36,8 +38,10 @@ extern snet_global_info_structure_t *snet_global;
 bool SNetGlobalRegisterInterface( int id, 
 				  void (*freefun)( void*),
 				  void* (*copyfun)( void*), 
-				  int(*serfun)( FILE *,void *),
-				  void* (*deserfun)( FILE *)); 
+				  int (*serialisefun)( FILE *, void*),
+				  void* (*deserialisefun)( FILE *),
+				  int (*encodefun)( FILE *, void*),
+				  void* (*decodefun)( FILE *));
 
 
 void SNetGlobalSetFreeFun(snet_global_interface_functions_t *f, 
@@ -49,18 +53,29 @@ void SNetGlobalSetCopyFun(snet_global_interface_functions_t *f,
 void* SNetGlobalGetCopyFun(snet_global_interface_functions_t *f);
 
 void SNetGlobalSetSerializationFun(snet_global_interface_functions_t *f,
-                        int (*serfun) (FILE *, void*));
+                        int (*serialisefun) (FILE *, void*));
 void* SNetGlobalGetSerializationFun(snet_global_interface_functions_t *f);
 
 void SNetGlobalSetDeserializationFun(snet_global_interface_functions_t *f,
-                        void* (*deserfun) (FILE *));
+                        void* (*deserialisefun) (FILE *));
 
 void *SNetGlobalGetDeserializationFun(snet_global_interface_functions_t *f);
+
+void SNetGlobalSetEncodingFun(snet_global_interface_functions_t *f,
+			      int (*encodefun) (FILE *, void*));
+void* SNetGlobalGetEncodingFun(snet_global_interface_functions_t *f);
+
+void SNetGlobalSetDecodingFun(snet_global_interface_functions_t *f,
+			      void* (*decodefun) (FILE *));
+
+void *SNetGlobalGetDecodingFun(snet_global_interface_functions_t *f);
 
 void *SNetGetFreeFunFromRec(snet_record_t *rec);
 void *SNetGetCopyFunFromRec(snet_record_t *rec);
 void *SNetGetSerializationFunFromRec(snet_record_t *rec);
 void *SNetGetDeserializationFunFromRec(snet_record_t *rec);
+void *SNetGetEncodingFunFromRec(snet_record_t *rec);
+void *SNetGetDecodingFunFromRec(snet_record_t *rec);
 
 void SNetGlobalSetId(snet_global_interface_functions_t *f, int id);
 int SNetGlobalGetId(snet_global_interface_functions_t *f);
@@ -74,4 +89,6 @@ void *SNetGetCopyFun(int id);
 void *SNetGetFreeFun(int id);
 void *SNetGetSerializationFun(int id);
 void *SNetGetDeserializationFun(int id);
+void *SNetGetEncodingFun(int id);
+void *SNetGetDecodingFun(int id);
 #endif

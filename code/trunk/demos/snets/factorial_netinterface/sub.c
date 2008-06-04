@@ -1,6 +1,5 @@
 #include <sub.h>
 #include <stdlib.h>
-#include <myfuns.h>
 #include <bool.h>
 #include <stdio.h>
 
@@ -15,7 +14,8 @@ void *sub( void *hnd, C_Data *x)
   *int_x= *(int*)C2SNet_cdataGetData( x);
   *int_x -= 1;
 
-  result = C2SNet_cdataCreate( int_x, &C2SNetFree, &C2SNetCopyInt,  &C2SNetSerializeInt);
+  result = C2SNet_cdataCreate( int_x, &C2SNetFree, &C2SNetCopyInt,  
+			       &C2SNetSerializeInt, &C2SNetEncodeInt);
 
   c = C2SNet_containerCreate( hnd, 1);
   C2SNet_containerSetField( c, result);

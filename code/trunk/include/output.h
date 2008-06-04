@@ -18,13 +18,16 @@
  *
  *******************************************************************************/
 
-#include <record.h>
-#include <buffer.h>
-#include <label.h>
-#include <interface.h>
+#include <stdio.h>
+#include "record.h"
+#include "buffer.h"
+#include "label.h"
+#include "interface.h"
+
 
 /* Init output system.
  *
+ * @param file File where the output is printed to.
  * @param labels Set of labels to use.
  * @param interfaces Set of interfaces to use.
  * @param in_buf Buffer from where the records to output are taken.
@@ -33,7 +36,8 @@
  * @return -1 Error occured while starting the system.
  *
  */
-int SNetInOutputInit(snetin_label_t *labels, 
+int SNetInOutputInit(FILE *file,
+		     snetin_label_t *labels, 
 		     snetin_interface_t *interfaces,
 		     snet_buffer_t *in_buf);
 

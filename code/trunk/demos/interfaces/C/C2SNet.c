@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include "C2SNet.h"
+#include "C2SNetTypes.h"
 #include "memfun.h"
 #include "typeencode.h"
 #include "interface_functions.h"
@@ -76,6 +77,7 @@ void *C2SNet_copy( void *ptr)
   new->copyfun = ((C_Data*)ptr)->copyfun;
   new->freefun = ((C_Data*)ptr)->freefun;
   new->serfun = ((C_Data*)ptr)->serfun;
+  new->encfun = ((C_Data*)ptr)->encfun;
   new->data = copyfun( ((C_Data*)ptr)->data);
 
   return( new);
@@ -88,6 +90,14 @@ int C2SNet_serialize(FILE *file, void *ptr)
   return( serfun( file, ((C_Data*)ptr)->data) );
 }
 
+int C2SNet_encode(FILE *file, void *ptr)
+{
+  int (*encfun)(FILE *, void*) = ((C_Data*)ptr)->encfun;
+
+  return( encfun( file, ((C_Data*)ptr)->data) );
+}
+
+/*
 void *C2SNet_deserialize(FILE *file)
 {                      
   void *(*fun)(FILE *) = SNetGetDeserializationFun(my_interface_id);
@@ -95,12 +105,22 @@ void *C2SNet_deserialize(FILE *file)
   return fun(file);
 }
  
-void C2SNet_init( int id, void *(*deserialization_fun)(FILE *))
+void *C2SNet_decode(FILE *file)
+{                      
+  void *(*fun)(FILE *) = SNetGetDecodingFun(my_interface_id);
+
+  return fun(file);
+}
+*/
+
+void C2SNetInit( int id)
 {
   my_interface_id = id;
   SNetGlobalRegisterInterface( id, &C2SNet_free, &C2SNet_copy,
 			       &C2SNet_serialize, 
-			       deserialization_fun);  
+			       &C2SNet_deserialize,
+			       &C2SNet_encode, 
+			       &C2SNet_decode);  
 }
 
 
@@ -110,7 +130,8 @@ void C2SNet_init( int id, void *(*deserialization_fun)(FILE *))
 C_Data *C2SNet_cdataCreate( void *data, 
 			    void (*freefun)( void*),
 			    void* (*copyfun)( void*),
-			    int (*serfun)( FILE *, void*))			    
+			    int (*serfun)( FILE *, void*),
+			    int (*encfun)( FILE *, void*))
 {
   C_Data *c;
 
@@ -119,6 +140,7 @@ C_Data *C2SNet_cdataCreate( void *data,
   c->freefun = freefun;
   c->copyfun = copyfun;
   c->serfun = serfun;
+  c->encfun = encfun;
 
   return( c);
 }
@@ -141,6 +163,11 @@ void *C2SNet_cdataGetFreeFun( C_Data *c)
 void *C2SNet_cdataGetSerializationFun( C_Data *c)
 { 
   return( c->serfun);
+}
+
+void *C2SNet_cdataGetEncodingFun( C_Data *c)
+{ 
+  return( c->encfun);
 }
 
 

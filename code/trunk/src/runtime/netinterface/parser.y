@@ -46,6 +46,7 @@
 
 #define MODE_BINARY 0
 #define MODE_TEXTUAL 1
+#define INTERFACE_UNKNOWN -1
 
  extern int yylex(void);
  extern void yylex_destroy();
@@ -55,7 +56,7 @@
 
  /***** Struct definitions ******/
 
- /* Struct of two strings for a lists */
+ /* Struct to represent xml attribute. */
  typedef struct attribute{
    char *name;
    char *value;
@@ -64,6 +65,7 @@
 
  /***** Globals variables *****/
  static struct{
+
    /* Value that tells if a terminate record has been encounterd in the input stream */
    unsigned int terminate;  
 
@@ -80,6 +82,7 @@
  /* Data values for record currently under parsing  */
  static struct{
    snet_record_t *record;
+   int interface;
    int mode;
  }current;
  
@@ -144,7 +147,6 @@
 %}
 
 %union {
-  int              cint;
   char             *str;
   struct attribute *attrib;
 }
@@ -245,14 +247,16 @@ Data:         DATA_BEGIN Attributes STARTTAG_SHORTEND
 		  }
 		}
               }
-              TAG_END Records DATA_END_BEGIN TAG_END{
+
+              TAG_END Records DATA_END_BEGIN TAG_END
+              {
 		deleteAttributes($2);
               }
             ;
 
 Records:      Record Records
               {
-
+		/* List of records */
 	      }
             | /* EMPTY*/
               {
@@ -277,9 +281,8 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 					       SNetTencCreateVector( 0), 
 					       SNetTencCreateVector( 0)));
 
-		      SNetRecSetInterfaceId(current.record, 
-					    SNetInInterfaceToId(parser.interface, 
-								interface->value));
+		      current.interface = SNetInInterfaceToId(parser.interface, interface->value);
+		      SNetRecSetInterfaceId(current.record, current.interface);
 		    }
 
 		  }else if(strcmp(attr->value, SNET_REC_SYNC) == 0){
@@ -304,17 +307,25 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		    
 		  }else{
 		    yyerror("Record with unknown type found!");
-		    // TODO: record with unknown type!
 		  }
 		}
 		else{
-		  yyerror("Record with no type found!");
-		  // TODO: ERROR 
+		  yyerror("Record without type found!");
 		}
 
-		if(current.record != NULL) {
-		  SNetBufPut(parser.buffer, current.record);
+		if(parser.terminate != SNET_PARSE_ERROR) {
+		  if(current.record != NULL) {
+		    SNetBufPut(parser.buffer, current.record);
+		    current.record = NULL;
+		    current.interface = INTERFACE_UNKNOWN;
+		  }
+		}else {
+		  /* Discard the record because of parsing error. */
+		  SNetRecDestroy(current.record);
 		  current.record = NULL;
+		  current.interface = INTERFACE_UNKNOWN;
+		  yyerror("Error encountered while parsing a record. Record discarded!");
+		  parser.terminate = SNET_PARSE_CONTINUE;
 		}
 
 		deleteAttributes($2);
@@ -332,14 +343,14 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 					     SNetTencCreateVector( 0), 
 					     SNetTencCreateVector( 0), 
 					     SNetTencCreateVector( 0)));
-		    
+
 		    attrib_t *interface = searchAttribute($2, INTERFACE);
-		    if(interface != NULL) {	    
-		      SNetRecSetInterfaceId(current.record, 
-					    SNetInInterfaceToId(parser.interface, 
-								interface->value));
+		    if(interface != NULL) {
+		      current.interface = SNetInInterfaceToId(parser.interface, 
+							      interface->value);
+		      SNetRecSetInterfaceId(current.record, current.interface);
 		    }else {
-		      SNetRecSetInterfaceId(current.record, SNET_INTERFACE_ERROR);
+		      SNetRecSetInterfaceId(current.record, INTERFACE_UNKNOWN);
 		    }
 
 		  }else if(strcmp(attr->value, SNET_REC_SYNC) == 0){
@@ -362,41 +373,58 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		    }
 		  }else{
 		    yyerror("Record with unknown type found!");
-		    // TODO: record with unknown type!
 		  }
-		}
-		else{
-		  // TODO: ERROR 
+		}else{
+		    yyerror("Record without type found!");
 		}
 	      } 
               TAG_END Entitys RECORD_END_BEGIN TAG_END{
 
 		if(current.record != NULL) {
 
-		  if(SNetRecGetDescriptor(current.record) == REC_data
-		     && SNetRecGetInterfaceId(current.record) == SNET_INTERFACE_ERROR) {
+		  if(parser.terminate != SNET_PARSE_ERROR) {
+		    if(SNetRecGetDescriptor(current.record) == REC_data
+		       && SNetRecGetInterfaceId(current.record) == INTERFACE_UNKNOWN) {
+		      SNetRecDestroy(current.record);
+		      current.record = NULL;
+		      current.interface = INTERFACE_UNKNOWN;
+		      yyerror("Error encountered while parsing a record. Record discarded!");
+		      parser.terminate = SNET_PARSE_CONTINUE;
+		    } else {
+		      SNetBufPut(parser.buffer, current.record);
+		      current.record = NULL;
+		      current.interface = INTERFACE_UNKNOWN;
+		    }
+		  }else {
+		    /* Discard the record because of parsing error. */
 		    SNetRecDestroy(current.record);
-		  } else {
-		    SNetBufPut(parser.buffer, current.record);
+		    current.record = NULL;
+		    current.interface = INTERFACE_UNKNOWN;
+		    yyerror("Error encountered while parsing a record. Record discarded!");
+		    parser.terminate = SNET_PARSE_CONTINUE;
 		  }
 		  
 		  current.record = NULL;
 		}
 
 		deleteAttributes($2);
+
               }
-            ;
+          ;
 
 Entitys:  Field Entitys
           {
+
 	  }
         | Tag Entitys
           {
+
 	  }
         | Btag Entitys
           {
+
 	  }
-        | /**/
+        | /* EMPTY */
           {
 	  }
         ;
@@ -404,6 +432,9 @@ Entitys:  Field Entitys
 
 Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
           {
+	    /* Field without any data. 
+	     * TODO: This is an error! */
+	    yyerror("Field without data encountered!");
 	    deleteAttributes($2);
 	  }
         | FIELD_BEGIN Attributes TAG_END
@@ -414,40 +445,87 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	    int iid;
 	    attrib_t *finterface;
 	    int label;
+	    void *(*fun)(FILE *);
 
 	    attr = searchAttribute($2, LABEL);
 	    if(attr != NULL) {
 	      label = SNetInLabelToId(parser.labels, attr->value);
+	    } else{
+	      yyerror("Field without label found!");
 	    }
-
-	    iid = SNetRecGetInterfaceId(current.record);
 
 	    finterface = searchAttribute($2, INTERFACE);
 
-	    if(finterface != NULL) {
+	    if(finterface == NULL) {
+	      /* This can be INTERFACE_UNKNOWN!*/
+	      iid = current.interface;
+	    }else {
 	      int i = SNetInInterfaceToId(parser.interface, finterface->value);
+	      
+	      if(current.interface != INTERFACE_UNKNOWN) {
+		if(i != current.interface) {
+		  /* The record and the field have different interfaces! */
+		  yyerror("Interface error!");
+		  i = INTERFACE_UNKNOWN;
+		}
+	      }else {
+		if(i == SNET_INTERFACE_ERROR) {
+		  /* The field has unknown interface! */
+		  yyerror("Interface error!");
+		  i = INTERFACE_UNKNOWN;
+		}else {
+		  /* No default interface declared. The record might have
+		   * interface if this is not the first field. */
+		  iid = SNetRecGetInterfaceId(current.record);
 
-	      if(iid == SNET_INTERFACE_ERROR) {
-		SNetRecSetInterfaceId(current.record, i);
+		  if(iid == INTERFACE_UNKNOWN) {
+		    /* No interface set yet. This field dictates the interface. */
+		    SNetRecSetInterfaceId(current.record, i);
+		    iid = i;
+		  } else if(iid != i) {
+		    /* The record and the field have different interfaces! */
+		    yyerror("Interface error!");
+		    i = INTERFACE_UNKNOWN;
+		  }
+		}
 	      }
-
+	      
 	      iid = i;
 	    }
 
-	    // TODO: test for mode!
+	    if(iid != INTERFACE_UNKNOWN) {
+	      if(current.mode == MODE_TEXTUAL) {
+		fun = SNetGetDeserializationFun(iid);
+	      } else if(current.mode == MODE_BINARY) {
+		fun = SNetGetEncodingFun(iid);
+	      } else {
+		yyerror("Unknown data mode");
+	      }
 
-	    void *(*desfun)(FILE *) = SNetGetDeserializationFun(iid);
+	      if(fun != NULL) {
+		data = fun(yyin);
+	     
+		if(data != NULL) {
+		  SNetRecAddField(current.record, label);
+		  SNetRecSetField(current.record, label, data);
+		} else {
+		  yyerror("Could not decode data!");
+		}
 
-	    if(desfun != NULL) {
-	      data = desfun(yyin);
+		while(getc(yyin) != '<');		  
+		if(ungetc('<', yyin) == EOF){
+		  /* TODO: This is an error. First char of the next tag is already consumed! */
+		}
+	      }
+	      yyrestart(yyin);
+	    }else { 
+	      /* If we cannot deserialise the data we must ignore it! */
+	     
+	      while(getc(yyin) != '<');
+	      if(ungetc('<', yyin) == EOF){
+		/* TODO: This is an error. First char of the next tag is already consumed! */
+	      }
 	    }
-
-	    SNetRecAddField(current.record, label);
-	    SNetRecSetField(current.record, label, data);
-
-	    yyrestart(yyin);
-	    
-	    
           }
           FIELD_END_BEGIN TAG_END
           {
@@ -458,6 +536,8 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 
 Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
           {
+	    /* Tag with no value. TODO: This is an error? Or short for 0? */
+	    yyerror("Tag without data encountered!");
 	    deleteAttributes($2);
 	  }
         | TAG_BEGIN Attributes TAG_END CHARDATA TAG_END_BEGIN TAG_END
@@ -470,8 +550,13 @@ Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
 	      label = SNetInLabelToId(parser.labels, attr->value);
 	    
 	      SNetRecAddTag(current.record, label);
+
+	      /* TODO: test that the atoi call worked? */
 	      SNetRecSetTag(current.record, label, atoi($4));
+	    } else{
+	      yyerror("Tag without label found!");
 	    }
+
 
 	    deleteAttributes($2);
           }
@@ -479,6 +564,8 @@ Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
 
 Btag:     BTAG_BEGIN Attributes STARTTAG_SHORTEND
           {
+	    /* Btag with no value. TODO: This should be an error? or short for 0?*/
+	    yyerror("Btag without data encountered!");
 	    deleteAttributes($2);
 	  }
         | BTAG_BEGIN Attributes TAG_END CHARDATA BTAG_END_BEGIN TAG_END
@@ -491,7 +578,11 @@ Btag:     BTAG_BEGIN Attributes STARTTAG_SHORTEND
 	      label = SNetInLabelToId(parser.labels, attr->value);
 	    
 	      SNetRecAddBTag(current.record, label);
+
+	      /* TODO: test that the atoi call worked correctly? */
 	      SNetRecSetBTag(current.record, label, atoi($4));
+	    } else{
+	      yyerror("Btag without label found!");
 	    }
 
 	    deleteAttributes($2);
@@ -504,7 +595,7 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
 		/* Default namespace */
 		if(strcmp($1, "xmlns") == 0){
 		  if(strcmp($4, SNET_NAMESPACE) != 0) {
-		    // TODO: Wrong name space!
+		    // TODO: Wrong name space! Do we even want to check this?
 		    yyerror("Data in wrong namespace!");
 		  }
 		  SNetMemFree($4);
@@ -523,7 +614,7 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
 		/* Default namespace */
 		if(strcmp($1, "xmlns") == 0){
 		  if(strcmp($4, SNET_NAMESPACE) != 0) {
-		    // TODO: Wrong name space!
+		    // TODO: Wrong name space! Do we even want to check this?
 		    yyerror("Data in wrong namespace!");
 		  }
 		  SNetMemFree($4);
@@ -544,31 +635,45 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
 
 %%
 
-void yyerror(char *error) 
-{
-  printf("\nParse error: %s\n", error);
-  parser.terminate = SNET_PARSE_ERROR;
-}
-
-void SNetInParserInit(snetin_label_t *labels,
-		      snetin_interface_t *interfaces,
-		      snet_buffer_t *in_buf)
-{  
-  parser.labels = labels;
-  parser.interface = interfaces;
-  parser.buffer = in_buf;
-
-  parser.terminate = SNET_PARSE_CONTINUE;
-}  
-
 static void flush()
 {
   if(current.record != NULL) {
     SNetRecDestroy(current.record);
     current.record = NULL;
   }
+
+  current.interface = INTERFACE_UNKNOWN;
+
   current.mode = MODE_BINARY;
+
+  if(parser.terminate == SNET_PARSE_ERROR) {
+    parser.terminate = SNET_PARSE_CONTINUE;
+  }
 }
+
+void yyerror(char *error) 
+{
+  if(error != NULL && strcmp(error, "syntax error") != 0) {
+    printf("\n  ** Parse error: %s\n\n", error);
+  }
+
+  if(parser.terminate != SNET_PARSE_TERMINATE) {
+    parser.terminate = SNET_PARSE_ERROR;
+  }
+}
+
+void SNetInParserInit(FILE *file,
+		      snetin_label_t *labels,
+		      snetin_interface_t *interfaces,
+		      snet_buffer_t *in_buf)
+{  
+  yyin = file; 
+  parser.labels = labels;
+  parser.interface = interfaces;
+  parser.buffer = in_buf;
+
+  parser.terminate = SNET_PARSE_CONTINUE;
+}  
 
 int SNetInParserParse()
 {
@@ -577,7 +682,7 @@ int SNetInParserParse()
   if(parser.terminate == SNET_PARSE_CONTINUE) {
     yyparse();
   }
-
+ 
   return parser.terminate;
 }
 
@@ -601,3 +706,4 @@ void SNetInParserDestroy()
 #undef BINARY    
 #undef MODE_BINARY
 #undef MODE_TEXTUAL
+#undef INTERFACE_UNKNOWN

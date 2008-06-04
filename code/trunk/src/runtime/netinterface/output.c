@@ -29,6 +29,7 @@
 static pthread_t thread; 
 
 typedef struct { 
+  FILE *file;
   snetin_label_t *labels;
   snetin_interface_t *interfaces;
   snet_buffer_t *buffer;
@@ -43,29 +44,33 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
   char *label = NULL;
 
   /* Change this to redirect the output! */
-  FILE *file = stdout;
 
-  fprintf(file, "<data mode=\"textual\" xmlns=\"snet-home.org\">");
+  fprintf(hnd->file, "<data mode=\"textual\" xmlns=\"snet-home.org\">");
   if( rec != NULL) {
     switch( SNetRecGetDescriptor( rec)) {
     case REC_data:
-      fprintf(file, "<record type=\"data\" >");
+      fprintf(hnd->file, "<record type=\"data\" >");
 
        /* Fields */
        for( k=0; k<SNetRecGetNumFields( rec); k++) {
+	 int (*fun)(FILE *, void *);
 	 i = SNetRecGetFieldNames( rec)[k];
 
 	 int id = SNetRecGetInterfaceId(rec);
 
-	 int (*fun)(FILE *, void *) = SNetGetSerializationFun(id);
+	 //if(/*decideByMagic() -> TODO: mode needs to be added to records */) { 
+	   fun = SNetGetSerializationFun(id);
+	 //}else {
+	 //  fun = SNetGetEncodingFun(id);
+	 //}
 
 	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	   fprintf(file, "<field label=\"%s\" interface=\"%s\">", label, 
+	   fprintf(hnd->file, "<field label=\"%s\" interface=\"%s\">", label, 
 	   	  SNetInIdToInterface(hnd->interfaces, id));
 
-	   fun(file, SNetRecGetField(rec, i));
+	   fun(hnd->file, SNetRecGetField(rec, i));
 
-	   fprintf(file, "</field>");
+	   fprintf(hnd->file, "</field>");
 	 }else{
 	   /* Error: unknown label! */
 	 }
@@ -78,7 +83,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 	 i = SNetRecGetTagNames( rec)[k];
 
 	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	   fprintf(file, "<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
+	   fprintf(hnd->file, "<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
 	 }else{
 	   /* Error: unknown label! */
 	 }
@@ -91,31 +96,31 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 	 i = SNetRecGetBTagNames( rec)[k];
 
 	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	   fprintf(file, "<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
+	   fprintf(hnd->file, "<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
 	 }else{
 	   /* Error: unknown label! */
 	 }
 
 	 SNetMemFree(label);
        }
-       fprintf(file, "</record>");
+       fprintf(hnd->file, "</record>");
        break;
     case REC_sync: /* TODO: What additional data is needed? */
-      fprintf(file, "<record type=\"sync\" />");
+      fprintf(hnd->file, "<record type=\"sync\" />");
     case REC_collect: /* TODO: What additional data is needed? */
-      fprintf(file, "<record type=\"collect\" />");
+      fprintf(hnd->file, "<record type=\"collect\" />");
     case REC_sort_begin: /* TODO: What additional data is needed? */
-      fprintf(file, "<record type=\"sort_begin\" />");
+      fprintf(hnd->file, "<record type=\"sort_begin\" />");
     case REC_sort_end: /* TODO: What additional data is needed? */
-      fprintf(file, "<record type=\"sort_end\" />");
+      fprintf(hnd->file, "<record type=\"sort_end\" />");
     case REC_terminate:
-      fprintf(file, "<record type=\"terminate\" />");
+      fprintf(hnd->file, "<record type=\"terminate\" />");
       break;
     default:
       break;
     }
   }
-  fprintf(file, "</data>\n");
+  fprintf(hnd->file, "</data>\n");
 }
 
 /* This is output function for the output thread */
@@ -140,12 +145,14 @@ static void *doOutput(void* data)
   return NULL;
 }
 
-int SNetInOutputInit(snetin_label_t *labels, 
+int SNetInOutputInit(FILE *file,
+		     snetin_label_t *labels, 
 		     snetin_interface_t *interfaces, 
 		     snet_buffer_t *in_buf)
 {
   handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
 
+  hnd->file = file;
   hnd->labels = labels;
   hnd->interfaces = interfaces;
   hnd->buffer = in_buf;

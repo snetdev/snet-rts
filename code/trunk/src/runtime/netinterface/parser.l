@@ -30,7 +30,7 @@ char *STRcpy(const char *text){
 
 #define YY_INPUT(buf,result,max_size) \
  { \
-  int c = getchar(); \
+  int c = getc(yyin); \
   result = (c == EOF) ? YY_NULL : (buf[0] = c, 1); \
  }
 
@@ -43,7 +43,6 @@ extern void yyerror(char *error);
 
 %option noyywrap
 %option stack
-%option noyy_top_state
 
    /* Suppress compilation warning yyunput defined but not used */
 %option nounput
@@ -64,6 +63,10 @@ extern void yyerror(char *error);
 %x IN_XML_DQUOTE 
     /* Inside single quoted XML-attribute ('...') */
 %x IN_XML_SQUOTE 
+    /* These are used to ignore all unknown elements */
+%x IN_XML_UNKNOWN
+%x IN_XML_UNKNOWN_END
+ 
  
 %%
 
@@ -109,7 +112,12 @@ extern void yyerror(char *error);
              return NAME;
           }                           
       
-<IN_XML_CONTENT>{
+<IN_XML_CONTENT>{ /* This is for error recovery! */
+"<?xml" {
+           while(yy_top_state() != INITIAL) {
+              yy_pop_state();
+           } 
+        }
 
 "</data" {
           yy_pop_state();
@@ -164,6 +172,10 @@ extern void yyerror(char *error);
 
  "<!--" {
           yy_push_state(IN_XML_COMMENT);
+        }
+
+ "<"[^ \n\t><]+ {
+          yy_push_state(IN_XML_UNKNOWN);
         }
 
  [^<]*  { 
@@ -295,6 +307,47 @@ extern void yyerror(char *error);
           yy_push_state(IN_XML_ELEMENT);
           return BTAG_BEGIN;
         }
+
+ "<"[^ \n\t><]+ {
+          yy_push_state(IN_XML_UNKNOWN);
+        }
+}
+
+<IN_XML_UNKNOWN_END>{
+">" {
+       yy_pop_state();
+    }
+
+ .  {
+    }
+}
+
+<IN_XML_UNKNOWN>{
+"<?xml" { /* This is for error recovery! */
+           while(yy_top_state() != INITIAL) {
+              yy_pop_state();
+           } 
+        }
+ 
+ ">"  {
+
+      }
+
+ "</" {
+          yy_pop_state();
+          yy_push_state(IN_XML_UNKNOWN_END);
+      }
+
+ "<"  {
+          yy_push_state(IN_XML_UNKNOWN);
+      }
+
+ "/>" {
+          yy_pop_state();
+      }
+
+ .    {
+      }
 }
 
 <*>.    {

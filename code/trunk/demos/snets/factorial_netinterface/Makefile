@@ -16,5 +16,11 @@ all:
 	$(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) -o $(TARGET) $(TARGET).snet
 	rm -f *.o
 
+gcc:    
+	$(HIDE) rm -f *.o
+	$(CC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) -o $(TARGET) *.c $(LIBS)
+	rm -f *.o
+
+
 clean:
 	$(HIDE) rm -f *.o $(TARGET) $(TARGET).h $(TARGET).c

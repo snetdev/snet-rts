@@ -47,38 +47,54 @@
 /* Size of the buffer used to receive data. */
 #define BUF_SIZE 256
 
+/* Observer type. */
+typedef enum {OBSfile, OBSsocket} obstype_t;
+
+
 /* A handle for observer data. */
-typedef struct {
-  snet_buffer_t *inbuf;  // Buffer for incoming records
-  snet_buffer_t *outbuf; // Buffer for outgoibg records
-  int id;                // Instance specific ID of this observer
-  int fdesc;             // File descriptor provided by the dispatcher at register time
-  const char *code;      // Code attribute
-  const char *position;  // Code attribute
-  char type;             // Type of the observer (before/after)
+typedef struct obs_handle {
+  obstype_t obstype;     // type of the observer
+  void *desc;            // Observer desctiptor, depends on the type of the observer (obs_socket_t / obs_file_T)
   bool isInteractive;    // Is this observer interactive
+  snet_buffer_t *inbuf;  // Buffer for incoming records
+  snet_buffer_t *outbuf; // Buffer for outgoing records
+  int id;                // Instance specific ID of this observer (NOTICE: this will change!)
+  const char *code;      // Code attribute
+  const char *position;  // Name of the net/box to which the observer is attached to
+  char type;             // Type of the observer (before/after)
   char data_level;       // Data level used
-}observer_handle_t;
+}obs_handle_t;
 
-/* This struct stores information of sleeping observer. */
-typedef struct sleeper{
-  int id;               // ID of the sleeping observer .
-  pthread_cond_t cond;  // Condition that the observer is waiting for.
-  bool isSleeping;      // This value tells if the observer is actually sleeping.
-  struct sleeper *next; // Next entry in sleeping queue.
-}sleeper_t;
 
-/* This struct store information of a connection. */
-typedef struct connection{
-  int fdesc;                 // Socket file descriptor.
-  FILE *file;                // FILE pointer to the socket (NOTICE: close only one of these!)
-  struct hostent *host;      // Host where the socket is connected to.
-  struct sockaddr_in addr;   // Socket address.
-  sleeper_t *sleepers;       // Sleeping queue.
-  struct connection *next;   // Next entry in connection list.
-  char buffer[MSG_BUF_SIZE]; // This buffer is used to store possible extra characters incase
-                             // if a part of the message received is missing.
-}connection_t;
+/* Wait queue for observers waiting for reply messages */
+typedef struct obs_wait_queue {
+  obs_handle_t *hnd;           // Observer
+  pthread_cond_t cond;         // Wait condition
+  struct obs_wait_queue *next;
+} obs_wait_queue_t;
+
+
+/* Data for socket */
+typedef struct obs_socket{
+  int fdesc;                    // Socket file descriptor
+  FILE *file;                   // File pointer to the file descriptor
+  int users;                    // Number of users currently registered for this socket.
+  struct hostent *host;         // Socket data
+  struct sockaddr_in addr;      
+  obs_wait_queue_t *wait_queue; // Queue of currently waiting observers.
+  char buffer[MSG_BUF_SIZE];    // Buffer for buffering leftovers of last message                       
+  struct obs_socket *next; 
+}obs_socket_t; 
+
+
+/* Data for file */
+typedef struct obs_file {
+  FILE *file;             // File
+  int users;              // Number of users currently registered for this file.
+  char *filename;         // Name of the file
+  struct obs_file *next;
+} obs_file_t;
+
 
 
 /* Thread for dispatcher. This is needed for pthread_join later. */
@@ -87,10 +103,11 @@ static pthread_t *dispatcher_thread;
 /* Mutex to guard connections list */
 static pthread_mutex_t connection_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* Connections list */
-static connection_t *connections = NULL;
-
+/* Registered sockets / files */
+static obs_socket_t *open_sockets = NULL;
+static obs_file_t *open_files = NULL;
 static int user_count = 0;
+
 
 /* This value indicates if the dispatcher should terminate */
 static volatile bool mustTerminate = false;
@@ -112,106 +129,154 @@ static snetin_interface_t *interfaces = NULL;
 
 
 
+/** <!--********************************************************************-->
+ *
+ * @fn obs_socket_t *ObserverInitSocket(const char *addr, int port)
+ *
+ *   @brief  Open new socket for an observer.
+ * 
+ *           The socket is automatically added to the list of sockets
+ *           and the dispatcher is notified of new socket. 
+ *
+ *   @param addr  The address of the listener
+ *   @param port  The port used by the listener
+ *   @return      The new socket, or NULL if the operation failed.
+ *
+ ******************************************************************************/
 
-/* Open socket to address addr in port port. */
-static connection_t *ObserverInitSocket(const char *addr, int port)
+static obs_socket_t *ObserverInitSocket(const char *addr, int port)
 {
-  connection_t *temp = SNetMemAlloc(sizeof(connection_t));
+  obs_socket_t *new = SNetMemAlloc(sizeof(obs_socket_t));
   int i = 0;
-
-  if(temp == NULL){
+  
+  if(new == NULL){
     return NULL;
   }
 
-  temp->sleepers = NULL;
-  temp->next = NULL;
+  new->wait_queue = NULL;
+  new->next = NULL;
 
   /* Open connection */
-  if(!inet_aton(addr, &temp->addr.sin_addr)) {
-    temp->host = gethostbyname(addr);
-
-    if (temp->host) {
-      temp->addr.sin_addr = *(struct in_addr*)temp->host->h_addr;
-      temp->fdesc = socket(PF_INET, SOCK_STREAM, 0);
-
-      if(temp->fdesc != -1){
-
-	temp->addr.sin_port = htons(port);
-	temp->addr.sin_family = AF_INET;
-
-	if(connect(temp->fdesc, (struct sockaddr*)&temp->addr, sizeof(temp->addr)) != -1) {
-
-	  temp->file = fdopen(temp->fdesc, "w");
-
-	  if(temp->file == NULL) {
-	    // TODO: ?
-	    printf("Could not open socket (fdopen)!\n");
-	  }
-
-	  /* Zero the message buffer. */
-	  for(i = 0; i < MSG_BUF_SIZE; i++){
-	    temp->buffer[i] = '\0';
-	  }
-
-	  /* Wake up the dispatcher thread in select. A new file has to be added! */
-	  write(notification_pipe[1], "?", 1);
-	  return temp;
-	}
-      }
-    }
+  if(inet_aton(addr, &new->addr.sin_addr)) {
+    SNetMemFree(new);
+    return NULL;
   }
 
-  SNetMemFree(temp);
+  new->host = gethostbyname(addr);
 
-  return NULL;
+  if (!new->host) {
+    SNetMemFree(new);
+    return NULL;
+  }
+
+  new->addr.sin_addr = *(struct in_addr*)new->host->h_addr;
+  new->fdesc = socket(PF_INET, SOCK_STREAM, 0);
+
+  if(new->fdesc == -1){
+    SNetMemFree(new);
+    return NULL;
+  }
+
+  new->addr.sin_port = htons(port);
+  new->addr.sin_family = AF_INET;
+  
+  if(connect(new->fdesc, (struct sockaddr*)&new->addr, sizeof(new->addr)) == -1) {
+    SNetMemFree(new);
+    return NULL;
+  }
+
+  new->file = fdopen(new->fdesc, "w");
+  
+  if(new->file == NULL) {
+    SNetMemFree(new);
+    return NULL;
+  }
+
+  /* Zero the message buffer. */
+  for(i = 0; i < MSG_BUF_SIZE; i++){
+    new->buffer[i] = '\0';
+  }
+  
+  /* Wake up the dispatcher thread in select. A new file has to be added! */
+  write(notification_pipe[1], "?", 1);
+
+  new->next = open_sockets;
+  open_sockets = new;
+
+  return new;
 }
 
+/** <!--********************************************************************-->
+ *
+ * @fn void ObserverWait(obs_handle_t *self)
+ *
+ *   @brief  Put observer to wait for a reply message.
+ * 
+ *           Observer blocks until it is released by the dispatcher.
+ * 
+ *   @param self  Handle of the observer.
+ *
+ ******************************************************************************/
 
-/* Add sleeper entry to connection. */
-static void ObserverAddSleeper(int self, connection_t *con)
+static void ObserverWait(obs_handle_t *self)
 {
-  sleeper_t *temp = SNetMemAlloc( sizeof(sleeper_t));
+  obs_socket_t *socket;
+  obs_wait_queue_t *temp;
+
+  if(self == NULL || self->obstype != OBSsocket || self->desc == NULL) {
+    return;
+  }
+
+  /* Search for unused wait queue places. */
+
+  socket = (obs_socket_t *)self->desc;
+
+  temp = socket->wait_queue;
+
+  while(temp != NULL) {
+    if(temp->hnd == NULL) {
+      temp->hnd = self;
+
+      pthread_cond_wait(&temp->cond, &connection_mutex);
+      temp->hnd = NULL;
+
+      return;
+    }
+    
+    temp = temp->next;
+  }
+  
+  /* No free wait queue structs. New one is created. */
+
+  temp = SNetMemAlloc( sizeof(obs_wait_queue_t));
 
   if(temp == NULL){
     return;
   }
 
   pthread_cond_init(&temp->cond, NULL);
-  temp->id = self;
-  temp->isSleeping = false;
-  temp->next = NULL;
-  
-  temp->next = con->sleepers; 
-  con->sleepers = temp;
+  temp->hnd = self;
+  temp->next = socket->wait_queue;
+  socket->wait_queue = temp;
+
+  pthread_cond_wait(&temp->cond, &connection_mutex);
+  temp->hnd = NULL;
+
+  return;
 }
 
-
-/* Remove sleeper entry from connection. */
-static void ObserverRemoveSleeper(int self, connection_t *con)
-{
-  sleeper_t *temp = con->sleepers;
-  sleeper_t *prev = NULL;
-
-  while(temp != NULL){
-    if(temp->id == self){
-      if(prev != NULL){
-	prev->next = temp->next;
-      }
-      else{
-	con->sleepers = temp->next;
-      }
-      pthread_cond_destroy(&temp->cond);
-      SNetMemFree(temp);
-      return;
-    }
-    prev = temp;
-    temp = temp->next;
-  }
-}
-
-/* Parse reply message using regex. 
+/** <!--********************************************************************-->
  *
- */
+ * @fn int ObserverParseReplyMessage(char *buf, int *oid)
+ *
+ *   @brief  This function parses a reply message and returns ID of the
+ *           corresponding observer.
+ *
+ *   @param buf   Buffer containing the message.
+ *   @param oid   Variable to where the ID is stored.
+ *   @return      Number of parsed characters.
+ *
+ ******************************************************************************/
 
 static int ObserverParseReplyMessage(char *buf, int *oid)
 {
@@ -240,16 +305,27 @@ static int ObserverParseReplyMessage(char *buf, int *oid)
   return pmatch[0].rm_eo;
 }
 
-/* This function is used by the dispatcher thread.
- * 
- */
+/** <!--********************************************************************-->
+ *
+ * @fn void *ObserverDispatch(void *arg) 
+ *
+ *   @brief  This is the main function for the dispatcher thread.
+ *
+ *           Dispatcher listens to all open sockets and parses possible reply 
+ *           messages. Blocked interactive observers are released when 
+ *           corresponding reply message is received.
+ *
+ *   @param arg   Possible data structures needed by the dispatcher
+ *   @return      Always returns NULL
+ *
+ ******************************************************************************/
 
 static void *ObserverDispatch(void *arg) 
 {
   fd_set fdr_set;
   int ndfs = 0;
   int ret;
-  connection_t *temp = NULL;
+  obs_socket_t *temp = NULL;
   int len = 0;
   int i = 0;
 
@@ -263,7 +339,7 @@ static void *ObserverDispatch(void *arg)
     FD_ZERO(&fdr_set);
     
     /* Notification pipe is used to end select. */
-    temp = connections;
+    temp = open_sockets;
     FD_SET(notification_pipe[0], &fdr_set);
     ndfs = notification_pipe[0] + 1;
 
@@ -294,7 +370,7 @@ static void *ObserverDispatch(void *arg)
 	/* Incoming message(s). Go through all the changed files and parse messages */
 
 	pthread_mutex_lock(&connection_mutex);
-	temp = connections;
+	temp = open_sockets;
 
 	while(temp != NULL){
 	  if(FD_ISSET(temp->fdesc, &fdr_set)){
@@ -335,13 +411,13 @@ static void *ObserverDispatch(void *arg)
 		}
 
 		/* Wake up sleeping observer */ 
-		sleeper_t *sleep = temp->sleepers;
-		while(sleep != NULL){
-		  if(sleep->id == oid && sleep->isSleeping == true){
-		    pthread_cond_signal(&sleep->cond);
+		obs_wait_queue_t *queue = temp->wait_queue;
+		while(queue != NULL){
+		  if(queue->hnd != NULL && queue->hnd->id == oid) {
+		    pthread_cond_signal(&queue->cond);
 		    break;
 		  }
-		  sleep = sleep->next;
+		  queue = queue->next;
 		}
 	      }while(1);
 	    }
@@ -358,12 +434,22 @@ static void *ObserverDispatch(void *arg)
   return NULL;
 }
 
+/** <!--********************************************************************-->
+ *
+ * @fn int ObserverRegisterSocket(obs_handle_t *self,  const char *addr, int port)
+ *
+ *   @brief  Register an observer for socket output connection.
+ *
+ *   @param self  Observer handle of the observer to be registered.
+ *   @param addr  The address of the listener
+ *   @param port  The port used by the listener
+ *   @return      0 if the operation succeed, -1 otherwise.
+ *
+ ******************************************************************************/
 
-/* Register observer to the dispatcher */
-static int ObserverAdd(int self, const char *addr, int port, bool isInteractive)
+static int ObserverRegisterSocket(obs_handle_t *self,  const char *addr, int port)
 {
-  connection_t *temp = connections;
-  connection_t *new = NULL; 
+  obs_socket_t *temp = open_sockets;
   struct hostent *host;
 
   pthread_mutex_lock(&connection_mutex);
@@ -380,82 +466,258 @@ static int ObserverAdd(int self, const char *addr, int port, bool isInteractive)
     if((*(struct in_addr*)host->h_addr).s_addr == temp->addr.sin_addr.s_addr
        && temp->addr.sin_port == htons(port)) {
 
-      if(isInteractive == true){
-	ObserverAddSleeper(self, temp);
-      }
-
       user_count++;
+      temp->users++;
+
+      self->obstype = OBSsocket;
+      self->desc = (void *)temp;
+
       pthread_mutex_unlock(&connection_mutex);
-      return temp->fdesc;
+      return 0;
     }
     temp = temp->next;
   }
 
   /* New connection */
 
-  if((new = ObserverInitSocket(addr, port)) == NULL) {
+  if((temp = ObserverInitSocket(addr, port)) == NULL) {
+    pthread_mutex_unlock(&connection_mutex);
+    return -1;
+  }
+  
+  user_count++;
+  temp->users = 1;
+
+  self->obstype = OBSsocket;
+  self->desc = (void *)temp;
+
+  pthread_mutex_unlock(&connection_mutex);
+  return 0;
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn int ObserverRegisterFile(obs_handle_t *self, const char *filename)
+ *
+ *   @brief  Register an observer for output file.
+ *
+ *   @param self      Observer handle of the observer to be registered.
+ *   @param filename  The name of the file to be used.
+ *   @return          0 if the operation succeed, -1 otherwise.
+ *
+ ******************************************************************************/
+
+static int ObserverRegisterFile(obs_handle_t *self, const char *filename)
+{
+  obs_file_t *temp = open_files;
+  FILE *file = NULL;
+  
+  pthread_mutex_lock(&connection_mutex);
+
+  if(mustTerminate == true){
     pthread_mutex_unlock(&connection_mutex);
     return -1;
   }
 
-  temp = connections;
-  new->next = connections;
-  connections = new;
-
-  if(isInteractive == true){
-    ObserverAddSleeper(self, new);
-  }
-  
-  user_count++;
-  pthread_mutex_unlock(&connection_mutex);
-  return new->fdesc;
-}
-
-/* Unregister observer from the dispatcher. */
-static void ObserverRemove(int self, int fid)
-{
-  connection_t *temp = connections;
-  connection_t *prev = NULL;
-
-  pthread_mutex_lock(&connection_mutex);
- 
   while(temp != NULL){
-    if(temp->fdesc == fid){
-      ObserverRemoveSleeper(self, temp);
+    if(strcmp(temp->filename, filename) == 0) {
 
-      /* The socket cannot be closed as some observer
-       * created in the future might use it and closing
-       * could affect the listening application.
-       */ 
-      user_count--;
+      user_count++;
+      temp->users++;
 
-      break;
+      self->obstype = OBSfile;
+      self->desc = (void *)temp;
+
+      pthread_mutex_unlock(&connection_mutex);
+      return 0;
     }
 
-    prev = temp;
     temp = temp->next;
-  } 
+  }
+
+  /* The file is not open yet: */
+
+  file = fopen(filename, "a");
+
+  if(file == NULL) {
+    pthread_mutex_unlock(&connection_mutex);
+    return -1;
+  }
+
+  temp = SNetMemAlloc(sizeof(obs_file_t));
+
+  if(temp == NULL) {
+    fclose(file);
+    pthread_mutex_unlock(&connection_mutex);
+    return -1;
+  }
+
+  temp->file = file;   
+
+  user_count++;
+  temp->users = 1;
+
+
+  temp->filename = SNetMemAlloc(sizeof(char) * (strlen(filename) + 1));
+
+  if(temp->filename == NULL) {
+    fclose(file);
+    pthread_mutex_unlock(&connection_mutex);
+    return -1;
+  }
+
+  temp->filename = strcpy(temp->filename, filename);
+
+  temp->next = open_files;
+  open_files = temp;  
+
+  self->obstype = OBSfile; 
+  self->desc = (void *)temp;
 
   pthread_mutex_unlock(&connection_mutex);
+  return 0;
 }
 
-static int ObserverPrintRecordToFile(FILE *file, observer_handle_t *handle, snet_record_t *rec){
+/** <!--********************************************************************-->
+ *
+ * @fn void ObserverRemove(obs_handle_t *self)
+ *
+ *   @brief  Unregister observer from the observer system.
+ *
+ *   @param self      Observer handle of the observer to be unregistered.
+ *
+ ******************************************************************************/
+
+static void ObserverRemove(obs_handle_t *self)
+{
+  obs_file_t *file;
+  obs_socket_t *socket;
+/*
+  obs_file_t *temp_file;
+  obs_socket_t *temp_socket;
+  obs_wait_queue_t *queue;
+*/
+
+  if(self == NULL) {
+    return;
+  }
+
+  pthread_mutex_lock(&connection_mutex);
+  
+  if(self->obstype == OBSfile) {
+    if(self->desc != NULL) {
+      file = (obs_file_t *)self->desc;
+      
+      file->users--;
+
+      /*
+      if(file->users == 0) {
+	fclose(file->file);
+
+	if(file == open_files) {
+	  open_files = file->next;
+	} else {
+	  temp_file = open_files;
+
+	  while(temp_file->next != NULL) {
+	    if(temp_file->next == file) {
+	      temp_file->next = file->next;
+	      break;
+	    }
+
+	    temp_file = temp_file->next;
+	  }
+	}
+	
+	SNetMemFree(file->filename);
+	SNetMemFree(file);
+	
+      }
+      */
+
+      user_count--;
+
+    }
+  } else if(self->obstype == OBSsocket) {
+    if(self->desc != NULL) {
+      socket = (obs_socket_t *)self->desc;
+
+      socket->users--;
+      /*
+      if(socket->users == 0) {
+	fclose(socket->file);
+
+	if(socket == open_sockets) {
+	  open_sockets = socket->next;
+	} else {
+	  temp_socket = open_sockets;
+	  
+	  while(temp_socket->next != NULL) {
+	    if(temp_socket->next == socket) {
+	      temp_socket->next = socket->next;
+	      break;
+	    }
+
+	    temp_socket = temp_socket->next;
+	  }
+	}
+
+	while(socket->wait_queue != NULL) {
+	  queue = socket->wait_queue;
+
+	  pthread_cond_destroy(&socket->wait_queue->cond);
+
+	  SNetMemFree(socket->wait_queue);
+
+	  socket->wait_queue = queue;
+	}
+	
+	SNetMemFree(socket);
+      }
+      */
+
+      user_count--;
+
+    }
+  }
+
+  pthread_mutex_unlock(&connection_mutex);
+
+  return;
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_t *rec)
+ *
+ *   @brief  Write record into the given output stream.
+
+ *
+ *   @param file  File pointer to where the record is printed.
+ *   @param hnd   Handle of the observer.
+ *   @param rec   Record to be printed.
+ *   @return      0 in case of success, -1 in case of failure.
+ *
+ ******************************************************************************/
+
+static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_t *rec)
+{
   int k, i;
   char *label = NULL;
   char *interface = NULL;
   
   fprintf(file,"<?xml version=\"1.0\"?>");
   fprintf(file,"<data xmlns=\"snet-home.org\">");
-  fprintf(file,"<observer oid=\"%d\" position=\"%s\" type=\"", handle->id, handle->position);
+  fprintf(file,"<observer oid=\"%d\" position=\"%s\" type=\"", hnd->id, hnd->position);
 
-  if(handle->type == SNET_OBSERVERS_TYPE_BEFORE) {
+  if(hnd->type == SNET_OBSERVERS_TYPE_BEFORE) {
     fprintf(file,"before\" ");
-  } else if(handle->type == SNET_OBSERVERS_TYPE_AFTER){
+  } else if(hnd->type == SNET_OBSERVERS_TYPE_AFTER){
     fprintf(file,"after\" ");
   }
 
-  if(handle->code != NULL){
-    fprintf(file,"code=\"%s\" ", handle->code);
+  if(hnd->code != NULL){
+    fprintf(file,"code=\"%s\" ", hnd->code);
   }
 
   fprintf(file,">");
@@ -472,7 +734,7 @@ static int ObserverPrintRecordToFile(FILE *file, observer_handle_t *handle, snet
 
       i = SNetRecGetFieldNames( rec)[k];
       if((label = SNetInIdToLabel(labels, i)) != NULL){
-	if(handle->data_level == SNET_OBSERVERS_DATA_LEVEL_FULL 
+	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_FULL 
 	   && (interface = SNetInIdToInterface(interfaces, id)) != NULL){
 	  fprintf(file,"<field label=\"%s\" interface=\"%s\" >", label, interface);
 
@@ -492,7 +754,7 @@ static int ObserverPrintRecordToFile(FILE *file, observer_handle_t *handle, snet
       i = SNetRecGetTagNames( rec)[k];
       
       if((label = SNetInIdToLabel(labels, i)) != NULL){
-	if(handle->data_level == SNET_OBSERVERS_DATA_LEVEL_NONE) {
+	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_NONE) {
 	  fprintf(file,"<tag label=\"%s\" />", label);
 	}else {
 	  fprintf(file,"<tag label=\"%s\" >%d</tag>", label, SNetRecGetTag(rec, i));	   
@@ -507,10 +769,10 @@ static int ObserverPrintRecordToFile(FILE *file, observer_handle_t *handle, snet
       i = SNetRecGetBTagNames( rec)[k];
       
       if((label = SNetInIdToLabel(labels, i)) != NULL){
-	if(handle->data_level == SNET_OBSERVERS_DATA_LEVEL_NONE) {
-	fprintf(file,"<btag label=\"%s\" />", label); 
+	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_NONE) {
+	  fprintf(file,"<btag label=\"%s\" />", label); 
 	}else {
-	fprintf(file,"<btag label=\"%s\" >%d</btag>", label, SNetRecGetBTag(rec, i));
+	  fprintf(file,"<btag label=\"%s\" >%d</btag>", label, SNetRecGetBTag(rec, i));
 	}
       }
       
@@ -537,68 +799,75 @@ static int ObserverPrintRecordToFile(FILE *file, observer_handle_t *handle, snet
   return 0;
 }
 
-/* This is used by the observers to send anything out. Blocks the observer if its an interactive one. */
-static int ObserverSend(observer_handle_t *hnd, snet_record_t *rec)
+/** <!--********************************************************************-->
+ *
+ * @fn int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
+ *
+ *   @brief  Send record to the listener.
+
+ *
+ *   @param hnd   Handle of the observer.
+ *   @param rec   Record to be sent.
+ *   @return      0 in case of success, -1 in case of failure.
+ *
+ ******************************************************************************/
+
+static int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
 {
   int ret;
-  connection_t *temp = connections;
+  obs_socket_t *socket;
+  obs_file_t *file;
 
   pthread_mutex_lock(&connection_mutex);
 
-  if(mustTerminate == true){
+  if(mustTerminate == true || hnd == NULL || hnd->desc == NULL){
     pthread_mutex_unlock(&connection_mutex);
     return -1;
   }
 
-  /* Search the right socket */
-  while(temp != NULL){
-    if(temp->fdesc == hnd->fdesc){
-      break;
-    }
+  if(hnd->obstype == OBSfile) {
+    file = (obs_file_t *)hnd->desc;
 
-    temp = temp->next;
-  }
-
-  /* Error: connection not registerd! */
-  if(temp == NULL){
+    ret = ObserverPrintRecordToFile(file->file, hnd, rec);
+    
     pthread_mutex_unlock(&connection_mutex);
-    return -1;
-  }
+    return ret;
 
-  /* Send the data */
-
-  ret = ObserverPrintRecordToFile(temp->file, hnd, rec);
-  fflush(temp->file);
-
-  /* Interactive observers block */
-  if(hnd->isInteractive == true && ret == 0){
-
-    /* Add to sleeper list*/
-    sleeper_t *sleeper = temp->sleepers;
-
-    while(sleeper != NULL){
-      if(sleeper->id == hnd->id){
-	sleeper->isSleeping = true;
-
-	if(pthread_cond_wait(&sleeper->cond, &connection_mutex) != 0)
-	  {
-	    /* Error */
-	  }
-	sleeper->isSleeping = false;
-	break;
-      }
-      sleeper = sleeper->next;
+  } else if(hnd->obstype == OBSsocket) {
+    socket = (obs_socket_t *)hnd->desc;
+ 
+    ret = ObserverPrintRecordToFile(socket->file, hnd, rec);
+    fflush(socket->file);
+    
+    if(hnd->isInteractive == true && ret == 0){    
+      ObserverWait(hnd);    
     }
+    
+    pthread_mutex_unlock(&connection_mutex);
+    return ret; 
   }
 
   pthread_mutex_unlock(&connection_mutex);
-  return ret; 
+  return -1;
 }
 
-/* Function used by the observer thread. */
-static void *ObserverBoxThread( void *hndl) {
+/** <!--********************************************************************-->
+ *
+ * @fn void *ObserverBoxThread( void *hndl) {
+ *
+ *   @brief  The main function for observer thread.
+ *
+ *           Observer takes incoming records, sends them to the listener,
+ *           and after that passes the record to the next entity.
+ *
+ *   @param hndl  Handle of the observer.
+ *   @return      NULL.
+ *
+ ******************************************************************************/
 
-  observer_handle_t *hnd = (observer_handle_t*)hndl; 
+static void *ObserverBoxThread( void *hndl) 
+{
+  obs_handle_t *hnd = (obs_handle_t*)hndl; 
   snet_record_t *rec = NULL;
 
   bool isTerminated = false;
@@ -621,7 +890,7 @@ static void *ObserverBoxThread( void *hndl) {
   } 
 
   /* Unregister observer */
-  ObserverRemove(hnd->id, hnd->fdesc);
+  ObserverRemove(hnd);
 
   SNetBufBlockUntilEmpty(hnd->outbuf);
   SNetBufDestroy(hnd->outbuf);
@@ -631,20 +900,48 @@ static void *ObserverBoxThread( void *hndl) {
   return NULL;
 }
 
-/* Function used to initialize a observer component. */
-snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf, 
-			       const char *addr, 
-			       int port, 
-			       bool isInteractive, 
-			       const char *position, 
-			       char type, 
-			       char data_level, 
-			       const char *code)
+/** <!--********************************************************************-->
+ *
+ * @fn snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf, 
+ *				     const char *addr, 
+ *				     int port, 
+ *				     bool isInteractive, 
+ *				     const char *position, 
+ *				     char type, 
+ *                                   char data_level, 
+ *                                   const char *code)
+ *
+ *   @brief  Initialize an observer that uses socket communication.
+ *
+ *           Observer handle is created and the observer is started.
+ *           Incase the connection cannot be opened, this observer is ignored.
+ *
+ *   @param inbuf         Buffer for incoming records.
+ *   @param addr          Address of the listener.
+ *   @param port          Port number that the listener uses.
+ *   @param isInteractive True if this observer is interactive, false otherwise.
+ *   @param position      String describing the position of this observer (Net/box name).
+ *   @param type          Type of the observer SNET_OBSERVERS_TYPE_BEFORE or SNET_OBSERVERS_TYPE_AFTER
+ *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_NONE or SNET_OBSERVERS_DATA_LEVEL_TAGS or SNET_OBSERVERS_DATA_LEVEL_FULL
+ *   @param code          User specified code sent by the observer.
+ *
+ *   @return              Buffer for outcoming records.
+ *
+ ******************************************************************************/
+snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf, 
+				     const char *addr, 
+				     int port, 
+				     bool isInteractive, 
+				     const char *position, 
+				     char type, 
+				     char data_level, 
+				     const char *code)
 {
   pthread_t box_thread;
-  observer_handle_t *hnd;
+  obs_handle_t *hnd;
 
-  hnd = SNetMemAlloc(sizeof(observer_handle_t));
+  hnd = SNetMemAlloc(sizeof(obs_handle_t));
+
   if(hnd == NULL){
     SNetMemFree(hnd);
     return inbuf;
@@ -657,17 +954,15 @@ snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf,
   hnd->id = id_pool++;
   pthread_mutex_unlock(&connection_mutex);
 
-  /* Register observer */
-  hnd->fdesc = ObserverAdd(hnd->id, addr, port, isInteractive);
+  hnd->obstype = OBSsocket;
 
-  /* If observer couldn't be registered, it can be ignored! */
-  if(hnd->fdesc == -1){
+  /* Register observer */
+  if(ObserverRegisterSocket(hnd, addr, port) != 0) {
     SNetMemFree(hnd);
     return inbuf;
   }
 
   hnd->type = type;
-
   hnd->isInteractive = isInteractive;
   hnd->position = position;
   hnd->data_level = data_level;
@@ -679,8 +974,86 @@ snet_buffer_t *SNetObserverBox(snet_buffer_t *inbuf,
   return(hnd->outbuf);
 }
 
+/** <!--********************************************************************-->
+ *
+ * @fn snet_buffer_t *SNetObserverFileBox(snet_buffer_t *inbuf, 
+ *				   const char *filename, 
+ *				   const char *position, 
+ *				   char type, 
+ *				   char data_level, 
+ *				   const char *code)
+ *
+ *   @brief  Initialize an observer that uses file for output.
+ *
+ *           Observer handle is created and the observer is started.
+ *           Incase the file cannot be opened, this observer is ignored.
+ *
+ *   @param inbuf         Buffer for incoming records.
+ *   @param filename      Name of the file to be used.
+ *   @param position      String describing the position of this observer (Net/box name).
+ *   @param type          Type of the observer SNET_OBSERVERS_TYPE_BEFORE or SNET_OBSERVERS_TYPE_AFTER
+ *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_NONE or SNET_OBSERVERS_DATA_LEVEL_TAGS or SNET_OBSERVERS_DATA_LEVEL_FULL
+ *   @param code          User specified code sent by the observer.
+ *
+ *   @return              Buffer for outcoming records.
+ *
+ ******************************************************************************/
+snet_buffer_t *SNetObserverFileBox(snet_buffer_t *inbuf, 
+				   const char *filename, 
+				   const char *position, 
+				   char type, 
+				   char data_level, 
+				   const char *code)
+{
+  pthread_t box_thread;
+  obs_handle_t *hnd;
+  
+  hnd = SNetMemAlloc(sizeof(obs_handle_t));
+  if(hnd == NULL){
+    SNetMemFree(hnd);
+    return inbuf;
+  }
 
-/* This function is used to initialize the observer system. */
+  hnd->inbuf = inbuf;
+  hnd->outbuf  = SNetBufCreate( BUFFER_SIZE);
+
+  pthread_mutex_lock(&connection_mutex);
+  hnd->id = id_pool++;
+  pthread_mutex_unlock(&connection_mutex);
+
+  hnd->obstype = OBSfile;
+
+  if(ObserverRegisterFile(hnd, filename) != 0) {
+    SNetMemFree(hnd);
+    return inbuf;
+  }
+
+  hnd->type = type;
+  hnd->isInteractive = false;
+  hnd->position = position;
+  hnd->data_level = data_level;
+  hnd->code = code;
+
+  pthread_create(&box_thread, NULL, ObserverBoxThread, (void*)hnd);
+  pthread_detach(box_thread);
+
+  return(hnd->outbuf);
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn int SNetObserverInit(snetin_label_t *labs, snetin_interface_t *interfs) 
+ *
+ *   @brief  Call to this function initializes the observer system.
+ *
+ *           Notice: This function must be called before any other observer
+ *           function!
+ *
+ *   @param labs     Labels used in the S-Net
+ *   @param interfs  Interfaces used in the S-Net
+ *   @return         0 if success, -1 otherwise.
+ *
+ ******************************************************************************/
 int SNetObserverInit(snetin_label_t *labs, snetin_interface_t *interfs) 
 {
   /* Start dispatcher */ 
@@ -715,10 +1088,21 @@ int SNetObserverInit(snetin_label_t *labs, snetin_interface_t *interfs)
 }
 
 
-/* This function is used to destroy te observer system. */
+/** <!--********************************************************************-->
+ *
+ * @fn void SNetObserverDestroy() 
+ *
+ *   @brief  Call to this function destroys the observer system.
+ *
+ *           Notice: No observer functions must be called after this call!
+ *
+ *
+ ******************************************************************************/
 void SNetObserverDestroy() 
 {
-  connection_t *con; 
+  obs_socket_t *socket;
+  obs_file_t *file; 
+  obs_wait_queue_t *queue;
 
   /* Don't close connections before the dispatcher stops using them! */
   
@@ -735,17 +1119,35 @@ void SNetObserverDestroy()
 
   SNetMemFree(dispatcher_thread);
 
-  con = connections;
-
-  /* Destroy all connections. */
-  while(con != NULL){
-    connections = con->next;
+  while(open_sockets != NULL){
+    socket = open_sockets->next;
     
-    fclose(con->file);
+    fclose(open_sockets->file);
 
-    SNetMemFree(con);
+    while(open_sockets->wait_queue != NULL) {
+      queue = open_sockets->wait_queue->next;
+      
+      pthread_cond_destroy(&open_sockets->wait_queue->cond);
+      
+      SNetMemFree(open_sockets->wait_queue);
+      
+      open_sockets->wait_queue = queue;
+    }
     
-    con = connections;
+    SNetMemFree(open_sockets);
+    
+    open_sockets = socket;
+  }
+
+  while(open_files != NULL){
+    file = open_files->next;
+    
+    fclose(open_files->file);
+
+    SNetMemFree(open_files->filename);
+    SNetMemFree(open_files);
+    
+    open_files = file;
   }
 
   regfree(preg);
