@@ -18,7 +18,7 @@ void SNetUtilStackGotoTop(snet_util_stack_t *target);
 void SNetUtilStackGotoBottom(snet_util_stack_t *target); 
 void SNetUtilStackUp(snet_util_stack_t *target);
 void SNetUtilStackDown(snet_util_stack_t *target);
-void *SnetUtilStackGet(snet_util_stack_t *target);
+void *SNetUtilStackGet(snet_util_stack_t *target);
 bool SNetUtilStackCurrentDefined(snet_util_stack_t *target);
 
 #endif
