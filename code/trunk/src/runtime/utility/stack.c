@@ -250,7 +250,7 @@ void SNetUtilStackGotoTop(snet_util_stack_t *target) {
  * @param target the stack to manipulate
  *
  ******************************************************************************/
-void SnetUtilStackGotoBottom(snet_util_stack_t *target) {
+void SNetUtilStackGotoBottom(snet_util_stack_t *target) {
   if(target == NULL) {
     SNetUtilDebugFatal("SnetUtilStackGotoBottom: target == NULL");
   }
