@@ -71,7 +71,7 @@ extern void SNetRecAddIteration(snet_record_t *rec, int inital_value);
  */
 extern void SNetRecRemoveIteration(snet_record_t *rec);
 
-extern snet_util_stack_t SNetRecGetIterationStack(snet_record_t *rec);
+extern snet_util_stack_t *SNetRecGetIterationStack(snet_record_t *rec);
 
 /*
  * CREC_sync: snet_buffer_t *inbuf

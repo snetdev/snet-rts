@@ -7,11 +7,14 @@
 #include "handle.h"
 #include "debug.h"
 #include "threading.h"
+#include "tree.h"
+#include "list.h"
+
 /* --------------------------------------------------------
  * Syncro Cell: Flow Inheritance, uncomment desired variant
  * --------------------------------------------------------
  */
- 
+
 // inherit all fields and tags from matched records
 //#define SYNC_FI_VARIANT_1
 
@@ -53,6 +56,11 @@
 /*  SNetSync                                                                 */
 /* ------------------------------------------------------------------------- */
 
+struct sync_state {
+  bool terminated;
+  int match_count;
+  snet_record_t **storage;
+};
 
 #ifdef SYNC_FI_VARIANT_2
 // Destroys storage including all records
@@ -153,8 +161,8 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
 #endif
 
 
-static bool 
-MatchPattern( snet_record_t *rec, 
+static bool
+MatchPattern( snet_record_t *rec,
               snet_variantencoding_t *pat,
               snet_expr_t *guard) {
 
@@ -182,7 +190,7 @@ MatchPattern( snet_record_t *rec,
 
 
 static void *SyncBoxThread( void *hndl) {
-
+  
   int i;
   int match_cnt=0, new_matches=0;
   int num_patterns;
@@ -196,48 +204,77 @@ static void *SyncBoxThread( void *hndl) {
   snet_typeencoding_t *patterns;
   snet_expr_list_t *guards;
   
+  struct sync_state *current_state;
+  snet_util_tree_t *states;
+  snet_util_list_t *to_free;
+
   outbuf = SNetHndGetOutbuffer( hnd);
   outtype = SNetHndGetType( hnd);
   patterns = SNetHndGetPatterns( hnd);
   num_patterns = SNetTencGetNumVariants( patterns);
   guards = SNetHndGetGuardList( hnd);
+  
 
-  storage = SNetMemAlloc( num_patterns * sizeof( snet_record_t*));
-  for( i=0; i<num_patterns; i++) {
-    storage[i] = NULL;
-  }
+  /* TODO: maybe make finding of dead synccells cleverer? */
+  states = SNetUtilTreeCreate();
+  to_free = SNetUtilListCreate();
+
   
   while( !( terminate)) {
     rec = SNetBufGet( SNetHndGetInbuffer( hnd));
 
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
-        new_matches = 0;
-      for( i=0; i<num_patterns; i++) {
-        if( (storage[i] == NULL) && 
-            (MatchPattern( rec, SNetTencGetVariant( patterns, i+1), SNetEgetExpr( guards, i)))) {
-          storage[i] = rec;
-          was_match = true;
-          new_matches += 1;
+        if(!SNetUtilTreeContains(states, SNetRecGetIterationStack(rec))) {
+          /* insert fresh state for that stack. */
+          current_state = (struct sync_state *)SNetMemAlloc(
+                                          sizeof(struct sync_state));
+          for(i = 0; i < num_patterns; i++) {
+            current_state->storage[i] = NULL;
+          }
+          current_state->match_count = 0;
+          SNetUtilTreeSet(states, SNetRecGetIterationStack(rec), current_state);
+          SNetUtilListAddEnd(to_free, current_state);
+        } else {
+          current_state = SNetUtilTreeGet(states,SNetRecGetIterationStack(rec));
         }
-      }
 
-      if( new_matches == 0) {
-        SNetBufPut( outbuf, rec);
-      } 
-      else {
-        match_cnt += new_matches;
-       if( match_cnt == num_patterns) {
-          #ifdef SYNC_FI_VARIANT_1
-          SNetBufPut( outbuf, Merge( storage, patterns, outtype));
-          #endif
-          #ifdef SYNC_FI_VARIANT_2
-          SNetBufPut( outbuf, Merge( storage, patterns, outtype, rec));
-          #endif
-          SNetBufPut( outbuf, SNetRecCreate( REC_sync, SNetHndGetInbuffer( hnd)));
-          terminate = true;
-       }
-      }
+        if(current_state->terminated) {
+          SNetBufPut(outbuf, rec);
+          continue;
+        }
+        storage = current_state->storage;
+        match_cnt = current_state->match_count;
+
+        new_matches = 0;
+        for( i=0; i<num_patterns; i++) {
+          /* storage empty and guard accepts => store record*/
+          if( (storage[i] == NULL) &&
+              (MatchPattern(rec, SNetTencGetVariant(patterns, i+1),
+                        SNetEgetExpr( guards, i)))) {
+            storage[i] = rec;
+            was_match = true;
+            new_matches += 1;
+          }
+        }
+
+        if( new_matches == 0) {
+          SNetBufPut( outbuf, rec);
+        }
+        else {
+          match_cnt += new_matches;
+         if( match_cnt == num_patterns) {
+            #ifdef SYNC_FI_VARIANT_1
+            SNetBufPut( outbuf, Merge( storage, patterns, outtype));
+            #endif
+            #ifdef SYNC_FI_VARIANT_2
+            SNetBufPut( outbuf, Merge( storage, patterns, outtype, rec));
+            #endif
+            SNetBufPut(outbuf,
+                      SNetRecCreate(REC_sync, SNetHndGetInbuffer( hnd)));
+            current_state->terminated = true;
+         }
+        }
       break;
     case REC_sync:
         SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
@@ -245,7 +282,7 @@ static void *SyncBoxThread( void *hndl) {
 
       break;
       case REC_collect:
-        SNetUtilDebugNotice("[Sync] Unhandled control record, destroyingi" 
+        SNetUtilDebugNotice("[Sync] Unhandled control record, destroying"
                             " it\n\n");
         SNetRecDestroy( rec);
         break;
@@ -256,6 +293,14 @@ static void *SyncBoxThread( void *hndl) {
         SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
         break;
     case REC_terminate:
+        /* TODO: need to free contents of tree! */
+        SNetUtilTreeDestroy(states);
+        SNetUtilListGotoBeginning(to_free);
+        while(SNetUtilListCurrentDefined(to_free)) {
+          current_state = SNetUtilListGet(to_free);
+          free(current_state);
+        }
+        SNetUtilListDestroy(to_free);
         SNetUtilDebugNotice("[Sync] received termination record\n"
                                 "stored records are discarded");
         terminate = true;
@@ -275,9 +320,9 @@ static void *SyncBoxThread( void *hndl) {
 }
 
 
-extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf, 
-                                snet_typeencoding_t *outtype, 
-                                snet_typeencoding_t *patterns, 
+extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf,
+                                snet_typeencoding_t *outtype,
+                                snet_typeencoding_t *patterns,
                                 snet_expr_list_t *guards ) {
 
   snet_buffer_t *outbuf;
@@ -292,4 +337,4 @@ extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf,
 
   return( outbuf);
 }
-                          
+
