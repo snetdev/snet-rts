@@ -156,6 +156,17 @@ static void *SplitBoxThread( void *hndl) {
 
         SNetBufPut(initial, rec);
         break;
+      case REC_probe:
+        SNetUtilListGotoBeginning(repos);
+        elem = SNetUtilListGet(repos);
+        SNetBufPut((snet_buffer_t*)elem->buf, rec);
+        SNetUtilListNext(repos);
+        while(SNetUtilListCurrentDefined(repos)) {
+          elem = SNetUtilListGet(repos);
+            SNetBufPut((snet_buffer_t*)elem->buf, SNetRecCopy(rec));
+            SNetUtilListNext(repos);
+        }
+      break;
     }
   }
 
@@ -287,15 +298,26 @@ static void *DetSplitBoxThread( void *hndl) {
         SNetUtilListGotoBeginning(repos);
         while(SNetUtilListCurrentDefined(repos)) {
           elem = SNetUtilListGet(repos);
-          SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter)); 
+          SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter));
           SNetBufPut( (snet_buffer_t*)elem->buf, SNetRecCopy( rec));
           SNetUtilListNext(repos);
         }
         SNetUtilListDestroy(repos);
 
-        SNetBufPut( initial, SNetRecCreate( REC_sort_begin, 0, counter)); 
+        SNetBufPut( initial, SNetRecCreate( REC_sort_begin, 0, counter));
         SNetBufPut( initial, rec);
         break;
+      case REC_probe:
+        SNetUtilListGotoBeginning(repos);
+        elem = SNetUtilListGet(repos);
+        SNetBufPut(elem->buf, SNetRecCreate(REC_sort_begin, 0, counter));
+        SNetBufPut(elem->buf, rec);
+        while(SNetUtilListCurrentDefined(repos)) {
+          elem = SNetUtilListGet(repos);
+          SNetBufPut(elem->buf, SNetRecCreate(REC_sort_begin, 0, counter));
+          SNetBufPut(elem->buf, SNetRecCopy(rec));
+          SNetUtilListNext(repos);
+        }
     }
   }
 

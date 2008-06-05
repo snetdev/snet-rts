@@ -27,7 +27,8 @@ typedef enum {
 	REC_collect,
 	REC_sort_begin,
 	REC_sort_end,
-	REC_terminate
+	REC_terminate,
+  REC_probe
 } snet_record_descr_t;
 
 
@@ -322,9 +323,9 @@ extern int SNetRecGetLevel( snet_record_t *rec);
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec);
 
 extern int SNetRecGetInterfaceId( snet_record_t *rec);
-extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id); 
+extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id);
 
-
+extern bool SNetRecProbeFailed(snet_record_t *rec);
 
 
 #endif

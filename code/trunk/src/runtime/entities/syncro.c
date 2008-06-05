@@ -293,7 +293,6 @@ static void *SyncBoxThread( void *hndl) {
         SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
         break;
     case REC_terminate:
-        /* TODO: need to free contents of tree! */
         SNetUtilTreeDestroy(states);
         SNetUtilListGotoBeginning(to_free);
         while(SNetUtilListCurrentDefined(to_free)) {
@@ -305,6 +304,9 @@ static void *SyncBoxThread( void *hndl) {
                                 "stored records are discarded");
         terminate = true;
         SNetBufPut( outbuf, rec);
+      break;
+      case REC_probe:
+        SNetBufput(SNetHndGetOutbuffer(hnd), rec);
       break;
     }
   }

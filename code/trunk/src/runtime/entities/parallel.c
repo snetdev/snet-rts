@@ -214,8 +214,23 @@ static void *ParallelBoxThread( void *hndl) {
         SNetMemFree( matchcounter);
         SNetHndDestroy( hnd);
         break;
+      case REC_probe:
+        if(is_det) {
+          for(i = 0; i<num; i++) {
+            SNetBufPut(buffers[i],
+                      SNetRecCreate(REC_sort_begin, 0, counter));
+          }
+        }
+        for(i = 0; i<num;i++) {
+          if(i==(num-1)) {
+            SNetBufPut(buffers[i], rec);
+          } else {
+            SNetBufPut(buffers[i], SNetRecCopy(rec));
+          }
+        }
+        break;
     }
-  }  
+  }
 
   return( NULL);
 }

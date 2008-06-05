@@ -62,6 +62,10 @@ static void *DetCollector( void *info) {
   snet_util_list_t *lst = NULL; 
   bool terminate = false;
   bool got_record;
+
+  bool all_probed;
+  snet_record_t *temp_record;
+
   snet_collect_elem_t *tmp_elem, *new_elem, *elem;
 
   snet_record_t *current_sort_rec = NULL;
@@ -237,6 +241,45 @@ static void *DetCollector( void *info) {
               }
 
               break;
+
+            case REC_probe:
+              /* we are only allowed to foward a probe record if this record
+               * type is present on all input streams.
+               */
+              all_probed = true;
+              for(i = 0; i < SNetUtilListCount(lst); i++) {
+                /* This is some tiny optimization. If there was a stream
+                 * without a probe record on it already, then we dont
+                 * need to look at the other buffers. However, we have
+                 * to keep rotation so we do not modify the current-element
+                 * of the list (because it loops around, it will end up at
+                 * the start again)
+                 */
+                if(all_probed) {
+                  tmp_elem = SNetUtilListGet(lst);
+                  temp_record = SNetBufShow(tmp_elem->buf);
+                  if(SNetRecGetDescriptor(temp_record) != REC_probe) {
+                    all_probed = false;
+                  }
+                }
+                SNetUtilListRotateForward(lst);
+              }
+              if(all_probed) {
+                /* all input buffers are probed, lets remove those
+                 * probes! (and pass one to the outer world)
+                 */
+                for(i = 0; i < SNetUtilListCount(lst)-1; i++) {
+                  tmp_elem = SNetUtilListGet(lst);
+                  temp_record = SNetBufGet(tmp_elem->buf);
+                  SNetRecDestroy(temp_record);
+                  SNetUtilListRotateForward(lst);
+                }
+                tmp_elem = SNetUtilListGet(lst);
+                temp_record = SNetBufGet(tmp_elem->buf);
+                SNetBufPut(outbuf, temp_record);
+                SNetUtilListRotateForward(lst);
+              }
+            break;
           } // switch
         } // if
         else {
@@ -271,6 +314,8 @@ static void *Collector( void *info) {
   
   int counter = 0; 
   int sort_end_counter = 0;
+  bool all_probed;
+  snet_record_t *temp_record;
 
   sem = SNetMemAlloc(sizeof( sem_t));
   sem_init( sem, 0, 0);
@@ -427,6 +472,44 @@ static void *Collector( void *info) {
               }
 
               break;
+            case REC_probe:
+              /* we are only allowed to foward a probe record if this record
+               * type is present on all input streams.
+               */
+              all_probed = true;
+              for(i = 0; i < SNetUtilListCount(lst); i++) {
+                /* This is some tiny optimization. If there was a stream
+                 * without a probe record on it already, then we dont
+                 * need to look at the other buffers. However, we have
+                 * to keep rotation so we do not modify the current-element
+                 * of the list (because it loops around, it will end up at
+                 * the start again)
+                 */
+                if(all_probed) {
+                  tmp_elem = SNetUtilListGet(lst);
+                  temp_record = SNetBufShow(tmp_elem->buf);
+                  if(SNetRecGetDescriptor(temp_record) != REC_probe) {
+                    all_probed = false;
+                  }
+                }
+                SNetUtilListRotateForward(lst);
+              }
+              if(all_probed) {
+                /* all input buffers are probed, lets remove those
+                 * probes! (and pass one to the outer world)
+                 */
+                for(i = 0; i < SNetUtilListCount(lst)-1; i++) {
+                  tmp_elem = SNetUtilListGet(lst);
+                  temp_record = SNetBufGet(tmp_elem->buf);
+                  SNetRecDestroy(temp_record);
+                  SNetUtilListRotateForward(lst);
+                }
+                tmp_elem = SNetUtilListGet(lst);
+                temp_record = SNetBufGet(tmp_elem->buf);
+                SNetBufPut(outbuf, temp_record);
+                SNetUtilListRotateForward(lst);
+              }
+            break;
           } // switch
         } // if
         else {

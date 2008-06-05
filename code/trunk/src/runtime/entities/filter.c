@@ -464,6 +464,9 @@ static void *FilterThread( void *hnd)
           SNetBufDestroy( outbuf);
           SNetHndDestroy( hnd);
         break;
+        case REC_probe:
+          SNetBufPut(SNetHndGetOutbuffer(hnd), in_rec);
+        break;
     } // switch rec_descr
     
   } // while not terminate
@@ -515,7 +518,6 @@ extern snet_buffer_t
 
   return( outbuf);
 }
-                       
 
 
 extern snet_buffer_t 
@@ -635,6 +637,9 @@ static void *NameshiftThread( void *h)
         SNetBufBlockUntilEmpty( outbuf);
         SNetBufDestroy( outbuf);
         SNetHndDestroy( hnd);
+      break;
+      case REC_probe:
+        SNetBufPut(SNetHndGetOutbuffer(hnd), rec);
       break;
     }
   }

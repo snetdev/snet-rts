@@ -43,8 +43,8 @@ MatchesExitPattern( snet_record_t *rec,
 }
 
 
-static void *StarBoxThread( void *hndl) {
-
+static void *StarBoxThread( void *hndl)
+{
   snet_handle_t *hnd = (snet_handle_t*)hndl;
   snet_buffer_t* (*box)( snet_buffer_t*);
   snet_buffer_t* (*self)( snet_buffer_t*);
@@ -129,13 +129,19 @@ static void *StarBoxThread( void *hndl) {
         SNetBufDestroy( our_outbuf);
         //real_outbuf will be destroyed by the dispatcher
         break;
+      case REC_probe:
+        if(starbuf != NULL) {
+          SNetBufPut(our_outbuf, SNetRecCopy(rec));
+        }
+        SNetBufPut(our_outbuf, rec);
+      break;
     }
   }
 
   return( NULL);
 }
 
-extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf, 
+extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf,
                                 snet_typeencoding_t *type,
                                 snet_expr_list_t *guards,
                                 snet_buffer_t* (*box_a)(snet_buffer_t*),
@@ -304,6 +310,12 @@ static void *DetStarBoxThread( void *hndl) {
         SNetBufDestroy( our_outbuf);
         //real_outbuf will be destroyed by the dispatcher
         break;
+      case REC_probe:
+        if(starbuf != NULL) {
+          SNetBufPut(our_outbuf, SNetRecCopy(rec));
+        }
+        SNetBufPut(our_outbuf, rec);
+      break;
     }
   }
 

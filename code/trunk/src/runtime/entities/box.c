@@ -71,6 +71,9 @@ static void *BoxThread( void *hndl) {
         SNetBufDestroy( SNetHndGetOutbuffer( hnd));
         SNetHndDestroy( hnd);
         break;
+      case REC_probe:
+        SNetBufPut(SNetHndGetOutbuffer(hnd), rec);
+      break;
     }
   }
    return( NULL);
