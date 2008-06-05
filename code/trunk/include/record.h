@@ -8,11 +8,11 @@
 #define RECORD_H
 
 
-#include <typeencode.h>
-#include <bool.h>
-#include <constants.h>
-#include <buffer.h>
-
+#include "typeencode.h"
+#include "bool.h"
+#include "constants.h"
+#include "buffer.h"
+#include "stack.h"
 /* 
  * data structure for the record
  */
@@ -71,6 +71,8 @@ extern void SNetRecAddIteration(snet_record_t *rec, int inital_value);
  */
 extern void SNetRecRemoveIteration(snet_record_t *rec);
 
+extern snet_util_stack_t SNetRecGetIterationStack(snet_record_t *rec);
+
 /*
  * CREC_sync: snet_buffer_t *inbuf
  *
@@ -85,7 +87,6 @@ extern snet_buffer_t *SNetRecGetBuffer( snet_record_t *rec);
  * Creates copy of given record.
  * RETURN: pointer to copy
  */
-                      
 extern snet_record_t *SNetRecCopy( snet_record_t *rec);
 
 

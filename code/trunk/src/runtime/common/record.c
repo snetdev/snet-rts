@@ -8,9 +8,12 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include <memfun.h>
-#include <record.h>
-#include <snetentities.h>
+#include "memfun.h"
+#include "record.h"
+#include "snetentities.h"
+#include "stack.h"
+#include "debug.h"
+
 //#include <lbindings.h>
 
 #define GETNUM( N, M)   int i;\
@@ -52,18 +55,12 @@
 #define STAR_REC( name, component) RECORD( name, star_rec)->component
 
 /* DATA_REC(x, y) -> x->rec->data_rec->y */
-struct iteration_counters {
-  int counter;
-  struct iteration_counters *next;
-};
-
 typedef struct {
   snet_variantencoding_t *v_enc;
   void **fields;
   int *tags;
   int *btags;
   int interface_id;
-  struct iteration_counters **counters;
 } data_rec_t;
 
 typedef struct {
@@ -101,6 +98,7 @@ union record_types {
 struct record {
   snet_record_descr_t rec_descr;
   snet_record_types_t *rec;
+  snet_util_stack_t *iteration_counters;
 };
 
 
@@ -162,7 +160,7 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
 
   rec = SNetMemAlloc( sizeof( snet_record_t));
   REC_DESCR( rec) = descr;
-  
+  rec->iteration_counters = SNetUtilStackCreate();  
 
   va_start( args, descr);
 
@@ -176,7 +174,6 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
       DATA_REC( rec, tags) = SNetMemAlloc( SNetTencGetNumTags( v_enc) * sizeof( int));
       DATA_REC( rec, btags) = SNetMemAlloc( SNetTencGetNumBTags( v_enc) * sizeof( int));
       DATA_REC( rec, v_enc) = v_enc;
-      DATA_REC( rec, counters) = NULL;
       break;
     case REC_sync:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
@@ -215,12 +212,19 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...) {
 }
 
 
-extern void SNetRecDestroy( snet_record_t *rec) {
+extern snet_util_stack_t *SNetRectGetIterationStack(snet_record_t *rec)
+{
+  return rec->iteration_counters;
+}
+
+extern void SNetRecDestroy( snet_record_t *rec)
+{
 
   int i;
   int num, *names;
   
   if( rec != NULL) {
+    SNetUtilStackDestroy(rec->iteration_counters);
   switch( REC_DESCR( rec)) {
     case REC_data: {
         void (*freefun)(void*);
@@ -235,9 +239,6 @@ extern void SNetRecDestroy( snet_record_t *rec) {
         SNetMemFree( DATA_REC( rec, fields));
         SNetMemFree( DATA_REC( rec, tags));
         SNetMemFree( DATA_REC( rec, btags));
-        while( DATA_REC( rec, counters)) {
-          SNetRecRemoveIteration(rec);
-        }
         SNetMemFree( RECORD( rec, data_rec));
       }
       break;
@@ -270,83 +271,60 @@ extern void SNetRecDestroy( snet_record_t *rec) {
  }
 }
 
-extern int SNetRecHasIteration(snet_record_t *rec) {
-  switch(REC_DESCR(rec)) {
-    case REC_data:
-      return (DATA_REC(rec, counters) != NULL);
-    break;
-    default:
-      printf(" \n\n ** Fatal Error **: Wrong type in SNetRecHAsITeration() (%d) \n\n", REC_DESCR(rec));
-      exit(1);
-    break;
-  }
+extern int SNetRecHasIteration(snet_record_t *rec)
+{
+  return !SNetUtilStackIsEmpty(rec->iteration_counters);
 }
 
-extern int SNetRecGetIteration(snet_record_t *rec) {
+extern int SNetRecGetIteration(snet_record_t *rec)
+{
   int result;
-  switch(REC_DESCR(rec)) {
-    case REC_data:
-      if(DATA_REC(rec, counters) != NULL) {
-        result = (*(DATA_REC(rec, counters)))->counter;
-      } else {
-        printf("\n\n ** Fatal Error **: Iteration requested for data record with no initialized iterations!\n\n");
-      }
-      break;
-    default:
-      printf("\n\n ** Fatal Error **: Wrong type in RecGetIteration() (%d) \n\n", REC_DESCR(rec));
-      exit(1);
-    break;
-  }
+
+  result = *((int*)SNetUtilStackPeek(rec->iteration_counters));
+
   return result;
 }
 
-extern void SNetRecIncIteration(snet_record_t *rec) {
-  switch(REC_DESCR(rec)) {
-    case REC_data:
-      if(DATA_REC(rec, counters) != NULL) {
-        (*DATA_REC(rec, counters))->counter++;
-      } else {
-        printf("\n\n ** Fatal Error **: IncIteration requested for data record with no inizialized iterations!\n\n");
-      }
-      break;
-    default:
-      printf("\n\n ** Fatal Error **: Wrong type in RecIncIteration() (%d) \n\n", REC_DESCR(rec));
-      exit(1);
-    break;
+extern void SNetRecIncIteration(snet_record_t *rec)
+{
+  int *counter;
+
+  if(SNetUtilStackIsEmpty(rec->iteration_counters)) {
+    SNetUtilDebugFatal("IncIteration requested for record without iteration"
+                       " counter!");
   }
+  counter = ((int*)SNetUtilStackPeek(rec->iteration_counters));
+
+  *counter = *counter + 1;
 }
 
-extern void SNetRecAddIteration(snet_record_t *rec, int initial_value) {
-  struct iteration_counters *new_iteration;
-  switch(REC_DESCR(rec)) {
-    case REC_data:
-      new_iteration = SNetMemAlloc(sizeof(struct iteration_counters));
-      new_iteration->counter = initial_value;
-      new_iteration->next = *DATA_REC(rec, counters);
-      DATA_REC(rec, counters) = &new_iteration;
-    break;
-    default:
-      printf("\n\n ** Fatal Error **: Wrong type in RecAddIteration() (%d) \n\n", REC_DESCR(rec));
-    break;
-  }
+extern void SNetRecAddIteration(snet_record_t *rec, int initial_value)
+{
+  int *new_iteration;
+
+  new_iteration = (int*) malloc(sizeof(int));
+  *new_iteration = initial_value;
+
+  SNetUtilStackPush(rec->iteration_counters, new_iteration);
 }
 
-extern void SNetRecRemoveIteration(snet_record_t *rec) {
-  struct iteration_counters *to_delete;
-  switch(REC_DESCR(rec)) {
-    case REC_data:
-      to_delete = *DATA_REC(rec, counters);
-      DATA_REC(rec, counters) = &(to_delete->next);
-      SNetMemFree(to_delete);
-    break;
-    default:
-      printf("\n\n ** Fatal Error **: Wrong type in RecRemoveIteration() (%d) \n\n", REC_DESCR(rec));
-    break;
+extern void SNetRecRemoveIteration(snet_record_t *rec)
+{
+  int *old_iteration;
+
+  if(SNetUtilStackIsEmpty(rec->iteration_counters)) {
+    SNetUtilDebugFatal("Removal of iteration counter requested without any "
+                       "iterationcounters present");
   }
+
+  old_iteration = SNetUtilStackPeek(rec->iteration_counters);
+  SNetUtilStackPop(rec->iteration_counters);
+  free(old_iteration);
 }
 
 
-extern snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec) {
+extern snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec)
+{
   return( REC_DESCR( rec));
 }
 
@@ -695,10 +673,10 @@ extern void SNetRecRemoveField( snet_record_t *rec, int name) {
 
 
 extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
-  struct iteration_counters *current;
-  struct iteration_counters *new_element;
   int i;
   snet_record_t *new_rec;
+  int *temp;
+
   switch( REC_DESCR( rec)) {
   
     case REC_data:
@@ -717,32 +695,6 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
       }
       SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
 
-      /*
-       * We have to copy the stack of iteration counters into the new array;
-       * assume, this counters are:
-       * |-i1-i2-...-i(n-1)-in, whereas | is the bottom of the stack, i1 is the
-       * element first added to the stack, i2 is added after i1, ...
-       * then we create a temporary stack with the elements reversed by traversing
-       * the stack in the given record and pushing a copy of each element onto the new
-       * stack, resulting in: |-in-i(n-1)-i(n-2)-...-i2-i1.
-       * After this, we have to traverse this stack top down and push every element 
-       * on the result stack, resulting in:
-       * |-i1-i2-...-i(n-1)-in 
-       */
-      struct iteration_counters *temp = NULL;
-      current = *DATA_REC(rec, counters);
-      while(current != NULL) {
-        new_element = SNetMemAlloc(sizeof(struct iteration_counters));
-        new_element->counter = current->counter;
-        new_element->next = temp;
-        temp = new_element;
-        current = current->next;
-      }
-      while(temp != NULL) {
-        temp->next = *DATA_REC(new_rec, counters);
-        DATA_REC(new_rec, counters) = &temp;
-        temp = temp->next;
-      }
       break;
     case REC_sort_begin:
       new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_B_REC( rec, level),
@@ -760,6 +712,14 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec) {
       exit( 1);
   }
 
+  new_rec->iteration_counters = SNetUtilStackCreate();
+  SNetUtilStackGotoBottom(rec->iteration_counters);
+  while(SNetUtilStackCurrentDefined(rec->iteration_counters)) {
+    temp = malloc(sizeof(int));
+    *temp = *((int*)SNetUtilStackGet(rec->iteration_counters));
+    SNetUtilStackPush(new_rec->iteration_counters, temp);
+    SNetUtilStackUp(rec->iteration_counters);
+  }
   return( new_rec);
 }
 /*
