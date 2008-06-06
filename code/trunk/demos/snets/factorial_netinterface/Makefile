@@ -4,7 +4,7 @@ TARGET     = factorial
 
 CC         = gcc
 SNETC      = $(SNETBASE)/bin/snetc
-CCFLAGS    = -DFILTER_VERSION_2  -Dmain_$(TARGET)=main
+CCFLAGS    = -DFILTER_VERSION_2
 INCDIRS    = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
 LIBDIRS    = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
 LIBS       = -lC4SNet -lpthread -lsnet
