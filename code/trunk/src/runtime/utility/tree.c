@@ -132,8 +132,8 @@ bool SNetUtilTreeContains(snet_util_tree_t *tree, snet_util_stack_t *key) {
   if(key == NULL) {
     SNetUtilDebugFatal("SNetUtilTreeContains: key == NULL");
   }
-  return (Traverse(tree, key) == NULL);
-} 
+  return (Traverse(tree, key)->content_defined);
+}
 
 /*<!--***********************************************************************-->
  *
@@ -163,14 +163,14 @@ void *SNetUtilTreeGet(snet_util_tree_t *tree, snet_util_stack_t *key) {
   }
 
   elem = Traverse(tree, key);
-  if(elem == NULL) {
+  if(elem->content_defined ) {
+    return elem->content;
+  } else {
     SNetUtilDebugFatal("SnetUtilTreeGet: element not in tree!");
     /* unreachable */
     return NULL;
-  } else {
-    return elem;
-  }  
-} 
+  }
+}
 
 /**<!--**********************************************************************-->
  *
@@ -218,5 +218,5 @@ void SNetUtilTreeSet(snet_util_tree_t *tree, snet_util_stack_t *key,
   }
 
   tree->content = content;
-  tree->content_defined = false;
+  tree->content_defined = true;
 }
