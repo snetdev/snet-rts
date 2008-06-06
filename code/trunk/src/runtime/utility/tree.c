@@ -208,13 +208,13 @@ void SNetUtilTreeSet(snet_util_tree_t *tree, snet_util_stack_t *key,
         /* list is sorted => we ran too far => element not in list */
         new_child = malloc(sizeof(struct numerated_child));
         new_child->index = current_int;
-        new_tree = malloc(sizeof(struct tree));
+        new_tree = SNetUtilTreeCreate();
         new_child->child = new_tree;
         SNetUtilListAddBefore(tree->children, new_child);
-        tree = new_tree; 
+        tree = new_tree;
       } else if(current->index == current_int) {
         tree = current->child;
-      } 
+      }
     }
   }
 
