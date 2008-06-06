@@ -60,7 +60,7 @@ snet_util_stack_t *SNetUtilStackCreate() {
   snet_util_stack_t *result;
 
   result = SNetMemAlloc(sizeof(snet_util_stack_t));
-
+  result->data = SNetUtilListCreate();
   return result;
 }
 
