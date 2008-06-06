@@ -59,7 +59,7 @@ extern int SNetRecGetIteration(snet_record_t *rec);
  * Increments the times this record was iterated in the current star
  * by 1.
  */
-extern void SNetRecIncInteration(snet_record_t *rec);
+extern void SNetRecIncIteration(snet_record_t *rec);
 
 /*
  * Adds a new iteration counter and initializes this counter with the given
@@ -101,7 +101,6 @@ extern void SNetRecRenameField( snet_record_t *rec, int name, int new_name);
  * Deletes the record. Frees memory.
  * RETURNS: nothing
  */
- 
 
 extern void SNetRecDestroy( snet_record_t *r);
 
@@ -324,9 +323,6 @@ extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec);
 
 extern int SNetRecGetInterfaceId( snet_record_t *rec);
 extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id);
-
-extern bool SNetRecProbeFailed(snet_record_t *rec);
-
 
 #endif
 

@@ -88,7 +88,7 @@ typedef struct {
 } star_rec_t;
 
 typedef struct {
-  bool failed;
+  /* empty */
 } probe_rec_t;
 
 union record_types {
@@ -211,7 +211,6 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
     case REC_probe:
       RECPTR(rec) = SNetMemAlloc(sizeof(snet_record_types_t));
       RECORD(rec, probe_rec) = SNetMemAlloc(sizeof(sort_end_t));
-      PROBE_REC(rec, failed) = false;
     break;
 
     default:
@@ -341,22 +340,6 @@ extern void SNetRecRemoveIteration(snet_record_t *rec)
 extern snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec)
 {
   return( REC_DESCR( rec));
-}
-
-extern bool SNetRecProbeFailed(snet_record_t *rec)
-{
-  bool result;
-
-  switch(REC_DESCR(rec)) {
-    case REC_probe:
-      result = PROBE_REC(rec, failed);
-    break;
-
-    default:
-      SNetUtilDebugFatal("SNetRecordProbeFailed: Wrong record type (%d)",
-                            REC_DESCR(rec));
-  }
-  return result;
 }
 
 extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id)
@@ -755,7 +738,6 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec)
       break;
     case REC_probe:
       new_rec = SNetRecCreate(REC_probe);
-      PROBE_REC(new_rec, failed) = PROBE_REC(rec, failed);
       break;
     default:
       SNetUtilDebugFatal("Can't copy record of that type (%d)",

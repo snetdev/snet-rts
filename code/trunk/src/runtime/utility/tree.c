@@ -190,8 +190,9 @@ void *SNetUtilTreeGet(snet_util_tree_t *tree, snet_util_stack_t *key) {
  * @param the value to set
  *
  */
-void SNetUtilTreeSet(snet_util_tree_t *tree, snet_util_stack_t *key, 
-                      void *content) {
+void SNetUtilTreeSet(snet_util_tree_t *tree, snet_util_stack_t *key,
+              void *content)
+{
   int current_int;
   struct numerated_child *current;
   struct numerated_child *new_child;
@@ -219,4 +220,29 @@ void SNetUtilTreeSet(snet_util_tree_t *tree, snet_util_stack_t *key,
 
   tree->content = content;
   tree->content_defined = true;
+}
+
+/**<!--**********************************************************************-->
+ *
+ * @fn void SNetUtilTreeDelete(snet_util_tree *tree, snet_util_stack *key)
+ *
+ * @brief delets the element from the tree. If its not in there, nothing happens
+ *
+ * @param tree the tree to manipulate, must not be NULL
+ * @param key the key to kill, must not be NULL
+ *
+ ******************************************************************************/
+void SNetUtilTreeDelete(snet_util_tree_t *tree, snet_util_stack_t *key) {
+  struct tree *elem;
+  if(tree == NULL) {
+    SNetUtilDebugFatal("TreeDelete: tree == NULL");
+  }
+  if(key == NULL) {
+    SNetUtilDebugFatal("TreeDelete: key == NULL");
+  }
+  
+  elem = Traverse(tree, key);
+  if(elem != NULL) {
+    elem->content_defined = false;
+  }
 }
