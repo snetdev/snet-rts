@@ -224,7 +224,7 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
 }
 
 
-extern snet_util_stack_t *SNetRectGetIterationStack(snet_record_t *rec)
+extern snet_util_stack_t *SNetRecGetIterationStack(snet_record_t *rec)
 {
   return rec->iteration_counters;
 }

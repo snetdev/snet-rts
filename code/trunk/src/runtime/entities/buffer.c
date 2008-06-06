@@ -71,7 +71,7 @@ static void printRec( snet_buffer_t *b, snet_record_t *rec)
 }
 #endif
 
-extern snet_buffer_t *SNetBufCreate( unsigned int size) {
+snet_buffer_t *SNetBufCreate( unsigned int size) {
   snet_buffer_t *theBuffer;
        
   theBuffer = SNetMemAlloc( sizeof( snet_buffer_t));
@@ -96,7 +96,7 @@ extern snet_buffer_t *SNetBufCreate( unsigned int size) {
   return( theBuffer);
 }
 
-extern snet_buffer_t *SNetBufPut( snet_buffer_t *bf, void* elem) {
+snet_buffer_t *SNetBufPut( snet_buffer_t *bf, void* elem) {
 
    /* lock the mutex */	
   pthread_mutex_lock( bf->mxCounter);

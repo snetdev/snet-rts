@@ -306,7 +306,7 @@ static void *SyncBoxThread( void *hndl) {
         SNetBufPut( outbuf, rec);
       break;
       case REC_probe:
-        SNetBufput(SNetHndGetOutbuffer(hnd), rec);
+        SNetBufPut(SNetHndGetOutbuffer(hnd), rec);
       break;
     }
   }
