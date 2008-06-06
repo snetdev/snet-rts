@@ -229,6 +229,8 @@ static void *SyncBoxThread( void *hndl) {
           /* insert fresh state for that stack. */
           current_state = (struct sync_state *)SNetMemAlloc(
                                           sizeof(struct sync_state));
+          current->state->storage = SNetMemAlloc(num_patterns *
+                                                    sizeof(struct sync_state));
           for(i = 0; i < num_patterns; i++) {
             current_state->storage[i] = NULL;
           }
