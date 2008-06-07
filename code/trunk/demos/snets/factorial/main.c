@@ -4,7 +4,7 @@
 #include <string.h>
 #include <memfun.h>
 
-#include <C2SNet.h>
+#include <C4SNet.h>
 #include <myfuns.h>
 #include "factorial.h"
 
@@ -17,7 +17,7 @@
      printf("\n - %2d fields: ", SNetRecGetNumFields( NAME));\
     for( k=0; k<SNetRecGetNumFields( NAME); k++) {\
       printf(" %s=%d ", snet_factorial_labels[ SNetRecGetFieldNames( NAME)[k] ],\
-                        *((int*)C2SNet_cdataGetData( SNetRecGetField( NAME, SNetRecGetFieldNames( NAME)[k]))));\
+                        *((int*)C4SNet_cdataGetData( SNetRecGetField( NAME, SNetRecGetFieldNames( NAME)[k]))));\
       if( FREE) {\
         SNetMemFree( SNetRecGetField( NAME, SNetRecGetFieldNames( NAME)[k]));\
       }\
@@ -38,7 +38,7 @@ char **names;
 void initialise() {
 
   SNetGlobalInitialise();
-  C2SNet_init( 0, NULL); 
+  C4SNetInit( 0); 
 }
 
 int main() {
@@ -139,10 +139,10 @@ int main() {
 
   *F_z_1 = 42;
 
-  field1 = C2SNet_cdataCreate( F_x_1, &myfree, &mycopy, NULL);
-  field2 = C2SNet_cdataCreate( F_r_1, &myfree, &mycopy, NULL);
-  field3 = C2SNet_cdataCreate( F_x_3, &myfree, &mycopy, NULL);
-  field4 = C2SNet_cdataCreate( F_r_3, &myfree, &mycopy, NULL);
+  field1 = C4SNet_cdataCreate( F_x_1, &myfree, &mycopy, NULL, NULL);
+  field2 = C4SNet_cdataCreate( F_r_1, &myfree, &mycopy, NULL, NULL);
+  field3 = C4SNet_cdataCreate( F_x_3, &myfree, &mycopy, NULL, NULL);
+  field4 = C4SNet_cdataCreate( F_r_3, &myfree, &mycopy, NULL, NULL);
 
 
   SNetRecSetField( rec1, F__factorial__x, (void*)field1);

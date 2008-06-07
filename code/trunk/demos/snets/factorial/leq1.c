@@ -13,13 +13,13 @@ void *leq1( void *hnd, C_Data *x)
 
   bool_p = malloc( sizeof( bool));
 
-  int_x= *(int*)C2SNet_cdataGetData( x);
+  int_x= *(int*)C4SNet_cdataGetData( x);
   
   *bool_p = (int_x <= 1);
 
-  result = C2SNet_cdataCreate( bool_p, &myfree, &mycopy, NULL);
+  result = C4SNet_cdataCreate( bool_p, &myfree, &mycopy, NULL, NULL);
 
   
-  C2SNet_out( hnd, 1, x, result);
+  C4SNet_out( hnd, 1, x, result);
   return( hnd);
 }

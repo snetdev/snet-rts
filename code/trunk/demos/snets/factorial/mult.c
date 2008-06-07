@@ -11,12 +11,12 @@ void *mult( void *hnd, C_Data *x, C_Data *r)
 
   int_rr = malloc( sizeof( int));
 
-  int_x = *(int*) C2SNet_cdataGetData( x);
-  int_r = *(int*) C2SNet_cdataGetData( r);
+  int_x = *(int*) C4SNet_cdataGetData( x);
+  int_r = *(int*) C4SNet_cdataGetData( r);
   *int_rr = int_x * int_r;
 
-  result = C2SNet_cdataCreate( int_rr, &myfree, &mycopy, NULL);
+  result = C4SNet_cdataCreate( int_rr, &myfree, &mycopy, NULL, NULL);
 
-  C2SNet_out( hnd, 1, result);
+  C4SNet_out( hnd, 1, result);
   return( hnd);
 }

@@ -30,7 +30,15 @@
 
 #define SNET__factorial__NUMBER_OF_LABELS 11
 
+
+
+#define SNET__factorial__NUMBER_OF_INTERFACES 0
+
+
 extern char *snet_factorial_labels[];
+
+extern char *snet_factorial_interfaces[];
+
 
 extern snet_buffer_t *SNet__factorial___factorial(snet_buffer_t *in_buf);
 
