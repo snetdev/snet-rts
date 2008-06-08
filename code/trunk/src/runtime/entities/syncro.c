@@ -235,6 +235,9 @@ static void *SyncBoxThread( void *hndl) {
             current_state->storage[i] = NULL;
           }
           current_state->match_count = 0;
+          current_state->terminated = false;
+
+
           SNetUtilTreeSet(states, SNetRecGetIterationStack(rec), current_state);
           SNetUtilListAddEnd(to_free, current_state);
         } else {
@@ -264,8 +267,8 @@ static void *SyncBoxThread( void *hndl) {
           SNetBufPut( outbuf, rec);
         }
         else {
-          match_cnt += new_matches;
-         if( match_cnt == num_patterns) {
+          current_state->match_count += new_matches;
+          if(current_state->match_count == num_patterns) {
             #ifdef SYNC_FI_VARIANT_1
             SNetBufPut( outbuf, Merge( storage, patterns, outtype));
             #endif
@@ -299,7 +302,9 @@ static void *SyncBoxThread( void *hndl) {
         SNetUtilListGotoBeginning(to_free);
         while(SNetUtilListCurrentDefined(to_free)) {
           current_state = SNetUtilListGet(to_free);
-          free(current_state);
+          SNetUtilListNext(to_free);
+          SNetMemFree(current_state->storage);
+          SNetMemFree(current_state);
         }
         SNetUtilListDestroy(to_free);
         SNetUtilDebugNotice("[Sync] received termination record\n"
