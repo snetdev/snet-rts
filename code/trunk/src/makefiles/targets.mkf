@@ -177,7 +177,6 @@ common          = memfun.o handle.o record.o typeencode.o expression.o
 entities        = buffer.o filter.o feedbackbuffer.o graphics.o\
                   syncro.o out.o box.o alias.o\
                   serial.o collectors.o parallel.o star.o split.o
-
 utility		= list.o debug.o stack.o tree.o
 
 threading       = threading.o
