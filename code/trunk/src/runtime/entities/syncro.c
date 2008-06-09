@@ -200,6 +200,7 @@ static void *SyncBoxThread( void *hndl) {
   snet_buffer_t *outbuf;
   snet_record_t **storage;
   snet_record_t *rec;
+  snet_record_t *temp_record;
   snet_typeencoding_t *outtype;
   snet_typeencoding_t *patterns;
   snet_expr_list_t *guards;
@@ -207,6 +208,7 @@ static void *SyncBoxThread( void *hndl) {
   struct sync_state *current_state;
   snet_util_tree_t *states;
   snet_util_list_t *to_free;
+  snet_util_stack_t *temp_stack;
 
   outbuf = SNetHndGetOutbuffer( hnd);
   outtype = SNetHndGetType( hnd);
@@ -222,10 +224,11 @@ static void *SyncBoxThread( void *hndl) {
   
   while( !( terminate)) {
     rec = SNetBufGet( SNetHndGetInbuffer( hnd));
-
+    /*SNetUtilDebugNotice("sync: got record %x", (unsigned int) rec);*/
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
-        if(!SNetUtilTreeContains(states, SNetRecGetIterationStack(rec))) {
+        temp_stack = SNetRecGetIterationStack(rec);
+        if(!SNetUtilTreeContains(states, temp_stack)) {
           /* insert fresh state for that stack. */
           current_state = (struct sync_state *)SNetMemAlloc(
                                           sizeof(struct sync_state));
@@ -238,10 +241,10 @@ static void *SyncBoxThread( void *hndl) {
           current_state->terminated = false;
 
 
-          SNetUtilTreeSet(states, SNetRecGetIterationStack(rec), current_state);
+          SNetUtilTreeSet(states, temp_stack, current_state);
           SNetUtilListAddEnd(to_free, current_state);
         } else {
-          current_state = SNetUtilTreeGet(states,SNetRecGetIterationStack(rec));
+          current_state = SNetUtilTreeGet(states,temp_stack);
         }
 
         if(current_state->terminated) {
@@ -270,13 +273,17 @@ static void *SyncBoxThread( void *hndl) {
           current_state->match_count += new_matches;
           if(current_state->match_count == num_patterns) {
             #ifdef SYNC_FI_VARIANT_1
-            SNetBufPut( outbuf, Merge( storage, patterns, outtype));
+            temp_record = Merge( storage, patterns, outtype);
             #endif
             #ifdef SYNC_FI_VARIANT_2
-            SNetBufPut( outbuf, Merge( storage, patterns, outtype, rec));
+            temp_record =  Merge( storage, patterns, outtype, rec);
             #endif
-            SNetBufPut(outbuf,
-                      SNetRecCreate(REC_sync, SNetHndGetInbuffer( hnd)));
+            if(temp_record != rec) {
+              SNetRecCopyIterations(rec, temp_record);
+            }
+            /*SNetUtilDebugNotice("synccell synched => %x",
+                      (unsigned int) temp_record);*/
+            SNetBufPut(outbuf, temp_record);
             current_state->terminated = true;
          }
         }
