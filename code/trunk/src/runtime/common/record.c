@@ -352,11 +352,11 @@ extern void SNetRecCopyIterations(snet_record_t *source, snet_record_t *target)
     SNetUtilDebugFatal("RecCopyIterations: target == source!");
   }
 
-  temp_stack = SNetRecStackGetIterationStack(source);
+  temp_stack = SNetRecGetIterationStack(source);
   SNetUtilStackGotoBottom(temp_stack);
   while(SNetUtilStackCurrentDefined(temp_stack)) {
     current_counter = SNetUtilStackGet(temp_stack);
-    SNetRecAddIteration(temp_record, *current_counter);
+    SNetRecAddIteration(target, *current_counter);
     SNetUtilStackUp(temp_stack);
   }
 
