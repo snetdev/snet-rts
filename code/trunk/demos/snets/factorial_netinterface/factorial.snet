@@ -2,7 +2,7 @@
 <metadata xmlns="snet-home.org" >
   <net name="factorial" >
      <observer data="full" type="before" />
-     <observer data="full" type="after" interactive="true" />
+     <observer data="full" type="after" interactive="true" /> 
   </net>
   <net name="factorial/compute" >
      <observer data="full" type="before" interactive="true" />
@@ -22,14 +22,6 @@ net factorial({x} -> {x,<stop>})
 	<metadata xmlns="snet-home.org" >
   	    <box name="leq1" >
 		<interface name="C4SNet" />
-     	        <compiler>gcc</compiler>
-		<compilerflags>-c -I. -I../../interfaces/C/</compilerflags>
-		<boxsource>leq1.c myfuns.c</boxsource>
-  	    </box>
-  	    <box name="condif" >
-		<compiler>gcc</compiler>
-		<compilerflags>-c -I. -I../../interfaces/C/</compilerflags>
-		<boxsource>condif.c myfuns.c</boxsource>
   	    </box>
 	</metadata>
 
@@ -38,20 +30,6 @@ net factorial({x} -> {x,<stop>})
 
         net compute
         {
-		<?xml version="1.0"?>
-		<metadata xmlns="snet-home.org" >
-  	    	    <box name="sub" >
-			<compiler>gcc</compiler>
-			<compilerflags>-c -I. -I../../interfaces/C/</compilerflags>
-			<boxsource>sub.c myfuns.c</boxsource>
-  	    	    </box>
-  	    	<box name="mult" >
-			<compiler>gcc</compiler>
-			<compilerflags>-c -I. -I../../interfaces/C/</compilerflags>
-			<boxsource>mult.c myfuns.c</boxsource>
-  	    	</box>
-		</metadata>
-
                 box sub( (x) -> (xx));
                 box mult( (xm,rm) -> (rrm));
         }

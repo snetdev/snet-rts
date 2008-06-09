@@ -45,11 +45,12 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 
   /* Change this to redirect the output! */
 
-  fprintf(hnd->file, "<data mode=\"textual\" xmlns=\"snet-home.org\">");
+  fprintf(hnd->file, "<data xmlns=\"snet-home.org\">");
   if( rec != NULL) {
     switch( SNetRecGetDescriptor( rec)) {
     case REC_data:
-      fprintf(hnd->file, "<record type=\"data\" >");
+      /* TODO: take mode from record?! */
+      fprintf(hnd->file, "<record type=\"data\" mode=\"textual\" >");
 
        /* Fields */
        for( k=0; k<SNetRecGetNumFields( rec); k++) {

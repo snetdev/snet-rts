@@ -725,7 +725,8 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
   switch(SNetRecGetDescriptor( rec)) {
 
   case REC_data:
-    fprintf(file,"<record type=\"data\" >");
+    /* TODO: mode should be taken from the record?! */
+    fprintf(file,"<record type=\"data\" mode=\"textual\" >");
 
     /* fields */
     for(k=0; k<SNetRecGetNumFields( rec); k++) {    

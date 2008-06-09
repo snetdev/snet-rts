@@ -233,19 +233,19 @@ Data:         DATA_BEGIN Attributes STARTTAG_SHORTEND
 	      }
             | DATA_BEGIN Attributes 
               { /* MID-RULE: */
-		attrib_t *attr = searchAttribute($2, MODE);
+		//	attrib_t *attr = searchAttribute($2, MODE);
 
 		/* Default mode: */
-		current.mode = MODE_BINARY;
+		/*current.mode = MODE_BINARY;
 
 		if(attr != NULL) {
-		  if(strcmp(attr->value, TEXTUAL) == 0) {
-		    current.mode = MODE_TEXTUAL;
-		  }
-		  else if(strcmp(attr->value, BINARY) == 0) {
-		    current.mode = MODE_BINARY;
-		  }
+		if(strcmp(attr->value, TEXTUAL) == 0) {
+		current.mode = MODE_TEXTUAL;
 		}
+		else if(strcmp(attr->value, BINARY) == 0) {
+		current.mode = MODE_BINARY;
+		}
+		}*/
               }
 
               TAG_END Records DATA_END_BEGIN TAG_END
@@ -273,7 +273,20 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		  if(strcmp(attr->value, SNET_REC_DATA) == 0) {
 
 		    attrib_t *interface = searchAttribute($2, INTERFACE);
+		    attrib_t *mode = searchAttribute($2, MODE);
 
+		    /* Default mode: */
+		    current.mode = MODE_BINARY;
+
+		    if(mode != NULL) {
+		      if(strcmp(mode->value, TEXTUAL) == 0) {
+			current.mode = MODE_TEXTUAL;
+		      }
+		      else if(strcmp(mode->value, BINARY) == 0) {
+			current.mode = MODE_BINARY;
+		      }
+		    }
+		  
 		    if(interface != NULL) {
 		      current.record = SNetRecCreate(REC_data,
 					   SNetTencVariantEncode( 
@@ -338,13 +351,28 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		if(attr != NULL) {
 		  if(strcmp(attr->value, SNET_REC_DATA) == 0) {
 
+		    attrib_t *interface = searchAttribute($2, INTERFACE);
+		    attrib_t *mode = searchAttribute($2, MODE);
+
 		    current.record = SNetRecCreate(REC_data,
 					 SNetTencVariantEncode( 
 					     SNetTencCreateVector( 0), 
 					     SNetTencCreateVector( 0), 
 					     SNetTencCreateVector( 0)));
 
-		    attrib_t *interface = searchAttribute($2, INTERFACE);
+
+		    /* Default mode: */
+		    current.mode = MODE_BINARY;
+
+		    if(mode != NULL) {
+		      if(strcmp(mode->value, TEXTUAL) == 0) {
+			current.mode = MODE_TEXTUAL;
+		      }
+		      else if(strcmp(mode->value, BINARY) == 0) {
+			current.mode = MODE_BINARY;
+		      }
+		    }
+
 		    if(interface != NULL) {
 		      current.interface = SNetInInterfaceToId(parser.interface, 
 							      interface->value);

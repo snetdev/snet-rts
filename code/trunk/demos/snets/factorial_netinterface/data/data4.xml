@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
-<data mode="textual" xmlns="snet-home.org" >
-  <record type="data" interface="C4SNet" >
+<data xmlns="snet-home.org" >
+  <record type="data" mode="textual" interface="C4SNet" >
     <field label="x" >(int)5</field>
     <field label="r" >(int)2</field>
     <tag label="T">0</tag>
