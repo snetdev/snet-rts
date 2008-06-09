@@ -319,6 +319,7 @@ extern void SNetRecAddIteration(snet_record_t *rec, int initial_value)
   new_iteration = (int*) malloc(sizeof(int));
   *new_iteration = initial_value;
 
+  SNetUtilDebugNotice("adding an iteration to %x", (unsigned int) rec);
   SNetUtilStackPush(rec->iteration_counters, new_iteration);
 }
 
@@ -336,7 +337,30 @@ extern void SNetRecRemoveIteration(snet_record_t *rec)
   free(old_iteration);
 }
 
+extern void SNetRecCopyIterations(snet_record_t *source, snet_record_t *target)
+{
+  snet_util_stack_t *temp_stack;
+  int *current_counter;
 
+  if(source == NULL) {
+    SNetUtilDebugFatal("RecCopyIterations: source == NULL");
+  }
+  if(target == NULL) {
+    SNetUtilDebugFatal("RecCopyIterations: target == NULL");
+  }
+  if(target == source) {
+    SNetUtilDebugFatal("RecCopyIterations: target == source!");
+  }
+
+  temp_stack = SNetRecStackGetIterationStack(source);
+  SNetUtilStackGotoBottom(temp_stack);
+  while(SNetUtilStackCurrentDefined(temp_stack)) {
+    current_counter = SNetUtilStackGet(temp_stack);
+    SNetRecAddIteration(temp_record, *current_counter);
+    SNetUtilStackUp(temp_stack);
+  }
+
+}
 extern snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec)
 {
   return( REC_DESCR( rec));
