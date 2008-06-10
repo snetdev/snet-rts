@@ -1,19 +1,25 @@
 CC        = gcc
-CCFLAGS  = -Wall -g
+CCFLAGS  = -Wall -g -fPIC
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include
-
-
+SOFLAGS   = -shared -dy -Wl -allow-shlib-undefined 
+COPY      = cp
 
 # = = = = = = = = = = = = = = = = = = = =
-TARGET    = libC4SNet.a
+OBJECTS     = C4SNetTypes.o C4SNet.o 
+TARGET      = libC4SNet.so 
+WRAPOBJECTS = C4SNetc.o
+WRAPTARGET  = libC4SNetc.so
 # = = = = = = = = = = = = = = = = = = = =
-
+TARGETDIR   = $(SNETBASE)/lib
+# = = = = = = = = = = = = = = = = = = = =
 
 
 all:
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
-	$(AR) r $(TARGET) *.o 
+	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
+	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
+	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
 
 clean:
-	rm -f *.o *.a
+	rm -f *.o *.a *.so

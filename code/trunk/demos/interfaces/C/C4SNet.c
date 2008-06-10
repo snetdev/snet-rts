@@ -31,11 +31,12 @@ void C4SNet_outCompound( c4snet_container_t *c)
 
 void C4SNet_out( void *hnd, int variant, ...)
 {
+  va_list args;
+  /*
   int i;
   void **fields;
   int *tags, *btags;
   snet_variantencoding_t *v;
-  va_list args;
 
 
   v = SNetTencGetVariant( SNetHndGetType( hnd), variant);
@@ -54,8 +55,10 @@ void C4SNet_out( void *hnd, int variant, ...)
     btags[i] =  va_arg( args, int);
   }
   va_end( args);
-
-  SNetOutRawArray( hnd, my_interface_id, variant, fields, tags, btags);
+*/
+  va_start( args, variant);
+  SNetOutRawV( hnd, my_interface_id, variant, args);
+  va_end( args);
 }
 
 void C4SNet_free( void *ptr) 
@@ -183,7 +186,8 @@ c4snet_container_t *C4SNet_containerCreate( void *hnd, int var_num)
   snet_variantencoding_t *v;
 
 
-  v = SNetTencGetVariant( SNetHndGetType( hnd), var_num);
+  v = SNetTencGetVariant( 
+        SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), var_num);
 
   c = SNetMemAlloc( sizeof( c4snet_container_t));
   c->counter = SNetMemAlloc( 3 * sizeof( int));
