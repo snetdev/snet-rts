@@ -22,4 +22,4 @@ all:
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
 
 clean:
-	rm -f *.o *.a *.so
+	rm -f *.o *.a *.so $(TARGETDIR)/$(TARGET) $(TARGETDIR)/$(WRAPTARGET)

@@ -15,10 +15,6 @@
 #include <record.h>
 
 
-
-
-
-
 #define REMOVE_FROM_TENC( NAMES, TENCNUM, TENCNAMES)\
   int i, skip;\
   snet_vector_t *new;\
@@ -61,8 +57,6 @@
   return( true);
 
 
-
-
 union vfield {
   int  *ints;
   snet_variantencoding_t **v_encodes;
@@ -74,13 +68,11 @@ struct vector {
 };
 
 
-
 struct variantencode {
   snet_vector_t *field_names;
   snet_vector_t *tag_names;
   snet_vector_t *btag_names;
 };
-
 
 struct typeencode {
 //  snet_vector_t *variants;
@@ -108,6 +100,12 @@ struct patternset {
   snet_patternencoding_t **patterns;
 };
 
+struct box_sign {
+  snet_typeencoding_t *out_type;
+  snet_vector_t **mappings;
+};
+
+
 /* *********************************************************** */
 
 static void DestroyFieldVector( snet_vector_t *vect) {
@@ -116,8 +114,6 @@ static void DestroyFieldVector( snet_vector_t *vect) {
   }
   SNetMemFree( vect);         
 }
-
-
 
 static int *GetIntField( snet_vector_t *vect) {
   if( vect != NULL) {
@@ -311,7 +307,10 @@ extern snet_vector_t *SNetTencCopyVector( snet_vector_t *vec) {
   return( new_vec);
 }
 
-
+extern int SNetTencVectorGetEntry( snet_vector_t *v, int num) 
+{
+  return( v->fields.ints[num]);
+}
 
 extern void SNetTencDestroyVector( snet_vector_t *vec) {
  
@@ -651,11 +650,42 @@ extern void SNetTencDestroyPatternSet( snet_patternset_t *patset) {
   SNetMemFree( patset);
 }
 
+snet_box_sign_t *SNetTencBoxSignEncode( snet_typeencoding_t *t, ...)
+{
+  int i;
+  va_list args;
+  snet_box_sign_t *sign;
 
+  sign = SNetMemAlloc( sizeof( snet_box_sign_t));
+  sign->out_type = t;
+  sign->mappings = 
+    SNetMemAlloc( SNetTencGetNumVariants( t) * sizeof( snet_vector_t*));
 
+  va_start( args, t);
+  for( i=0; i<SNetTencGetNumVariants( t); i++) {
+    sign->mappings[i] = va_arg( args, snet_vector_t*);
+  }
+  va_end( args);
 
+  return( sign);
+}
 
+snet_typeencoding_t *SNetTencBoxSignGetType( snet_box_sign_t *t)
+{
+  return( t->out_type);
+}
+extern snet_vector_t *SNetTencBoxSignGetMapping( snet_box_sign_t *t, int num)
+{
+  return( t->mappings[num]);
+}
+void SNetTencBoxSignDestroy( snet_box_sign_t *t)
+{
+  int i;
 
-
-
-
+  for( i=0; i<SNetTencGetNumVariants( t->out_type); i++) {
+    SNetTencDestroyVector( t->mappings[i]);
+  }
+  SNetDestroyTypeEncoding( t->out_type);
+  SNetMemFree( t->mappings);
+  SNetMemFree( t);
+}

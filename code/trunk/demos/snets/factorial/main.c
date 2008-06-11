@@ -119,7 +119,7 @@ int main() {
   F_r_5 = SNetMemAlloc( sizeof( int));
   F_r_6 = SNetMemAlloc( sizeof( int));
 
-  *F_x_1 = 2; 
+  *F_x_1 = 4; 
   *F_r_1 = 1;
 
   *F_x_2 = 2;

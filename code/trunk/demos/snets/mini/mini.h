@@ -23,8 +23,9 @@
 #define SNET__mini__NUMBER_OF_LABELS 3
 
 
+#define I__mini__SAC2SNet 0
 
-#define SNET__mini__NUMBER_OF_INTERFACES 0
+#define SNET__mini__NUMBER_OF_INTERFACES 1
 
 
 extern char *snet_mini_labels[];

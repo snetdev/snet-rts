@@ -40,9 +40,6 @@
   VAL_OR_NULL( PREFIX, FILTER, filter_instructions, va_arg( args, int*))
 
 
-
-
-
 typedef struct {
   int num;
   char **string_names;
@@ -54,7 +51,7 @@ typedef struct {
   snet_buffer_t *outbuf_a;
   snet_record_t *rec;
   void (*boxfun_a)( snet_handle_t*);
-  snet_typeencoding_t *type;
+  snet_box_sign_t *sign;
   name_mapping_t *mapping;
 } box_handle_t;
 
@@ -183,7 +180,7 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
             BOX_HND( outbuf_a) = va_arg( args, snet_buffer_t*);
             BOX_HND( rec) = va_arg( args, snet_record_t*);
             BOX_HND( boxfun_a) = va_arg( args, void*);
-            BOX_HND( type) = va_arg( args, snet_typeencoding_t*);
+            BOX_HND( sign) = va_arg( args, snet_box_sign_t*);
             BOX_HND( mapping) = NULL;
             break;
     }
@@ -322,6 +319,7 @@ extern void SNetHndDestroy( snet_handle_t *hnd) {
         SNetMemFree( BOX_HND_MAPPING( string_names));
         SNetMemFree( BOX_HND_MAPPING( int_names));
       }
+      SNetTencBoxSignDestroy( BOX_HND( sign));
       SNetMemFree( HANDLE( box_hnd)); 
       break;
     case HND_parallel: 
@@ -643,9 +641,6 @@ extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hnd) {
   snet_typeencoding_t *type;
 
   switch( hnd->descr) {
-    case HND_box: 
-      type = BOX_HND( type); 
-      break;
     case HND_star: 
       type = STAR_HND( type); 
       break;
@@ -658,6 +653,19 @@ extern snet_typeencoding_t *SNetHndGetType( snet_handle_t *hnd) {
   return( type);
 }
 
+snet_box_sign_t *SNetHndGetBoxSign( snet_handle_t *hnd)
+{
+  snet_box_sign_t *t;
+
+  switch( hnd->descr) {
+    case HND_box: 
+      t = BOX_HND( sign); 
+      break;
+   default: WrongHandleType();
+  }
+
+  return( t);
+}
 
 extern snet_typeencoding_list_t *SNetHndGetTypeList( snet_handle_t *hnd) {
  

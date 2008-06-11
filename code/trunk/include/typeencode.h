@@ -7,12 +7,24 @@
 #define TYPEENCODE_H
 
 #include <bool.h>
+
+typedef enum {
+  field, tag, btag
+} snet_type_t;
+
+typedef struct {
+  int num;
+  snet_type_t *type;
+} snet_input_type_enc_t;
+
 typedef struct vector snet_vector_t;
 
 typedef struct typeencode snet_typeencoding_t;
 typedef struct typeencoding_list snet_typeencoding_list_t;
 
 typedef struct variantencode snet_variantencoding_t;
+
+typedef struct box_sign snet_box_sign_t;
 
 typedef struct patternencoding snet_patternencoding_t;
 
@@ -22,11 +34,11 @@ struct record;
 /* ****************************************************************** */
 
 
+/* returns true if the record matches the pattern. */
+extern bool SNetTencPatternMatches(snet_variantencoding_t *pat, struct record *rec);
 
 /* --- Vector Functions --- */
 
-/* returns true if the record matches the pattern. */
-extern bool SNetTencPatternMatches(snet_variantencoding_t *pat, struct record *rec);
 /*
  * Creates a vector with "num" entries. 
  * The entries must be given as parameter (exactly "num" of them).
@@ -57,6 +69,7 @@ extern snet_vector_t *SNetTencCreateEmptyVector( int num);
 
 extern void SNetTencSetVectorEntry( snet_vector_t *vect, int num, int val);
 
+extern int SNetTencVectorGetEntry( snet_vector_t *v, int num); 
 
 
 
@@ -358,6 +371,13 @@ extern snet_patternencoding_t *SNetTencGetPatternEncoding( snet_patternset_t *pa
 
 
 extern void SNetTencDestroyPatternSet( snet_patternset_t *patset);
+
+
+extern snet_box_sign_t *SNetTencBoxSignEncode( snet_typeencoding_t *t, ...);
+extern snet_typeencoding_t *SNetTencBoxSignGetType( snet_box_sign_t *t);
+extern snet_vector_t *SNetTencBoxSignGetMapping( snet_box_sign_t *t, int num);
+extern void SNetTencBoxSignDestroy( snet_box_sign_t *t);
+
 
 #endif
 

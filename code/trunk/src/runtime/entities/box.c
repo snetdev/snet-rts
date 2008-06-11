@@ -82,14 +82,14 @@ static void *BoxThread( void *hndl) {
 
 extern snet_buffer_t *SNetBox( snet_buffer_t *inbuf, 
                                         void (*boxfun)( snet_handle_t*), 
-                         snet_typeencoding_t *outspec) {
+                             snet_box_sign_t *out_signs) {
 
   snet_buffer_t *outbuf;
   snet_handle_t *hndl;
   
 
   BUF_CREATE( outbuf, BUFFER_SIZE);
-  hndl = SNetHndCreate( HND_box, inbuf, outbuf, NULL, boxfun, outspec);
+  hndl = SNetHndCreate( HND_box, inbuf, outbuf, NULL, boxfun, out_signs);
 
   SNetThreadCreate( (void*)BoxThread, (void*)hndl, ENTITY_box);
   

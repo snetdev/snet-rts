@@ -8,6 +8,6 @@ external classtype;
 provide all;
 
 external void out( SNet &handle, int variant, ...);
-  #pragma linkname "SAC2SNet_out"
+  #pragma linkname "SAC4SNet_out"
   #pragma linksign [1,2]
 

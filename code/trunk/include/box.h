@@ -5,7 +5,7 @@
 #include "handle.h"
 #include "typeencode.h"
 snet_buffer_t *SNetBox(snet_buffer_t *inbuf, 
-                        void (*boxfun) (snet_handle_t*),
-                    snet_typeencoding_t *outspec);
+                       void (*boxfun) (snet_handle_t*),
+                       snet_box_sign_t *sign);
 
 #endif

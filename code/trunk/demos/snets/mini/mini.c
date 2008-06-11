@@ -12,14 +12,17 @@
 */
 
 #include "mini.h"
+#include "networkinterface.h"
+#include "SAC2SNet.h"
 #include "A.h"
 
 char *snet_mini_labels[] = {
 	"E__mini__None",
-	"F__mini__A",
-	"F__mini__B"};
+	"A",
+	"B"};
 
-char *snet_mini_interfaces[] = {};
+char *snet_mini_interfaces[] = {
+	"SAC2SNet"};
 
 static void SNet__mini__A(snet_handle_t *hnd) {
   snet_record_t *rec = NULL;
@@ -47,5 +50,15 @@ snet_buffer_t *SNet__mini___mini(snet_buffer_t *in_buf) {
               out_type);
 
   return (out_buf);
+}
+
+int main_mini(int argc, char* argv[])
+{
+  SNetGlobalInitialise();
+  SAC2SNet_init(I__mini__SAC2SNet);
+  
+  return SNetInRun(snet_mini_labels, SNET__mini__NUMBER_OF_LABELS,
+              snet_mini_interfaces, SNET__mini__NUMBER_OF_INTERFACES,
+              SNet__mini___mini);
 }
 

@@ -188,15 +188,15 @@ fi
 dnl check for pthread flag on gcc
 if test "$GCC" = yes; then
   AC_MSG_CHECKING([existence of pthread flag])
-  echo "int main(){return 0;}" > .sac_configure_temp.c
-  if test "`gcc -o .snet_configure_temp -pthread .snet_configure_temp.c 2>&1 | grep "unrecognized option"`" = ""; then
+  echo "int main(){return 0;}" > .snet_configure_temp.c
+  if test "`gcc -o .snet_configure_temp -pthread .snet_configure_temp.c 2>&1 | grep unrecognized `" = ""; then
     AC_MSG_RESULT([supported])
     GCC_PTHREADS="-pthread"
   else
     AC_MSG_RESULT([unsupported])
     GCC_PTHREADS="-lpthread"
   fi
-  rm -f .sac_configure_temp.c .sac_configure_temp
+  rm -f .snet_configure_temp.c .snet_configure_temp
 fi
 
 dnl check whether we need to link libm
@@ -337,6 +337,14 @@ AC_SUBST(LD_PATH)
 dnl 
 dnl static sac2c settings for config.h
 dnl
+
+dnl check if $SNETBASE is set
+AC_MSG_CHECKING([if SNETBASE is set])
+if test "`echo $SNETBASE`" = ""; then
+  AC_MSG_RESULT([no \n\n!!!Please set environment variable SNETBASE!!!\n])
+else
+  AC_MSG_RESULT([yes])
+fi
 
 
 dnl generate configure dependent files

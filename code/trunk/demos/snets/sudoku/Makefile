@@ -5,7 +5,7 @@ INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/SAC\
 	    -I./include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/SAC\
 	    -L./lib
-LIBS      = -lpthread -lsnet -lSAC2SNet
+LIBS      = -lpthread -lsnet -lSAC2SNet -lsocket -lnsl
 
 # SAC SimpleFibre library
 FIBREOBJS = $(SACBASE)/stdlib/world/stdio/src/FibreIO/*.o

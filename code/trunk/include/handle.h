@@ -1,5 +1,5 @@
-/*
- * 
+/* 
+ * $Id$
  */
 
 #ifndef HANDLE_H
@@ -45,11 +45,6 @@ typedef enum {
 
 typedef struct handle snet_handle_t;
 
-//typedef struct filter_instruction     snet_filter_instruction_t;
-//typedef struct filter_instruction_set snet_filter_instruction_set_t;
-
-
-
 typedef struct filter_instruction {
   snet_filter_opcode_t opcode;
   int *data;
@@ -65,6 +60,12 @@ typedef struct filter_instruction_set_list {
   int num;
   snet_filter_instruction_set_t **lst;
 } snet_filter_instruction_set_list_t;
+
+
+
+//typedef struct filter_instruction snet_filter_instruction_t;
+//typedef struct filter_instruction_set snet_filter_instruction_set_t;
+//typedef struct filter_instruction_set_list snet_filter_instruction_set_list_t;
 
 
 extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionList( int num, ...);
@@ -127,11 +128,11 @@ extern snet_expr_list_t
 
 extern bool SNetHndIsIncarnate( snet_handle_t *hnd);
 
-extern void SNetHndSetStringNames( snet_handle_t *hnd, int num, ...);
-
 extern void SNetHndDestroy( snet_handle_t *hndl);
 extern snet_handle_t *SNetHndCopy( snet_handle_t *hnd);
 
 extern bool SNetHndIsDet( snet_handle_t *hnd);
+
+snet_box_sign_t *SNetHndGetBoxSign( snet_handle_t *hnd);
 
 #endif
