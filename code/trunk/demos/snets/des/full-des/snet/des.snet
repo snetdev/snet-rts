@@ -4,6 +4,7 @@ net des ( {Key, Pt} -> {Ct}) {
 
   box InitialP( (Pt) -> (L, R));
   box genSubKeys( (Key) -> (KeySet));
+  box KeyInvert( (KeySet) -> (KeySet));
   box FinalP( (L, R) -> (Ct));
 
   net desRound {
@@ -46,9 +47,7 @@ net des ( {Key, Pt} -> {Ct}) {
              )
            ) .. [|{L}, {R,KeySet,<C>}|]*{L,R,KeySet,<C>};
 
-} connect InitialP .. 
-genSubKeys ..
-[{L,R,KeySet} -> {L,R,KeySet,<C=(0-1)>}] .. 
-desRound*{<C>} if <C==15> .. 
-FinalP .. 
-[{KeySet, <C>} -> {}];
+} connect genSubKeys .. ( [] | ([{<Decipher>} -> {}] .. KeyInvert)) ..
+          InitialP .. [{L,R,KeySet} -> {L,R,KeySet,<C=0>}] .. 
+          desRound*{<C>} if <C==16> .. 
+          FinalP .. [{KeySet, <C>} -> {}];

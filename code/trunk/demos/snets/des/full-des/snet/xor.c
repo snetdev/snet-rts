@@ -1,5 +1,5 @@
 #include <xor.h>
-#include <cwrapper.h>
+#include "desboxes.h"
 #include <sacinterface.h>
 
 void *xor( void *hnd, void *ptr_1, void *ptr_2)

@@ -2,6 +2,8 @@ module desboxes;
 
 import String:{to_string};
 
+use sacprelude: {wrap};
+
 use Structures: all except { to_string};
 use StdIO: all;
 
@@ -177,6 +179,13 @@ int[ ., .] genSubKeys( int[.] key)
         } : genarray( [16], genarray( [48], 0 ) );
 
   return( res);
+}
+
+void KeyInvert( SNet::SNet &hnd, int[.,.] KeySet)
+{
+  decipher_keys = reverse( KeySet);
+
+  SNet::out( hnd, 1, wrap( decipher_keys));
 }
 
 int[.,.],int[.],int SubKey( int[ ., .] keySet, int c)

@@ -8,7 +8,7 @@
 #include <memfun.h>
 #include <SAC2SNet.h>
 
-#include <cwrapper.h>
+#include "desboxes.h"
 #include <des.h>
 
 #define MAX_PT_LEN 65536 
@@ -75,18 +75,18 @@ void *Feeder( void *buf)
       current_block[j]= bit_array[(i*64)+j];
       fprintf(stderr, "%d ", current_block[j]);
     }
-/*    if( DECIPHER) {
+    if( DECIPHER) {
       type1 = SNetTencVariantEncode( 
               SNetTencCreateVector( 2 , F__des__Pt, F__des__Key),
               SNetTencCreateVector( 1, T__des__Decipher),
               SNetTencCreateVector( 0));
     }
-    else {*/
+    else {
       type1 = SNetTencVariantEncode( 
               SNetTencCreateVector( 2 , F__des__Pt, F__des__Key),
               SNetTencCreateVector( 0),
               SNetTencCreateVector( 0));
-/*    }*/
+    }
 
    rec1 = SNetRecCreate( REC_data, type1);
    SNetRecSetField( rec1, F__des__Pt, 
@@ -142,13 +142,7 @@ int main(int argc, char **argv)
   snet_buffer_t *inbuf, *outbuf;
   pthread_t feeder, reader;
 
-  if( argc > 1) {
-    DECIPHER = true;
-  }
-  else {
-    DECIPHER = false;
-  }
-
+  DECIPHER = ( argc > 1);
 
   /* Prepare buffer */
   inbuf = SNetBufCreate( 10);

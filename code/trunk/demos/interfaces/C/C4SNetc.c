@@ -1,10 +1,12 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "C4SNetc.h"
 
 
 
 #define MAX_ARGS 99
-#define STRAPPEND( dest, src)     dest = strappend( dest, src)
+// #define STRAPPEND( dest, src)     dest = strappend( dest, src)
+#define STRAPPEND( dest, src)  
 
 static char *itoa( int val)
 {
@@ -28,7 +30,7 @@ static char *itoa( int val)
       break;
     }
    }
-  str = malloc( len * sizeof( char));
+  str = malloc( (len + 1) * sizeof( char));
   strcpy(str,&result[MAX_ARGS-len]);
   free( result);
 
@@ -39,8 +41,14 @@ static char *itoa( int val)
 static char *strappend( char *dest, char *src)
 {
   char *res;
-  res = realloc( dest, (strlen( dest) + strlen( src) + 1) * sizeof( char));
+  int newlen;
+  
+  newlen = (strlen( dest) + strlen( src) + 1);
+  res = malloc( newlen * sizeof( char));
+  strcpy( res, dest);
   strcat( res, src);
+  
+  free( dest);
 
   return( res);
 }
@@ -54,7 +62,7 @@ char *C4SNetGenBoxWrapper( char *box_name,
 
   /* construct full SAC function name */
   c_fqn = box_name;
-
+  
   /* generate prototype of SAC function */
   wrapper_code = 
     malloc( ( strlen( "extern void *") + 1) * sizeof( char)); 
