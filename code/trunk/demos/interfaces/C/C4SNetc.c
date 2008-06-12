@@ -5,8 +5,7 @@
 
 
 #define MAX_ARGS 99
-// #define STRAPPEND( dest, src)     dest = strappend( dest, src)
-#define STRAPPEND( dest, src)  
+#define STRAPPEND( dest, src)     dest = strappend( dest, src)
 
 static char *itoa( int val)
 {
