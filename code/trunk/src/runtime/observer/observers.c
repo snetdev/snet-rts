@@ -739,7 +739,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
     for(k=0; k<SNetRecGetNumFields( rec); k++) {    
       int id = SNetRecGetInterfaceId(rec);  
    
-      if(mode == MODE_textual) { 
+      if(mode == MODE_textual) {
 	fun = SNetGetSerializationFun(id);
       }else {
 	fun = SNetGetEncodingFun(id);
