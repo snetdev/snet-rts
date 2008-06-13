@@ -48,7 +48,8 @@ void SAC4SNet_out( void *hnd, int variant, ...)
   va_list args;
 
 
-  venc = SNetTencGetVariant( SNetHndGetType( hnd), variant);
+  venc = SNetTencGetVariant(
+           SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), variant);
   fields = SNetMemAlloc( SNetTencGetNumFields( venc) * sizeof( void*));
   tags = SNetMemAlloc( SNetTencGetNumTags( venc) * sizeof( int));
   btags = SNetMemAlloc( SNetTencGetNumBTags( venc) * sizeof( int));
