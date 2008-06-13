@@ -379,7 +379,7 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 			current.mode = MODE_BINARY;
 		      }
 		    }
-
+	
 		    if(current.mode == MODE_BINARY) {
 		      SNetRecSetDataMode(current.record, MODE_binary);
 		    }

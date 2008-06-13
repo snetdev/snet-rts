@@ -852,12 +852,12 @@ extern bool SNetRecHasField( snet_record_t *rec, int name)
   return( result);
 }
 
-extern snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mode)
+extern snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mod)
 {
 
   switch( REC_DESCR( rec)) {
     case REC_data:
-      DATA_REC( rec, mode) = mode;
+      DATA_REC( rec, mode) = mod;
       break;
     default:
       SNetUtilDebugFatal("Wrong type in RECSetMode() (%d)", REC_DESCR(rec));
