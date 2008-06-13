@@ -122,6 +122,10 @@ void *C4SNet_decode(FILE *file)
 
   for(j = 0; j < 5; j++) {
     buf[j] = fgetc(file);
+    if(buf[j] == '<') {
+      ungetc('<', file);
+      return NULL;
+    }
   }
 
   if(strncmp(buf, "(int)", 5) == 0) {
@@ -137,8 +141,16 @@ void *C4SNet_decode(FILE *file)
   }
   else { 
 
-    buf[j++] = fgetc(file);
-    buf[j++] = fgetc(file);
+    buf[j] = fgetc(file);
+    if(buf[j] == '<') {
+      ungetc('<', file);
+      return NULL;
+    }
+    buf[++j] = fgetc(file);
+    if(buf[j] == '<') {
+      ungetc('<', file);
+      return NULL;
+    }
   
     if(strncmp(buf, "(float)", 7) == 0) {
 
@@ -154,6 +166,6 @@ void *C4SNet_decode(FILE *file)
       }
     }
   }
-  
+ 
   return NULL;
 }

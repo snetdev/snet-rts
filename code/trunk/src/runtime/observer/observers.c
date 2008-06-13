@@ -705,6 +705,8 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
   int k, i;
   char *label = NULL;
   char *interface = NULL;
+  snet_record_mode_t mode;
+  int (*fun)(FILE *,void *);
   
   fprintf(file,"<?xml version=\"1.0\"?>");
   fprintf(file,"<data xmlns=\"snet-home.org\">");
@@ -725,13 +727,23 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
   switch(SNetRecGetDescriptor( rec)) {
 
   case REC_data:
-    /* TODO: mode should be taken from the record?! */
-    fprintf(file,"<record type=\"data\" mode=\"textual\" >");
+    mode = SNetRecGetDataMode(rec);
+    
+    if(mode == MODE_textual) {
+      fprintf(file, "<record type=\"data\" mode=\"textual\" >");
+    }else {
+      fprintf(file, "<record type=\"data\" mode=\"binary\" >");
+    }
 
     /* fields */
     for(k=0; k<SNetRecGetNumFields( rec); k++) {    
-      int id = SNetRecGetInterfaceId(rec);     
-      int (*fun)(FILE *,void *) = SNetGetSerializationFun(id);
+      int id = SNetRecGetInterfaceId(rec);  
+   
+      if(mode == MODE_textual) { 
+	fun = SNetGetSerializationFun(id);
+      }else {
+	fun = SNetGetEncodingFun(id);
+      }
 
       i = SNetRecGetFieldNames( rec)[k];
       if((label = SNetInIdToLabel(labels, i)) != NULL){

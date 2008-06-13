@@ -62,6 +62,7 @@ typedef struct {
   int *tags;
   int *btags;
   int interface_id;
+  snet_record_mode_t mode;
 } data_rec_t;
 
 typedef struct {
@@ -181,6 +182,7 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       DATA_REC( rec, btags) = SNetMemAlloc( SNetTencGetNumBTags( v_enc)
                                               * sizeof( int));
       DATA_REC( rec, v_enc) = v_enc;
+      DATA_REC( rec, mode) = MODE_binary;
       break;
     case REC_sync:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
@@ -748,6 +750,8 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec)
       }
       SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
 
+      SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
+
       break;
     case REC_sort_begin:
       new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_B_REC( rec, level),
@@ -844,6 +848,38 @@ extern bool SNetRecHasField( snet_record_t *rec, int name)
 
   result = ( FindName( SNetRecGetFieldNames( rec),
              SNetRecGetNumTags( rec), name) == NOT_FOUND) ? false : true;
+
+  return( result);
+}
+
+extern snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mode)
+{
+
+  switch( REC_DESCR( rec)) {
+    case REC_data:
+      DATA_REC( rec, mode) = mode;
+      break;
+    default:
+      SNetUtilDebugFatal("Wrong type in RECSetMode() (%d)", REC_DESCR(rec));
+      break;
+  }
+
+  return( rec);
+}
+
+extern snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec)
+{
+
+  snet_record_mode_t result;
+
+  switch( REC_DESCR( rec)) {
+    case REC_data:
+      result = DATA_REC( rec, mode);
+      break;
+    default:
+      SNetUtilDebugFatal("Wrong type in RECGetMode() (%d)", REC_DESCR(rec));
+      break;
+  }
 
   return( result);
 }

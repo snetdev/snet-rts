@@ -42,6 +42,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
   int k = 0;
   int i = 0;
   char *label = NULL;
+  snet_record_mode_t mode;
 
   /* Change this to redirect the output! */
 
@@ -49,63 +50,69 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
   if( rec != NULL) {
     switch( SNetRecGetDescriptor( rec)) {
     case REC_data:
-      /* TODO: take mode from record?! */
-      fprintf(hnd->file, "<record type=\"data\" mode=\"textual\" >");
 
-       /* Fields */
-       for( k=0; k<SNetRecGetNumFields( rec); k++) {
-	 int (*fun)(FILE *, void *);
-	 i = SNetRecGetFieldNames( rec)[k];
+      mode = SNetRecGetDataMode(rec);
+      
+      if(mode == MODE_textual) {
+	fprintf(hnd->file, "<record type=\"data\" mode=\"textual\" >");
+      }else {
+	fprintf(hnd->file, "<record type=\"data\" mode=\"binary\" >");
+      }
 
-	 int id = SNetRecGetInterfaceId(rec);
-
-	 //if(/*decideByMagic() -> TODO: mode needs to be added to records */) { 
-	   fun = SNetGetSerializationFun(id);
-	 //}else {
-	 //  fun = SNetGetEncodingFun(id);
-	 //}
-
-	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	   fprintf(hnd->file, "<field label=\"%s\" interface=\"%s\">", label, 
+      /* Fields */
+      for( k=0; k<SNetRecGetNumFields( rec); k++) {
+	int (*fun)(FILE *, void *);
+	i = SNetRecGetFieldNames( rec)[k];
+	
+	int id = SNetRecGetInterfaceId(rec);
+	
+	if(mode == MODE_textual) { 
+	  fun = SNetGetSerializationFun(id);
+	}else {
+	  fun = SNetGetEncodingFun(id);
+	}
+	
+	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
+	  fprintf(hnd->file, "<field label=\"%s\" interface=\"%s\">", label, 
 	   	  SNetInIdToInterface(hnd->interfaces, id));
-
-	   fun(hnd->file, SNetRecGetField(rec, i));
-
-	   fprintf(hnd->file, "</field>");
-	 }else{
-	   /* Error: unknown label! */
-	 }
 	  
-	 SNetMemFree(label);
-       }
-
+	  fun(hnd->file, SNetRecGetField(rec, i));
+	  
+	  fprintf(hnd->file, "</field>");
+	}else{
+	  /* Error: unknown label! */
+	}
+	
+	SNetMemFree(label);
+      }
+      
        /* Tags */
-       for( k=0; k<SNetRecGetNumTags( rec); k++) {
-	 i = SNetRecGetTagNames( rec)[k];
-
-	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	   fprintf(hnd->file, "<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
-	 }else{
-	   /* Error: unknown label! */
-	 }
-
-	 SNetMemFree(label);
-       }
-
-       /* BTags */
-       for( k=0; k<SNetRecGetNumBTags( rec); k++) {
-	 i = SNetRecGetBTagNames( rec)[k];
-
-	 if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	   fprintf(hnd->file, "<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
-	 }else{
-	   /* Error: unknown label! */
-	 }
-
-	 SNetMemFree(label);
-       }
-       fprintf(hnd->file, "</record>");
-       break;
+      for( k=0; k<SNetRecGetNumTags( rec); k++) {
+	i = SNetRecGetTagNames( rec)[k];
+	
+	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
+	  fprintf(hnd->file, "<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
+	}else{
+	  /* Error: unknown label! */
+	}
+	
+	SNetMemFree(label);
+      }
+      
+      /* BTags */
+      for( k=0; k<SNetRecGetNumBTags( rec); k++) {
+	i = SNetRecGetBTagNames( rec)[k];
+	
+	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
+	  fprintf(hnd->file, "<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
+	}else{
+	  /* Error: unknown label! */
+	}
+	
+	SNetMemFree(label);
+      }
+      fprintf(hnd->file, "</record>");
+      break;
     case REC_sync: /* TODO: What additional data is needed? */
       fprintf(hnd->file, "<record type=\"sync\" />");
     case REC_collect: /* TODO: What additional data is needed? */

@@ -296,6 +296,13 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 
 		      current.interface = SNetInInterfaceToId(parser.interface, interface->value);
 		      SNetRecSetInterfaceId(current.record, current.interface);
+
+		      if(current.mode == MODE_BINARY) {
+			SNetRecSetDataMode(current.record, MODE_binary);
+		      }
+		      else {
+			SNetRecSetDataMode(current.record, MODE_textual);
+		      }
 		    }
 
 		  }else if(strcmp(attr->value, SNET_REC_SYNC) == 0){
@@ -373,6 +380,13 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      }
 		    }
 
+		    if(current.mode == MODE_BINARY) {
+		      SNetRecSetDataMode(current.record, MODE_binary);
+		    }
+		    else {
+		      SNetRecSetDataMode(current.record, MODE_textual);
+		    }
+		    
 		    if(interface != NULL) {
 		      current.interface = SNetInInterfaceToId(parser.interface, 
 							      interface->value);
@@ -525,7 +539,7 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	      if(current.mode == MODE_TEXTUAL) {
 		fun = SNetGetDeserializationFun(iid);
 	      } else if(current.mode == MODE_BINARY) {
-		fun = SNetGetEncodingFun(iid);
+		fun = SNetGetDecodingFun(iid);
 	      } else {
 		yyerror("Unknown data mode");
 	      }

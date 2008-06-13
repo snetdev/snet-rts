@@ -31,6 +31,11 @@ typedef enum {
   REC_probe
 } snet_record_descr_t;
 
+typedef enum {
+	MODE_textual,
+	MODE_binary,
+} snet_record_mode_t;
+
 
 
 /*
@@ -325,6 +330,9 @@ extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec);
 
 extern int SNetRecGetInterfaceId( snet_record_t *rec);
 extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id);
+
+extern snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec);
+extern snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mode);
 
 #endif
 
