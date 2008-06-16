@@ -309,16 +309,20 @@ static void *SyncBoxThread( void *hndl) {
         break;
     case REC_terminate:
         SNetUtilTreeDestroy(states);
+        /* check if all storages are empty */
         SNetUtilListGotoBeginning(to_free);
         while(SNetUtilListCurrentDefined(to_free)) {
           current_state = SNetUtilListGet(to_free);
           SNetUtilListNext(to_free);
+          if(!current_state->terminated) {
+            SNetUtilDebugNotice("[Sync] received termination record - "
+                                 "stored records are discarded");
+          }
           SNetMemFree(current_state->storage);
           SNetMemFree(current_state);
         }
         SNetUtilListDestroy(to_free);
-        SNetUtilDebugNotice("[Sync] received termination record\n"
-                                "stored records are discarded");
+
         terminate = true;
         SNetBufPut( outbuf, rec);
       break;
@@ -333,7 +337,6 @@ static void *SyncBoxThread( void *hndl) {
   SNetDestroyTypeEncoding( outtype);
   SNetDestroyTypeEncoding( patterns);
   SNetHndDestroy( hnd);
-  SNetMemFree( storage);
 
   return( NULL);
 }
