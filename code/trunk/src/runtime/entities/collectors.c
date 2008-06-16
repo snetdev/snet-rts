@@ -243,6 +243,7 @@ static void *DetCollector( void *info) {
               break;
 
             case REC_probe:
+              SNetUtilDebugNotice("collector probed");
               /* we are only allowed to foward a probe record if this record
                * type is present on all input streams.
                */
@@ -258,7 +259,8 @@ static void *DetCollector( void *info) {
                 if(all_probed) {
                   tmp_elem = SNetUtilListGet(lst);
                   temp_record = SNetBufShow(tmp_elem->buf);
-                  if(SNetRecGetDescriptor(temp_record) != REC_probe) {
+                  if(temp_record == NULL ||
+                     SNetRecGetDescriptor(temp_record) != REC_probe) {
                     all_probed = false;
                   }
                 }
@@ -279,6 +281,7 @@ static void *DetCollector( void *info) {
                 SNetBufPut(outbuf, temp_record);
                 SNetUtilListRotateForward(lst);
               }
+              SNetUtilDebugNotice("collector probing done");
             break;
           } // switch
         } // if
@@ -349,6 +352,7 @@ static void *Collector( void *info) {
             case REC_data:
               tmp_elem = SNetUtilListGet(lst);
               if(CompareSortRecords(tmp_elem->current, current_sort_rec)) {
+                SNetUtilDebugNotice("moving data");
                 rec = SNetBufGet( tmp_elem->buf);
                 SNetBufPut( outbuf, rec);
                 processed_record = true;
@@ -473,6 +477,7 @@ static void *Collector( void *info) {
 
               break;
             case REC_probe:
+              SNetUtilDebugNotice("probing in collector");
               /* we are only allowed to foward a probe record if this record
                * type is present on all input streams.
                */
@@ -488,12 +493,17 @@ static void *Collector( void *info) {
                 if(all_probed) {
                   tmp_elem = SNetUtilListGet(lst);
                   temp_record = SNetBufShow(tmp_elem->buf);
-                  if(SNetRecGetDescriptor(temp_record) != REC_probe) {
+                  if(temp_record == NULL ||
+                     SNetRecGetDescriptor(temp_record) != REC_probe) {
+                    SNetUtilDebugNotice("fail at %d with %d", i, 
+                                          (temp_record == NULL? -1 : SNetRecGetDescriptor(temp_record)));
                     all_probed = false;
+                    break; /* for */
                   }
                 }
                 SNetUtilListRotateForward(lst);
               }
+              SNetUtilDebugNotice("%d", all_probed);
               if(all_probed) {
                 /* all input buffers are probed, lets remove those
                  * probes! (and pass one to the outer world)
@@ -508,6 +518,7 @@ static void *Collector( void *info) {
                 temp_record = SNetBufGet(tmp_elem->buf);
                 SNetBufPut(outbuf, temp_record);
                 SNetUtilListRotateForward(lst);
+                SNetUtilDebugNotice("removed all probes");
               }
             break;
           } // switch

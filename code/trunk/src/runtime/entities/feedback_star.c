@@ -101,8 +101,7 @@ static bool TakeFromFeedback(int recs_from_feedback, int recs_from_data_in) {
     return true;
   }
 }
-static void
-StarEntryThread(void* input)
+static void *StarEntryThread(void* input)
 {
   struct star_entry_input *c_input = (struct star_entry_input*) input;
   snet_buffer_t *data_in = c_input->data_in;
@@ -124,6 +123,7 @@ StarEntryThread(void* input)
 
   sem_t *sem;
   snet_record_t *current_record;
+  snet_record_t *temp_record;
 
   sem = SNetMemAlloc(sizeof(sem_t));
   sem_init(sem, 0, 0);
@@ -137,25 +137,37 @@ StarEntryThread(void* input)
 
     /* depending on the selection function, read data or restart the loop. */
     if(TakeFromFeedback(recs_from_feedback, recs_from_data_in)) {
-      current_record = (snet_record_t*)SNetFbckBufTryGet(feedback_out,
-                                                          &fmessage);
+      SNetUtilDebugNotice("moo");
       record_from_data_in = false;
+      do {
+        current_record = (snet_record_t*)SNetFbckBufTryGet(feedback_out,
+                                                          &fmessage);
+      } while(fmessage == FBCKBUF_blocked);
       if(current_record == NULL) {
-        current_record = (snet_record_t*) SNetBufTryGet(data_in, &bmessage);
+        record_from_data_in = true;
+        do {
+          current_record = (snet_record_t*) SNetBufTryGet(data_in, &bmessage);
+        } while(bmessage == BUF_blocked);
+        SNetUtilDebugNotice("current_record: %x", (unsigned int) current_record);
         if(current_record == NULL) {
           SNetUtilDebugNotice("FeedbackStar: This should not happen, the "
                   "semaphore said >data ready!<, but I got NULL from both "
                   "streams.");
           continue;
         }
-        record_from_data_in = true;
       }
     } else {
-      current_record = (snet_record_t*)SNetBufTryGet(data_in, &bmessage);
+      SNetUtilDebugNotice("quack");
       record_from_data_in = true;
+      do {
+        current_record = (snet_record_t*)SNetBufTryGet(data_in, &bmessage);
+      } while(bmessage == BUF_blocked);
       if(current_record == NULL) {
-        current_record = (snet_record_t*)SNetFbckBufTryGet(feedback_out,
+        record_from_data_in = false;
+        do {
+          current_record = (snet_record_t*)SNetFbckBufTryGet(feedback_out,
                                                               &fmessage);
+        } while(fmessage == FBCKBUF_blocked);
         record_from_data_in = false;
         if(current_record == NULL) {
           SNetUtilDebugNotice("FeedbackStar: This should not happen, the "
@@ -165,6 +177,7 @@ StarEntryThread(void* input)
         }
       }
     }
+    SNetUtilDebugNotice("data in star entry, from %d", record_from_data_in);
     switch(SNetRecGetDescriptor(current_record)) {
       case REC_data:
         if(record_from_data_in) {
@@ -215,10 +228,11 @@ StarEntryThread(void* input)
 
       case REC_terminate:
         if(record_from_data_in) {
+          SNetUtilDebugNotice("terminator arrived! starting probes!");
           pre_termination = true;
           probing = true;
           probe_failed = false;
-          SNetBufPut(body_in, current_record);
+          SNetBufPut(body_in, SNetRecCreate(REC_probe));
           SNetRecDestroy(current_record);
         } else {
           SNetUtilDebugNotice("Star Entry: Unexpected termination token on "
@@ -228,6 +242,7 @@ StarEntryThread(void* input)
       break;
 
       case REC_probe:
+        SNetUtilDebugNotice("star entry probed");
         if(record_from_data_in) {
           probing = true;
           probe_failed = false;
@@ -244,6 +259,7 @@ StarEntryThread(void* input)
               SNetBufBlockUntilEmpty(body_in);
               SNetBufDestroy(body_in);
             } else {
+              probing = false;
               SNetBufPut(reject, current_record);
             }
           }
@@ -251,14 +267,26 @@ StarEntryThread(void* input)
       break;
     }
   }
+  return NULL;
 }
 
-static void StarExitThread(snet_buffer_t *finish,
-                           snet_fbckbuffer_t *feedback_in,
-                           snet_buffer_t *body_out,
-                           snet_typeencoding_t *exittype,
-                           snet_expr_list_t *exitguards) 
+struct star_exit_input {
+  snet_buffer_t *finish;
+  snet_fbckbuffer_t *feedback_in;
+  snet_buffer_t *body_out;
+  snet_typeencoding_t *exittype;
+  snet_expr_list_t *exitguards;
+};
+
+static void *StarExitThread(void *packed_input)
 {
+  struct star_exit_input *input = (struct star_exit_input*) packed_input;
+  snet_buffer_t *finish = input->finish;
+  snet_fbckbuffer_t *feedback_in = input->feedback_in;
+  snet_buffer_t *body_out = input->body_out;
+  snet_typeencoding_t *exittype = input->exittype;
+  snet_expr_list_t *exitguards = input->exitguards;
+
   bool terminate = false;
   snet_record_t *current_record;
   snet_record_t *temp_record;
@@ -266,8 +294,11 @@ static void StarExitThread(snet_buffer_t *finish,
   snet_util_tree_t *sort_records = SNetUtilTreeCreate();
   snet_util_stack_t *curr_iter_stack;
 
+  SNetMemFree(input);
   while(!terminate) {
+    SNetUtilDebugNotice("star exit is alive");
     current_record = SNetBufGet(body_out);
+    SNetUtilDebugNotice("STAR EXIT:: data in star exit");
     switch(SNetRecGetDescriptor(current_record)) {
       case REC_data:
         if(MatchesExitPattern(current_record, exittype, exitguards)) {
@@ -280,6 +311,7 @@ static void StarExitThread(snet_buffer_t *finish,
                       SNetUtilTreeGet(sort_records, curr_iter_stack));
             SNetUtilTreeDelete(sort_records, curr_iter_stack);
           }
+          SNetUtilDebugNotice("foobar");
           SNetFbckBufPut(feedback_in, current_record);
         }
       break;
@@ -325,6 +357,7 @@ static void StarExitThread(snet_buffer_t *finish,
       break;
 
       case REC_terminate:
+        SNetUtilDebugNotice("terminated");
         terminate = true;
         SNetFbckBufDestroy(feedback_in);
         SNetBufPut(finish, current_record);
@@ -333,10 +366,13 @@ static void StarExitThread(snet_buffer_t *finish,
       break;
 
       case REC_probe:
+        SNetUtilDebugNotice("exit probed!");
         SNetFbckBufPut(feedback_in, current_record);
       break;
     }
   }
+  SNetUtilDebugNotice("Star exit is dead now");
+  return NULL;
 }
 /**<!--**********************************************************************-->
  *
@@ -375,24 +411,57 @@ snet_buffer_t *SNetStar( snet_buffer_t *data_in,
   snet_buffer_t *reject;
   snet_buffer_t *finish;
 
+  reject = SNetBufCreate(BUFFER_SIZE);
+  finish = SNetBufCreate(BUFFER_SIZE);
+
   snet_buffer_t *data_out = CreateCollector(reject);
   SNetBufPut(reject, SNetRecCreate(REC_collect, finish));
 
-  feedback = SNetFbckBufCreate(BUFFER_SIZE);
+  feedback = SNetFbckBufCreate();
 
   body_in = SNetBufCreate(BUFFER_SIZE);
   body_out = (*box_a)(body_in);
 
-  struct star_entry_input *x = SNetMemAlloc(sizeof(struct star_entry_input));
+  struct star_entry_input *x;
+  struct star_exit_input *y;
+
+  x = SNetMemAlloc(sizeof(struct star_entry_input));
   x->data_in = data_in;
   x->feedback_out = feedback;
   x->body_in = body_in;
   x->reject = reject;
   x->exittype = type;
   x->exitguards = guards;
-  return NULL;
+  SNetThreadCreate(&StarEntryThread, x, ENTITY_star_nondet);
+
+  y = SNetMemAlloc(sizeof(struct star_exit_input));
+  y->finish = finish;
+  y->feedback_in = feedback;
+  y->body_out = body_out;
+  y->exittype = type;
+  y->exitguards = guards;
+  SNetThreadCreate(&StarExitThread, y, ENTITY_star_nondet);
+  return data_out;
 }
 
+extern
+snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf,
+                            snet_typeencoding_t *type,
+                               snet_expr_list_t *guards,
+                                  snet_buffer_t *(*box_a)(snet_buffer_t*),
+                                  snet_buffer_t *(*box_b)(snet_buffer_t*)) {
+  SNetUtilDebugFatal("Hey, who called StarIncarnate?");
+  return inbuf;
+}
+
+extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf,
+                                   snet_typeencoding_t *type,
+                                   snet_expr_list_t *guards,
+                                   snet_buffer_t *(*box_a)(snet_buffer_t*),
+                                   snet_buffer_t *(*box_b)(snet_buffer_t*)) {
+  SNetUtilDebugFatal("Detfeedbackstar not implemented.");
+  return inbuf;
+}
 snet_buffer_t *SNetStarDetIncarnate( snet_buffer_t *inbuf,
                                snet_typeencoding_t *type,
                                   snet_expr_list_t *guards,

@@ -232,7 +232,9 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
   }
   SNetMemFree( names);
 
-
+  if(out_rec != old_rec) {
+    SNetRecCopyIterations(old_rec, out_rec);
+  }
   // output record
   SNetRecSetInterfaceId( out_rec, id);
   SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
