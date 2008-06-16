@@ -53,7 +53,7 @@ static struct tree *Traverse(struct tree *tree, snet_util_stack_t *key) {
   SNetUtilStackGotoBottom(key);
   while(SNetUtilStackCurrentDefined(key)) {
     current_int = *((int*)SNetUtilStackGet(key));
-    
+    SNetUtilStackUp(key);
     SNetUtilListGotoBeginning(tree->children);
     while(SNetUtilListCurrentDefined(tree->children)) {
       current = (struct numerated_child*)SNetUtilListGet(tree->children);
@@ -200,7 +200,7 @@ void SNetUtilTreeSet(snet_util_tree_t *tree, snet_util_stack_t *key,
   SNetUtilStackGotoBottom(key);
   while(SNetUtilStackCurrentDefined(key)) {
     current_int = *((int*)SNetUtilStackGet(key));
-    
+    SNetUtilStackUp(key);
     SNetUtilListGotoBeginning(tree->children);
     while(SNetUtilListCurrentDefined(tree->children)) {
       current = (struct numerated_child*)SNetUtilListGet(tree->children);
