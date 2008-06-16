@@ -274,6 +274,8 @@ static void *SyncBoxThread( void *hndl) {
           if(current_state->match_count == num_patterns) {
             #ifdef SYNC_FI_VARIANT_1
             temp_record = Merge( storage, patterns, outtype);
+	    SNetRecSetInterfaceId( temp_record, SNetRecGetInterfaceId( rec));
+	    SNetRecSetDataMode( temp_record, SNetRecGetDataMode( rec));
             #endif
             #ifdef SYNC_FI_VARIANT_2
             temp_record =  Merge( storage, patterns, outtype, rec);
@@ -283,6 +285,7 @@ static void *SyncBoxThread( void *hndl) {
             }
             /*SNetUtilDebugNotice("synccell synched => %x",
                       (unsigned int) temp_record);*/
+	    
             SNetBufPut(outbuf, temp_record);
             current_state->terminated = true;
          }

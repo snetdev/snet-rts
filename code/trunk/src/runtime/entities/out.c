@@ -134,6 +134,7 @@ extern snet_handle_t
 
   // output record
   SNetRecSetInterfaceId( out_rec, if_id);
+  SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
   SNetBufPut( SNetHndGetOutbuffer( hnd), out_rec);
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
@@ -234,6 +235,7 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
 
   // output record
   SNetRecSetInterfaceId( out_rec, id);
+  SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
   SNetBufPut( SNetHndGetOutbuffer( hnd), out_rec);
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);

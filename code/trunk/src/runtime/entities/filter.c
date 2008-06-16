@@ -388,7 +388,8 @@ static void *FilterThread( void *hnd)
                                            SNetTencCopyVariantEncoding( 
                                            SNetTencGetVariant( out_type, j+1)));
                   SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
-  
+		  SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
+
                   current_set = FilterGetInstructionSet( current_lst, j);
                   for( k=0; k<SNetFilterGetNumInstructions( current_set); k++) {
                     current_instr = FilterGetInstruction( current_set, k);
@@ -700,6 +701,7 @@ static void *FilterThread( void *hndl) {
         variant = SNetTencCopyVariantEncoding( SNetTencGetVariant( out_type, i+1));
         out_rec = SNetRecCreate( REC_data, variant);
         SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
+        SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));	
         set = instructions[i];
         // this runs for each filter instruction 
         for( j=0; j<set->num; j++) {
