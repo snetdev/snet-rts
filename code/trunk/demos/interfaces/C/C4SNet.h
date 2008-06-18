@@ -6,12 +6,35 @@
 
 typedef struct container c4snet_container_t;
 
+typedef enum{
+  CTYPE_uchar,      //char
+    CTYPE_char,     //signed char
+    CTYPE_ushort,   //unsigned short
+    CTYPE_short,    //short
+    CTYPE_uint,     //unsigned int
+    CTYPE_int,      //int,
+    CTYPE_ulong,    //unsigned long
+    CTYPE_long,     //long
+    CTYPE_float,    //float
+    CTYPE_double,   //double
+}ctype_t;
+
+typedef union cdata_types{
+  unsigned char uc;
+  char c;
+  unsigned short us;
+  short s;
+  unsigned int ui;
+  int i;
+  unsigned long ul;
+  long l;
+  float f;
+  double d;
+} cdata_types_t;
+
 typedef struct cdata {
- void *data;
- void (*freefun)( void*);
- void* (*copyfun)( void*);
- int (*serfun)(FILE *, void*);
- int (*encfun)(FILE *, void*);
+  ctype_t type;
+  cdata_types_t data;
 } C_Data;
 
 
@@ -20,28 +43,22 @@ void C4SNetInit( int id);
 void C4SNet_outCompound( c4snet_container_t *c);
 void C4SNet_out( void *hnd, int variant, ...);
 
-void C4SNet_free( void *ptr);
-void *C4SNet_copy( void *ptr);
-int C4SNet_serialize( FILE *file, void *ptr);
-void *C4SNet_deserialize( FILE *file);
-int C4SNet_encode( FILE *file, void *ptr);
-void *C4SNet_decode( FILE *file);
+void C4SNetFree( void *ptr);
+void *C4SNetCopy( void *ptr);
+int C4SNetSerialize( FILE *file, void *ptr);
+void *C4SNetDeserialize( FILE *file);
+int C4SNetEncode( FILE *file, void *ptr);
+void *C4SNetDecode( FILE *file);
 
 /* ************************************************************************* */
 
 /* C_Data */
 
-C_Data *C4SNet_cdataCreate( void *data, 
-		     	    void (*freefun)( void*),
-		     	    void* (*copyfun)( void*),
-			    int (*serfun)( FILE *, void*),
-			    int (*encfun)( FILE *, void*));
+C_Data *C4SNet_cdataCreate( ctype_t type, void *data);
 
 void *C4SNet_cdataGetData( C_Data *c);
-void *C4SNet_cdataGetCopyFun( C_Data *c);
-void *C4SNet_cdataGetFreeFun( C_Data *c);
-void *C4SNet_cdataGetSerFun( C_Data *c);
-void *C4SNet_cdataGetEncFun( C_Data *c);
+
+ctype_t C4SNet_cdataGetType( C_Data *c);
 
 /* ************************************************************************* */
 

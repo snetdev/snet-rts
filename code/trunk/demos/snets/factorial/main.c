@@ -5,7 +5,6 @@
 #include <memfun.h>
 
 #include <C4SNet.h>
-#include <myfuns.h>
 #include "factorial.h"
 
 
@@ -139,10 +138,10 @@ int main() {
 
   *F_z_1 = 42;
 
-  field1 = C4SNet_cdataCreate( F_x_1, &myfree, &mycopy, NULL, NULL);
-  field2 = C4SNet_cdataCreate( F_r_1, &myfree, &mycopy, NULL, NULL);
-  field3 = C4SNet_cdataCreate( F_x_3, &myfree, &mycopy, NULL, NULL);
-  field4 = C4SNet_cdataCreate( F_r_3, &myfree, &mycopy, NULL, NULL);
+  field1 = C4SNet_cdataCreate( CTYPE_int, F_x_1);
+  field2 = C4SNet_cdataCreate( CTYPE_int, F_r_1);
+  field3 = C4SNet_cdataCreate( CTYPE_int, F_x_3);
+  field4 = C4SNet_cdataCreate( CTYPE_int, F_r_3);
 
 
   SNetRecSetField( rec1, F__factorial__x, (void*)field1);

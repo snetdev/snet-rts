@@ -77,7 +77,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 	   	  SNetInIdToInterface(hnd->interfaces, id));
 	  
 	  fun(hnd->file, SNetRecGetField(rec, i));
-	  
+
 	  fprintf(hnd->file, "</field>");
 	}else{
 	  /* Error: unknown label! */

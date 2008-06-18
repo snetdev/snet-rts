@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<data xmlns="snet-home.org" >
+  <record type="data" interface="C4SNet">
+    <field label="x" >BQBQAAAA</field><!-- x=5 -->
+    <field label="r" >BQAgAAAA</field><!-- r=2 -->
+    <tag label="r1" >0</tag>
+    <!-- result r=240=BQ8AAAAA x=1=BQAQAAAA -->
+  </record>
+  <record type="data" interface="C4SNet" >
+    <field label="x" >BQAgAAAA</field><!-- x=2 -->
+    <field label="r" >BQAgAAAA</field><!-- r=2 -->
+    <tag label="r2" >0</tag>
+    <!-- result r=4=BQBAAAAA x=1=BQAQAAAA -->
+  </record>
+  <record type="terminate" />
+</data>

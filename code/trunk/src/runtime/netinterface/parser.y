@@ -548,6 +548,7 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 		data = fun(yyin);
 	     
 		if(data != NULL) {
+
 		  SNetRecAddField(current.record, label);
 		  SNetRecSetField(current.record, label, data);
 		} else {

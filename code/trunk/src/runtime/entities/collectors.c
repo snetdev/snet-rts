@@ -352,7 +352,7 @@ static void *Collector( void *info) {
             case REC_data:
               tmp_elem = SNetUtilListGet(lst);
               if(CompareSortRecords(tmp_elem->current, current_sort_rec)) {
-                SNetUtilDebugNotice("moving data");
+                //SNetUtilDebugNotice("moving data");
                 rec = SNetBufGet( tmp_elem->buf);
                 SNetBufPut( outbuf, rec);
                 processed_record = true;

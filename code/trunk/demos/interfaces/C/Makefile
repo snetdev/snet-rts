@@ -6,7 +6,7 @@ SOFLAGS   = -shared -dy -Wl -allow-shlib-undefined
 COPY      = cp
 
 # = = = = = = = = = = = = = = = = = = = =
-OBJECTS     = C4SNetTypes.o C4SNet.o 
+OBJECTS     = C4SNetTypes.o C4SNet.o base64.o 
 TARGET      = libC4SNet.so 
 WRAPOBJECTS = C4SNetc.o
 WRAPTARGET  = libC4SNetc.so

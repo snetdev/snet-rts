@@ -61,118 +61,114 @@ void C4SNet_out( void *hnd, int variant, ...)
   va_end( args);
 }
 
-void C4SNet_free( void *ptr) 
-{
-  void  (*freefun)(void*) = ((C_Data*)ptr)->freefun;
- 
-  freefun( ((C_Data*)ptr)->data);
-
-  SNetMemFree( ptr);
-}
-
-
-void *C4SNet_copy( void *ptr)
-{
-  C_Data *new;
-  void* (*copyfun)(void*) = ((C_Data*)ptr)->copyfun;
-
-  new = SNetMemAlloc( sizeof( C_Data));
-  new->copyfun = ((C_Data*)ptr)->copyfun;
-  new->freefun = ((C_Data*)ptr)->freefun;
-  new->serfun = ((C_Data*)ptr)->serfun;
-  new->encfun = ((C_Data*)ptr)->encfun;
-  new->data = copyfun( ((C_Data*)ptr)->data);
-
-  return( new);
-}
-
-int C4SNet_serialize(FILE *file, void *ptr)
-{
-  int (*serfun)(FILE *, void*) = ((C_Data*)ptr)->serfun;
-
-  return( serfun( file, ((C_Data*)ptr)->data) );
-}
-
-int C4SNet_encode(FILE *file, void *ptr)
-{
-  int (*encfun)(FILE *, void*) = ((C_Data*)ptr)->encfun;
-
-  return( encfun( file, ((C_Data*)ptr)->data) );
-}
-
-/*
-void *C4SNet_deserialize(FILE *file)
-{                      
-  void *(*fun)(FILE *) = SNetGetDeserializationFun(my_interface_id);
-
-  return fun(file);
-}
- 
-void *C4SNet_decode(FILE *file)
-{                      
-  void *(*fun)(FILE *) = SNetGetDecodingFun(my_interface_id);
-
-  return fun(file);
-}
-*/
-
 void C4SNetInit( int id)
 {
   my_interface_id = id;
-  SNetGlobalRegisterInterface( id, &C4SNet_free, &C4SNet_copy,
-			       &C4SNet_serialize, 
-			       &C4SNet_deserialize,
-			       &C4SNet_encode, 
-			       &C4SNet_decode);  
+  SNetGlobalRegisterInterface( id, 
+			       &C4SNetFree, 
+			       &C4SNetCopy,
+			       &C4SNetSerialize, 
+			       &C4SNetDeserialize,
+			       &C4SNetEncode, 
+			       &C4SNetDecode);  
 }
 
 
 
 /* ************************************************************************* */
 
-C_Data *C4SNet_cdataCreate( void *data, 
-			    void (*freefun)( void*),
-			    void* (*copyfun)( void*),
-			    int (*serfun)( FILE *, void*),
-			    int (*encfun)( FILE *, void*))
+C_Data *C4SNet_cdataCreate( ctype_t type, void *data)
 {
   C_Data *c;
-
   c = malloc( sizeof( C_Data));
-  c->data = data;
-  c->freefun = freefun;
-  c->copyfun = copyfun;
-  c->serfun = serfun;
-  c->encfun = encfun;
+  c->type = type;
+
+  switch(type) {
+  case CTYPE_uchar: 
+    c->data.uc = *(unsigned char *)data;
+    break;
+  case CTYPE_char: 
+    c->data.c = *(char *)data;
+    break;
+  case CTYPE_ushort: 
+    c->data.us = *(unsigned short *)data;
+    break;
+  case CTYPE_short: 
+    c->data.s = *(short *)data;
+    break;
+  case CTYPE_uint: 
+    c->data.ui = *(unsigned int *)data;
+    break;
+  case CTYPE_int: 
+    c->data.i = *(int *)data;
+    break;
+  case CTYPE_ulong:
+    c->data.ul = *(unsigned long *)data;
+    break;
+  case CTYPE_long:
+    c->data.l = *(long *)data;
+    break;
+  case CTYPE_float: 
+    c->data.f = *(float *)data;	
+    break;
+  case CTYPE_double: 
+    c->data.d = *(double *)data;
+    break;
+  default:
+    free(c);
+    return NULL;
+    break;
+  }
 
   return( c);
 }
 
 void *C4SNet_cdataGetData( C_Data *c)
 {
-  return( c->data);
+  C_Data *temp = (C_Data *)c;
+
+  switch(temp->type) {
+  case CTYPE_uchar: 
+    return &temp->data.uc;
+    break;
+  case CTYPE_char: 
+    return &temp->data.c;
+    break;
+  case CTYPE_ushort: 
+    return &temp->data.us;
+    break;
+  case CTYPE_short: 
+    return &temp->data.s;
+    break;
+  case CTYPE_uint: 
+    return &temp->data.ui;
+    break;
+  case CTYPE_int: 
+    return &temp->data.i;
+    break;
+  case CTYPE_ulong:
+    return &temp->data.ul;
+    break;
+  case CTYPE_long:
+     return &temp->data.l;
+    break;
+  case CTYPE_float: 
+    return &temp->data.f;	
+    break;
+  case CTYPE_double: 
+    return &temp->data.d;
+    break;
+  default:
+    return NULL;
+    break;
+  }
+
+  return NULL;
 }
 
-void *C4SNet_cdataGetCopyFun( C_Data *c)
-{
-  return( c->copyfun);
+ctype_t C4SNet_cdataGetType( C_Data *c) {
+  return( c->type);
 }
-
-void *C4SNet_cdataGetFreeFun( C_Data *c)
-{ 
-  return( c->freefun);
-}
-
-void *C4SNet_cdataGetSerializationFun( C_Data *c)
-{ 
-  return( c->serfun);
-}
-
-void *C4SNet_cdataGetEncodingFun( C_Data *c)
-{ 
-  return( c->encfun);
-}
-
 
 
 /* ************************************************************************* */
