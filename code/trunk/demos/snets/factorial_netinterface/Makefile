@@ -1,3 +1,5 @@
+include $(SNETBASE)/src/makefiles/config.mkf
+
 # = = = = = = = = = = = = = = = = = = = =
 TARGET     = factorial
 # = = = = = = = = = = = = = = = = = = = =
@@ -8,7 +10,6 @@ CCFLAGS    = -DFILTER_VERSION_2
 INCDIRS    = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
 LIBDIRS    = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
 LIBS       = -lC4SNet -lpthread -lsnet 
-RPATH      = -R$(SNETBASE)/demos/interfaces/C
 
 all:
 	$(HIDE) rm -f *.o $(TARGET) $(TARGET).h $(TARGET).c
@@ -18,7 +19,8 @@ all:
 
 gcc:    
 	$(HIDE) rm -f *.o
-	$(CC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) $(RPATH) -o $(TARGET) *.c $(LIBS)
+	$(SNETC) -b7 $(TARGET).snet
+	$(CC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) $(RPATH) -DSNetMain__factorial=main -o $(TARGET) *.c $(LIBS)
 	rm -f *.o
 
 

@@ -64,7 +64,7 @@ GTKLIBS	     := @GTKLIBS@
 SOCKETLIBS   := @LIB_SOCKET@
 RTLIBS	     := @LIB_RT@
 MTLIBS	     := @CCMTLINK@
-RPATH        := -R$(SNETBASE)/lib
+RPATH        := @LD_PATH@$(SNETBASE)/lib
 EFLIBS       := -lefence
 
 CONFIGURED   := $(PROJECT_ROOT)/src/makefiles/config.mkf \

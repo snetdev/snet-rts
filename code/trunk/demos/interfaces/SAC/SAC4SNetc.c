@@ -28,7 +28,7 @@ static char *itoa( int val)
       break;
     }
    }
-  str = malloc( len * sizeof( char));
+  str = malloc( (len+1) * sizeof( char));
   strcpy(str,&result[MAX_ARGS-len]);
   free( result);
 
@@ -47,13 +47,9 @@ static char *strappend( char *dest, char *src)
 
 static void constructSACfqn( char **fqn, char *box_name, void *meta_data)
 {
-  if( meta_data == NULL) {
-    *fqn = malloc( (strlen( box_name) + 1) * sizeof( char));
-    strcpy( *fqn, box_name);
-  }
-  else {
-    //noop
-  }
+  /* TODO: use meta-data to construct function name */
+  *fqn = malloc( (strlen( box_name) + 1) * sizeof( char));
+  strcpy( *fqn, box_name);
 }
 
 char *SAC4SNetGenBoxWrapper( char *box_name,
