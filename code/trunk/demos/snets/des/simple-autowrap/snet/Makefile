@@ -47,7 +47,6 @@ lib%.a: %.o $(foreach FILE,$(WRAPFILES),$(FILE).o)
 
 %.o: %.c
 	$(CC) $(CCFLAGS) $(INCDIRS) $(BOXINCS) $(SACNAMES) -c $<
-	cat $<
 
 clean:
 	rm -f $(TARGET).o lib$(TARGET).a $(TARGET).c $(TARGET).h 

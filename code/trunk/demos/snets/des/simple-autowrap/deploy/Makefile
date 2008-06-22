@@ -15,6 +15,8 @@ SCFLAGS   = -b7 -v0
 AR        = ar
 
 # --- S-Net Runtime / Interface Paths and Libraries
+
+include $(SNETBASE)/src/makefiles/config.mkf
 INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/SAC\
 	    -I./include -I$(SACBASE)/sac2c/include -I../boxes/include\
 	    -I../snet
@@ -43,7 +45,7 @@ TARGET       = simpleDes
 .PHONY: clean 
 
 all: deployerObjs
-	$(CC) $(LIBDIRS) -L$(SNETLIBPATH) *.o $(BOXLIBS) $(LIBS) -o $(TARGET) $(LIBS)
+	$(CC) $(LIBDIRS) -L$(SNETLIBPATH) $(RPATH) *.o $(BOXLIBS) $(LIBS) -o $(TARGET) $(LIBS)
 	
 deployerObjs: $(DEPLOYSRC)
 	$(CC) $(CCFLAGS) $(INCDIRS) -I$(SNETINCPATH) -c $^
