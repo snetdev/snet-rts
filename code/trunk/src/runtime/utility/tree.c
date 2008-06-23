@@ -49,14 +49,15 @@ struct numerated_child {
 static struct tree *Traverse(struct tree *tree, snet_util_stack_t *key) {
   int current_int;
   struct numerated_child *current;
-
-  SNetUtilStackGotoBottom(key);
-  while(SNetUtilStackCurrentDefined(key)) {
-    current_int = *((int*)SNetUtilStackGet(key));
-    SNetUtilStackUp(key);
+  snet_util_stack_iterator_t *key_part;
+  key_part = SNetUtilStackBottom(key);
+  while(SNetUtilStackIterCurrDefined(key_part)) {
+    current_int = SNetUtilStackIterGet(key_part);
+    key_part = SNetUtilStackIterNext(key_part);
     SNetUtilListGotoBeginning(tree->children);
     while(SNetUtilListCurrentDefined(tree->children)) {
       current = (struct numerated_child*)SNetUtilListGet(tree->children);
+      SNetUtilListNext(tree->children);
       if(current->index > current_int) {
         /* list is sorted => we ran too far => element not in list */
         return NULL;
@@ -66,6 +67,7 @@ static struct tree *Traverse(struct tree *tree, snet_util_stack_t *key) {
     }
   }
 
+  SNetUtilStackIterDestroy(key_part);
   return tree;
 }
 
@@ -197,13 +199,16 @@ void SNetUtilTreeSet(snet_util_tree_t *tree, snet_util_stack_t *key,
   struct numerated_child *current;
   struct numerated_child *new_child;
   struct tree *new_tree;
-  SNetUtilStackGotoBottom(key);
-  while(SNetUtilStackCurrentDefined(key)) {
-    current_int = *((int*)SNetUtilStackGet(key));
-    SNetUtilStackUp(key);
+  snet_util_stack_iterator_t *key_part;
+
+  key_part = SNetUtilStackBottom(key);
+  while(SNetUtilStackIterCurrDefined(key_part)) {
+    current_int = SNetUtilStackIterGet(key_part);
+    key_part = SNetUtilStackIterNext(key_part);
     SNetUtilListGotoBeginning(tree->children);
     while(SNetUtilListCurrentDefined(tree->children)) {
       current = (struct numerated_child*)SNetUtilListGet(tree->children);
+      SNetUtilListNext(tree->children);
       if(current->index > current_int) {
         /* list is sorted => we ran too far => element not in list */
         new_child = malloc(sizeof(struct numerated_child));
@@ -218,6 +223,7 @@ void SNetUtilTreeSet(snet_util_tree_t *tree, snet_util_stack_t *key,
     }
   }
 
+  SNetUtilStackIterDestroy(key_part);
   tree->content = content;
   tree->content_defined = true;
 }

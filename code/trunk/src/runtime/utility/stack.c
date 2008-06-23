@@ -5,6 +5,9 @@
 #include "debug.h"
 #include "memfun.h"
 
+#define NULLCHECK(VAR) if((VAR) == NULL) {\
+                        SNetUtilDebugFatal("%s: %s == null", __FUNCTION__, #VAR);}
+
 /**
  *
  * @file stack.c
@@ -29,10 +32,56 @@
  * the stack, but I consider that really cumbersome.
  *
  *****************************************************************************/
-struct stack {
-  snet_util_list_t *data;
+/* Single linked list structure.
+ * We cannot use the UtilList here, because if we did, we had
+ * to keep the counting integers on the heap. This way, we can
+ * store the ints directly.
+ */
+struct stack_elem {
+  int data;
+  struct stack_elem *next;
+  struct stack_elem *prev;
 };
 
+/* invariants:
+ * If foo is a stack, and foo->top is NULL then foo->bottom
+ * must be NULL as well.
+ * If foo is a stack and foo->bottom is NULL then foo->top
+ * must be NULL as well.
+ * (in those two cases, the stack is empty)
+ *
+ * If foo is a stack, and foo->top == foo->bottom, then
+ * foo->top->next must be null. In this case, the stack contains
+ * exactly one element.
+ */
+struct stack {
+  struct stack_elem *top;
+
+  /* We need a pointer to the last element of the stack because
+   * within the SNetUtilTree, we insert stacks with the bottom
+   * of the stack being the first element to be considered (and
+   * we do not want to walk all through the stack all the time
+   * in order to get to the end;
+   */
+  struct stack_elem *bottom;
+};
+
+enum iterator_direction { UP, DOWN };
+
+struct stack_iterator {
+  struct stack *base; /* base provides the elements */
+
+  /* if we start at the bottom, we want to iterate towards the top of stack,
+   * if we start at the tos, we want to iterate towards the bottom of the stack.
+   * this is stored here.
+   */
+  enum iterator_direction direction;
+
+  /* stores the current stack element. if this is NULL, the iterator is
+   * considered finished, that is, it walked through the entire stack
+   */
+  struct stack_elem *current;
+};
 /**
  *
  * @name Stack Management
@@ -60,7 +109,8 @@ snet_util_stack_t *SNetUtilStackCreate() {
   snet_util_stack_t *result;
 
   result = SNetMemAlloc(sizeof(snet_util_stack_t));
-  result->data = SNetUtilListCreate();
+  result->top = NULL;
+  result->bottom = NULL;
   return result;
 }
 
@@ -70,19 +120,34 @@ snet_util_stack_t *SNetUtilStackCreate() {
  *
  * @brief this destroys the stack and frees all memory. content is not touched
  *
- *    This frees the given stack. If the stack is non-empty, elements will
- *    be discarded silently. The contents will not be touched. 
- *    If the target is NULL, a fatal error will be signaled. 
+ *    This frees the given stack. If the stack is non-empty, contained integers
+ *    will be discarded silently.
+ *    If the target is NULL, a fatal error will be signaled.
  *
  * @param target the stack to kill
  *
  *****************************************************************************/
 void SNetUtilStackDestroy(snet_util_stack_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SNetUtilStackDestroy: target==NULL");
-  }
+  struct stack_elem *current;
+  struct stack_elem *next;
 
-  SNetUtilListDestroy(target->data);
+  NULLCHECK(target)
+
+  /* free all elements of the stack*/
+  if(target->top == NULL) {
+    /* nothing to do, stack is empty */
+  } else if(target->top == target->bottom) {
+    /* singleton stack */
+    SNetMemFree(target->top);
+  } else {
+    /* multi element stack */
+    current = target->top;
+    while(current != NULL) {
+      next = current->next;
+      SNetMemFree(current);
+      current = next;
+    }
+  }
   SNetMemFree(target);
 }
 
@@ -93,7 +158,7 @@ void SNetUtilStackDestroy(snet_util_stack_t *target) {
  * @name Standard functions
  *
  * <!--
- * bool SNetUtilStackIsEmpty(snet_util_stack_t target) : returns true 
+ * bool SNetUtilStackIsEmpty(snet_util_stack_t target) : returns true
  *    if the stack is empty
  * void SNetUtilStackPush(snet_util_stack_t *target, void *content) :
  *    pushes the new element on the stack
@@ -102,6 +167,8 @@ void SNetUtilStackDestroy(snet_util_stack_t *target) {
  * void *SNetUtilStackPeek(snet_util_stack_t *target) :
  *    returns the content of the topmost element of the stack and keeps
  *    the element
+ * snet_util_stack_t*SNetUtilStackSet(snet_util_stack_t *target, int new_value):
+ *    sets the top of stack to the given element
  * -->
  *
  *  This implements the standard stack functions, that is, push, pop, 
@@ -119,60 +186,90 @@ void SNetUtilStackDestroy(snet_util_stack_t *target) {
  * @brief returns true if the stack is empty, false otherwise
  *
  *    This checks if the stack is empty. if the given stack is NULL, some fatal
- *    error is signaled. 
+ *    error is signaled.
  *
  * @param target the stack to examine
  *
  * @return true or false
  *****************************************************************************/
 bool SNetUtilStackIsEmpty(snet_util_stack_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SNetUtilStackIsEmpty: target == NULL");
-  }
-  return SNetUtilListIsEmpty(target->data);
+  NULLCHECK(target)
+  return (target->top == NULL);
 }
 
 /**<!--*********************************************************************-->
  *
- * @fn void SNetUtilStackPush(snet_util_stack_t *target, void *content)
+ * @fn snet_util_stack_t *SNetUtilStackPush(snet_util_stack_t *target,
+ *                                                       int content)
  *
  * @brief pushes the element on the given stack
  *
  *    This pushes the given content onto the stack. If the stack is NULL,
- *    some fatal error is signaled. 
+ *    some fatal error is signaled.
  *
  * @param target the stack to push to
  * @param content the element to push
+ * @return a pointer to the stack
  *
  *****************************************************************************/
-void SNetUtilStackPush(snet_util_stack_t *target, void *content) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SNetUtilStackPush: target == NULL");
-  }
+snet_util_stack_t *SNetUtilStackPush(snet_util_stack_t *target, int content) {
+  struct stack_elem *new_elem;
 
-  SNetUtilListAddBeginning(target->data, content);
+  NULLCHECK(target)
+
+  new_elem = SNetMemAlloc(sizeof(struct stack_elem));
+  new_elem->data = content;
+
+  if(target->top == NULL) {
+    /* empty stack */
+    new_elem->next = NULL;
+    new_elem->prev = NULL;
+    target->top = new_elem;
+    target->bottom = new_elem;
+  } else {
+    /* singleton stack and multi element stack handled equally*/
+    new_elem->next = target->top;
+    target->top->prev = new_elem;
+    target->top = new_elem;
+  }
+  return target;
 }
 
 /**<!--*********************************************************************-->
  *
- * @fn void SNetUtilStackPop(snet_util_stack_t *target)
+ * @fn snet_util_stack_t *SNetUtilStackPop(snet_util_stack_t *target)
  *
  * @brief removes the topmost element of the stack
  *
- *    This removes the topmost element of the stack and discards its content. 
+ *    This removes the topmost element of the stack and discards its content.
  *    If the given stack is NULL or empty an error is signalled
  *
  * @param target the stack to modify
+ * @return a pointer to the stack
  *
  *****************************************************************************/
-void SNetUtilStackPop(snet_util_stack_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SNetUtilStackPop: target == null");
-  }
+snet_util_stack_t *SNetUtilStackPop(snet_util_stack_t *target) {
+  struct stack_elem *to_delete;
+
+  NULLCHECK(target)
   if(SNetUtilStackIsEmpty(target)) {
     SNetUtilDebugFatal("SNetUtilStackPop: target is empty!");
   }
-  SNetUtilListDeleteFirst(target->data);
+
+  /* delete element */
+  /* tos-> top != NULL and tos->bottom != NULL */
+  to_delete = target->top;
+  if(target->top == target->bottom) {
+    /* singleton stack */
+    target->top = NULL;
+    target->bottom = NULL;
+  } else {
+    /* multi element stack */
+    target->top = to_delete->next;
+    to_delete->next->prev = NULL;
+  }
+  SNetMemFree(to_delete);
+  return target;
 }
 
 /**<!--*********************************************************************-->
@@ -187,173 +284,139 @@ void SNetUtilStackPop(snet_util_stack_t *target) {
  * @return the topmost element of the stack.
  *
  *****************************************************************************/
-void *SNetUtilStackPeek(snet_util_stack_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SnetUtilStackPeek: target == NULL");
-  }
+int SNetUtilStackPeek(snet_util_stack_t *target) {
+  NULLCHECK(target)
   if(SNetUtilStackIsEmpty(target)) {
     SNetUtilDebugFatal("SnetUtilStackPeek: empty stack");
   }
-  return SNetUtilListGetFirst(target->data);
+  return target->top->data;
+}
+
+/*
+ * @fn snet_util_stack_t *SNetUtilStackSet(snet_util_stack_t *target,
+ *                                                       int new_value
+ * @brief sets the top of stack to the new value
+ * @param target the stack to manipulate
+ * @param new_value the new value to set to
+ * @return the modified stack
+ */
+snet_util_stack_t *SNetUtilStackSet(snet_util_stack_t *target, int new_value) {
+  NULLCHECK(target)
+  NULLCHECK(target->top)
+
+  target->top->data = new_value;
+  return target;
 }
 /*@}*/
 
 /**
+ * @name Iterator functions
  *
- * @name Deep Inspection Functions
- *
- * <!--
- * void SNetUtilStackGotoTop(snet_util_stack_t *target) : makes the topmost
- *    element of the stack the current element for inspection.
- * void SNetUtilStackGotoBottom(snet_util_stack_t *target) : makes the deepest
- *    element in the stack the current element for inspection
- * void SNetUtilStackUp(snet_util_stack_t *target) : Makes the element above
- *    the old current element the new current element.
- * void SNetUtilStackDown(snet_util_stack_t *target) : Makes the element below
- *    the old current element the new current element.
- * void *SNetUtilStackGet(snet_util_stack_t *target) : Returns the value of
- *    the current stack element.
- * bool SNetUtilStackCurrentDefined(snet_util_stack_t *target) : Returns true
- *    if the current element is defined, false otherwise. 
+ * This implements functions that allow the inspection of all elements of the
+ * stack
  */
 /*@{*/
-/**<!--*********************************************************************-->
+
+/* @fn void SNetUtilStackIterDestroy(snet_util_stack_iter_t *target)
+ * @brief destroys the iterator
+ * @param target the iterator to kill
+ */
+void SNetUtilStackIterDestroy(snet_util_stack_iterator_t *target) {
+  NULLCHECK(target)
+  SNetMemFree(target);
+}
+/**
+ * @fn snet_util_stack_iterator_t *SNetUtilStackTop(snet_util_stack_t *target)
  *
- * @fn void SNetUtilStackGotoTop(snet_util_stack_t *target)
+ * @brief Initializes the iterator to_init so points to the top of target and
+ *        will iterate towards the bottom of target
  *
- * @brief makes the topmost element of the stack the current element. 
- *
- *    This makes the topmost element of the stack the currently inspected 
- *    element regardless of the current elements state. 
- *    If the given stack is NULL, a fatal error is signaled.
- *
- * @param target the stack to manipulate, must not be NULL
- *
- *****************************************************************************/
-void SNetUtilStackGotoTop(snet_util_stack_t *target) {
-  if(target == NULL) { 
-    SNetUtilDebugFatal("SNetUtilStackGotoTop: target == NULL");
-  }
-  SNetUtilListGotoBeginning(target->data);
+ * @param target the stack to iterate over - NULL will cause a fatal error
+ * @param to_init the iterator to initialize - NULL will cause a fatal error
+ * @return the intialized iterator
+ */
+snet_util_stack_iterator_t *SNetUtilStackTop(snet_util_stack_t *target) {
+  struct stack_iterator *result;
+  NULLCHECK(target)
+
+  result = SNetMemAlloc(sizeof(struct stack_iterator));
+  result->base = target;
+  result->direction = DOWN;
+  result->current = target->top;
+
+  return result;
 }
 
-/**<!--**********************************************************************-->
+/**
+ * @fn snet_util_stack_iterator_t *
+ *    SNetUtilStackBottom(snet_util_stack_t *target)
  *
- * @fn SneTUtilStackGotoBottom(snet_util_stack *target)
+ * @brief initializes the given iterator to_init so it points
+ *    to the lowest element of the stack and iterates upwards
  *
- * @brief makes the deepest element in the stack the current element.
- *
- *    This makes the deepest element of the stack the current element, 
- *    regardless of the current elements state. 
- *    target must not be null, a fatal error will be signaled otherwise.
- *
- * @param target the stack to manipulate
- *
- ******************************************************************************/
-void SNetUtilStackGotoBottom(snet_util_stack_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SnetUtilStackGotoBottom: target == NULL");
-  }
-  SNetUtilListGotoEnd(target->data);
+ * @param target the stack to iterate over, NULL triggers a fatal error
+ * @param to_init the iterator to intialize. NULL triggers a fatal error
+ * @return returns the initialized iterator
+ */
+snet_util_stack_iterator_t *SNetUtilStackBottom(snet_util_stack_t *target) {
+  struct stack_iterator *result;
+  NULLCHECK(target)
+
+  result = SNetMemAlloc(sizeof(struct stack_iterator));
+  result->base = target;
+  result->direction = UP;
+  result->current = target->bottom;
+  return result;
 }
 
-/**<!--**********************************************************************-->
- *
- * @fn void SnetUtilStackUp(snet_util_stack_t *target)
- *
- * @brief makes the element above the old current element the current element
- *
- *         This makes the element above the old current element the new current 
- *    element. If the current element is the topmost element in the stack, the
- *    current element will be undefined after this operation. If the current 
- *    element was undefined already, it will stay undefined. (Thus, GotoTop(s);
- *    Up(s) implies CurrentDefined(s) == False)
- *         Furthermore, the target stack must not be NULL, a fatal error will
- *    be signaled otherweise.
- *
- * @param target the stack to manipulate, must not be null.
- *
- ******************************************************************************/
-void SNetUtilStackUp(snet_util_stack_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SNetUtilStackUp: target == NULL");
+/**
+ * @fn snet_util_stack_iterator_t *
+ *    SNetUtilStackIterNext(snet_util_stack_iterator_t *target)
+ * @brief sets the current element to the next element
+ * @param target the iterator to manipulate
+ * @return the manipulated iterator
+ */
+snet_util_stack_iterator_t *
+    SNetUtilStackIterNext(snet_util_stack_iterator_t *target) {
+  NULLCHECK(target)
+
+  if(target->current != NULL) {
+    switch(target->direction) {
+      case UP:
+        target->current = target->current->next;
+      break;
+
+      case DOWN:
+        target->current = target->current->prev;
+      break;
+    }
   }
-  SNetUtilListPrev(target->data);
+  return target;
 }
 
-/**<!--**********************************************************************-->
- *
- * @fn void SNetUtilStackDown(snet_util_stack_t *target)
- *
- * @brief makes the element below the old current element the current element
- *
- *      This makes the element below the old current element the new current
- * element. If the current element is the lowest element on the stack, the
- * new current element will be undefined. If the current element was undefined
- * before, the current element will be undefined. (Thus, GotoBottom(s); Down(s)
- * implies CurrentDefined(s) == False.
- *      Furthermore, the target stack must not be NULL. If it is NULL, a fatal
- * error is signaled.
- *
- * @param target the stack to manipulate. Must not be NULL.
- *
- ******************************************************************************/
-void SNetUtilStackDown(snet_util_stack_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SnetUtilStackDown: target == NULL");
-  }
-  SNetUtilListNext(target->data);
-}
-
-/**<!--**********************************************************************-->
- *
- * @fn void *SNetUtilStackGet(snet_util_stack_t *target) 
- *
- * @brief Returns the content of the current element. 
- *
- *    This returns the content of the current element. The target stack must 
- * not be NULL or empty and the current element must be defined, otherwise, 
- * according fatal errors will be signaled.
- *    
- * @param target the stack to inspect
- *
- * @return the content of the current element
- *
- ******************************************************************************/
-void *SNetUtilStackGet(snet_util_stack_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SNetUtilStackGet: target == NULL!");
-  }
-  if(SNetUtilStackIsEmpty(target)) {
-    SNetUtilDebugFatal("SNetUtilStackGet: Stack is empty!");
-  }
-  if(!SNetUtilStackCurrentDefined(target)) {
-    SNetUtilDebugFatal("SnetUtilStackGet: current element is undefined!");
-  }
-  return SNetUtilListGet(target->data);
-}
-
-/**<!--**********************************************************************-->
- *
- * @fn bool SNetUtilStackCurrentDefined(snet_util_stack_t *target)
- *
- * @brief returns true if the current element is defined
- *
- *      This checks if the current element is defined. If it is, all is good. 
- * If it is undefined, it is unsafe to call Get for example. 
- *      Furthermore, the target must not be NULL, a fatal error will be 
- * signalled otherwise.      
- *
- * @param target the stack to inspect
- *
+/**
+ * @fn bool SNetUtilStackIterCurrDefined(snet_util_stack_iterator_t *target)
+ * @brief returns if the current element of the iterator is defined
+ * @param target the iterator to inspect
  * @return true if the current element is defined, false otherwise
- *
- ******************************************************************************/
-bool SNetUtilStackCurrentDefined(snet_util_stack_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SnetUtilStackCurrentDefined: target == NULL");
-  }
-  return SNetUtilListCurrentDefined(target->data);
-}
+ */
+bool SNetUtilStackIterCurrDefined(snet_util_stack_iterator_t *target) {
+  NULLCHECK(target)
 
+  return target->current != NULL;
+}
+/**
+ * @fn int SNetUtilStackIterGet(snet_util_stack_iterator_t *target)
+ * @brief return the data in the current element. signals a fatal error if
+ *        it's undefined
+ * @param target the iterator to inspect, NULL or current undefined results in
+ *        a fatal error
+ * @return the data of he current element
+ */
+int SNetUtilStackIterGet(snet_util_stack_iterator_t *target) {
+  NULLCHECK(target)
+  NULLCHECK(target->current)
+
+  return target->current->data;
+}
 /*@}*/
