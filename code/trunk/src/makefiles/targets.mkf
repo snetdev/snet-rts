@@ -26,6 +26,10 @@ targets_runtime_devel     := libsnet.a
 targets_runtime_prod      := libsnet.prod.a 
 targets_runtime_default   := $(targets_runtime_devel)
 
+targets_util_devel     	  := libsnetutil.a 
+targets_util_prod      	  := libsnetutil.prod.a 
+targets_util_default   	  := $(targets_util_devel)
+
 targets_tools_devel       := FeederFront.devel RecordInspector.devel
 targets_tools_prod        := FeederFront RecordInspector
 targets_tools_default     := $(targets_tools_devel)
@@ -44,6 +48,7 @@ targetdir_commonlib       := src/lib
 targetdir_maketools       := src/bin
 targetdir_compiler        := bin
 targetdir_runtime         := lib
+targetdir_util	          := lib
 targetdir_tools           := bin
 #targetdir_demo            := bin
 
@@ -74,6 +79,10 @@ clean_runtime             :=
 clean_runtime_devel       :=
 clean_runtime_prod        :=
 
+clean_util             	  :=
+clean_util_devel       	  :=
+clean_util_prod		  :=
+
 clean_tools               :=
 clean_tools_devel         :=
 clean_tools_prod          :=
@@ -96,6 +105,8 @@ compiler        = tree global support parse preproc flat typeinf opt postproc \
                   codegen invokecc print
 
 runtime         = common entities netinterface observer utility threading interfacing
+
+util		= metadata
 
 tools           = RecordInspector FeederFront 
 
@@ -142,9 +153,9 @@ tree            = check.o check_attribs.o check_lib.o check_mem.o \
                   check_node.o checktst.o free.o free_attribs.o free_node.o \
                   node_basic.o traverse.o traverse_helper.o traverse_tables.o \
                   tree_basic.o tree_compound.o copy.o copy_attribs.o copy_node.o \
-		  metadata.o
 
-parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o mdinterp.o mdcol.o mdns.o mdaux.o
+parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o mdinterp.o \
+		  mdcol.o mdns.o mdaux.o
 
 preproc         = dcr.o tcheck.o boxex.o boxexfile.o mod.o tres.o
 
@@ -156,13 +167,15 @@ opt             =
 
 postproc        = ptypcln.o ptran.o netren.o netflat.o
 
-codegen         = codegen.o codefile.o cchoice.o cexpr.o cfilt.o cserial.o cshield.o csplit.o cstar.o csync.o ctext.o ctrans.o cwrap.o cvar.o cgenwrap.o
+codegen         = codegen.o codefile.o cchoice.o cexpr.o cfilt.o cserial.o \
+		  cshield.o csplit.o cstar.o csync.o ctext.o ctrans.o cwrap.o \
+		  cvar.o cgenwrap.o
 
 invokecc        = invokecc.o
 
 print           = print.o 
 
-util            = debug.o
+#util            = debug.o
 
 
 ###############################################################################
@@ -174,10 +187,10 @@ util            = debug.o
 
 common          = memfun.o handle.o record.o typeencode.o expression.o
 
-
 entities        = buffer.o filter.o feedbackbuffer.o graphics.o\
                   syncro.o out.o box.o alias.o\
                   serial.o collectors.o parallel.o star.o split.o
+
 utility		= list.o debug.o stack.o tree.o
 
 threading       = threading.o
@@ -188,6 +201,15 @@ netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o\
                   networkinterface.o
 
 observer	= observers.o
+
+###############################################################################
+#
+# Collection of util object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+metadata	= metadata.o
 
 ###############################################################################
 #

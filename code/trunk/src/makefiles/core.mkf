@@ -46,8 +46,11 @@ TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
 LIB  := -L$(PROJECT_ROOT)/src/lib -lcommon 
 INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
-RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS) -lsnet 
+RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS) -lsnet
 RUNTIMEINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) $(GTKFLAGS)
+
+UTILLIB  := -L$(PROJECT_ROOT)/lib -lsnetutil
+UTILINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
 XML_DIR     = $(PROJECT_ROOT)/src/compiler/xml
 XML_COMMONS = $(wildcard $(XML_DIR)/common_*.xsl)
@@ -99,7 +102,7 @@ $(PROJECT_ROOT)/bin/snetc: global/build.o
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/snetc (developer version)"
 	$(HIDE) $(CC)  -o $@ $(TARGETDIRS_DEVEL) $< \
-                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAG) $(RPATH)
+                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAG) $(RPATH) $(UTILLIB)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -108,7 +111,7 @@ $(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/snetc.prod (product version)"
 	$(HIDE) $(CCPROD) -o $@ $(TARGETDIRS_PROD) $< \
-                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAG) $(RPATH)
+                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAG) $(RPATH) $(UTILLIB)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -117,7 +120,7 @@ $(PROJECT_ROOT)/bin/snetc.efence: global/build.o
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/snetc.efence (efence version)"
 	$(HIDE) $(CC) -o $@ $(TARGETDIRS_DEVEL) $< \
-                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAG) $(EFLIBS) $(RPATH)
+                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAG) $(EFLIBS) $(RPATH) $(UTILLIB)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -147,7 +150,7 @@ $(PROJECT_ROOT)/src/bin/%.devel: $(TARGETDIRS_DEVEL)
 	@$(ECHO) "Linking $(PREFIX_ROOT)src/bin/$*.devel (developer version)"
 	$(HIDE) $(CC) -o $@ \
                 $(filter $*/%,$^) \
-                $(LIB) $(LIBS) 
+                $(LIB) $(LIBS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -179,6 +182,24 @@ $(PROJECT_ROOT)/lib/libsnet.prod.a:  $(TARGETDIRS_PROD)
 	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
 	@$(TOUCH) .done
+	@$(CLOCK_SKEW_ELIMINATION)
+
+$(PROJECT_ROOT)/lib/libsnetutil.a: $(TARGETDIRS_DEVEL) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetutil.a (developer version)"
+	$(HIDE) $(AR) $@ $^
+	$(HIDE) $(RANLIB) $@
+	@$(RM) .make_track
+	@$(TOUCH) .done
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+$(PROJECT_ROOT)/lib/libsnetutil.prod.a:  $(TARGETDIRS_PROD) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetutil.prod.a (product version)"
+	$(HIDE) $(AR) $@ $^
+	$(HIDE) $(RANLIB) $@
+	@$(RM) .make_track
+	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/bin/%.devel: $(TARGETDIRS_DEVEL) 
@@ -186,7 +207,7 @@ $(PROJECT_ROOT)/bin/%.devel: $(TARGETDIRS_DEVEL)
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/$*.devel (developer version)"
 	$(HIDE) $(CC) -o $@ \
                 $(filter $*/%,$^) \
-                $(RUNTIMELIB) $(GTKLIBS)
+                $(UTILLIB) $(RUNTIMELIB) $(GTKLIBS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -196,7 +217,7 @@ $(PROJECT_ROOT)/bin/%: $(TARGETDIRS_PROD)
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/$* (product version)"
 	$(HIDE) $(CCPROD) -o $@ \
                 $(filter $*/%,$^) \
-                $(RUNTIMELIB) $(GTKLIBS)
+                $(UTILLIB) $(RUNTIMELIB) $(GTKLIBS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION) 
@@ -259,7 +280,7 @@ makesubdir.prod: $(TARGETDIRS_PROD)
               $(ECHO) "Compiling files in directory $(PREFIX_LOCAL)$(dir $@)" ; \
          fi
 	@$(ECHO) "  Compiling developer code:  $(notdir $<)"
-	$(HIDE) $(CC) $(CCFLAGS) $(CFLAGS) $(YYFLAGS) $(INCS) $(RUNTIMEINCS) \
+	$(HIDE) $(CC) $(CCFLAGS) $(CFLAGS) $(YYFLAGS) $(INCS) $(UTILINCS) $(RUNTIMEINCS) \
 	 -o $@ -c $<
 	@$(CLOCK_SKEW_ELIMINATION) 
 
@@ -271,7 +292,7 @@ makesubdir.prod: $(TARGETDIRS_PROD)
          fi
 	@$(ECHO) "  Compiling product code:  $(notdir $<)"
 	$(HIDE) $(CCPROD) $(CCPROD_FLAGS) $(CPROD_FLAGS) $(YYFLAGS) $(INCS) \
-	 $(RUNTIMEINCS) -o $@ -c $<
+	 $(UTILINCS) $(RUNTIMEINCS) -o $@ -c $<
 	@$(CLOCK_SKEW_ELIMINATION) 
 
 
@@ -351,7 +372,7 @@ makesubdir.prod: $(TARGETDIRS_PROD)
              $(ECHO) "Checking dependencies in directory $(PREFIX_LOCAL)$(dir $@)" ; \
         fi
 	@$(ECHO) "  Checking dependencies of source file: $(notdir $<)"
-	$(HIDE) if $(CC) $(CCDEPS_FLAGS) $(CFLAGS) $(INCS) $(RUNTIMEINCS) $<  > $@d ; \
+	$(HIDE) if $(CC) $(CCDEPS_FLAGS) $(CFLAGS) $(INCS) $(UTILINCS) $(RUNTIMEINCS) $<  > $@d ; \
 	 then sed 's/\($(notdir $*)\)\.o[ :]*/$(subst /,\/,$*)\.o $(subst /,\/,$@)\: ..\/makefiles\/config.mkf /'  <$@d >$@; \
 	      $(RM) $@d ; \
 	 else $(RM) $@d ; \

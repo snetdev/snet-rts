@@ -75,6 +75,8 @@ default devel prod: checks
                         PREFIX_LOCAL="src/commonlib/" PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/maketools/" PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/util   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
@@ -98,6 +100,8 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/commonlib/" PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/maketools/" PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/util   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
