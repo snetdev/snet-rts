@@ -7,7 +7,7 @@ SNETCFLAGS= -b7
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
-LIBS      = -lpthread -lC4SNet -lsnet 
+LIBS      = -lpthread -lC4SNet -lsnet -lsnetutil 
 
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = factorial
