@@ -37,6 +37,8 @@ typedef enum {
 } snet_record_mode_t;
 
 
+/* returns true if the record matches the pattern. */
+extern bool SNetRecPatternMatches(snet_variantencoding_t *pat, struct record *rec);
 
 /*
  * Allocates memory for a record and initialises

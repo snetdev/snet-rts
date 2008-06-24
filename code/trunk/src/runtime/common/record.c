@@ -111,6 +111,50 @@ struct record {
 
 /* *********************************************************** */
 
+static bool ContainsName( int name, int *names, int num) {
+  
+  int i;
+  bool found;
+
+  found = false;
+
+  for( i=0; i<num; i++) {
+    if( names[i] == name) {
+      found = true;
+      break;
+    }
+  }
+
+  return( found);
+}
+
+#define FIND_NAME_IN_RECORD( TENCNUM, TENCNAMES, RECNAMES, RECNUM)\
+    for( j=0; j<TENCNUM( pat); j++) {\
+      if( !( ContainsName( TENCNAMES( pat)[j],\
+                           RECNAMES( rec),\
+                           RECNUM( rec)))) {\
+        is_match = false;\
+        break;\
+      }\
+    }
+
+extern bool SNetRecPatternMatches(snet_variantencoding_t *pat,
+				  snet_record_t *rec) {
+  int j;
+  bool is_match = true;
+  FIND_NAME_IN_RECORD( SNetTencGetNumFields, SNetTencGetFieldNames,
+                           SNetRecGetFieldNames, SNetRecGetNumFields);
+  if( is_match) {
+    FIND_NAME_IN_RECORD( SNetTencGetNumTags, SNetTencGetTagNames,
+                             SNetRecGetTagNames, SNetRecGetNumTags);
+    if( is_match) {
+      FIND_NAME_IN_RECORD( SNetTencGetNumBTags, SNetTencGetBTagNames,
+                               SNetRecGetBTagNames, SNetRecGetNumBTags);
+    }
+  }
+  return is_match;
+}
+
 static int FindName( int *names, int count, int val)
 {
 

@@ -34,9 +34,6 @@ struct record;
 /* ****************************************************************** */
 
 
-/* returns true if the record matches the pattern. */
-extern bool SNetTencPatternMatches(snet_variantencoding_t *pat, struct record *rec);
-
 /* --- Vector Functions --- */
 
 /*

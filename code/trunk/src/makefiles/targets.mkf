@@ -106,7 +106,7 @@ compiler        = tree global support parse preproc flat typeinf opt postproc \
 
 runtime         = common entities netinterface observer utility threading interfacing
 
-util		= metadata
+util		= utils metadata
 
 tools           = RecordInspector FeederFront 
 
@@ -175,8 +175,6 @@ invokecc        = invokecc.o
 
 print           = print.o 
 
-#util            = debug.o
-
 
 ###############################################################################
 #
@@ -185,7 +183,7 @@ print           = print.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-common          = memfun.o handle.o record.o typeencode.o expression.o
+common          = handle.o record.o expression.o
 
 entities        = buffer.o filter.o feedbackbuffer.o graphics.o\
                   syncro.o out.o box.o alias.o\
@@ -208,6 +206,8 @@ observer	= observers.o
 #
 # Note that the variable names must coincide with the directory names above.
 #
+
+utils		= memfun.o typeencode.o 
 
 metadata	= metadata.o
 

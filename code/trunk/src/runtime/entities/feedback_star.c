@@ -56,7 +56,7 @@ MatchesExitPattern( snet_record_t *rec,
     is_match = true;
     if( SNetEevaluateBool( SNetEgetExpr( guards, i), rec)) {
       pat = SNetTencGetVariant( patterns, i+1);
-      is_match = SNetTencPatternMatches(pat, rec);
+      is_match = SNetRecPatternMatches(pat, rec);
     }
     else {
       is_match = false;
