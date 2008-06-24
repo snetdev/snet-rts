@@ -1,6 +1,5 @@
 #include "metadata.h"
 #include <string.h>
-#include "memory.h"
 
 const char *SNetMetadataGet(snet_meta_data_enc_t *md, const char *key) {
   int i;
