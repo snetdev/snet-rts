@@ -26,8 +26,8 @@ targets_runtime_devel     := libsnet.a
 targets_runtime_prod      := libsnet.prod.a 
 targets_runtime_default   := $(targets_runtime_devel)
 
-targets_util_devel     	  := libsnetutil.a 
-targets_util_prod      	  := libsnetutil.prod.a 
+targets_util_devel     	  := libsnetutil.so
+targets_util_prod      	  := libsnetutil.prod.so 
 targets_util_default   	  := $(targets_util_devel)
 
 targets_tools_devel       := FeederFront.devel RecordInspector.devel

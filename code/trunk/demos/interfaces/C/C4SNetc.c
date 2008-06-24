@@ -37,11 +37,11 @@ static char *itoa( int val)
 }
 
 
-static char *strappend( char *dest, char *src)
+static char *strappend( char *dest, const char *src)
 {
   char *res;
   int newlen;
-  
+
   newlen = (strlen( dest) + strlen( src) + 1);
   res = malloc( newlen * sizeof( char));
   strcpy( res, dest);
@@ -54,11 +54,11 @@ static char *strappend( char *dest, char *src)
 
 char *C4SNetGenBoxWrapper( char *box_name,
                            snet_input_type_enc_t *t,
-                           void *meta_data) 
+                           snet_meta_data_enc_t *meta_data) 
 {
   int i;
   char *wrapper_code, *tmp_str, *c_fqn;
-
+  
   /* construct full SAC function name */
   c_fqn = box_name;
   
@@ -84,7 +84,7 @@ char *C4SNetGenBoxWrapper( char *box_name,
       free( tmp_str);
   }
   STRAPPEND( wrapper_code, ");\n\n");
-  
+
   /* generate box wrapper */
   STRAPPEND( wrapper_code, "void *SNetCall__");
   STRAPPEND( wrapper_code, box_name);
