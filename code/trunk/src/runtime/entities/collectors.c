@@ -12,6 +12,59 @@
 
 /* #define COLLECTOR_DEBUG */
 
+/* @fn void RemoveProbes(snet_util_list_t *buffers, snet_buffer_t *outbuf)
+ * @brief removes the probes on all buffers in the list and passes one
+ *        to the outer world
+ * @param buffers the buffers to remove a probe on
+ * @param outbuf the outbuf to send a probe to
+ */
+static void RemoveProbes(snet_util_list_t *buffers, snet_buffer_t *outbuf) {
+  snet_util_list_iter_t *check_position;
+  snet_collect_elem_t *tmp_elem;
+  snet_record_t *temp_record;
+
+  check_position = SNetUtilListFirst(buffers);
+  while(SNetUtilListIterHasNext(check_position)) {
+    tmp_elem = SNetUtilListIterGet(check_position);
+    temp_record = SNetBufGet(tmp_elem->buf);
+    SNetRecDestroy(temp_record);
+    check_position = SNetUtilListIterNext(check_position);
+  }
+  tmp_elem = SNetUtilListIterGet(check_position);
+  temp_record = SNetBufGet(tmp_elem->buf);
+  SNetBufPut(outbuf, temp_record);
+}
+
+/* @fn bool AllProbed(snet_util_list_t *buffers)
+ * @brief checks if all buffers have a probe waiting
+ * @param buffers the buffers to check
+ * @return true if there is a probe waiting on every buffer
+ */
+static bool AllProbed(snet_util_list_t *buffers) {
+  bool all_probed;
+  snet_util_list_iter_t *position;
+  snet_collect_elem_t *current_elem;
+  snet_record_t *current_record;
+  bool record_is_probe;
+
+  all_probed = true;
+  position = SNetUtilListFirst(buffers);
+  while(SNetUtilListIterCurrentDefined(position)) {
+    current_elem = SNetUtilListIterGet(position);
+    position = SNetUtilListIterNext(position);
+    current_record = SNetBufShow(current_elem->buf);
+
+    record_is_probe  = current_record != NULL &&
+                  SNetRecGetDescriptor(current_record) == REC_probe;
+    if(!record_is_probe) {
+      all_probed = false;
+      break;
+    }
+  }
+  SNetUtilListIterDestroy(position);
+  return all_probed;
+}
+
 /* true <=> recordLevel identical and record number identical or both are NULL*/
 /** <!--********************************************************************-->
  *
@@ -47,11 +100,11 @@ static bool CompareSortRecords( snet_record_t *rec1, snet_record_t *rec2) {
 
 /** <!--********************************************************************-->
  *
- * @fn void Detcollector(void *info) 
+ * @fn void Detcollector(void *info)
  *
  * @brief contains mainloop of a deterministic collector
  *
- * @param info is some dispatch_info_t, contains all information the 
+ * @param info is some dispatch_info_t, contains all information the
  *          collector needs
  *
  ******************************************************************************/
@@ -61,29 +114,25 @@ static void *DetCollector( void *info) {
   snet_buffer_t *outbuf = inf->to_buf;
   sem_t *sem;
   snet_record_t *rec;
-  snet_util_list_t *lst = NULL; 
+  snet_util_list_t *lst = NULL;
   bool terminate = false;
   bool got_record;
-
-  bool all_probed;
-  snet_record_t *temp_record;
 
   snet_collect_elem_t *tmp_elem, *new_elem, *elem;
 
   snet_record_t *current_sort_rec = NULL;
-  
-  int counter = 0; 
+
+  int counter = 0;
   int sort_end_counter = 0;
 
   bool processed_record;
 
   snet_util_list_iter_t *read_position;
-  snet_util_list_iter_t *check_position;
   sem = SNetMemAlloc( sizeof( sem_t));
   sem_init( sem, 0, 0);
 
   SNetBufRegisterDispatcher( inf->from_buf, sem);
-  
+
   elem = SNetMemAlloc( sizeof( snet_collect_elem_t));
   elem->buf = inf->from_buf;
   elem->current = NULL;
@@ -97,17 +146,17 @@ static void *DetCollector( void *info) {
     sem_wait( sem);
     do {
       processed_record = false;
-      
+
       i = 0;
       j = SNetUtilListCount(lst);
       for( i=0; (i<j) && !(terminate); i++) {
 //    while( !( got_record)) {
         tmp_elem = SNetUtilListIterGet(read_position);
         rec = SNetBufShow( tmp_elem->buf);
-        if( rec != NULL) { 
-         
+        if( rec != NULL) {
+
           got_record = true;
-          
+
           switch(SNetRecGetDescriptor( rec)) {
             case REC_data:
               tmp_elem = SNetUtilListIterGet(read_position);
@@ -117,14 +166,10 @@ static void *DetCollector( void *info) {
                 processed_record=true;
               }
               else {
-//              sem_post( sem);
                 read_position = SNetUtilListIterRotateForward(read_position);
               }
-                  
-//            rec = SNetBufGet( current_buf);
-//            SNetBufPut( outbuf, rec);
               break;
-    
+
             case REC_sync:
               tmp_elem = SNetUtilListIterGet(read_position);
               if(CompareSortRecords( tmp_elem->current, current_sort_rec)) {
@@ -136,13 +181,12 @@ static void *DetCollector( void *info) {
                 processed_record=true;
               }
               else {
-//              sem_post( sem);
                 read_position = SNetUtilListIterRotateForward(read_position);
               }
               break;
-    
+
             case REC_collect:
-              tmp_elem = SNetUtilListIterGet(read_position); 
+              tmp_elem = SNetUtilListIterGet(read_position);
               if( CompareSortRecords( tmp_elem->current, current_sort_rec)) {
                 rec = SNetBufGet(tmp_elem->buf);
                 new_elem = SNetMemAlloc(sizeof( snet_collect_elem_t));
@@ -159,18 +203,17 @@ static void *DetCollector( void *info) {
                 processed_record=true;
               }
               else {
-//              sem_post( sem);
-                read_position = SNetUtilListIterRotateForward(read_position); 
-              }            
+                read_position = SNetUtilListIterRotateForward(read_position);
+              }
               break;
             case REC_sort_begin:
-              tmp_elem = SNetUtilListIterGet(read_position); 
+              tmp_elem = SNetUtilListIterGet(read_position);
               if( CompareSortRecords(tmp_elem->current, current_sort_rec)) {
                 rec = SNetBufGet(tmp_elem->buf);
                 tmp_elem->current = SNetRecCopy( rec);
                 counter += 1;
 
-                if( counter == SNetUtilListCount(lst)) { 
+                if( counter == SNetUtilListCount(lst)) {
                   counter = 0;
                   current_sort_rec = SNetRecCopy( rec);
 
@@ -188,7 +231,6 @@ static void *DetCollector( void *info) {
                 processed_record=true;
               }
               else {
-//              sem_post( sem);
                 read_position = SNetUtilListIterRotateForward(read_position);
               }
               break;
@@ -215,7 +257,6 @@ static void *DetCollector( void *info) {
                 processed_record=true;
               }
               else {
-//              sem_post( sem);
                 read_position = SNetUtilListIterRotateForward(read_position);
               }
               break;
@@ -246,7 +287,6 @@ static void *DetCollector( void *info) {
                 processed_record=true;
               }
               else {
-//              sem_post( sem);
                 SNetUtilListIterRotateForward(read_position);
               }
 
@@ -254,36 +294,8 @@ static void *DetCollector( void *info) {
 
             case REC_probe:
               SNetUtilDebugNotice("collector probed");
-              /* we are only allowed to foward a probe record if this record
-               * type is present on all input streams.
-               */
-              check_position = SNetUtilListFirst(lst);
-              all_probed = true;
-              while(SNetUtilListIterCurrentDefined(check_position)) {
-                tmp_elem = SNetUtilListIterGet(check_position);
-                temp_record = SNetBufShow(tmp_elem->buf);
-                if(temp_record == NULL ||
-                   SNetRecGetDescriptor(temp_record) != REC_probe) {
-                  all_probed = false;
-                  break;
-                }
-                check_position = SNetUtilListIterNext(check_position);
-              }
-              SNetUtilListIterDestroy(check_position);
-              if(all_probed) {
-                /* all input buffers are probed, lets remove those
-                 * probes! (and pass one to the outer world)
-                 */
-                check_position = SNetUtilListFirst(lst);
-                while(SNetUtilListIterHasNext(check_position)) {
-                  tmp_elem = SNetUtilListIterGet(check_position);
-                  temp_record = SNetBufGet(tmp_elem->buf);
-                  SNetRecDestroy(temp_record);
-                  check_position = SNetUtilListIterNext(check_position);
-                }
-                tmp_elem = SNetUtilListIterGet(check_position);
-                temp_record = SNetBufGet(tmp_elem->buf);
-                SNetBufPut(outbuf, temp_record);
+              if(AllProbed(lst)) {
+                RemoveProbes(lst, outbuf);
               }
               SNetUtilDebugNotice("collector probing done");
             break;
@@ -318,20 +330,17 @@ static void *Collector( void *info) {
   snet_collect_elem_t *tmp_elem, *elem;
 
   snet_record_t *current_sort_rec = NULL;
-  
-  int counter = 0; 
+
+  int counter = 0;
   int sort_end_counter = 0;
-  bool all_probed;
-  snet_record_t *temp_record;
 
   snet_util_list_iter_t *read_position;
-  snet_util_list_iter_t *temp_position;
 
   sem = SNetMemAlloc(sizeof( sem_t));
   sem_init( sem, 0, 0);
 
   SNetBufRegisterDispatcher(inf->from_buf, sem);
-  
+
   elem = SNetMemAlloc(sizeof(snet_collect_elem_t));
   elem->buf = inf->from_buf;
   elem->current = NULL;
@@ -348,12 +357,14 @@ static void *Collector( void *info) {
       processed_record = false;
       j = SNetUtilListCount(lst);
       for( i=0; (i<j) && !(terminate); i++) {
-//    while( !( got_record)) {
-        current_buf = ((snet_collect_elem_t*) SNetUtilListIterGet(read_position))->buf;
+        elem = (snet_collect_elem_t*) SNetUtilListIterGet(read_position);
+        current_buf = elem->buf;
+
         #ifdef COLLECTOR_DEBUG
           SNetUtilDebugNotice("COLLECTOR %x: reading buffer %x",
             (unsigned int) outbuf, (unsigned int) current_buf);
         #endif
+
         rec = SNetBufShow(current_buf);
         if( rec != NULL) {
           got_record = true;
@@ -361,62 +372,44 @@ static void *Collector( void *info) {
             SNetUtilDebugNotice("COLLECTOR %x: found data",
               (unsigned int) outbuf);
           #endif
-          switch( SNetRecGetDescriptor( rec)) {
-            case REC_data:
-              #ifdef COLLECTOR_DEBUG
-                SNetUtilDebugNotice("COLLECTOR %x: Data record", (
-                  unsigned int) outbuf);
-              #endif
-              tmp_elem = SNetUtilListIterGet(read_position);
-              if(CompareSortRecords(tmp_elem->current, current_sort_rec)) {
+
+          if(CompareSortRecords(elem->current, current_sort_rec)) {
+            rec = SNetBufGet(elem->buf);
+            switch( SNetRecGetDescriptor( rec)) {
+              case REC_data:
                 #ifdef COLLECTOR_DEBUG
+                  SNetUtilDebugNotice("COLLECTOR %x: Data record", (
+                    unsigned int) outbuf);
                   SNetUtilDebugNotice("COLLECTOR %x: outputting data",
                     (unsigned int) outbuf);
                 #endif
-                rec = SNetBufGet( tmp_elem->buf);
                 SNetBufPut( outbuf, rec);
                 processed_record = true;
-              }
-              else {
-//              sem_post( sem);
-                read_position = SNetUtilListIterRotateForward(read_position);
-              }
-                  
-              //rec = SNetBufGet( current_buf);
-              //SNetBufPut( outbuf, rec);
               break;
-    
-            case REC_sync:
-              #ifdef COLLECTOR_DEBUG
-                SNetUtilDebugNotice("COLLECTOR %x: sync record",
-                  (unsigned int) outbuf);
-              #endif
-              tmp_elem = SNetUtilListIterGet(read_position);
-              if( CompareSortRecords(tmp_elem->current, current_sort_rec)) {
-                rec = SNetBufGet(tmp_elem->buf);
+
+              case REC_sync:
+                #ifdef COLLECTOR_DEBUG
+                  SNetUtilDebugNotice("COLLECTOR %x: sync record",
+                    (unsigned int) outbuf);
+                #endif
                 tmp_elem = SNetUtilListIterGet(read_position);
                 tmp_elem->buf = SNetRecGetBuffer( rec);
-                SNetUtilListIterSet(read_position, tmp_elem);
+                lst = SNetUtilListIterSet(read_position, tmp_elem);
+
                 SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
                 SNetRecDestroy( rec);
                 processed_record = true;
-              }
-              else {
-//              sem_post( sem);
-                read_position = SNetUtilListIterRotateForward(read_position);
-              }
               break;
 
-            case REC_collect:
-              #ifdef COLLECTOR_DEBUG
-                SNetUtilDebugNotice("COLLECTOR %x: collect record", 
-                  (unsigned int) outbuf);
-              #endif
-              tmp_elem = SNetUtilListIterGet(read_position);
-              if(CompareSortRecords(tmp_elem->current, current_sort_rec)) {
-                rec = SNetBufGet(tmp_elem->buf);
+              case REC_collect:
+                #ifdef COLLECTOR_DEBUG
+                  SNetUtilDebugNotice("COLLECTOR %x: collect record",
+                    (unsigned int) outbuf);
+                #endif
+
                 tmp_elem = SNetMemAlloc(sizeof( snet_collect_elem_t));
                 tmp_elem->buf = SNetRecGetBuffer(rec);
+
                 #ifdef COLLECTOR_DEBUG
                   SNetUtilDebugNotice("COLLECTOR %x: adding buffer %x",
                     (unsigned int) outbuf, (unsigned int) tmp_elem->buf);
@@ -431,21 +424,14 @@ static void *Collector( void *info) {
                 SNetBufRegisterDispatcher( SNetRecGetBuffer( rec), sem);
                 SNetRecDestroy( rec);
                 processed_record = true;
-              }
-              else {
-//              sem_post( sem);
-                read_position = SNetUtilListIterRotateForward(read_position);
-              }
               break;
-            case REC_sort_begin:
+
+              case REC_sort_begin:
               #ifdef COLLECTOR_DEBUG
                 SNetUtilDebugNotice("COLLECTOR %x: sort_begin record",
                   (unsigned int) outbuf);
               #endif
-              tmp_elem = SNetUtilListIterGet(read_position);
-              if(CompareSortRecords(tmp_elem->current, current_sort_rec)) {
-                rec = SNetBufGet(tmp_elem->buf);
-                tmp_elem->current = SNetRecCopy( rec);
+                elem->current = SNetRecCopy( rec);
                 counter += 1;
 
                 if(counter == SNetUtilListCount(lst)) {
@@ -462,19 +448,13 @@ static void *Collector( void *info) {
                   SNetRecDestroy(rec);
                 }
                 processed_record = true;
-              }
-              else {
-//              sem_post( sem);
-                read_position = SNetUtilListIterRotateForward(read_position);
-              }
               break;
-            case REC_sort_end:
-              #ifdef COLLECTOR_DEBUG
-                SNetUtilDebugNotice("COLLECTOR: %x sort_end record", (unsigned int) outbuf);
-              #endif
-              tmp_elem = SNetUtilListIterGet(read_position);
-              if(CompareSortRecords(tmp_elem->current, current_sort_rec)) {
-                rec = SNetBufGet(tmp_elem->buf);
+
+              case REC_sort_end:
+                #ifdef COLLECTOR_DEBUG
+                  SNetUtilDebugNotice("COLLECTOR: %x sort_end record",
+                    (unsigned int) outbuf);
+                #endif
                 sort_end_counter += 1;
                 if( sort_end_counter == SNetUtilListCount(lst)) {
                   #ifdef COLLECTOR_DEBUG
@@ -488,19 +468,13 @@ static void *Collector( void *info) {
                   SNetRecDestroy( rec);
                 }
                 processed_record = true;
-              }
-              else {
-                read_position = SNetUtilListIterRotateForward(read_position);
-              }
               break;
-            case REC_terminate:
-              #ifdef COLLECTOR_DEBUG
-                SNetUtilDebugNotice("COLLECTOR %x: terminate record",
-                  (unsigned int) outbuf);
-              #endif
-              tmp_elem = SNetUtilListIterGet(read_position);
-              if(CompareSortRecords(tmp_elem->current, current_sort_rec)) {
-                rec = SNetBufGet(tmp_elem->buf);
+
+              case REC_terminate:
+                #ifdef COLLECTOR_DEBUG
+                  SNetUtilDebugNotice("COLLECTOR %x: terminate record",
+                    (unsigned int) outbuf);
+                #endif
                 tmp_elem = SNetUtilListIterGet(read_position);
                 SNetBufDestroy( tmp_elem->buf);
                 lst = SNetUtilListIterDelete(read_position);
@@ -514,68 +488,32 @@ static void *Collector( void *info) {
                   SNetUtilDebugNotice("COLLECTOR %x: %d buffers left",
                     (unsigned int) outbuf, SNetUtilListCount(lst));
                 #endif
-                if(SNetUtilListCount(lst) == 0) {
+                if(SNetUtilListIsEmpty(lst)) {
                   terminate = true;
                   #ifdef COLLECTOR_DEBUG
                     SNetUtilDebugNotice("COLLECTOR %x: forwarding TERMINATE"
                       " token", (unsigned int) outbuf);
                   #endif
                   SNetBufPut(outbuf, rec);
-                  SNetBufBlockUntilEmpty(outbuf);
-                  SNetBufDestroy(outbuf);
-                  SNetUtilListDestroy(lst);
-                  SNetUtilListIterDestroy(read_position);
                 }
                 else {
                   SNetRecDestroy( rec);
                 }
                 processed_record = true;
-              }
-              else {
-//              sem_post( sem);
-                read_position = SNetUtilListIterRotateForward(read_position);
-              }
 
               break;
-            case REC_probe:
-              SNetUtilDebugNotice("probing in collector");
-              /* we are only allowed to foward a probe record if this record
-               * type is present on all input streams.
-               */
-              all_probed = true;
-              temp_position = SNetUtilListFirst(lst);
-              while(SNetUtilListIterCurrentDefined(temp_position)) {
-                tmp_elem = SNetUtilListIterGet(temp_position);
-                temp_position = SNetUtilListIterNext(temp_position);
-                temp_record = SNetBufShow(tmp_elem->buf);
-                if(temp_record == NULL ||
-                   SNetRecGetDescriptor(temp_record) != REC_probe) {
-                  all_probed = false;
-                  break; /* for */
-                }
-              }
-              SNetUtilListIterDestroy(temp_position);
 
-              SNetUtilDebugNotice("%d", all_probed);
-              if(all_probed) {
-                /* all input buffers are probed, lets remove those
-                 * probes! (and pass one to the outer world)
-                 */
-                temp_position = SNetUtilListFirst(lst);
-                while(SNetUtilListIterCurrentDefined(temp_position)) {
-                  tmp_elem = SNetUtilListIterGet(temp_position);
-                  temp_position = SNetUtilListIterNext(temp_position);
-                  temp_record = SNetBufGet(tmp_elem->buf);
-                  SNetRecDestroy(temp_record);
+              case REC_probe:
+                SNetUtilDebugNotice("probing in collector");
+                if(AllProbed(lst)) {
+                  RemoveProbes(lst, outbuf);
                 }
-                tmp_elem = SNetUtilListIterGet(temp_position);
-                temp_record = SNetBufGet(tmp_elem->buf);
-                SNetBufPut(outbuf, temp_record);
-                SNetUtilListIterDestroy(temp_position);
-                SNetUtilDebugNotice("removed all probes");
-              }
-            break;
-          } // switch
+              break;
+            } // switch
+          } // if sort-record is right
+          else {
+            read_position = SNetUtilListIterRotateForward(read_position);
+          }
         } // if
         else {
           #ifdef COLLECTOR_DEBUG
@@ -584,11 +522,14 @@ static void *Collector( void *info) {
           #endif
           read_position  = SNetUtilListIterRotateForward(read_position);
         }
-  //    } // while !got_record
       } // for getCount
     } while( processed_record && !(terminate));
   } // while !terminate
 
+  SNetBufBlockUntilEmpty(outbuf);
+  SNetBufDestroy(outbuf);
+  SNetUtilListDestroy(lst);
+  SNetUtilListIterDestroy(read_position);
   SNetMemFree( inf);
   return( NULL);
 }
@@ -596,7 +537,6 @@ static void *Collector( void *info) {
 
 static snet_buffer_t *CollectorStartup( snet_buffer_t *initial_buffer, 
                                         bool is_det) {
-                                          
   snet_buffer_t *outbuf;
   dispatch_info_t *buffers;
 
