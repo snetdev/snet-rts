@@ -22,7 +22,7 @@ net factorial({x} -> {x,<stop>})
 	<metadata xmlns="snet-home.org" >
   	    <box name="leq1" >
 		<interface>C4SNet</interface>
-		<originalname>leq1</originalname>
+		<snet_originalname>leq1</snet_originalname>
 		<boxfun>test</boxfun>
                 <extra1>value</extra1>
                 <extra2 value="value" />
