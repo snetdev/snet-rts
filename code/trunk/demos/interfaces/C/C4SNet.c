@@ -1,12 +1,13 @@
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "C4SNet.h"
-#include "C4SNetTypes.h"
+#include "C4SNetText.h"
 #include "memfun.h"
 #include "typeencode.h"
 #include "interface_functions.h"
 #include "out.h"
-
+#include "base64.h"
 
 #define F_COUNT( c) c->counter[0]
 #define T_COUNT( c) c->counter[1]
@@ -23,6 +24,95 @@ struct container {
   int *tags;
   int *btags;
 };
+
+int C4SNetSizeof(ctype_t type){
+  switch(type) {
+  case CTYPE_uchar: 
+    return sizeof(unsigned char);
+    break;
+  case CTYPE_char: 
+    return sizeof(signed char);
+    break;
+  case CTYPE_ushort: 
+    return sizeof(unsigned short);
+    break;
+  case CTYPE_short: 
+    return sizeof(signed short);
+    break;
+  case CTYPE_uint: 
+    return sizeof(unsigned int);
+    break;
+  case CTYPE_int: 
+    return sizeof(signed int);
+    break;
+  case CTYPE_ulong:
+    return sizeof(unsigned long);
+    break;
+  case CTYPE_long:
+    return sizeof(signed long);
+    break;
+    break;
+  case CTYPE_float: 
+    return sizeof(float);
+    break;
+  case CTYPE_double: 
+    return sizeof(double);
+    break;
+  case CTYPE_ldouble: 
+    return sizeof(long double);
+    break;
+  case CTYPE_unknown:
+  default:
+    return 0;
+    break;
+  }
+}
+
+void C4SNetFree( void *ptr)
+{
+  SNetMemFree( ptr);
+}
+
+void *C4SNetCopy( void *ptr)
+{
+  C_Data *new;
+
+  new = SNetMemAlloc( sizeof( C_Data));
+
+  new->data = ((C_Data *)ptr)->data;
+  new->type = ((C_Data *)ptr)->type;
+
+  return( new);
+}
+
+int C4SNetEncode( FILE *file, void *ptr){
+  C_Data *temp = (C_Data *)ptr;
+
+  int i = 0;
+
+  i = Base64encodeDataType(file, (int)temp->type);
+
+  i += Base64encode(file, (unsigned char *)&temp->data, C4SNetSizeof(temp->type));
+
+  return i + 1;
+}
+
+void *C4SNetDecode(FILE *file) 
+{
+  int i = 0;
+
+  cdata_types_t data;
+  ctype_t type;
+  int temp = 0;
+
+  i = Base64decodeDataType(file, &temp);
+
+  type = (ctype_t)temp;
+
+  i += Base64decode(file, (unsigned char *)&data, C4SNetSizeof(type));
+
+  return C4SNet_cdataCreate( type, &data);
+}
 
 void C4SNet_outCompound( c4snet_container_t *c) 
 {
@@ -79,45 +169,15 @@ void C4SNetInit( int id)
 
 C_Data *C4SNet_cdataCreate( ctype_t type, void *data)
 {
-  C_Data *c;
-  c = malloc( sizeof( C_Data));
-  c->type = type;
+  C_Data *c = NULL;
 
-  switch(type) {
-  case CTYPE_uchar: 
-    c->data.uc = *(unsigned char *)data;
-    break;
-  case CTYPE_char: 
-    c->data.c = *(char *)data;
-    break;
-  case CTYPE_ushort: 
-    c->data.us = *(unsigned short *)data;
-    break;
-  case CTYPE_short: 
-    c->data.s = *(short *)data;
-    break;
-  case CTYPE_uint: 
-    c->data.ui = *(unsigned int *)data;
-    break;
-  case CTYPE_int: 
-    c->data.i = *(int *)data;
-    break;
-  case CTYPE_ulong:
-    c->data.ul = *(unsigned long *)data;
-    break;
-  case CTYPE_long:
-    c->data.l = *(long *)data;
-    break;
-  case CTYPE_float: 
-    c->data.f = *(float *)data;	
-    break;
-  case CTYPE_double: 
-    c->data.d = *(double *)data;
-    break;
-  default:
-    free(c);
-    return NULL;
-    break;
+  int size = C4SNetSizeof(type);
+
+  if(size != 0) {
+    c = malloc( sizeof( C_Data));
+    c->type = type;
+
+    memcpy((void *)&c->data, data, size);
   }
 
   return( c);
@@ -125,49 +185,18 @@ C_Data *C4SNet_cdataCreate( ctype_t type, void *data)
 
 void *C4SNet_cdataGetData( C_Data *c)
 {
-  C_Data *temp = (C_Data *)c;
+  if(c != NULL) {
+    return (void *)&c->data;
+  } 
 
-  switch(temp->type) {
-  case CTYPE_uchar: 
-    return &temp->data.uc;
-    break;
-  case CTYPE_char: 
-    return &temp->data.c;
-    break;
-  case CTYPE_ushort: 
-    return &temp->data.us;
-    break;
-  case CTYPE_short: 
-    return &temp->data.s;
-    break;
-  case CTYPE_uint: 
-    return &temp->data.ui;
-    break;
-  case CTYPE_int: 
-    return &temp->data.i;
-    break;
-  case CTYPE_ulong:
-    return &temp->data.ul;
-    break;
-  case CTYPE_long:
-     return &temp->data.l;
-    break;
-  case CTYPE_float: 
-    return &temp->data.f;	
-    break;
-  case CTYPE_double: 
-    return &temp->data.d;
-    break;
-  default:
-    return NULL;
-    break;
-  }
-
-  return NULL;
+  return c;
 }
 
 ctype_t C4SNet_cdataGetType( C_Data *c) {
-  return( c->type);
+  if(c != NULL) {
+    return( c->type);
+  }
+  return CTYPE_unknown;
 }
 
 

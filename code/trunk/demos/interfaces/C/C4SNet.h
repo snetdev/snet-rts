@@ -2,13 +2,13 @@
 #define _C4SNET_H_
 
 #include <stdio.h>
-#include "C4SNetTypes.h"
 
 typedef struct container c4snet_container_t;
 
 typedef enum{
-  CTYPE_uchar,      //char
-    CTYPE_char,     //signed char
+  CTYPE_unknown,    // unkown data type
+    CTYPE_uchar,    //unsigned char
+    CTYPE_char,     //char
     CTYPE_ushort,   //unsigned short
     CTYPE_short,    //short
     CTYPE_uint,     //unsigned int
@@ -17,6 +17,7 @@ typedef enum{
     CTYPE_long,     //long
     CTYPE_float,    //float
     CTYPE_double,   //double
+    CTYPE_ldouble,  // long double
 }ctype_t;
 
 typedef union cdata_types{
@@ -38,17 +39,16 @@ typedef struct cdata {
 } C_Data;
 
 
+int C4SNetSizeof(ctype_t type);
+void C4SNetFree( void *ptr);
+void *C4SNetCopy( void *ptr);
+int C4SNetEncode( FILE *file, void *ptr);
+void *C4SNetDecode(FILE *file);
+
 void C4SNetInit( int id);
 
 void C4SNet_outCompound( c4snet_container_t *c);
 void C4SNet_out( void *hnd, int variant, ...);
-
-void C4SNetFree( void *ptr);
-void *C4SNetCopy( void *ptr);
-int C4SNetSerialize( FILE *file, void *ptr);
-void *C4SNetDeserialize( FILE *file);
-int C4SNetEncode( FILE *file, void *ptr);
-void *C4SNetDecode( FILE *file);
 
 /* ************************************************************************* */
 
