@@ -1,6 +1,9 @@
+/*
+ * $Id$
+ */
 
-/* 
- * This implements a buffer.
+/*
+ * This implements a buffer with unbounded capacity.
  */
 
 
@@ -25,6 +28,7 @@
 #endif
 
 struct fbckbuffer  {
+  /* this list is sorted descending on the iterations of the records */
   snet_util_list_t *content;
   bool dispatcher_registered;
   sem_t *sem;
@@ -87,34 +91,58 @@ extern snet_fbckbuffer_t *SNetFbckBufCreate() {
   return( theBuffer);
 }
 
-extern snet_fbckbuffer_t *SNetFbckBufPut( snet_fbckbuffer_t *bf, void* elem) {
-  snet_record_t *current;
+/* @fn snet_util_list_iterator_t *
+ *                    FindPosition(snet_util_list_iterator_t *position,
+ *                                           snet_util_record_t *index)
+ * @brief moves the given iterator to the element after the correct
+ *        insertion point for a sort by insert. The iterator will be
+ *        undefined if you have to add at the end of the list.
+ * @param position the iterator to modify, must not be null
+ * @param index the index to insert
+ * @return a pointer to the modified iterator
+ */
+static snet_util_list_iter_t *
+FindPosition(snet_util_list_iter_t *position, snet_record_t *new_element)
+{
+  snet_record_t *current_element;
+  bool sorted;
 
-  snet_record_t *rec = (snet_record_t*) elem;
- 
-   /* lock the mutex */	
-  pthread_mutex_lock( bf->mxCounter);
-    
-  /* put element into list */
-  if(SNetUtilListIsEmpty(bf->content)) {
-    SNetUtilListAddBeginning(bf->content, elem);
-  } else {
-    /* sort by insert */
-    SNetUtilListGotoBeginning(bf->content);
-    current = (snet_record_t*)SNetUtilListGet(bf->content);
-    while(SNetRecGetIteration(current) < SNetRecGetIteration(rec)) {
-      SNetUtilListNext(bf->content);
-      current = SNetUtilListGet(bf->content);
+  while(SNetUtilListIterCurrentDefined(position)) {
+    current_element = SNetUtilListIterGet(position);
+    sorted =
+        SNetRecGetIteration(current_element) > SNetRecGetIteration(new_element);
+    if(!sorted) {
+      break;
+    } else {
+      position = SNetUtilListIterNext(position);
     }
-    SNetUtilListAddBefore(bf->content, rec);
   }
-	
+  return position;
+}
+
+extern snet_fbckbuffer_t *SNetFbckBufPut( snet_fbckbuffer_t *bf, void* elem) {
+  snet_record_t *rec;
+  snet_util_list_iter_t *target;
+
+  rec = (snet_record_t*) elem;
+
+  pthread_mutex_lock( bf->mxCounter);
+
+  /* sort by insert */
+  target = SNetUtilListFirst(bf->content);
+  target = FindPosition(target, rec);
+  if(SNetUtilListIterCurrentDefined(target)) {
+    SNetUtilListIterAddBefore(target, elem);
+  } else {
+    SNetUtilListAddEnd(bf->content, elem);
+  }
+  SNetUtilListIterDestroy(elem);
+
   /* send signal to waiting threads that an item is now available */
   pthread_cond_signal( bf->condEmpty);
 
-  /* unlock the mutex */
   pthread_mutex_unlock( bf->mxCounter);
-  
+
   return( bf);
 }
 
@@ -143,15 +171,15 @@ extern void *SNetFbckBufGet( snet_fbckbuffer_t *bf) {
 
 extern void *SNetFbckBufTryGet(snet_fbckbuffer_t *bf, snet_fbckbuffer_msg_t *msg) { 
   void *ptr=NULL;
-  /* return if the buffer is locked */	
+  /* return if the buffer is locked */
   if( pthread_mutex_trylock( bf->mxCounter) == EBUSY ) {
-    *msg = FBCKBUF_blocked;	    
+    *msg = FBCKBUF_blocked;
   }
   else {   /* return if there are no elements in the buffer */
     if(SNetUtilListIsEmpty(bf->content)) {
       *msg = FBCKBUF_empty;
       pthread_mutex_unlock( bf->mxCounter );
-    } else { 
+    } else {
       /* get an element from the buffer*/
       ptr = SNetUtilListGetFirst(bf->content);
       SNetUtilListDeleteFirst(bf->content);
@@ -166,9 +194,9 @@ extern void *SNetFbckBufTryGet(snet_fbckbuffer_t *bf, snet_fbckbuffer_msg_t *msg
 
 extern void *SNetFbckBufShow(snet_fbckbuffer_t *buf) {
   void *ptr;
-  
+
   pthread_mutex_lock( buf->mxCounter );
- 
+
   if(SNetUtilListIsEmpty(buf->content)) {
     ptr = NULL;
   } else {
@@ -176,16 +204,15 @@ extern void *SNetFbckBufShow(snet_fbckbuffer_t *buf) {
   }
 
   pthread_mutex_unlock( buf->mxCounter);
-  
+
   return( ptr);
 }
 
 extern void SNetFbckBufBlockUntilEmpty(snet_fbckbuffer_t *bf) {
-  
   pthread_mutex_lock( bf->mxCounter);
 
   while(!SNetUtilListIsEmpty(bf->content)) {
-    // wake up, if an item is removed from the buffer    
+    /* wake up, if an item is removed from the buffer */
     pthread_cond_wait( bf->elemRemoved, bf->mxCounter);
   }
 
@@ -199,7 +226,7 @@ extern void SNetFbckBufRegisterDispatcher( snet_fbckbuffer_t *bf, sem_t *sem) {
   pthread_mutex_lock( bf->mxCounter);
   bf->dispatcher_registered = true;
   bf->sem = sem;
-  
+
   for(i = 0; i < SNetUtilListCount(bf->content); i++) {
     sem_post(sem);
   }
@@ -218,7 +245,7 @@ extern void SNetFbckBufDestroy(snet_fbckbuffer_t *bf) {
     pthread_mutex_destroy( bf->mxCounter);
     pthread_cond_destroy( bf->condEmpty);
     pthread_cond_destroy( bf->elemRemoved);
-    
+
     SNetMemFree( bf->condEmpty);
     SNetMemFree( bf->mxCounter);
     SNetMemFree( bf->elemRemoved);

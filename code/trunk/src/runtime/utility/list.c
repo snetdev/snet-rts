@@ -29,21 +29,13 @@ struct list {
   struct list_elem *current;
 };
 
-/** <!--********************************************************************-->
- *
- * @fn void Link(struct list_elem *pred, struct list_elem*succ)
- * 
- *   @brief establishes a link so pred is the predecessor of succ.
- *
- *   This is just a little helper function that links pred and succ together.
- *   As this is a doubly linked list, we have to set next and prev-pointers
- *   so pred really is the predecessor and succ really is the successor of 
- *   pred.
- *
- * @param pred this is any non-null element of the list
- * @param succ this is any non-null element of the list
- *
- *****************************************************************************/
+struct list_iterator {
+  struct list *base;
+  struct list_elem *current;
+};
+
+#define NULLCHECK(VAR) if((VAR) == NULL) { SNetUtilDebugFatal("%s: %s == null", __FUNCTION__, #VAR);}
+
 static void Link(struct list_elem *pred, struct list_elem *succ) {
   pred->next = succ;
   succ->prev = pred;
@@ -64,9 +56,7 @@ static void Link(struct list_elem *pred, struct list_elem *succ) {
  *****************************************************************************/
 snet_util_list_t *SNetUtilListCreate() {
   struct list *result = SNetMemAlloc(sizeof(snet_util_list_t));
-  if(result == NULL) {
-    SNetUtilDebugFatal("Could not create list, MemAlloc returned 0.");
-  }
+  NULLCHECK(result)
   result->first = NULL;
   result->last = NULL;
   result->current = NULL;
@@ -102,101 +92,6 @@ void SNetUtilListDestroy(snet_util_list_t *target) {
 
 /** <!--********************************************************************-->
  *
- * @fn void SNetUtilListAddAfter(snet_util_list_t *target, void* content) 
- *
- * @brief Adds the content in a new list_element after the current element
- *
- *      This list has a current element. The new content will be added to 
- *      the list after the current element. If the list is empty, the new
- *      element will be added without the need to set the current element.
- *
- * @param target the list to add the element to
- * @param content the new content to add.
- *
- *****************************************************************************/
-void SNetUtilListAddAfter(snet_util_list_t *target, void *content) {
-  struct list_elem *succ;
-  struct list_elem *pred;
-  struct list_elem *elem;
- 
-  if(target == NULL) { 
-    SNetUtilDebugFatal("target == null in AddAfter!"); 
-  }
-  elem = SNetMemAlloc(sizeof(struct list_elem));
-  elem->content = content;
-
-  if(target->first == NULL && target->last == NULL) {
-    /* list is empty */
-    target->first = elem;
-    target->last = elem;
-    target->current = elem;
-    elem->next = NULL;
-    elem->prev = NULL;
-  } else {
-    if(target->current->next == NULL) {
-      /* adding to end of list */
-      target->last = elem;
-      Link(target->current, elem);
-      elem->next = NULL;
-    } else {
-      /* adding somewhere in the list */
-      pred = target->current;
-      succ = target->current->next;
-      Link(pred, elem);
-      Link(elem, succ);
-    }
-  }
-}
-
-/** <!--********************************************************************-->
- *
- * @fn void SNetUtilListAddBefore(snet_util_list_t *target, void *content)
- *
- * @brief Adds the new element before the current element of the list
- *
- *      The content will be added to an element before the current element
- *      in the list. If the list was empty before, the element will be added 
- *      correctly. 
- *
- * @param target the list you want to add the element to
- * @param content the new element to add
- *
- ******************************************************************************/
-void SNetUtilListAddBefore(snet_util_list_t *target, void *content) {
-  struct list_elem *succ;
-  struct list_elem *pred;
-  struct list_elem *elem;
-
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in AddBefore!");
-  }
-  elem = SNetMemAlloc(sizeof(struct list_elem));
-  elem->content = content;
-  if(target->first == NULL && target->last == NULL) {
-    /* list is empty */
-    target->first = elem;
-    target->last = elem;
-    target->current = elem;
-    elem->next = NULL;
-    elem->prev = NULL;
-  } else {
-    if(target->current->prev == NULL) {
-      /* adding to beginning of list */
-      target->first = elem;
-      Link(elem, target->current);
-      elem->prev = NULL;
-    } else {
-      /* adding somewhere in the list */
-      pred = target->current->prev;
-      succ = target->current;
-      Link(pred, elem);
-      Link(elem, succ);
-    }
-  }
-}
-
-/** <!--********************************************************************-->
- *
  * @fn void SNetUtilListAddBeginning(snet_util_list_t *target, void *content
  *
  * @brief Adds the content to the beginning of the list
@@ -208,17 +103,27 @@ void SNetUtilListAddBefore(snet_util_list_t *target, void *content) {
  * @param content the new element to add
  *
  *****************************************************************************/
-void SNetUtilListAddBeginning(snet_util_list_t *target, void *content) {
-  struct list_elem *temp;
+snet_util_list_t *
+SNetUtilListAddBeginning(snet_util_list_t *target, void *content) {
+  struct list_elem *new_element;
 
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in AddBeginning");
+  NULLCHECK(target)
+
+  new_element = SNetMemAlloc(sizeof(struct list_elem));
+  new_element->content = content;
+  new_element->prev = NULL;
+
+  if(target->first == NULL) {
+    /* empty list */
+    target->first = new_element;
+    target->last = new_element;
+    new_element->next = NULL;
+  } else {
+    /* list with at least 1 element */
+    new_element->next = target->first;
+    target->first = new_element;
   }
-
-  temp = target->current;
-  target->current = target->first;
-  SNetUtilListAddBefore(target, content);
-  target->current = temp;
+  return target;
 }
 
 /** <!--********************************************************************-->
@@ -235,253 +140,27 @@ void SNetUtilListAddBeginning(snet_util_list_t *target, void *content) {
  * @param content the new element to add
  *
  *****************************************************************************/
-void SNetUtilListAddEnd(snet_util_list_t *target, void *content) {
-  struct list_elem *temp;
+snet_util_list_t *SNetUtilListAddEnd(snet_util_list_t *target, void *content) {
+  struct list_elem *new_element;
 
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in AddBeginning");
-  }
+  NULLCHECK(target)
 
-  temp = target->current;
-  target->current = target->last;
-  SNetUtilListAddAfter(target, content);
-  target->current = temp;
-}
+  new_element = SNetMemAlloc(sizeof(struct list_elem));
+  new_element->content = content;
+  new_element->next = NULL;
 
-/** <!--********************************************************************-->
- *
- * @fn void SNetUtilListGotoBeginning(snet_util_list_t *target)
- *
- * @brief sets the current element to the first element in the list
- *
- *      This sets the current element to the beginning of the list. If the
- *      list is empty, current will be undefined.
- *
- * @param target the list to modify
- *
- *****************************************************************************/
-void SNetUtilListGotoBeginning(snet_util_list_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in GotoBeginning!");
+  if(target->last == NULL) {
+    /* empty list */
+    target->first = new_element;
+    target->last = new_element;
+    new_element->prev = NULL;
+  } else {
+    /* list with at least one element */
+    new_element->prev = target->last;
+    target->last->next = new_element;
+    target->last = new_element;
   }
-
-  target->current = target->first;
-}
-
-/** <!--********************************************************************-->
- *
- * @fn void SNetUtilLIstGotoEnd(snet_util_list_t *target)
- *
- * @brief moves the current pointer to the end of the list
- *
- *      This moves the current element to the last element of the list. If the
- *      list is empty, the current element will be undefined afterwards.
- *
- * @param target the list to modify
- *
- *****************************************************************************/
-void SNetUtilListGotoEnd(snet_util_list_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in GotoEnd!");
-  }
-
-  target->current = target->last;
-}
-
-/** <!--********************************************************************-->
- *
- * @fn void SNetUtilListNext(snet_util_list_t *target)
- *
- * @brief makes the next element the current element 
- *
- *        This function sets the current element to the next element of the old
- *        current element. If the current element is the last element in 
- *        the list, the current element goes in some undefined state. Further
- *        calls to SNeTUtilListNext will keep the current element in this 
- *        undefined state. It is not safe to call AddBefore or similar functions
- *        while we are in this undefined state. 
- *
- * @param target the list to modify
- *
- ******************************************************************************/
-void SNetUtilListNext(snet_util_list_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in ListNext!");
-  }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("target->current == null in ListNext!");
-  }
-
-  if(target->current != NULL) {
-    target->current = target->current->next;
-  }
-}
-
-/** <!--********************************************************************-->
- *
- * @fn void SNetUtilListPrev(snet_util_list *target)
- *
- * @brief makes the previous element the current element
- * 
- *      This function sets the current element to the previous element of the
- *      old current element. If the current element is the first element of the
- *      list, the current element goes into some undefined state. Further calls
- *      to Prev with the current element in the undefined state keeps the 
- *      current element in the undefined state. It is not safe to call functions
- *      like AddAfter or similar functions with the current element in the 
- *      undefined state.
- *
- * @param target the list to modify
- *
- *****************************************************************************/
-void SNetUtilListPrev(snet_util_list_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in ListPrev!");
-  }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("target->current == null in ListPrev");
-  }
-
-  if(target->current != NULL) {
-    target->current = target->current->prev;
-  }
-}
-
-/** <!--********************************************************************-->
- *
- * @fn void* SNetUtilListGet(snet_util_list_t target)
- *
- * @brief returns the current value.
- *
- *      This function returns the value of the element current points to. If 
- *      the list is empty and current is thus undefined, a fatal error will 
- *      be signaled.
- *
- * @param target the list to inspect
- *
- * @return the value of the current element.
- *
- *****************************************************************************/
-void* SNetUtilListGet(snet_util_list_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in ListGet");
-  }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("target->current == null in listGet");
-  }
-
-  return target->current->content;
-}
-
-/** <!--********************************************************************-->
- *
- * @fn bool SNetUtilHasNext(snet_util_list_t target)
- *
- * @brief checks if a next element exists.
- *
- * @param target the list to inspect
- *
- * @return true if there is some next element, false otherwise
- *
- *****************************************************************************/
-bool SNetUtilListHasNext(snet_util_list_t *target) {
-  if(target == NULL) { 
-    SNetUtilDebugFatal("target == null in HasNext");
-  }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("target->current == NULL!");
-  }
-
-  return target->current->next != NULL;
-}
-
-/** <!--********************************************************************-->
- *
- * @fn bool SNetUtilListHasPrev(snet_util_list_t *target)
- *
- * @brief returns if a previous element exists
- *
- * @param target the list to inspect
- *
- * @return true if a previous element exists, false otherwise
- *
- *****************************************************************************/
-bool SNetUtilListHasPrev(snet_util_list_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in HasPrev");
-  }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("target->current == null in HasPrev!");
-  }
-
-  return target->current->prev != NULL;
-}
-
-/** <!--********************************************************************-->
- *
- * @fn void SNetUtilListSet(snet_util_list_t *target, void *new_content)
- *
- * @brief sets the content of the current element to the new content
- *
- *    If the current element is defined, this sets it's content to the new
- *    content. Otherwise, some fatal error will be signalled.
- *
- * @param list the list to manipulate
- * @param new_content the new content for the current element.
- ******************************************************************************/
-void SNetUtilListSet(snet_util_list_t *target, void *new_content) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == NULL in SNetUtilListSet!");
-  }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("current element of target list is undefined in"
-                       " SNetUtilListSet!");
-  }
-  target->current->content = new_content;
-}
-
-/** <!--********************************************************************-->
- *
- * @fn void SNetUtilListDelete(snet_util_list_t *target)
- *
- * @brief Deletes the current element
- *
- *      This removes the current element from the list. If the list is empty - 
- *      and thus the current element undefined - a fatal error will be 
- *      signaled.
- *
- * @param the list to modify
- *
- ***************************************************************************/
-void SNetUtilListDelete(snet_util_list_t *target) {
-  struct list_elem* pred;
-  struct list_elem* succ;
-
-  if(target == NULL) {
-    SNetUtilDebugFatal("target == null in SNetUtilListDelete!");
-  }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("target->current == null in SNetUtilListDelete!");
-  }
-  pred = target->current->prev;
-  succ = target->current->next;
-  if(pred != NULL && succ != NULL) {
-    Link(pred, succ);
-  } else if(pred == NULL && succ != NULL) {
-    // deleting first element of list
-    target->first = succ;
-    succ->prev = NULL;
-  } else if(pred != NULL &&  succ == NULL) {
-    // deleting last element of list
-    target->last = pred;
-    pred->next= NULL;
-  } else { //pred == succ == NULL
-    // deleting only element of the list
-    target->first = NULL;
-    target->last = NULL;
-  }
-  SNetMemFree(target->current);
-  target->current = succ;
+  return target;
 }
 
 /** <!--********************************************************************-->
@@ -495,30 +174,9 @@ void SNetUtilListDelete(snet_util_list_t *target) {
  * @return true if the list is empty, false otherwise
  *
  *****************************************************************************/
-
 bool SNetUtilListIsEmpty(snet_util_list_t *target) {
+    NULLCHECK(target)
     return (target->first == NULL);
-}
-
-/** <!--********************************************************************-->
- *
- * @fn bool SNetUtilListCurrentDefined(snet_util_list *target)
- *
- * @brief returns true if current is in some defined state, false otherwise
- *      
- *      If the current element is defined, this is true, otherwise, this is
- *      false. You can use this to iterate over all elements of a list by
- *      checking this while calling Next or Prev after initializing the 
- *      current element to the beginning or the end of the list.
- *      Doing something like while(hasNext()) will not execute the loop 
- *      body for the last or first element of the list, as those elements
- *      have no next / previous element.
- *
- * @return true if the current element is defined
- *
- */
-bool SNetUtilListCurrentDefined(snet_util_list_t *target) {
-    return (target->current != NULL);
 }
 
 /** <!--********************************************************************-->
@@ -535,52 +193,19 @@ bool SNetUtilListCurrentDefined(snet_util_list_t *target) {
  *
  ******************************************************************************/
 int SNetUtilListCount(snet_util_list_t *target) {
-  struct list_elem *temp;
+  struct list_iterator *current_position;
   int counter;
 
-  if(target == NULL) {
-    SNetUtilDebugFatal("SnetUtilListCount: target == NULL!");
-  }
-
-  temp = target->current;
+  NULLCHECK(target)
 
   counter = 0;
-  for(SNetUtilListGotoBeginning(target);
-      SNetUtilListCurrentDefined(target);
-      SNetUtilListNext(target)) {
+  current_position = SNetUtilListFirst(target);
+  while(SNetUtilListIterCurrentDefined(current_position)) {
     counter += 1;
+    current_position = SNetUtilListIterNext(current_position);
   }
-  target->current = temp;
+  SNetUtilListIterDestroy(current_position);
   return counter;
-}
-
-/** <!--********************************************************************-->
- *
- * @fn void SNetUtilListRotateFoward(snet_util_list_t *target)
- *
- * @brief sets the current element to the next element, wraps around at the end
- *
- *    This sets the current element to the next element. if the current element
- *    would be undefined after this operation, the current element will be 
- *    set to the first element of the list.
- *    Neither target, nor the current element of target can be undefined and
- *    will result in a fatal error.
- *
- * @param target the list to modify
- *
- *****************************************************************************/
-void SNetUtilListRotateForward(snet_util_list_t *target) {
-  if(target == NULL) {
-    SNetUtilDebugFatal("SNetUtilListRotateForward: target == NULL");
-  }
-  if(target->current == NULL) {
-    SNetUtilDebugFatal("SnetUtilListRotateForward: current element undefined");
-  }
-
-  SNetUtilListNext(target);
-  if(!SNetUtilListCurrentDefined(target)) {
-    SNetUtilListGotoBeginning(target);
-  }
 }
 
 /**<!--*********************************************************************-->
@@ -596,24 +221,27 @@ void SNetUtilListRotateForward(snet_util_list_t *target) {
  * @param target the list to manipulate
  *
  *****************************************************************************/
-void SNetUtilListDeleteFirst(snet_util_list_t *target) {
-  struct list_elem *temp;
+snet_util_list_t *SNetUtilListDeleteFirst(snet_util_list_t *target) {
+  struct list_elem *to_delete;
 
-  if(target == NULL) {
-    SNetUtilDebugFatal("SNetUtilListDeleteFirst: target == NULL");
-  }
+  NULLCHECK(target)
   if(SNetUtilListIsEmpty(target)) {
     SNetUtilDebugFatal("SNetUtilListDeleteFirst: list is empty already!");
   }
 
   if(target->current == target->first) {
-    temp = NULL;
+    /* singleton list */
+    to_delete = target->first;
+    target->first = NULL;
+    target->last = NULL;
   } else {
-    temp = target->current;
+    /* list with at least 2 elements */
+    to_delete = target->first;
+    target->first = to_delete->next;
+    to_delete->next->prev = NULL;
   }
-  target->current = target->first;
-  SNetUtilListDelete(target);
-  target->current = temp;
+  SNetMemFree(to_delete);
+  return target;
 }
 
 /**<!--*********************************************************************-->
@@ -629,20 +257,314 @@ void SNetUtilListDeleteFirst(snet_util_list_t *target) {
  *
  *****************************************************************************/
 void *SNetUtilListGetFirst(snet_util_list_t *target) {
-  struct list_elem *temp;
-  void *result;
-
-  if(target == NULL) {
-    SNetUtilDebugFatal("SNetUtilListDeleteFirst: target == NULL");
-  }
+  NULLCHECK(target)
   if(SNetUtilListIsEmpty(target)) {
     SNetUtilDebugFatal("SNetUtilListDeleteFirst: list is empty already!");
   }
 
-  temp = target->current;
-  target->current = target->first;
-  result = SNetUtilListGet(target);
-  target->current = temp;
+  return target->first->content;
+}
 
+
+/* iterator functions */
+
+/* @fn snet_util_list_iter_t SNetUtilListIterAddAfter(snet_util_list_iter_t *target, void *content)
+ * @brief adds the given content after the current element of the iterator.
+ * @param target iterator with defined current element, not NULL
+ * @param content the content to add
+ * @return a pointer of the base list of the iterator
+ */
+snet_util_list_t *
+SNetUtilListIterAddAfter(snet_util_list_iter_t *target_iter, void *content) {
+  struct list_elem *succ;
+  struct list_elem *pred;
+  struct list_elem *current_element;
+  struct list_elem *new_elem;
+  struct list *base_list;
+
+
+  NULLCHECK(target_iter)
+  NULLCHECK(target_iter->base)
+
+  base_list = target_iter->base;
+  current_element = target_iter->current;
+
+  new_elem = SNetMemAlloc(sizeof(struct list_elem));
+  new_elem->content = content;
+
+  if(base_list->first == NULL && base_list->last == NULL) {
+    /* list is empty */
+    base_list->first = new_elem;
+    base_list->last = new_elem;
+    target_iter->current = new_elem;
+    new_elem->next = NULL;
+    new_elem->prev = NULL;
+  } else {
+    if(current_element->next == NULL) {
+      /* adding to end of list */
+      base_list->last = new_elem;
+      Link(current_element, new_elem);
+      new_elem->next = NULL;
+    } else {
+      /* adding somewhere in the list */
+      pred = current_element;
+      succ = current_element->next;
+      Link(pred, new_elem);
+      Link(new_elem, succ);
+    }
+  }
+  return base_list;
+}
+
+/* @fn snet_util_list_t *SNetUtilListIterAddBefore(snet_util_list_t *target, void *content)
+ * @brief Adds the new element before the current element of the list
+ * @param target the list you want to add the element to
+ * @param content the new element to add
+ */
+snet_util_list_t *
+SNetUtilListIterAddBefore(snet_util_list_iter_t *iterator, void *content)
+{
+  struct list_elem *new_elem;
+  struct list_elem *current_element;
+  struct list *base_list;
+
+  NULLCHECK(iterator)
+  NULLCHECK(iterator->base)
+  NULLCHECK(iterator->current)
+
+  base_list = iterator->base;
+  current_element = iterator->current;
+
+  new_elem = SNetMemAlloc(sizeof(struct list_elem));
+  new_elem->content = content;
+
+  if(base_list->first == NULL && base_list->last == NULL) {
+    /* list is empty */
+    base_list->first = new_elem;
+    base_list->last = new_elem;
+    iterator->current = new_elem;
+    new_elem->next = NULL;
+    new_elem->prev = NULL;
+  } else {
+    if(current_element->prev == NULL) {
+      /* adding to beginning of list */
+      base_list->first = current_element;
+      Link(new_elem, current_element);
+      new_elem->prev = NULL;
+    } else {
+      /* adding somewhere in the list */
+      Link(current_element->prev, new_elem);
+      Link(new_elem, current_element);
+    }
+  }
+  return base_list;
+}
+
+/* @fn snet_util_list_iterator_t *SNetUtilListFirst(snet_util_list_t *target)
+ * @brief creates an iterator on the first element of the list
+ * @param target_iter the list iterate over
+ * @return a pointer to the new iterator
+ */
+snet_util_list_iter_t *SNetUtilListFirst(snet_util_list_t *base) {
+  struct list_iterator *result;
+
+  NULLCHECK(base)
+
+  result = SNetMemAlloc(sizeof(struct list_iterator));
+  result->base = base;
+  result->current = base->first;
   return result;
+}
+
+/* @fn snet_util_list_iterator_t *SNetUtilListLast(snet_util_list_t *target)
+ * @brief creates an iterator on the last element of the list
+ * @param target the list to iterate over
+ * @return a pointer to the new iterator
+ */
+snet_util_list_iter_t *SNetUtilListLast(snet_util_list_t *base) {
+  struct list_iterator *result;
+  NULLCHECK(base)
+
+  result = SNetMemAlloc(sizeof(struct list_iterator));
+  result->base = base;
+  result->current = base->last;
+  return result;
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn bool SNetUtilListIterCurrentDefined(snet_util_list_iterator_t *target)
+ *
+ * @brief returns true if current is in some defined state, false otherwise
+ *
+ *      If the current element is defined, this is true, otherwise, this is
+ *      false. You can use this to iterate over all elements of a list by
+ *      checking this while calling Next or Prev after initializing the
+ *      current element to the beginning or the end of the list.
+ *      Doing something like while(hasNext()) will not execute the loop
+ *      body for the last or first element of the list, as those elements
+ *      have no next / previous element.
+ *
+ * @return true if the current element is defined
+ *
+ */
+bool SNetUtilListIterCurrentDefined(snet_util_list_iter_t *target) {
+  NULLCHECK(target)
+  return (target->current != NULL);
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn snet_util_list_iter_t *SNetUtilListIterRotateFoward(snet_util_list_iter_t *target)
+ *
+ * @brief sets the current element to the next element, wraps around at the end
+ *
+ *    This sets the current element to the next element. if the current element
+ *    would be undefined after this operation, the current element will be
+ *    set to the first element of the list.
+ *    Neither target, nor the current element of target can be undefined and
+ *    will result in a fatal error.
+ *
+ * @param target the list to modify
+ * @return the modified iterator
+ *****************************************************************************/
+snet_util_list_iter_t *SNetUtilListIterRotateForward(snet_util_list_iter_t *target)
+{
+  NULLCHECK(target)
+  NULLCHECK(target->current)
+  NULLCHECK(target->base)
+
+  target = SNetUtilListIterNext(target);
+  if(!SNetUtilListIterCurrentDefined(target)) {
+    target->current = target->base->first;
+  }
+  return target;
+}
+
+/** <!--********************************************************************-->
+ *
+ * @fn snet_util_list_t *SNetUtilListIterDelete(snet_util_list_t *target)
+ *
+ * @brief Deletes the current element
+ *
+ *      This removes the current element of the list iterator 
+ *      from the list. If the current element is
+ *      undefined a fatal error will be signaled.
+ *
+ * @param the list to modify
+ * @return a pointer to the base list
+ ***************************************************************************/
+snet_util_list_t *SNetUtilListIterDelete(snet_util_list_iter_t *target) {
+  struct list_elem* pred;
+  struct list_elem* succ;
+
+  struct list* base_list;
+  NULLCHECK(target)
+  NULLCHECK(target->current)
+
+  base_list = target->base;
+  pred = target->current->prev;
+  succ = target->current->next;
+  if(pred != NULL && succ != NULL) {
+    /* deleting somewhere in the list */
+    Link(pred, succ);
+  } else if(pred == NULL && succ != NULL) {
+    /* deleting first element of list */
+    base_list->first = succ;
+    succ->prev = NULL;
+  } else if(pred != NULL &&  succ == NULL) {
+    /* deleting last element of list */
+    base_list->last = pred;
+    pred->next= NULL;
+  } else { /* pred == succ == NULL */
+    /* deleting only element of the list */
+    base_list->first = NULL;
+    base_list->last = NULL;
+  }
+  SNetMemFree(target->current);
+  target->current = succ;
+  return base_list;
+}
+
+/* @fn snet_util_list_t *SNetUtilListIterSet(snet_util_list_iter_t *target, void *new_content)
+ * @brief sets the content of the current element to the new content
+ * @param list the list to manipulate
+ * @param new_content the new content for the current element.
+ * @return a pointer to the base list
+ */
+snet_util_list_t *SNetUtilListIterSet(snet_util_list_iter_t *target, void *new_content) {
+  NULLCHECK(target)
+  NULLCHECK(target->current)
+  target->current->content = new_content;
+  return target->base;
+}
+
+/* @fn snet_util_list_iter_t *SNetUtilListIterNext(snet_util_list_iter_t *target)
+ * @brief makes the next element the current element
+ * @param target the list iterator to modify
+ * @return a pointer to the modified iterator
+ */
+snet_util_list_iter_t *SNetUtilListIterNext(snet_util_list_iter_t *target) {
+  NULLCHECK(target)
+  NULLCHECK(target->current)
+
+  target->current = target->current->next;
+  return target;
+}
+
+/* @fn snet_util_list_iter_t *SNetUtilListIterPrev(snet_util_list_iter_t *target)
+ * @brief makes the previous element the current element
+ * @param target the list to modify
+ * @return a pointer to the modified list iterator
+ */
+snet_util_list_iter_t *SNetUtilListIterPrev(snet_util_list_iter_t *target) {
+  NULLCHECK(target)
+  NULLCHECK(target->current)
+
+  target->current = target->current->prev;
+  return target;
+}
+
+/* @fn void* SNetUtilListIterGet(snet_util_list_iter_t *target)
+ * @brief returns the current value.
+ * @param target the list iterator to inspect
+ * @return the value of the current element.
+ */
+void* SNetUtilListIterGet(snet_util_list_iter_t *target) {
+  NULLCHECK(target)
+  NULLCHECK(target->current)
+  return target->current->content;
+}
+
+/* @fn bool SNetUtilListIterHasNext(snet_util_list_iter_t target)
+ * @brief checks if a next element exists.
+ * @param target the list iterator to inspect
+ * @return true if there is some next element, false otherwise
+ */
+bool SNetUtilListIterHasNext(snet_util_list_iter_t *target) {
+  NULLCHECK(target)
+  NULLCHECK(target->current)
+
+  return target->current->next != NULL;
+}
+
+/* @fn bool SNetUtilListIterHasPrev(snet_util_list_iter_t *target)
+ * @brief returns if a previous element exists
+ * @param target the list iterator to inspect
+ * @return true if a previous element exists, false otherwise
+ */
+bool SNetUtilListIterHasPrev(snet_util_list_iter_t *target) {
+  NULLCHECK(target)
+  NULLCHECK(target->current)
+  return target->current->prev != NULL;
+}
+
+/* @fn void SNetUtilListIterDestroy(snet_util_list_iter_t *target)
+ * @brief destroys the given iterator
+ * @param target the iterator to destroy, null is accepted
+ */
+void SNetUtilListIterDestroy(snet_util_list_iter_t *target) {
+  if(target != NULL) {
+    SNetMemFree(target);
+  }
 }

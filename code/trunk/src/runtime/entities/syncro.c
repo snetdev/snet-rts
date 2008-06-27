@@ -10,6 +10,8 @@
 #include "tree.h"
 #include "list.h"
 
+/* #define SYNCRO_DEBUG */
+
 /* --------------------------------------------------------
  * Syncro Cell: Flow Inheritance, uncomment desired variant
  * --------------------------------------------------------
@@ -204,7 +206,7 @@ static void *SyncBoxThread( void *hndl) {
   snet_typeencoding_t *outtype;
   snet_typeencoding_t *patterns;
   snet_expr_list_t *guards;
-  
+  snet_util_list_iter_t *current_storage;
   struct sync_state *current_state;
   snet_util_tree_t *states;
   snet_util_list_t *to_free;
@@ -224,11 +226,19 @@ static void *SyncBoxThread( void *hndl) {
   
   while( !( terminate)) {
     rec = SNetBufGet( SNetHndGetInbuffer( hnd));
-    /*SNetUtilDebugNotice("sync: got record %x", (unsigned int) rec);*/
+    #ifdef SYNCRO_DEBUG
+      SNetUtilDebugNotice("SYNCRO: got record %x", (unsigned int) rec);
+    #endif
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
+        #ifdef SYNCRO_DEBUG
+          SNetUtilDebugNotice("SYNCRO: looking for state for that guy");
+        #endif
         temp_stack = SNetRecGetIterationStack(rec);
         if(!SNetUtilTreeContains(states, temp_stack)) {
+          #ifdef SYNCRO_DEBUG
+            SNetUtilDebugNotice("SYNCRO: new state");
+          #endif
           /* insert fresh state for that stack. */
           current_state = (struct sync_state *)SNetMemAlloc(
                                           sizeof(struct sync_state));
@@ -246,8 +256,13 @@ static void *SyncBoxThread( void *hndl) {
         } else {
           current_state = SNetUtilTreeGet(states,temp_stack);
         }
-
+        #ifdef SYNCRO_DEBUG
+          SNetUtilDebugNotice("SYNCRO: got state");
+        #endif
         if(current_state->terminated) {
+          #ifdef SYNCRO_DEBUG
+            SNetUtilDebugNotice("SYNCRO: passing dead state");
+          #endif
           SNetBufPut(outbuf, rec);
           continue;
         }
@@ -267,6 +282,9 @@ static void *SyncBoxThread( void *hndl) {
         }
 
         if( new_matches == 0) {
+          #ifdef SYNCRO_DEBUG
+            SNetUtilDebugNotice("SYNCRO: Record didnt match anything, fowarding it");
+          #endif
           SNetBufPut( outbuf, rec);
         }
         else {
@@ -283,9 +301,10 @@ static void *SyncBoxThread( void *hndl) {
             if(temp_record != rec) {
               SNetRecCopyIterations(rec, temp_record);
             }
-            /*SNetUtilDebugNotice("synccell synched => %x",
-                      (unsigned int) temp_record);*/
-	    
+            #ifdef SYNCRO_DEBUG
+              SNetUtilDebugNotice("synccell synched => %x",
+                      (unsigned int) temp_record);
+	          #endif
             SNetBufPut(outbuf, temp_record);
             current_state->terminated = true;
          }
@@ -310,10 +329,10 @@ static void *SyncBoxThread( void *hndl) {
     case REC_terminate:
         SNetUtilTreeDestroy(states);
         /* check if all storages are empty */
-        SNetUtilListGotoBeginning(to_free);
-        while(SNetUtilListCurrentDefined(to_free)) {
-          current_state = SNetUtilListGet(to_free);
-          SNetUtilListNext(to_free);
+        current_storage = SNetUtilListFirst(to_free);
+        while(SNetUtilListIterCurrentDefined(current_storage)) {
+          current_state = SNetUtilListIterGet(current_storage);
+          current_storage = SNetUtilListIterNext(current_storage);
           if(!current_state->terminated) {
             SNetUtilDebugNotice("[Sync] received termination record - "
                                  "stored records are discarded");

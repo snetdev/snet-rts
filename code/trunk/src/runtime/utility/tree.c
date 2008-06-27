@@ -3,6 +3,8 @@
 #include "debug.h"
 #include "stack.h"
 #include "list.h"
+#include "memfun.h"
+
 struct tree {
   snet_util_list_t *children;
   bool content_defined;
@@ -49,22 +51,25 @@ struct numerated_child {
 static struct tree *Traverse(struct tree *tree, snet_util_stack_t *key) {
   int current_int;
   struct numerated_child *current;
+  snet_util_list_iter_t *child_position;
   snet_util_stack_iterator_t *key_part;
+
   key_part = SNetUtilStackBottom(key);
   while(SNetUtilStackIterCurrDefined(key_part)) {
     current_int = SNetUtilStackIterGet(key_part);
     key_part = SNetUtilStackIterNext(key_part);
-    SNetUtilListGotoBeginning(tree->children);
-    while(SNetUtilListCurrentDefined(tree->children)) {
-      current = (struct numerated_child*)SNetUtilListGet(tree->children);
-      SNetUtilListNext(tree->children);
+    child_position = SNetUtilListFirst(tree->children);
+    while(SNetUtilListIterCurrentDefined(child_position)) {
+      current = (struct numerated_child*)SNetUtilListIterGet(child_position);
+      child_position = SNetUtilListIterNext(child_position);
       if(current->index > current_int) {
         /* list is sorted => we ran too far => element not in list */
         return NULL;
       } else if(current->index == current_int) {
         tree = current->child;
-      } 
+      }
     }
+    SNetUtilListIterDestroy(child_position);
   }
 
   SNetUtilStackIterDestroy(key_part);
@@ -83,7 +88,7 @@ static struct tree *Traverse(struct tree *tree, snet_util_stack_t *key) {
 snet_util_tree_t *SNetUtilTreeCreate() {
   struct tree *result;
   
-  result = malloc(sizeof(struct tree));
+  result = SNetMemAlloc(sizeof(struct tree));
   result->content = NULL;
   result->content_defined = false;
   result->children = SNetUtilListCreate();
@@ -101,12 +106,16 @@ snet_util_tree_t *SNetUtilTreeCreate() {
  *
  ******************************************************************************/
 void SNetUtilTreeDestroy(snet_util_tree_t *target) {
-  SNetUtilListGotoBeginning(target->children);
-  while(SNetUtilListCurrentDefined(target->children)) {
-    SNetUtilTreeDestroy(SNetUtilListGet(target->children));
-    SNetUtilListNext(target->children);
+  snet_util_list_iter_t *current_position;
+
+
+  current_position = SNetUtilListFirst(target->children);
+  while(SNetUtilListIterCurrentDefined(current_position)) {
+    SNetUtilTreeDestroy(SNetUtilListIterGet(current_position));
+    current_position = SNetUtilListIterNext(current_position);
   }
-  free(target);
+  SNetMemFree(target);
+  SNetUtilListIterDestroy(current_position);
 }
 
 /**<!--**********************************************************************-->
@@ -200,27 +209,29 @@ void SNetUtilTreeSet(snet_util_tree_t *tree, snet_util_stack_t *key,
   struct numerated_child *new_child;
   struct tree *new_tree;
   snet_util_stack_iterator_t *key_part;
+  snet_util_list_iter_t *current_child;
 
   key_part = SNetUtilStackBottom(key);
   while(SNetUtilStackIterCurrDefined(key_part)) {
     current_int = SNetUtilStackIterGet(key_part);
     key_part = SNetUtilStackIterNext(key_part);
-    SNetUtilListGotoBeginning(tree->children);
-    while(SNetUtilListCurrentDefined(tree->children)) {
-      current = (struct numerated_child*)SNetUtilListGet(tree->children);
-      SNetUtilListNext(tree->children);
+    current_child = SNetUtilListFirst(tree->children);
+    while(SNetUtilListIterCurrentDefined(current_child)) {
+      current = (struct numerated_child*)SNetUtilListIterGet(current_child);
+      current_child = SNetUtilListIterNext(current_child);
       if(current->index > current_int) {
         /* list is sorted => we ran too far => element not in list */
         new_child = malloc(sizeof(struct numerated_child));
         new_child->index = current_int;
         new_tree = SNetUtilTreeCreate();
         new_child->child = new_tree;
-        SNetUtilListAddBefore(tree->children, new_child);
+        SNetUtilListIterAddBefore(current_child, new_child);
         tree = new_tree;
       } else if(current->index == current_int) {
         tree = current->child;
       }
     }
+    SNetUtilListIterDestroy(current_child);
   }
 
   SNetUtilStackIterDestroy(key_part);
