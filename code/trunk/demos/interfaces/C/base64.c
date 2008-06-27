@@ -6,12 +6,28 @@
  *            which could be compared to given length.
  */
 
-#define PADDING_CHAR 64
-#define BITS_PER_CHAR 8
-#define BITS_PER_ENCODED_CHAR 6
-#define BITS_PER_BLOCK 24
-#define BLOCK_NOT_FULL(i) (((i) * BITS_PER_ENCODED_CHAR) % BITS_PER_BLOCK != 0)
+/* Base64 encoding encodes binary data to character values. 
+ * The encoding can be used in XML data as it doesn't contain any
+ * restricted characters that could appear in binary data.
+ *
+ * Base64 encoding codes each block of 3 bytes (24 bits) to 
+ * 4 bytes (32 bits).
+ *
+ */
 
+/* Bits per byte. */
+#define BITS_PER_BYTE 8
+
+/* Bits per encoded byte. */
+#define BITS_PER_ENCODED_BYTE 6
+
+/* Bits per encoding block. */
+#define BITS_PER_BLOCK 24
+
+/* Macro for telling if encoding block is full */
+#define BLOCK_NOT_FULL(i) (((i) * BITS_PER_ENCODED_BYTE) % BITS_PER_BLOCK != 0)
+
+/* base64 encoding table for bit patterns */
 static const char base64[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 
 			      'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 
 			      'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 
@@ -22,12 +38,16 @@ static const char base64[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 			      '4', '5', '6', '7', '8', '9', '+', '/',
 	/* (padding char)*/   '='}; 
 
+/* Index of the panding character in the encoding table */
+#define PADDING_BYTE 64
+
+
 int Base64encodeDataType(FILE *file, int type) 
 {
   int i = 0;
 
   while(type >= 64) {
-    i += fputc(base64[PADDING_CHAR], file);
+    i += fputc(base64[PADDING_BYTE], file);
     type -= 64;
   }
 
@@ -37,7 +57,7 @@ int Base64encodeDataType(FILE *file, int type)
 }
 
 
-int Base64encode(FILE *file, unsigned char *from, int len)
+int Base64encode(FILE *file, void *src, int len)
 {
   int size = 0;
   int i, j;
@@ -45,8 +65,9 @@ int Base64encode(FILE *file, unsigned char *from, int len)
   unsigned char cur = 0;
   unsigned char last = 0;
   unsigned char next = 0;
+  unsigned char *from = (unsigned char *)src;
 
-  size = (len * BITS_PER_CHAR + (BITS_PER_ENCODED_CHAR - 1)) / BITS_PER_ENCODED_CHAR;
+  size = (len * BITS_PER_BYTE + (BITS_PER_ENCODED_BYTE - 1)) / BITS_PER_ENCODED_BYTE;
 
   for(i = 0, j = 0, offset = 0; j < size; i++, j++) {
 
@@ -79,7 +100,7 @@ int Base64encode(FILE *file, unsigned char *from, int len)
   
   /* Add padding to the stream. */
   while(BLOCK_NOT_FULL(size)) {
-    fputc(base64[PADDING_CHAR], file);
+    fputc(base64[PADDING_BYTE], file);
     size++; 
   }
 
@@ -89,16 +110,18 @@ int Base64encode(FILE *file, unsigned char *from, int len)
 int Base64decodeDataType(FILE *file, int *type)
 {
   int i = 0;
-  int j;
+  int j = 0;
   char next;
 
-  while((next = fgetc(file)) == base64[PADDING_CHAR]) {
+  *type = 0;
+
+  while((next = fgetc(file)) == base64[PADDING_BYTE]) {
     *type += 64;
     i++;
   }
   i++;
 
-  for(j = 0; j < PADDING_CHAR; j++) {
+  for(j = 0; j < PADDING_BYTE; j++) {
     if(base64[j] == next) {
       break;
     }
@@ -106,7 +129,7 @@ int Base64decodeDataType(FILE *file, int *type)
 
   *type += j;
 
-  if(j == PADDING_CHAR) {
+  if(j == PADDING_BYTE) {
     ungetc(next, file);
     return 0;
   }
@@ -114,12 +137,13 @@ int Base64decodeDataType(FILE *file, int *type)
   return i;
 }
 
-int Base64decode(FILE *file, unsigned char *to, int len)
+int Base64decode(FILE *file, void *dst, int len)
 {
   int i, j;
   int offset = 0;
   char cur;
   unsigned char next = 0;
+  unsigned char *to = (unsigned char *)dst;
 
   j = 0;
   i = 0;
@@ -128,13 +152,13 @@ int Base64decode(FILE *file, unsigned char *to, int len)
     i++;
 
     /* Direct table instead of searching? */
-    for(next = 0; next <= PADDING_CHAR; next++) {
+    for(next = 0; next <= PADDING_BYTE; next++) {
       if(base64[(unsigned int)next] == cur) {
 	break;
       }
     }
 
-    if(next == PADDING_CHAR) {
+    if(next == PADDING_BYTE) {
       while(j < len) {
 	to[j++] = 0;
       }
@@ -142,7 +166,7 @@ int Base64decode(FILE *file, unsigned char *to, int len)
     }
     
     /* Unknown character! */
-    if(next > PADDING_CHAR) {
+    if(next > PADDING_BYTE) {
       ungetc(cur, file);
       while(j < len) {
 	to[j++] = 0;
@@ -179,7 +203,7 @@ int Base64decode(FILE *file, unsigned char *to, int len)
   /* Remove padding from the stream. */
   while(BLOCK_NOT_FULL(i)) {
     cur = fgetc(file);
-    if(cur != base64[PADDING_CHAR]) {
+    if(cur != base64[PADDING_BYTE]) {
       ungetc(cur, file);
       while(j < len) {
 	to[j++] = 0;
@@ -192,8 +216,8 @@ int Base64decode(FILE *file, unsigned char *to, int len)
   return i;
 }
 
-#undef PADDING_CHAR
-#undef BITS_PER_CHAR
-#undef BITS_PER_ENCODED_CHAR
+#undef PADDING_BYTE
+#undef BITS_PER_BYTE
+#undef BITS_PER_ENCODED_BYTE
 #undef BITS_PER_BLOCK
 #undef BLOCK_NOT_FULL

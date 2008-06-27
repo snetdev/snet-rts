@@ -3,12 +3,34 @@
 
 #include <stdio.h>
 
-int Base64encode(FILE *file, unsigned char *from, int size);
+/* Encode 'size' bytes from memory location 'src' to file 'dst' 
+ * using base64 encoding. 
+ *
+ */
 
-int Base64decode(FILE *file, unsigned char *to, int size);
+int Base64encode(FILE *dst, void *src, int size);
 
-int Base64encodeDataType(FILE *file, int type);
 
-int Base64decodeDataType(FILE *file, int *type);
+/* Decode max 'size' bytes base64 encoded data from 
+ * file 'src' to memory location 'dst'.
+ * 
+ */
+
+int Base64decode(FILE *src, void *dst, int size);
+
+
+/* Encode data type ID 'type' to file 'dst'. 
+ * Encoding is XML -safe. 
+ *
+ */
+
+int Base64encodeDataType(FILE *dst, int type);
+
+
+/* Decode data type ID from file 'src' to memory location 'type'.
+ * 
+ */
+
+int Base64decodeDataType(FILE *src, int *type);
 
 #endif /* _BASE64_H_ */

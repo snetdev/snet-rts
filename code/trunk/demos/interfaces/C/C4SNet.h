@@ -5,21 +5,23 @@
 
 typedef struct container c4snet_container_t;
 
+/* Type enumeration for C primary types. */
 typedef enum{
-  CTYPE_unknown,    // unkown data type
-    CTYPE_uchar,    //unsigned char
-    CTYPE_char,     //char
-    CTYPE_ushort,   //unsigned short
-    CTYPE_short,    //short
-    CTYPE_uint,     //unsigned int
-    CTYPE_int,      //int,
-    CTYPE_ulong,    //unsigned long
-    CTYPE_long,     //long
-    CTYPE_float,    //float
-    CTYPE_double,   //double
-    CTYPE_ldouble,  // long double
+  CTYPE_unknown,    /* Unkown data type. Used for error messages, not a valid type! */
+    CTYPE_uchar,    /* unsigned char      */
+    CTYPE_char,     /* signed char        */
+    CTYPE_ushort,   /* unsigned short int */
+    CTYPE_short,    /* signed short int   */ 
+    CTYPE_uint,     /* unsigned int       */ 
+    CTYPE_int,      /* signed int         */ 
+    CTYPE_ulong,    /* unsigned long int  */
+    CTYPE_long,     /* signed long int    */ 
+    CTYPE_float,    /* float              */ 
+    CTYPE_double,   /* double             */ 
+    CTYPE_ldouble,  /* long double        */ 
 }ctype_t;
 
+/* Union of all the types to be used as generic data type. */
 typedef union cdata_types{
   unsigned char uc;
   char c;
@@ -31,17 +33,18 @@ typedef union cdata_types{
   long l;
   float f;
   double d;
+  long double ld;
 } cdata_types_t;
 
+/* C data structure. Can only contain primary type. */
 typedef struct cdata {
   ctype_t type;
   cdata_types_t data;
 } C_Data;
 
-
-int C4SNetSizeof(ctype_t type);
 void C4SNetFree( void *ptr);
 void *C4SNetCopy( void *ptr);
+
 int C4SNetEncode( FILE *file, void *ptr);
 void *C4SNetDecode(FILE *file);
 

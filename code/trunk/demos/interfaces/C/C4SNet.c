@@ -25,7 +25,7 @@ struct container {
   int *btags;
 };
 
-int C4SNetSizeof(ctype_t type){
+static int C4SNetSizeof(ctype_t type){
   switch(type) {
   case CTYPE_uchar: 
     return sizeof(unsigned char);
@@ -50,7 +50,6 @@ int C4SNetSizeof(ctype_t type){
     break;
   case CTYPE_long:
     return sizeof(signed long);
-    break;
     break;
   case CTYPE_float: 
     return sizeof(float);
@@ -99,19 +98,22 @@ int C4SNetEncode( FILE *file, void *ptr){
 
 void *C4SNetDecode(FILE *file) 
 {
+  C_Data *c = NULL;
   int i = 0;
-
-  cdata_types_t data;
   ctype_t type;
-  int temp = 0;
+  int size;
 
-  i = Base64decodeDataType(file, &temp);
+  i = Base64decodeDataType(file, (int *)&type);
 
-  type = (ctype_t)temp;
+  size = C4SNetSizeof(type);
 
-  i += Base64decode(file, (unsigned char *)&data, C4SNetSizeof(type));
+  if(size != 0) {
+    c = malloc( sizeof( C_Data));
+    c->type = type;
+    i += Base64decode(file, (unsigned char *)&c->data, size);
+  }
 
-  return C4SNet_cdataCreate( type, &data);
+  return c;
 }
 
 void C4SNet_outCompound( c4snet_container_t *c) 
