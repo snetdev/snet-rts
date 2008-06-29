@@ -9,6 +9,8 @@
 #include "interface_functions.h"
 #include "typeencode.h"
 
+#define DEBUG_FILTER
+
 /* ------------------------------------------------------------------------- */
 /*  SNetFilter                                                               */
 /* ------------------------------------------------------------------------- */
@@ -429,8 +431,12 @@ static void *FilterThread( void *hnd)
                     } 
                   } // forall instructions of current_set
 
-                  SNetBufPut( outbuf, 
-                              FilterInheritFromInrec( in_type, in_rec, out_rec));
+                  out_rec = FilterInheritFromInrec( in_type, in_rec, out_rec);
+                  #ifdef DEBUG_FILTER
+                    SNetUtilDebugNotice("FILTER %x: outputting %x",
+                      (unsigned int) outbuf, (unsigned int) out_rec);
+                  #endif
+                  SNetBufPut( outbuf, out_rec);
                 } // forall variants of selected out_type
               } // if guard is true
             } // forall guards
