@@ -9,6 +9,8 @@
 #include <time.h>
 #endif
 
+//#define BOX_DEBUG
+
 // used in SNetOut (depends on local variables!)
 #define ENTRYSUM( RECNUM, TENCNUM)\
                         RECNUM( HNDgetRecord( hnd)) +\
@@ -133,6 +135,10 @@ extern snet_handle_t
 
 
   // output record
+  #ifdef BOX_DEBUG
+    SNetUtilDebugNotice("BOX %x: outputting %x",
+      (unsigned int) SNetHndGetOutbuffer(hnd), (unsigned int) out_rec);
+  #endif
   SNetRecSetInterfaceId( out_rec, if_id);
   SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
   SNetBufPut( SNetHndGetOutbuffer( hnd), out_rec);
