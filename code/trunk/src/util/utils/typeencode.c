@@ -523,6 +523,16 @@ extern void SNetDestroyTypeEncoding( snet_typeencoding_t *t_enc) {
   SNetMemFree( t_enc);
 }
 
+extern void SNetTencDestroyTypeEncodingList( snet_typeencoding_list_t *t_list)
+{
+  int i;
+
+  for( i=0; i<t_list->num; i++) {
+    SNetDestroyTypeEncoding( (t_list->types)[i]);
+  }
+
+  SNetMemFree( t_list);
+}
 
 
 extern snet_patternencoding_t *SNetTencPatternEncode( int num_tags, int num_fields, ...) {

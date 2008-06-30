@@ -314,7 +314,7 @@ extern snet_variantencoding_t *SNetTencGetVariant( snet_typeencoding_t *type, in
 
 extern void SNetDestroyTypeEncoding( snet_typeencoding_t *t_enc);
 
-
+extern void SNetTencDestroyTypeEncodingList( snet_typeencoding_list_t *t_list);
 
 
 /* --- Pattern Encoding Functions --- */

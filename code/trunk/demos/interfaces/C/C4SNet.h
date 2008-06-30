@@ -19,10 +19,10 @@ typedef enum{
     CTYPE_float,    /* float              */ 
     CTYPE_double,   /* double             */ 
     CTYPE_ldouble,  /* long double        */ 
-}ctype_t;
+}C4SNet_type_t;
 
 /* Union of all the types to be used as generic data type. */
-typedef union cdata_types{
+typedef union primary_types {
   unsigned char uc;
   char c;
   unsigned short us;
@@ -34,13 +34,15 @@ typedef union cdata_types{
   float f;
   double d;
   long double ld;
-} cdata_types_t;
+} C4SNet_primary_type_t;
 
 /* C data structure. Can only contain primary type. */
 typedef struct cdata {
-  ctype_t type;
-  cdata_types_t data;
-} C_Data;
+  unsigned int ref_count;
+  C4SNet_type_t type;
+  C4SNet_primary_type_t data;
+} C4SNet_data_t;
+
 
 void C4SNetFree( void *ptr);
 void *C4SNetCopy( void *ptr);
@@ -57,11 +59,11 @@ void C4SNet_out( void *hnd, int variant, ...);
 
 /* C_Data */
 
-C_Data *C4SNet_cdataCreate( ctype_t type, void *data);
+C4SNet_data_t *C4SNet_cdataCreate( C4SNet_type_t type, void *data);
 
-void *C4SNet_cdataGetData( C_Data *c);
+void *C4SNet_cdataGetData( C4SNet_data_t *c);
 
-ctype_t C4SNet_cdataGetType( C_Data *c);
+C4SNet_type_t C4SNet_cdataGetType( C4SNet_data_t *c);
 
 /* ************************************************************************* */
 

@@ -3,6 +3,6 @@
 
 #include <C4SNet.h>
 
-void *sub( void *hnd, C_Data *x);
+void *sub( void *hnd, C4SNet_data_t *x);
 
 #endif

@@ -81,6 +81,9 @@ extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr) {
   
   SNetMemFree( instr->data);
   //SNetMemFree( instr->expr);
+#ifdef FILTER_VERSION_2
+  SNetEdestroyExpr(instr->expr);
+#endif
   SNetMemFree( instr);
 }
 
@@ -136,6 +139,16 @@ extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList( i
   return( lst);
 }
 
+extern void SNetDestroyFilterInstructionSetList( snet_filter_instruction_set_list_t *lst)
+{
+  int i;
+  
+  for( i=0; i<lst->num; i++) {
+    SNetMemFree(lst->lst[i]);
+  }
+
+  SNetMemFree(lst);
+}
 
 extern void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set) {
 

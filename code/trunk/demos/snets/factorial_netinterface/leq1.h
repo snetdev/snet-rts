@@ -3,6 +3,6 @@
 
 #include <C4SNet.h>
 
-void *leq1( void *hnd, C_Data *x);
+void *leq1( void *hnd, C4SNet_data_t *x);
 
 #endif

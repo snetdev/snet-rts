@@ -84,6 +84,7 @@ snet_global_interface_functions_t *SNetGlobalGetInterface(int id);
 bool SNetGlobalRuntimeInitialised();
 
 bool SNetGlobalInitialise();
+void SNetGlobalDestroy();
 
 void *SNetGetCopyFun(int id);
 void *SNetGetFreeFun(int id);

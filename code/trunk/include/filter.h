@@ -9,6 +9,8 @@ extern snet_filter_instruction_set_t *SNetCreateFilterInstructionSet( int num, .
 extern int SNetFilterGetNumInstructions( snet_filter_instruction_set_t *set);
 extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList( int num, ...);
 
+extern void SNetDestroyFilterInstructionSetList( snet_filter_instruction_set_list_t *list);
+
 #ifdef FILTER_VERSION_2
 extern snet_buffer_t
 *SNetFilter( snet_buffer_t *inbuf,

@@ -142,6 +142,32 @@ bool SNetGlobalInitialise()
   return( success);
 }
 
+void SNetGlobalDestroy() 
+{
+  int i;
+#ifdef DBG_RT_TRACE_THREAD_CREATE
+  pthread_mutex_destroy( t_count_mtx);
+  SNetMemFree(t_count_mtx);
+#endif
+
+  if( snet_global != NULL) {
+    for(i = 0; i < snet_global->num; i++) {
+      SNetMemFree(snet_global->interface[i]);
+    }
+
+    SNetMemFree(snet_global->interface);
+    SNetMemFree(snet_global); 
+  }
+  else {
+    SNetUtilDebugFatal("[Global] Runtime system not initialized");
+  }
+#ifdef DBG_RT_TRACE_INIT
+  gettimeofday( &t, NULL);
+  SNetUtilDebugNotice("[DBG::RT::Global] Runtime system destroyed at %lf\n",
+                        t.tv_sec + t.tv_usec / 1000000.0);
+#endif
+  return;
+}
 
 bool 
 SNetGlobalRegisterInterface( int id, 

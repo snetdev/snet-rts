@@ -1,3 +1,4 @@
+
 <?xml version="1.0"?>
 <metadata xmlns="snet-home.org" >
   <net name="factorial" >
@@ -46,3 +47,4 @@ net factorial({x} -> {x,<stop>})
 
 }
 connect (leq1 .. condif .. ([{<T>} -> {<stop>}] | compute))*{<stop>};
+

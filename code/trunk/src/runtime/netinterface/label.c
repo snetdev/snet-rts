@@ -57,10 +57,12 @@ snetin_label_t *SNetInLabelInit(char **labels, int len){
 void SNetInLabelDestroy(snetin_label_t *labels){
   pthread_mutex_destroy(&labels->mutex);
 
-  /* remove are temporary labels */
+  /* Only labels to remove are temporary labels */
   while(labels->temp_labels != NULL){
     temp_label_t *temp = labels->temp_labels->next;
+    SNetMemFree(labels->temp_labels->label);
     SNetMemFree(labels->temp_labels);
+
     labels->temp_labels = temp;
   }
   SNetMemFree(labels);

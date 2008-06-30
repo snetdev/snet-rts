@@ -89,7 +89,7 @@ static snet_expr_t *CreateExpr( snet_expr_type_t t) {
   return( new);
 }
 
-static void DestroyExpr( snet_expr_t *expr) {
+void SNetEdestroyExpr( snet_expr_t *expr) {
 
   int i;
 
@@ -291,6 +291,22 @@ extern snet_expr_list_t *SNetEcreateList( int num, ...)
 
 
   return( lst);
+}
+
+extern void SNetEdestroyList( snet_expr_list_t *lst) 
+{
+  
+  int i;
+  if(lst != NULL) {
+    for( i=0; i<lst->num; i++) {
+      if(lst->list[i] != NULL) {
+	SNetEdestroyExpr(lst->list[i]);
+      }
+    }
+    
+    SNetMemFree(lst);
+  }
+  return;
 }
 
 extern int SNetElistGetNumExpressions( snet_expr_list_t *lst) 

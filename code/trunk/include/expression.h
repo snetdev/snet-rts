@@ -69,7 +69,8 @@ extern bool SNetEevaluateBool( snet_expr_t *expr, snet_record_t *rec);
 
 /* *** */
 extern snet_expr_list_t *SNetEcreateList( int num, ...);
-
+extern void SNetEdestroyList( snet_expr_list_t *lst);
+extern void SNetEdestroyExpr( snet_expr_t *expr);
 
 /* *** */
 extern int SNetElistGetNumExpressions( snet_expr_list_t *l);

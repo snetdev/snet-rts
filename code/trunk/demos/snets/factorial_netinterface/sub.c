@@ -3,11 +3,11 @@
 #include <bool.h>
 #include <stdio.h>
 
-void *sub( void *hnd, C_Data *x)
+void *sub( void *hnd, C4SNet_data_t *x)
 {
   int int_x;
   c4snet_container_t *c;
-  C_Data *result;
+  C4SNet_data_t *result;
 
   int_x= *(int *)C4SNet_cdataGetData( x);
   int_x -= 1;

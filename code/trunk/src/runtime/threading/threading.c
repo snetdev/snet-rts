@@ -65,26 +65,25 @@ extern void SNetThreadCreate( void *(*fun)(void*),
                               void *fun_args,
                   snet_entity_id_t id) 
 {
-  pthread_t *thread;
-  pthread_attr_t *attr;
+  pthread_t thread;
+  pthread_attr_t attr;
   size_t stack_size;
   int res;
 #ifdef DBG_RT_TRACE_THREAD_CREATE 
   struct timeval t;
 #endif
 
-  thread = SNetMemAlloc( sizeof( pthread_t));
-  attr = SNetMemAlloc( sizeof( pthread_attr_t));
-
-  res = pthread_attr_init( attr);
+  res = pthread_attr_init( &attr);
   stack_size = ThreadStackSize( id);
 
   if( stack_size > 0) {
-    pthread_attr_setstacksize( attr, stack_size);
+    pthread_attr_setstacksize( &attr, stack_size);
   }
   
-  pthread_attr_getstacksize( attr, &stack_size);
-  res = pthread_create( thread, attr, fun, fun_args);
+  pthread_attr_getstacksize( &attr, &stack_size);
+  res = pthread_create( &thread, &attr, fun, fun_args);
+
+  pthread_attr_destroy( &attr);
 
 #ifdef DBG_RT_TRACE_THREAD_CREATE 
   gettimeofday( &t, NULL);
@@ -104,6 +103,6 @@ extern void SNetThreadCreate( void *(*fun)(void*),
     exit( 1);
   }
   else {
-    ThreadDetach( thread);
+    ThreadDetach( &thread);
   }
 }

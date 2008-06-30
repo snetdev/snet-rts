@@ -323,18 +323,32 @@ extern void SNetHndDestroy( snet_handle_t *hnd) {
       SNetMemFree( HANDLE( box_hnd)); 
       break;
     case HND_parallel: 
+      SNetTencDestroyTypeEncodingList( PAR_HND( type));
       SNetMemFree( HANDLE( parallel_hnd)); 
       break;
     case HND_sync: 
+      SNetEdestroyList( SYNC_HND(guard_list));
       SNetMemFree( HANDLE( sync_hnd)); 
       break;
     case HND_split: 
       SNetMemFree( HANDLE( split_hnd)); 
     break;
     case HND_filter: 
+      SNetDestroyTypeEncoding( FILTER_HND( in_type));
+#ifdef FILTER_VERSION_2
+      SNetTencDestroyTypeEncodingList( FILTER_HND( out_types));
+
+      for( i=0; i<SNetElistGetNumExpressions( FILTER_HND(guard_list)); i++) {
+	SNetDestroyFilterInstructionSetList( FILTER_HND(instr_lists)[i]);
+      }                               
+      SNetMemFree( FILTER_HND(instr_lists));
+#endif
+      SNetEdestroyList( FILTER_HND(guard_list));
       SNetMemFree( HANDLE( filter_hnd)); 
     break;
     case HND_star: 
+      SNetEdestroyList( STAR_HND(guard_list));
+      SNetDestroyTypeEncoding( STAR_HND( type));
       SNetMemFree( HANDLE( star_hnd)); 
     break;
   }

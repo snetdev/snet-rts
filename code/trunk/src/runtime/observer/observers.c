@@ -961,7 +961,6 @@ snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf,
   }
 
   hnd->inbuf = inbuf;
-  hnd->outbuf  = SNetBufCreate( BUFFER_SIZE);
 
   pthread_mutex_lock(&connection_mutex);
   hnd->id = id_pool++;
@@ -974,6 +973,8 @@ snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf,
     SNetMemFree(hnd);
     return inbuf;
   }
+
+  hnd->outbuf  = SNetBufCreate( BUFFER_SIZE);
 
   hnd->type = type;
   hnd->isInteractive = isInteractive;
@@ -1164,6 +1165,8 @@ void SNetObserverDestroy()
   }
 
   regfree(preg);
+
+  SNetMemFree(preg);
 
   return;
 }

@@ -3,9 +3,9 @@
 #include <bool.h>
 #include <stdio.h>
 
-void *mult( void *hnd, C_Data *x, C_Data *r)
+void *mult( void *hnd, C4SNet_data_t *x, C4SNet_data_t *r)
 { 
-  C_Data *result;
+  C4SNet_data_t *result;
   int int_x, int_r, int_rr ;
 
   int_x = *(int *)C4SNet_cdataGetData( x);

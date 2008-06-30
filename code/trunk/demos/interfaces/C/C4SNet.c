@@ -25,7 +25,7 @@ struct container {
   int *btags;
 };
 
-static int C4SNetSizeof(ctype_t type){
+static int C4SNetSizeof(C4SNet_type_t type){
   switch(type) {
   case CTYPE_uchar: 
     return sizeof(unsigned char);
@@ -69,23 +69,40 @@ static int C4SNetSizeof(ctype_t type){
 
 void C4SNetFree( void *ptr)
 {
+  /*
+  C4SNet_data_t *temp = (C4SNet_data_t *)ptr;
+
+  
+  if(--temp->ref_count == 0) {
+    printf("REF_COUNT == 0 -> free;\n");
+    SNetMemFree( ptr);
+  }else {
+    printf("ref_count--; (%d)\n", temp->ref_count);
+  }
+  */
   SNetMemFree( ptr);
+  
 }
 
 void *C4SNetCopy( void *ptr)
 {
-  C_Data *new;
+  /*
+  ((C4SNet_data_t *)ptr)->ref_count++;
+  printf("ref_count++ (%d);\n", ((C4SNet_data_t *)ptr)->ref_count);
+  return ptr;
+  */
+  C4SNet_data_t *new;
+  new = SNetMemAlloc( sizeof( C4SNet_data_t));
 
-  new = SNetMemAlloc( sizeof( C_Data));
-
-  new->data = ((C_Data *)ptr)->data;
-  new->type = ((C_Data *)ptr)->type;
-
+  new->data = ((C4SNet_data_t *)ptr)->data;
+  new->type = ((C4SNet_data_t *)ptr)->type;
+  
   return( new);
+  
 }
 
 int C4SNetEncode( FILE *file, void *ptr){
-  C_Data *temp = (C_Data *)ptr;
+  C4SNet_data_t *temp = (C4SNet_data_t *)ptr;
 
   int i = 0;
 
@@ -98,9 +115,9 @@ int C4SNetEncode( FILE *file, void *ptr){
 
 void *C4SNetDecode(FILE *file) 
 {
-  C_Data *c = NULL;
+  C4SNet_data_t *c = NULL;
   int i = 0;
-  ctype_t type;
+  C4SNet_type_t type;
   int size;
 
   i = Base64decodeDataType(file, (int *)&type);
@@ -108,8 +125,10 @@ void *C4SNetDecode(FILE *file)
   size = C4SNetSizeof(type);
 
   if(size != 0) {
-    c = malloc( sizeof( C_Data));
+    c = malloc( sizeof( C4SNet_data_t));
     c->type = type;
+    c->ref_count = 1;
+    //printf("REF_COUNT == 1; -> create\n");
     i += Base64decode(file, (unsigned char *)&c->data, size);
   }
 
@@ -119,6 +138,9 @@ void *C4SNetDecode(FILE *file)
 void C4SNet_outCompound( c4snet_container_t *c) 
 {
   SNetOutRawArray( c->hnd, my_interface_id, c->variant, c->fields, c->tags, c->btags);
+  
+  SNetMemFree(c->counter);
+  SNetMemFree(c);
 }
 
 void C4SNet_out( void *hnd, int variant, ...)
@@ -169,15 +191,17 @@ void C4SNetInit( int id)
 
 /* ************************************************************************* */
 
-C_Data *C4SNet_cdataCreate( ctype_t type, void *data)
+C4SNet_data_t *C4SNet_cdataCreate( C4SNet_type_t type, void *data)
 {
-  C_Data *c = NULL;
+  C4SNet_data_t *c = NULL;
 
   int size = C4SNetSizeof(type);
 
   if(size != 0) {
-    c = malloc( sizeof( C_Data));
+    c = malloc( sizeof( C4SNet_data_t));
     c->type = type;
+    c->ref_count = 1;
+    //printf("REF_COUNT == 1; -> create\n");
 
     memcpy((void *)&c->data, data, size);
   }
@@ -185,7 +209,7 @@ C_Data *C4SNet_cdataCreate( ctype_t type, void *data)
   return( c);
 }
 
-void *C4SNet_cdataGetData( C_Data *c)
+void *C4SNet_cdataGetData( C4SNet_data_t *c)
 {
   if(c != NULL) {
     return (void *)&c->data;
@@ -194,7 +218,7 @@ void *C4SNet_cdataGetData( C_Data *c)
   return c;
 }
 
-ctype_t C4SNet_cdataGetType( C_Data *c) {
+C4SNet_type_t C4SNet_cdataGetType( C4SNet_data_t *c) {
   if(c != NULL) {
     return( c->type);
   }

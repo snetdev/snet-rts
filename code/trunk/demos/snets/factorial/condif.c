@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 
-void *condif( void *hnd, C_Data *p)
+void *condif( void *hnd, C4SNet_data_t *p)
 {
   bool bool_p;
 

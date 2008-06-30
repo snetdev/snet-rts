@@ -3,6 +3,6 @@
 
 #include <C4SNet.h>
 
-void *condif( void *hnd, C_Data *x);
+void *condif( void *hnd, C4SNet_data_t *x);
 
 #endif

@@ -7,7 +7,7 @@
 
 int C4SNetSerialize( FILE *file, void *ptr)
 {
-  C_Data *temp = (C_Data *)ptr;
+  C4SNet_data_t *temp = (C4SNet_data_t *)ptr;
 
   switch(temp->type) {
   case CTYPE_uchar: 
@@ -56,7 +56,7 @@ void *C4SNetDeserialize(FILE *file)
   char buf[32];
   int j;
   char c;
-  cdata_types_t t;
+  C4SNet_primary_type_t t;
 
   j = 0;
   c = '\0';

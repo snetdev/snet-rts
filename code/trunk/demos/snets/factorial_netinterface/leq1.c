@@ -3,11 +3,11 @@
 #include <bool.h>
 #include <stdio.h>
 
-void *leq1( void *hnd, C_Data *x)
+void *leq1( void *hnd, C4SNet_data_t *x)
 {
   bool bool_p;
   int int_x;
-  C_Data *result;
+  C4SNet_data_t *result;
 
   int_x= *(int *)C4SNet_cdataGetData( x);
   

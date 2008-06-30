@@ -50,7 +50,7 @@ int main() {
 
   int *F_x_1, *F_x_2, *F_x_3, *F_x_4, *F_x_5, *F_x_6, *F_r_1, *F_r_2, *F_r_3, *F_r_4, *F_r_5, *F_r_6, *F_z_1;
 
-  C_Data *field1, *field2, *field3, *field4;
+  C4SNet_data_t *field1, *field2, *field3, *field4;
 
 
 

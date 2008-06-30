@@ -42,6 +42,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
   int k = 0;
   int i = 0;
   char *label = NULL;
+  char *interface = NULL;
   snet_record_mode_t mode;
 
   /* Change this to redirect the output! */
@@ -73,17 +74,21 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 	}
 	
 	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	  fprintf(hnd->file, "<field label=\"%s\" interface=\"%s\">", label, 
-	   	  SNetInIdToInterface(hnd->interfaces, id));
-	  
-	  fun(hnd->file, SNetRecGetField(rec, i));
+	  if((interface = SNetInIdToInterface(hnd->interfaces, id)) != NULL) {
+	    fprintf(hnd->file, "<field label=\"%s\" interface=\"%s\">", label, 
+		    interface);
+	    
+	    fun(hnd->file, SNetRecGetField(rec, i));
+	    
+	    fprintf(hnd->file, "</field>");
+	    SNetMemFree(interface);
+	  }
 
-	  fprintf(hnd->file, "</field>");
+	  SNetMemFree(label);
 	}else{
 	  /* Error: unknown label! */
 	}
 	
-	SNetMemFree(label);
       }
       
        /* Tags */
@@ -150,6 +155,9 @@ static void *doOutput(void* data)
       }
     }
   }
+  
+  SNetMemFree(hnd);
+
   return NULL;
 }
 
