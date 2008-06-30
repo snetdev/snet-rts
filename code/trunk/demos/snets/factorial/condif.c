@@ -20,7 +20,7 @@ void *condif( void *hnd, C4SNet_data_t *p)
     c = C4SNet_containerCreate( hnd, 2);
   }
   
-  free(p);
+  C4SNetFree(p);
 
 
   C4SNet_containerSetTag( c, 0);

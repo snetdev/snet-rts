@@ -8,6 +8,7 @@
 #include "interface_functions.h"
 #include "out.h"
 #include "base64.h"
+#include <pthread.h>
 
 #define F_COUNT( c) c->counter[0]
 #define T_COUNT( c) c->counter[1]
@@ -69,36 +70,23 @@ static int C4SNetSizeof(C4SNet_type_t type){
 
 void C4SNetFree( void *ptr)
 {
-  /*
+  
   C4SNet_data_t *temp = (C4SNet_data_t *)ptr;
 
-  
-  if(--temp->ref_count == 0) {
-    printf("REF_COUNT == 0 -> free;\n");
+  temp->ref_count--;
+
+  if(temp->ref_count == 0) {
     SNetMemFree( ptr);
-  }else {
-    printf("ref_count--; (%d)\n", temp->ref_count);
   }
-  */
-  SNetMemFree( ptr);
-  
 }
 
 void *C4SNetCopy( void *ptr)
 {
-  /*
-  ((C4SNet_data_t *)ptr)->ref_count++;
-  printf("ref_count++ (%d);\n", ((C4SNet_data_t *)ptr)->ref_count);
-  return ptr;
-  */
-  C4SNet_data_t *new;
-  new = SNetMemAlloc( sizeof( C4SNet_data_t));
+  C4SNet_data_t *temp = (C4SNet_data_t *)ptr;
 
-  new->data = ((C4SNet_data_t *)ptr)->data;
-  new->type = ((C4SNet_data_t *)ptr)->type;
-  
-  return( new);
-  
+  temp->ref_count++;
+
+  return ptr;
 }
 
 int C4SNetEncode( FILE *file, void *ptr){
@@ -128,7 +116,7 @@ void *C4SNetDecode(FILE *file)
     c = malloc( sizeof( C4SNet_data_t));
     c->type = type;
     c->ref_count = 1;
-    //printf("REF_COUNT == 1; -> create\n");
+
     i += Base64decode(file, (unsigned char *)&c->data, size);
   }
 
@@ -201,7 +189,6 @@ C4SNet_data_t *C4SNet_cdataCreate( C4SNet_type_t type, void *data)
     c = malloc( sizeof( C4SNet_data_t));
     c->type = type;
     c->ref_count = 1;
-    //printf("REF_COUNT == 1; -> create\n");
 
     memcpy((void *)&c->data, data, size);
   }

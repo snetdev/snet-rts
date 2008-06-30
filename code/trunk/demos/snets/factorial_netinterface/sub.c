@@ -17,6 +17,8 @@ void *sub( void *hnd, C4SNet_data_t *x)
   c = C4SNet_containerCreate( hnd, 1);
   C4SNet_containerSetField( c, result);
 
+  C4SNetFree(x);
+
   C4SNet_outCompound( c);
   return( hnd);
 }
