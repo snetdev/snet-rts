@@ -47,17 +47,19 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 
   /* Change this to redirect the output! */
 
-  fprintf(hnd->file, "<data xmlns=\"snet-home.org\">");
   if( rec != NULL) {
+
+    fprintf(hnd->file, "<?xml version=\"1.0\" ?>");
+
     switch( SNetRecGetDescriptor( rec)) {
     case REC_data:
 
       mode = SNetRecGetDataMode(rec);
       
       if(mode == MODE_textual) {
-	fprintf(hnd->file, "<record type=\"data\" mode=\"textual\" >");
+	fprintf(hnd->file, "<record xmlns=\"snet-home.org\" type=\"data\" mode=\"textual\" >");
       }else {
-	fprintf(hnd->file, "<record type=\"data\" mode=\"binary\" >");
+	fprintf(hnd->file, "<record xmlns=\"snet-home.org\" type=\"data\" mode=\"binary\" >");
       }
 
       /* Fields */
@@ -133,7 +135,8 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
       break;
     }
   }
-  fprintf(hnd->file, "</data>\n");
+
+  fflush(hnd->file);
 }
 
 /* This is output function for the output thread */
@@ -155,7 +158,9 @@ static void *doOutput(void* data)
       }
     }
   }
-  
+
+  fflush(hnd->file);
+  fprintf(hnd->file, "\n");
   SNetMemFree(hnd);
 
   return NULL;
@@ -183,6 +188,7 @@ int SNetInOutputInit(FILE *file,
 
 int SNetInOutputDestroy()
 {
+
   if(pthread_join(thread, NULL) == 0){
     return 0;
   }

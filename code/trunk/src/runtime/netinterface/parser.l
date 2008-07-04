@@ -28,6 +28,8 @@ char *STRcpy(const char *text){
   return strcpy(t, text);
 }
 
+#define FILTER(ret) return(ret);
+
 #define YY_INPUT(buf,result,max_size) \
  { \
   int c = getc(yyin); \
@@ -64,199 +66,202 @@ extern void yyerror(char *error);
     /* Inside single quoted XML-attribute ('...') */
 %x IN_XML_SQUOTE 
     /* These are used to ignore all unknown elements */
-%x IN_XML_UNKNOWN
-%x IN_XML_UNKNOWN_END
- 
- 
+
 %%
 
 <*>{
  [ \t\n]+ {
          /* Ignore */
+         
        }
 }
 
 <IN_XML_ELEMENT>{
  "/>" {
+        
         yy_pop_state();
-        return STARTTAG_SHORTEND;
+        FILTER( STARTTAG_SHORTEND);
       }
 	
  "\"" {
-        BEGIN(IN_XML_DQUOTE);
-        return DQUOTE;
+        
+        yy_push_state(IN_XML_DQUOTE);
+        FILTER( DQUOTE);
       }
 
  "'"  {
-        BEGIN(IN_XML_SQUOTE);
-        return SQUOTE;
+        
+        yy_push_state(IN_XML_SQUOTE);
+        FILTER( SQUOTE);
       }
 
  ">"  {
-        BEGIN(IN_XML_CONTENT);
-        return TAG_END;
+        
+        yy_pop_state();
+        yy_push_state(IN_XML_CONTENT);
+        FILTER( TAG_END);
       }
+
+(([A-Za-z\200-\377_^?]|"_"|":")([A-Za-z\200-\377_0-9.-]|":")*) {
+             
+             yylval.str = STRcpy(yytext);
+             FILTER( NAME);
+      } 
 }
 
 
 <IN_XML_ENDELEMENT>{
 ">"  {
+        
         yy_pop_state();
-        return TAG_END;
+        FILTER( TAG_END);
      }
-}
-
-
-<IN_XML_ELEMENT>(([A-Za-z\200-\377_^?]|"_"|":")([A-Za-z\200-\377_0-9.-]|":")*) {
-             yylval.str = STRcpy(yytext);
-             return NAME;
-          }                           
+}                      
       
-<IN_XML_CONTENT>{ /* This is for error recovery! */
-"<?xml" {
-           while(yy_top_state() != INITIAL) {
-              yy_pop_state();
-           } 
+<IN_XML_CONTENT>{
+ "</record" {
+          yy_pop_state();
+          yy_push_state(IN_XML_ENDELEMENT);
+          FILTER( RECORD_END_BEGIN);
         }
 
-"</data" {
+ "</field" {
+          
           yy_pop_state();
           yy_push_state(IN_XML_ENDELEMENT);
-          return DATA_END_BEGIN;
+          FILTER( FIELD_END_BEGIN);
         }
-"</record" {
+ "</tag" {
+          
           yy_pop_state();
           yy_push_state(IN_XML_ENDELEMENT);
-          return RECORD_END_BEGIN;
+          FILTER( TAG_END_BEGIN);
         }
-"</field" {
+ "</btag" {
+          
           yy_pop_state();
           yy_push_state(IN_XML_ENDELEMENT);
-          return FIELD_END_BEGIN;
+          FILTER( BTAG_END_BEGIN);
         }
-"</tag" {
-          yy_pop_state();
-          yy_push_state(IN_XML_ENDELEMENT);
-          return TAG_END_BEGIN;
-        }
-"</btag" {
-          yy_pop_state();
-          yy_push_state(IN_XML_ENDELEMENT);
-          return BTAG_END_BEGIN;
-        }
-
- "<data"    {
-          yy_push_state(IN_XML_ELEMENT);
-          return DATA_BEGIN;
-        }
-
- "<record"    {
-          yy_push_state(IN_XML_ELEMENT);
-          return RECORD_BEGIN;
-        }
-
+ 
  "<field"    {
+         
           yy_push_state(IN_XML_ELEMENT);
-          return FIELD_BEGIN;
+          FILTER( FIELD_BEGIN);
         }
 
  "<tag"    {
+          
           yy_push_state(IN_XML_ELEMENT);
-          return TAG_BEGIN;
+          FILTER( TAG_BEGIN);
         }
 
  "<btag" {
+          
           yy_push_state(IN_XML_ELEMENT);
-          return BTAG_BEGIN;
+          FILTER( BTAG_BEGIN);
         }
 
  "<!--" {
+          
           yy_push_state(IN_XML_COMMENT);
         }
 
- "<"[^ \n\t><]+ {
-          yy_push_state(IN_XML_UNKNOWN);
-        }
-
- [^<]*  { 
+ [^<>]+ { 
+          
           yylval.str = STRcpy(yytext);
-          return CHARDATA;
+          FILTER( CHARDATA);
         }
 }
  
 
 <IN_XML_DQUOTE>{
  "\""     {
-            BEGIN(IN_XML_ELEMENT);
-            return DQUOTE;
+            
+            yy_pop_state();
+            FILTER( DQUOTE);
           }
 
  [^<&\"]* {
+            
             yylval.str = STRcpy(yytext);
-            return DATTVAL;
+            FILTER( DATTVAL);
           }
 }
 
 
 <IN_XML_SQUOTE>{
  "'"     {
-           BEGIN(IN_XML_ELEMENT);
-           return SQUOTE;
+           
+           yy_pop_state();
+           FILTER( SQUOTE);
          }
 
  [^<&']* { 
+           
            yylval.str = STRcpy(yytext);
-           return SATTVAL;
+           FILTER( SATTVAL);
          }
 }
 
 
 <IN_XML_DECL,IN_XML_ELEMENT>"=" {
-                           return EQ;
+                           
+                           FILTER( EQ);
                          }
 
 
 <IN_XML_DECL>{
  "version"                   {
-                               return VERSION;
+                               
+                               FILTER( VERSION);
                              }
 
  "encoding"                  {
-                               return ENCODING;
+                               
+                               FILTER( ENCODING);
                              }
 
  "standalone"                {
-                               return STANDALONE;
+                               
+                               FILTER( STANDALONE);
                              }
 
  "yes"                       {
-                               return YES;
+                               
+                               FILTER( YES);
                              }
 
  "no"                        {
-                               return NO;
+                               
+                               FILTER( NO);
                              }
 
  "'"                         {
-                               return SQUOTE;
+                               
+                               FILTER( SQUOTE);
                              }
 
  "\""                        {
-                               return DQUOTE;
+                               
+                               FILTER( DQUOTE);
                              }
 
  "1.0"                       {
-                               return VERSIONNUMBER;
+                               
+                               FILTER( VERSIONNUMBER);
                              }
 
- [A-Za-z]([A-Za-z0-9._]|\-)* {         
+ [A-Za-z]([A-Za-z0-9._]|\-)* {   
+                               
                                yylval.str = STRcpy(yytext);
-                               return ENCNAME;
+                               FILTER( ENCNAME);
                              }
 
  "?>"                        {
-                               BEGIN(INITIAL);
-                               return XMLDECL_END;
+                               
+                               yy_pop_state();
+                               FILTER( XMLDECL_END);
                              }
 }
 
@@ -264,94 +269,47 @@ extern void yyerror(char *error);
 <IN_XML_COMMENT>{
  ([^-\n]|("-"[^-\n]))* {
                      /* Ignore */
+                     
                    }
  
  "-->"             {
+                     
                      yy_pop_state();
                    }
 }
 
 
 <INITIAL>{
-"<?xml" {
-          BEGIN(IN_XML_DECL);
-          return XMLDECL_BEGIN;
+ "<?xml" {
+          yy_push_state(IN_XML_DECL);
+          FILTER( XMLDECL_BEGIN);
         }
 
- "<!--" {
-          yy_push_state(IN_XML_COMMENT);
+ "<!--" {    
+           yy_push_state(IN_XML_COMMENT);
         }
 
-
- "<data"    {
+ "<record" {
           yy_push_state(IN_XML_ELEMENT);
-          return DATA_BEGIN;
+          FILTER( RECORD_BEGIN);
         }
 
- "<record"    {
-          yy_push_state(IN_XML_ELEMENT);
-          return RECORD_BEGIN;
-        }
-
- "<field"    {
-          yy_push_state(IN_XML_ELEMENT);
-          return FIELD_BEGIN;
-        }
-
- "<tag"    {
-          yy_push_state(IN_XML_ELEMENT);
-          return TAG_BEGIN;
-        }
-
- "<btag" {
-          yy_push_state(IN_XML_ELEMENT);
-          return BTAG_BEGIN;
-        }
-
- "<"[^ \n\t><]+ {
-          yy_push_state(IN_XML_UNKNOWN);
+ .      {
+           /* Skip unknown characters until a record is found! */
         }
 }
 
-<IN_XML_UNKNOWN_END>{
-">" {
-       yy_pop_state();
-    }
-
- .  {
-    }
-}
-
-<IN_XML_UNKNOWN>{
-"<?xml" { /* This is for error recovery! */
-           while(yy_top_state() != INITIAL) {
-              yy_pop_state();
-           } 
+<*>.    { 
+            yyerror("invalid character");           
         }
  
- ">"  {
-
-      }
-
- "</" {
-          yy_pop_state();
-          yy_push_state(IN_XML_UNKNOWN_END);
-      }
-
- "<"  {
-          yy_push_state(IN_XML_UNKNOWN);
-      }
-
- "/>" {
-          yy_pop_state();
-      }
-
- .    {
-      }
-}
-
-<*>.    {
-            yyerror("invalid character");
-        }
-
 %%
+
+/* This function is used to flush the lexer content and start lexin from the
+   beginning. */
+
+void yy_flush() 
+{
+  yyrestart(yyin);
+  BEGIN(INITIAL);
+}

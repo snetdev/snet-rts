@@ -53,7 +53,8 @@
  void yyerror(char *error);
  extern void yyrestart(FILE *);
  extern FILE *yyin;
-
+ extern void yy_flush();
+ 
  /***** Struct definitions ******/
 
  /* Struct to represent xml attribute. */
@@ -151,8 +152,8 @@
   struct attribute *attrib;
 }
 
-%token STARTTAG_SHORTEND DQUOTE SQUOTE TAG_END DATA_END_BEGIN RECORD_END_BEGIN FIELD_END_BEGIN
-%token TAG_END_BEGIN BTAG_END_BEGIN DATA_BEGIN RECORD_BEGIN FIELD_BEGIN TAG_BEGIN BTAG_BEGIN
+%token STARTTAG_SHORTEND DQUOTE SQUOTE TAG_END RECORD_END_BEGIN FIELD_END_BEGIN
+%token TAG_END_BEGIN BTAG_END_BEGIN RECORD_BEGIN FIELD_BEGIN TAG_BEGIN BTAG_BEGIN
 %token EQ VERSION ENCODING STANDALONE YES NO VERSIONNUMBER XMLDECL_END XMLDECL_BEGIN
  
 %token <str>  NAME CHARDATA DATTVAL SATTVAL ENCNAME 
@@ -162,7 +163,7 @@
 
 %%
 
-Document:     Prolog Data 
+Document:     Prolog Record
 {
 		/* YYACCEPT is needed to stop the parsing,
 		   as there might be more characters in the
@@ -186,7 +187,7 @@ Prolog:       XMLDecl
 
 /* At the moment these values are just ignored */
 XMLDecl:      XMLDECL_BEGIN VersionInfo EncodingDecl SDDecl XMLDECL_END
-            | XMLDECL_BEGIN VersionInfo EncodingDecl XMLDECL_END
+            | XMLDECL_BEGIN VersionInfo EncodingDecl XMLDECL_END 
             | XMLDECL_BEGIN VersionInfo SDDecl XMLDECL_END
             | XMLDECL_BEGIN VersionInfo XMLDECL_END
               {
@@ -223,44 +224,6 @@ SDDecl:       STANDALONE EQ SQUOTE YES SQUOTE
             | STANDALONE EQ DQUOTE NO DQUOTE
               {
 
-              }
-            ;
-
-Data:         DATA_BEGIN Attributes STARTTAG_SHORTEND
-              {
-		/* Empty data. This can be ignored! */
-		deleteAttributes($2);
-	      }
-            | DATA_BEGIN Attributes 
-              { /* MID-RULE: */
-		//	attrib_t *attr = searchAttribute($2, MODE);
-
-		/* Default mode: */
-		/*current.mode = MODE_BINARY;
-
-		if(attr != NULL) {
-		if(strcmp(attr->value, TEXTUAL) == 0) {
-		current.mode = MODE_TEXTUAL;
-		}
-		else if(strcmp(attr->value, BINARY) == 0) {
-		current.mode = MODE_BINARY;
-		}
-		}*/
-              }
-
-              TAG_END Records DATA_END_BEGIN TAG_END
-              {
-		deleteAttributes($2);
-              }
-            ;
-
-Records:      Record Records
-              {
-		/* List of records */
-	      }
-            | /* EMPTY*/
-              {
-          
               }
             ;
 
@@ -344,7 +307,7 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		  SNetRecDestroy(current.record);
 		  current.record = NULL;
 		  current.interface = INTERFACE_UNKNOWN;
-		  yyerror("Error encountered while parsing a record. Record discarded!");
+		  yyerror("Error encountered while parsing a record. Record discarded (1)!");
 		  parser.terminate = SNET_PARSE_CONTINUE;
 		}
 
@@ -421,7 +384,6 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		}
 	      } 
               TAG_END Entitys RECORD_END_BEGIN TAG_END{
-
 		if(current.record != NULL) {
 
 		  if(parser.terminate != SNET_PARSE_ERROR) {
@@ -430,7 +392,7 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      SNetRecDestroy(current.record);
 		      current.record = NULL;
 		      current.interface = INTERFACE_UNKNOWN;
-		      yyerror("Error encountered while parsing a record. Record discarded!");
+		      yyerror("Error encountered while parsing a record. Record discarded (2)!");
 		      parser.terminate = SNET_PARSE_CONTINUE;
 		    } else {
 		      SNetBufPut(parser.buffer, current.record);
@@ -442,7 +404,7 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		    SNetRecDestroy(current.record);
 		    current.record = NULL;
 		    current.interface = INTERFACE_UNKNOWN;
-		    yyerror("Error encountered while parsing a record. Record discarded!");
+		    yyerror("Error encountered while parsing a record. Record discarded (3)!");
 		    parser.terminate = SNET_PARSE_CONTINUE;
 		  }
 		  
@@ -488,7 +450,7 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	    attrib_t *finterface;
 	    int label;
 	    void *(*fun)(FILE *);
-
+  
 	    attr = searchAttribute($2, LABEL);
 	    if(attr != NULL) {
 	      label = SNetInLabelToId(parser.labels, attr->value);
@@ -534,8 +496,9 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	      
 	      iid = i;
 	    }
-
+	
 	    if(iid != INTERFACE_UNKNOWN) {
+
 	      if(current.mode == MODE_TEXTUAL) {
 		fun = SNetGetDeserializationFun(iid);
 	      } else if(current.mode == MODE_BINARY) {
@@ -675,10 +638,9 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
               {                
                 $$ = NULL;
               }
-
 %%
 
-static void flush()
+static void parserflush()
 {
   if(current.record != NULL) {
     SNetRecDestroy(current.record);
@@ -692,6 +654,8 @@ static void flush()
   if(parser.terminate == SNET_PARSE_ERROR) {
     parser.terminate = SNET_PARSE_CONTINUE;
   }
+
+  yy_flush();
 }
 
 void yyerror(char *error) 
@@ -720,12 +684,12 @@ void SNetInParserInit(FILE *file,
 
 int SNetInParserParse()
 {
-  flush();
+  parserflush();
 
   if(parser.terminate == SNET_PARSE_CONTINUE) {
     yyparse();
   }
- 
+
   return parser.terminate;
 }
 

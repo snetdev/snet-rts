@@ -1,1 +1,1 @@
-<data xmlns="snet-home.org"><record type="data" mode="textual" ><field label="x" interface="C4SNet">(int)11</field><field label="r" interface="C4SNet">(int)2</field></record></data><data mode="textual" xmlns="snet-home.org"><record type="terminate" /></data>
+<record xmlns="snet-home.org" type="data" mode="textual" ><field label="x" interface="C4SNet">(int)11</field><field label="r" interface="C4SNet">(int)2</field></record><record xmlns="snet-home.org" type="terminate" />

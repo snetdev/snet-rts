@@ -116,7 +116,7 @@ static volatile bool mustTerminate = false;
 static int notification_pipe[2];
 
 /* Pattern of reply message for regex. */
-static const char pattern[] = "^(<[\?]xml[ \n\t]+version=\"1[.]0\"[ \n\t]*[\?]>)?<data[ \n\t]+xmlns=\"snet-home[.]org\"[ \n\t]*>[ \n\t]*<observer[ \n\t]+oid=\"([0-9]+)\"[ \n\t]*((/>)|(>[ \n\t]*</observer[ \n\t]*>))[ \n\t]*</data[ \n\t]*>[ \n\t]*";
+static const char pattern[] = "^(<[\?]xml[ \n\t]+version=\"1[.]0\"[ \n\t]*[\?]>)?<observer[ \n\t]+(xmlns=\"snet-home[.]org\"[ \n\t]+)?oid=\"([0-9]+)\"([ \n\t]+xmlns=\"snet-home[.]org\"[ \n\t]+)?[ \n\t]*((/>)|(>[ \n\t]*</observer[ \n\t]*>))[ \n\t]*";
 
 /* Compiled regex */
 static regex_t *preg = NULL;
@@ -281,7 +281,7 @@ static void ObserverWait(obs_handle_t *self)
 static int ObserverParseReplyMessage(char *buf, int *oid)
 {
   int ret = 0;
-  regmatch_t pmatch[3];
+  regmatch_t pmatch[4];
   char id[32];
   int i = 0;
   *oid = -1;
@@ -290,13 +290,13 @@ static int ObserverParseReplyMessage(char *buf, int *oid)
     return 0;
   }
 
-  if((ret =  regexec(preg, buf, (size_t)3, pmatch, 0)) != 0){
+  if((ret =  regexec(preg, buf, (size_t)4, pmatch, 0)) != 0){
     return 0;
   }
 
   /* Take oid. */
-  for(i = pmatch[2].rm_so; i <= pmatch[2].rm_eo; i++){
-    id[i - pmatch[2].rm_so] = buf[i];
+  for(i = pmatch[3].rm_so; i < pmatch[3].rm_eo; i++){
+    id[i - pmatch[3].rm_so] = buf[i];
   }
   id[i] = '\0';
 
@@ -709,8 +709,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
   int (*fun)(FILE *,void *);
   
   fprintf(file,"<?xml version=\"1.0\"?>");
-  fprintf(file,"<data xmlns=\"snet-home.org\">");
-  fprintf(file,"<observer oid=\"%d\" position=\"%s\" type=\"", hnd->id, hnd->position);
+  fprintf(file,"<observer xmlns=\"snet-home.org\" oid=\"%d\" position=\"%s\" type=\"", hnd->id, hnd->position);
 
   if(hnd->type == SNET_OBSERVERS_TYPE_BEFORE) {
     fprintf(file,"before\" ");
@@ -807,7 +806,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
   default:
     break;
   }
-  fprintf(file,"</observer></data>");
+  fprintf(file,"</observer>");
  
   return 0;
 }
@@ -1083,6 +1082,7 @@ int SNetObserverInit(snetin_label_t *labs, snetin_interface_t *interfs)
 
   /* Compile regex pattern for parsing reply messages. */
   if(regcomp(preg, pattern, REG_EXTENDED) != 0){
+    printf("Did not compile!\n");
     return -1;
   }
   
