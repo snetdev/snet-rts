@@ -1,10 +1,18 @@
-
 <?xml version="1.0"?>
 <metadata xmlns="snet-home.org" >
-  <interface name="SAC2SNet" default="true" />
+  <interface name="SAC4SNet" default="true" />
 </metadata>
 
-
 net mini {
-  box A( (A) -> (B));
-} connect A;
+
+  <?xml version="1.0"?>
+    <metadata xmlns="snet-home.org" >
+      <box name="boxA" >
+        <SACmodule>mini</SACmodule>
+        <SACboxfun>A</SACboxfun>
+      </box>
+    </metadata>
+
+  box boxA( (A) -> (A));
+
+} connect boxA;

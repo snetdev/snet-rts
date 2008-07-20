@@ -9,9 +9,7 @@ export all;
 
 void A( SNet::SNet &hnd, int[.] A)
 {
-  B = A + 1;
-  C = B + 1;
-  
-  SNet::out( hnd, 1, sacprelude::wrap( B));
-  SNet::out( hnd, 1, sacprelude::wrap( C));
+  res = A + 1;
+
+  SNet::out( hnd, 1, sacprelude::wrap( res));
 }

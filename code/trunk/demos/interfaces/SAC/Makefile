@@ -1,7 +1,10 @@
 CC        = gcc
 CCFLAGS   = -Wall -g -fPIC
 SOFLAGS   = -shared -dy -Wl -allow-shlib-undefined 
-INCDIRS   = -I. -I$(SNETBASE)/include -I$(SAC2CBASE)/include
+INCDIRS   = -I. \
+	    -I$(SNETBASE)/include \
+            -I$(SNETBASE)/src/util/metadata \
+	    -I$(SAC2CBASE)/include
 SAC2C	  = sac2c
 SACFLAGS  = -v0
 COPY      = cp

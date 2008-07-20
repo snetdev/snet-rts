@@ -22,7 +22,7 @@ INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/SAC\
 	    -I../snet
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/SAC\
 	    -L../boxes/lib 
-LIBS      = -lpthread  -lSAC4SNet -lsimpleDes -lsnet -lm 
+LIBS      = -lpthread  -lSAC4SNet -lsimpleDes -lsnet -lm -lsnetutil
 
 
 # --- Directory for S-Net 

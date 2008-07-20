@@ -6,6 +6,15 @@
 #define MAX_ARGS 99
 #define STRAPPEND( dest, src)     dest = strappend( dest, src)
 
+/** Define SAC specific strings and recognised meta-data keys **/
+#define MOD_DELIMITER "__" 
+#define TYPE_STRING   "SACTYPE_SNet_SNet"
+
+#define MOD_NAME      "SACmodule"
+#define BOX_FUN       "SACboxfun"
+/** ********************************************************* **/
+
+
 static char *itoa( int val)
 {
   int i;
@@ -36,7 +45,7 @@ static char *itoa( int val)
 }
 
 
-static char *strappend( char *dest, char *src)
+static char *strappend( char *dest, const char *src)
 {
   char *res;
   res = realloc( dest, (strlen( dest) + strlen( src) + 1) * sizeof( char));
@@ -45,22 +54,43 @@ static char *strappend( char *dest, char *src)
   return( res);
 }
 
-static void constructSACfqn( char **fqn, char *box_name, void *meta_data)
+static void constructSACfqn( char **fqn, 
+                             char *box_name, 
+                             int num_args,
+                             snet_meta_data_enc_t *meta_data)
 {
-  /* TODO: use meta-data to construct function name */
-  *fqn = malloc( (strlen( box_name) + 1) * sizeof( char));
-  strcpy( *fqn, box_name);
+  const char *key_val;
+
+  *fqn = malloc( sizeof( char));
+  *fqn[0] = '\0';
+
+  key_val = SNetMetadataGet( meta_data, MOD_NAME);
+  if( key_val != NULL) {
+    STRAPPEND( *fqn, key_val);
+    STRAPPEND( *fqn, MOD_DELIMITER);
+    key_val = SNetMetadataGet( meta_data, BOX_FUN);
+    if( key_val != NULL) {
+      STRAPPEND( *fqn, key_val);
+    }
+    else {
+      STRAPPEND( *fqn, box_name);
+    }
+    STRAPPEND( *fqn, itoa( num_args+1));
+  }
+  else {
+    STRAPPEND( *fqn, box_name);
+  }
 }
 
 char *SAC4SNetGenBoxWrapper( char *box_name,
                              snet_input_type_enc_t *t,
-                             void *meta_data) 
+                             snet_meta_data_enc_t *meta_data) 
 {
   int i;
   char *wrapper_code, *tmp_str, *sac_fqn;
 
   /* construct full SAC function name */
-  constructSACfqn( &sac_fqn,  box_name, meta_data);
+  constructSACfqn( &sac_fqn, box_name, t->num, meta_data);
 
   /* generate prototype of SAC function */
   wrapper_code = 
@@ -127,8 +157,9 @@ char *SAC4SNetGenBoxWrapper( char *box_name,
     }
   }
   STRAPPEND( wrapper_code, ");\n\n"
-            "  return( "
-            "SACARGconvertToVoidPointer( SACTYPE_SNet_SNet, hnd_return));\n");
+            "  return( SACARGconvertToVoidPointer( ");
+  STRAPPEND( wrapper_code, TYPE_STRING);
+  STRAPPEND( wrapper_code, ", hnd_return));\n");
   
   STRAPPEND( wrapper_code, "}\n");
    

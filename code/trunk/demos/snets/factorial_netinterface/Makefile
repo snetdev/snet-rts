@@ -9,7 +9,7 @@ SNETC      = $(SNETBASE)/bin/snetc
 CCFLAGS    = -DFILTER_VERSION_2
 INCDIRS    = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
 LIBDIRS    = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
-LIBS       = -lC4SNet -lpthread -lsnet 
+LIBS       = -lC4SNet -lpthread -lsnet -lsnetutil
 
 all:
 	$(HIDE) rm -f *.o $(TARGET) $(TARGET).h $(TARGET).c

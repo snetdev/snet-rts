@@ -3,19 +3,34 @@
   <interface name="SAC4SNet" default="true" />
 </metadata>
 
-#define GenSubKeys simpleDesboxes_genSubKeys2
-#define KeyInvert simpleDesboxes_KeyInvert2
-#define InitialP simpleDesboxes_InitialP2
-#define FinalP simpleDesboxes_FinalP3
-#define DesRound simpleDesboxes_DesRound5
-
 net simpleDes {
 
- box GenSubKeys( (Key) -> (KeySet));
- box KeyInvert( (KeySet) -> (KeySet));
- box InitialP( (Pt) -> (L, R));
- box FinalP( (L, R) -> (Ct));
- box DesRound( (L, R, KeySet, <C>) -> (L, R, KeySet, <C>));
+
+<?xml version="1.0"?>
+  <metadata xmlns="snet-home.org" >
+    <box name="GenSubKeys" >
+      <SACmodule>simpleDesboxes</SACmodule>
+      <SACboxfun>genSubKeys</SACboxfun>
+    </box>
+    <box name="KeyInvert" >
+      <SACmodule>simpleDesboxes</SACmodule>
+    </box>
+    <box name="InitialP" >
+      <SACmodule>simpleDesboxes</SACmodule>
+    </box>
+    <box name="FinalP" >
+      <SACmodule>simpleDesboxes</SACmodule>
+    </box>
+    <box name="DesRound" >
+      <SACmodule>simpleDesboxes</SACmodule>
+    </box>
+  </metadata>
+
+  box GenSubKeys( (Key) -> (KeySet));
+  box KeyInvert( (KeySet) -> (KeySet));
+  box InitialP( (Pt) -> (L, R));
+  box FinalP( (L, R) -> (Ct));
+  box DesRound( (L, R, KeySet, <C>) -> (L, R, KeySet, <C>));
 
 } connect GenSubKeys .. ( ([{<Decipher>} -> {}] .. KeyInvert)| [] ) ..
   InitialP ..
