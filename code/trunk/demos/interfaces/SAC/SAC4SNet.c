@@ -43,7 +43,7 @@ void SAC4SNet_out( void *hnd, int variant, ...)
   int *tags, *btags;
   snet_variantencoding_t *venc;
   snet_vector_t *mapping;
-  int num_entries;
+  int num_entries, f_count=0, t_count=0, b_count=0;
   int *f_names, *t_names, *b_names;
   va_list args;
 
@@ -67,13 +67,13 @@ void SAC4SNet_out( void *hnd, int variant, ...)
   for( i=0; i<num_entries; i++) {
     switch( SNetTencVectorGetEntry( mapping, i)) {
       case field:
-        fields[i] =  SACARGnewReference( va_arg( args, SACarg*));
+        fields[f_count++] =  SACARGnewReference( va_arg( args, SACarg*));
         break;
       case tag:
-        tags[i] =  va_arg( args, int);
+        tags[t_count++] =  va_arg( args, int);
         break;
       case btag:
-        btags[i] = va_arg( args, int);
+        btags[b_count++] = va_arg( args, int);
         break;
     }
   }

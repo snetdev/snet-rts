@@ -3,7 +3,7 @@
 
 #include <sacinterface.h>
 #include <snetentities.h>
-#include <SAC2SNet.h>
+#include <SAC4SNet.h>
 #include <pthread.h>
 #include <sudoku.h>
 #include <memfun.h>
@@ -102,7 +102,7 @@ int main( int argc, char **argv)
 
   /* Initialise S-Net runtime system */
   SNetGlobalInitialise();
-  SAC2SNet_init( 0);
+  SAC4SNetInit( 0);
 
 
   /* Build SACarg from input board */
