@@ -1,7 +1,7 @@
 #include "metadata.h"
 #include <string.h>
 
-const char *SNetMetadataGet(snet_meta_data_enc_t *md, const char *key) {
+char *SNetMetadataGet(snet_meta_data_enc_t *md, const char *key) {
   int i;
 
   if(md == NULL || key == NULL) {

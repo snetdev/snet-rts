@@ -7,6 +7,6 @@ typedef struct metadata{
    char **values;
 }snet_meta_data_enc_t;
 
-const char *SNetMetadataGet(snet_meta_data_enc_t *md, const char *key);
+char *SNetMetadataGet(snet_meta_data_enc_t *md, const char *key);
 
 #endif /* _METADATA_H_ */

@@ -106,7 +106,7 @@ compiler        = tree global support parse preproc flat typeinf opt postproc \
 
 runtime         = common entities netinterface observer utility threading interfacing
 
-util		= utils metadata
+util		= core metadata
 
 tools           = RecordInspector FeederFront 
 
@@ -207,7 +207,7 @@ observer	= observers.o
 # Note that the variable names must coincide with the directory names above.
 #
 
-utils		= memfun.o typeencode.o 
+core		= memfun.o typeencode.o 
 
 metadata	= metadata.o
 

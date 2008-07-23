@@ -24,7 +24,6 @@ net factorial({x} -> {x,<stop>})
   	    <box name="leq1" >
 		<interface>C4SNet</interface>
 		<snet_originalname>leq1</snet_originalname>
-		<boxfun>test</boxfun>
                 <extra1>value</extra1>
                 <extra2 value="value" />
                 <extra3></extra3>
