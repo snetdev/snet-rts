@@ -45,6 +45,7 @@ extern void yyerror(char *error);
 
 %option noyywrap
 %option stack
+%option noyy_top_state
 
    /* Suppress compilation warning yyunput defined but not used */
 %option nounput
