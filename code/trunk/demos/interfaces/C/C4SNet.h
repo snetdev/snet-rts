@@ -3,11 +3,15 @@
 
 #include <stdio.h>
 
+/* C data structure. Can only contain primary type. */
+typedef struct cdata c4snet_data_t;
+
+/* Container for data*/
 typedef struct container c4snet_container_t;
 
 /* Type enumeration for C primary types. */
 typedef enum{
-  CTYPE_unknown,    /* Unkown data type. Used for error messages, not a valid type! */
+    CTYPE_unknown,  /* Unkown data type. Used for error messages, not a valid type! */
     CTYPE_uchar,    /* unsigned char      */
     CTYPE_char,     /* signed char        */
     CTYPE_ushort,   /* unsigned short int */
@@ -19,56 +23,37 @@ typedef enum{
     CTYPE_float,    /* float              */ 
     CTYPE_double,   /* double             */ 
     CTYPE_ldouble,  /* long double        */ 
-}C4SNet_type_t;
-
-/* Union of all the types to be used as generic data type. */
-typedef union primary_types {
-  unsigned char uc;
-  char c;
-  unsigned short us;
-  short s;
-  unsigned int ui;
-  int i;
-  unsigned long ul;
-  long l;
-  float f;
-  double d;
-  long double ld;
-} C4SNet_primary_type_t;
-
-/* C data structure. Can only contain primary type. */
-typedef struct cdata {
-  unsigned int ref_count;
-  C4SNet_type_t type;
-  C4SNet_primary_type_t data;
-} C4SNet_data_t;
+}c4snet_type_t;
 
 
-void C4SNetFree( void *ptr);
-void *C4SNetCopy( void *ptr);
-
-int C4SNetEncode( FILE *file, void *ptr);
-void *C4SNetDecode(FILE *file);
-
+/***************************** Common functions ****************************/
 void C4SNetInit( int id);
+void C4SNetOut( void *hnd, int variant, ...);
 
-void C4SNet_outCompound( c4snet_container_t *c);
-void C4SNet_out( void *hnd, int variant, ...);
+/****************************** Data functions *****************************/
 
-/* ************************************************************************* */
+c4snet_data_t *C4SNetDataCreate( c4snet_type_t type, void *data);
+void *C4SNetDataCopy( void *ptr);
+void C4SNetDataFree( void *ptr);
 
-/* C_Data */
+void *C4SNetDataGetData( c4snet_data_t *c);
+c4snet_type_t C4SNetDataGetType( c4snet_data_t *c);
 
-C4SNet_data_t *C4SNet_cdataCreate( C4SNet_type_t type, void *data);
+int C4SNetDataSerialize( FILE *file, void *ptr);
+void *C4SNetDataDeserialize(FILE *file);
 
-void *C4SNet_cdataGetData( C4SNet_data_t *c);
+int C4SNetDataEncode( FILE *file, void *ptr);
+void *C4SNetDataDecode(FILE *file);
 
-C4SNet_type_t C4SNet_cdataGetType( C4SNet_data_t *c);
+/**************************** Container functions ***************************/
+/* TODO: Would 'record' be better than 'container'? */
 
-/* ************************************************************************* */
+c4snet_container_t *C4SNetContainerCreate( void *hnd, int var_num);
 
-c4snet_container_t *C4SNet_containerCreate( void *hnd, int var_num);
-c4snet_container_t *C4SNet_containerSetField( c4snet_container_t *c, void *ptr);
-c4snet_container_t *C4SNet_containerSetTag( c4snet_container_t *c, int val);
-c4snet_container_t *C4SNet_containerSetBTag( c4snet_container_t *c, int val);
-#endif 
+c4snet_container_t *C4SNetContainerSetField( c4snet_container_t *c, void *ptr);
+c4snet_container_t *C4SNetContainerSetTag( c4snet_container_t *c, int val);
+c4snet_container_t *C4SNetContainerSetBTag( c4snet_container_t *c, int val);
+
+void C4SNetContainerOut( c4snet_container_t *c);
+
+#endif /* _C4SNET_H_ */

@@ -1,8 +1,8 @@
-#ifndef _condif_h_
-#define _condif_h_
+#ifndef CONDIF_H_
+#define CONDIF_H_
 
 #include <C4SNet.h>
 
-void *condif( void *hnd, C4SNet_data_t *x);
+void *condif( void *hnd, c4snet_data_t *x);
 
-#endif
+#endif /* CONDIF_H_ */

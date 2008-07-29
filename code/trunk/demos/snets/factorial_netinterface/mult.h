@@ -1,8 +1,8 @@
-#ifndef _mult_h_
-#define _mult_h_
+#ifndef MULT_H_
+#define MULT_H_
 
 #include <C4SNet.h>
 
-void *mult( void *hnd, C4SNet_data_t *x, C4SNet_data_t *r);
+void *mult( void *hnd, c4snet_data_t *x, c4snet_data_t *r);
 
-#endif
+#endif /* MULT_H_ */

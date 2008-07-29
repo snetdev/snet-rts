@@ -1,8 +1,8 @@
-#ifndef _sub_h_
-#define _sub_h_
+#ifndef SUB_H_
+#define SUB_H_ 
 
 #include <C4SNet.h>
 
-void *sub( void *hnd, C4SNet_data_t *x);
+void *sub( void *hnd, c4snet_data_t *x);
 
-#endif
+#endif /* SUB_H_ */

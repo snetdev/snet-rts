@@ -3,23 +3,23 @@
 #include <bool.h>
 #include <stdio.h>
 
-void *sub( void *hnd, C4SNet_data_t *x)
+void *sub( void *hnd, c4snet_data_t *x)
 {
   int int_x;
   c4snet_container_t *c;
-  C4SNet_data_t *result;
+  c4snet_data_t *result;
 
-  int_x= *(int *)C4SNet_cdataGetData( x);
+  int_x= *(int *)C4SNetDataGetData( x);
   int_x -= 1;
 
-  result = C4SNet_cdataCreate( CTYPE_int, &int_x);
+  result = C4SNetDataCreate( CTYPE_int, &int_x);
 
-  c = C4SNet_containerCreate( hnd, 1);
-  C4SNet_containerSetField( c, result);
+  c = C4SNetContainerCreate( hnd, 1);
+  C4SNetContainerSetField( c, result);
 
-  C4SNetFree(x);
+  C4SNetDataFree(x);
 
-  C4SNet_outCompound( c);
+  C4SNetContainerOut( c);
   return( hnd);
 }
 

@@ -16,7 +16,7 @@
      printf("\n - %2d fields: ", SNetRecGetNumFields( NAME));\
     for( k=0; k<SNetRecGetNumFields( NAME); k++) {\
       printf(" %s=%d ", snet_factorial_labels[ SNetRecGetFieldNames( NAME)[k] ],\
-                        *((int*)C4SNet_cdataGetData( SNetRecGetField( NAME, SNetRecGetFieldNames( NAME)[k]))));\
+                        *((int*)C4SNetDataGetData( SNetRecGetField( NAME, SNetRecGetFieldNames( NAME)[k]))));\
       if( FREE) {\
         SNetMemFree( SNetRecGetField( NAME, SNetRecGetFieldNames( NAME)[k]));\
       }\
@@ -50,7 +50,7 @@ int main() {
 
   int *F_x_1, *F_x_2, *F_x_3, *F_x_4, *F_x_5, *F_x_6, *F_r_1, *F_r_2, *F_r_3, *F_r_4, *F_r_5, *F_r_6, *F_z_1;
 
-  C4SNet_data_t *field1, *field2, *field3, *field4;
+  c4snet_data_t *field1, *field2, *field3, *field4;
 
 
 
@@ -138,10 +138,10 @@ int main() {
 
   *F_z_1 = 42;
 
-  field1 = C4SNet_cdataCreate( CTYPE_int, F_x_1);
-  field2 = C4SNet_cdataCreate( CTYPE_int, F_r_1);
-  field3 = C4SNet_cdataCreate( CTYPE_int, F_x_3);
-  field4 = C4SNet_cdataCreate( CTYPE_int, F_r_3);
+  field1 = C4SNetDataCreate( CTYPE_int, F_x_1);
+  field2 = C4SNetDataCreate( CTYPE_int, F_r_1);
+  field3 = C4SNetDataCreate( CTYPE_int, F_x_3);
+  field4 = C4SNetDataCreate( CTYPE_int, F_r_3);
 
 
   SNetRecSetField( rec1, F__factorial__x, (void*)field1);

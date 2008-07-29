@@ -4,28 +4,28 @@
 #include <stdio.h>
 
 
-void *condif( void *hnd, C4SNet_data_t *p)
+void *condif( void *hnd, c4snet_data_t *p)
 {
   bool bool_p;
 
   c4snet_container_t *c;
 
 
-  bool_p = *(bool *)C4SNet_cdataGetData( p);
+  bool_p = *(bool *)C4SNetDataGetData( p);
  
   if(bool_p) {
-    c = C4SNet_containerCreate( hnd, 1);
+    c = C4SNetContainerCreate( hnd, 1);
   } 
   else {
-    c = C4SNet_containerCreate( hnd, 2);
+    c = C4SNetContainerCreate( hnd, 2);
   }
   
-  C4SNetFree(p);
+  C4SNetDataFree(p);
 
 
-  C4SNet_containerSetTag( c, 0);
+  C4SNetContainerSetTag( c, 0);
   
-  C4SNet_outCompound( c);
+  C4SNetContainerOut( c);
   
   return( hnd);
 }
