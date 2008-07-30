@@ -23,6 +23,11 @@
   </net>
 </metadata>
 
+<metadata xmlns="snet-home.org">
+  <interface name="C4SNet" default="true"/>
+  <interface name="SAC4SNet" default="true"/>
+</metadata>
+
 type A = {A};
 typesig A2P = A -> {P};
 typesig compAB_t = A2P, {B} -> {Q};
@@ -37,15 +42,10 @@ connect compA || compB || compC;
 net failing_metadatatest {
 
     <?xml version="1.0"?>
-    <snet:metadata >
+    <snet:metadata xmlns:snet="snet-home.org">
       <snet:box name="examine" >
-        <snet:observer type="after">
-          <snet:field>I</snet:field> <!-- Unknown field -->
-          <snet:field>Y</snet:field>
-        </snet:observer>
-        <snet:observer type="both"> <!-- Conflict in types -->
-          <snet:field>Q</snet:field>
-        </snet:observer>
+        <snet:observer type="after" />
+        <snet:observer type="both" /> <!-- Conflict in types -->
       </snet:box>
       <snet:net name="compute">
         <snet:net name="syncPQ">

@@ -1,36 +1,5 @@
-
-<?xml version="1.0"?>
-<metadata xmlns="snet-home.org" >
-  <net name="factorial" >
-     <observer data="full" type="before" />
-     <observer data="full" type="after" interactive="true" /> 
-  </net>
-  <net name="factorial/compute" >
-     <observer data="full" type="before" interactive="true" />
-  </net>
-</metadata>
-
-<?xml version="1.0"?>
-<metadata xmlns="snet-home.org" >
-  <interface name="C4SNet" default="true" />
-</metadata>
-
-
 net factorial({x} -> {x,<stop>})
 {
-
-	<?xml version="1.0"?>
-	<metadata xmlns="snet-home.org" >
-  	    <box name="leq1" >
-		<interface>C4SNet</interface>
-		<snet_originalname>leq1</snet_originalname>
-                <extra1>value</extra1>
-                <extra2 value="value" />
-                <extra3></extra3>
-                <extra4 />
-  	    </box>
-	</metadata>
-
         box leq1( (x) -> (x,p));
         box condif( (p) -> (<T>) | (<F>));
 

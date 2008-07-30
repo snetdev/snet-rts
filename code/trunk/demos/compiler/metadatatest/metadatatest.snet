@@ -14,6 +14,7 @@
 <?xml version="1.0"?>
 <!-- Test for namespaces and observer -->
 <metadata xmlns="snet-home.org">
+  <interface name="C4SNet" default="true" />
   <net name="metadatatest/split" >
      <observer type="after" code="123abc">
      </observer>
@@ -27,14 +28,8 @@ typesig compAB_t = A2P, {B} -> {Q};
 net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
    <metadata xmlns="snet-home.org">
       <box name="compA" >
-        <interface name="C2SNet" />
+        <interface value="C4SNet" />
        </box>
-      <box name="compB" >
-        <interface name="C2SAC" />
-       </box>
-      <box name="compC" >
-        <interface name="C2SAC" />
-      </box>
    </metadata>
  
     box compA ((A) -> (P));
@@ -49,13 +44,11 @@ net metadatatest {
     <!-- Test for box-->
     <snet:metadata xmlns:snet="snet-home.org">
       <snet:box name="examine" >
-        <snet:interface name="C2SNet" />
-        <snet:boxsource name="boxfuns.c" />
-        <snet:boxfunction name="funB" />
-        <snet:compiler name="gcc" />
-        <snet:compilerflags>-Wall -O2 -g -c</snet:compilerflags>
-        <snet:ldflags>-L/path/to/libs -lmylib1 -lmylib2</snet:ldflags>
-        <snet:threads>2</snet:threads>
+        <snet:interface value="C4SNet" />
+        <snet:boxname value="funB" />
+        <c4snet_value value="value" />
+        <c4snet_data>data</c4snet_data>
+        <c4snet_null></c4snet_null>
       </snet:box>
       <snet:net name="compute">
         <snet:net name="syncPQ">

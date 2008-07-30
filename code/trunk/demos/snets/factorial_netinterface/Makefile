@@ -6,6 +6,7 @@ TARGET     = factorial
 
 CC         = gcc
 SNETC      = $(SNETBASE)/bin/snetc
+METADATA   = -mfactorial.md -mleq1.md
 CCFLAGS    = -DFILTER_VERSION_2
 VALGRIND   = valgrind
 VFLAGS     = --leak-check=full --show-reachable=yes
@@ -16,19 +17,19 @@ LIBS       = -lC4SNet -lpthread -lsnet -lsnetutil
 all:
 	$(HIDE) rm -f *.o $(TARGET) $(TARGET).h $(TARGET).c
 	$(CC) $(INCDIRS) -c *.c
-	$(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) -o $(TARGET) $(TARGET).snet
+	$(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) -o $(TARGET) $(METADATA) $(TARGET).snet
 	rm -f *.o
 
 gcc:    
 	$(HIDE) rm -f *.o
-	$(SNETC) -b7 $(TARGET).snet
+	$(SNETC) -b7 $(METADATA) $(TARGET).snet
 	$(CC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) $(RPATH) -DSNetMain__factorial=main -o $(TARGET) *.c $(LIBS)
 	rm -f *.o
 
 valgrind:
 	$(HIDE) rm -f *.o $(TARGET) $(TARGET).h $(TARGET).c
 	$(CC) $(INCDIRS) -c *.c
-	$(VALGRIND) $(VFLAGS) $(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) -o $(TARGET) $(TARGET).snet
+	$(VALGRIND) $(VFLAGS) $(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) -o $(TARGET) $(METADATA) $(TARGET).snet
 	rm -f *.o
 
 clean:
