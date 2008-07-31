@@ -26,9 +26,9 @@ net netwrap
 connect boxwrap;
 
 net filtwrap
-connect [{B} if <1==2> -> {C=B}; {<d=3>}
-             if <1==3> ->
-             else -> {B}];
+connect [{B} -> if <1==2> then {C=B}; {<d=3>}
+             else if <1==3> then
+             else {B}];
 
 net syncwrap
 connect [|{A},{B,C},{<d>}|];

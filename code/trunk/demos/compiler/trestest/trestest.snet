@@ -8,7 +8,7 @@
  * Date:   24.05.2007
  *
  * Run:
- *         $ snetc -b1 typesigtest.snet
+ *         $ snetc -b2:tres trestest.snet
  *
  ****************************************************************/
 

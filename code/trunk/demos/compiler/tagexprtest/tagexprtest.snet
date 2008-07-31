@@ -7,7 +7,7 @@
  * Date:   24.05.2007
  *
  * Run:
- *         $ snetc -b1 tagexprtest.snet
+ *         $ snetc -b2:tcheck tagexprtest.snet
  *
  ****************************************************************/
 
