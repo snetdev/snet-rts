@@ -298,7 +298,7 @@ static int ObserverParseReplyMessage(char *buf, int *oid)
   for(i = pmatch[3].rm_so; i < pmatch[3].rm_eo; i++){
     id[i - pmatch[3].rm_so] = buf[i];
   }
-  id[i] = '\0';
+  id[i - pmatch[3].rm_so] = '\0';
 
   *oid = atoi(id);
 
