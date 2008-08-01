@@ -117,7 +117,7 @@ char *C4SNetGenBoxWrapper( char *box_name,
     free( tmp_str);
   }
   
-  STRAPPEND( wrapper_code, "));\n}\n");
+  STRAPPEND( wrapper_code, "));\n}");
 
   return( wrapper_code);
 }
