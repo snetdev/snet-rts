@@ -1,18 +1,24 @@
+/** <!--********************************************************************-->
+ *
+ * $Id$
+ *
+ * file base64.c
+ *
+ * Base64 encoding encodes binary data to character values. 
+ * The encoding can be used in XML data as it doesn't contain any
+ * restricted characters that could appear in binary data.
+ *
+ * Base64 encoding codes each block of 3 bytes (24 bits) to 
+ * 4 bytes (32 bits).
+ * 
+ *****************************************************************************/
+
 #include "base64.h"
 
 /* TODO: - Enc/dec should also handle byte ordering?
  *       - What about incorrect length? (for example: incoming 64bit int to 32bit int) 
  *         -> Because of the padding we know the real length of the data
  *            which could be compared to given length.
- */
-
-/* Base64 encoding encodes binary data to character values. 
- * The encoding can be used in XML data as it doesn't contain any
- * restricted characters that could appear in binary data.
- *
- * Base64 encoding codes each block of 3 bytes (24 bits) to 
- * 4 bytes (32 bits).
- *
  */
 
 /* Bits per byte. */
@@ -41,7 +47,7 @@ static const char base64[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 /* Index of the panding character in the encoding table */
 #define PADDING_BYTE 64
 
-
+/* Encode data type 'type' to 'file'. */
 int Base64encodeDataType(FILE *file, int type) 
 {
   int i = 0;
@@ -56,7 +62,7 @@ int Base64encodeDataType(FILE *file, int type)
   return i;
 }
 
-
+/* Encode 'len' bytes from 'src' to 'file'. */
 int Base64encode(FILE *file, void *src, int len)
 {
   int size = 0;
@@ -107,6 +113,7 @@ int Base64encode(FILE *file, void *src, int len)
   return size;
 }
 
+/* Decode data type enconding from 'file' to 'type'. */
 int Base64decodeDataType(FILE *file, int *type)
 {
   int i = 0;
@@ -137,6 +144,10 @@ int Base64decodeDataType(FILE *file, int *type)
   return i;
 }
 
+/* Decode 'len' bytes to 'dst' from 'file'.
+ * 'len' is the number of bytes in 'dst' not the number 
+ * of bytes to be taken from 'file'.
+ */
 int Base64decode(FILE *file, void *dst, int len)
 {
   int i, j;
@@ -215,9 +226,3 @@ int Base64decode(FILE *file, void *dst, int len)
 
   return i;
 }
-
-#undef PADDING_BYTE
-#undef BITS_PER_BYTE
-#undef BITS_PER_ENCODED_BYTE
-#undef BITS_PER_BLOCK
-#undef BLOCK_NOT_FULL

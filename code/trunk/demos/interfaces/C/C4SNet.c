@@ -1,3 +1,14 @@
+/** <!--********************************************************************-->
+ *
+ * $Id$
+ *
+ * file C4SNet.c
+ *
+ * C4SNet is a simple C language interface for S-Net. 
+ *
+ * 
+ *****************************************************************************/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include "C4SNet.h"
@@ -13,8 +24,10 @@
 
 #define BUF_SIZE 32
 
+/* ID of the language interface. */
 static int interface_id;
 
+/* Container for returning the result. */
 struct container {
   snet_handle_t *hnd;
   int variant;
@@ -25,6 +38,7 @@ struct container {
   int *btags;
 };
 
+/* Union containing all C primary types. */
 typedef union primary_types {
   unsigned char uc;
   char c;
@@ -39,12 +53,25 @@ typedef union primary_types {
   long double ld;
 } c4snet_primary_type_t;
 
+/* Data struct to store the actual data. */
 struct cdata {
-  unsigned int ref_count;
-  c4snet_type_t type;
-  c4snet_primary_type_t data;
+  unsigned int ref_count;     /* reference count for garbage collection. */
+  c4snet_type_t type;         /* C type of the data. */
+  c4snet_primary_type_t data; /* The data. */
 };
 
+/* Interface functions that are needed by the runtime environment,
+ * but are not given to the box programmer.
+ */
+static void *C4SNetDataShallowCopy( void *ptr);
+static int C4SNetDataSerialize( FILE *file, void *ptr);
+static void *C4SNetDataDeserialize(FILE *file);
+static int C4SNetDataEncode( FILE *file, void *ptr);
+static void *C4SNetDataDecode(FILE *file);
+
+/***************************** Auxiliary functions ****************************/
+
+/* Return size of the data type. */
 static int C4SNetSizeof(c4snet_type_t type){
   switch(type) {
   case CTYPE_uchar: 
@@ -89,18 +116,20 @@ static int C4SNetSizeof(c4snet_type_t type){
 
 /***************************** Common functions ****************************/
 
+/* Language interface initialization function. */
 void C4SNetInit( int id)
 {
   interface_id = id;
   SNetGlobalRegisterInterface( id, 
 			       &C4SNetDataFree, 
-			       &C4SNetDataCopy,
+			       &C4SNetDataShallowCopy,
 			       &C4SNetDataSerialize, 
 			       &C4SNetDataDeserialize,
 			       &C4SNetDataEncode, 
 			       &C4SNetDataDecode);  
 }
 
+/* Communicates back the results of the box. */
 void C4SNetOut( void *hnd, int variant, ...)
 {
   va_list args;
@@ -137,14 +166,23 @@ void C4SNetOut( void *hnd, int variant, ...)
 
 /****************************** Data functions *****************************/
 
+/* Creates a new c4snet_data_t struct. */
 c4snet_data_t *C4SNetDataCreate( c4snet_type_t type, void *data)
 {
   c4snet_data_t *c = NULL;
+  int size;
 
-  int size = C4SNetSizeof(type);
+  if(type == CTYPE_unknown || data == NULL) {
+    return NULL;
+  }
+
+  size = C4SNetSizeof(type);
 
   if(size != 0) {
-    c = malloc( sizeof( c4snet_data_t));
+    if((c = SNetMemAlloc( sizeof( c4snet_data_t))) == NULL) {
+      return NULL;
+    }
+
     c->type = type;
     c->ref_count = 1;
 
@@ -154,46 +192,84 @@ c4snet_data_t *C4SNetDataCreate( c4snet_type_t type, void *data)
   return( c);
 }
 
-void *C4SNetDataCopy( void *ptr)
+/* Increments c4snet_data_t struct's reference count by one.
+ * This copy function should be used inside S-Net runtime
+ * to avoid needles copying.
+ */
+static void *C4SNetDataShallowCopy( void *ptr)
 {
   c4snet_data_t *temp = (c4snet_data_t *)ptr;
 
-  temp->ref_count++;
+  if(ptr != NULL) {
+    temp->ref_count++;
+  }
 
   return ptr;
 }
 
-void C4SNetDataFree( void *ptr)
+/* Copies c4snet_data_t struct. 
+ * This copy function is available for box code writers.
+ *
+ */
+void *C4SNetDataCopy( void *ptr)
 {
-  
   c4snet_data_t *temp = (c4snet_data_t *)ptr;
+  c4snet_data_t *c = NULL;
 
-  temp->ref_count--;
-
-  if(temp->ref_count == 0) {
-    SNetMemFree( ptr);
+  if((c = SNetMemAlloc( sizeof( c4snet_data_t))) == NULL) {
+    return NULL;
   }
-}
 
-void *C4SNetDataGetData( c4snet_data_t *c)
-{
-  if(c != NULL) {
-    return (void *)&c->data;
-  } 
+  c->type = temp->type;
+  c->ref_count = 1;
+
+  memcpy((void *)&c->data, (void *)&(temp->data), sizeof(temp->data));
 
   return c;
 }
 
-c4snet_type_t C4SNetDataGetType( c4snet_data_t *c) {
-  if(c != NULL) {
-    return( c->type);
+/* Frees the memory allocated for c4snet_data_t struct. */
+void C4SNetDataFree( void *ptr)
+{
+  c4snet_data_t *temp = (c4snet_data_t *)ptr;
+
+  if(temp != NULL) { 
+    temp->ref_count--;
+    
+    if(temp->ref_count == 0) {
+      SNetMemFree( ptr);
+    }
   }
+}
+
+/* Returns the actual data. */
+void *C4SNetDataGetData( c4snet_data_t *ptr)
+{
+  if(ptr != NULL) {
+    return (void *)&ptr->data;
+  } 
+
+  return ptr;
+}
+
+/* Returns the type of the data. */
+c4snet_type_t C4SNetDataGetType( c4snet_data_t *ptr) 
+{
+  if(ptr != NULL) {
+    return( ptr->type);
+  }
+
   return CTYPE_unknown;
 }
 
-int C4SNetDataSerialize( FILE *file, void *ptr)
+/* Serializes data to a file using textual representation. */
+static int C4SNetDataSerialize( FILE *file, void *ptr)
 {
   c4snet_data_t *temp = (c4snet_data_t *)ptr;
+
+  if(temp == NULL) {
+    return 0;
+  }
 
   switch(temp->type) {
   case CTYPE_uchar: 
@@ -259,7 +335,8 @@ int C4SNetDataSerialize( FILE *file, void *ptr)
   return 0;
 }
 
-void *C4SNetDataDeserialize(FILE *file) 
+/* Deserializes textual data from a file. */
+static void *C4SNetDataDeserialize(FILE *file) 
 {
   char buf[BUF_SIZE];
   int j;
@@ -421,10 +498,14 @@ void *C4SNetDataDeserialize(FILE *file)
   return NULL;
 }
 
-int C4SNetDataEncode( FILE *file, void *ptr){
+/* Binary encodes data to a file. */
+static int C4SNetDataEncode( FILE *file, void *ptr){
   c4snet_data_t *temp = (c4snet_data_t *)ptr;
-
   int i = 0;
+
+  if(temp == NULL) {
+    return 0;
+  }
 
   i = Base64encodeDataType(file, (int)temp->type);
 
@@ -433,7 +514,8 @@ int C4SNetDataEncode( FILE *file, void *ptr){
   return i + 1;
 }
 
-void *C4SNetDataDecode(FILE *file) 
+/* Decodes binary data from a file. */
+static void *C4SNetDataDecode(FILE *file) 
 {
   c4snet_data_t *c = NULL;
   int i = 0;
@@ -445,7 +527,7 @@ void *C4SNetDataDecode(FILE *file)
   size = C4SNetSizeof(type);
 
   if(size != 0) {
-    c = malloc( sizeof( c4snet_data_t));
+    c = SNetMemAlloc( sizeof( c4snet_data_t));
     c->type = type;
     c->ref_count = 1;
 
@@ -458,16 +540,19 @@ void *C4SNetDataDecode(FILE *file)
 
 /**************************** Container functions ***************************/
 
-c4snet_container_t *C4SNetContainerCreate( void *hnd, int var_num) 
+/* Creates a container that can be used to return values. */
+c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant) 
 {
-  
   int i;
   c4snet_container_t *c;
   snet_variantencoding_t *v;
 
+  if(hnd == NULL) {
+    return 0;
+  }
 
   v = SNetTencGetVariant( 
-        SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), var_num);
+        SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), variant);
 
   c = SNetMemAlloc( sizeof( c4snet_container_t));
   c->counter = SNetMemAlloc( 3 * sizeof( int));
@@ -475,7 +560,7 @@ c4snet_container_t *C4SNetContainerCreate( void *hnd, int var_num)
   c->tags = SNetMemAlloc( SNetTencGetNumTags( v) * sizeof( int));
   c->btags = SNetMemAlloc( SNetTencGetNumBTags( v) * sizeof( int));
   c->hnd = hnd;
-  c->variant = var_num;
+  c->variant = variant;
 
   for( i=0; i<3; i++) {
     c->counter[i] = 0;
@@ -485,7 +570,7 @@ c4snet_container_t *C4SNetContainerCreate( void *hnd, int var_num)
 }
 
 
-
+/* Adds field into a container. */
 c4snet_container_t *C4SNetContainerSetField(c4snet_container_t *c, void *ptr)
 {
   c->fields[ F_COUNT( c)] = ptr;
@@ -494,24 +579,25 @@ c4snet_container_t *C4SNetContainerSetField(c4snet_container_t *c, void *ptr)
   return( c);
 }
 
-
-c4snet_container_t *C4SNetContainerSetTag(c4snet_container_t *c, int val)
+/* Adds tag into a container. */
+c4snet_container_t *C4SNetContainerSetTag(c4snet_container_t *c, int value)
 {
-  c->tags[ T_COUNT( c)] = val;
+  c->tags[ T_COUNT( c)] = value;
   T_COUNT( c) += 1;
 
   return( c);
 }
 
-
-c4snet_container_t *C4SNetContainerSetBTag(c4snet_container_t *c, int val)
+/* Adds binding tag into a container. */
+c4snet_container_t *C4SNetContainerSetBTag(c4snet_container_t *c, int value)
 {
-  c->btags[ B_COUNT( c)] = val;
+  c->btags[ B_COUNT( c)] = value;
   B_COUNT( c) += 1;
 
   return( c);
 }
 
+/* Communicates back the results of the box stored in a container. */
 void C4SNetContainerOut(c4snet_container_t *c) 
 {
   SNetOutRawArray( c->hnd, interface_id, c->variant, c->fields, c->tags, c->btags);
@@ -519,9 +605,3 @@ void C4SNetContainerOut(c4snet_container_t *c)
   SNetMemFree(c->counter);
   SNetMemFree(c);
 }
-
-
-#undef BUF_SIZE
-#undef F_COUNT
-#undef T_COUNT
-#undef B_COUNT
