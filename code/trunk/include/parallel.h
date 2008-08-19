@@ -11,11 +11,11 @@ typedef struct {
   int match_count;
 } match_count_t;
 
-snet_buffer_t *SNetParallel(snet_buffer_t *inbuf, 
+snet_tl_stream_t *SNetParallel(snet_tl_stream_t *inbuf, 
                              snet_typeencoding_list_t *types,
                              ...);
 
-snet_buffer_t *SNetParallelDet(snet_buffer_t *inbuf, 
+snet_tl_stream_t *SNetParallelDet(snet_tl_stream_t *inbuf, 
                                 snet_typeencoding_list_t *types,
                                 ...);
 #endif

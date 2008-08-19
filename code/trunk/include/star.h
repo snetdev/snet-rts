@@ -1,36 +1,36 @@
 #ifndef STAR_HEADER
 #define STAR_HEADER
 
-#include "buffer.h"
+#include "stream_layer.h"
 #include "typeencode.h"
 #include "expression.h"
 
-extern snet_buffer_t *SNetStar( snet_buffer_t *inbuf,
-                                snet_typeencoding_t *type,
-                                snet_expr_list_t *guards,
-                                snet_buffer_t* (*box_a)(snet_buffer_t*),
-                                snet_buffer_t* (*box_b)(snet_buffer_t*));
-
-
-extern
-snet_buffer_t *SNetStarIncarnate( snet_buffer_t *inbuf,
-                            snet_typeencoding_t *type,
-                               snet_expr_list_t *guards,
-                                  snet_buffer_t *(*box_a)(snet_buffer_t*),
-                                  snet_buffer_t *(*box_b)(snet_buffer_t*));
-
-
-extern snet_buffer_t *SNetStarDet( snet_buffer_t *inbuf,
+extern snet_tl_stream_t *SNetStar( snet_tl_stream_t *inbuf,
                                    snet_typeencoding_t *type,
                                    snet_expr_list_t *guards,
-                                   snet_buffer_t *(*box_a)(snet_buffer_t*),
-                                   snet_buffer_t *(*box_b)(snet_buffer_t*));
+                                  snet_tl_stream_t*(*box_a)(snet_tl_stream_t*),
+                                 snet_tl_stream_t*(*box_b)(snet_tl_stream_t*));
+
+
 extern
-snet_buffer_t *SNetStarDetIncarnate( snet_buffer_t *inbuf,
+snet_tl_stream_t *SNetStarIncarnate( snet_tl_stream_t *inbuf,
+                                          snet_typeencoding_t *type,
+                                          snet_expr_list_t *guards,
+                                  snet_tl_stream_t*(*box_a)(snet_tl_stream_t*),
+                                snet_tl_stream_t *(*box_b)(snet_tl_stream_t*));
+
+
+extern snet_tl_stream_t *SNetStarDet( snet_tl_stream_t *inbuf,
+                                      snet_typeencoding_t *type,
+                                      snet_expr_list_t *guards,
+                                 snet_tl_stream_t *(*box_a)(snet_tl_stream_t*),
+                                snet_tl_stream_t *(*box_b)(snet_tl_stream_t*));
+extern
+snet_tl_stream_t *SNetStarDetIncarnate( snet_tl_stream_t *inbuf,
                                snet_typeencoding_t *type,
                                   snet_expr_list_t *guards,
-                                     snet_buffer_t *(*box_a)(snet_buffer_t*),
-                                     snet_buffer_t *(*box_b)(snet_buffer_t*));
+                                 snet_tl_stream_t *(*box_a)(snet_tl_stream_t*),
+                                snet_tl_stream_t *(*box_b)(snet_tl_stream_t*));
 
 
 #endif

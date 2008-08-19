@@ -84,17 +84,17 @@ extern snet_filter_instruction_set_t **SNetFilterInstructionsGetSets( snet_filte
  *  HND_split: inbuf, outbuf, boxfun, tagA(=ltag), tagB(=utag)
  *  HND_filter: inbuf, outbuf, filter_instructions
  */
-extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t descr, ...);		
+extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t descr, ...);
 
 extern snet_record_t *SNetHndGetRecord( snet_handle_t *hndl);
 
-extern void SNetHndSetRecord( snet_handle_t *hndl, snet_record_t *rec); 
+extern void SNetHndSetRecord( snet_handle_t *hndl, snet_record_t *rec);
 
-extern void SNetHndSetInbuffer( snet_handle_t *hnd, snet_buffer_t *inbuf);
-extern snet_buffer_t *SNetHndGetInbuffer( snet_handle_t *hndl);
+extern void SNetHndSetInput( snet_handle_t *hnd, snet_tl_stream_t *inbuf);
+extern snet_tl_stream_t *SNetHndGetInput( snet_handle_t *hndl);
 
-extern snet_buffer_t *SNetHndGetOutbuffer( snet_handle_t *hndl);
-extern snet_buffer_t **SNetHndGetOutbuffers( snet_handle_t *hndl);
+extern snet_tl_stream_t *SNetHndGetOutput( snet_handle_t *hndl);
+extern snet_tl_stream_t **SNetHndGetOutputs( snet_handle_t *hndl);
 
 extern void *SNetHndGetBoxfun( snet_handle_t *handle);
 extern void *SNetHndGetBoxfunA( snet_handle_t *handle);

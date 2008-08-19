@@ -1,3 +1,7 @@
+/*
+ * $Id$
+ */
+
 /*  
  * buffer.h
  * This implements a buffer and its accessor functions.   
@@ -10,8 +14,10 @@
 
 #include <pthread.h>
 #include <semaphore.h>
+#include "bool.h"
+#include "extended_semaphore.h"
 typedef enum fbckbufmessage snet_fbckbuffer_msg_t;
-typedef struct fbckbuffer snet_fbckbuffer_t; 
+typedef struct fbckbuffer snet_fbckbuffer_t;
 
 enum fbckbufmessage
 {
@@ -33,7 +39,9 @@ enum fbckbufmessage
 
 extern snet_fbckbuffer_t *SNetFbckBufCreate();
 
+extern bool SNetFbckBufIsEmpty(snet_fbckbuffer_t *buf);
 
+extern void SNetFbckBufBlockUntilDataReady(snet_fbckbuffer_t *buf);
 
 
 /*
@@ -58,7 +66,7 @@ extern snet_fbckbuffer_t *SNetFbckBufPut( snet_fbckbuffer_t *buf, void* elem);
  * RETURNS: pointer to the element.  
  */
 
-extern void *SNetFbckBufGet( snet_fbckbuffer_t *buf); // TODO: returns element, not buffer
+extern void *SNetFbckBufGet( snet_fbckbuffer_t *buf); 
 
 
 /*
@@ -96,7 +104,7 @@ extern void *SNetFbckBufShow( snet_fbckbuffer_t *buf);
  * with the mutex and cond.var. of the dispatcher.
  */
 
-extern void SNetFbckBufRegisterDispatcher( snet_fbckbuffer_t *buf, sem_t *sem);
+extern void SNetFbckBufRegisterDispatcher( snet_fbckbuffer_t *buf, snet_ex_sem_t *sem);
 
 
 

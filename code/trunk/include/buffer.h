@@ -1,6 +1,10 @@
-/*  
+/*
+ * $Id$
+ */
+
+/*
  * buffer.h
- * This implements a buffer and its accessor functions.   
+ * This implements a buffer and its accessor functions.
  */
 
 
@@ -10,8 +14,11 @@
 
 #include <pthread.h>
 #include <semaphore.h>
+#include "bool.h"
+#include "stream_layer.h"
+#include "extended_semaphore.h"
 typedef enum bufmessage snet_buffer_msg_t;
-typedef struct buffer  snet_buffer_t; 
+typedef struct buffer  snet_buffer_t;
 
 enum bufmessage
 {
@@ -23,7 +30,11 @@ enum bufmessage
 };
 
 
-
+extern bool SNetBufIsEmpty(snet_buffer_t *buf);
+extern void SNetBufBlockUntilDataReady(snet_buffer_t *buf);
+extern void SNetBufBlockUntilHasSpace(snet_buffer_t *buf);
+extern void SNetBufClaim(snet_buffer_t *buf);
+extern void SNetBufRelease(snet_buffer_t *buf);
 
 /*
  * Allocates memory for the buffer and initializes
@@ -34,7 +45,8 @@ enum bufmessage
  *          otherwise. 
  */
 
-extern snet_buffer_t *SNetBufCreate( unsigned int size); // TODO: add extern to all functions
+extern snet_buffer_t *SNetBufCreate( unsigned int size, pthread_mutex_t *lock); 
+// TODO: add extern to all functions
 
 
 
@@ -140,7 +152,7 @@ extern unsigned int SNetGetSpaceLeft( snet_buffer_t *bf);
  * with the mutex and cond.var. of the dispatcher.
  */
 
-extern void SNetBufRegisterDispatcher( snet_buffer_t *buf, sem_t *sem);
+extern void SNetBufRegisterDispatcher( snet_buffer_t *buf, snet_ex_sem_t *sem);
 
 
 

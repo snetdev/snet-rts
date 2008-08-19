@@ -8,6 +8,7 @@
 
 typedef struct list snet_util_list_t;
 
+void SNetUtilListDump(snet_util_list_t *target);
 snet_util_list_t *SNetUtilListCreate();
 void SNetUtilListDestroy(snet_util_list_t *target);
 
@@ -32,6 +33,7 @@ snet_util_list_t *SNetUtilListIterAddAfter(snet_util_list_iter_t *target, void* 
 snet_util_list_t * SNetUtilListIterAddBefore(snet_util_list_iter_t *target, void* content);
 snet_util_list_iter_t *SNetUtilListIterNext(snet_util_list_iter_t *target);
 snet_util_list_iter_t *SNetUtilListIterPrev(snet_util_list_iter_t *target);
+snet_util_list_t *SNetUtilListIterMoveToBack(snet_util_list_iter_t *target);
 void *SNetUtilListIterGet(snet_util_list_iter_t *target);
 bool SNetUtilListIterHasNext(snet_util_list_iter_t *target);
 bool SNetUtilListIterHasPrev(snet_util_list_iter_t *target);

@@ -19,10 +19,9 @@
  *******************************************************************************/
 
 #include <stdio.h>
-#include "buffer.h"
 #include "label.h"
 #include "interface.h"
-
+#include "stream_layer.h"
 /* Init SNet and start network interface.
  *
  * @notice This call does not initialize any language interfaces!
@@ -42,6 +41,6 @@
 int SNetInRun(int argc, char *argv[],
 	      char *const_labels[], int number_of_labels, 
 	      char *const_interfaces[], int number_of_interfaces, 
-	      snet_buffer_t *(snetfun)(snet_buffer_t *));
+	      snet_tl_stream_t *(snetfun)(snet_tl_stream_t *));
 
 #endif /* NETWORK_INTERFACE_H */

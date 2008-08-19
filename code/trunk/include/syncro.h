@@ -2,10 +2,9 @@
 #define SYNCRO_HEADER
 #include "expression.h"
 #include "typeencode.h"
-#include "buffer.h"
+#include "stream_layer.h"
 
-
-snet_buffer_t *SNetSync( snet_buffer_t *input, 
+snet_tl_stream_t *SNetSync( snet_tl_stream_t *input, 
                          snet_typeencoding_t *outtype,
                          snet_typeencoding_t *patterns,
                          snet_expr_list_t *guards);

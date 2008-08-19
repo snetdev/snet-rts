@@ -185,13 +185,14 @@ print           = print.o
 
 common          = handle.o record.o expression.o
 
-entities        = buffer.o filter.o feedbackbuffer.o graphics.o\
+entities        = filter.o graphics.o\
                   syncro.o out.o box.o alias.o\
                   serial.o collectors.o parallel.o star.o split.o
 
 utility		= list.o debug.o stack.o tree.o
 
-threading       = threading.o extended_semaphore.o stream_layer.o
+threading       = threading.o extended_semaphore.o stream_layer.o buffer.o\
+                  feedbackbuffer.o
 
 interfacing     = interface_functions.o
 

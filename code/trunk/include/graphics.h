@@ -8,10 +8,12 @@
 #include <buffer.h>
 #include <string.h>
 
-extern snet_buffer_t *SNetGraphicalBox( snet_buffer_t *inbuf, char **names, char* name);
+extern snet_tl_stream_t*
+SNetGraphicalBox( snet_tl_stream_t *instream, char **names, char* name);
 
 
-extern snet_buffer_t *SNetGraphicalFeeder( snet_buffer_t *outbuf, char **names, int num_names );
+extern snet_tl_stream_t*
+SNetGraphicalFeeder(snet_tl_stream_t *outstream, char **names, int num_names );
 
 
 extern void SNetInitGraphicalSystem();

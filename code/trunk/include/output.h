@@ -20,7 +20,7 @@
 
 #include <stdio.h>
 #include "record.h"
-#include "buffer.h"
+#include "stream_layer.h"
 #include "label.h"
 #include "interface.h"
 
@@ -39,7 +39,7 @@
 int SNetInOutputInit(FILE *file,
 		     snetin_label_t *labels, 
 		     snetin_interface_t *interfaces,
-		     snet_buffer_t *in_buf);
+		     snet_tl_stream_t *in_buf);
 
 
 /* Wait until the end of output.

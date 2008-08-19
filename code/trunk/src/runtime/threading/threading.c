@@ -6,7 +6,7 @@
 
 #include "memfun.h"
 #include "snetentities.h"
-
+#include "debug.h"
 #include "threading.h"
 
 #ifdef DBG_RT_TRACE_THREAD_CREATE 

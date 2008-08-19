@@ -18,7 +18,7 @@
  *
  *******************************************************************************/
 
-#include "buffer.h"
+#include "stream_layer.h"
 #include "bool.h"
 #include "label.h"
 #include "interface.h"
@@ -32,7 +32,7 @@
 #define SNET_OBSERVERS_TYPE_BEFORE 0
 #define SNET_OBSERVERS_TYPE_AFTER 1
 
-snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf, 
+snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *inbuf, 
 				     const char *addr,
 				     int port, 
 				     bool interactive, 
@@ -41,7 +41,7 @@ snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf,
 				     char data_level, 
 				     const char *code);
 
-snet_buffer_t *SNetObserverFileBox(snet_buffer_t *inbuf, 
+snet_tl_stream_t *SNetObserverFileBox(snet_tl_stream_t *inbuf, 
 				   const char *filename, 
 				   const char *position, 
 				   char type, 

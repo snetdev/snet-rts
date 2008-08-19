@@ -8,18 +8,18 @@
 #define RECORD_H
 
 
+typedef struct record snet_record_t;
+typedef union record_types snet_record_types_t;
+
 #include "typeencode.h"
 #include "bool.h"
 #include "constants.h"
-#include "buffer.h"
+#include "stream_layer.h"
 #include "stack.h"
 /* 
  * data structure for the record
  */
 
-typedef struct record snet_record_t;
-
-typedef union record_types snet_record_types_t;
 
 typedef enum {
 	REC_data,
@@ -90,7 +90,7 @@ extern snet_util_stack_t *SNetRecGetIterationStack(snet_record_t *rec);
 
 extern snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec);
 
-extern snet_buffer_t *SNetRecGetBuffer( snet_record_t *rec);
+extern snet_tl_stream_t *SNetRecGetStream( snet_record_t *rec);
 
 
 /*
