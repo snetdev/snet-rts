@@ -17,4 +17,7 @@ void SNetExSemWaitWhileMinValue(snet_ex_sem_t *target);
 void SNetExSemWaitWhileMaxValue(snet_ex_sem_t *target);
 
 int SNetExSemGetValue(snet_ex_sem_t *value_provider);
+bool SNetExSemIsMaximal(snet_ex_sem_t *target);
+bool SNetExSemIsMinimal(snet_ex_sem_t *target);
+
 #endif
