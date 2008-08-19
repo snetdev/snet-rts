@@ -191,7 +191,7 @@ entities        = buffer.o filter.o feedbackbuffer.o graphics.o\
 
 utility		= list.o debug.o stack.o tree.o
 
-threading       = threading.o
+threading       = threading.o extended_semaphore.o stream_layer.o
 
 interfacing     = interface_functions.o
 

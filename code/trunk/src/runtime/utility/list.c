@@ -12,7 +12,8 @@
  *
  * This implements a doubly linked list that supports arbitrary contents. 
  * Furthermore, it is possible to traverse this list, because it keeps track
- * of a current element that can be inspected or removed or you can add elements
+ * of a current element that can be inspected or removed or you 
+ * can add elements
  * before or after it. 
  */
 
@@ -39,6 +40,41 @@ struct list_iterator {
 static void Link(struct list_elem *pred, struct list_elem *succ) {
   pred->next = succ;
   succ->prev = pred;
+}
+
+void SNetUtilListDump(snet_util_list_t *target) {
+  struct list_elem *current;
+
+  fprintf(stderr, "List %x:\n", (unsigned int) target);
+  fprintf(stderr, "first: %x, last: %x\n", 
+          (unsigned int) target->first,
+          (unsigned int) target->last);
+  fprintf(stderr, " current    | prev       | content    | next\n");
+  fprintf(stderr, "--------------------------------------------\n");
+  
+  current = target->first;
+  while(current) {
+    fprintf(stderr, " %10x | %10x | %10x | %10x\n",
+            (unsigned int) current,
+            (unsigned int) current->prev,
+            (unsigned int) current->content,
+            (unsigned int) current->next);
+    current = current->next;
+  }
+  fprintf(stderr, "\n");
+}
+
+snet_util_list_t *SNetUtilListIterMoveToBack(snet_util_list_iter_t *target) {
+  void *content;
+  snet_util_list_t *base_list;
+
+  NULLCHECK(target);
+
+  base_list = target->base;
+  content = SNetUtilListIterGet(target);
+  base_list = SNetUtilListIterDelete(target);
+  base_list = SNetUtilListAddEnd(base_list, content);
+  return base_list;
 }
 
 /** <!--********************************************************************-->
@@ -121,6 +157,7 @@ SNetUtilListAddBeginning(snet_util_list_t *target, void *content) {
   } else {
     /* list with at least 1 element */
     new_element->next = target->first;
+    target->first->prev = new_element;
     target->first = new_element;
   }
   return target;
@@ -150,11 +187,13 @@ snet_util_list_t *SNetUtilListAddEnd(snet_util_list_t *target, void *content) {
   new_element->next = NULL;
 
   if(target->last == NULL) {
+    SNetUtilDebugNotice("AddEnd: empty list");
     /* empty list */
     target->first = new_element;
     target->last = new_element;
     new_element->prev = NULL;
   } else {
+    SNetUtilDebugNotice("AddEnd: at least one element");
     /* list with at least one element */
     new_element->prev = target->last;
     target->last->next = new_element;
@@ -465,24 +504,31 @@ snet_util_list_t *SNetUtilListIterDelete(snet_util_list_iter_t *target) {
   base_list = target->base;
   pred = target->current->prev;
   succ = target->current->next;
+  SNetUtilListDump(base_list);
+
   if(pred != NULL && succ != NULL) {
+    fprintf(stderr, "middle of list\n");
     /* deleting somewhere in the list */
     Link(pred, succ);
   } else if(pred == NULL && succ != NULL) {
+    fprintf(stderr, "first element of list\n");
     /* deleting first element of list */
     base_list->first = succ;
     succ->prev = NULL;
   } else if(pred != NULL &&  succ == NULL) {
+    fprintf(stderr, "last\n");
     /* deleting last element of list */
     base_list->last = pred;
     pred->next= NULL;
   } else { /* pred == succ == NULL */
+    fprintf(stderr, "singleton\n");
     /* deleting only element of the list */
     base_list->first = NULL;
     base_list->last = NULL;
   }
   SNetMemFree(target->current);
   target->current = succ;
+  SNetUtilListDump(base_list);
   return base_list;
 }
 

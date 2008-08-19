@@ -10,7 +10,10 @@
 
 #include "memfun.h"
 #include "record.h"
+
 #include "snetentities.h"
+#include "stream_layer.h"
+
 #include "stack.h"
 #include "debug.h"
 
@@ -30,7 +33,7 @@
   for( i=0; i<RECNUMS( rec); i++) {\
     if( names[i] != name) {\
       new[i - skip] = RECGET( rec, names[i]);\
-    }\
+    }                                 \
     else {\
       skip += 1;\
     }\
@@ -66,7 +69,7 @@ typedef struct {
 } data_rec_t;
 
 typedef struct {
-  snet_buffer_t *inbuf;
+  snet_tl_stream_t *input;
 } sync_rec_t;
 
 typedef struct {
@@ -85,7 +88,7 @@ typedef struct {
 } terminate_rec_t;
 
 typedef struct {
-  snet_buffer_t *outbuf;
+  snet_tl_stream_t *output;
 } star_rec_t;
 
 typedef struct {
@@ -231,12 +234,12 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
     case REC_sync:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
       RECORD( rec, sync_rec) = SNetMemAlloc( sizeof( sync_rec_t));
-      SYNC_REC( rec, inbuf) = va_arg( args, snet_buffer_t*);
+      SYNC_REC( rec, input) = va_arg( args, snet_tl_stream_t*);
       break;
     case REC_collect:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
       RECORD( rec, star_rec) = SNetMemAlloc( sizeof( star_rec_t));
-      STAR_REC( rec, outbuf) = va_arg( args, snet_buffer_t*);
+      STAR_REC( rec, output) = va_arg( args, snet_tl_stream_t*);
       break;
     case REC_terminate:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
@@ -434,23 +437,23 @@ extern int SNetRecGetInterfaceId( snet_record_t *rec)
   return( result);
 }
 
-extern snet_buffer_t *SNetRecGetBuffer( snet_record_t *rec)
+extern snet_tl_stream_t *SNetRecGetStream( snet_record_t *rec)
 {
-  snet_buffer_t *inbuf;
+  snet_tl_stream_t *result;
 
   switch( REC_DESCR( rec)) {
     case REC_sync:
-      inbuf = SYNC_REC( rec, inbuf);
+      result = SYNC_REC( rec, input);
       break;
     case REC_collect:
-      inbuf = STAR_REC( rec, outbuf);
+      result = STAR_REC( rec, output);
       break;
     default:
       SNetUtilDebugFatal("Wrong type in RECgetBuffer() (%d)", REC_DESCR(rec));
       break;
   }
 
-  return( inbuf);
+  return result;
 }
 
 

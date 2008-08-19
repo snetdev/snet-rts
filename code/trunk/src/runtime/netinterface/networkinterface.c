@@ -159,14 +159,14 @@ static void SNetInClose(FILE *file)
 int SNetInRun(int argc, char *argv[],
 	      char *static_labels[], int number_of_labels, 
 	      char *static_interfaces[], int number_of_interfaces, 
-	      snet_buffer_t *(snetfun)(snet_buffer_t *))
+	      snet_tl_stream_t *(snetfun)(snet_tl_stream_t *))
 {
   FILE *input = stdin;
   FILE *output = stdout;
   int bufsize = SNET_DEFAULT_BUFSIZE;
   int i = 0;
-  snet_buffer_t *in_buf = SNetBufCreate(bufsize);
-  snet_buffer_t *out_buf = NULL;
+  snet_tl_stream_t *in_buf = SNetTlCreateStream(bufsize);
+  snet_tl_stream_t *out_buf = NULL;
   snetin_label_t *labels = NULL;
   snetin_interface_t *interfaces = NULL;
   char *brk;
@@ -291,7 +291,7 @@ int SNetInRun(int argc, char *argv[],
   }
   
   if(in_buf != NULL){
-    SNetBufDestroy(in_buf);
+    SNetTlMarkObsolete(in_buf);
   }
   
   SNetInParserDestroy();

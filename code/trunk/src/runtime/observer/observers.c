@@ -32,7 +32,7 @@
 #include "constants.h"
 #include "record.h"
 #include "typeencode.h"
-#include "buffer.h"
+#include "stream_layer.h"
 #include "memfun.h"
 #include "bool.h"
 #include "interface_functions.h"
@@ -56,8 +56,8 @@ typedef struct obs_handle {
   obstype_t obstype;     // type of the observer
   void *desc;            // Observer desctiptor, depends on the type of the observer (obs_socket_t / obs_file_T)
   bool isInteractive;    // Is this observer interactive
-  snet_buffer_t *inbuf;  // Buffer for incoming records
-  snet_buffer_t *outbuf; // Buffer for outgoing records
+  snet_tl_stream_t *inbuf;  // Stream for incoming records
+  snet_tl_stream_t *outbuf; // Stream for outgoing records
   int id;                // Instance specific ID of this observer (NOTICE: this will change!)
   const char *code;      // Code attribute
   const char *position;  // Name of the net/box to which the observer is attached to
@@ -886,7 +886,7 @@ static void *ObserverBoxThread( void *hndl)
  
   /* Do until terminate record is processed. */
   while(!isTerminated){ 
-    rec = SNetBufGet(hnd->inbuf);
+    rec = SNetTlRead(hnd->inbuf);
     if(rec != NULL) {
            
       /* Send message. */
@@ -897,15 +897,14 @@ static void *ObserverBoxThread( void *hndl)
       }
       
       /* Pass the record to next component. */
-      SNetBufPut(hnd->outbuf, rec);
+      SNetTlWrite(hnd->outbuf, rec);
     }
   } 
 
   /* Unregister observer */
   ObserverRemove(hnd);
 
-  SNetBufBlockUntilEmpty(hnd->outbuf);
-  SNetBufDestroy(hnd->outbuf);
+  SNetTlMarkObsolete(hnd->outbuf);
 
   SNetMemFree(hnd);
 
@@ -914,7 +913,7 @@ static void *ObserverBoxThread( void *hndl)
 
 /** <!--********************************************************************-->
  *
- * @fn snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf, 
+ * @fn snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *inbuf, 
  *				     const char *addr, 
  *				     int port, 
  *				     bool isInteractive, 
@@ -928,7 +927,7 @@ static void *ObserverBoxThread( void *hndl)
  *           Observer handle is created and the observer is started.
  *           Incase the connection cannot be opened, this observer is ignored.
  *
- *   @param inbuf         Buffer for incoming records.
+ *   @param inbuf         Stream for incoming records.
  *   @param addr          Address of the listener.
  *   @param port          Port number that the listener uses.
  *   @param isInteractive True if this observer is interactive, false otherwise.
@@ -937,10 +936,10 @@ static void *ObserverBoxThread( void *hndl)
  *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_NONE or SNET_OBSERVERS_DATA_LEVEL_TAGS or SNET_OBSERVERS_DATA_LEVEL_FULL
  *   @param code          User specified code sent by the observer.
  *
- *   @return              Buffer for outcoming records.
+ *   @return              Stream for outcoming records.
  *
  ******************************************************************************/
-snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf, 
+snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *inbuf, 
 				     const char *addr, 
 				     int port, 
 				     bool isInteractive, 
@@ -973,7 +972,7 @@ snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf,
     return inbuf;
   }
 
-  hnd->outbuf  = SNetBufCreate( BUFFER_SIZE);
+  hnd->outbuf  = SNetTlCreateStream(BUFFER_SIZE);
 
   hnd->type = type;
   hnd->isInteractive = isInteractive;
@@ -981,6 +980,7 @@ snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf,
   hnd->data_level = data_level;
   hnd->code = code;
 
+  /* hkr: TODO for me! */
   pthread_create(&box_thread, NULL, ObserverBoxThread, (void*)hnd);
   pthread_detach(box_thread);
 
@@ -989,7 +989,7 @@ snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf,
 
 /** <!--********************************************************************-->
  *
- * @fn snet_buffer_t *SNetObserverFileBox(snet_buffer_t *inbuf, 
+ * @fn snet_tl_stream_t *SNetObserverFileBox(snet_tl_stream_t *inbuf, 
  *				   const char *filename, 
  *				   const char *position, 
  *				   char type, 
@@ -1001,17 +1001,17 @@ snet_buffer_t *SNetObserverSocketBox(snet_buffer_t *inbuf,
  *           Observer handle is created and the observer is started.
  *           Incase the file cannot be opened, this observer is ignored.
  *
- *   @param inbuf         Buffer for incoming records.
+ *   @param inbuf         Stream for incoming records.
  *   @param filename      Name of the file to be used.
  *   @param position      String describing the position of this observer (Net/box name).
  *   @param type          Type of the observer SNET_OBSERVERS_TYPE_BEFORE or SNET_OBSERVERS_TYPE_AFTER
  *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_NONE or SNET_OBSERVERS_DATA_LEVEL_TAGS or SNET_OBSERVERS_DATA_LEVEL_FULL
  *   @param code          User specified code sent by the observer.
  *
- *   @return              Buffer for outcoming records.
+ *   @return              Stream for outcoming records.
  *
  ******************************************************************************/
-snet_buffer_t *SNetObserverFileBox(snet_buffer_t *inbuf, 
+snet_tl_stream_t *SNetObserverFileBox(snet_tl_stream_t *inbuf, 
 				   const char *filename, 
 				   const char *position, 
 				   char type, 
@@ -1028,7 +1028,7 @@ snet_buffer_t *SNetObserverFileBox(snet_buffer_t *inbuf,
   }
 
   hnd->inbuf = inbuf;
-  hnd->outbuf  = SNetBufCreate( BUFFER_SIZE);
+  hnd->outbuf  = SNetTlCreateStream(BUFFER_SIZE);
 
   pthread_mutex_lock(&connection_mutex);
   hnd->id = id_pool++;

@@ -14,11 +14,10 @@
 #include <graphics.h>
 #include <record.h>
 #include <typeencode.h>
-#include <buffer.h>
 #include <memfun.h>
 #include <bool.h>
 #include <constants.h>
-
+#include <stream_layer.h>
 
 bool initialised=false;
 
@@ -41,8 +40,8 @@ int port_counter = PORT_RANGE_START;
 
 
 typedef struct {
-  snet_buffer_t *inbuf;
-  snet_buffer_t *outbuf;
+  snet_tl_stream_t *instream;
+  snet_tl_stream_t *outstream;
   char *box_title;
   char **descriptor;
   int port;
@@ -103,7 +102,6 @@ static void *GraphicBoxThread( void *hndl) {
   struct hostent *host;
   struct sockaddr_in addr;
   int s;
-  snet_buffer_msg_t buf_msg;
   snet_record_t *rec = NULL;
   int state;
   bool terminate = false;
@@ -175,8 +173,7 @@ static void *GraphicBoxThread( void *hndl) {
 
       case STATE_OK:
       case STATE_PUT_FAILED: {
-        SNetBufTryPut( hnd->outbuf, rec, &buf_msg);
-        if( buf_msg != BUF_success) {
+        if(!SNetTlTryWrite(hnd->outstream, rec)) {
           strcpy( buf, "Buffer full.\n");
           send(s, buf, strlen( buf) + 1, 0);
           state = STATE_PUT_FAILED;
@@ -188,8 +185,8 @@ static void *GraphicBoxThread( void *hndl) {
         }
       }
       case STATE_GET_FAILED: {
-        rec = SNetBufTryGet( hnd->inbuf, &buf_msg);
-        if( buf_msg == BUF_success) {
+        rec = SNetTlPeek(hnd->instream);
+        if(rec != NULL) {
           switch( SNetRecGetDescriptor( rec)) {
             case REC_data:
               RecordToText( rec, buf, hnd->descriptor);
@@ -202,10 +199,10 @@ static void *GraphicBoxThread( void *hndl) {
               terminate = true;
               send(s, buf, strlen( buf) + 1, 0);
               recv(s, buf, 1024, 0);
-              SNetBufPut( hnd->outbuf, rec);
+              SNetTlWrite(hnd->outstream, rec);
               break;
             case REC_sync:
-              hnd->inbuf = SNetRecGetBuffer( rec);
+              hnd->instream = SNetRecGetStream( rec);
               SNetRecDestroy( rec);
               break;
             case REC_sort_begin:
@@ -213,7 +210,7 @@ static void *GraphicBoxThread( void *hndl) {
               strcat( buf, " - \n - control message: sort begin\n - \n");
               send(s, buf, strlen( buf) + 1, 0);
               state = STATE_OK;
-              break;           
+              break;
             case REC_sort_end:
               strcpy( buf, "The current record contains:\n\n");
               strcat( buf, " - \n - control message: sort end\n - \n");
@@ -254,9 +251,10 @@ static void *GraphicBoxThread( void *hndl) {
 
 
 
-extern snet_buffer_t *SNetGraphicalBox( snet_buffer_t *inbuf, char **names, char *name) {
+extern snet_tl_stream_t*
+SNetGraphicalBox( snet_tl_stream_t *instream, char **names, char *name) {
 
-  snet_buffer_t *outbuf;
+  snet_tl_stream_t *outstream;
   pthread_t *box_thread;
   graphic_handle_t *hnd;
 
@@ -273,27 +271,27 @@ extern snet_buffer_t *SNetGraphicalBox( snet_buffer_t *inbuf, char **names, char
            " (max. %d characters)\n\n", name, MAX_BOXTITLE_LEN);
     exit( 1);
   }
-  
+
   hnd = SNetMemAlloc( sizeof( graphic_handle_t));
   hnd->box_title = SNetMemAlloc( ( strlen( name) + 1) * sizeof( char));
   strcpy( hnd->box_title, name);
   hnd->descriptor = names;
-  
+
   pthread_mutex_lock( lock_port_counter);
   my_port = port_counter++;
   pthread_mutex_unlock( lock_port_counter);
   hnd->port = my_port;
-  
-  outbuf = SNetBufCreate( BUFFER_SIZE);
 
-  hnd->inbuf = inbuf;
-  hnd->outbuf = outbuf;
+  outstream = SNetTlCreateStream( BUFFER_SIZE);
+
+  hnd->instream = instream;
+  hnd->outstream = outstream;
 
   box_thread = SNetMemAlloc( sizeof( pthread_t));
   pthread_create( box_thread, NULL, GraphicBoxThread, (void*)hnd);
   pthread_detach( *box_thread);
 
-  return( outbuf);
+  return( outstream);
 }
 
 // ----------------------------------------------------------------------------
@@ -501,14 +499,14 @@ static void *FeederThread( void *hndl) {
     recv(s, buf, 4096, 0);
     
     if( strcmp( buf, "TERMINATE") == 0) {
-      SNetBufPut( hnd->outbuf, SNetRecCreate( REC_terminate));
+      SNetTlWrite( hnd->outstream, SNetRecCreate( REC_terminate));
       terminate = true;
     } 
     else {
       rec = StringToRecord( buf, hnd->descriptor);
     }
     
-    SNetBufPut( hnd->outbuf, rec);
+    SNetTlWrite( hnd->outstream, rec);
   }
 
   close( s);
@@ -518,13 +516,14 @@ static void *FeederThread( void *hndl) {
 
 
 
-extern snet_buffer_t *SNetGraphicalFeeder( snet_buffer_t *outbuf, char **names, int num_names ) {
+extern snet_tl_stream_t*
+SNetGraphicalFeeder( snet_tl_stream_t *outstream, char **names, int num_names ) {
 
   graphic_handle_t *hnd;
   pthread_t *box_thread;
 
   hnd = SNetMemAlloc( sizeof( graphic_handle_t));
-  hnd->outbuf = outbuf;
+  hnd->outstream = outstream;
   hnd->descriptor = names;
   hnd->num_desc = num_names; 
   
@@ -533,7 +532,7 @@ extern snet_buffer_t *SNetGraphicalFeeder( snet_buffer_t *outbuf, char **names, 
   pthread_create( box_thread, NULL, FeederThread, (void*)hnd);
   pthread_detach( *box_thread);
 
-  return( outbuf);
+  return( outstream);
 
 }
 

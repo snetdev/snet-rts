@@ -5,8 +5,9 @@
 #include "debug.h"
 #include "memfun.h"
 
-#define NULLCHECK(VAR) if((VAR) == NULL) {\
-                        SNetUtilDebugFatal("%s: %s == null", __FUNCTION__, #VAR);}
+#define NULLCHECK(STACK,VAR) if((VAR) == NULL) {\
+                        SNetUtilDebugFatal("%s on %x: %s == null",\
+                        __FUNCTION__, (unsigned int) (STACK), #VAR);}
 
 /**
  *
@@ -131,7 +132,7 @@ void SNetUtilStackDestroy(snet_util_stack_t *target) {
   struct stack_elem *current;
   struct stack_elem *next;
 
-  NULLCHECK(target)
+  NULLCHECK(target, target)
 
   /* free all elements of the stack*/
   if(target->top == NULL) {
@@ -193,7 +194,7 @@ void SNetUtilStackDestroy(snet_util_stack_t *target) {
  * @return true or false
  *****************************************************************************/
 bool SNetUtilStackIsEmpty(snet_util_stack_t *target) {
-  NULLCHECK(target)
+  NULLCHECK(target, target)
   return (target->top == NULL);
 }
 
@@ -215,7 +216,7 @@ bool SNetUtilStackIsEmpty(snet_util_stack_t *target) {
 snet_util_stack_t *SNetUtilStackPush(snet_util_stack_t *target, int content) {
   struct stack_elem *new_elem;
 
-  NULLCHECK(target)
+  NULLCHECK(target,target)
 
   new_elem = SNetMemAlloc(sizeof(struct stack_elem));
   new_elem->data = content;
@@ -251,7 +252,7 @@ snet_util_stack_t *SNetUtilStackPush(snet_util_stack_t *target, int content) {
 snet_util_stack_t *SNetUtilStackPop(snet_util_stack_t *target) {
   struct stack_elem *to_delete;
 
-  NULLCHECK(target)
+  NULLCHECK(target, target)
   if(SNetUtilStackIsEmpty(target)) {
     SNetUtilDebugFatal("SNetUtilStackPop: target is empty!");
   }
@@ -285,9 +286,10 @@ snet_util_stack_t *SNetUtilStackPop(snet_util_stack_t *target) {
  *
  *****************************************************************************/
 int SNetUtilStackPeek(snet_util_stack_t *target) {
-  NULLCHECK(target)
+  NULLCHECK(target, target)
   if(SNetUtilStackIsEmpty(target)) {
-    SNetUtilDebugFatal("SnetUtilStackPeek: empty stack");
+    SNetUtilDebugFatal("SnetUtilStackPeek(%x): empty stack",
+      (unsigned int) target);
   }
   return target->top->data;
 }
@@ -301,8 +303,8 @@ int SNetUtilStackPeek(snet_util_stack_t *target) {
  * @return the modified stack
  */
 snet_util_stack_t *SNetUtilStackSet(snet_util_stack_t *target, int new_value) {
-  NULLCHECK(target)
-  NULLCHECK(target->top)
+  NULLCHECK(target, target)
+  NULLCHECK(target, target->top)
 
   target->top->data = new_value;
   return target;
@@ -322,7 +324,7 @@ snet_util_stack_t *SNetUtilStackSet(snet_util_stack_t *target, int new_value) {
  * @param target the iterator to kill
  */
 void SNetUtilStackIterDestroy(snet_util_stack_iterator_t *target) {
-  NULLCHECK(target)
+  NULLCHECK(target, target)
   SNetMemFree(target);
 }
 /**
@@ -337,7 +339,7 @@ void SNetUtilStackIterDestroy(snet_util_stack_iterator_t *target) {
  */
 snet_util_stack_iterator_t *SNetUtilStackTop(snet_util_stack_t *target) {
   struct stack_iterator *result;
-  NULLCHECK(target)
+  NULLCHECK(target, target)
 
   result = SNetMemAlloc(sizeof(struct stack_iterator));
   result->base = target;
@@ -360,7 +362,7 @@ snet_util_stack_iterator_t *SNetUtilStackTop(snet_util_stack_t *target) {
  */
 snet_util_stack_iterator_t *SNetUtilStackBottom(snet_util_stack_t *target) {
   struct stack_iterator *result;
-  NULLCHECK(target)
+  NULLCHECK(target, target)
 
   result = SNetMemAlloc(sizeof(struct stack_iterator));
   result->base = target;
@@ -378,7 +380,7 @@ snet_util_stack_iterator_t *SNetUtilStackBottom(snet_util_stack_t *target) {
  */
 snet_util_stack_iterator_t *
     SNetUtilStackIterNext(snet_util_stack_iterator_t *target) {
-  NULLCHECK(target)
+  NULLCHECK(target, target)
 
   if(target->current != NULL) {
     switch(target->direction) {
@@ -401,7 +403,7 @@ snet_util_stack_iterator_t *
  * @return true if the current element is defined, false otherwise
  */
 bool SNetUtilStackIterCurrDefined(snet_util_stack_iterator_t *target) {
-  NULLCHECK(target)
+  NULLCHECK(target, target)
 
   return target->current != NULL;
 }
@@ -414,8 +416,8 @@ bool SNetUtilStackIterCurrDefined(snet_util_stack_iterator_t *target) {
  * @return the data of he current element
  */
 int SNetUtilStackIterGet(snet_util_stack_iterator_t *target) {
-  NULLCHECK(target)
-  NULLCHECK(target->current)
+  NULLCHECK(target, target)
+  NULLCHECK(target, target->current)
 
   return target->current->data;
 }

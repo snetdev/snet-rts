@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "collectors.h"
 #include "threading.h"
+#include "stream_layer.h"
 #include "list.h"
 /* ------------------------------------------------------------------------- */
 /*  SNetSplit                                                                */
@@ -39,23 +40,23 @@ static void *SplitBoxThread( void *hndl) {
 
   int i;
   snet_handle_t *hnd = (snet_handle_t*)hndl;
-  snet_buffer_t *initial;
+  snet_tl_stream_t *initial;
   int ltag, ltag_val, utag, utag_val;
   snet_record_t *rec, *current_sort_rec;
-  snet_buffer_t* (*boxfun)( snet_buffer_t*);
+  snet_tl_stream_t* (*boxfun)( snet_tl_stream_t*);
   bool terminate = false;
   snet_util_list_t *repos = NULL;
   snet_blist_elem_t *elem;
 
 
-  initial = SNetHndGetOutbuffer( hnd);
+  initial = SNetHndGetOutput( hnd);
   boxfun = SNetHndGetBoxfun( hnd);
   ltag = SNetHndGetTagA( hnd);
   utag = SNetHndGetTagB( hnd);
 
   
   while( !( terminate)) {
-    rec = SNetBufGet( SNetHndGetInbuffer( hnd));
+    rec = SNetTlRead( SNetHndGetInput( hnd));
 
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
@@ -65,8 +66,9 @@ static void *SplitBoxThread( void *hndl) {
         if( repos == NULL) {
           elem = SNetMemAlloc( sizeof( snet_blist_elem_t));
           elem->num = ltag_val;
-          elem->buf = SNetBufCreate( BUFFER_SIZE);
-          SNetBufPut( initial, SNetRecCreate( REC_collect, boxfun( elem->buf)));
+          elem->stream = SNetTlCreateStream( BUFFER_SIZE);
+          SNetTlWrite( initial, 
+                       SNetRecCreate( REC_collect, boxfun( elem->stream)));
           //SNetBufBlockUntilEmpty( initial);
           repos = SNetUtilListCreate();
           repos = SNetUtilListAddBeginning(repos, elem);
@@ -77,21 +79,22 @@ static void *SplitBoxThread( void *hndl) {
           if( elem == NULL) {
             elem = SNetMemAlloc( sizeof( snet_blist_elem_t));
             elem->num = i;
-            elem->buf = SNetBufCreate( BUFFER_SIZE);
+            elem->stream = SNetTlCreateStream( BUFFER_SIZE);
             repos = SNetUtilListAddBeginning(repos, elem);
-            SNetBufPut( initial, SNetRecCreate( REC_collect, boxfun( elem->buf)));
+            SNetTlWrite( initial, 
+                         SNetRecCreate( REC_collect, boxfun( elem->stream)));
             //SNetBufBlockUntilEmpty( initial);
           } 
           if( i == utag_val) {
-            SNetBufPut( elem->buf, rec); // last rec is not copied.
+            SNetTlWrite( elem->stream, rec); // last rec is not copied.
           }
           else {
-            SNetBufPut( elem->buf, SNetRecCopy( rec)); // COPY
+            SNetTlWrite( elem->stream, SNetRecCopy( rec)); // COPY
           }
         } 
         break;
       case REC_sync:
-        SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
+        SNetHndSetInput( hnd, SNetRecGetStream( rec));
         SNetRecDestroy( rec);
 
         break;
@@ -107,13 +110,13 @@ static void *SplitBoxThread( void *hndl) {
           current_position = SNetUtilListFirst(repos);
           while(SNetUtilListIterHasNext(current_position)) {
             elem = SNetUtilListIterGet(current_position);
-            SNetBufPut( elem->buf,
+            SNetTlWrite( elem->stream,
                 SNetRecCreate( REC_sort_begin, SNetRecGetLevel( rec),
                                SNetRecGetNum( rec)));
             current_position = SNetUtilListIterNext(current_position);
           }
           elem = SNetUtilListIterGet(current_position);
-          SNetBufPut(elem->buf, rec);
+          SNetTlWrite(elem->stream, rec);
           SNetUtilListIterDestroy(current_position);
         } else {
           /* we are unable to relay this record anyway, so we discard it? */
@@ -128,13 +131,13 @@ static void *SplitBoxThread( void *hndl) {
           current_position = SNetUtilListFirst(repos);
           while(SNetUtilListIterHasNext(current_position)) {
             elem = SNetUtilListIterGet(current_position);
-            SNetBufPut( elem->buf,
+            SNetTlWrite( elem->stream,
                 SNetRecCreate( REC_sort_end, SNetRecGetLevel( rec),
                                SNetRecGetNum( rec)));
             current_position = SNetUtilListIterNext(current_position);
           }
           elem = SNetUtilListIterGet(current_position);
-          SNetBufPut(elem->buf, rec);
+          SNetTlWrite(elem->stream, rec);
           SNetUtilListIterDestroy(current_position);
         } else {
           SNetUtilDebugNotice("[SPLIT] Got sort_end_record with nowhere to"
@@ -149,7 +152,7 @@ static void *SplitBoxThread( void *hndl) {
           current_position = SNetUtilListFirst(repos);
           while(SNetUtilListIterHasNext(current_position)) {
             elem = SNetUtilListIterGet(current_position);
-            SNetBufPut( (snet_buffer_t*)elem->buf, SNetRecCopy( rec));
+            SNetTlWrite(elem->stream, SNetRecCopy( rec));
             current_position = SNetUtilListIterNext(current_position);
           }
           SNetUtilListIterDestroy(current_position);
@@ -160,16 +163,16 @@ static void *SplitBoxThread( void *hndl) {
         }
         SNetUtilListDestroy(repos);
 
-        SNetBufPut(initial, rec);
+        SNetTlWrite(initial, rec);
         break;
       case REC_probe:
         current_position = SNetUtilListFirst(repos);
         elem = SNetUtilListIterGet(current_position);
-        SNetBufPut((snet_buffer_t*)elem->buf, rec);
+        SNetTlWrite(elem->stream, rec);
         current_position = SNetUtilListIterNext(current_position);
         while(SNetUtilListIterCurrentDefined(current_position)) {
           elem = SNetUtilListIterGet(current_position);
-          SNetBufPut((snet_buffer_t*)elem->buf, SNetRecCopy(rec));
+          SNetTlWrite(elem->stream, SNetRecCopy(rec));
           current_position = SNetUtilListIterNext(current_position);
         }
       break;
@@ -181,33 +184,31 @@ static void *SplitBoxThread( void *hndl) {
 
 
 
-extern snet_buffer_t *SNetSplit( snet_buffer_t *inbuf, 
-                                 snet_buffer_t* (*box_a)( snet_buffer_t*),
-                                 int ltag, int utag) {
+extern snet_tl_stream_t *SNetSplit( snet_tl_stream_t *input, 
+                                snet_tl_stream_t* (*box_a)( snet_tl_stream_t*),
+                                int ltag, int utag) {
 
-  snet_buffer_t *initial, *outbuf;
+  snet_tl_stream_t *initial, *output;
   snet_handle_t *hnd;
 
-  initial = SNetBufCreate( BUFFER_SIZE);
-  hnd = SNetHndCreate( HND_split, inbuf, initial, box_a, ltag, utag);
+  initial = SNetTlCreateStream( BUFFER_SIZE);
+  hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag);
  
-  outbuf = CreateCollector( initial);
+  output = CreateCollector(initial);
 
-  SNetThreadCreate( SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
-
-  return( outbuf);
+  SNetTlCreateComponent(SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
+  return(output);
 }
 
 
 
 static void *DetSplitBoxThread( void *hndl) {
-
   int i;
   snet_handle_t *hnd = (snet_handle_t*)hndl;
-  snet_buffer_t *initial, *tmp;
+  snet_tl_stream_t *initial, *tmp;
   int ltag, ltag_val, utag, utag_val;
   snet_record_t *rec;
-  snet_buffer_t* (*boxfun)( snet_buffer_t*);
+  snet_tl_stream_t* (*boxfun)( snet_tl_stream_t*);
   bool terminate = false;
   snet_util_list_t *repos = NULL;
   snet_blist_elem_t *elem;
@@ -215,14 +216,14 @@ static void *DetSplitBoxThread( void *hndl) {
   int counter = 1;
 
 
-  initial = SNetHndGetOutbuffer( hnd);
-  boxfun = SNetHndGetBoxfun( hnd);
-  ltag = SNetHndGetTagA( hnd);
-  utag = SNetHndGetTagB( hnd);
+  initial = SNetHndGetOutput(hnd);
+  boxfun = SNetHndGetBoxfun(hnd);
+  ltag = SNetHndGetTagA(hnd);
+  utag = SNetHndGetTagB(hnd);
 
 
   while( !( terminate)) {
-    rec = SNetBufGet( SNetHndGetInbuffer( hnd));
+    rec = SNetTlRead(SNetHndGetInput( hnd));
 
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
@@ -232,25 +233,26 @@ static void *DetSplitBoxThread( void *hndl) {
         if( repos == NULL) {
           elem = SNetMemAlloc( sizeof( snet_blist_elem_t));
           elem->num = ltag_val;
-          elem->buf = SNetBufCreate( BUFFER_SIZE);
-          SNetBufPut( initial, SNetRecCreate( REC_sort_begin, 0, 0));
+          elem->stream = SNetTlCreateStream(BUFFER_SIZE);
+          SNetTlWrite(initial, SNetRecCreate(REC_sort_begin, 0, 0));
 
-          tmp = boxfun( elem->buf);
-          SNetBufPut( initial, SNetRecCreate( REC_collect, tmp));
-//          SNetBufPut( tmp, SNetRecCreate( REC_sort_begin, 0, 0));
-          SNetBufPut( tmp, SNetRecCreate( REC_sort_end, 0, 0));
+          tmp = boxfun(elem->stream);
+          SNetTlWrite(initial, SNetRecCreate(REC_collect, tmp));
+//          SNetBufPut(tmp, SNetRecCreate( REC_sort_begin, 0, 0));
+          SNetTlWrite(tmp, SNetRecCreate(REC_sort_end, 0, 0));
 
-          SNetBufPut( initial, SNetRecCreate( REC_sort_end, 0, 0));
+          SNetTlWrite(initial, SNetRecCreate(REC_sort_end, 0, 0));
           repos = SNetUtilListCreate();
           repos = SNetUtilListAddBeginning(repos, elem);
         }
 
 
-        SNetBufPut( initial, SNetRecCreate( REC_sort_begin, 0, counter));
+        SNetTlWrite(initial, SNetRecCreate( REC_sort_begin, 0, counter));
         current_position = SNetUtilListFirst(repos);
         while(SNetUtilListIterCurrentDefined(current_position)) {
           elem = SNetUtilListIterGet(current_position);
-          SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter));
+          SNetTlWrite(elem->stream, 
+                      SNetRecCreate( REC_sort_begin, 0, counter));
           current_position = SNetUtilListIterNext(current_position);
         }
 
@@ -259,31 +261,31 @@ static void *DetSplitBoxThread( void *hndl) {
           if(elem == NULL) {
             elem = SNetMemAlloc( sizeof( snet_blist_elem_t));
             elem->num = i;
-            elem->buf = SNetBufCreate( BUFFER_SIZE);
+            elem->stream = SNetTlCreateStream(BUFFER_SIZE);
             repos = SNetUtilListAddBeginning(repos, elem);
-            SNetBufPut( initial, SNetRecCreate( REC_collect, boxfun( elem->buf)));
-//            SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter));
+            SNetTlWrite( initial, 
+                         SNetRecCreate( REC_collect, boxfun( elem->stream)));
           }
           if( i == utag_val) {
-            SNetBufPut( elem->buf, rec); // last rec is not copied.
+            SNetTlWrite(elem->stream, rec); // last rec is not copied.
           }
           else {
-            SNetBufPut( elem->buf, SNetRecCopy( rec)); // COPY
+            SNetTlWrite(elem->stream, SNetRecCopy(rec)); // COPY
           }
         }
 
         current_position = SNetUtilListFirst(repos);
         while(SNetUtilListIterCurrentDefined(current_position)) {
           elem = SNetUtilListIterGet(current_position);
-          SNetBufPut( elem->buf, SNetRecCreate( REC_sort_end, 0, counter));
+          SNetTlWrite(elem->stream, SNetRecCreate( REC_sort_end, 0, counter));
           current_position = SNetUtilListIterNext(current_position);
         }
-        SNetBufPut( initial, SNetRecCreate( REC_sort_end, 0, counter));
+        SNetTlWrite(initial, SNetRecCreate( REC_sort_end, 0, counter));
         counter += 1;
 
         break;
       case REC_sync:
-        SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
+        SNetHndSetInput( hnd, SNetRecGetStream( rec));
         SNetRecDestroy( rec);
         break;
       case REC_collect:
@@ -293,37 +295,37 @@ static void *DetSplitBoxThread( void *hndl) {
         break;
       case REC_sort_begin:
         SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        SNetTlWrite(SNetHndGetOutput(hnd), rec);
         break;
       case REC_sort_end:
         SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        SNetTlWrite(SNetHndGetOutput( hnd), rec);
         break;
       case REC_terminate:
         terminate = true;
-
         current_position = SNetUtilListFirst(repos);
         while(SNetUtilListIterCurrentDefined(current_position)) {
           elem = SNetUtilListIterGet(current_position);
-          SNetBufPut( elem->buf, SNetRecCreate( REC_sort_begin, 0, counter));
-          SNetBufPut( (snet_buffer_t*)elem->buf, SNetRecCopy( rec));
+          SNetTlWrite(elem->stream, 
+                      SNetRecCreate( REC_sort_begin, 0, counter));
+          SNetTlWrite(elem->stream, SNetRecCopy(rec));
           current_position = SNetUtilListIterNext(current_position);
         }
         SNetUtilListIterDestroy(current_position);
         SNetUtilListDestroy(repos);
 
-        SNetBufPut( initial, SNetRecCreate( REC_sort_begin, 0, counter));
-        SNetBufPut( initial, rec);
+        SNetTlWrite(initial, SNetRecCreate( REC_sort_begin, 0, counter));
+        SNetTlWrite(initial, rec);
         break;
       case REC_probe:
         current_position = SNetUtilListFirst(repos);
         elem = SNetUtilListIterGet(current_position);
-        SNetBufPut(elem->buf, SNetRecCreate(REC_sort_begin, 0, counter));
-        SNetBufPut(elem->buf, rec);
+        SNetTlWrite(elem->stream, SNetRecCreate(REC_sort_begin, 0, counter));
+        SNetTlWrite(elem->stream, rec);
         while(SNetUtilListIterCurrentDefined(current_position)) {
           elem = SNetUtilListIterGet(current_position);
-          SNetBufPut(elem->buf, SNetRecCreate(REC_sort_begin, 0, counter));
-          SNetBufPut(elem->buf, SNetRecCopy(rec));
+          SNetTlWrite(elem->stream, SNetRecCreate(REC_sort_begin, 0, counter));
+          SNetTlWrite(elem->stream, SNetRecCopy(rec));
           current_position = SNetUtilListIterNext(current_position);
         }
     }
@@ -335,21 +337,21 @@ static void *DetSplitBoxThread( void *hndl) {
 
 
 extern
-snet_buffer_t *SNetSplitDet( snet_buffer_t *inbuf, 
-                             snet_buffer_t *(*box_a)( snet_buffer_t*),
+snet_tl_stream_t *SNetSplitDet( snet_tl_stream_t *input, 
+                             snet_tl_stream_t *(*box_a)( snet_tl_stream_t*),
                                        int ltag, 
                                        int utag) {
 
-  snet_buffer_t *initial, *outbuf;
+  snet_tl_stream_t *initial, *output;
   snet_handle_t *hnd;
 
-  initial = SNetBufCreate( BUFFER_SIZE);
-  hnd = SNetHndCreate( HND_split, inbuf, initial, box_a, ltag, utag);
+  initial = SNetTlCreateStream( BUFFER_SIZE);
+  hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag);
  
-  outbuf = CreateDetCollector( initial);
+  output = CreateDetCollector( initial);
 
   SNetThreadCreate( DetSplitBoxThread, (void*)hnd, ENTITY_split_det);
 
-  return( outbuf);
+  return( output);
 }
 

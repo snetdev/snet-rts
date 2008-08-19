@@ -26,6 +26,7 @@
 #include "interface.h"
 #include "memfun.h"
 #include "snetentities.h"
+#include "stream_layer.h"
 
 #define SNET_NAMESPACE "snet-home.org"
 
@@ -77,7 +78,7 @@
    snetin_interface_t *interface;
 
    /* Buffer where all the parsed data should be put */
-   snet_buffer_t *buffer;
+   snet_tl_stream_t *buffer;
  }parser;
 
  /* Data values for record currently under parsing  */
@@ -298,7 +299,7 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 
 		if(parser.terminate != SNET_PARSE_ERROR) {
 		  if(current.record != NULL) {
-		    SNetBufPut(parser.buffer, current.record);
+		    SNetTlWrite(parser.buffer, current.record);
 		    current.record = NULL;
 		    current.interface = INTERFACE_UNKNOWN;
 		  }
@@ -395,7 +396,7 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      yyerror("Error encountered while parsing a record. Record discarded (2)!");
 		      parser.terminate = SNET_PARSE_CONTINUE;
 		    } else {
-		      SNetBufPut(parser.buffer, current.record);
+		      SNetTlWrite(parser.buffer, current.record);
 		      current.record = NULL;
 		      current.interface = INTERFACE_UNKNOWN;
 		    }
@@ -672,7 +673,7 @@ void yyerror(char *error)
 void SNetInParserInit(FILE *file,
 		      snetin_label_t *labels,
 		      snetin_interface_t *interfaces,
-		      snet_buffer_t *in_buf)
+		      snet_tl_stream_t *in_buf)
 {  
   yyin = file; 
   parser.labels = labels;

@@ -9,8 +9,9 @@
 #include "threading.h"
 #include "tree.h"
 #include "list.h"
+#include "stream_layer.h"
 
-/* #define SYNCRO_DEBUG */
+#define SYNCRO_DEBUG
 
 /* --------------------------------------------------------
  * Syncro Cell: Flow Inheritance, uncomment desired variant
@@ -28,7 +29,7 @@
 
 
 #define BUF_CREATE( PTR, SIZE)\
-            PTR = SNetBufCreate( SIZE);
+            PTR = SNetTlCreateStream( SIZE);
 
 #define BUF_SET_NAME( PTR, NAME)
 
@@ -199,7 +200,7 @@ static void *SyncBoxThread( void *hndl) {
   bool was_match;
   bool terminate = false;
   snet_handle_t *hnd = (snet_handle_t*) hndl;
-  snet_buffer_t *outbuf;
+  snet_tl_stream_t *output;
   snet_record_t **storage;
   snet_record_t *rec;
   snet_record_t *temp_record;
@@ -212,63 +213,35 @@ static void *SyncBoxThread( void *hndl) {
   snet_util_list_t *to_free;
   snet_util_stack_t *temp_stack;
 
-  outbuf = SNetHndGetOutbuffer( hnd);
+  #ifdef SYNCRO_DEBUG
+  SNetUtilDebugNotice("(CREATION SYNCRO)");
+  #endif
+  output = SNetHndGetOutput( hnd);
   outtype = SNetHndGetType( hnd);
   patterns = SNetHndGetPatterns( hnd);
   num_patterns = SNetTencGetNumVariants( patterns);
   guards = SNetHndGetGuardList( hnd);
   
-
-  /* TODO: maybe make finding of dead synccells cleverer? */
-  states = SNetUtilTreeCreate();
-  to_free = SNetUtilListCreate();
-
+  storage = SNetMemAlloc(num_patterns * sizeof(snet_record_t*));
+  for(i = 0; i < num_patterns; i++) {
+    storage[i] = NULL;
+  }
+  match_cnt = 0;
   
   while( !( terminate)) {
-    rec = SNetBufGet( SNetHndGetInbuffer( hnd));
     #ifdef SYNCRO_DEBUG
-      SNetUtilDebugNotice("SYNCRO: got record %x", (unsigned int) rec);
+    SNetUtilDebugNotice("SYNCRO %x: reading %x",
+                        (unsigned int) output,
+                        (unsigned int) SNetHndGetInput(hnd));
+    #endif
+    rec = SNetTlRead( SNetHndGetInput( hnd));
+    #ifdef SYNCRO_DEBUG
+      SNetUtilDebugNotice("SYNCRO %x: got record %x", 
+                          (unsigned int) output,
+                          (unsigned int) rec);
     #endif
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
-        #ifdef SYNCRO_DEBUG
-          SNetUtilDebugNotice("SYNCRO: looking for state for that guy");
-        #endif
-        temp_stack = SNetRecGetIterationStack(rec);
-        if(!SNetUtilTreeContains(states, temp_stack)) {
-          #ifdef SYNCRO_DEBUG
-            SNetUtilDebugNotice("SYNCRO: new state");
-          #endif
-          /* insert fresh state for that stack. */
-          current_state = (struct sync_state *)SNetMemAlloc(
-                                          sizeof(struct sync_state));
-          current_state->storage = SNetMemAlloc(num_patterns *
-                                                    sizeof(struct sync_state));
-          for(i = 0; i < num_patterns; i++) {
-            current_state->storage[i] = NULL;
-          }
-          current_state->match_count = 0;
-          current_state->terminated = false;
-
-
-          SNetUtilTreeSet(states, temp_stack, current_state);
-          SNetUtilListAddEnd(to_free, current_state);
-        } else {
-          current_state = SNetUtilTreeGet(states,temp_stack);
-        }
-        #ifdef SYNCRO_DEBUG
-          SNetUtilDebugNotice("SYNCRO: got state");
-        #endif
-        if(current_state->terminated) {
-          #ifdef SYNCRO_DEBUG
-            SNetUtilDebugNotice("SYNCRO: passing dead state");
-          #endif
-          SNetBufPut(outbuf, rec);
-          continue;
-        }
-        storage = current_state->storage;
-        match_cnt = current_state->match_count;
-
         new_matches = 0;
         for( i=0; i<num_patterns; i++) {
           /* storage empty and guard accepts => store record*/
@@ -280,79 +253,101 @@ static void *SyncBoxThread( void *hndl) {
             new_matches += 1;
           }
         }
+ 
+        #ifdef SYNCRO_DEBUG
+        SNetUtilDebugNotice("SYNCRO %x: record %x matched %d patterns", 
+                            (unsigned int) output,
+                            (unsigned int)rec,
+                            new_matches);
+        #endif
 
         if( new_matches == 0) {
           #ifdef SYNCRO_DEBUG
-            SNetUtilDebugNotice("SYNCRO: Record didnt match anything, fowarding it");
+            SNetUtilDebugNotice("SYNCRO %x: Record didnt match anything,"
+                                " fowarding it", (unsigned int) output);
           #endif
-          SNetBufPut( outbuf, rec);
+          SNetTlWrite(output, rec);
         }
         else {
-          current_state->match_count += new_matches;
-          if(current_state->match_count == num_patterns) {
+          #ifdef SYNCRO_DEBUG
+          SNetUtilDebugNotice("SYNCRO %x: storing record", 
+                              (unsigned int) output);
+          #endif
+          match_cnt += new_matches;
+          if(match_cnt == num_patterns) {
             #ifdef SYNC_FI_VARIANT_1
             temp_record = Merge( storage, patterns, outtype);
-	    SNetRecSetInterfaceId( temp_record, SNetRecGetInterfaceId( rec));
-	    SNetRecSetDataMode( temp_record, SNetRecGetDataMode( rec));
+	          SNetRecSetInterfaceId( temp_record, SNetRecGetInterfaceId( rec));
+	          SNetRecSetDataMode( temp_record, SNetRecGetDataMode( rec));
             #endif
             #ifdef SYNC_FI_VARIANT_2
             temp_record =  Merge( storage, patterns, outtype, rec);
             #endif
-            if(temp_record != rec) {
-              SNetRecCopyIterations(rec, temp_record);
-            }
+
             #ifdef SYNCRO_DEBUG
-              SNetUtilDebugNotice("synccell synched => %x",
-                      (unsigned int) temp_record);
-	          #endif
-            SNetBufPut(outbuf, temp_record);
-            current_state->terminated = true;
-         }
+              SNetUtilDebugNotice("SYNCRO %x: synccell synched => %x",
+                                  (unsigned int) output,
+                                  (unsigned int) temp_record);
+            #endif
+            SNetTlWrite(output, temp_record);
+            /* current_state->terminated = true; */
+            SNetTlWrite(output, SNetRecCreate(REC_sync, 
+                                              SNetHndGetInput(hnd)));
+            terminate = true;
+          }
+          #ifdef SYNCRO_DEBUG
+          SNetUtilDebugNotice("SYNCRO %x: record processed", 
+                              (unsigned int) output);
+          #endif
         }
       break;
     case REC_sync:
-        SNetHndSetInbuffer( hnd, SNetRecGetBuffer( rec));
+        SNetHndSetInput( hnd, SNetRecGetStream( rec));
         SNetRecDestroy( rec);
 
       break;
       case REC_collect:
-        SNetUtilDebugNotice("[Sync] Unhandled control record, destroying"
-                            " it\n\n");
+        SNetUtilDebugNotice("SYNCRO %x: Unhandled control record, destroying"
+                            " it\n\n", (unsigned int) output);
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
-        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        SNetTlWrite( SNetHndGetOutput( hnd), rec);
         break;
       case REC_sort_end:
-        SNetBufPut( SNetHndGetOutbuffer( hnd), rec);
+        SNetTlWrite( SNetHndGetOutput( hnd), rec);
         break;
     case REC_terminate:
-        SNetUtilTreeDestroy(states);
+        /* SNetUtilTreeDestroy(states);*/
+      SNetUtilDebugNotice("SYNCRO %x: got terminate record", 
+                          (unsigned int) output);
+        
         /* check if all storages are empty */
+        /*
         current_storage = SNetUtilListFirst(to_free);
         while(SNetUtilListIterCurrentDefined(current_storage)) {
           current_state = SNetUtilListIterGet(current_storage);
           current_storage = SNetUtilListIterNext(current_storage);
           if(!current_state->terminated) {
-            SNetUtilDebugNotice("[Sync] received termination record - "
+            SNetUtilDebugNotice("SYNCRO received termination record - "
                                  "stored records are discarded");
           }
           SNetMemFree(current_state->storage);
           SNetMemFree(current_state);
         }
         SNetUtilListDestroy(to_free);
-
+        */
+        SNetMemFree(storage);
         terminate = true;
-        SNetBufPut( outbuf, rec);
+        SNetTlWrite( output, rec);
       break;
+
       case REC_probe:
-        SNetBufPut(SNetHndGetOutbuffer(hnd), rec);
+        SNetTlWrite(SNetHndGetOutput(hnd), rec);
       break;
     }
   }
-
-  SNetBufBlockUntilEmpty( outbuf);
-  SNetBufDestroy( outbuf);
+  SNetTlMarkObsolete(output);
   SNetDestroyTypeEncoding( outtype);
   SNetDestroyTypeEncoding( patterns);
   SNetHndDestroy( hnd);
@@ -361,21 +356,29 @@ static void *SyncBoxThread( void *hndl) {
 }
 
 
-extern snet_buffer_t *SNetSync( snet_buffer_t *inbuf,
+extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *inbuf,
                                 snet_typeencoding_t *outtype,
                                 snet_typeencoding_t *patterns,
                                 snet_expr_list_t *guards ) {
 
-  snet_buffer_t *outbuf;
+  snet_tl_stream_t *outbuf;
   snet_handle_t *hnd;
 
 //  outbuf = SNetBufCreate( BUFFER_SIZE);
   BUF_CREATE( outbuf, BUFFER_SIZE);
+  #ifdef SYNCRO_DEBUG
+  SNetUtilDebugNotice("-");
+  SNetUtilDebugNotice("| SYNCRO CREATED");
+  SNetUtilDebugNotice("| input: %x", (unsigned int) inbuf);
+  SNetUtilDebugNotice("| output: %x", (unsigned int) outbuf);
+  SNetUtilDebugNotice("-");
+  #endif
   hnd = SNetHndCreate( HND_sync, inbuf, outbuf, outtype, patterns, guards);
 
 
-  SNetThreadCreate( SyncBoxThread, (void*)hnd, ENTITY_sync);
-
+  SNetTlCreateComponent( SyncBoxThread, (void*)hnd, ENTITY_sync);
+  
+  SNetUtilDebugNotice("SYNCRO CREATION DONE");
   return( outbuf);
 }
 

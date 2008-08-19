@@ -17,6 +17,8 @@
 #include "memfun.h"
 #include "record.h"
 #include "list.h"
+#include "bool.h"
+#include "extended_semaphore.h"
 
 #ifdef DEBUG
   #include <debug.h>
@@ -35,6 +37,8 @@ struct fbckbuffer  {
 
   
   pthread_mutex_t *mxCounter;
+  bool is_locked;
+
   pthread_cond_t *elemRemoved;
   pthread_cond_t *condEmpty;
 };
@@ -70,6 +74,24 @@ static void printRec( snet_fbckbuffer_t *b, snet_record_t *rec)
   printf("\n<----------------------------------- <\n\n");
 }
 #endif
+bool SNetFbckBufIsEmpty(snet_fbckbuffer_t *buf) {
+  bool is_empty;
+  
+  
+  return SNetUtilListCount(buf->content);
+}
+
+extern void SNetFbckBufBlockUntilDataReady(snet_fbckbuffer_t *buf) {
+  /* lock the mutex */
+  pthread_mutex_lock( buf->mxCounter );
+ 
+  /* wait for signal if there are no elements in the buffer */
+  /* the mutex is unlocked in this case */
+  while(SNetUtilListIsEmpty(buf->content)) {
+    pthread_cond_wait( buf->condEmpty, buf->mxCounter);
+  }
+  pthread_mutex_unlock( buf->mxCounter);
+}
 
 extern snet_fbckbuffer_t *SNetFbckBufCreate() {
   snet_fbckbuffer_t *theBuffer;
@@ -221,14 +243,14 @@ extern void SNetFbckBufBlockUntilEmpty(snet_fbckbuffer_t *bf) {
 
 
 
-extern void SNetFbckBufRegisterDispatcher( snet_fbckbuffer_t *bf, sem_t *sem) {
+extern void SNetFbckBufRegisterDispatcher( snet_fbckbuffer_t *bf, snet_ex_sem_t *sem) {
   int i;
   pthread_mutex_lock( bf->mxCounter);
   bf->dispatcher_registered = true;
-  bf->sem = sem;
+  //bf->sem = sem;
 
   for(i = 0; i < SNetUtilListCount(bf->content); i++) {
-    sem_post(sem);
+    //sem_post(sem);
   }
   pthread_mutex_unlock( bf->mxCounter);
 }

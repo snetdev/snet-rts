@@ -24,6 +24,7 @@
 #include "snetentities.h"
 #include "label.h"
 #include "interface.h"
+#include "stream_layer.h"
 
 /* Thread to do the output */
 static pthread_t thread; 
@@ -32,7 +33,7 @@ typedef struct {
   FILE *file;
   snetin_label_t *labels;
   snetin_interface_t *interfaces;
-  snet_buffer_t *buffer;
+  snet_tl_stream_t *buffer;
 } handle_t;
 
 
@@ -147,7 +148,7 @@ static void *doOutput(void* data)
   snet_record_t *rec = NULL;
   if(hnd->buffer != NULL){
     while(1){
-      rec = SNetBufGet(hnd->buffer);
+      rec = SNetTlRead(hnd->buffer);
       if(rec != NULL) {
       	printRec(rec, hnd);
 	if(SNetRecGetDescriptor(rec) == REC_terminate){
@@ -169,7 +170,7 @@ static void *doOutput(void* data)
 int SNetInOutputInit(FILE *file,
 		     snetin_label_t *labels, 
 		     snetin_interface_t *interfaces, 
-		     snet_buffer_t *in_buf)
+		     snet_tl_stream_t *in_buf)
 {
   handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
 

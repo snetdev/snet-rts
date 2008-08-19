@@ -9,7 +9,6 @@
 
 #include "threading.h"
 
-
 #ifdef DBG_RT_TRACE_THREAD_CREATE 
 #include <sys/time.h>
 #endif
@@ -71,20 +70,30 @@ extern void SNetThreadCreate( void *(*fun)(void*),
   int res;
 #ifdef DBG_RT_TRACE_THREAD_CREATE 
   struct timeval t;
-#endif
+  #endif
 
+  SNetUtilDebugNotice("Creating thread1");
   res = pthread_attr_init( &attr);
+
+  SNetUtilDebugNotice("Creating thread2");
+
   stack_size = ThreadStackSize( id);
 
+  SNetUtilDebugNotice("Creating thread3");
   if( stack_size > 0) {
+  SNetUtilDebugNotice("Creating thread3.5b");
     pthread_attr_setstacksize( &attr, stack_size);
+  SNetUtilDebugNotice("Creating thread3,5a");
   }
   
+  SNetUtilDebugNotice("Creating thread4");
   pthread_attr_getstacksize( &attr, &stack_size);
+  SNetUtilDebugNotice("Creating thread5");
   res = pthread_create( &thread, &attr, fun, fun_args);
 
+  SNetUtilDebugNotice("Creating thread6");
   pthread_attr_destroy( &attr);
-
+  SNetUtilDebugNotice("Thread created");
 #ifdef DBG_RT_TRACE_THREAD_CREATE 
   gettimeofday( &t, NULL);
   SNetLockThreadMutex();
@@ -103,6 +112,8 @@ extern void SNetThreadCreate( void *(*fun)(void*),
     exit( 1);
   }
   else {
+    SNetUtilDebugNotice("Detaching thread");
     ThreadDetach( &thread);
+    SNetUtilDebugNotice("Thread detached");
   }
 }
