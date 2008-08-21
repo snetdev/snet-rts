@@ -17,7 +17,7 @@ SNetSerial(snet_tl_stream_t *input,
 
   #ifdef SERIAL_DEBUG
   SNetUtilDebugNotice("Serial creation started");
-  SNetUtilDebugNotice("box_a = %x, box_b = %x", box_a, box_b);
+  SNetUtilDebugNotice("box_a = %p, box_b = %p", box_a, box_b);
   #endif
   internal_stream = (*box_a)(input);
 
@@ -29,9 +29,9 @@ SNetSerial(snet_tl_stream_t *input,
   #ifdef SERIAL_DEBUG
   SNetUtilDebugNotice("-");
   SNetUtilDebugNotice("| SERIAL CREATED");
-  SNetUtilDebugNotice("| input: %x", (unsigned int) input);
-  SNetUtilDebugNotice("| middle stream: %x", (unsigned int) internal_stream);
-  SNetUtilDebugNotice("| output: %x", (unsigned int) output);
+  SNetUtilDebugNotice("| input: %p", input);
+  SNetUtilDebugNotice("| middle stream: %p", internal_stream);
+  SNetUtilDebugNotice("| output: %p", output);
   SNetUtilDebugNotice("-");
   #endif
   return(output);

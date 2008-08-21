@@ -75,7 +75,7 @@ static void printRec( snet_fbckbuffer_t *b, snet_record_t *rec)
 }
 #endif
 bool SNetFbckBufIsEmpty(snet_fbckbuffer_t *buf) {
-  bool is_empty;
+  //bool is_empty;
   
   
   return SNetUtilListCount(buf->content);

@@ -90,12 +90,12 @@ static void CheckLock(snet_ex_sem_t *subject, char *function_name) {
   int access_status;
   access_status = pthread_mutex_trylock(subject->access);
   if(access_status != EBUSY) {
-    SNetUtilDebugFatal("(ERROR (SEMAPHORE %x) "
-                       "(%s (target %x))"
+    SNetUtilDebugFatal("(ERROR (SEMAPHORE %p) "
+                       "(%s (target %p))"
                        "(Semaphore not locked))",
-                       (unsigned int) subject, 
+                       subject, 
                        function_name,
-                       (unsigned int) subject);
+                       subject);
   }
 }
 
@@ -134,8 +134,8 @@ snet_ex_sem_t *SNetExSemCreate(pthread_mutex_t *access,
   }
   result = SNetMemAlloc(sizeof(snet_ex_sem_t));
 
-  SNetUtilDebugNotice("(CREATION (SEMAPHORE %x) (access %x))",
-                      (unsigned int) result, (unsigned int) access);
+  SNetUtilDebugNotice("(CREATION (SEMAPHORE %p) (access %p))",
+                      result, access);
   result->access = access;
   if(has_min_value) {
     if(initial_value < min_value) {
@@ -226,13 +226,13 @@ void SNetExSemWaitWhileMinValue(snet_ex_sem_t *target) {
   CheckLock(target, "SNetExSemWaitWhileMinValue");
 
   if(!target->has_min_value) {
-    SNetUtilDebugFatal("(ERROR (SEMAPHORE %x)"
-                       "(SNetExSemWaitWhileMinValue (target  %x))",
+    SNetUtilDebugFatal("(ERROR (SEMAPHORE %p)"
+                       "(SNetExSemWaitWhileMinValue (target  %p))",
                        "(Semaphore has no min value!))",
-                       (unsigned int) target, (unsigned int) target);
+                       target, target);
   }
   if(target->value == target->min_value) {
-    SNetUtilDebugNotice("waiting, releasing mutex %x", (unsigned int) target->access);
+    SNetUtilDebugNotice("waiting, releasing mutex %p", target->access);
     pthread_cond_wait(target->value_increased, target->access);
     SNetUtilDebugNotice("semaphore done with waiting");
   }
@@ -242,10 +242,10 @@ void SNetExSemWaitWhileMaxValue(snet_ex_sem_t *target) {
   CheckLock(target, "SNetExSemWaitWhileMaxValue");
   
   if(!target->has_max_value) {
-    SNetUtilDebugFatal("(ERROR (SEMAPHORE %x)"
-                       "(SNetExSemWaitWhileMaxValue (target %x))"
+    SNetUtilDebugFatal("(ERROR (SEMAPHORE %p)"
+                       "(SNetExSemWaitWhileMaxValue (target %p))"
                        "(Semaphore has no max value))",
-                       (unsigned int) target, (unsigned int) target);
+                       target, target);
   }
   if(target->value == target->max_value) {
     pthread_cond_wait(target->value_decreased, target->access);
@@ -267,7 +267,7 @@ bool SNetExSemIsMaximal(snet_ex_sem_t *target) {
 }
 
 bool SNetExSemIsMinimal(snet_ex_sem_t *target) {
-  SNetUtilDebugNotice("Semaphore access: %x\n", (unsigned int) target->access);
+  SNetUtilDebugNotice("Semaphore access: %p\n", target->access);
   CheckLock(target, "SNetExSemIsMinimal");
   if(target->has_min_value) {
     return target->value == target->min_value;

@@ -207,11 +207,11 @@ static void *SyncBoxThread( void *hndl) {
   snet_typeencoding_t *outtype;
   snet_typeencoding_t *patterns;
   snet_expr_list_t *guards;
-  snet_util_list_iter_t *current_storage;
-  struct sync_state *current_state;
-  snet_util_tree_t *states;
-  snet_util_list_t *to_free;
-  snet_util_stack_t *temp_stack;
+  //snet_util_list_iter_t *current_storage;
+  //struct sync_state *current_state;
+  //snet_util_tree_t *states;
+  //snet_util_list_t *to_free;
+  //snet_util_stack_t *temp_stack;
 
   #ifdef SYNCRO_DEBUG
   SNetUtilDebugNotice("(CREATION SYNCRO)");
@@ -230,15 +230,15 @@ static void *SyncBoxThread( void *hndl) {
   
   while( !( terminate)) {
     #ifdef SYNCRO_DEBUG
-    SNetUtilDebugNotice("SYNCRO %x: reading %x",
-                        (unsigned int) output,
-                        (unsigned int) SNetHndGetInput(hnd));
+    SNetUtilDebugNotice("SYNCRO %p: reading %p",
+                        output,
+                        SNetHndGetInput(hnd));
     #endif
     rec = SNetTlRead( SNetHndGetInput( hnd));
     #ifdef SYNCRO_DEBUG
-      SNetUtilDebugNotice("SYNCRO %x: got record %x", 
-                          (unsigned int) output,
-                          (unsigned int) rec);
+      SNetUtilDebugNotice("SYNCRO %p: got record %p", 
+                          output,
+                          rec);
     #endif
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
@@ -255,23 +255,23 @@ static void *SyncBoxThread( void *hndl) {
         }
  
         #ifdef SYNCRO_DEBUG
-        SNetUtilDebugNotice("SYNCRO %x: record %x matched %d patterns", 
-                            (unsigned int) output,
-                            (unsigned int)rec,
+        SNetUtilDebugNotice("SYNCRO %p: record %p matched %d patterns", 
+                            output,
+                            rec,
                             new_matches);
         #endif
 
         if( new_matches == 0) {
           #ifdef SYNCRO_DEBUG
-            SNetUtilDebugNotice("SYNCRO %x: Record didnt match anything,"
-                                " fowarding it", (unsigned int) output);
+            SNetUtilDebugNotice("SYNCRO %p: Record didnt match anything,"
+                                " fowarding it", output);
           #endif
           SNetTlWrite(output, rec);
         }
         else {
           #ifdef SYNCRO_DEBUG
-          SNetUtilDebugNotice("SYNCRO %x: storing record", 
-                              (unsigned int) output);
+          SNetUtilDebugNotice("SYNCRO %p: storing record", 
+                              output);
           #endif
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
@@ -285,9 +285,9 @@ static void *SyncBoxThread( void *hndl) {
             #endif
 
             #ifdef SYNCRO_DEBUG
-              SNetUtilDebugNotice("SYNCRO %x: synccell synched => %x",
-                                  (unsigned int) output,
-                                  (unsigned int) temp_record);
+              SNetUtilDebugNotice("SYNCRO %p: synccell synched => %p",
+                                  output,
+                                  temp_record);
             #endif
             SNetTlWrite(output, temp_record);
             /* current_state->terminated = true; */
@@ -296,8 +296,8 @@ static void *SyncBoxThread( void *hndl) {
             terminate = true;
           }
           #ifdef SYNCRO_DEBUG
-          SNetUtilDebugNotice("SYNCRO %x: record processed", 
-                              (unsigned int) output);
+          SNetUtilDebugNotice("SYNCRO %p: record processed", 
+                              output);
           #endif
         }
       break;
@@ -307,8 +307,8 @@ static void *SyncBoxThread( void *hndl) {
 
       break;
       case REC_collect:
-        SNetUtilDebugNotice("SYNCRO %x: Unhandled control record, destroying"
-                            " it\n\n", (unsigned int) output);
+        SNetUtilDebugNotice("SYNCRO %p: Unhandled control record, destroying"
+                            " it\n\n", output);
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -319,8 +319,8 @@ static void *SyncBoxThread( void *hndl) {
         break;
     case REC_terminate:
         /* SNetUtilTreeDestroy(states);*/
-      SNetUtilDebugNotice("SYNCRO %x: got terminate record", 
-                          (unsigned int) output);
+      SNetUtilDebugNotice("SYNCRO %p: got terminate record", 
+                          output);
         
         /* check if all storages are empty */
         /*
@@ -369,8 +369,8 @@ extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *inbuf,
   #ifdef SYNCRO_DEBUG
   SNetUtilDebugNotice("-");
   SNetUtilDebugNotice("| SYNCRO CREATED");
-  SNetUtilDebugNotice("| input: %x", (unsigned int) inbuf);
-  SNetUtilDebugNotice("| output: %x", (unsigned int) outbuf);
+  SNetUtilDebugNotice("| input: %p", inbuf);
+  SNetUtilDebugNotice("| output: %p", outbuf);
   SNetUtilDebugNotice("-");
   #endif
   hnd = SNetHndCreate( HND_sync, inbuf, outbuf, outtype, patterns, guards);

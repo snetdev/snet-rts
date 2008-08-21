@@ -35,11 +35,11 @@ bool SNetBufIsEmpty(snet_buffer_t *buf) {
   int lock_status;
   lock_status = pthread_mutex_trylock(buf->mxCounter);
   if(lock_status != EBUSY) {
-    SNetUtilDebugFatal("(ERROR (BUFFER %x) (SNetBufIsEmpty (buf %x)) "
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufIsEmpty (buf %p)) "
                        "(Buffer is not locked.))",
-                       (unsigned int) buf, (unsigned int) buf);
+                       buf, buf);
   }
-  SNetUtilDebugNotice("buffer mutex: %x", (unsigned int) buf->mxCounter);
+  SNetUtilDebugNotice("buffer mutex: %p", buf->mxCounter);
   return SNetExSemIsMinimal(buf->record_count);
 }
 
@@ -47,10 +47,10 @@ snet_buffer_t *SNetBufCreate( unsigned int size, pthread_mutex_t *lock) {
   snet_buffer_t *theBuffer;
        
   theBuffer = SNetMemAlloc( sizeof( snet_buffer_t));
-  SNetUtilDebugNotice("(CREATION (BUFFER %x) ((size %d) (lock %x)))",
-                      (unsigned int) theBuffer,
+  SNetUtilDebugNotice("(CREATION (BUFFER %p) ((size %d) (lock %p)))",
+                      theBuffer,
                       size,
-                      (unsigned int) lock);
+                      lock);
 
   theBuffer->ringBuffer = SNetMemAlloc( size * sizeof( void**));
   theBuffer->bufferCapacity=size;
@@ -71,14 +71,14 @@ snet_buffer_t *SNetBufPut( snet_buffer_t *bf, void* elem) {
   int lock_status;
 
   #ifdef BUFFER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (BUFFER %x) (SNetBufPut (buf %x) (elem %x)))",
-                      (unsigned int) bf, (unsigned int) bf, (unsigned int) elem);
+  SNetUtilDebugNotice("(CALLINFO (BUFFER %p) (SNetBufPut (buf %p) (elem %p)))",
+                      bf, bf, elem);
   #endif
   lock_status = pthread_mutex_trylock(bf->mxCounter);
   if(lock_status != EBUSY) {
-    SNetUtilDebugFatal("(ERROR (BUFFER %x) (SNetBufPut (buf %x)) (elem %x) "
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufPut (buf %p)) (elem %p) "
                        "(Buffer is not locked))",
-                       (unsigned int) bf, (unsigned int) bf, (unsigned int) elem);
+                       bf, bf, elem);
   }
 
   bf->record_count = SNetExSemIncrement(bf->record_count);
@@ -97,9 +97,9 @@ extern void *SNetBufGet( snet_buffer_t *bf) {
   int lock_status;
   lock_status = pthread_mutex_trylock(bf->mxCounter);
   if(lock_status != EBUSY) {
-    SNetUtilDebugFatal("(ERROR (BUFFER %x) (SNetBufGet (buf %x)) "
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufGet (buf %p)) "
                        "(Buffer is not locked))",
-                       (unsigned int) bf, (unsigned int) bf);
+		       bf, bf);
   }
 
   SNetUtilDebugNotice("spaceLeft = %d, capacity = %d, semaphore value = %d",
@@ -122,9 +122,9 @@ extern void *SNetBufShow( snet_buffer_t *buf) {
   lock_status = pthread_mutex_trylock(buf->mxCounter);
   SNetUtilDebugNotice("lock_status = %d, EBUSY = %d", lock_status, EBUSY);
   if(lock_status != EBUSY) {
-    SNetUtilDebugFatal("(ERROR (BUFFER %x) (SNetBufShow (buf %x)) "
-                       "(Buffer is not locked))", (unsigned int) buf, 
-                       (unsigned int) buf);
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufShow (buf %p)) "
+                       "(Buffer is not locked))", buf, 
+                       buf);
   }
 
   if(SNetBufIsEmpty(buf)) {
@@ -144,7 +144,7 @@ extern void SNetBufRegisterDispatcher( snet_buffer_t *bf, snet_ex_sem_t *sem) {
   int space_left;
   lock_status = pthread_mutex_trylock(bf->mxCounter);
   if(lock_status != EBUSY) {
-    SNetUtilDebugFatal("(ERROR (BUFFER %x) (BufRegisterDispatcher (bf %x) (sem %x))"
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (BufRegisterDispatcher (bf %p) (sem %p))"
                        "(Buffer not locked))");
   }
 

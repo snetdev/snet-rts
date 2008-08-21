@@ -138,19 +138,19 @@ void DeleteStream(snet_util_list_t *lst,
   snet_collect_elem_t *target_element;
 
   #ifdef COLLECTOR_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (COLLECTOR IDK) (DeleteStream (lst %x) (inputs %x) "
-                      "(target_stream %x)))", (unsigned int) lst,
-                      (unsigned int) inputs, (unsigned int) target_stream);
-  fprintf(stderr, "(STATEINFO (COLLECTOR IDK) (DeleteStream (lst %x) (inputs %x) "
-         "(target_Stream %x)) (before deleting)", (unsigned int) lst,
-          (unsigned int) inputs, (unsigned int) target_stream);
+  SNetUtilDebugNotice("(CALLINFO (COLLECTOR IDK) (DeleteStream (lst %p) (inputs %p) "
+                      "(target_stream %p)))", lst,
+                      inputs, target_stream);
+  fprintf(stderr, "(STATEINFO (COLLECTOR IDK) (DeleteStream (lst %p) (inputs %p) "
+         "(target_Stream %p)) (before deleting)", lst,
+          inputs, target_stream);
   for(current_position = SNetUtilListFirst(lst);
       SNetUtilListIterCurrentDefined(current_position);
       current_position = SNetUtilListIterNext(current_position)) {
     target_element = SNetUtilListIterGet(current_position);
-    fprintf(stderr, " ((stream %x) (current_elemnet %x))",
-           (unsigned int) target_element->stream,
-            (unsigned int) target_element->current);
+    fprintf(stderr, " ((stream %p) (current_elemnet %p))",
+           target_element->stream,
+            target_element->current);
   }
   fprintf(stderr, ")\n");
   #endif
@@ -159,13 +159,13 @@ void DeleteStream(snet_util_list_t *lst,
     target_element = SNetUtilListIterGet(current_position);
     if(target_element->stream == target_stream) {
       SNetUtilDebugNotice("(STATEINFO (COLLECTOR IDK) "
-                        "(DeleteStream (lst %x) (inputs %x) (target_stream %x))"
+                        "(DeleteStream (lst %p) (inputs %p) (target_stream %p))"
                           "(at break in while loop) "
-                          "(target_element (stream %x) (current_record)))",
-                          (unsigned int) lst, (unsigned int) inputs,
-                          (unsigned int) target_stream,
-                          (unsigned int) target_element->stream,
-                          (unsigned int) target_element->current);
+                          "(target_element (stream %p) (current_record)))",
+                          lst, inputs,
+                          target_stream,
+                          target_element->stream,
+                          target_element->current);
       break;
     }
     current_position = SNetUtilListIterNext(current_position);
@@ -237,18 +237,18 @@ static void *Collector( void *info) {
       elem = FindElement(lst, current_stream);
 
       #ifdef COLLECTOR_DEBUG
-      SNetUtilDebugNotice("(STATEINFO (COLLECTOR %x) (start of main loop) "
-                          "(reading stream %x))",
-          (unsigned int) output, (unsigned int) current_stream);
+      SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (start of main loop) "
+                          "(reading stream %p))",
+          output, current_stream);
       #endif
 
       if( rec != NULL) {
         #ifdef COLLECTOR_DEBUG
           SNetUtilDebugDumpRecord(rec, record_message);
-          SNetUtilDebugNotice("(STATEINFO (COLLECTOR %x) (start of main loop) "
+          SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (start of main loop) "
                               "(found %s))",
-                              (unsigned int) output, 
-                              (unsigned int) record_message);
+                              output, 
+                              record_message);
         #endif
 
         if(CompareSortRecords(elem->current, current_sort_rec)) {
@@ -258,8 +258,8 @@ static void *Collector( void *info) {
           switch( SNetRecGetDescriptor( rec)) {
             case REC_data:
               #ifdef COLLECTOR_DEBUG
-                SNetUtilDebugNotice("(STATEINFO (COLLECTOR %x) (in switch) (outputting data))",
-                  (unsigned int) output);
+                SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in switch) (outputting data))",
+                  output);
               #endif
               SNetTlWrite(output, rec);
               processed_record = true;
@@ -276,8 +276,8 @@ static void *Collector( void *info) {
               tmp_elem->stream = SNetRecGetStream(rec);
 
               #ifdef COLLECTOR_DEBUG
-              SNetUtilDebugNotice("(MODIFICATION (COLLECTOR %x) (ADD (STREAM %x)))",
-                                  (unsigned int) output, (unsigned int) tmp_elem->stream);
+              SNetUtilDebugNotice("(MODIFICATION (COLLECTOR %p) (ADD (STREAM %p)))",
+                                  output, tmp_elem->stream);
               #endif
               if(current_sort_rec == NULL) {
                 tmp_elem->current = NULL;
@@ -306,14 +306,14 @@ static void *Collector( void *info) {
                   } else if(SNetRecGetLevel(rec) == 0) {
                     SNetRecDestroy( rec);
                   } else {
-                    SNetUtilDebugNotice("(ERROR (COLLECTOR %x) (record "
-                                        "with level < 0!))", (unsigned int) output);
+                    SNetUtilDebugNotice("(ERROR (COLLECTOR %p) (record "
+                                        "with level < 0!))", output);
                     SNetRecDestroy(rec);
                   }
                 } else {
                   #ifdef COLLECTOR_DEBUG
-                   SNetUtilDebugNotice("(STATEINFO (COLLECTOR %x) (in switch) (found enough sort"
-                      "records outputing sort stuff))", (unsigned int) output);
+                   SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in switch) (found enough sort"
+                      "records outputing sort stuff))", output);
                   #endif
                   SNetTlWrite(output, rec);
                 }
@@ -334,15 +334,15 @@ static void *Collector( void *info) {
                   } else if(SNetRecGetLevel(rec) == 0) {
                     SNetRecDestroy(rec);
                   } else {
-                    SNetUtilDebugNotice("(ERROR (COLLECTOR %x) (found a sort end record))"
+                    SNetUtilDebugNotice("(ERROR (COLLECTOR %p) (found a sort end record))"
                           "with level < 0.");
                     SNetRecDestroy(rec);
                   }
                 } else {
                   #ifdef COLLECTOR_DEBUG
-                    SNetUtilDebugNotice("(STATEINFO (COLLECTOR %x) (in switch) "
+                    SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in switch) "
                                         "(found enoguh sort end records, outputtting things))", 
-                                        (unsigned int) output);
+                                        output);
                   #endif
                   SNetTlWrite(output, rec);
                 }
@@ -354,15 +354,15 @@ static void *Collector( void *info) {
 
             case REC_terminate:
               #ifdef COLLECTOR_DEBUG
-              SNetUtilDebugNotice("(STATEINFO (COLLECTOR %x) (in switch, before DeleteStream) "
+              SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in switch, before DeleteStream) "
                                   "(%d buffers left before deletion))",
-                                  (unsigned int) output, SNetUtilListCount(lst));
+                                  output, SNetUtilListCount(lst));
               #endif
               DeleteStream(lst, inputs, current_stream);
               #ifdef COLLECTOR_DEBUG
-                SNetUtilDebugNotice("(STATEINFO (COLLECTOR %x) "
+                SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) "
                                     "(in switch, after DeleteStream) (%d buffers left))",
-                                    (unsigned int) output, SNetUtilListCount(lst));
+                                    output, SNetUtilListCount(lst));
               #endif
               if(SNetUtilListIsEmpty(lst)) {
                 terminate = true;
@@ -384,9 +384,9 @@ static void *Collector( void *info) {
         } // if sort record fits
         #ifdef COLLECTOR_DEBUG 
           else {
-            SNetUtilDebugNotice("(STATEINFO (COLLECTOR %x) (in some else far below)"
+            SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in some else far below)"
                                 "(rejected due to sort record))",
-                                (unsigned int) output);
+                                output);
           }
         #endif
       } // if
@@ -420,8 +420,8 @@ CollectorStartup(snet_tl_stream_t *initial_stream, bool is_det)
   } else {
     SNetUtilDebugNotice("| COLLECTOR CREATED");
   }
-  SNetUtilDebugNotice("| input: %x", (unsigned int) initial_stream);
-  SNetUtilDebugNotice("| output: %x", (unsigned int) output);
+  SNetUtilDebugNotice("| input: %p", initial_stream);
+  SNetUtilDebugNotice("| output: %p", output);
   SNetUtilDebugNotice("-");
   #endif
 

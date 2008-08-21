@@ -139,10 +139,10 @@ PutToBuffers(snet_tl_stream_t **streams,
 
     if( i == idx) {
       #ifdef PARALLEL_DEBUG
-      SNetUtilDebugNotice("PARALLEL %x: Writing record %x to stream %x",
-                          (unsigned int) streams, 
-                          (unsigned int) rec,
-                          (unsigned int) streams[i]);
+      SNetUtilDebugNotice("PARALLEL %p: Writing record %p to stream %p",
+                          streams, 
+			  rec,
+                          streams[i]);
       #endif
       SNetTlWrite( streams[i], rec);
     }
@@ -185,9 +185,9 @@ static void *ParallelBoxThread( void *hndl) {
 
   while( !( terminate)) {
     #ifdef PARALLEL_DEBUG
-    SNetUtilDebugNotice("PARALLEL %x: reading %x",
-                        (unsigned int) streams,
-                        (unsigned int) SNetHndGetInput(hnd));
+    SNetUtilDebugNotice("PARALLEL %p: reading %p",
+                        streams,
+                        SNetHndGetInput(hnd));
     #endif
     rec = SNetTlRead( SNetHndGetInput( hnd));
 
@@ -317,10 +317,10 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
   #ifdef PARALLEL_DEBUG
   SNetUtilDebugNotice("-");
   SNetUtilDebugNotice("| PARALLEL CREATED");
-  SNetUtilDebugNotice("| input: %x", SNetHndGetInput(hnd));
+  SNetUtilDebugNotice("| input: %p", SNetHndGetInput(hnd));
   SNetUtilDebugNotice("| internal network inputs::");
   for(i = 0; i < num; i++) {
-    SNetUtilDebugNotice("| - %x", transits[i]);
+    SNetUtilDebugNotice("| - %p", transits[i]);
   }
   SNetUtilDebugNotice("-");
   #endif

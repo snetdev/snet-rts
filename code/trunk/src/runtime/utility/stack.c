@@ -6,8 +6,8 @@
 #include "memfun.h"
 
 #define NULLCHECK(STACK,VAR) if((VAR) == NULL) {\
-                        SNetUtilDebugFatal("%s on %x: %s == null",\
-                        __FUNCTION__, (unsigned int) (STACK), #VAR);}
+                        SNetUtilDebugFatal("%s on %p: %s == null",\
+                        __FUNCTION__, (STACK), #VAR);}
 
 /**
  *
@@ -288,8 +288,8 @@ snet_util_stack_t *SNetUtilStackPop(snet_util_stack_t *target) {
 int SNetUtilStackPeek(snet_util_stack_t *target) {
   NULLCHECK(target, target)
   if(SNetUtilStackIsEmpty(target)) {
-    SNetUtilDebugFatal("SnetUtilStackPeek(%x): empty stack",
-      (unsigned int) target);
+    SNetUtilDebugFatal("SnetUtilStackPeek(%p): empty stack",
+		       target);
   }
   return target->top->data;
 }

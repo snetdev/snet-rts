@@ -38,40 +38,40 @@ struct stream {
 
 static void Lock(snet_tl_stream_t *target) {
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (STREAM %x) (Lock (stream  %x)))",
-                      (unsigned int) target, (unsigned int) target);
+  SNetUtilDebugNotice("(CALLINFO (STREAM %p) (Lock (stream  %p)))",
+                      target, target);
   #endif
-  SNetUtilDebugNotice("Stream mutex: %x", target->access);
+  SNetUtilDebugNotice("Stream mutex: %p", target->access);
   pthread_mutex_lock(target->access);
 }
 
 static void Unlock(snet_tl_stream_t *target) {
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (STREAM %x) (Unlock (stream %x)))",
-                      (unsigned int) target, (unsigned int) target);
+  SNetUtilDebugNotice("(CALLINFO (STREAM %p) (Unlock (stream %p)))",
+                      target, target);
   #endif
   pthread_mutex_unlock(target->access);
 }
 
 static void LockStreamset(snet_tl_streamset_t *target) {
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (STREAMSET %x) (LockStreamset (stream %x)))",
-                      (unsigned int) target, (unsigned int) target);
+  SNetUtilDebugNotice("(CALLINFO (STREAMSET %p) (LockStreamset (stream %p)))",
+                      target, target);
   #endif
   pthread_mutex_lock(target->access);
 }
 static void UnlockStreamset(snet_tl_streamset_t *target) {
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (STREAMSET %x) (UnlockStreamset (stream %x)))",
-                      (unsigned int) target, (unsigned int) target);
+  SNetUtilDebugNotice("(CALLINFO (STREAMSET %p) (UnlockStreamset (stream %p)))",
+                      target, target);
   #endif
   pthread_mutex_unlock(target->access);
 }
 
 static snet_record_t *UnifiedPeek(snet_tl_stream_t *record_source)
 {
-  snet_buffer_msg_t buffer_message;
-  snet_fbckbuffer_msg_t feedback_message;
+  //snet_buffer_msg_t buffer_message;
+  //snet_fbckbuffer_msg_t feedback_message;
 
   snet_record_t *result = NULL;
   if(record_source->is_unbounded) {
@@ -96,8 +96,8 @@ static snet_record_t *UnifiedRead(snet_tl_stream_t *record_source)
 
   #ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugDumpRecord(result, record_message);
-  SNetUtilDebugNotice("STREAMLAYER: UnifiedRead(%x) = %s",
-                      (unsigned int) record_source,
+  SNetUtilDebugNotice("STREAMLAYER: UnifiedRead(%p) = %s",
+                      record_source,
                       record_message);
   #endif
   return result;
@@ -118,11 +118,11 @@ static bool UnifiedWrite(snet_tl_stream_t *record_destination,
                             snet_record_t *data)
 {
   bool record_written = true;
-  snet_buffer_msg_t buffer_status;
+  //snet_buffer_msg_t buffer_status;
   if(record_destination->is_obsolete) {
-    SNetUtilDebugFatal("Writing to write record %x to obsolete stream %x!",
-                       (unsigned int) data,
-                       (unsigned int) record_destination);
+    SNetUtilDebugFatal("Writing to write record %p to obsolete stream %p!",
+                       data,
+                       record_destination);
   }
   if(record_destination->is_unbounded) {
     SNetFbckBufPut(record_destination->buffers.feedback_buffer, data);
@@ -134,9 +134,9 @@ static bool UnifiedWrite(snet_tl_stream_t *record_destination,
     
   }
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("UnifiedTryWrite(destination=%x, data=%x) = %s",
-                      (unsigned int) record_destination,
-                      (unsigned int) data,
+  SNetUtilDebugNotice("UnifiedTryWrite(destination=%p, data=%p) = %s",
+                      record_destination,
+                      data,
                       record_written ? "true" : "false");
   #endif
   return record_written;
@@ -147,7 +147,7 @@ static void UnifiedDestroy(snet_tl_stream_t *stream_to_destroy)
   if(stream_to_destroy == NULL) {
     SNetUtilDebugFatal("Cannot destroy NULL-stream!");
   }
-  SNetUtilDebugNotice("destroying %x", (unsigned int) stream_to_destroy);
+  SNetUtilDebugNotice("destroying %p", stream_to_destroy);
   if(!stream_to_destroy->is_obsolete) {
     SNetUtilDebugFatal("Stream to destroy must be marked obsolete!");
   }
@@ -194,8 +194,8 @@ snet_tl_stream_t *SNetTlCreateStream(int size)
   result->access = SNetMemAlloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(result->access, NULL);
 
-  SNetUtilDebugNotice("(CREATION (STREAM %x) (mutex %x))",
-                      (unsigned int) result, (unsigned int) result->access);
+  SNetUtilDebugNotice("(CREATION (STREAM %p) (mutex %p))",
+                      result, result->access);
   result->is_obsolete = false;
   result->is_unbounded = false;
   result->buffers.buffer = SNetBufCreate(size, result->access);
@@ -225,7 +225,7 @@ snet_tl_stream_t *SNetTlMarkObsolete(snet_tl_stream_t *obsolete_stream)
     SNetUtilDebugFatal("cannot mark NULL obsolete!");
   }
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("%x  marked obsolete!", (unsigned int) obsolete_stream);
+  SNetUtilDebugNotice("%p  marked obsolete!", obsolete_stream);
   #endif
   Lock(obsolete_stream);
 
@@ -314,12 +314,12 @@ SNetTlAddToStreamset(snet_tl_streamset_t *stream_destination,
                      snet_tl_stream_t *new_stream)
 {
   if(stream_destination == NULL) {
-    SNetUtilDebugFatal("Cannot add %x to Streamset NULL",
-                          (unsigned int) new_stream);
+    SNetUtilDebugFatal("Cannot add %p to Streamset NULL",
+		       new_stream);
   }
   if(new_stream == NULL) {
-    SNetUtilDebugFatal("Cannot add stream NULL to streamset %x",
-                          (unsigned int) stream_destination);
+    SNetUtilDebugFatal("Cannot add stream NULL to streamset %p",
+		       stream_destination);
   }
   
   LockStreamset(stream_destination);
@@ -371,7 +371,7 @@ snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
     SNetUtilDebugFatal("SnetTLRead(NULL)!");
   }
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("Read(%x)", (unsigned int) record_source);
+  SNetUtilDebugNotice("Read(%p)", record_source);
   #endif
   Lock(record_source);
   SNetUtilDebugNotice("TLREAD: after Lock");
@@ -380,8 +380,8 @@ snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
   if(record_source->is_in_streamset) {
     LockStreamset(record_source->containing_streamset);
     #ifdef STREAM_LAYER_DEBUG
-    SNetUtilDebugNotice("(Streamset %x) At entry of Read many: semaphore has value %d",
-                        (unsigned int) record_source->containing_streamset,
+    SNetUtilDebugNotice("(Streamset %p) At entry of Read many: semaphore has value %d",
+                        record_source->containing_streamset,
                         SNetExSemGetValue(record_source->containing_streamset->record_counter));
     #endif
     SNetExSemDecrement(record_source->containing_streamset->record_counter);
@@ -401,8 +401,8 @@ snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
   }
   #ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugDumpRecord(result, message);
-  SNetUtilDebugNotice("Read(%x) = %s",
-                      (unsigned int) record_source,
+  SNetUtilDebugNotice("Read(%p) = %s",
+                      record_source,
                       message);
   #endif
   return result;
@@ -418,11 +418,11 @@ ReadAny(snet_tl_streamset_t *possible_sources, bool remove_record)
   result.stream = NULL;
   result.record = NULL;
 
-  SNetUtilDebugNotice("(STATEINFO (STREAMSET %x)"
-                      "(ReadAny (possible sources %x) (remove_record %s))"
+  SNetUtilDebugNotice("(STATEINFO (STREAMSET %p)"
+                      "(ReadAny (possible sources %p) (remove_record %s))"
                       "(at entry) (length of possible_sources->streams %d)",
-                      (unsigned int) possible_sources,
-                      (unsigned int) possible_sources, remove_record?"true":"false",
+                      possible_sources,
+                      possible_sources, remove_record?"true":"false",
                       SNetUtilListCount(possible_sources->streams));
   SNetUtilListDump(possible_sources->streams);
   for(current_position = SNetUtilListFirst(possible_sources->streams);
@@ -431,14 +431,14 @@ ReadAny(snet_tl_streamset_t *possible_sources, bool remove_record)
     current_stream = SNetUtilListIterGet(current_position);
     Lock(current_stream);
     read_record = UnifiedPeek(current_stream);
-    SNetUtilDebugNotice("(STATEINFO (STREAMSET %x) "
-                        "(ReadAny (possible sources %x) (remove_record %s))"
+    SNetUtilDebugNotice("(STATEINFO (STREAMSET %p) "
+                        "(ReadAny (possible sources %p) (remove_record %s))"
                         "(in the loop in ReadAny)"
-                        "((current_stream %x) (read_record %x)))",
-                        (unsigned int) possible_sources,
-                        (unsigned int) possible_sources,
+                        "((current_stream %p) (read_record %p)))",
+                        possible_sources,
+                        possible_sources,
                         remove_record ? "true" : "false",
-                        (unsigned int) current_stream, (unsigned int) read_record);
+                        current_stream, read_record);
     if(read_record != NULL) {
       if(remove_record) {
         UnifiedRead(current_stream);
@@ -468,12 +468,12 @@ SNetTlReadMany(snet_tl_streamset_t *possible_sources)
     SNetUtilDebugFatal("Cant read from NULL!");
   }
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("ReadMany(%x)", (unsigned int) possible_sources);
+  SNetUtilDebugNotice("ReadMany(%p)", possible_sources);
   #endif
   LockStreamset(possible_sources);
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(streamset %x) At entry of Read many: semaphore has value %d",
-                      (unsigned int) possible_sources,
+  SNetUtilDebugNotice("(streamset %p) At entry of Read many: semaphore has value %d",
+                      possible_sources,
                       SNetExSemGetValue(possible_sources->record_counter));
   #endif
   SNetExSemDecrement(possible_sources->record_counter);
@@ -491,8 +491,8 @@ SNetTlReadMany(snet_tl_streamset_t *possible_sources)
   
   #ifdef  STREAM_LAYER_DEBUG
   SNetUtilDebugDumpRecord(result.record, record_representation);
-  SNetUtilDebugNotice("ReadMany(%x) = (%x, %s)",
-                      (unsigned int) possible_sources,
+  SNetUtilDebugNotice("ReadMany(%p) = (%p, %s)",
+                      possible_sources,
                       result.stream, record_representation);
   #endif
 
@@ -504,7 +504,7 @@ snet_record_t *SNetTlPeek(snet_tl_stream_t *record_source)
   snet_record_t *result;
   #ifdef STREAM_LAYER_DEBUG
   char record_representation[100];
-  SNetUtilDebugNotice("Peek(%x)", (unsigned int) record_source);
+  SNetUtilDebugNotice("Peek(%p)", record_source);
   #endif
 
   Lock(record_source);
@@ -513,8 +513,8 @@ snet_record_t *SNetTlPeek(snet_tl_stream_t *record_source)
 
   #ifdef  STREAM_LAYER_DEBUG
   SNetUtilDebugDumpRecord(result, record_representation);
-  SNetUtilDebugNotice("Peek(%x) = %s",
-                      (unsigned int) record_source,
+  SNetUtilDebugNotice("Peek(%p) = %s",
+                      record_source,
                       record_representation);
   #endif
   return result;
@@ -533,13 +533,13 @@ SNetTlPeekMany(snet_tl_streamset_t *possible_sources)
   }
 
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (PeekMany (possible_sources %x)))", 
-                      (unsigned int) possible_sources);
+  SNetUtilDebugNotice("(CALLINFO (PeekMany (possible_sources %p)))", 
+                      possible_sources);
   #endif
   LockStreamset(possible_sources);
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(streamset %x) At entry of Peek Many: semaphore has value %d",
-                      (unsigned int) possible_sources,
+  SNetUtilDebugNotice("(streamset %p) At entry of Peek Many: semaphore has value %d",
+                      possible_sources,
                       SNetExSemGetValue(possible_sources->record_counter));
   #endif
   SNetExSemWaitWhileMinValue(possible_sources->record_counter);
@@ -557,9 +557,9 @@ SNetTlPeekMany(snet_tl_streamset_t *possible_sources)
 
   #ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugDumpRecord(result.record, record_string);
-  SNetUtilDebugNotice("Peekmany(%x) = (%x, %s)",
-                      (unsigned int) possible_sources,
-                      (unsigned int) result.stream,
+  SNetUtilDebugNotice("Peekmany(%p) = (%p, %s)",
+                      possible_sources,
+                      result.stream,
                       record_string);
   #endif
   return result;
@@ -573,9 +573,9 @@ SNetTlWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
   #ifdef STREAM_LAYER_DEBUG
   char message_space[100];
   SNetUtilDebugDumpRecord(data, message_space);
-  SNetUtilDebugNotice("Write(stream=%x,record=%s)", 
-                      (unsigned int) record_destination,
-                      (unsigned int) message_space);
+  SNetUtilDebugNotice("Write(stream=%p,record=%s)", 
+                      record_destination,
+                      message_space);
   #endif
   Lock(record_destination);
   record_written = UnifiedWrite(record_destination, data);
@@ -583,9 +583,9 @@ SNetTlWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
   if(record_destination->is_in_streamset) {
     LockStreamset(record_destination->containing_streamset);
     #ifdef STREAM_LAYER_DEBUG
-    SNetUtilDebugNotice("(Streamset %x) At entry of Write: semaphore has value %d",
+    SNetUtilDebugNotice("(Streamset %p) At entry of Write: semaphore has value %d",
                         
-                        (unsigned int) record_destination->containing_streamset,
+                        record_destination->containing_streamset,
                         SNetExSemGetValue(record_destination->containing_streamset->
                                           record_counter));
     #endif
@@ -598,9 +598,9 @@ SNetTlWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
                        " Could not write record after waiting for space!");
   }
   #ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("Write(%x, %x) exited",
-                      (unsigned int) record_destination,
-                      (unsigned int) data);
+  SNetUtilDebugNotice("Write(%p, %p) exited",
+                      record_destination,
+                      data);
   #endif
   Unlock(record_destination);
   return record_destination;
@@ -616,9 +616,9 @@ SNetTlTryWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
   char message_space[100];
 
   SNetUtilDebugDumpRecord(data, message_space);
-  SNetUtilDebugNotice("(CALLINFO (STREAM %x) (TryWrite (stream %x) (record %s)))",
-                      (unsigned int) record_destination, 
-                      (unsigned int) record_destination, message_space);
+  SNetUtilDebugNotice("(CALLINFO (STREAM %p) (TryWrite (stream %p) (record %s)))",
+                      record_destination, 
+                      record_destination, message_space);
   #endif
 
   Lock(record_destination);

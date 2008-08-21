@@ -45,20 +45,20 @@ static void Link(struct list_elem *pred, struct list_elem *succ) {
 void SNetUtilListDump(snet_util_list_t *target) {
   struct list_elem *current;
 
-  fprintf(stderr, "List %x:\n", (unsigned int) target);
-  fprintf(stderr, "first: %x, last: %x\n", 
-          (unsigned int) target->first,
-          (unsigned int) target->last);
+  fprintf(stderr, "List %p:\n", target);
+  fprintf(stderr, "first: %p, last: %p\n", 
+          target->first,
+          target->last);
   fprintf(stderr, " current    | prev       | content    | next\n");
   fprintf(stderr, "--------------------------------------------\n");
   
   current = target->first;
   while(current) {
-    fprintf(stderr, " %10x | %10x | %10x | %10x\n",
-            (unsigned int) current,
-            (unsigned int) current->prev,
-            (unsigned int) current->content,
-            (unsigned int) current->next);
+    fprintf(stderr, " %10p | %10p | %10p | %10p\n",
+            current,
+            current->prev,
+            current->content,
+            current->next);
     current = current->next;
   }
   fprintf(stderr, "\n");

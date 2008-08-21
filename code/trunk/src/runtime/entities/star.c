@@ -73,19 +73,19 @@ static void *StarBoxThread( void *hndl)
   #ifdef STAR_DEBUG
   SNetUtilDebugNotice("-");
   SNetUtilDebugNotice("| NONDET STAR CREATED");
-  SNetUtilDebugNotice("| input: %x", (unsigned int) SNetHndGetInput(hnd));
-  SNetUtilDebugNotice("| output to next iteration: %x", 
-                      (unsigned int) our_outstream);
-  SNetUtilDebugNotice("| output to collector: %x", 
-                      (unsigned int) real_outstream);
+  SNetUtilDebugNotice("| input: %p", SNetHndGetInput(hnd));
+  SNetUtilDebugNotice("| output to next iteration: %p", 
+                      our_outstream);
+  SNetUtilDebugNotice("| output to collector: %p", 
+                      real_outstream);
   SNetUtilDebugNotice("-");
   #endif
 
   while( !( terminate)) {
     #ifdef STAR_DEBUG
-    SNetUtilDebugNotice("STAR %x: Reading from %x",
-                        (unsigned int) real_outstream,
-                        (unsigned int) SNetHndGetInput(hnd));
+    SNetUtilDebugNotice("STAR %p: Reading from %p",
+                        real_outstream,
+                        SNetHndGetInput(hnd));
     #endif
     rec = SNetTlRead( SNetHndGetInput( hnd));
 
@@ -94,8 +94,8 @@ static void *StarBoxThread( void *hndl)
         if( MatchesExitPattern( rec, exit_tags, guards)) {
           #ifdef STAR_DEBUG
           SNetUtilDebugDumpRecord(rec, record_message);
-          SNetUtilDebugNotice("STAR %x stopping iterations of %s",
-                              (unsigned int) real_outstream,
+          SNetUtilDebugNotice("STAR %p stopping iterations of %s",
+                              real_outstream,
                               record_message);
           #endif
           SNetTlWrite(real_outstream, rec);
@@ -103,15 +103,15 @@ static void *StarBoxThread( void *hndl)
         else {
           if( starstream == NULL) {
             #ifdef STAR_DEBUG
-            SNetUtilDebugNotice("STAR %x creating new instance",
-                                (unsigned int) real_outstream);
+            SNetUtilDebugNotice("STAR %p creating new instance",
+                                real_outstream);
             #endif
             // register new buffer with dispatcher,
             // starstream is returned by self, which is SNetStarIncarnate
             starstream = SNetSerial(our_outstream, box, self);
             #ifdef STAR_DEBUG
-            SNetUtilDebugNotice("STAR %x has created a new instance",
-                                (unsigned int) real_outstream);
+            SNetUtilDebugNotice("STAR %p has created a new instance",
+                                real_outstream);
             #endif
             SNetTlWrite(real_outstream, SNetRecCreate(REC_collect, starstream));
 /*            if( current_sort_rec != NULL) {
@@ -123,10 +123,10 @@ static void *StarBoxThread( void *hndl)
           }
           #ifdef STAR_DEBUG
           SNetUtilDebugDumpRecord(rec, record_message);
-          SNetUtilDebugNotice("STAR %x: outputting %s to %x",
-                              (unsigned int) real_outstream,
+          SNetUtilDebugNotice("STAR %p: outputting %s to %p",
+                              real_outstream,
                               record_message,
-                              (unsigned int) our_outstream);
+                              our_outstream);
           #endif
          SNetTlWrite(our_outstream, rec);
        }
@@ -134,9 +134,9 @@ static void *StarBoxThread( void *hndl)
 
       case REC_sync:
         #ifdef STAR_DEBUG
-        SNetUtilDebugNotice("STAR %x: resetting input stream to %x",
-                            (unsigned int) real_outstream,
-                            (unsigned int)SNetRecGetStream(rec));
+        SNetUtilDebugNotice("STAR %p: resetting input stream to %p",
+                            real_outstream,
+                            SNetRecGetStream(rec));
         #endif
         SNetHndSetInput(hnd, SNetRecGetStream( rec));
         SNetRecDestroy( rec);
@@ -265,9 +265,9 @@ static void *DetStarBoxThread( void *hndl) {
   while( !( terminate)) {
 
     #ifdef STAR_DEBUG
-    SNetUtilDebugNotice("STAR %x: reading from %x",
-                        (unsigned int) real_output,
-                        (unsigned int) SNetHndGetInput(hnd));
+    SNetUtilDebugNotice("STAR %p: reading from %p",
+                        real_output,
+                        SNetHndGetInput(hnd));
     #endif
     rec = SNetTlRead( SNetHndGetInput( hnd));
 
@@ -292,10 +292,10 @@ static void *DetStarBoxThread( void *hndl) {
               SNetTlWrite(real_output, SNetRecCreate(REC_collect,starstream));
             }
             #ifdef STAR_DEBUG
-            SNetUtilDebugNotice("STAR %x: iteration: putting %x to %x",
-                                (unsigned int) real_output,
-                                (unsigned int) rec,
-                                (unsigned int) our_output);
+            SNetUtilDebugNotice("STAR %p: iteration: putting %p to %p",
+                                real_output,
+                                rec,
+                                our_output);
             #endif
             SNetTlWrite( our_output, rec);
           }
@@ -320,10 +320,10 @@ static void *DetStarBoxThread( void *hndl) {
 //           SNetTlWrite( our_output, sort_begin); /* sort_begin is set in "case REC_sort_xxx" */
           }
           #ifdef STAR_DEBUG
-           SNetUtilDebugNotice("STAR %x: outputting %x to %x",
-                               (unsigned int) real_output,
-                               (unsigned int) rec,
-                               (unsigned int) our_output);
+           SNetUtilDebugNotice("STAR %p: outputting %p to %p",
+                               real_output,
+                               rec,
+                               our_output);
           #endif
           SNetTlWrite( our_output, rec);
          }
@@ -406,8 +406,8 @@ extern snet_tl_stream_t *SNetStarDet( snet_tl_stream_t *input,
   #ifdef STAR_DEBUG
   SNetUtilDebugNotice("-");
   SNetUtilDebugNotice("| DET STAR CREATED");
-  SNetUtilDebugNotice("| input: %x", (unsigned int) input);
-  SNetUtilDebugNotice("| output: %x", (unsigned int) star_output);
+  SNetUtilDebugNotice("| input: %p", input);
+  SNetUtilDebugNotice("| output: %p", star_output);
   SNetUtilDebugNotice("-");
   #endif
 
@@ -437,8 +437,8 @@ snet_tl_stream_t *SNetStarDetIncarnate( snet_tl_stream_t *input,
   #ifdef STAR_DEBUG
   SNetUtilDebugNotice("-");
   SNetUtilDebugNotice("| DET STAR INCARNATE CREATED");
-  SNetUtilDebugNotice("| input: %x", (unsigned int) input);
-  SNetUtilDebugNotice("| output: %x", (unsigned int) output);
+  SNetUtilDebugNotice("| input: %p", input);
+  SNetUtilDebugNotice("| output: %p", output);
   SNetUtilDebugNotice("-");
   #endif
 

@@ -360,7 +360,7 @@ extern void SNetRecIncIteration(snet_record_t *rec)
 extern void SNetRecAddIteration(snet_record_t *rec, int initial_value)
 {
   snet_util_stack_t *current_stack = rec->iteration_counters;
-  SNetUtilDebugNotice("adding an iteration to %x", (unsigned int) rec);
+  SNetUtilDebugNotice("adding an iteration to %p", rec);
   current_stack = SNetUtilStackPush(current_stack, initial_value);
 }
 
