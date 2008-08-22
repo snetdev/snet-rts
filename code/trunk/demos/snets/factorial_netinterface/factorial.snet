@@ -15,4 +15,3 @@ net factorial({x} -> {x,<stop>})
 
 }
 connect (leq1 .. condif .. ([{<T>} -> {<stop>}] | compute))*{<stop>};
-

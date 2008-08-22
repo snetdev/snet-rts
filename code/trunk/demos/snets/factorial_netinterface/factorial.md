@@ -6,13 +6,12 @@
 
   <!-- Observers at the both sides of the top network -->
   <net name="factorial" >
-     <observer data="full" type="before" interactive="true" />
-     <observer data="full" type="after" interactive="true" /> 
-  </net>
+     <observer data="full" type="both" interactive="true" />
+   </net>
 
   <!-- Observer observing tags at compute network -->
   <net name="factorial/compute" >
-     <observer data="tags" type="before" interactive="true" />
+     <observer data="full" type="before" interactive="true" />
   </net>
 </metadata>
  
