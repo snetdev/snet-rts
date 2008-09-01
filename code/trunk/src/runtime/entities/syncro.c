@@ -11,7 +11,7 @@
 #include "list.h"
 #include "stream_layer.h"
 
-#define SYNCRO_DEBUG
+//#define SYNCRO_DEBUG
 
 /* --------------------------------------------------------
  * Syncro Cell: Flow Inheritance, uncomment desired variant
@@ -307,8 +307,10 @@ static void *SyncBoxThread( void *hndl) {
 
       break;
       case REC_collect:
+#ifdef SYNCRO_DEBUG
         SNetUtilDebugNotice("SYNCRO %p: Unhandled control record, destroying"
                             " it\n\n", output);
+#endif
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -319,9 +321,10 @@ static void *SyncBoxThread( void *hndl) {
         break;
     case REC_terminate:
         /* SNetUtilTreeDestroy(states);*/
+#ifdef SYNCRO_DEBUG
       SNetUtilDebugNotice("SYNCRO %p: got terminate record", 
                           output);
-        
+#endif
         /* check if all storages are empty */
         /*
         current_storage = SNetUtilListFirst(to_free);
@@ -377,8 +380,9 @@ extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *inbuf,
 
 
   SNetTlCreateComponent( SyncBoxThread, (void*)hnd, ENTITY_sync);
-  
+#ifdef SYNCRO_DEBUG
   SNetUtilDebugNotice("SYNCRO CREATION DONE");
+#endif
   return( outbuf);
 }
 

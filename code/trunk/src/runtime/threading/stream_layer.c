@@ -12,7 +12,7 @@
 
 #include "pthread.h"
 
-#define STREAM_LAYER_DEBUG
+//#define STREAM_LAYER_DEBUG
 
 struct streamset {
   pthread_mutex_t *access;
@@ -40,8 +40,8 @@ static void Lock(snet_tl_stream_t *target) {
   #ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugNotice("(CALLINFO (STREAM %p) (Lock (stream  %p)))",
                       target, target);
-  #endif
   SNetUtilDebugNotice("Stream mutex: %p", target->access);
+  #endif
   pthread_mutex_lock(target->access);
 }
 
@@ -147,7 +147,9 @@ static void UnifiedDestroy(snet_tl_stream_t *stream_to_destroy)
   if(stream_to_destroy == NULL) {
     SNetUtilDebugFatal("Cannot destroy NULL-stream!");
   }
+#ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugNotice("destroying %p", stream_to_destroy);
+#endif
   if(!stream_to_destroy->is_obsolete) {
     SNetUtilDebugFatal("Stream to destroy must be marked obsolete!");
   }
@@ -175,7 +177,9 @@ SNetTlCreateComponent(void* (*func)(void*),
                       snet_entity_id_t type)
 {
   SNetThreadCreate( (void*)func, (void*)args, type);
+#ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugNotice("CREATE COMPONENT DONE");
+#endif
 }
 
 void SNetTlTerminate(snet_tl_component_t *terminated_component)
@@ -194,8 +198,11 @@ snet_tl_stream_t *SNetTlCreateStream(int size)
   result->access = SNetMemAlloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(result->access, NULL);
 
+#ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugNotice("(CREATION (STREAM %p) (mutex %p))",
                       result, result->access);
+#endif
+
   result->is_obsolete = false;
   result->is_unbounded = false;
   result->buffers.buffer = SNetBufCreate(size, result->access);
@@ -373,19 +380,20 @@ snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
   #ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugNotice("Read(%p)", record_source);
   #endif
-  Lock(record_source);
-  SNetUtilDebugNotice("TLREAD: after Lock");
-  result = UnifiedRead(record_source);
-  SNetUtilDebugNotice("TLREAD: After read");
   if(record_source->is_in_streamset) {
     LockStreamset(record_source->containing_streamset);
+  }
+
+  Lock(record_source);
+  result = UnifiedRead(record_source);
+
+  if(record_source->is_in_streamset) {
     #ifdef STREAM_LAYER_DEBUG
     SNetUtilDebugNotice("(Streamset %p) At entry of Read many: semaphore has value %d",
                         record_source->containing_streamset,
                         SNetExSemGetValue(record_source->containing_streamset->record_counter));
     #endif
     SNetExSemDecrement(record_source->containing_streamset->record_counter);
-    UnlockStreamset(record_source->containing_streamset);
   }
 
   if(result == NULL) {
@@ -395,10 +403,17 @@ snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
  
   if(record_source->is_obsolete && UnifiedIsEmpty(record_source)) {
     Unlock(record_source);
+    if(record_source->is_in_streamset) {
+      UnlockStreamset(record_source->containing_streamset);
+    }
     UnifiedDestroy(record_source);
-  } else {
+  }else {
     Unlock(record_source);
+    if(record_source->is_in_streamset) {
+      UnlockStreamset(record_source->containing_streamset);
+    }
   }
+
   #ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugDumpRecord(result, message);
   SNetUtilDebugNotice("Read(%p) = %s",
@@ -418,6 +433,7 @@ ReadAny(snet_tl_streamset_t *possible_sources, bool remove_record)
   result.stream = NULL;
   result.record = NULL;
 
+#ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugNotice("(STATEINFO (STREAMSET %p)"
                       "(ReadAny (possible sources %p) (remove_record %s))"
                       "(at entry) (length of possible_sources->streams %d)",
@@ -425,12 +441,14 @@ ReadAny(snet_tl_streamset_t *possible_sources, bool remove_record)
                       possible_sources, remove_record?"true":"false",
                       SNetUtilListCount(possible_sources->streams));
   SNetUtilListDump(possible_sources->streams);
+#endif /* STREAM_LAYER_DEBUG */
   for(current_position = SNetUtilListFirst(possible_sources->streams);
       SNetUtilListIterCurrentDefined(current_position);
       current_position = SNetUtilListIterNext(current_position)) {
     current_stream = SNetUtilListIterGet(current_position);
     Lock(current_stream);
     read_record = UnifiedPeek(current_stream);
+#ifdef STREAM_LAYER_DEBUG
     SNetUtilDebugNotice("(STATEINFO (STREAMSET %p) "
                         "(ReadAny (possible sources %p) (remove_record %s))"
                         "(in the loop in ReadAny)"
@@ -439,6 +457,7 @@ ReadAny(snet_tl_streamset_t *possible_sources, bool remove_record)
                         possible_sources,
                         remove_record ? "true" : "false",
                         current_stream, read_record);
+#endif /* STREAM_LAYER_DEBUG */
     if(read_record != NULL) {
       if(remove_record) {
         UnifiedRead(current_stream);
@@ -545,6 +564,7 @@ SNetTlPeekMany(snet_tl_streamset_t *possible_sources)
   SNetExSemWaitWhileMinValue(possible_sources->record_counter);
   result = ReadAny(possible_sources, false);
   UnlockStreamset(possible_sources);
+
   if(result.record == NULL) {
     LockStreamset(possible_sources);
     SNetUtilDebugNotice("STREAMLAYER: Invariant broken: No data after waiting");
@@ -577,11 +597,14 @@ SNetTlWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
                       record_destination,
                       message_space);
   #endif
+  if(record_destination->is_in_streamset) {
+    LockStreamset(record_destination->containing_streamset);
+  }
+
   Lock(record_destination);
   record_written = UnifiedWrite(record_destination, data);
 
   if(record_destination->is_in_streamset) {
-    LockStreamset(record_destination->containing_streamset);
     #ifdef STREAM_LAYER_DEBUG
     SNetUtilDebugNotice("(Streamset %p) At entry of Write: semaphore has value %d",
                         
@@ -590,7 +613,6 @@ SNetTlWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
                                           record_counter));
     #endif
     SNetExSemIncrement(record_destination->containing_streamset->record_counter);
-    UnlockStreamset(record_destination->containing_streamset);
   }
 
   if(!record_written) {
@@ -603,6 +625,11 @@ SNetTlWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
                       data);
   #endif
   Unlock(record_destination);
+
+  if(record_destination->is_in_streamset) {
+    UnlockStreamset(record_destination->containing_streamset);
+  }
+
   return record_destination;
 }
 
@@ -621,15 +648,23 @@ SNetTlTryWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
                       record_destination, message_space);
   #endif
 
+  if(record_destination->is_in_streamset) {
+    LockStreamset(record_destination->containing_streamset);
+  }
+
   Lock(record_destination);
 
   record_written = UnifiedWrite(record_destination, data);
+
   if(record_destination->is_in_streamset) {
-    LockStreamset(record_destination->containing_streamset);
     SNetExSemIncrement(record_destination->containing_streamset->record_counter);
+  }
+
+  Unlock(record_destination);
+
+  if(record_destination->is_in_streamset) {
     UnlockStreamset(record_destination->containing_streamset);
   }
-  Unlock(record_destination);
 
   if(record_written) {
     return record_destination;

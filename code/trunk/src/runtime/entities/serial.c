@@ -1,7 +1,7 @@
 #include "serial.h"
 #include "buffer.h"
 #include "debug.h"
-#define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 
 /* ------------------------------------------------------------------------- */
 /*  SNetSerial                                                               */

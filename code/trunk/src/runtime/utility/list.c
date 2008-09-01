@@ -187,13 +187,17 @@ snet_util_list_t *SNetUtilListAddEnd(snet_util_list_t *target, void *content) {
   new_element->next = NULL;
 
   if(target->last == NULL) {
+#ifdef LIST_DEBUG
     SNetUtilDebugNotice("AddEnd: empty list");
+#endif
     /* empty list */
     target->first = new_element;
     target->last = new_element;
     new_element->prev = NULL;
   } else {
+#ifdef LIST_DEBUG
     SNetUtilDebugNotice("AddEnd: at least one element");
+#endif
     /* list with at least one element */
     new_element->prev = target->last;
     target->last->next = new_element;
@@ -504,31 +508,43 @@ snet_util_list_t *SNetUtilListIterDelete(snet_util_list_iter_t *target) {
   base_list = target->base;
   pred = target->current->prev;
   succ = target->current->next;
+#ifdef LIST_DEBUG
   SNetUtilListDump(base_list);
+#endif
 
   if(pred != NULL && succ != NULL) {
+#ifdef LIST_DEBUG
     fprintf(stderr, "middle of list\n");
+#endif
     /* deleting somewhere in the list */
     Link(pred, succ);
   } else if(pred == NULL && succ != NULL) {
+#ifdef LIST_DEBUG
     fprintf(stderr, "first element of list\n");
+#endif
     /* deleting first element of list */
     base_list->first = succ;
     succ->prev = NULL;
   } else if(pred != NULL &&  succ == NULL) {
+#ifdef LIST_DEBUG
     fprintf(stderr, "last\n");
+#endif
     /* deleting last element of list */
     base_list->last = pred;
     pred->next= NULL;
   } else { /* pred == succ == NULL */
+#ifdef LIST_DEBUG
     fprintf(stderr, "singleton\n");
+#endif
     /* deleting only element of the list */
     base_list->first = NULL;
     base_list->last = NULL;
   }
   SNetMemFree(target->current);
   target->current = succ;
+#ifdef LIST_DEBUG
   SNetUtilListDump(base_list);
+#endif
   return base_list;
 }
 

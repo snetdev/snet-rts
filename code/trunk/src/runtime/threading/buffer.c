@@ -17,7 +17,7 @@
 
 #include "extended_semaphore.h"
 
-#define BUFFER_DEBUG
+//#define BUFFER_DEBUG
 
 struct buffer  {
   void **ringBuffer;
@@ -39,7 +39,9 @@ bool SNetBufIsEmpty(snet_buffer_t *buf) {
                        "(Buffer is not locked.))",
                        buf, buf);
   }
+#ifdef BUFFER_DEBUG
   SNetUtilDebugNotice("buffer mutex: %p", buf->mxCounter);
+#endif
   return SNetExSemIsMinimal(buf->record_count);
 }
 
@@ -47,10 +49,12 @@ snet_buffer_t *SNetBufCreate( unsigned int size, pthread_mutex_t *lock) {
   snet_buffer_t *theBuffer;
        
   theBuffer = SNetMemAlloc( sizeof( snet_buffer_t));
+#ifdef BUFFER_DEBUG
   SNetUtilDebugNotice("(CREATION (BUFFER %p) ((size %d) (lock %p)))",
                       theBuffer,
                       size,
                       lock);
+#endif
 
   theBuffer->ringBuffer = SNetMemAlloc( size * sizeof( void**));
   theBuffer->bufferCapacity=size;
@@ -102,9 +106,11 @@ extern void *SNetBufGet( snet_buffer_t *bf) {
 		       bf, bf);
   }
 
+#ifdef BUFFER_DEBUG
   SNetUtilDebugNotice("spaceLeft = %d, capacity = %d, semaphore value = %d",
                       bf->bufferSpaceLeft, bf->bufferCapacity, 
                       SNetExSemGetValue(bf->record_count));
+#endif
 
   bf->record_count = SNetExSemDecrement(bf->record_count);
 
@@ -120,7 +126,10 @@ extern void *SNetBufShow( snet_buffer_t *buf) {
   int lock_status;
   void *result;
   lock_status = pthread_mutex_trylock(buf->mxCounter);
+
+#ifdef BUFFER_DEBUG
   SNetUtilDebugNotice("lock_status = %d, EBUSY = %d", lock_status, EBUSY);
+#endif
   if(lock_status != EBUSY) {
     SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufShow (buf %p)) "
                        "(Buffer is not locked))", buf, 

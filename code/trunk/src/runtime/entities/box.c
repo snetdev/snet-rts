@@ -5,7 +5,7 @@
 #include "debug.h"
 #include "stream_layer.h"
 
-#define BOX_DEBUG
+//#define BOX_DEBUG
 /* ------------------------------------------------------------------------- */
 /*  SNetBox                                                                  */
 /* ------------------------------------------------------------------------- */
@@ -22,9 +22,9 @@ static void *BoxThread( void *hndl) {
   void (*boxfun)( snet_handle_t*);
   bool terminate = false;
   hnd = (snet_handle_t*) hndl;
-  #ifdef BOX_DEBUG
+#ifdef BOX_DEBUG
   SNetUtilDebugNotice("(CREATION BOX)");
-  #endif
+#endif
   boxfun = SNetHndGetBoxfun( hnd);
 
 

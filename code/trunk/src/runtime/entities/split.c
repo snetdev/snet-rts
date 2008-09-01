@@ -62,7 +62,9 @@ static void *SplitBoxThread( void *hndl) {
       case REC_data:
         ltag_val = SNetRecGetTag( rec, ltag);
         utag_val = SNetRecGetTag( rec, utag);
+#ifdef DEBUG_SPLIT
         SNetUtilDebugNotice("SPLIT got data");
+#endif
         if( repos == NULL) {
           elem = SNetMemAlloc( sizeof( snet_blist_elem_t));
           elem->num = ltag_val;
@@ -99,8 +101,10 @@ static void *SplitBoxThread( void *hndl) {
 
         break;
       case REC_collect:
+#ifdef DEBUG_SPLIT
         SNetUtilDebugNotice("[SPLIT] Unhandled control record,"
                             " destroying it \n\n");
+#endif
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -120,8 +124,10 @@ static void *SplitBoxThread( void *hndl) {
           SNetUtilListIterDestroy(current_position);
         } else {
           /* we are unable to relay this record anyway, so we discard it? */
+#ifdef DEBUG_SPLIT
           SNetUtilDebugNotice("[SPLIT] Got sort_begin_record with nowhere to"
                      " send it!");
+#endif
           SNetRecDestroy(rec);
         }
         break;
@@ -140,8 +146,10 @@ static void *SplitBoxThread( void *hndl) {
           SNetTlWrite(elem->stream, rec);
           SNetUtilListIterDestroy(current_position);
         } else {
+#ifdef DEBUG_SPLIT
           SNetUtilDebugNotice("[SPLIT] Got sort_end_record with nowhere to"
                       " send it!");
+#endif
           SNetRecDestroy(rec);
         }
         break;
@@ -157,8 +165,10 @@ static void *SplitBoxThread( void *hndl) {
           }
           SNetUtilListIterDestroy(current_position);
         } else {
+#ifdef DEBUG_SPLIT
           SNetUtilDebugNotice("[SPLIT] got termination record with nowhere"
               " send it!");
+#endif
           SNetRecDestroy(rec);
         }
         SNetUtilListDestroy(repos);
@@ -289,8 +299,10 @@ static void *DetSplitBoxThread( void *hndl) {
         SNetRecDestroy( rec);
         break;
       case REC_collect:
+#ifdef SPLIT_DEBUG
         SNetUtilDebugNotice("[SPLIT] Unhandled control record," 
                             " destroying it\n\n");
+#endif
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:

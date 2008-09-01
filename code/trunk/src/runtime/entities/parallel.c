@@ -8,7 +8,7 @@
 #include "threading.h"
 #include "stream_layer.c"
 
-#define PARALLEL_DEBUG
+//#define PARALLEL_DEBUG
 
 static bool ContainsName( int name, int *names, int num) {  
   int i;

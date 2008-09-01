@@ -9,7 +9,7 @@
 #include "typeencode.h"
 #include "stream_layer.h"
 #include "threading.h" /* for enumeration */
-#define FILTER_DEBUG
+//#define FILTER_DEBUG
 
 /* ------------------------------------------------------------------------- */
 /*  SNetFilter                                                               */

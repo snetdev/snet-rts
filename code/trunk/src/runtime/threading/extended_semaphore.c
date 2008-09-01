@@ -134,8 +134,10 @@ snet_ex_sem_t *SNetExSemCreate(pthread_mutex_t *access,
   }
   result = SNetMemAlloc(sizeof(snet_ex_sem_t));
 
+#ifdef STRAM_LAYER_DEBUG
   SNetUtilDebugNotice("(CREATION (SEMAPHORE %p) (access %p))",
                       result, access);
+#endif /* STREAM_LAEYR_DEBUG */
   result->access = access;
   if(has_min_value) {
     if(initial_value < min_value) {
@@ -192,7 +194,7 @@ snet_ex_sem_t *SNetExSemIncrement(snet_ex_sem_t *target) {
   CheckLock(target, "SNetExSemIncrement");
 
   if(target->has_max_value) {
-    if(target->value == target->max_value) {
+    while(target->value == target->max_value) {
       pthread_cond_wait(target->value_decreased, target->access);
     }
   }
@@ -209,7 +211,7 @@ snet_ex_sem_t *SNetExSemDecrement(snet_ex_sem_t *target) {
   CheckLock(target, "SNetExSemDecrement");
 
   if(target->has_min_value) {
-    if(target->value == target->min_value) {
+    while(target->value == target->min_value) {
       pthread_cond_wait(target->value_increased, target->access);
     }
   }
@@ -231,10 +233,14 @@ void SNetExSemWaitWhileMinValue(snet_ex_sem_t *target) {
                        "(Semaphore has no min value!))",
                        target, target);
   }
-  if(target->value == target->min_value) {
+  while(target->value == target->min_value) {
+#ifdef STRAM_LAYER_DEBUG
     SNetUtilDebugNotice("waiting, releasing mutex %p", target->access);
+#endif /* STREAM_LAEYR_DEBUG */
     pthread_cond_wait(target->value_increased, target->access);
+#ifdef STRAM_LAYER_DEBUG
     SNetUtilDebugNotice("semaphore done with waiting");
+#endif /* STREAM_LAEYR_DEBUG */
   }
 }
 
@@ -247,7 +253,7 @@ void SNetExSemWaitWhileMaxValue(snet_ex_sem_t *target) {
                        "(Semaphore has no max value))",
                        target, target);
   }
-  if(target->value == target->max_value) {
+  while(target->value == target->max_value) {
     pthread_cond_wait(target->value_decreased, target->access);
   }
 }
@@ -267,7 +273,9 @@ bool SNetExSemIsMaximal(snet_ex_sem_t *target) {
 }
 
 bool SNetExSemIsMinimal(snet_ex_sem_t *target) {
+#ifdef STRAM_LAYER_DEBUG
   SNetUtilDebugNotice("Semaphore access: %p\n", target->access);
+#endif /* STREAM_LAEYR_DEBUG */
   CheckLock(target, "SNetExSemIsMinimal");
   if(target->has_min_value) {
     return target->value == target->min_value;

@@ -9,7 +9,7 @@
 #include "debug.h"
 #include "stream_layer.h"
 
-#define COLLECTOR_DEBUG
+//#define COLLECTOR_DEBUG
 typedef struct {
   snet_tl_stream_t *from_stream;
   snet_tl_stream_t *to_stream;
@@ -158,6 +158,7 @@ void DeleteStream(snet_util_list_t *lst,
   while(SNetUtilListIterCurrentDefined(current_position)) {
     target_element = SNetUtilListIterGet(current_position);
     if(target_element->stream == target_stream) {
+#ifdef COLLECTOR_DEBUG
       SNetUtilDebugNotice("(STATEINFO (COLLECTOR IDK) "
                         "(DeleteStream (lst %p) (inputs %p) (target_stream %p))"
                           "(at break in while loop) "
@@ -166,6 +167,7 @@ void DeleteStream(snet_util_list_t *lst,
                           target_stream,
                           target_element->stream,
                           target_element->current);
+#endif
       break;
     }
     current_position = SNetUtilListIterNext(current_position);
@@ -306,8 +308,10 @@ static void *Collector( void *info) {
                   } else if(SNetRecGetLevel(rec) == 0) {
                     SNetRecDestroy( rec);
                   } else {
+#ifdef COLLECTOR_DEBUG
                     SNetUtilDebugNotice("(ERROR (COLLECTOR %p) (record "
                                         "with level < 0!))", output);
+#endif
                     SNetRecDestroy(rec);
                   }
                 } else {
@@ -334,8 +338,10 @@ static void *Collector( void *info) {
                   } else if(SNetRecGetLevel(rec) == 0) {
                     SNetRecDestroy(rec);
                   } else {
+#ifdef COLLECTOR_DEBUG
                     SNetUtilDebugNotice("(ERROR (COLLECTOR %p) (found a sort end record))"
                           "with level < 0.");
+#endif
                     SNetRecDestroy(rec);
                   }
                 } else {
