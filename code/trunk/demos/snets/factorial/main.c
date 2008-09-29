@@ -6,6 +6,7 @@
 
 #include <C4SNet.h>
 #include "factorial.h"
+#include "bool.h"
 
 
 #define PRINT_RECORD_WITH_FREE( NAME) __PRINT_RECORD( NAME, true)
@@ -44,7 +45,7 @@ int main() {
 
   snet_typeencoding_t *enc1, *enc2, *enc3, *enc4, *enc5, *enc6;
   snet_record_t *rec1, *rec2, *rec3, *rec4, *rec5, *rec6, *resrec;
-  snet_buffer_t *start_buf, *res_buf;
+  snet_tl_stream_t *start_stream, *res_stream;
 
   int i,j,k;
 
@@ -52,7 +53,7 @@ int main() {
 
   c4snet_data_t *field1, *field2, *field3, *field4;
 
-
+  bool terminate;
 
   initialise();
 
@@ -170,77 +171,79 @@ int main() {
   SNetRecAddTag( rec1, T_s);
   SNetRecSetTag( rec1, T_s, 43);
 */
-  start_buf = SNetBufCreate( 10);
+  start_stream = SNetTlCreateStream( 10);
   //REGISTER_BUFFER( start_buf);
   //SET_BUFFER_NAME( start_buf, "initialBuffer");
 
 
-  SNetBufPut( start_buf, rec1);
+  SNetTlWrite( start_stream, rec1);
   printf("\nPut record to Buffer:");
   PRINT_RECORD( rec1);
   printf("\n");
 
- SNetBufPut( start_buf, rec2);
- printf("\nPut record to Buffer:");
- PRINT_RECORD( rec2);
- printf("\n");
+  SNetTlWrite( start_stream, rec2);
+  printf("\nPut record to Buffer:");
+  PRINT_RECORD( rec2);
+  printf("\n");
 
 /*
-  SNetBufPut( start_buf, rec2);
+  SNetTlWrite( start_stream, rec2);
   printf("\nPut record to Buffer:");
   PRINT_RECORD( rec2);
   printf("\n"); 
 
-  SNetBufPut( start_buf, rec3);
+  SNetTlWrite(  start_stream, rec3);
   printf("\nPut record to Buffer:");
   PRINT_RECORD( rec3);
   printf("\n");
 
-  SNetBufPut( start_buf, rec4);
+  SNetTlWrite(  start_stream, rec4);
   printf("\nPut record to Buffer:");
   PRINT_RECORD( rec4);
   printf("\n");
   
-  SNetBufPut( start_buf, rec5);
+  SNetTlWrite(  start_stream, rec5);
   printf("\nPut record to Buffer:");
   PRINT_RECORD( rec5);
   printf("\n");
   
-  SNetBufPut( start_buf, rec6);
+  SNetTlWrite(  start_stream, rec6);
   printf("\nPut record to Buffer:");
   PRINT_RECORD( rec6);
   printf("\n");
 */
   printf("\n\n\n");
 
-  res_buf = SNet__factorial___factorial( start_buf);
+  res_stream = SNet__factorial___factorial( start_stream);
 
 
   printf("\n  >>> Wait,  then press a key to send a termination record. <<<\n");
   getc( stdin);
-  SNetBufPut( start_buf, SNetRecCreate( REC_terminate));
+  SNetTlWrite( start_stream, SNetRecCreate( REC_terminate));
 
 
   
   printf("\nPress any key to see resulting record\n");
   getc( stdin);
 
-  i = BUFFER_SIZE-SNetGetSpaceLeft( res_buf);
   printf("\n\nResulting Buffer contains %d records.\n", i);
-    for( j=0; j<i; j++) {
+  for( j=0, terminate = false; !terminate; j++) {
     printf("\nRecord %d:", j);
-    resrec = SNetBufGet( res_buf);
+    resrec = SNetTlRead( res_stream);
     if( SNetRecGetDescriptor( resrec) == REC_data) {
      PRINT_RECORD_WITH_FREE( resrec);  
      printf("\n");
     }
     else {
       printf("\n - Control Record, Type: %d\n", SNetRecGetDescriptor( resrec));
+      if(SNetRecGetDescriptor( resrec) == REC_terminate) {
+	terminate = true;
+      }
     }
-   // SNetRecDestroy( resrec);
+   SNetRecDestroy( resrec);
   }
   
-  SNetBufDestroy( start_buf);
+  SNetTlMarkObsolete( start_stream);
   printf("\n\nPress any key to exit.\n");
   getc( stdin);
   printf("\nEnd.\n"); 

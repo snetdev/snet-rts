@@ -3,11 +3,11 @@ include $(SNETBASE)/src/makefiles/config.mkf
 CC        = gcc
 CCFLAGS  = -Wall -g -DFILTER_VERSION_2
 SNETC     = snetc
-SNETCFLAGS= -b7 
+SNETCFLAGS= -b7
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
-LIBS      = -lpthread -lC4SNet -lsnet -lsnetutil 
+LIBS      = -lpthread -lC4SNet -lC4SNetc -lsnet -lsnetutil 
 
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = factorial
@@ -15,7 +15,7 @@ TARGET    = factorial
 
 
 all: 
-	$(SNETC) $(SNETCFLAGS) $(TARGET).snet
+	$(SNETC) $(SNETCFLAGS) -m $(TARGET).md $(TARGET).snet 
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
 	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(LIBS) 
 

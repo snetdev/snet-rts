@@ -1,8 +1,3 @@
-<?xml version="1.0"?>
-<metadata xmlns="snet-home.org" >
-  <interface name="C4SNet" default="true" />
-</metadata>
-
 net factorial
 {
         box leq1( (x) -> (x,p));
