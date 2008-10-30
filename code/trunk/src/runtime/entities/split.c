@@ -110,7 +110,6 @@ static void *SplitBoxThread( void *hndl) {
       case REC_sort_begin:
         current_sort_rec = rec;
         if(!SNetUtilListIsEmpty(repos)) {
-          // elven queen
           current_position = SNetUtilListFirst(repos);
           while(SNetUtilListIterHasNext(current_position)) {
             elem = SNetUtilListIterGet(current_position);
@@ -156,13 +155,14 @@ static void *SplitBoxThread( void *hndl) {
       case REC_terminate:
         terminate = true;
 
-        if(!SNetUtilListIsEmpty(repos)) {
-          current_position = SNetUtilListFirst(repos);
-          while(SNetUtilListIterHasNext(current_position)) {
-            elem = SNetUtilListIterGet(current_position);
-            SNetTlWrite(elem->stream, SNetRecCopy( rec));
-            current_position = SNetUtilListIterNext(current_position);
-          }
+	if(!SNetUtilListIsEmpty(repos)) {
+	  do {
+	    current_position = SNetUtilListFirst(repos);
+	    elem = SNetUtilListIterGet(current_position);
+	    SNetTlWrite(elem->stream, SNetRecCopy( rec));
+	    repos = SNetUtilListIterDelete(current_position);
+	  } while(!SNetUtilListIsEmpty(repos));
+
           SNetUtilListIterDestroy(current_position);
         } else {
 #ifdef DEBUG_SPLIT
