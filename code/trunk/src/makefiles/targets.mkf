@@ -189,7 +189,7 @@ entities        = filter.o graphics.o\
                   syncro.o out.o box.o alias.o\
                   serial.o collectors.o parallel.o star.o split.o
 
-utility		= list.o debug.o stack.o tree.o
+utility		= list.o debug.o stack.o tree.o bitmap.o
 
 threading       = threading.o extended_semaphore.o stream_layer.o buffer.o\
                   feedbackbuffer.o
