@@ -65,23 +65,20 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 
       /* Fields */
       for( k=0; k<SNetRecGetNumFields( rec); k++) {
-	int (*fun)(FILE *, void *);
 	i = SNetRecGetFieldNames( rec)[k];
 	
 	int id = SNetRecGetInterfaceId(rec);
-	
-	if(mode == MODE_textual) { 
-	  fun = SNetGetSerializationFun(id);
-	}else {
-	  fun = SNetGetEncodingFun(id);
-	}
 	
 	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
 	  if((interface = SNetInIdToInterface(hnd->interfaces, id)) != NULL) {
 	    fprintf(hnd->file, "<field label=\"%s\" interface=\"%s\">", label, 
 		    interface);
 	    
-	    fun(hnd->file, SNetRecGetField(rec, i));
+	    if(mode == MODE_textual) { 
+	      SNetGetSerializationFun(id)(hnd->file, SNetRecGetField(rec, i));
+	    }else {
+	      SNetGetEncodingFun(id)(hnd->file, SNetRecGetField(rec, i));
+	    }
 	    
 	    fprintf(hnd->file, "</field>");
 	    SNetMemFree(interface);

@@ -282,12 +282,12 @@ extern void SNetRecDestroy( snet_record_t *rec)
 {
   int i;
   int num, *names;
+  snet_free_fun_t freefun;
   
   if( rec != NULL) {
     SNetUtilStackDestroy(rec->iteration_counters);
   switch( REC_DESCR( rec)) {
     case REC_data: {
-        void (*freefun)(void*);
         num = SNetRecGetNumFields( rec);
         names = SNetRecGetUnconsumedFieldNames( rec);
         freefun = SNetGetFreeFunFromRec( rec);
@@ -770,6 +770,7 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec)
   snet_record_t *new_rec;
   snet_util_stack_iterator_t *current_iteration;
   int temp;
+  snet_copy_fun_t copyfun;
 
   switch( REC_DESCR( rec)) {
     case REC_data:
@@ -781,7 +782,7 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec)
       for( i=0; i<SNetRecGetNumBTags( rec); i++) {
         DATA_REC( new_rec, btags[i]) = DATA_REC( rec, btags[i]);
       }
-      void* (*copyfun)(void*);
+ 
       copyfun = SNetGetCopyFunFromRec( rec);
       for( i=0; i<SNetRecGetNumFields( rec); i++) {
         DATA_REC( new_rec, fields[i]) = copyfun( DATA_REC( rec, fields[i]));

@@ -66,6 +66,7 @@ extern snet_handle_t
   int i, *names;
   snet_record_t *out_rec, *old_rec;
   snet_variantencoding_t *venc;
+  snet_copy_fun_t copyfun;
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
@@ -114,7 +115,7 @@ extern snet_handle_t
   names = SNetRecGetUnconsumedFieldNames( old_rec);
   for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
     if( SNetRecAddField( out_rec, names[i])) {
-      void* (*copyfun)(void*);
+
       copyfun = SNetGlobalGetCopyFun( 
                   SNetGlobalGetInterface( 
                     SNetRecGetInterfaceId( old_rec)));
@@ -166,6 +167,7 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
   snet_vector_t *mapping;
   int num_entries, f_count=0, t_count=0, b_count=0;
   int *f_names, *t_names, *b_names;
+  snet_copy_fun_t copyfun;
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
@@ -219,7 +221,7 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
   names = SNetRecGetUnconsumedFieldNames( old_rec);
   for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
     if( SNetRecAddField( out_rec, names[i])) {
-      void* (*copyfun)(void*);
+
       copyfun = SNetGlobalGetCopyFun( 
                   SNetGlobalGetInterface( 
                     SNetRecGetInterfaceId( old_rec)));
@@ -258,8 +260,8 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
 
 snet_handle_t *SNetOutRaw( snet_handle_t *hnd, 
                            int id, 
-                 			     int variant_num, 
-                			     ...)
+			   int variant_num, 
+			   ...)
 {
   snet_handle_t *h;
   va_list args;

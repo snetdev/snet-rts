@@ -336,9 +336,10 @@ FilterInheritFromInrec( snet_typeencoding_t *in_type,
 {
   int i;
   int *names;
+  snet_copy_fun_t copyfun;
 
   names = SNetRecGetFieldNames( in_rec);
-  void* (*copyfun)(void*);
+
   copyfun = SNetGlobalGetCopyFun( SNetGlobalGetInterface( 
                                     SNetRecGetInterfaceId( in_rec)));
   for( i=0; i<SNetRecGetNumFields( in_rec); i++) {
@@ -375,6 +376,7 @@ static void *FilterThread( void *hnd)
   snet_filter_instruction_t *current_instr;
   snet_filter_instruction_set_t *current_set;
   snet_filter_instruction_set_list_t **instr_lst, *current_lst;
+  snet_copy_fun_t copyfun;
 
   done = false;
   terminate = false;
@@ -429,7 +431,6 @@ static void *FilterThread( void *hnd)
                               getExprFromInstr( current_instr), in_rec));
                         break;
                       case snet_field: {
-                        void* (*copyfun)(void*);
                         copyfun = SNetGlobalGetCopyFun( 
                                    SNetGlobalGetInterface( SNetRecGetInterfaceId( in_rec)));
                         SNetRecSetField( 
@@ -699,6 +700,7 @@ static void *FilterThread( void *hndl) {
   snet_variantencoding_t *variant;
   snet_record_t *out_rec, *in_rec;
   bool terminate = false;
+  snet_copy_fun_t copyfun;
 
   outstream = SNetHndGetOutput( hnd);
   out_type =  SNetHndGetOutType( hnd);
@@ -750,7 +752,6 @@ static void *FilterThread( void *hndl) {
               SNetTencRemoveField( names, instr->data[0]);
               break;
             case FLT_copy_field: {
-              void* (*copyfun)(void*);
               copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
               SNetRecSetField( out_rec, instr->data[0],
                 copyfun( SNetRecGetField( in_rec, instr->data[0])));
@@ -780,7 +781,6 @@ static void *FilterThread( void *hndl) {
         }
   
        // add everything that is left.
-        void* (*copyfun)(void*);
         copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
         for( j=0; j<SNetTencGetNumFields( names); j++) {
          if( SNetRecAddField( out_rec, SNetTencGetFieldNames( names)[j])) {

@@ -27,8 +27,7 @@
 #include "memfun.h"
 #include "snetentities.h"
 #include "stream_layer.h"
-
-#define SNET_NAMESPACE "snet-home.org"
+#include "constants.h"
 
 /* SNet record types */
 #define SNET_REC_DATA       "data" 
@@ -450,7 +449,6 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	    int iid;
 	    attrib_t *finterface;
 	    int label;
-	    void *(*fun)(FILE *);
   
 	    attr = searchAttribute($2, LABEL);
 	    if(attr != NULL) {
@@ -501,29 +499,27 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	    if(iid != INTERFACE_UNKNOWN) {
 
 	      if(current.mode == MODE_TEXTUAL) {
-		fun = SNetGetDeserializationFun(iid);
+		data = SNetGetDeserializationFun(iid)(yyin);
 	      } else if(current.mode == MODE_BINARY) {
-		fun = SNetGetDecodingFun(iid);
+		data = SNetGetDecodingFun(iid)(yyin);
 	      } else {
+		data = NULL;
 		yyerror("Unknown data mode");
 	      }
 
-	      if(fun != NULL) {
-		data = fun(yyin);
-	     
-		if(data != NULL) {
+	      if(data != NULL) {
 
-		  SNetRecAddField(current.record, label);
-		  SNetRecSetField(current.record, label, data);
-		} else {
-		  yyerror("Could not decode data!");
-		}
-
-		while(getc(yyin) != '<');		  
-		if(ungetc('<', yyin) == EOF){
-		  /* TODO: This is an error. First char of the next tag is already consumed! */
-		}
+		SNetRecAddField(current.record, label);
+		SNetRecSetField(current.record, label, data);
+	      } else {
+		yyerror("Could not decode data!");
 	      }
+
+	      while(getc(yyin) != '<');		  
+	      if(ungetc('<', yyin) == EOF){
+		/* TODO: This is an error. First char of the next tag is already consumed! */
+	      }
+	    
 	      yyrestart(yyin);
 	    }else { 
 	      /* If we cannot deserialise the data we must ignore it! */
@@ -698,20 +694,3 @@ void SNetInParserDestroy()
 {
   yylex_destroy();
 }
-
-#undef SNET_NAMESPACE 
-#undef SNET_REC_DATA     
-#undef SNET_REC_SYNC       
-#undef SNET_REC_COLLECT    
-#undef SNET_REC_SORT_BEGIN 
-#undef SNET_REC_SORT_END   
-#undef SNET_REC_TERMINATE  
-#undef LABEL     
-#undef INTERFACE 
-#undef TYPE    
-#undef MODE      
-#undef TEXTUAL  
-#undef BINARY    
-#undef MODE_BINARY
-#undef MODE_TEXTUAL
-#undef INTERFACE_UNKNOWN

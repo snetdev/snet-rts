@@ -6,67 +6,67 @@
 snet_global_info_structure_t *snet_global = NULL;
 
 void SNetGlobalSetFreeFun( snet_global_interface_functions_t *f,
-                        void (*freefun)( void*))
+			   snet_free_fun_t freefun)
 {
   f->freefun = freefun;
 }
 
 void SNetGlobalSetCopyFun( snet_global_interface_functions_t *f,
-                        void* (*copyfun)( void*))
+			   snet_copy_fun_t copyfun)
 {
   f->copyfun = copyfun;
 }
 
-void *SNetGlobalGetCopyFun( snet_global_interface_functions_t *f)
+snet_copy_fun_t SNetGlobalGetCopyFun( snet_global_interface_functions_t *f)
 {
   return( f->copyfun);
 }
 
-void *SNetGlobalGetFreeFun( snet_global_interface_functions_t *f)
+snet_free_fun_t SNetGlobalGetFreeFun( snet_global_interface_functions_t *f)
 {
   return( f->freefun);
 }
 
 void SNetGlobalSetSerializationFun( snet_global_interface_functions_t *f,
-				 int (*serialisefun)( FILE *, void *))
+				    snet_serialise_fun_t serialisefun)
 {
   f->serialisefun = serialisefun;
 }
 
-void *SNetGlobalGetSerializationFun(snet_global_interface_functions_t *f)
+snet_serialise_fun_t SNetGlobalGetSerializationFun(snet_global_interface_functions_t *f)
 {
   return( f->serialisefun);
 }
 
 void SNetGlobalSetDeserializationFun( snet_global_interface_functions_t *f,
-				   void* (*deserialisefun)(FILE *))
+				      snet_deserialise_fun_t deserialisefun)
 {
   f->deserialisefun = deserialisefun;
 }
 
-void *SNetGlobalGetDeserializationFun( snet_global_interface_functions_t *f)
+snet_deserialise_fun_t SNetGlobalGetDeserializationFun( snet_global_interface_functions_t *f)
 {
   return( f->deserialisefun);
 }
 
 void SNetGlobalSetEncodingFun( snet_global_interface_functions_t *f,
-				 int (*encodefun)( FILE *, void *))
+				 snet_encode_fun_t encodefun)
 {
   f->encodefun = encodefun;
 }
 
-void *SNetGlobalGetEncodingFun(snet_global_interface_functions_t *f)
+snet_encode_fun_t SNetGlobalGetEncodingFun(snet_global_interface_functions_t *f)
 {
   return( f->encodefun);
 }
 
 void SNetGlobalSetDecodingFun( snet_global_interface_functions_t *f,
-			       void* (*decodefun)(FILE *))
+			       snet_decode_fun_t decodefun)
 {
   f->decodefun = decodefun;;
 }
 
-void *SNetGlobalGetDecodingFun( snet_global_interface_functions_t *f)
+snet_decode_fun_t SNetGlobalGetDecodingFun( snet_global_interface_functions_t *f)
 {
   return( f->decodefun);
 }
@@ -171,12 +171,12 @@ void SNetGlobalDestroy()
 
 bool 
 SNetGlobalRegisterInterface( int id, 
-                             void (*freefun)( void*),
-                             void* (*copyfun)( void*), 
-			     int (*serialisefun)( FILE *, void*),
-			     void* (*deserialisefun)( FILE *),
-			     int (*encodefun)( FILE *, void*),
-			     void* (*decodefun)( FILE *))
+			     snet_free_fun_t freefun,
+			     snet_copy_fun_t copyfun,
+			     snet_serialise_fun_t serialisefun,
+			     snet_deserialise_fun_t deserialisefun,
+			     snet_encode_fun_t encodefun,
+			     snet_decode_fun_t decodefun)         
 {
   int num; 
   snet_global_interface_functions_t *new_if;
@@ -203,70 +203,70 @@ SNetGlobalRegisterInterface( int id,
   return( true);
 }
 
-void *SNetGetFreeFunFromRec( snet_record_t *rec) 
+snet_free_fun_t SNetGetFreeFunFromRec( snet_record_t *rec) 
 {
   return( SNetGlobalGetFreeFun( SNetGlobalGetInterface( 
                     SNetRecGetInterfaceId( rec))));
 }
 
-void *SNetGetCopyFunFromRec( snet_record_t *rec) 
+snet_copy_fun_t SNetGetCopyFunFromRec( snet_record_t *rec) 
 {
   return( SNetGlobalGetCopyFun( SNetGlobalGetInterface( 
                 SNetRecGetInterfaceId( rec))));
 }
 
-void *SNetGetCopyFun( int id) 
+snet_copy_fun_t SNetGetCopyFun( int id) 
 {
   return( SNetGlobalGetCopyFun( SNetGlobalGetInterface( id)));
 }
 
-void *SNetGetFreeFun( int id) 
+snet_free_fun_t SNetGetFreeFun( int id) 
 {
   return( SNetGlobalGetFreeFun( SNetGlobalGetInterface( id)));
 }
 
-void *SNetGetSerializationFunFromRec( snet_record_t *rec) 
+snet_serialise_fun_t SNetGetSerializationFunFromRec( snet_record_t *rec) 
 {
   return( SNetGlobalGetSerializationFun( SNetGlobalGetInterface( 
                     SNetRecGetInterfaceId( rec))));
 }
 
-void *SNetGetSerializationFun( int id) 
+snet_serialise_fun_t SNetGetSerializationFun( int id) 
 {
   return( SNetGlobalGetSerializationFun( SNetGlobalGetInterface( id)));
 }
 
 
-void *SNetGetDeserializationFunFromRec( snet_record_t *rec) 
+snet_deserialise_fun_t SNetGetDeserializationFunFromRec( snet_record_t *rec) 
 {
   return( SNetGlobalGetDeserializationFun( SNetGlobalGetInterface( 
                 SNetRecGetInterfaceId( rec))));
 }
 
-void *SNetGetDeserializationFun( int id) 
+snet_deserialise_fun_t SNetGetDeserializationFun( int id) 
 {
   return( SNetGlobalGetDeserializationFun( SNetGlobalGetInterface( id)));
 }
 
-void *SNetGetEncodingFunFromRec( snet_record_t *rec) 
+snet_encode_fun_t SNetGetEncodingFunFromRec( snet_record_t *rec) 
 {
   return( SNetGlobalGetEncodingFun( SNetGlobalGetInterface( 
 		SNetRecGetInterfaceId( rec))));
 }
 
-void *SNetGetEncodingFun( int id) 
+snet_encode_fun_t SNetGetEncodingFun( int id) 
 {
   return( SNetGlobalGetEncodingFun( SNetGlobalGetInterface( id)));
 }
 
 
-void *SNetGetDecodingFunFromRec( snet_record_t *rec) 
+snet_decode_fun_t SNetGetDecodingFunFromRec( snet_record_t *rec) 
 {
   return( SNetGlobalGetDecodingFun( SNetGlobalGetInterface( 
                 SNetRecGetInterfaceId( rec))));
 }
 
-void *SNetGetDecodingFun( int id) 
+snet_decode_fun_t SNetGetDecodingFun( int id) 
 {
   return( SNetGlobalGetDecodingFun( SNetGlobalGetInterface( id)));
 }

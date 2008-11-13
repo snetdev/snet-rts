@@ -27,5 +27,7 @@
 #define PORT_RANGE_START 6555 
 #define FEEDER_PORT 6999
 
+#define SNET_NAMESPACE "snet-home.org"
+
 #endif
 

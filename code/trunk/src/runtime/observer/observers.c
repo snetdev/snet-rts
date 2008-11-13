@@ -706,8 +706,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
   char *label = NULL;
   char *interface = NULL;
   snet_record_mode_t mode;
-  int (*fun)(FILE *,void *);
-  
+
   fprintf(file,"<?xml version=\"1.0\"?>");
   fprintf(file,"<observer xmlns=\"snet-home.org\" oid=\"%d\" position=\"%s\" type=\"", hnd->id, hnd->position);
 
@@ -737,12 +736,6 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
     /* fields */
     for(k=0; k<SNetRecGetNumFields( rec); k++) {    
       int id = SNetRecGetInterfaceId(rec);  
-   
-      if(mode == MODE_textual) {
-	fun = SNetGetSerializationFun(id);
-      }else {
-	fun = SNetGetEncodingFun(id);
-      }
 
       i = SNetRecGetFieldNames( rec)[k];
       if((label = SNetInIdToLabel(labels, i)) != NULL){
@@ -750,7 +743,11 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
 	   && (interface = SNetInIdToInterface(interfaces, id)) != NULL){
 	  fprintf(file,"<field label=\"%s\" interface=\"%s\" >", label, interface);
 
-	  fun(file, SNetRecGetField(rec, i));
+	  if(mode == MODE_textual) {
+	    SNetGetSerializationFun(id)(file, SNetRecGetField(rec, i));
+	  }else {
+	    SNetGetEncodingFun(id)(file, SNetRecGetField(rec, i));
+	  }
 
 	  fprintf(file,"</field>");
 	}else{
