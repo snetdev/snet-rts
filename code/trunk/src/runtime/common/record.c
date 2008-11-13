@@ -922,3 +922,27 @@ extern snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec)
   return( result);
 }
 
+extern void SNetRecCopyFieldToRec( snet_record_t *from, int old_name ,
+				   snet_record_t *to, int new_name)
+{
+  int offset_old;
+  int offset_new;
+  snet_copy_fun_t copyfun;
+
+  offset_old = FindName( SNetTencGetFieldNames( GetVEnc( from)),
+			 SNetTencGetNumFields( GetVEnc( from)), old_name);
+
+  offset_new = FindName( SNetTencGetFieldNames( GetVEnc( to)),
+			SNetTencGetNumFields( GetVEnc( to)), new_name);
+
+  if( offset_new == NOT_FOUND || offset_old == NOT_FOUND) {
+    NotFoundError( new_name, "get", "field");
+  }
+
+  copyfun = SNetGlobalGetCopyFun( SNetGlobalGetInterface( 
+				   SNetRecGetInterfaceId( from)));
+
+  DATA_REC( to, fields[offset_new]) = copyfun(DATA_REC( from, fields[offset_old]));
+
+  return; 
+}

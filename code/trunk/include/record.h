@@ -99,7 +99,14 @@ extern snet_tl_stream_t *SNetRecGetStream( snet_record_t *rec);
  */
 extern snet_record_t *SNetRecCopy( snet_record_t *rec);
 
-
+/*
+ * Copies field 'old_name' from record 'from' to 
+ * record 'to' with name 'new_name'.
+ *
+ * NOTICE: This should be used instead of "get-copy-set"!
+ */
+extern void SNetRecCopyFieldToRec( snet_record_t *from, int old_name, 
+				   snet_record_t *to, int new_name);
 
 extern void SNetRecRenameTag( snet_record_t *rec, int name, int new_name);
 extern void SNetRecRenameBTag( snet_record_t *rec, int name, int new_name);

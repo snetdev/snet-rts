@@ -336,17 +336,13 @@ FilterInheritFromInrec( snet_typeencoding_t *in_type,
 {
   int i;
   int *names;
-  snet_copy_fun_t copyfun;
 
   names = SNetRecGetFieldNames( in_rec);
 
-  copyfun = SNetGlobalGetCopyFun( SNetGlobalGetInterface( 
-                                    SNetRecGetInterfaceId( in_rec)));
   for( i=0; i<SNetRecGetNumFields( in_rec); i++) {
     if( !( FilterInTypeHasField( in_type, SNetRecGetFieldNames( in_rec)[i]))) {
       if( SNetRecAddField( out_rec, names[i])) {
-        SNetRecSetField( out_rec, names[i], 
-                         copyfun( SNetRecGetField( in_rec, names[i]))); 
+	SNetRecCopyFieldToRec(in_rec, names[i], out_rec, names[i]);
       }
     }
   }
@@ -376,7 +372,6 @@ static void *FilterThread( void *hnd)
   snet_filter_instruction_t *current_instr;
   snet_filter_instruction_set_t *current_set;
   snet_filter_instruction_set_list_t **instr_lst, *current_lst;
-  snet_copy_fun_t copyfun;
 
   done = false;
   terminate = false;
@@ -431,13 +426,10 @@ static void *FilterThread( void *hnd)
                               getExprFromInstr( current_instr), in_rec));
                         break;
                       case snet_field: {
-                        copyfun = SNetGlobalGetCopyFun( 
-                                   SNetGlobalGetInterface( SNetRecGetInterfaceId( in_rec)));
-                        SNetRecSetField( 
-                            out_rec, 
-                            getNameFromInstr( current_instr),
-                            copyfun( SNetRecGetField( in_rec, 
-                                     getFieldNameFromInstr( current_instr))));
+			SNetRecCopyFieldToRec(in_rec, 
+					      getFieldNameFromInstr( current_instr), 
+					      out_rec, 
+					      getNameFromInstr( current_instr));
                         }
                         break;
                         case create_record: //noop
@@ -688,8 +680,8 @@ extern snet_tl_stream_t
 }
 
 #else
-static void *FilterThread( void *hndl) {
-
+static void *FilterThread( void *hndl) 
+{
   int i,j;
   snet_variantencoding_t *names;
   snet_handle_t *hnd = (snet_handle_t*) hndl;
@@ -700,20 +692,19 @@ static void *FilterThread( void *hndl) {
   snet_variantencoding_t *variant;
   snet_record_t *out_rec, *in_rec;
   bool terminate = false;
-  snet_copy_fun_t copyfun;
 
   outstream = SNetHndGetOutput( hnd);
   out_type =  SNetHndGetOutType( hnd);
-
+  
   instructions = SNetHndGetFilterInstructions( hnd);
-  #ifdef DEBUG_FILTER
+#ifdef DEBUG_FILTER
   SNetUtilDebugNotice("[Filter] Use of filter v1 is deprecated.\n\n");
-  #endif
+#endif
   while( !( terminate)) {
     in_rec = SNetTlRead( SNetHndGetInput( hnd));
     switch( SNetRecGetDescriptor( in_rec)) {
-      case REC_data:
-        for( i=0; i<SNetTencGetNumVariants( out_type); i++) {
+    case REC_data:
+      for( i=0; i<SNetTencGetNumVariants( out_type); i++) {
         names = SNetTencCopyVariantEncoding( SNetRecGetVariantEncoding( in_rec));
         variant = SNetTencCopyVariantEncoding( SNetTencGetVariant( out_type, i+1));
         out_rec = SNetRecCreate( REC_data, variant);
@@ -725,100 +716,96 @@ static void *FilterThread( void *hndl) {
         for( j=0; j<set->num; j++) {
           instr = set->instructions[j];
           switch( instr->opcode) {
-            case FLT_strip_tag:
-              SNetTencRemoveTag( names, instr->data[0]);
-              break;
-            case FLT_strip_field:
-//              SNetFreeField( 
-//                  SNetRecGetField( in_rec, instr->data[0]),
-//                  SNetRecGetLanguage( in_rec));
-              SNetTencRemoveField( names, instr->data[0]);
-              break;
-            case FLT_add_tag:
-              SNetRecSetTag( out_rec, instr->data[0], 0); 
-              break;
-            case FLT_set_tag:
-              // expressions are ignored for now!
-              SNetRecSetTag( out_rec, instr->data[0], 0);
-              break;
-            case FLT_rename_tag:
-              SNetRecSetTag( out_rec, instr->data[1], 
-                  SNetRecGetTag( in_rec, instr->data[0]));
-              SNetTencRemoveTag( names, instr->data[0]);
-              break;
-            case FLT_rename_field:
-              SNetRecSetField( out_rec, instr->data[1], 
-                  SNetRecGetField( in_rec, instr->data[0]));
-              SNetTencRemoveField( names, instr->data[0]);
-              break;
-            case FLT_copy_field: {
-              copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
-              SNetRecSetField( out_rec, instr->data[0],
-                copyfun( SNetRecGetField( in_rec, instr->data[0])));
-              }
-              break;
-            case FLT_use_tag:
-              SNetRecSetTag( out_rec, instr->data[0],
-                  SNetRecGetTag( in_rec, instr->data[0]));
-              break;
-            case FLT_use_field:
-              SNetRecSetField( out_rec, instr->data[0],
-                  SNetRecGetField( in_rec, instr->data[0]));
-              break;
+	  case FLT_strip_tag:
+	    SNetTencRemoveTag( names, instr->data[0]);
+	    break;
+	  case FLT_strip_field:
+	    //              SNetFreeField( 
+	    //                  SNetRecGetField( in_rec, instr->data[0]),
+	    //                  SNetRecGetLanguage( in_rec));
+	    SNetTencRemoveField( names, instr->data[0]);
+	    break;
+	  case FLT_add_tag:
+	    SNetRecSetTag( out_rec, instr->data[0], 0); 
+	    break;
+	  case FLT_set_tag:
+	    // expressions are ignored for now!
+	    SNetRecSetTag( out_rec, instr->data[0], 0);
+	    break;
+	  case FLT_rename_tag:
+	    SNetRecSetTag( out_rec, instr->data[1], 
+			   SNetRecGetTag( in_rec, instr->data[0]));
+	    SNetTencRemoveTag( names, instr->data[0]);
+	    break;
+	  case FLT_rename_field:
+	    SNetRecSetField( out_rec, instr->data[1], 
+			     SNetRecGetField( in_rec, instr->data[0]));
+	    SNetTencRemoveField( names, instr->data[0]);
+	    break;
+	  case FLT_copy_field:
+	    SNetRecCopyFieldToRec( in_rec, instr->data[0],			     
+				   out_rec, instr->data[0]);
+	    break;
+	  case FLT_use_tag:
+	    SNetRecSetTag( out_rec, instr->data[0],
+			   SNetRecGetTag( in_rec, instr->data[0]));
+	    break;
+	  case FLT_use_field:
+	    SNetRecSetField( out_rec, instr->data[0],
+			     SNetRecGetField( in_rec, instr->data[0]));
+	    break;
           }
-        }
-        // flow inherit, remove everthing that is already present in the 
-        // outrecord. Renamed fields/tags are removed above.
-        // TODO: remove everything that is present in in_type but not in out_type
-        for( j=0; j<SNetTencGetNumFields( variant); j++) {
-//          SNetFreeField( 
-//              SNetRecGetField( in_rec, SNetTencGetFieldNames( variant)[j]),
-//              SNetRecGetLanguage( in_rec));
-          SNetTencRemoveField( names, SNetTencGetFieldNames( variant)[j]);
-        }
-        for( j=0; j<SNetTencGetNumTags( variant); j++) {
-          SNetTencRemoveTag( names, SNetTencGetTagNames( variant)[j]);
-        }
-  
-       // add everything that is left.
-        copyfun = GetCopyFun( GetInterface( SNetRecGetInterfaceId( in_rec)));
-        for( j=0; j<SNetTencGetNumFields( names); j++) {
-         if( SNetRecAddField( out_rec, SNetTencGetFieldNames( names)[j])) {
-            SNetRecSetField( out_rec,
-                SNetTencGetFieldNames( names)[j],
-                copyfun( SNetRecGetField( in_rec, SNetTencGetFieldNames( names)[j])));
-         }
-       }
-      for( j=0; j<SNetTencGetNumTags( names); j++) {
-         if( SNetRecAddTag( out_rec, SNetTencGetTagNames( names)[j])) {
-            SNetRecSetTag( out_rec,
-                SNetTencGetTagNames( names)[j],
-                SNetRecGetTag( in_rec, SNetTencGetTagNames( names)[j]));
-         }
-      }
-
-      SNetTencDestroyVariantEncoding( names);
-      SNetTlWrite(outstream, out_rec);
+	}
+	// flow inherit, remove everthing that is already present in the 
+	// outrecord. Renamed fields/tags are removed above.
+	// TODO: remove everything that is present in in_type but not in out_type
+	for( j=0; j<SNetTencGetNumFields( variant); j++) {
+	  //          SNetFreeField( 
+	  //              SNetRecGetField( in_rec, SNetTencGetFieldNames( variant)[j]),
+	  //              SNetRecGetLanguage( in_rec));
+	  SNetTencRemoveField( names, SNetTencGetFieldNames( variant)[j]);
+	}
+	for( j=0; j<SNetTencGetNumTags( variant); j++) {
+	  SNetTencRemoveTag( names, SNetTencGetTagNames( variant)[j]);
+	}
+	  
+	// add everything that is left.
+	for( j=0; j<SNetTencGetNumFields( names); j++) {
+	  if( SNetRecAddField( out_rec, SNetTencGetFieldNames( names)[j])) {
+	    SNetRecCopyFieldToRec( in_rec, SNetTencGetFieldNames( names)[j]			     
+				   out_rec, SNetTencGetFieldNames( names)[j]);
+	  }
+	}
+	for( j=0; j<SNetTencGetNumTags( names); j++) {
+	  if( SNetRecAddTag( out_rec, SNetTencGetTagNames( names)[j])) {
+	    SNetRecSetTag( out_rec,
+			   SNetTencGetTagNames( names)[j],
+			   SNetRecGetTag( in_rec, SNetTencGetTagNames( names)[j]));
+	    }
+	}
+	
+	SNetTencDestroyVariantEncoding( names);
+	SNetTlWrite(outstream, out_rec);
       }
       SNetRecDestroy( in_rec);
       break;
     case REC_sync:
-        SNetHndSetInput( hnd, SNetRecGetStream( in_rec));
-        SNetRecDestroy( in_rec);
+      SNetHndSetInput( hnd, SNetRecGetStream( in_rec));
+      SNetRecDestroy( in_rec);
       break;
-      case REC_collect:
-        #ifdef DEBUG_FILTER
-        SNetUtilDebugNotice("[Filter] Unhandled control record, destroying "
-                            "it\n\n");
-        #endif
-        SNetRecDestroy( in_rec);
-        break;
-      case REC_sort_begin:
-        SNettlWrite( SNetHndGetOutput( hnd), in_rec);
-        break;
-      case REC_sort_end:
-        SNetTlWrite( SNetHndGetOutput( hnd), in_rec);
-        break;
+    case REC_collect:
+#ifdef DEBUG_FILTER
+      SNetUtilDebugNotice("[Filter] Unhandled control record, destroying "
+			  "it\n\n");
+#endif
+      SNetRecDestroy( in_rec);
+      break;
+    case REC_sort_begin:
+      SNettlWrite( SNetHndGetOutput( hnd), in_rec);
+      break;
+    case REC_sort_end:
+      SNetTlWrite( SNetHndGetOutput( hnd), in_rec);
+      break;
     case REC_terminate:
       terminate = true;
       SNetTlWrite( outstream, in_rec);
@@ -827,7 +814,7 @@ static void *FilterThread( void *hndl) {
       break;
     }
   }
-
+  
   return( NULL);
 }
 
