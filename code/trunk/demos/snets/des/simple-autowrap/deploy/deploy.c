@@ -37,7 +37,7 @@ void ToString( int *bits)
 
 void *Feeder( void *buf)
 { 
-  snet_buffer_t *inbuf = (snet_buffer_t*)buf;
+  snet_tl_stream_t *inbuf = (snet_tl_stream_t*)buf;
   snet_record_t *rec1;
   snet_variantencoding_t *type1;
   SACarg *in_key;
@@ -95,11 +95,11 @@ void *Feeder( void *buf)
    SNetRecSetField( rec1, F__simpleDes__Key, SACARGnewReference( in_key));
    SNetRecSetInterfaceId( rec1, 0);
   
-    SNetBufPut( inbuf, rec1);
+    SNetTlWrite( inbuf, rec1);
     fprintf(stderr, "\n");
   }
   }
-  SNetBufPut( inbuf, SNetRecCreate( REC_terminate));
+  SNetTlWrite( inbuf, SNetRecCreate( REC_terminate));
  return( NULL);
 }
 
@@ -109,13 +109,13 @@ void *Reader( void *buf)
   bool terminate;
   int i, shape, *cbit_array;
   SACarg *output;
-  snet_buffer_t *outbuf = (snet_buffer_t*)buf;
+  snet_tl_stream_t *outbuf = (snet_tl_stream_t*)buf;
   snet_record_t *resrec;
 
 
   terminate = false;
   while( !terminate) {
-    resrec = SNetBufGet( outbuf);
+    resrec = SNetTlRead( outbuf);
     if( SNetRecGetDescriptor( resrec) == REC_terminate) {
       terminate = true;
     }
@@ -140,19 +140,15 @@ void *Reader( void *buf)
 
 int main(int argc, char **argv) 
 {
-  snet_buffer_t *inbuf, *outbuf;
+  snet_tl_stream_t *inbuf, *outbuf;
   pthread_t feeder, reader;
 
-  if( argc > 1) {
-    DECIPHER = true;
-  }
-  else {
-    DECIPHER = false;
-  }
+  /* if cmdl argument given, decipher */
+  DECIPHER = (argc > 1) ? true : false;
 
 
   /* Prepare buffer */
-  inbuf = SNetBufCreate( 10);
+  inbuf = SNetTlCreateStream( 10);
 
   /* Invoke network */
   SNetGlobalInitialise();
@@ -167,6 +163,7 @@ int main(int argc, char **argv)
   pthread_join( feeder, NULL);
   pthread_join( reader, NULL);
 
+  SNetTlMarkObsolete( inbuf);
   
   return( 0);
 }
