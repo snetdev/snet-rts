@@ -1,0 +1,90 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : basetype.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "basetype.int.utc.h"
+#include "domain.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetBaseTypeInit(snet_base_t *var, const snet_domain_t *domain)
+{
+    assert(var != NULL);
+    assert(domain != NULL);
+
+    var->domain    = (snet_domain_t *) domain;
+    var->ref_cnt   = 0;
+    var->plc_flags = 0;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetBaseTypeSetPlaces(
+    snet_base_t *var,
+    const place *owner, const place *mutex, const place *spec_mod)
+{
+    assert(var != NULL);
+
+    if (owner != NULL) {
+        var->plc_flags |= 0x01;
+        var->places.owner = *owner;
+    }
+
+    if (mutex != NULL) {
+        var->plc_flags |= 0x02;
+        var->places.mutex = *mutex;
+    }
+
+    if (spec_mod != NULL) {
+        var->plc_flags |= 0x04;
+        var->places.spec_mod = *spec_mod;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetBaseTypeIncrRefCnt(snet_base_t *var)
+{
+    assert(var != NULL); var->ref_cnt++;
+}
+
+void SNetBaseTypeDecrRefCnt(snet_base_t *var)
+{
+    assert(var != NULL); var->ref_cnt--;
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetBaseTypeSameDomain(const snet_base_t *var1, const snet_base_t *var2)
+{
+    return (var1 == NULL || var2 == NULL ?
+            true : SNetDomainIsSame(var1->domain, var2->domain));
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

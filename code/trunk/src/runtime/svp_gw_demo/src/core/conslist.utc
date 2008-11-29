@@ -1,0 +1,415 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : conslist.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "conslist.int.utc.h"
+
+#include "memmng.int.utc.h"
+#include "plcmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+struct cons_list_node {
+    snet_base_t base;
+    
+    snet_conslst_t *lst;
+    snet_record_t  *rec;
+    snet_gnode_t   *gnode;
+    snet_ginx_t    *dyn_inx;
+    snet_ginx_t    *min_inx;
+
+    /*---*/
+
+    bool new_min_inx;
+
+    /*---*/
+
+    struct cons_list_node *next;
+
+}; // struct cons_list_node
+
+/*---*/
+
+struct cons_list {
+    snet_base_t base;
+    
+    /*---*/
+
+    snet_conslst_node_t *head;
+    snet_conslst_node_t *tail;
+
+}; // struct cons_list
+    
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstNodeInit(snet_conslst_node_t *n, const snet_domain_t *domain)
+{
+    assert(n != NULL);
+    assert(domain != NULL);
+
+    place owner_plc = SNetGetMyPlace();
+
+    SNetBaseTypeInit(&n->base, domain);
+    SNetBaseTypeSetPlaces(&n->base, &owner_plc, NULL, NULL);
+
+    n->lst     = NULL;
+    n->rec     = NULL;
+    n->gnode   = NULL;
+    n->dyn_inx = NULL;
+    n->min_inx = SNetGInxCreate(domain);
+    
+    n->new_min_inx = false;
+    n->next        = NULL;
+}
+
+snet_conslst_node_t* SNetConsLstNodeCreate(const snet_domain_t *domain)
+{
+    assert(domain != NULL);
+
+    snet_conslst_node_t *node = 
+        (snet_conslst_node_t *) SNetMemAlloc(sizeof(snet_conslst_node_t));
+
+    if (node == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+         abort();
+    }
+
+    SNetConsLstNodeInit(node, domain);
+
+    return node;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstNodeDestroy(snet_conslst_node_t *n)
+{
+    assert(n != NULL);
+    assert(n->lst == NULL);
+    assert(n->next == NULL);
+    assert(n->min_inx != NULL);
+
+    if (n->dyn_inx != NULL)
+        SNetGInxDestroy(n->dyn_inx);
+
+    SNetGInxDestroy(n->min_inx);
+    SNetMemFree(n);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstNodeSetupMutex(snet_conslst_node_t *n, const place *p)
+{
+    assert(n != NULL);
+    SNetBaseTypeSetPlaces(&n->base, NULL, p, NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstNodeSetRecord(
+    snet_conslst_node_t *n, const snet_record_t *rec)
+{
+    assert(n != NULL);
+    assert(SNetBaseTypeSameDomain(&n->base, SNetRecToBase(rec)));
+    
+    n->rec = (snet_record_t *) rec;
+}
+
+void SNetConsLstNodeSetGraphNode(
+    snet_conslst_node_t *n, const snet_gnode_t *gnode)
+{
+    assert(n != NULL);
+    assert(SNetBaseTypeSameDomain(&n->base, SNetGNodeToBase(gnode)));
+
+    n->gnode = (snet_gnode_t *) gnode;
+}
+
+/*----------------------------------------------------------------------------*/
+
+const snet_record_t*
+SNetConsLstNodeGetRecord(const snet_conslst_node_t *n)
+{
+    assert(n != NULL); return n->rec;
+}
+
+const snet_gnode_t*
+SNetConsLstNodeGetGraphNode(const snet_conslst_node_t *n)
+{
+    assert(n != NULL); return n->gnode;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_ginx_t*
+SNetConsLstNodeGetDynGInx(snet_conslst_node_t *n)
+{
+    assert(n != NULL); return n->dyn_inx;
+}
+
+snet_ginx_t*
+SNetConsLstNodeGetMinGInx(snet_conslst_node_t *n)
+{
+    assert(n != NULL); return n->min_inx;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstNodeAddDynInx(
+    snet_conslst_node_t *n, const snet_ginx_t *ginx)
+{
+    assert(n != NULL);
+    assert(n->dyn_inx == NULL);
+    assert(SNetBaseTypeSameDomain(&n->base, SNetGInxToBase(ginx)));
+
+    n->dyn_inx = SNetGInxCreateCopy(ginx, true);
+}
+
+void SNetConsLstNodeRemoveDynInx(snet_conslst_node_t *n)
+{
+    assert(n != NULL);
+    
+    if (n->dyn_inx != NULL)
+        SNetGInxDestroy(n->dyn_inx);
+
+    n->dyn_inx = NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstNodeSetMinInxModifiedFlag(snet_conslst_node_t *n)
+{
+    assert(n != NULL); n->new_min_inx = true;
+}
+
+void SNetConsLstNodeResetMinInxModifiedFlag(snet_conslst_node_t *n)
+{
+    assert(n != NULL); n->new_min_inx = false;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_conslst_node_t*
+SNetConsLstNodeGetNext(snet_conslst_node_t *n)
+{
+    assert(n != NULL); return n->next;
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetConsLstNodeIsHead(const snet_conslst_node_t *n)
+{
+    assert(n != NULL);
+
+    if (n->lst == NULL) {
+        return false;
+    }
+
+    return (n == n->lst->head);
+}
+
+bool SNetConsLstNodeIsTail(const snet_conslst_node_t *n)
+{
+    assert(n != NULL);
+
+    if (n->lst == NULL) {
+        return false;
+    }
+
+    return (n == n->lst->tail);
+}
+
+bool SNetConsLstNodeIsAttached(const snet_conslst_node_t *n)
+{
+    assert(n != NULL); return (n->lst != NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const snet_base_t* SNetConsLstNodeToBase(const snet_conslst_node_t *n)
+{
+    assert(n != NULL); return &n->base;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstInit(snet_conslst_t *lst, const snet_domain_t *domain)
+{
+    assert(lst != NULL);
+    assert(domain != NULL);
+
+    place owner_plc = SNetGetMyPlace();
+
+    SNetBaseTypeInit(&lst->base, domain);
+    SNetBaseTypeSetPlaces(&lst->base, &owner_plc, NULL, NULL);
+
+    lst->head = NULL;
+    lst->tail = NULL;
+}
+
+snet_conslst_t* SNetConsLstCreate(const snet_domain_t *domain)
+{
+    assert(domain != NULL);
+
+    snet_conslst_t *lst = 
+        (snet_conslst_t *) SNetMemAlloc(sizeof(snet_conslst_t));
+
+    if (lst == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+    }
+
+    SNetConsLstInit(lst, domain);
+
+    return lst;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstDestroy(snet_conslst_t *lst)
+{
+    assert(lst != NULL);
+    assert(lst->head == NULL);
+    assert(lst->tail == NULL);
+
+    SNetMemFree(lst);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstSetupMutex(snet_conslst_t *lst, const place *p)
+{
+    assert(lst != NULL);
+    SNetBaseTypeSetPlaces(&lst->base, NULL, p, NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const snet_conslst_node_t*
+SNetConsLstGetHead(const snet_conslst_t *lst)
+{
+    assert(lst != NULL); return lst->head;
+}
+
+const snet_conslst_node_t*
+SNetConsLstGetTail(const snet_conslst_t *lst)
+{
+    assert(lst != NULL); return lst->tail;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetConsLstPush(snet_conslst_t *lst, snet_conslst_node_t *n)
+{
+    assert(lst != NULL);
+
+    assert(n != NULL);
+    assert(n->lst == NULL);
+    assert(n->next == NULL);
+
+    assert(SNetBaseTypeSameDomain(&lst->base, &n->base));
+
+    if (lst->tail != NULL)
+        lst->tail->next = n;
+    
+    lst->tail = n;
+
+    if (lst->head == NULL) {
+        lst->head = n;
+    }
+
+    n->lst  = lst;
+    n->next = NULL;
+}
+
+void SNetConsLstInsertAfter(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
+{
+    assert(n1 != NULL);
+    assert(n2 != NULL);
+
+    assert(n1->lst == NULL);
+    assert(n1->next == NULL);
+
+    assert(n2->lst != NULL);
+    assert(n2->next != NULL);
+
+    assert(SNetBaseTypeSameDomain(&n1->base, &n2->base));
+
+    n1->lst  = n2->lst;
+    n1->next = n2->next;
+    n2->next = n1;
+
+    if (n2->lst->tail == n2) {
+        n2->lst->tail = n1;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_conslst_node_t* SNetConsLstPop(snet_conslst_t *lst)
+{
+    assert(lst != NULL);
+
+    if (lst->head == NULL) {
+        return NULL;
+    }
+
+    snet_conslst_node_t *head = lst->head;
+
+    if (lst->head == lst->tail) {
+        lst->head = NULL;
+        lst->tail = NULL;
+
+        return head;
+    }
+
+    lst->head = lst->head->next;
+
+    return head;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const snet_base_t* SNetConsLstToBase(const snet_conslst_t *lst)
+{
+    assert(lst != NULL); return &lst->base;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

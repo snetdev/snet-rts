@@ -1,0 +1,62 @@
+PROJ_NAME := svp-snetgwrt_demo
+LIB_NAME  := $(PROJ_NAME)
+
+#---
+
+CONFIGS   := debug release
+
+#---
+
+SOURCE_DIR     := ../../src/core
+SCRIPTS_DIR    := ../../scripts
+
+#---
+
+TARGET_DIR     := ..
+INTERM_DIR     := intermediate
+
+#---
+
+SRCFILES_LST   := SrcFiles.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := ../make-config
+
+#-------------------------------------------------------------------------------
+
+MAKE    := make
+MAKEDEP := cpp
+UTC2CPP := utc2cpp
+CXX     := g++
+AR      := ar
+ARINX   := ranlib
+LD      := g++
+
+#-------------------------------------------------------------------------------
+
+INCLUDE_DIRS :=                 \
+    ../../src/include/snet-gwrt \
+    ../../src/include.int/snet-gwrt
+
+#-------------------------------------------------------------------------------
+
+MAKEDEP_FLAGS           := -MM -MP
+MAKEDEP_OUTF_FLAG       := -MF
+MAKEDEP_TARGET_FLAG     := -MT
+MAKEDEP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),-I$(d))
+
+UTC2CPP_FLAGS           := --dollar-directives
+UTC2CPP_OUTF_FLAG       := -o
+UTC2CPP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),--cpp:-I$(d))
+
+CXX_FLAGS               := -c
+CXX_OUTF_FLAG           := -o
+CXX_INCL_DIRS_FLAGS     := $(foreach d,$(INCLUDE_DIRS),-I$(d))
+
+AR_FLAGS                := rvu
+ARINX_FLAGS             :=
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

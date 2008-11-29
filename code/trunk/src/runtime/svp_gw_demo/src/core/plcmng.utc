@@ -1,0 +1,214 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : plcmng.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "plcmng.int.utc.h"
+#include "memmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+place SNetGetMyPlace()
+{
+    return PLACE_GROUP;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_place_contract_t* 
+SNetPlaceAlloc(const snet_place_specs_t *specs)
+{
+    snet_place_contract_t *contract = 
+        (snet_place_contract_t *) SNetMemAlloc(sizeof(snet_place_contract_t));
+
+    if (contract == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    contract->expires   = false;
+    contract->plc_specs = NULL;
+    contract->data      = NULL;
+    contract->data_sz   = 0;
+
+    if (specs != NULL) {
+        contract->expires = specs->expires;
+
+        contract->plc_specs =
+            (snet_place_specs_t *) SNetMemAlloc(sizeof(snet_place_specs_t));
+
+        if (contract->plc_specs == NULL) {
+            SNetMemFree(contract);
+
+            /**
+             * !!TODO!!: Handle runtime error.
+             */
+            abort();
+        }
+
+        contract->plc_specs->expires           = specs->expires;
+        contract->plc_specs->mutex             = specs->mutex;
+        contract->plc_specs->type              = specs->type;
+        contract->plc_specs->type_spec_data    = NULL;
+        contract->plc_specs->type_spec_data_sz = 0;
+
+        if (specs->type_spec_data != NULL 
+            && specs->type_spec_data_sz > 0) {
+
+            contract->plc_specs->type_spec_data = 
+                SNetMemAlloc(specs->type_spec_data_sz);
+
+            if (contract->plc_specs->type_spec_data == NULL) {
+                SNetMemFree(contract->plc_specs);
+                SNetMemFree(contract);
+
+                /**
+                 * !!TODO!!: Handle runtime error
+                 */
+                abort();
+             }
+
+             contract->plc_specs->type_spec_data_sz = specs->type_spec_data_sz;
+
+             SNetMemCopy(
+                specs->type_spec_data, 
+                contract->plc_specs->type_spec_data, 
+                contract->plc_specs->type_spec_data_sz);
+        }
+    }
+
+    // !!NOTE: uTC-PTL specific!!
+    // This code will be replaced when the SEP API
+    // is defined and an implementation of SEP exists.
+
+    uTC::PlaceInfo *plc_info = 
+        (uTC::PlaceInfo *) SNetMemAlloc(sizeof(uTC::PlaceInfo));
+
+    if (plc_info == NULL) {
+        if (contract->plc_specs != NULL) {
+            if (contract->plc_specs->type_spec_data != NULL)
+                SNetMemFree(contract->plc_specs->type_spec_data);
+
+            SNetMemFree(contract->plc_specs);
+        }
+
+        SNetMemFree(contract);
+
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    contract->plc = (place) plc_info;
+
+    uTC::PlaceInfo default_plc_info = {
+        1,
+        false,
+        PTHREAD_MUTEX_INITIALIZER,
+        false,
+        PTHREAD_COND_INITIALIZER,
+        NULL
+    };
+
+    SNetMemCopy(
+        &default_plc_info, 
+        plc_info, 
+        sizeof(uTC::PlaceInfo));
+    
+    plc_info->exclusive_flag = specs->mutex;
+
+    if (specs->type == PLACE_TYPE_CONDVAR) {
+        // ??????
+    };
+
+    // !!END OF uTC-PTL specific!!
+
+    return contract;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetPlaceFree(snet_place_contract_t *contract)
+{
+    assert(contract != NULL);
+
+    // !!NOTE: uTC-PTL specific!!
+    // This code will be replaced when the SEP API
+    // is defined and an implementation of SEP exists.
+
+    uTC::PlaceInfo *plc_info = (uTC::PlaceInfo *)(contract->plc);
+
+    if (plc_info != NULL)
+        SNetMemFree(plc_info);
+    
+    // !!END OF uTC-PTL specific!!
+
+    if (contract->plc_specs != NULL) {
+        if (contract->plc_specs->type_spec_data != NULL)
+            SNetMemFree(contract->plc_specs->type_spec_data);
+
+        SNetMemFree(contract->plc_specs);
+    }
+
+    if (contract->data != NULL)
+        SNetMemFree(contract->data);
+
+    SNetMemFree(contract);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+bool SNetPlaceRenewContract(snet_place_contract_t *contract)
+{
+    assert(contract != NULL);
+
+    /**
+     * Not implemented yet.
+     */
+
+    return true;
+}
+
+bool SNetPlaceValidateContract(const snet_place_contract_t *contract)
+{
+    assert(contract != NULL);
+
+    /**
+     * Not implemented yet.
+     */
+     
+    return true;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

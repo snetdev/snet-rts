@@ -1,0 +1,145 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : memmng.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "memmng.int.utc.h"
+
+/*---*/
+
+#include <stdlib.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void* get_ptr_mask()
+{
+    return (void *)(&get_ptr_mask);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void* SNetMaskPointer(void *ptr)
+{
+    void *mask = get_ptr_mask();
+
+    assert(ptr != NULL);
+    assert(ptr != mask);
+
+    assert(sizeof(unsigned long) >= sizeof(void *));
+
+    return (void *)((unsigned long)(ptr) ^ (unsigned long)(mask));
+}
+
+void* SNetUnmaskPointer(void *ptr)
+{
+    return SNetMaskPointer(ptr);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void* SNetMemAlloc(unsigned int sz)
+{
+    return malloc((size_t) sz);
+}
+
+void* SNetMemRealloc(void *p, unsigned int sz)
+{
+    assert(p != NULL);
+    return realloc(p, (size_t) sz);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetMemFree(void *p)
+{
+    assert(p != NULL);
+    free(p);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+bool SNetRemoteMemAlloc(place p, unsigned int sz, snet_remote_mem_block_t *blk)
+{
+    assert(blk != NULL);
+
+    blk->plc = p;
+    blk->ptr = malloc((size_t) sz);
+
+    return (blk->ptr != NULL);
+}
+
+bool SNetRemoteMemRealloc(unsigned int sz, snet_remote_mem_block_t *blk)
+{
+    assert(blk != NULL);
+    assert(blk->ptr != NULL);
+
+    blk->ptr = realloc(blk->ptr, (size_t) sz);
+
+    return (blk->ptr != NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetRemoteMemFree(const snet_remote_mem_block_t *blk)
+{
+    assert(blk != NULL);
+    assert(blk->ptr != NULL);
+
+    free((void *) blk->ptr);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetMemCopy(const void *src, void *dest, unsigned int count)
+{
+    assert(src != NULL);
+    assert(dest != NULL);
+
+    memcpy(dest, (void *) src, (size_t) count);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetRemoteMemCopy(
+    const void *src,
+    const snet_remote_mem_block_t *blk,  unsigned int count)
+{
+    assert(src != NULL);
+    assert(blk != NULL);
+    assert(blk->ptr != NULL);
+
+    memcpy(blk->ptr, (void *) src, (size_t) count);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

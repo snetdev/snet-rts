@@ -1,0 +1,33 @@
+CONFIGS := debug release
+
+#---
+
+MAKE         := make
+SCRIPTS_DIR  := ../scripts
+
+#---
+
+PROJECTS_LST := Projects.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := make-config
+
+#-------------------------------------------------------------------------------
+
+PROJ_DEP_SVPSNetGWRT     :=
+PROJ_DEP_TestApplication := SVPSNetGWRT
+
+#-------------------------------------------------------------------------------
+
+PROJ_CFG_SVPSNetGWRT_debug       := debug
+PROJ_CFG_SVPSNetGWRT_release     := release
+
+#---
+
+PROJ_CFG_TestApplication_debug   := debug
+PROJ_CFG_TestApplication_release := release
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

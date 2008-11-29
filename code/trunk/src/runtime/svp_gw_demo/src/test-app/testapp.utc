@@ -1,0 +1,138 @@
+#include "snet-gwrt.utc.h"
+#include "snet-gwrt.int.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+
+/*---*/
+
+extern void ginx_test(const snet_domain_t *snetd);
+extern void graph_test(const snet_domain_t *snetd);
+extern void buffer_test(const snet_domain_t *snetd);
+extern void conslst_test(const snet_domain_t *snetd);
+
+/*---*/
+
+extern void net_ioproc_test(snet_domain_t *snetd);
+
+/*---*/
+
+extern int
+SNetMain__test(int argc, char* argv[]);
+
+extern bool
+SNet__test___setup(snet_domain_t *snetd);
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Simple tests with mutual exclusive places */
+
+static thread void foo()
+{
+    index i;
+
+    int ii = i;
+
+    printf("FOO: %d\n", ii);
+}
+
+static thread void bar()
+{
+    index i;
+
+    int ii = i;
+
+    printf("BAR: %d\n", ii);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void mutexplc_test()
+{
+    family fid_foo;
+    family fid_bar;
+
+    snet_place_specs_t plc_specs = {
+        false,
+        true,
+        PLACE_TYPE_GENERIC,
+        NULL,
+        0
+    };
+
+    snet_place_contract_t *plc_contract = SNetPlaceAlloc(&plc_specs);
+
+    if (plc_contract == NULL) {
+        abort();
+    }
+
+    place plc = SNetPlaceGetFromContract(plc_contract);
+
+    // create(fid_foo; ; 0; 100; 1; 1;;) foo();
+    // create(fid_bar; ; 0; 100; 1; 1;;) bar();
+
+    create(fid_foo; plc; 0; 100; 1; 1;;) foo();
+    create(fid_bar; plc; 0; 100; 1; 1;;) bar();
+
+    sync(fid_foo);
+    sync(fid_bar);
+
+    SNetPlaceFree(plc_contract);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void Runtime_tests()
+{
+    SNetGlobalInitialize();
+
+    printf("!! S-Net GW Runtime (demo) for SVP - Test Application !!");
+    printf("\n\n");
+
+    /*---*/
+
+    snet_domain_t *snetd = SNetDomainCreate();
+
+    SNet__test___setup(snetd);
+    
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+
+    /*---*/
+
+    // mutexplc_test();
+
+    // ginx_test(snetd);
+    // buffer_test(snetd);
+    graph_test(snetd);
+    // conslst_test(snetd);
+
+    // net_ioproc_test(snetd);
+
+    /*---*/
+
+    SNetDomainDestroy((snet_domain_t *) SNetMaskPointer(snetd));
+    SNetGlobalDestroy();
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+thread void main(void)
+{
+    Runtime_tests();
+
+    /*---*/
+
+    // SNetMain__test(0, NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+

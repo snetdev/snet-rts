@@ -1,0 +1,277 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : domain.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "domain.int.utc.h"
+#include "basetype.int.utc.h"
+#include "graph.int.utc.h"
+#include "memmng.int.utc.h"
+#include "plcmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+typedef struct domain_gw_info {
+    bool          valid;
+    family        fid;
+    snet_gnode_t *gnode;
+
+    /*---*/
+
+    struct domain_gw_info *next;
+
+} snet_domain_gw_info_t;
+
+/*---*/
+
+struct domain {
+    snet_base_t base;
+    
+    /*---*/
+
+    snet_gnode_t   *graph_root;
+    snet_gnode_t   *graph_root_alias;
+
+    snet_conslst_t *cons_list;
+    snet_buffer_t  *out_buffer;
+
+    /*---*/
+
+    snet_domain_gw_info_t *gws_lst_head;
+    snet_domain_gw_info_t *gws_lst_tail;
+
+    /*---*/
+
+    struct {
+        snet_place_contract_t *mutex;
+        snet_place_contract_t *gw;
+        snet_place_contract_t *out_buf_mutex;
+
+    } plc_contracts;
+
+}; // struct domain
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Public functions used by both the runtime and user code */
+
+snet_domain_t* SNetDomainCreate()
+{
+    snet_place_specs_t mutex_plc_specs;
+
+    snet_domain_t *snetd = 
+        (snet_domain_t *) SNetMemAlloc(sizeof(snet_domain_t));
+
+    if (snetd == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+         abort();
+    }
+
+    mutex_plc_specs.expires        = false;
+    mutex_plc_specs.mutex          = true;
+    mutex_plc_specs.type           = PLACE_TYPE_SNET_RT_SPEC;
+    mutex_plc_specs.type_spec_data = NULL;
+
+    snetd->plc_contracts.mutex = SNetPlaceAlloc(&mutex_plc_specs);
+
+    if (snetd->plc_contracts.mutex == NULL) {
+        SNetMemFree(snetd);
+
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+         abort();
+    }
+
+    place owner_plc = SNetGetMyPlace();
+    place mutex_plc = SNetPlaceGetFromContract(snetd->plc_contracts.mutex);
+
+    SNetBaseTypeInit(&snetd->base, snetd);
+    SNetBaseTypeSetPlaces(&snetd->base, &owner_plc, &mutex_plc, NULL);
+
+    snetd->graph_root       = NULL;
+    snetd->graph_root_alias = NULL;
+    
+    snetd->cons_list  = SNetConsLstCreate(snetd);
+    snetd->out_buffer = SNetBufCreate(true, 0, snetd);
+
+    snetd->gws_lst_head = NULL;
+    snetd->gws_lst_tail = NULL;
+
+    // For now no special place is
+    // used for the GW
+    snetd->plc_contracts.gw = NULL;
+
+    // Create and setup a mutex place for the
+    // output buffer.
+    snetd->plc_contracts.out_buf_mutex = SNetPlaceAlloc(&mutex_plc_specs);
+
+    if (snetd->plc_contracts.out_buf_mutex == NULL) {
+        SNetPlaceFree(snetd->plc_contracts.mutex);
+        SNetMemFree(snetd);
+
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    place out_buf_mutex_plc =
+        SNetPlaceGetFromContract(snetd->plc_contracts.out_buf_mutex);
+
+    SNetBufSetupMutex(snetd->out_buffer, &out_buf_mutex_plc);
+
+    return (snet_domain_t *) SNetMaskPointer(snetd);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetDomainDestroy(snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+
+    /**
+     * !!TODO!!: Cleanup domain.
+     */
+
+    SNetBufDestroy(snetd->out_buffer);
+    SNetConsLstDestroy(snetd->cons_list);
+    
+    /**
+     * !!TODO!!: Destroy Graph
+     */
+
+    SNetPlaceFree(snetd->plc_contracts.mutex);
+
+    if (snetd->plc_contracts.gw != NULL)
+        SNetPlaceFree(snetd->plc_contracts.gw);
+    
+    SNetPlaceFree(snetd->plc_contracts.out_buf_mutex);
+    SNetMemFree(snetd);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *root)
+{
+    assert(snetd != NULL);
+    assert(root  != NULL);
+
+    if (snetd == NULL || root == NULL) {
+        return;
+    }
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+    root = (snet_gnode_t *) SNetUnmaskPointer(root);
+
+    assert(snetd->graph_root == NULL);
+
+    if (snetd->graph_root != NULL) {
+        return;
+    }
+
+    assert(SNetDomainIsSame(
+        snetd, SNetBaseTypeGetDomain(SNetGNodeToBase(root))));
+
+    if (! SNetDomainIsSame(
+        snetd, SNetBaseTypeGetDomain(SNetGNodeToBase(root)))) {
+
+        return;
+    }
+
+    snetd->graph_root = root;
+}
+
+/*----------------------------------------------------------------------------*/
+
+// void SNetDomainReplaceGraphNode(
+//     snet_domain_t *snetd, const snet_ginx_t *inx, const snet_gnode_t *n)
+// {
+//     /**
+//      * Not implemented yet
+//      */
+// }
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Private functions only used within the runtime */
+
+bool SNetDomainIsSame(
+    const snet_domain_t *snetd1, const snet_domain_t *snetd2)
+{
+    assert(snetd1 != NULL);
+    assert(snetd2 != NULL);
+
+    return (snetd1 == snetd2);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_conslst_t*
+SNetDomainGetConsList(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL); return snetd->cons_list;
+}
+
+const snet_gnode_t*
+SNetDomainGetGraphRoot(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL); return snetd->graph_root;
+}
+
+snet_buffer_t*
+SNetDomainGetOutBuffer(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL); return snetd->out_buffer;
+}
+
+/*----------------------------------------------------------------------------*/
+
+place SNetDomainGetGWPlace(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL); 
+
+    if (snetd->plc_contracts.gw == NULL)
+        return SNetGetMyPlace();
+    else
+        return SNetPlaceGetFromContract(snetd->plc_contracts.gw);
+}
+
+place SNetDomainGetOutBufferCondPlace(const snet_domain_t *snetd)
+{
+    return SNetGetMyPlace();
+}
+
+/*------------------------------END OF FILE ----------------------------------*/
+/*----------------------------------------------------------------------------*/
+

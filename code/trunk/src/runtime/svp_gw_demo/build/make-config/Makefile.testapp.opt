@@ -1,0 +1,70 @@
+PROJ_NAME    := testapp
+BIN_NAME     := $(PROJ_NAME)
+
+#---
+
+CONFIGS      := debug release
+#---
+
+SOURCE_DIR   := ../../src/test-app
+SCRIPTS_DIR  := ../../scripts
+
+#---
+
+TARGET_DIR   := ..
+INTERM_DIR   := intermediate
+
+#---
+
+SRCFILES_LST := SrcFiles.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := ../make-config
+
+#-------------------------------------------------------------------------------
+
+MAKE    := make
+MAKEDEP := cpp
+UTC2CPP := utc2cpp
+CXX     := g++
+LD      := g++
+
+#-------------------------------------------------------------------------------
+
+INCLUDE_DIRS :=                  \
+    ../../src/include            \
+    ../../src/include.int        \
+    ../../src/include/snet-gwrt  \
+    ../../src/test-app           \
+    ../../src/test-app/test_snet
+
+#-------------------------------------------------------------------------------
+
+MAKEDEP_FLAGS           := -MM -MP
+MAKEDEP_OUTF_FLAG       := -MF
+MAKEDEP_TARGET_FLAG     := -MT
+MAKEDEP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),-I$(d))
+
+UTC2CPP_FLAGS           := --dollar-directives
+UTC2CPP_OUTF_FLAG       := -o
+UTC2CPP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),--cpp:-I$(d))
+
+CXX_FLAGS               := -c
+CXX_OUTF_FLAG           := -o
+CXX_INCL_DIRS_FLAGS     := $(foreach d,$(INCLUDE_DIRS),-I$(d))
+
+#-------------------------------------------------------------------------------
+
+LIB_DIRS :=
+
+#-------------------------------------------------------------------------------
+
+LD_FLAGS                := -shared-libgcc
+LD_OUTF_FLAG            := -o
+LD_LIB_DIRS_FLAGS       := $(foreach d,$(LIB_DIRS),-L$(d))
+LD_LIBS_FLAGS           :=
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

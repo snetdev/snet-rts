@@ -1,0 +1,234 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : gw.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "gw.int.utc.h"
+
+/*---*/
+
+#include "graphstructs.int.utc.h"
+#include "conslist.int.utc.h"
+#include "domain.int.utc.h"
+#include "buffer.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Handler functions for graph nodes */
+
+static bool gnode_hnd_nop(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_box(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_synccell(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_filter(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_star(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_star_merge(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_split(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_parallel(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_parallel_merge(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_extern_conn(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool gnode_hnd_extern_conn_merge(snet_gnode_t *n)
+{
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's other static functions */
+
+static thread void 
+SNetBufPushRecordThread(snet_buffer_t *buf, snet_record_t *rec)
+{
+    SNetBufPush(buf, rec);
+}
+
+static void 
+push_to_output_buf(const snet_domain_t *snetd, snet_record_t *rec)
+{
+    snet_buffer_t *out_buf = 
+        SNetDomainGetOutBuffer(snetd);
+
+    place buf_mutex_plc =
+        SNetBaseTypeGetMutexPlace(SNetBufToBase(out_buf));
+
+    family fid;
+
+    create (
+        fid; buf_mutex_plc; 0; 0; 1; 1;;)
+            SNetBufPushRecordThread(out_buf, rec);
+
+    sync(fid);
+
+    printf("Pushed record to output buffer\n");
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetGWSetupNormalGNodeHndFuncs(snet_gnode_t *n)
+{
+    assert(n != NULL);
+    assert(n->type != GRAPH_NODE_TYPE_NOP);
+
+    switch (n->type) {
+        case GRAPH_NODE_TYPE_BOX:
+            n->data.normal->hnd_func       = &gnode_hnd_box;
+            n->data.normal->hnd_func_merge = NULL;
+            break;
+
+        case GRAPH_NODE_TYPE_SYNC:
+            n->data.normal->hnd_func       = &gnode_hnd_synccell;
+            n->data.normal->hnd_func_merge = NULL;
+            break;
+
+        case GRAPH_NODE_TYPE_FILTER:
+            n->data.normal->hnd_func       = &gnode_hnd_filter;
+            n->data.normal->hnd_func_merge = NULL;
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_STAR:
+            n->data.normal->hnd_func       = &gnode_hnd_star;
+            n->data.normal->hnd_func_merge = &gnode_hnd_star_merge;
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_SPLIT:
+            n->data.normal->hnd_func       = &gnode_hnd_split;
+            n->data.normal->hnd_func_merge = NULL;
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_PARALLEL:
+            n->data.normal->hnd_func       = &gnode_hnd_parallel;
+            n->data.normal->hnd_func_merge = &gnode_hnd_parallel_merge;
+            break;
+
+        case GRAPH_NODE_TYPE_EXTERN_CONNECTION:
+            n->data.normal->hnd_func       = &gnode_hnd_extern_conn;
+            n->data.normal->hnd_func_merge = &gnode_hnd_extern_conn_merge;
+            break;
+
+        default:
+            // This should never happen!! It is here
+            // only so that the compiler does not 
+            // complain for unhandled cases!!!
+            return;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* SNetGWxxx() thread functions */
+
+thread void SNetGW(
+    snet_handle_t *hnd, snet_record_t *rec)
+{
+    printf("GW created!!!\n");
+
+    push_to_output_buf(
+        SNetBaseTypeGetDomain(SNetRecToBase(rec)), rec);
+}
+
+thread void SNetGWRaw(
+    snet_handle_t *hnd, int variant_num, void **args)
+{
+    /**
+     * Not impelemented yet.
+     */
+}
+
+thread void SNetGWRawArray(
+    snet_handle_t *hnd, 
+    int if_id, int var_num, void **fields, int **tags, int **btags)
+{
+    /**
+     * Not implemented yet.
+     */
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

@@ -1,0 +1,440 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : buffer.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "buffer.int.utc.h"
+
+#include "memmng.int.utc.h"
+#include "plcmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+typedef struct buffer_bucket {
+    void **store;
+    struct buffer_bucket *next;
+
+} snet_buf_bucket_t;
+
+typedef struct buffer_iterator {
+    unsigned int       inx;
+    snet_buf_bucket_t *bucket;
+
+} snet_buf_iterator_t;
+
+/*---*/
+
+struct buffer {
+    snet_base_t base;
+
+    bool dynamic;
+
+    unsigned int sz;
+    unsigned int bucket_sz;
+    unsigned int buckets_cnt;
+
+    snet_buf_bucket_t  init_bucket;
+    snet_buf_bucket_t *used_buckets_head;
+    snet_buf_bucket_t *empty_buckets_head;
+    snet_buf_bucket_t *empty_buckets_tail;
+
+    snet_buf_iterator_t head;
+    snet_buf_iterator_t tail;
+
+}; // struct buffer
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Modules static functions */
+
+static void init_bucket(snet_buf_bucket_t *bucket, unsigned int sz)
+{
+    bucket->store = (void **) SNetMemAlloc(sz * sizeof(void *));
+
+    if (bucket->store == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    bucket->next = NULL;
+}
+
+static snet_buf_bucket_t* create_bucket(unsigned int sz)
+{
+    snet_buf_bucket_t *bucket =
+        (snet_buf_bucket_t *) SNetMemAlloc(sizeof(snet_buf_bucket_t));
+
+    if (bucket == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    init_bucket(bucket, sz);
+
+    return bucket;
+}
+
+static void destroy_bucket(snet_buf_bucket_t *bucket, bool is_init)
+{
+    SNetMemFree(bucket->store);
+
+    if (! is_init)
+        SNetMemFree(bucket);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetBufInit(
+    snet_buffer_t *buf, 
+    bool dynamic, unsigned int sz,  const snet_domain_t *domain)
+{
+    assert(buf != NULL);
+    assert(domain != NULL);
+
+    place owner_plc = SNetGetMyPlace();
+
+    SNetBaseTypeInit(&buf->base, domain);
+    SNetBaseTypeSetPlaces(&buf->base, &owner_plc, NULL, NULL);
+
+    buf->dynamic     = dynamic;
+    buf->sz          = 0;
+    buf->bucket_sz   = (sz > 0 ? sz : SVPSNETGWRT_BUFFER_DEFAULT_BUCKET_SZ);
+    buf->buckets_cnt = 0;
+
+    init_bucket(&buf->init_bucket, buf->bucket_sz);
+
+    if (!buf->dynamic)
+        buf->init_bucket.next = &buf->init_bucket;
+        
+    buf->used_buckets_head  = &buf->init_bucket;
+    buf->empty_buckets_head = NULL;
+    buf->empty_buckets_tail = NULL;
+    
+    buf->head.inx    = 0;
+    buf->head.bucket = &buf->init_bucket;
+
+    buf->tail.inx    = 0;
+    buf->tail.bucket = &buf->init_bucket;
+}
+
+void SNetBufInitCopy(
+    snet_buffer_t *buf, const snet_buffer_t *src_buf, bool shalow)
+{
+    assert(buf != NULL);
+    assert(src_buf != NULL);
+
+    SNetBufInit(
+        buf,
+        src_buf->dynamic,
+        src_buf->bucket_sz,
+        SNetBaseTypeGetDomain(&src_buf->base));
+
+    if (shalow) {
+        return;
+    }
+
+    snet_buf_iterator_t it = src_buf->tail;
+
+    for (unsigned int i=0; i < src_buf->sz; i++) {
+        assert(it.bucket != NULL);
+
+        if (!SNetBufPush(buf, it.bucket->store[it.inx])) {
+            /**
+             * !!TODO!!: Handle runtime error.
+             */
+            abort();
+        }
+
+        it.inx++;
+
+        if (it.inx == src_buf->bucket_sz) {
+            it.inx    = 0;
+            it.bucket = it.bucket->next;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_buffer_t* 
+SNetBufCreate(bool dynamic, unsigned int sz, const snet_domain_t *domain)
+{
+    assert(domain != NULL);
+
+    snet_buffer_t *buf = 
+        (snet_buffer_t *) SNetMemAlloc(sizeof(snet_buffer_t));
+
+    if (buf == NULL) {
+        /**
+         * !!TODO:!!: Handle runtime error
+         */
+         abort();
+    }
+
+    SNetBufInit(buf, dynamic, sz, domain);
+    SNetBaseTypeIncrRefCnt(&buf->base);
+
+    return buf;
+}
+
+snet_buffer_t* SNetBufCreateCopy(const snet_buffer_t *src_buf, bool shalow)
+{
+    assert(src_buf != NULL);
+
+    snet_buffer_t *buf = 
+        (snet_buffer_t *) SNetMemAlloc(sizeof(snet_buffer_t));
+
+    if (buf == NULL) {
+        /**
+         * !!TODO:!!: Handle runtime error
+         */
+         abort();
+    }
+
+    SNetBufInitCopy(buf, src_buf, shalow);
+
+    return buf;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetBufDestroy(snet_buffer_t *buf)
+{
+    assert(buf != NULL);
+
+    if (! buf->dynamic) {
+        destroy_bucket(&buf->init_bucket, true);
+
+        SNetMemFree(buf);
+        return;
+    }
+
+    snet_buf_bucket_t *b = buf->tail.bucket;
+
+    while (b != NULL) {
+        buf->tail.bucket = b->next;
+
+        destroy_bucket(b, (b == &buf->init_bucket));
+
+        b = buf->tail.bucket;
+    }
+
+    b = buf->empty_buckets_tail;
+
+    while (b != NULL) {
+        buf->empty_buckets_tail = b->next;
+
+        destroy_bucket(b, (b == &buf->init_bucket));
+
+        b = buf->empty_buckets_tail;
+    }
+
+    SNetMemFree(buf);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetBufSetupMutex(snet_buffer_t *buf, const place *p)
+{
+    assert(buf != NULL);
+    SNetBaseTypeSetPlaces(&buf->base, NULL, p, NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+bool SNetBufIsEmpty(const snet_buffer_t *buf)
+{
+    assert(buf != NULL); return (buf->sz == 0);
+}
+
+bool SNetBufIsDynamic(const snet_buffer_t *buf)
+{
+    assert(buf != NULL); return buf->dynamic;
+}
+
+/*----------------------------------------------------------------------------*/
+
+unsigned int SNetBufGetSize(const snet_buffer_t *buf)
+{
+    assert(buf != NULL); return buf->sz;
+}
+
+unsigned int SNetBufGetCapacity(const snet_buffer_t *buf)
+{
+    assert(buf != NULL); 
+    return buf->bucket_sz * (buf->buckets_cnt + 1);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void* SNetBufPop(snet_buffer_t *buf)
+{
+    assert(buf != NULL);
+
+    if (buf->sz == 0) {
+        return NULL;
+    }
+
+    assert(buf->tail.bucket != NULL);
+
+    void *elem = buf->tail.bucket->store[buf->tail.inx];
+
+    buf->tail.inx++;
+    buf->sz--;
+
+    snet_buf_bucket_t *empty_bucket = NULL;
+
+    if (buf->tail.inx == buf->bucket_sz) {
+        if (buf->dynamic)
+            empty_bucket = buf->tail.bucket;
+
+        buf->tail.inx    = 0;
+        buf->tail.bucket = buf->tail.bucket->next;
+        
+        assert(buf->dynamic || buf->tail.bucket != NULL);
+    }
+
+    if (empty_bucket != NULL && empty_bucket != &buf->init_bucket) {
+        unsigned int pref_capacity = buf->bucket_sz + (buf->sz * 2);
+        unsigned int curr_capacity = buf->bucket_sz * (buf->buckets_cnt + 1);
+
+        if (curr_capacity - buf->bucket_sz > pref_capacity) {
+            buf->buckets_cnt--;
+
+            if (buf->used_buckets_head == empty_bucket) {
+                buf->used_buckets_head = NULL;
+            }
+
+            destroy_bucket(empty_bucket, false);
+ 
+            return elem;
+        }
+    }
+
+    if (empty_bucket != NULL) {
+        empty_bucket->next = NULL;
+
+        if (buf->empty_buckets_head != NULL)
+            buf->empty_buckets_head->next = empty_bucket;
+
+        buf->empty_buckets_head = empty_bucket;
+
+        if (buf->empty_buckets_tail == NULL)
+            buf->empty_buckets_tail = empty_bucket;
+
+        if (buf->used_buckets_head == empty_bucket) {
+            buf->used_buckets_head = NULL;
+        }
+    }
+
+    return elem;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void* SNetBufGet(const snet_buffer_t *buf)
+{
+    assert(buf != NULL);
+
+    if (buf->sz == 0) {
+        return NULL;
+    }
+
+    return buf->tail.bucket->store[buf->tail.inx];
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetBufPush(snet_buffer_t *buf, const void *elem)
+{
+    assert(buf != NULL);
+
+    if (!buf->dynamic && buf->sz == buf->bucket_sz) {
+        return false;
+    }
+
+    if (buf->head.bucket == NULL) {
+        assert(buf->dynamic);
+
+        snet_buf_bucket_t *new_bucket = NULL;
+
+        if (buf->empty_buckets_tail == NULL) {
+            new_bucket = create_bucket(buf->bucket_sz);
+            buf->buckets_cnt++;
+
+        } else {
+            new_bucket = buf->empty_buckets_tail;
+            buf->empty_buckets_tail = buf->empty_buckets_tail->next;
+
+            if (buf->empty_buckets_tail == NULL) {
+                buf->empty_buckets_head = NULL;
+            }
+        }
+
+        if (buf->used_buckets_head != NULL)
+            buf->used_buckets_head->next = new_bucket;
+
+        buf->used_buckets_head = new_bucket;
+        buf->head.bucket       = new_bucket; 
+        buf->head.bucket->next = NULL;
+
+        if (buf->tail.bucket == NULL)
+            buf->tail.bucket = new_bucket;
+    }
+
+    buf->head.bucket->store[buf->head.inx] = (void *) elem;
+
+    buf->head.inx++;
+    buf->sz++;
+
+    if (buf->head.inx == buf->bucket_sz) {
+        buf->head.inx    = 0;
+        buf->head.bucket = buf->head.bucket->next;
+    }
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const snet_base_t* SNetBufToBase(const snet_buffer_t *buf)
+{
+    assert(buf != NULL); return &buf->base;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

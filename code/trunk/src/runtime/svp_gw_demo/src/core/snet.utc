@@ -1,0 +1,371 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : snet.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    : This file contains functions that implement the primary 
+                     services of the runtime.
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "snet.utc.h"
+
+/*---*/
+
+#include "common.int.utc.h"
+#include "memmng.int.utc.h"
+#include "handle.int.utc.h"
+#include "domain.int.utc.h"
+
+#include "gw.int.utc.h"
+#include "conslist.int.utc.h"
+
+/*---*/
+
+#include <stdarg.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Global initialization and termination and box lanugage interface related
+ * routines for the runtime.
+ */
+
+void SNetGlobalInitialize()
+{
+    /**
+     * Not implemented yet
+     */
+}
+
+void SNetGlobalDestroy()
+{
+    /**
+     * Not implemented yet
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+bool SNetGlobalRegisterInterface(
+    int id,
+    void  (*freefun) (void *),
+    void* (*copyfun) (void *),
+    int   (*serfun)  (void *, char **),
+    void* (*deserfun)(char *, int))
+{
+    /**
+     * Not implemented yet
+     */
+
+     return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void* SNetGetCopyFun(int id)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetFreeFun(int id)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetSerializationFun(int id)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetDeserializationFun(int id)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void* SNetGetCopyFunFromRec(snet_record_t *rec)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetFreeFunFromRec(snet_record_t *rec)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetSerializationFunFromRec(snet_record_t *rec)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetDeserializationFunFromRec(snet_record_t *rec)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Network execution management functions
+ */
+
+void SNetKill(snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+
+    /**
+     * Not implemented yet
+     */
+}
+
+void SNetSqueeze(snet_domain_t *snetd)
+{
+    /**
+     * Not implemented yet
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * SNetPushIn() function used to insert
+ * records to the network.
+ */
+
+void SNetPushIn(snet_domain_t *snetd, snet_record_t *rec)
+{
+    assert(snetd != NULL);
+    assert(rec != NULL);
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+
+    assert(SNetDomainIsSame(
+        snetd, SNetBaseTypeGetDomain(SNetRecToBase(rec))));
+
+    if (rec == NULL) {
+        return;
+    }
+    
+    // Create a new cons-list node.
+    snet_conslst_node_t *cons_node = SNetConsLstNodeCreate(snetd);
+
+    // Set the graph node of the new cons-node to the
+    // root of the graph and then add the cons-node to the
+    // cons-list.
+    SNetConsLstNodeSetGraphNode(
+        cons_node,
+        SNetDomainGetGraphRoot(snetd));
+
+    SNetConsLstPush(SNetDomainGetConsList(snetd), cons_node);
+
+    // Create a handle that points to the new cons-node
+    // and then create the 1st GW instance giving it
+    // the handle.
+    snet_handle_t *hnd = SNetHandleCreate(cons_node);
+    
+    family fid;
+    place  gw_plc = SNetDomainGetGWPlace(snetd); 
+
+    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * SNetPopOut() function used to get output
+ * records of a network.
+ */
+
+static thread void read_net_out_buffer(
+    snet_buffer_t *buf, place *cond_plc, shared snet_record_t *out_rec)
+{
+    snet_record_t *r = (snet_record_t *) SNetBufPop(buf);
+
+    if (cond_plc == NULL) {
+        out_rec = r;
+        return;
+    }
+
+    if (r == NULL) {
+        /**
+         * !!TODO!!: Suspend ?????????
+         */
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_record_t* SNetPopOut(snet_domain_t *snetd, bool block)
+{
+    assert(snetd != NULL);
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+   
+    snet_record_t *rec     = NULL;
+    snet_buffer_t *out_buf = SNetDomainGetOutBuffer(snetd);
+
+    place buf_mutex_plc =
+        SNetBaseTypeGetMutexPlace(SNetBufToBase(out_buf));
+
+    place buf_cond_plc  =
+        SNetDomainGetOutBufferCondPlace(snetd);
+
+    place *buf_cond_plc_ptr = (block ? &buf_cond_plc : NULL);
+
+    family fid;
+
+    create (fid; buf_mutex_plc; 0; 0; 1; 1;;)
+        read_net_out_buffer(out_buf, buf_cond_plc_ptr, rec);
+
+    sync(fid);
+    return(rec);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * SNetOutxxx() functions that are called from boxes to emmit
+ * output records.
+ */
+
+void SNetOut(snet_handle_t *hnd, snet_record_t *rec)
+{
+    assert(hnd != NULL);
+    assert(rec != NULL);
+
+    hnd = (snet_handle_t *) SNetUnmaskPointer(hnd);
+
+    assert(SNetBaseTypeSameDomain(
+        SNetHandleToBase(hnd), SNetRecToBase(rec)));
+
+    family fid;
+
+    place  gw_plc = SNetDomainGetGWPlace(
+        SNetBaseTypeGetDomain(SNetHandleToBase(hnd))); 
+
+    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetOutRaw(snet_handle_t *hnd, int variant_num, ...)
+{
+    assert(hnd != NULL);
+    
+    if (variant_num == 0) {
+        return;
+    }
+
+    hnd = (snet_handle_t *) SNetUnmaskPointer(hnd);
+
+    family  fid;
+    va_list vargs;
+
+    place  gw_plc = SNetDomainGetGWPlace(
+        SNetBaseTypeGetDomain(SNetHandleToBase(hnd))); 
+
+    // !!NOTE!!: The "args" array allocated here
+    // is going to be freed by the GW created below.
+    void **args = (void **) SNetMemAlloc(variant_num * sizeof(void *));
+
+    if (args == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+         abort();
+    }
+
+    va_start(vargs, variant_num);
+
+    for (int i=0; i < variant_num; i++) {
+        args[i] = va_arg(vargs, void*);
+    }
+
+    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGWRaw(hnd, variant_num, args);
+
+    va_end(vargs);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetOutRawArray(
+    snet_handle_t *hnd, 
+    int if_id, int var_num, void **fields, int **tags, int **btags)
+{
+    assert(hnd != NULL);
+
+    hnd = (snet_handle_t *) SNetUnmaskPointer(hnd);
+
+    family fid;
+
+    place  gw_plc = SNetDomainGetGWPlace(
+        SNetBaseTypeGetDomain(SNetHandleToBase(hnd))); 
+
+    create (fid; gw_plc; 0; 0; 1; 1;;)
+        SNetGWRawArray(hnd, if_id, var_num, fields, tags, btags);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

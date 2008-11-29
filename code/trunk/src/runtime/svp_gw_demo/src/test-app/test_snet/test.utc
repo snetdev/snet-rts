@@ -1,0 +1,51 @@
+#include "test.snet.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static int SNet__test___run(snet_domain_t *snetd)
+{
+    return 0;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+int SNetMain__test(int argc, char* argv[])
+{
+    int ret = 0;
+
+    printf("!! S-Net GW Runtime (demo) for SVP - Test S-Net !!");
+    printf("\n");
+
+    // Initialize runtime
+    SNetGlobalInitialize();
+
+    // Create a new domain
+    snet_domain_t *snetd = SNetDomainCreate();
+
+    // Setup network
+    if (!SNet__test___setup(snetd)) {
+        return -1;
+    }
+
+    // Run
+    ret = SNet__test___run(snetd);
+    
+    // Cleanup
+    SNetDomainDestroy(snetd);
+    SNetGlobalDestroy();
+
+    return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+

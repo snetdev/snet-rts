@@ -1,0 +1,817 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : graph.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "graph.int.utc.h"
+#include "graphstructs.int.utc.h"
+
+#include "gw.int.utc.h"
+#include "domain.int.utc.h"
+
+#include "memmng.int.utc.h"
+#include "plcmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static functions */
+
+static void init_nop_node(snet_gnode_t *n)
+{
+    n->data.nop = 
+        (snet_nop_gnode_t *)
+            SNetMemAlloc(sizeof(snet_nop_gnode_t));
+
+    if (n->data.nop == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    n->data.nop->parent = NULL;
+
+    n->data.nop->lnk.merge       = false;
+    n->data.nop->lnk.node        = NULL;
+    n->data.nop->lnk.cached_node = NULL;
+}
+
+static void init_normal_node(snet_gnode_t *n)
+{
+    n->data.normal =
+        (snet_normal_gnode_t *) 
+            SNetMemAlloc(sizeof(snet_normal_gnode_t));
+
+    if (n->data.normal == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    n->data.normal->parent = NULL;
+
+    n->data.normal->inx =
+        SNetGInxCreate(SNetBaseTypeGetDomain(&n->base));
+
+    n->data.normal->lnk.merge       = false;
+    n->data.normal->lnk.node        = NULL;
+    n->data.normal->lnk.cached_node = NULL;
+
+    n->data.normal->stats.running_gw_cnt     = 0;
+    n->data.normal->stats.processed_recs_cnt = 0;
+
+    SNetGWSetupNormalGNodeHndFuncs(n);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void init_box_node(snet_gnode_t *n)
+{
+    init_normal_node(n);
+
+    n->data.normal->entity.box = 
+        (snet_box_gnode_t *) 
+            SNetMemAlloc(sizeof(snet_box_gnode_t));
+
+    if (n->data.normal->entity.box == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    n->data.normal->entity.box->func = NULL;
+    n->data.normal->entity.box->sign = NULL;
+
+    // n->data.normal->entity.box->plc_cache = SNetListCreate();
+}
+
+static void init_sync_node(snet_gnode_t *n)
+{
+    init_normal_node(n);
+
+    n->data.normal->entity.synccell = 
+        (snet_synccell_gnode_t *)
+            SNetMemAlloc(sizeof(snet_synccell_gnode_t));
+
+    if (n->data.normal->entity.synccell == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    n->data.normal->entity.synccell->out_type = NULL;
+    n->data.normal->entity.synccell->patterns = NULL;
+    n->data.normal->entity.synccell->guards   = NULL;
+
+    // n->data.normal->entity.synccell->states = SNetListCreate();
+}
+
+static void init_filter_node(snet_gnode_t *n)
+{
+    init_normal_node(n);
+
+    n->data.normal->entity.filter = 
+        (snet_filter_gnode_t *) 
+            SNetMemAlloc(sizeof(snet_filter_gnode_t));
+
+    if (n->data.normal->entity.filter == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    /**
+     * Not fully implemented yet
+     * because the structure has not been fully
+     * defined yet.
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void init_comb_star_node(snet_gnode_t *n)
+{
+    init_normal_node(n);
+
+    n->data.normal->entity.star = 
+        (snet_star_gnode_t *) 
+            SNetMemAlloc(sizeof(snet_star_gnode_t));
+
+    if (n->data.normal->entity.star == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    n->data.normal->entity.star->type   = NULL;
+    n->data.normal->entity.star->guards = NULL;
+    n->data.normal->entity.star->root   = NULL;
+}
+
+static void init_comb_split_node(snet_gnode_t *n)
+{
+    init_normal_node(n);
+
+    n->data.normal->entity.split = 
+        (snet_split_gnode_t *)
+            SNetMemAlloc(sizeof(snet_split_gnode_t));
+
+    if (n->data.normal->entity.split == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    n->data.normal->entity.split->root = NULL;
+}
+
+static void init_comb_par_node(snet_gnode_t *n)
+{
+    init_normal_node(n);
+
+    n->data.normal->entity.parallel = 
+        (snet_parallel_gnode_t *)
+            SNetMemAlloc(sizeof(snet_parallel_gnode_t));
+
+    if (n->data.normal->entity.parallel == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    n->data.normal->entity.parallel->is_det       = false;
+    n->data.normal->entity.parallel->last_taken   = 0;
+    n->data.normal->entity.parallel->branches_cnt = 0;
+    n->data.normal->entity.parallel->branches     = NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void init_extern_conn_node(snet_gnode_t *n)
+{
+    init_normal_node(n);
+
+    n->data.normal->entity.extern_conn = 
+        (snet_extern_conn_gnode_t *) 
+            SNetMemAlloc(sizeof(snet_extern_conn_gnode_t));
+
+    if (n->data.normal->entity.extern_conn == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    n->data.normal->entity.extern_conn->snetd = NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void destroy_nop_node(snet_gnode_t *n, bool deep)
+{
+    // If "deep" is "true" then we are destroying a whole graph (or part
+    // of it). In this case the node pointed by the link is destroyed
+    // only if the link is a forward one and it exists (not equal to NULL).
+    // For "merge" links we do nothing since any node pointed by such
+    // link is already being handled.
+    if (deep && !n->data.nop->lnk.merge && n->data.nop->lnk.node != NULL) {
+        // Also before we destroy the "next" node we must also
+        // check whether we are its "parent". This is for the cases
+        // where a segment of the graph has been replaced and the old
+        // segment is destroyed. In such case the "parent" of the "next"
+        // node after the segment being replaced should have changed to
+        // point to the last node of the new segment. That way we
+        // can destroy only the part that was replaced!!!
+
+        snet_gnode_t *next_node_parent = (
+            n->data.nop->lnk.node->type == GRAPH_NODE_TYPE_NOP ? 
+            n->data.nop->lnk.node->data.nop->parent :
+            n->data.nop->lnk.node->data.normal->parent);
+
+        if (next_node_parent == n)
+            SNetGNodeDestroy(n->data.nop->lnk.node, deep);
+    }
+
+    SNetMemFree(n->data.nop);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void destroy_normal_node(snet_gnode_t *n, bool deep)
+{
+    // See comments in the function 
+    // "destroy_nop_node()".
+    if (deep && 
+        !n->data.normal->lnk.merge && 
+         n->data.normal->lnk.node != NULL) {
+
+        // See comments in the function 
+        // "destroy_nop_node()".
+        snet_gnode_t *next_node_parent = (
+            n->data.normal->lnk.node->type == GRAPH_NODE_TYPE_NOP ? 
+            n->data.normal->lnk.node->data.nop->parent :
+            n->data.normal->lnk.node->data.normal->parent);
+
+        if (next_node_parent == n)
+            SNetGNodeDestroy(n->data.normal->lnk.node, deep);
+    }
+
+    if (n->data.normal->inx != NULL)
+        SNetGInxDestroy(n->data.normal->inx);
+
+    SNetMemFree(n->data.normal);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void destroy_box_node(snet_gnode_t *n)
+{
+    // SNetBoxSingDestroy(n->data.normal->entity.box->sign);
+
+    /**
+     * !!TODO!!: Free places in the cache
+     */
+
+    // SNetListDestroy(n->data.normal->entity.box->plc_cache);
+   
+    SNetMemFree(n->data.normal->entity.box);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void destroy_sync_node(snet_gnode_t *n)
+{
+    // SNetTencTypeDestroy(n->data.normal->entity.synccell->out_type);
+    // SNetTencTypeDestroy(n->data.normal->entity.synccell->patterns);
+    // SNetExprListDestroy(n->data.normal->entity.synccell->guards);
+
+    // unsigned int states_cnt =
+    //     SNetListGetSize(n->data.normal->entity.synccell->states);
+
+    // for (unsigned int i=0; i < states_cnt; i++) {
+    //     snet_synccell_state_t *s = (snet_synccell_state_t *) 
+    //         SNetListGetItemAt(n->data.normal->entity.synccell->states, i);
+
+    //     SNetGInxDestroy(s->inx);
+
+    //     unsigned int mins_cnt = SNetListGetSize(s->mins);
+
+    //     for (unsigned int j=0; j < mins_cnt; j++) {
+    //         snet_ginx_t *inx = 
+    //             (snet_ginx_t *) SNetListGetItemAt(s->mins, j);
+
+    //         SNetGInxDestroy(inx);
+    //     }
+
+    //     unsigned int bufs_cnt = SNetListGetSize(s->rec_buffers);
+
+    //     for (unsigned int j=0; j < bufs_cnt; j++) {
+    //         snet_buffer_t *buf = 
+    //             (snet_buffer_t *) SNetListGetItemAt(s->rec_buffers, j);
+
+    //         SNetBufferDestroy(buf);
+    //     }
+    // }
+
+    SNetMemFree(n->data.normal->entity.synccell);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void destroy_filter_node(snet_gnode_t *n)
+{
+    /**
+     * Not fully implemented because
+     * the definition of the related data
+     * structure is not complete yet.
+     */
+    SNetMemFree(n->data.normal->entity.filter);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void destroy_comb_star_node(snet_gnode_t *n, bool deep)
+{
+    // SNetTencTypeDestroy(n->data.normal->entity.star->type);
+    // SNetExprListDestroy(n->data.normal->entity.star->guards);
+
+    if (deep && n->data.normal->entity.star->root != NULL)
+        SNetGNodeDestroy(n->data.normal->entity.star->root, deep);
+
+    SNetMemFree(n->data.normal->entity.star);
+}
+
+static void destroy_comb_split_node(snet_gnode_t *n, bool deep)
+{
+    if (deep && n->data.normal->entity.star->root != NULL)
+        SNetGNodeDestroy(n->data.normal->entity.star->root, deep);
+
+    SNetMemFree(n->data.normal->entity.split);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void destroy_comb_par_node(snet_gnode_t *n, bool deep)
+{
+    if (deep) {
+        snet_gnode_t **branch_ptr = 
+            n->data.normal->entity.parallel->branches;
+
+        unsigned int branches_cnt =
+            n->data.normal->entity.parallel->branches_cnt;
+
+        for (unsigned int i=0; i < branches_cnt; i++, branch_ptr++) {
+            if (*branch_ptr != NULL)
+                SNetGNodeDestroy(*branch_ptr, deep);
+        }
+    }
+
+    if (n->data.normal->entity.parallel->branches != NULL)
+        SNetMemFree(n->data.normal->entity.parallel->branches);
+        
+    SNetMemFree(n->data.normal->entity.parallel);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void destroy_extern_conn_node(snet_gnode_t *n, bool deep)
+{
+    if (deep && n->data.normal->entity.extern_conn->snetd != NULL)
+        SNetDomainDestroy(n->data.normal->entity.extern_conn->snetd);
+
+    SNetMemFree(n->data.normal->entity.extern_conn);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Public to the user code functions */
+
+snet_gnode_t* SNetGraphCreate(snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+
+    if (snetd == NULL) {
+        return NULL;
+    }
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+
+    return (snet_gnode_t *)
+        SNetMaskPointer(SNetGNodeCreate(GRAPH_NODE_TYPE_NOP, snetd));
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGraphDestroy(snet_gnode_t *root)
+{
+    assert(root != NULL);
+
+    if (root == NULL) {
+        return;
+    }
+
+    root = (snet_gnode_t *) SNetUnmaskPointer(root);
+
+    assert(root->type == GRAPH_NODE_TYPE_NOP);
+
+    assert(SNetDomainGetGraphRoot(
+        SNetBaseTypeGetDomain(SNetGNodeToBase(root))) != root);
+
+    SNetGNodeDestroy(root, true);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Private to the runtime functions */
+
+void SNetGNodeInit(
+    snet_gnode_t *n,
+    snet_gnode_type_t type, const snet_domain_t *snetd)
+{
+    assert(n != NULL);
+    assert(snetd != NULL);
+
+    place owner_plc = SNetGetMyPlace();
+
+    SNetBaseTypeInit(&n->base, snetd);
+    SNetBaseTypeSetPlaces(&n->base, &owner_plc, NULL, NULL);
+
+    n->type = type;
+
+    switch (type) {
+        case GRAPH_NODE_TYPE_NOP:
+            init_nop_node(n);
+            break;
+
+        case GRAPH_NODE_TYPE_BOX:
+            init_box_node(n);
+            break;
+
+        case GRAPH_NODE_TYPE_SYNC:
+            init_sync_node(n);
+            break;
+
+        case GRAPH_NODE_TYPE_FILTER:
+            init_filter_node(n);
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_STAR:
+            init_comb_star_node(n);
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_SPLIT:
+            init_comb_split_node(n);
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_PARALLEL:
+            init_comb_par_node(n);
+            break;
+
+        case GRAPH_NODE_TYPE_EXTERN_CONNECTION:
+            init_extern_conn_node(n);
+            break;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetGNodeCreate(
+    snet_gnode_type_t type, const snet_domain_t *snetd)
+{
+    snet_gnode_t *node = 
+        (snet_gnode_t *) SNetMemAlloc(sizeof(snet_gnode_t));
+
+    if (node == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error
+         */
+        abort();
+    }
+
+    SNetGNodeInit(node, type, snetd);
+
+    return node;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeDestroy(snet_gnode_t *n, bool deep)
+{
+    assert(n != NULL);
+
+    switch (n->type) {
+        case GRAPH_NODE_TYPE_NOP:
+            destroy_nop_node(n, deep);
+            break;
+
+        case GRAPH_NODE_TYPE_BOX:
+            destroy_box_node(n);
+            destroy_normal_node(n, deep);
+            break;
+
+        case GRAPH_NODE_TYPE_SYNC:
+            destroy_sync_node(n);
+            destroy_normal_node(n, deep);
+            break;
+
+        case GRAPH_NODE_TYPE_FILTER:
+            destroy_filter_node(n);
+            destroy_normal_node(n, deep);
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_STAR:
+            destroy_comb_star_node(n, deep);
+            destroy_normal_node(n, deep);
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_SPLIT:
+            destroy_comb_split_node(n, deep);
+            destroy_normal_node(n, deep);
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_PARALLEL:
+            destroy_comb_par_node(n, deep);
+            destroy_normal_node(n, deep);
+            break;
+
+        case GRAPH_NODE_TYPE_EXTERN_CONNECTION:
+            destroy_extern_conn_node(n, deep);
+            destroy_normal_node(n, deep);
+            break;
+    }
+
+    SNetMemFree(n);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeSetupMutex(snet_gnode_t *n, const place *p)
+{
+    assert(n != NULL);
+    SNetBaseTypeSetPlaces(&n->base, NULL, p, NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_type_t SNetGNodeGetType(const snet_gnode_t *n)
+{
+    assert(n != NULL); return n->type;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeConnect(snet_gnode_t *n1, snet_gnode_t* n2, bool merge_lnk)
+{
+    assert(n1 != NULL);
+    assert(n2 != NULL);
+    
+    assert(!merge_lnk || 
+            n2->type == GRAPH_NODE_TYPE_COMB_STAR  || 
+            n2->type == GRAPH_NODE_TYPE_COMB_SPLIT || 
+            n2->type == GRAPH_NODE_TYPE_COMB_PARALLEL);
+
+    snet_gnode_contlink_t *n1_lnk = (
+        n1->type == GRAPH_NODE_TYPE_NOP ?
+        &n1->data.nop->lnk : &n1->data.normal->lnk);
+
+    n1_lnk->merge       = merge_lnk;
+    n1_lnk->node        = n2;
+    n1_lnk->cached_node = NULL;
+
+    if (merge_lnk) {
+        return;
+    }
+
+    if (n2->type == GRAPH_NODE_TYPE_NOP)
+        n2->data.nop->parent = n1;
+    else
+        n2->data.normal->parent = n1;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeSetupNormal(snet_gnode_t *n, const snet_ginx_t *inx)
+{
+    assert(n != NULL);
+    assert(inx != NULL);
+    
+    assert(n->type != GRAPH_NODE_TYPE_NOP);
+    assert(SNetBaseTypeSameDomain(&n->base, SNetGInxToBase(inx)));
+
+    SNetGInxSetValue(n->data.normal->inx, inx, true);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeSetupBox(
+    snet_gnode_t *n, snet_box_fptr_t func, snet_box_sign_t *sign)
+{
+    assert(n != NULL);
+    assert(n->type == GRAPH_NODE_TYPE_BOX);
+
+    n->data.normal->entity.box->func = func;
+    n->data.normal->entity.box->sign = sign;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeSetupSync(
+    snet_gnode_t *n,
+    snet_typeencoding_t *out_type,
+    snet_typeencoding_t *patterns, snet_expr_list_t *guards)
+{
+    assert(n != NULL);
+    assert(n->type == GRAPH_NODE_TYPE_SYNC);
+
+    n->data.normal->entity.synccell->out_type = out_type;
+    n->data.normal->entity.synccell->patterns = patterns;
+    n->data.normal->entity.synccell->guards   = guards;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeSetupFilter(snet_gnode_t *n)
+{
+    assert(n != NULL);
+    assert(n->type == GRAPH_NODE_TYPE_FILTER);
+
+    /**
+     * Not fully implemented yet because
+     * the definition of the related data
+     * structure is not yet complete!
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeSetupStar(
+    snet_gnode_t *n,
+    bool is_det, snet_typeencoding_t *type, 
+    snet_expr_list_t *guards, snet_gnode_t *root)
+{
+    assert(n != NULL);
+    assert(n->type == GRAPH_NODE_TYPE_COMB_STAR);
+
+    assert(n->data.normal->entity.star->type == NULL);
+    assert(n->data.normal->entity.star->root == NULL);
+    assert(n->data.normal->entity.star->guards == NULL);
+
+    n->data.normal->entity.star->type   = type;
+    n->data.normal->entity.star->guards = guards;
+
+    if (root == NULL) {
+        return;
+    }
+    
+    assert(SNetBaseTypeSameDomain(&n->base, &root->base));
+
+    if (root->type == GRAPH_NODE_TYPE_NOP)
+        root->data.nop->parent = n;
+    else
+        root->data.normal->parent = n;
+
+    n->data.normal->entity.star->root = root;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeSetupSplit(snet_gnode_t *n, bool is_det, snet_gnode_t *root)
+{
+    assert(n != NULL);
+    assert(n->type == GRAPH_NODE_TYPE_COMB_SPLIT);
+    assert(n->data.normal->entity.split->root == NULL);
+
+    if (root == NULL) {
+        return;
+    }
+
+    assert(SNetBaseTypeSameDomain(&n->base, &root->base));
+
+    if (root->type == GRAPH_NODE_TYPE_NOP)
+        root->data.nop->parent = n;
+    else
+        root->data.normal->parent = n;
+
+    n->data.normal->entity.split->root = root;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeSetupParallel(
+    snet_gnode_t *n, bool is_det, unsigned int branches_cnt)
+{
+    assert(n != NULL);
+    assert(n->type == GRAPH_NODE_TYPE_COMB_PARALLEL);
+
+    n->data.normal->entity.parallel->is_det       = is_det;
+    n->data.normal->entity.parallel->branches_cnt = branches_cnt;
+
+    if (branches_cnt == 0) {
+        return;
+    }
+
+    n->data.normal->entity.parallel->branches =
+        (snet_gnode_t **) SNetMemAlloc(branches_cnt * sizeof(snet_gnode_t *));
+
+    if (n->data.normal->entity.parallel->branches == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    snet_gnode_t **branch_ptr =
+        n->data.normal->entity.parallel->branches;
+
+    for (unsigned int i=0; i < branches_cnt; i++, branch_ptr++) {
+        *branch_ptr = NULL;
+    }
+}
+
+void SNetGNodeParallelSetupBranch(
+    snet_gnode_t *n, unsigned int inx, snet_gnode_t *branch_root)
+{
+    assert(n != NULL);
+    assert(n->type == GRAPH_NODE_TYPE_COMB_PARALLEL);
+
+    assert(inx < n->data.normal->entity.parallel->branches_cnt);
+    assert(n->data.normal->entity.parallel->branches[inx] == NULL);
+
+    if (branch_root == NULL) {
+        return;
+    }
+
+    assert(SNetBaseTypeSameDomain(&n->base, &branch_root->base));
+
+    if (branch_root->type == GRAPH_NODE_TYPE_NOP)
+        branch_root->data.nop->parent = n;
+    else
+        branch_root->data.normal->parent = n;
+    
+    n->data.normal->entity.parallel->branches[inx] = branch_root;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGNodeSetupExternConn(snet_gnode_t *n, snet_domain_t *snetd)
+{
+    assert(n != NULL);
+    assert(snetd != NULL);
+
+    assert(n->type == GRAPH_NODE_TYPE_EXTERN_CONNECTION);
+    assert(n->data.normal->entity.extern_conn->snetd == NULL);
+
+    assert(!SNetDomainIsSame(snetd, SNetBaseTypeGetDomain(&n->base)));
+
+    n->data.normal->entity.extern_conn->snetd = snetd;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const snet_base_t* SNetGNodeToBase(const snet_gnode_t *n)
+{
+    assert(n != NULL); return &n->base;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

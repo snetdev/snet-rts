@@ -1,0 +1,164 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : record.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "record.int.utc.h"
+#include "graph.int.utc.h"
+
+#include "memmng.int.utc.h"
+#include "plcmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+/**
+ * Datatypes for records.
+ */
+
+typedef struct data_record {
+    void **fields;
+    int   *tags;
+    int   *btags;
+    
+    /*---*/
+
+    snet_typeencoding_t *type;
+
+} snet_data_record_t;
+
+/*---*/
+
+typedef struct ctrl_record {
+    unsigned int  id;
+    unsigned int  data_sz;
+    void         *data;
+
+} snet_ctrl_record_t;
+
+/*---*/
+
+typedef struct net_record {
+    snet_gnode_t *root;
+
+} snet_net_record_t;
+
+/*---*/
+
+struct record {
+    snet_base_t  base;
+    unsigned int ifid;
+
+    snet_record_descr_t descr;
+    snet_record_mode_t  mode;
+
+    union {
+        snet_data_record_t data;
+        snet_ctrl_record_t ctrl;
+        snet_net_record_t  net;
+
+    } spec;
+
+}; // struct record
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_record_t*
+SNetRecCreate(snet_record_descr_t descr, const snet_domain_t *domain, ...)
+{
+    assert(domain != NULL);
+
+    snet_record_t *rec = 
+        (snet_record_t *) SNetMemAlloc(sizeof(snet_record_t));
+
+    if (rec == NULL) {
+        /**
+         * !!!TODO!!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    place owner_plc = SNetGetMyPlace();
+
+    SNetBaseTypeInit(&rec->base, domain);
+    SNetBaseTypeSetPlaces(&rec->base, &owner_plc, NULL, NULL);
+
+    rec->ifid  = 0;
+    rec->descr = descr;
+    rec->mode  = REC_MODE_BIN;
+
+    switch (descr) {
+        case REC_DESCR_DATA:
+            rec->spec.data.type   = NULL;
+            rec->spec.data.fields = NULL;
+            rec->spec.data.tags   = NULL;
+            rec->spec.data.btags  = NULL;
+
+            break;
+
+        case REC_DESCR_CTRL:
+            rec->spec.ctrl.id      = 0;
+            rec->spec.ctrl.data_sz = 0;
+            rec->spec.ctrl.data    = NULL;
+            
+            break;
+
+        case REC_DESCR_NET :
+            rec->spec.net.root = NULL;
+            break;
+    }
+
+    return rec;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetRecDestroy(snet_record_t *rec)
+{
+    assert(rec != NULL);
+    SNetMemFree(rec);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_record_descr_t SNetRecGetDescription(const snet_record_t *rec)
+{
+    assert(rec != NULL); return rec->descr;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const snet_base_t* SNetRecToBase(const snet_record_t *rec)
+{
+    assert(rec != NULL); return &rec->base;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

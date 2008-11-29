@@ -1,0 +1,353 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : entities.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "entities.utc.h"
+#include "graph.int.utc.h"
+#include "basetype.int.utc.h"
+#include "memmng.int.utc.h"
+
+/*---*/
+
+#include <stdarg.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static functions */
+
+static snet_gnode_t* create_parallel_gnode(
+    snet_gnode_t *in, 
+    bool is_det, snet_typeencoding_list_t *types, va_list vargs)
+{
+    assert(in != NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out = SNetGNodeCreate(
+        GRAPH_NODE_TYPE_COMB_PARALLEL,
+        SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
+
+    unsigned int branches_cnt = 2;
+
+    // unsigned int branches_cnt = 
+    //     (unsigned int) SNetTencGetNumTypes(types);
+
+    SNetGNodeSetupParallel(out, is_det, branches_cnt); 
+
+    for (unsigned int i=0; i < branches_cnt; i++) {
+        snet_comb_op_fptr_t branch_fun = va_arg(vargs, snet_comb_op_fptr_t);
+
+        snet_gnode_t *branch_root = SNetGNodeCreate(
+            GRAPH_NODE_TYPE_NOP,
+            SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
+
+        snet_gnode_t *branch_out = 
+            (snet_gnode_t *) SNetUnmaskPointer(
+                (*branch_fun)((snet_gnode_t *) SNetMaskPointer(branch_root)));
+
+        SNetGNodeParallelSetupBranch(out, i, branch_root);
+        SNetGNodeConnect(branch_out, out, true);
+    }
+
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_gnode_t* create_star_gnode(
+    snet_gnode_t *in, 
+    bool is_det,
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    assert(in != NULL);
+    assert(op_b == NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out = SNetGNodeCreate(
+        GRAPH_NODE_TYPE_COMB_STAR,
+        SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
+
+    snet_gnode_t *star_root = SNetGNodeCreate(
+        GRAPH_NODE_TYPE_NOP,
+        SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
+
+    snet_gnode_t *star_out = 
+        (snet_gnode_t *) SNetUnmaskPointer(
+            (*op_a)((snet_gnode_t *) SNetMaskPointer(star_root)));
+
+    SNetGNodeSetupStar(out, is_det, type, guards, star_root);
+
+    SNetGNodeConnect(star_out, out, true);
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_gnode_t* create_split_gnode(
+    snet_gnode_t *in, 
+    bool is_det, snet_comb_op_fptr_t op, int ltag, int utag)
+{
+    assert(in != NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out = SNetGNodeCreate(
+        GRAPH_NODE_TYPE_COMB_SPLIT,
+        SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
+
+    snet_gnode_t *split_root = SNetGNodeCreate(
+        GRAPH_NODE_TYPE_NOP,
+        SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
+
+    snet_gnode_t *split_out =
+        (snet_gnode_t *) SNetUnmaskPointer(
+            (*op)((snet_gnode_t *) SNetMaskPointer(split_root)));
+
+    SNetGNodeSetupSplit(out, is_det, split_root);
+
+    SNetGNodeConnect(split_out, out, true);
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetBox(
+    snet_gnode_t *in,
+    snet_box_fptr_t func, snet_box_sign_t *sign)
+{
+    assert(in != NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out = SNetGNodeCreate(
+        GRAPH_NODE_TYPE_BOX,
+        SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
+
+    SNetGNodeSetupBox(out, func, sign);
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetSync(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *out_type,
+    snet_typeencoding_t *patterns, snet_expr_list_t *guards)
+{
+    assert(in != NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out = SNetGNodeCreate(
+        GRAPH_NODE_TYPE_SYNC,
+        SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
+
+    SNetGNodeSetupSync(out, out_type, patterns, guards);
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetSerial(
+    snet_gnode_t *in,
+    snet_comb_op_fptr_t left, snet_comb_op_fptr_t right)
+{
+    return (*right)((*left)(in));
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetParallel(
+    snet_gnode_t *in, snet_typeencoding_list_t *types, ...)
+{
+    va_list vargs;
+
+    va_start(vargs, types);
+
+    snet_gnode_t *out =
+        create_parallel_gnode(in, false, types, vargs);
+
+    va_end(vargs);
+
+    return out;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetParallelDet(
+    snet_gnode_t *in, snet_typeencoding_list_t *types, ...)
+{
+    va_list vargs;
+
+    va_start(vargs, types);
+
+    snet_gnode_t *out =
+        create_parallel_gnode(in, true, types, vargs);
+
+    va_end(vargs);
+
+    return out;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetStar(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    return create_star_gnode(in, false, type, guards, op_a, op_b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetStarIncarnate(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    return SNetStar(in, type, guards, op_a, op_b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetStarDet(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    return create_star_gnode(in, true, type, guards, op_a, op_b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetStarDetIncarnate(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    return SNetStarDet(in, type, guards, op_a, op_b);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetSplit(
+    snet_gnode_t *in, snet_comb_op_fptr_t op, int ltag, int utag)
+{
+    return create_split_gnode(in, false, op, ltag, utag);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetSplitDet(
+    snet_gnode_t *in, snet_comb_op_fptr_t op, int ltag, int utag)
+{
+    return create_split_gnode(in, true, op, ltag, utag);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetFilter(
+    snet_gnode_t *in,
+    snet_typeencoding_t *in_type, snet_expr_list_t *guards, ...)
+{
+    /**
+     * Not implemented yet.
+     */
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetTranslate(
+    snet_gnode_t *in,
+    snet_typeencoding_t *in_type, snet_expr_list_t *guards, ...)
+{
+    /**
+     * Not implemented yet.
+     */
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetNameShift(
+    snet_gnode_t *in, int offset, snet_variantencoding_t *untouched)
+{
+    /**
+     * Not implemented yet.
+     */
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* SNetExternConnection(snet_gnode_t *in, snet_domain_t *snetd)
+{
+    assert(in != NULL);
+    assert(snetd != NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out = SNetGNodeCreate(
+        GRAPH_NODE_TYPE_EXTERN_CONNECTION,
+        SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
+
+    SNetGNodeSetupExternConn(out, snetd);
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

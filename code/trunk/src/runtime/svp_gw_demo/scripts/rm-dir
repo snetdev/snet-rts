@@ -1,0 +1,80 @@
+#!/bin/sh
+
+#------------------------------------------------------------------------------
+# Shows the help text
+
+show_usage()
+{
+    echo "USAGE: rm-dir [options] DIRECTORY"
+    echo
+    echo "where DIRECTORY the directory to be removed"
+    echo
+    echo "and options include:"
+    echo "       --ignore-fail-on-non-emtpy"
+    echo "                    Delete directories."
+    echo "    -p --parents    Remove DIRECTORY and its ancestors."
+    echo "    -v --vervose    Output a diagnostic for every directory"
+    echo "                    processed."
+    echo "       --help       Display available options."
+    echo   
+
+    exit $1
+}
+
+#------------------------------------------------------------------------------
+# Initialize some variables
+
+args=""
+dirs=""
+ignore_on_fail=0
+
+#------------------------------------------------------------------------------
+#Parse command line and setup option
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+    --ignore-fail-on-non-empty)
+        ignore_on_fail=1
+        ;;
+    -p)
+        args="$args $1"
+        ;;
+    --parents)
+        args="$args $1"
+        ;;
+    -v)
+        args="$args $1"
+        ;;
+    --verbose)
+        args="$args $1"
+        ;;
+    --help)
+        show_usage 0
+        ;;
+    *)
+        dirs="$dirs $1"
+        ;;
+    esac
+    shift
+done
+
+#------------------------------------------------------------------------------
+# Main
+
+if [ $ignore_on_fail -eq 0 ]
+then
+    rmdir $args $dirs
+    exit $?
+else
+    rmdir $args $dirs
+
+    if [ $? -eq 1 ]
+    then
+        exit 0
+    fi
+fi
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+

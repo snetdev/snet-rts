@@ -1,0 +1,71 @@
+#include "snet-gwrt.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static thread void read_stdin(snet_domain_t *snetd)
+{
+    snet_record_t *rec = NULL;
+    unsigned int   num = 0;
+
+    do {
+        scanf("%u", &num);
+        //num++;
+
+        if (num == 0)
+            rec = SNetRecCreate(REC_DESCR_CTRL, snetd);
+        else
+            rec = SNetRecCreate(REC_DESCR_DATA, snetd, num);
+
+        SNetPushIn(snetd, rec);
+
+    } while (num != 0 && num < 1000);
+}
+
+static thread void write_stdout(snet_domain_t *snetd)
+{
+    snet_record_t       *rec;
+    snet_record_descr_t  rec_descr;
+
+    do {
+        rec = SNetPopOut(snetd, false);
+
+        if (rec != NULL) {
+            rec_descr = SNetRecGetDescription(rec);
+
+            printf("\n\nPoped record %p: Type = %u\n", rec, rec_descr);
+            SNetRecDestroy(rec);
+        }
+
+    } while (rec == NULL || rec_descr == REC_DESCR_DATA);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void net_ioproc_test(snet_domain_t *snetd)
+{
+    family in_proc_fid;
+    family out_proc_fid;
+
+    /**
+     * !!TODO!!: Setup network (call to snet
+     * compiler generated code).
+     */
+
+    create (in_proc_fid; ; 0; 0; 1; 1;;) read_stdin(snetd);
+    create (out_proc_fid; ; 0; 0; 1; 1;;) write_stdout(snetd);
+
+    sync(in_proc_fid);
+    sync(out_proc_fid);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
