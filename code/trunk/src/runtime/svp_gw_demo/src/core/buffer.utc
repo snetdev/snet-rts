@@ -121,6 +121,8 @@ void SNetBufInit(
     assert(buf != NULL);
     assert(domain != NULL);
 
+    domain = (const snet_domain_t *) SNetUnmaskPointer(domain);
+
     place owner_plc = SNetGetMyPlace();
 
     SNetBaseTypeInit(&buf->base, domain);
@@ -157,7 +159,8 @@ void SNetBufInitCopy(
         buf,
         src_buf->dynamic,
         src_buf->bucket_sz,
-        SNetBaseTypeGetDomain(&src_buf->base));
+        (snet_domain_t *) SNetMaskPointer(
+            SNetBaseTypeGetDomain(&src_buf->base)));
 
     if (shalow) {
         return;

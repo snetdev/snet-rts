@@ -291,17 +291,9 @@ SNet__test___SR(snet_gnode_t *in)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-bool SNet__test___setup(snet_domain_t *snetd)
+snet_gnode_t* SNet__test___test(snet_gnode_t *in)
 {
-    snet_gnode_t *root = SNetGraphCreate(snetd);
-
-    if (SNetSerial(root, &SNet__test___SL, &SNet__test___SR) == NULL) {
-        return false;
-    }
-
-    SNetDomainSetGraph(snetd, root);
-
-    return true;
+    return SNetSerial(in, &SNet__test___SL, &SNet__test___SR);
 }
 
 /*----------------------------------------------------------------------------*/

@@ -167,10 +167,6 @@ void* SNetGetDeserializationFunFromRec(snet_record_t *rec)
 
 void SNetKill(snet_domain_t *snetd)
 {
-    assert(snetd != NULL);
-
-    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
-
     /**
      * Not implemented yet
      */
@@ -226,6 +222,7 @@ void SNetPushIn(snet_domain_t *snetd, snet_record_t *rec)
     place  gw_plc = SNetDomainGetGWPlace(snetd); 
 
     create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec);
+    sync(fid);
 }
 
 /*----------------------------------------------------------------------------*/

@@ -35,9 +35,12 @@ LD      := g++
 INCLUDE_DIRS :=                  \
     ../../src/include            \
     ../../src/include.int        \
+    ../../src/include.snetc      \
     ../../src/include/snet-gwrt  \
+                                 \
     ../../src/test-app           \
-    ../../src/test-app/test_snet
+    ../../src/test-app/test_snet \
+    ../../src/test-app/test_snet/00
 
 #-------------------------------------------------------------------------------
 

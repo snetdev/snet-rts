@@ -166,6 +166,9 @@ void SNetPlaceFree(snet_place_contract_t *contract)
 
     uTC::PlaceInfo *plc_info = (uTC::PlaceInfo *)(contract->plc);
 
+    pthread_mutex_destroy(&plc_info->exclusion_mutex);
+    pthread_cond_destroy(&plc_info->exclusion_cond);
+
     if (plc_info != NULL)
         SNetMemFree(plc_info);
     

@@ -42,18 +42,6 @@
 typedef struct graph_node snet_gnode_t;
 
 /*---*/
-
-/**
- * Datatype representing a stream that is
- * used by the S-Net compiler as input for the
- * "entities" functions of the CI. For us this
- * is also "snet_gnode_t" (or "struct graph_node"). 
- * It is required so that no changes are needed in 
- * the compiler generated code.
- */
-typedef struct graph_node snet_tl_stream_t;
-
-/*---*/
 /**
  * Function pointer type for box
  * proxy functions.

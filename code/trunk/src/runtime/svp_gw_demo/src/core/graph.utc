@@ -415,6 +415,93 @@ static void destroy_extern_conn_node(snet_gnode_t *n, bool deep)
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
+
+static void 
+enumerate_graph_segment(snet_gnode_t *start_node, snet_ginx_t *start_inx)
+{
+    assert(start_node != NULL);
+    assert(start_inx != NULL);
+
+    snet_gnode_t *n   = start_node;
+    snet_ginx_t  *inx = SNetGInxCreateCopy(start_inx, true);
+
+    while (n != NULL) {
+        snet_gnode_contlink_t *lnk = (
+            n->type == GRAPH_NODE_TYPE_NOP ?
+            &n->data.nop->lnk : &n->data.normal->lnk);
+
+        if (n->type == GRAPH_NODE_TYPE_NOP) {
+            n = (lnk->merge ? NULL : lnk->node);
+            continue;
+        }
+
+        SNetGInxIncrItemValue(
+            inx, SNetGInxGetLen(inx) - 1, 1);
+
+        switch (n->type) {
+            case GRAPH_NODE_TYPE_COMB_STAR :    {
+                SNetGInxSetValue(
+                    n->data.normal->inx, inx, true);
+                
+                SNetGInxConcatStr(inx, "0.0");
+
+                enumerate_graph_segment(
+                    n->data.normal->entity.star->root, inx);
+
+                SNetGInxChopRight(inx, 2);
+                break;
+            }
+
+            case GRAPH_NODE_TYPE_COMB_SPLIT:    {
+                SNetGInxSetValue(
+                    n->data.normal->inx, inx, true);
+                
+                SNetGInxConcatStr(inx, "0.0");
+
+                enumerate_graph_segment(
+                    n->data.normal->entity.split->root, inx);
+
+                SNetGInxChopRight(inx, 2);
+                break;
+            }
+
+            case GRAPH_NODE_TYPE_COMB_PARALLEL: {
+                SNetGInxSetValue(n->data.normal->inx, inx, true);
+
+                snet_gnode_t **branch_ptr = 
+                    n->data.normal->entity.parallel->branches;
+
+                unsigned int branches_cnt =
+                    n->data.normal->entity.parallel->branches_cnt;
+
+                for (unsigned int i=0; i < branches_cnt; i++, branch_ptr++) {
+                    snet_ginx_item_t brid = -((snet_ginx_item_t)(i + 1));
+                        
+                    SNetGInxConcatArray(inx, &brid, 1);
+                    SNetGInxConcatStr(inx, "0");
+
+                    enumerate_graph_segment(*branch_ptr, inx);
+                    
+                    SNetGInxChopRight(inx, 2);
+                }
+
+                break;
+            }
+
+            default: {
+                SNetGInxSetValue(n->data.normal->inx, inx, true);
+                break;
+            }
+        }
+
+        n = (lnk->merge ? NULL : lnk->node);
+    }
+
+    SNetGInxDestroy(inx);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /* Public to the user code functions */
 
@@ -810,6 +897,87 @@ void SNetGNodeSetupExternConn(snet_gnode_t *n, snet_domain_t *snetd)
 const snet_base_t* SNetGNodeToBase(const snet_gnode_t *n)
 {
     assert(n != NULL); return &n->base;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetGraphEnumerate(snet_gnode_t *start_node)
+{
+    if (start_node == NULL) {
+        return;
+    }
+
+    snet_ginx_t *inx = NULL;
+
+    snet_gnode_t *parent       = start_node;
+    snet_gnode_t *pbranch_root = NULL;
+
+    while (inx == NULL) {
+        pbranch_root = parent;
+
+        parent = (parent->type == GRAPH_NODE_TYPE_NOP ?
+            parent->data.nop->parent : parent->data.normal->parent); 
+
+        if (parent == NULL) {
+            break; 
+        }
+
+        switch (parent->type) {
+            case GRAPH_NODE_TYPE_NOP:
+                break;
+
+            default:
+                inx = SNetGInxCreateCopy(parent->data.normal->inx, true); 
+                break;
+        }
+    }
+
+    if (inx == NULL) {
+        inx = SNetGInxCreateFromStr(
+            SNetBaseTypeGetDomain(&start_node->base), "0");
+
+        enumerate_graph_segment(start_node, inx);
+
+        SNetGInxDestroy(inx);
+        return;
+    }
+    
+    switch (parent->type) {
+        case GRAPH_NODE_TYPE_COMB_STAR :    
+        case GRAPH_NODE_TYPE_COMB_SPLIT:    {
+            SNetGInxConcatStr(inx, "0.0");
+            break;
+        }
+
+        case GRAPH_NODE_TYPE_COMB_PARALLEL: {
+            snet_gnode_t **branch_ptr = 
+                parent->data.normal->entity.parallel->branches;
+
+            unsigned int branches_cnt =
+                parent->data.normal->entity.parallel->branches_cnt;
+
+            for (unsigned int i=0; i < branches_cnt; i++, branch_ptr++) {
+                if (*branch_ptr == pbranch_root) {
+                    snet_ginx_item_t brid = -((snet_ginx_item_t)(i + 1));
+                    
+                    SNetGInxConcatArray(inx, &brid, 1);
+                    SNetGInxConcatStr(inx, "0");
+
+                    break;
+                }
+            }
+
+            break;
+        }
+
+        default: break;
+    }
+
+    enumerate_graph_segment(start_node, inx);
+
+    SNetGInxDestroy(inx);
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

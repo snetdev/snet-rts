@@ -92,6 +92,8 @@ SNetRecCreate(snet_record_descr_t descr, const snet_domain_t *domain, ...)
 {
     assert(domain != NULL);
 
+    domain = (const snet_domain_t *) SNetUnmaskPointer(domain);
+
     snet_record_t *rec = 
         (snet_record_t *) SNetMemAlloc(sizeof(snet_record_t));
 

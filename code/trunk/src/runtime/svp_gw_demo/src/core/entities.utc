@@ -88,7 +88,7 @@ static snet_gnode_t* create_star_gnode(
     snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
 {
     assert(in != NULL);
-    assert(op_b == NULL);
+    // assert(op_b == NULL);
 
     in = (snet_gnode_t *) SNetUnmaskPointer(in);
 

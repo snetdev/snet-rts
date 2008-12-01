@@ -63,17 +63,31 @@ static void print_graph(const snet_gnode_t *n, unsigned int indent)
             n->type == GRAPH_NODE_TYPE_NOP ?
             &n->data.nop->lnk : &n->data.normal->lnk);
 
+        const char *inx_null     = "<>";
+        const char *inx_infinite = "<inf>";
+
+        const char *inx = (
+            n->type == GRAPH_NODE_TYPE_NOP ?
+            inx_null : SNetGInxToString(n->data.normal->inx, NULL));
+
+        if (inx == NULL) 
+            inx = inx_infinite;
+
         print_indent(indent);
         
         if (lnk->merge) {
             assert(lnk->node != NULL);
 
             printf(
-                "N(%p, %s, merging_to(%p))\n",
-                n, GNODE_TYPE_LBLS[n->type], lnk->node);
+                "N(%p: %s, %s, merging_to(%p))\n",
+                n, inx, GNODE_TYPE_LBLS[n->type], lnk->node);
 
         } else {
-            printf("N(%p, %s)\n", n, GNODE_TYPE_LBLS[n->type]);
+            printf("N(%p: %s, %s)\n", n, inx, GNODE_TYPE_LBLS[n->type]);
+        }
+
+        if (inx != NULL && inx != inx_null && inx != inx_infinite) {
+            SNetMemFree((void *) inx);
         }
        
         switch (n->type) {
@@ -145,7 +159,6 @@ static void print_domain_graph(
     snet_gnode_t *n = (snet_gnode_t *) SNetDomainGetGraphRoot(snetd);
 
     print_indent(indent);
-
     printf("DOMAIN(%p)\n", snetd);
     print_graph(n, indent + INDENT_STEP);
 }
@@ -157,7 +170,6 @@ static void print_domain_graph(
 void graph_test(const snet_domain_t *snetd)
 {
     print_domain_graph(snetd, 0);
-    printf("\n\nDONE!!!\n\n");
 }
 
 /*----------------------------------------------------------------------------*/

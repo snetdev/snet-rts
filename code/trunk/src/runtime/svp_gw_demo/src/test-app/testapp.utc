@@ -5,8 +5,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-/*---*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 extern void ginx_test(const snet_domain_t *snetd);
 extern void graph_test(const snet_domain_t *snetd);
@@ -17,13 +20,76 @@ extern void conslst_test(const snet_domain_t *snetd);
 
 extern void net_ioproc_test(snet_domain_t *snetd);
 
-/*---*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 extern int
 SNetMain__test(int argc, char* argv[]);
 
 extern bool
 SNet__test___setup(snet_domain_t *snetd);
+
+/*----------------------------------------------------------------------------*/
+
+extern int
+SNetMain__test00(int argc, char* argv[]);
+
+extern bool
+SNet__test00___setup(snet_domain_t *snetd);
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const char *ARG_ERRS_TXT[] = {
+    "Invalid use of \"--help\" argument",
+    "Argument \"-n\" or \"-net\" has already been specified",
+    "Missing network id for \"-net\" argument"
+};
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void help()
+{
+    printf("\nUSAGE: testapp [options] [test_id]\n\n");
+
+    printf("where [test_id] a number indicating the test to be run (if not\n");
+    printf("specified no test is run)\n\n");
+
+    printf("and options include:\n");
+    printf("    -n           Together with any tests specified to be run\n");
+    printf("                 the default (-1) test S-Net (genetated from the\n");
+    printf("                 source in the directory src/test-app/test_snet)\n");
+    printf("                 will also be run.\n\n");
+    printf("    -net <netid> Together with any tests specified to be run\n");
+    printf("                 the test S-Net identified by the number\n");
+    printf("                 <netid> (generated from the source code in\n");
+    printf("                 the directory src/test-app/test_snet/<netid>)\n");
+    printf("                 will also be run.\n\n");
+    printf("    --help       Displays this message.\n\n");
+
+    printf("List of tests:\n");
+    printf("    test_id    description\n");
+    printf("    -----------------------------------------------------------------------\n");
+    printf("       0       Test of mutual exclussion uTC \"places\".\n");
+    printf("       1       Test of graph indexes.\n");
+    printf("       2       Test of \"buffer\" data structure.\n");
+    printf("       3       Test of network input and output of records.\n");
+    printf("       4       Test of cons-list structure.\n\n");
+    printf("      50       Test of graph structure for network \"test\" build\n");
+    printf("               from sources in src/test-app/test_snet\n");
+    printf("     100       Test of graph structure for network \"test00\"\n");
+    printf("               build from sources in src/test-app/test_snet/00\n\n");
+
+    printf("List of networks:\n");
+    printf("    netid   name     description                 source directory\n");
+    printf("    -----------------------------------------------------------------------\n");
+    printf("     -1     test     A..(B..(C || D))..E         src/test-app/test_snet    \n");
+    printf("      0     test00   A..(B..(C || D))*{<T>}..E   src/test-app/test_snet/00 \n");
+
+    printf("\n\n");
+}
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -88,49 +154,228 @@ static void mutexplc_test()
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-static void Runtime_tests()
+static void Runtime_tests(unsigned int tid)
 {
     SNetGlobalInitialize();
 
-    printf("!! S-Net GW Runtime (demo) for SVP - Test Application !!");
-    printf("\n\n");
+    printf("Running test %u...\n", tid);
 
     /*---*/
 
-    snet_domain_t *snetd = SNetDomainCreate();
+    snet_domain_t *snetd = 
+        (snet_domain_t *) SNetUnmaskPointer(SNetDomainCreate());
 
-    SNet__test___setup(snetd);
+    switch (tid) {
+        case 0:
+            printf("Mutual Exclussion Places Test!!\n\n");
+            
+            mutexplc_test();
+            break;
+        
+        case 1:
+            printf("Graph Index Test!!\n\n");
+
+            ginx_test(snetd);
+            break;
+
+        case 2:
+            printf("Buffer Test!!\n\n");
+
+            buffer_test(
+                (snet_domain_t *) SNetMaskPointer(snetd));
+
+            break;
+
+        case 3:
+            printf("Network Record Input/Output Test!!\n\n");
+
+            net_ioproc_test(
+                (snet_domain_t *) SNetMaskPointer(snetd));
+
+            break;
+
+        case 4:
+            printf("Cons-List Test!!\n\n");
+
+            conslst_test(snetd);
+            break;
+
+        /*---*/
+
+        case 50:
+            printf("Graph Test (net = \"test\")!!\n\n");
+
+            SNet__test___setup(
+                (snet_domain_t *) SNetMaskPointer(snetd));
+
+            graph_test(snetd);
+            break;
+
+        case 100:
+            printf("Graph Test (net = \"test00\")!!\n\n");
+
+            SNet__test00___setup(
+                (snet_domain_t *) SNetMaskPointer(snetd));
+
+            graph_test(snetd);
+            break;
+
+        //case 101:
+            //printf("Graph Test (net = \"test01\")!!\n\n");
+
+            //SNet__test01___setup(
+            //    (snet_domain_t *) SNetMaskPointer(snetd));
+
+            //graph_test(snetd);
+            //break;
+        
+        default:
+            printf("\nERROR: Invalid  test id (%u)\n", tid);
+            break;
+    }
     
-    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
-
-    /*---*/
-
-    // mutexplc_test();
-
-    // ginx_test(snetd);
-    // buffer_test(snetd);
-    graph_test(snetd);
-    // conslst_test(snetd);
-
-    // net_ioproc_test(snetd);
-
     /*---*/
 
     SNetDomainDestroy((snet_domain_t *) SNetMaskPointer(snetd));
     SNetGlobalDestroy();
+
+    printf("\n\nDONE!!\n\n");
 }
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-thread void main(void)
+thread void main(int argc, const char **argv)
 {
-    Runtime_tests();
+    const int    largc = argc;
+    const char **largv = argv;
+
+    bool run_net  = false;
+    bool help_arg = false;
+
+    const char *arg_err  = NULL;
+    const char *inv_arg  = NULL;
+
+    int rt_test    = -1;
+    int run_net_id = -1;
 
     /*---*/
 
-    // SNetMain__test(0, NULL);
+    for (int i=1; i < largc; i++) {
+        const char *arg = largv[i];
+
+        if (strcmp(arg, "--help") == 0) {
+            if (largc != 2) {
+                arg_err = ARG_ERRS_TXT[0];
+                break;
+            }
+
+            help_arg = true;
+            break;
+
+        } else if (strcmp(arg, "-n") == 0) {
+            if (run_net) {
+                arg_err = ARG_ERRS_TXT[1];
+                break;
+            }
+
+            run_net = true;
+
+        } else if (strcmp(arg, "-net") == 0) {
+            if (run_net) {
+                arg_err = ARG_ERRS_TXT[1];
+                break;
+            }
+
+            i++;
+
+            if (i == largc) {
+                arg_err = ARG_ERRS_TXT[2];
+                break;
+            }
+
+            arg = argv[i];
+
+            char *endptr = NULL;
+
+            run_net_id = (int) strtol(arg, &endptr, 0);
+
+            if (endptr == arg) {
+                inv_arg = arg;
+                break;
+            }
+                
+            run_net = true;
+
+        } else {
+            if (rt_test != -1 ) {
+                inv_arg = arg;
+                break;
+            }
+
+            char *endptr = NULL;
+
+            rt_test = (int) strtol(arg, &endptr, 0);
+
+            if (endptr == arg) {
+                inv_arg = arg;
+                break;
+            }
+        }
+    }
+
+    /*---*/
+
+    printf("!! S-Net GW Runtime (demo) for SVP - Testing Application !!\n");
+
+    if (arg_err != NULL) {
+        printf("\nERROR: %s.\n", arg_err);
+
+        help();
+        return;
+    }
+
+    if (inv_arg != NULL) {
+        printf("\nERROR: Invalid argument \"%s\".\n", inv_arg);
+
+        help();
+        return;
+    }
+
+    if (help_arg) {
+        help();
+        return;
+    }
+
+    if (rt_test >= 0)
+        Runtime_tests(rt_test);
+
+    /*---*/
+
+    if (!run_net) {
+        return;
+    }
+
+    switch (run_net_id) {
+        case -1:
+            printf("Running network \"test\"...\n\n");
+
+            SNetMain__test(0, NULL);
+            break;
+
+        case  0:
+            printf("Running network \"test00\"...\n\n");
+
+            SNetMain__test00(0, NULL);
+            break;
+
+        default:
+            printf("\nERROR: Invalid network id (%d)\n\n", run_net_id);
+            return;
+    }
+
+    printf("\n\nDONE!!\n\n");
 }
 
 /*----------------------------------------------------------------------------*/

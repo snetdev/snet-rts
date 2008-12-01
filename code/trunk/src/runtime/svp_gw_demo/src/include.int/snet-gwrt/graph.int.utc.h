@@ -134,6 +134,12 @@ SNetGNodeSetupExternConn(snet_gnode_t *n, snet_domain_t *snetd);
 
 extern const snet_base_t* SNetGNodeToBase(const snet_gnode_t *n);
 
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+extern void
+SNetGraphEnumerate(snet_gnode_t *start_node);
+
 #endif // __SVPSNETGWRT_GRAPH_INT_H
 
 /*------------------------------- END OF FILE --------------------------------*/

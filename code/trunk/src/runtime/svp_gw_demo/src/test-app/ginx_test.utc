@@ -33,8 +33,6 @@ void ginx_test(const snet_domain_t *snetd)
 {
     snet_ginx_item_t ginx_init[] = { 100000, 20, 30, 40, 50 };
 
-    printf("Graph Index Test!!\n\n");
-
     snet_ginx_t *ginx0 = SNetGInxCreateFromStr(snetd, "0.0.0.0");
     snet_ginx_t *ginx1 = SNetGInxCreateFromStr(snetd, "1.-2.3.-4");
     snet_ginx_t *ginx2 = SNetGInxCreateFromArray(snetd, ginx_init, 5);
@@ -196,7 +194,7 @@ void ginx_test(const snet_domain_t *snetd)
     /*---*/
 
     SNetGInxDestroy(ginx0);
-    SNetGInxDestroy(ginx2);
+    SNetGInxDestroy(ginx1);
 
     SNetGInxDestroy(infimum);
     SNetGInxDestroy(infimum_ext);

@@ -119,7 +119,9 @@ snet_domain_t* SNetDomainCreate()
     snetd->graph_root_alias = NULL;
     
     snetd->cons_list  = SNetConsLstCreate(snetd);
-    snetd->out_buffer = SNetBufCreate(true, 0, snetd);
+
+    snetd->out_buffer = SNetBufCreate(
+        true, 0, (snet_domain_t *) SNetMaskPointer(snetd));
 
     snetd->gws_lst_head = NULL;
     snetd->gws_lst_tail = NULL;
@@ -209,6 +211,8 @@ void SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *root)
     }
 
     snetd->graph_root = root;
+
+    SNetGraphEnumerate(snetd->graph_root);
 }
 
 /*----------------------------------------------------------------------------*/

@@ -44,7 +44,7 @@ static void* get_ptr_mask()
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void* SNetMaskPointer(void *ptr)
+void* SNetMaskPointer(const void *ptr)
 {
     void *mask = get_ptr_mask();
 
@@ -53,10 +53,11 @@ void* SNetMaskPointer(void *ptr)
 
     assert(sizeof(unsigned long) >= sizeof(void *));
 
+    // return ptr;
     return (void *)((unsigned long)(ptr) ^ (unsigned long)(mask));
 }
 
-void* SNetUnmaskPointer(void *ptr)
+void* SNetUnmaskPointer(const void *ptr)
 {
     return SNetMaskPointer(ptr);
 }

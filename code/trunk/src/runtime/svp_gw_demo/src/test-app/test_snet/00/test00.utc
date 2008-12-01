@@ -1,4 +1,4 @@
-#include "test.snet.utc.h"
+#include "test00.snet.utc.h"
 
 /*---*/
 
@@ -9,7 +9,7 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-static int SNet__test___run(snet_domain_t *snetd)
+static int SNet__test00___run(snet_domain_t *snetd)
 {
     return 0;
 }
@@ -18,11 +18,11 @@ static int SNet__test___run(snet_domain_t *snetd)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-bool SNet__test___setup(snet_domain_t *snetd)
+bool SNet__test00___setup(snet_domain_t *snetd)
 {
     snet_gnode_t *root = SNetGraphCreate(snetd);
 
-    if (SNet__test___test(root) == NULL) {
+    if (SNet__test00___test00(root) == NULL) {
         return false;
     }
 
@@ -34,7 +34,7 @@ bool SNet__test___setup(snet_domain_t *snetd)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-int SNetMain__test(int argc, char* argv[])
+int SNetMain__test00(int argc, char* argv[])
 {
     int ret = 0;
 
@@ -45,12 +45,12 @@ int SNetMain__test(int argc, char* argv[])
     snet_domain_t *snetd = SNetDomainCreate();
 
     // Setup network
-    if (!SNet__test___setup(snetd)) {
+    if (!SNet__test00___setup(snetd)) {
         return -1;
     }
 
     // Run
-    ret = SNet__test___run(snetd);
+    ret = SNet__test00___run(snetd);
     
     // Cleanup
     SNetDomainDestroy(snetd);

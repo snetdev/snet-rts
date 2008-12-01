@@ -41,8 +41,8 @@ typedef struct {
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-extern void* SNetMaskPointer(void *ptr);
-extern void* SNetUnmaskPointer(void *ptr);
+extern void* SNetMaskPointer(const void *ptr);
+extern void* SNetUnmaskPointer(const void *ptr);
 
 /*----------------------------------------------------------------------------*/
 

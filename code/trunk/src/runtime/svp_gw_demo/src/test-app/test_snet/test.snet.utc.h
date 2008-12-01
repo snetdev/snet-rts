@@ -29,7 +29,7 @@ extern const char *snet_test_interfaces[];
 
 /*----------------------------------------------------------------------------*/
 
-extern bool SNet__test___setup(snet_domain_t *snetd);
+extern snet_gnode_t* SNet__test___test(snet_gnode_t *in);
 
 #endif // _TEST_SNET_H_
 

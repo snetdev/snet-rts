@@ -11,8 +11,6 @@
 
 void buffer_test(const snet_domain_t *snetd)
 {
-    printf("Buffer Test!!\n\n");
-
     unsigned int i = 0;
     unsigned int test_sz = 100000;
     unsigned int int_buf_item = 111;
@@ -82,8 +80,6 @@ void buffer_test(const snet_domain_t *snetd)
     }
     
     SNetBufDestroy(buf);
-    
-    printf("\nDONE!!!\n\n");
 }
 
 /*----------------------------------------------------------------------------*/
