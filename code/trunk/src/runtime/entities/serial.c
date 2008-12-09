@@ -7,32 +7,50 @@
 /*  SNetSerial                                                               */
 /* ------------------------------------------------------------------------- */
 
-extern snet_tl_stream_t*
-SNetSerial(snet_tl_stream_t *input, 
-           snet_tl_stream_t* (*box_a)(snet_tl_stream_t*),
-           snet_tl_stream_t* (*box_b)(snet_tl_stream_t*)) {
-
+extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input, 
+#ifdef DISTRIBUTED_SNET
+				    snet_dist_info_t *info, 
+				    int location,
+#endif /* DISTRIBUTED_SNET */
+				    snet_startup_fun_t box_a,
+				    snet_startup_fun_t box_b)
+{
   snet_tl_stream_t *internal_stream;
   snet_tl_stream_t *output;
 
-  #ifdef SERIAL_DEBUG
+#ifdef IGNORE_ROOT_NODE
+  /* This section forces input stream into root node. 
+   * Otherwise, the root node is ignored.
+   */
+  input = SNetRoutingInfoUpdate(info->routing, location, input); 
+#endif /* IGNORE_ROOT_NODE */
+
+#ifdef SERIAL_DEBUG
   SNetUtilDebugNotice("Serial creation started");
   SNetUtilDebugNotice("box_a = %p, box_b = %p", box_a, box_b);
-  #endif
+#endif
   internal_stream = (*box_a)(input);
 
-  #ifdef SERIAL_DEBUG
+#ifdef SERIAL_DEBUG
   SNetUtilDebugNotice("Serial creation halfway done");
-  #endif
+#endif
   output = (*box_b)(internal_stream);
 
-  #ifdef SERIAL_DEBUG
+#ifdef SERIAL_DEBUG
   SNetUtilDebugNotice("-");
   SNetUtilDebugNotice("| SERIAL CREATED");
   SNetUtilDebugNotice("| input: %p", input);
   SNetUtilDebugNotice("| middle stream: %p", internal_stream);
   SNetUtilDebugNotice("| output: %p", output);
   SNetUtilDebugNotice("-");
-  #endif
+#endif
+
+#ifdef IGNORE_ROOT_NODE
+  /* This section forces output stream into root node. 
+   * Otherwise, the root node is ignored.
+   */
+  output = SNetRoutingInfoUpdate(info->routing, location, output);
+#endif /* IGNORE_ROOT_NODE */
+
   return(output);
 }

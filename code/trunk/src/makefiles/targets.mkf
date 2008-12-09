@@ -155,7 +155,7 @@ tree            = check.o check_attribs.o check_lib.o check_mem.o \
                   tree_basic.o tree_compound.o copy.o copy_attribs.o copy_node.o \
 
 parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o mdinterp.o \
-		  mdcol.o mdns.o mdaux.o
+		  mdcol.o mdns.o mdaux.o sploc.o
 
 preproc         = dcr.o tcheck.o boxex.o boxexfile.o mod.o tres.o
 
@@ -165,11 +165,11 @@ typeinf         = typing.o typeinf.o
 
 opt             = 
 
-postproc        = ptypcln.o ptran.o netren.o netflat.o
+postproc        = ptypcln.o ptran.o ploc.o netren.o netflat.o
 
 codegen         = codegen.o codefile.o cchoice.o cexpr.o cfilt.o cserial.o \
 		  cshield.o csplit.o cstar.o csync.o ctext.o ctrans.o cwrap.o \
-		  cvar.o cgenwrap.o
+		  cvar.o cgenwrap.o cfun.o
 
 invokecc        = invokecc.o
 

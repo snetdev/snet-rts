@@ -106,15 +106,18 @@ void SNetEdestroyExpr( snet_expr_t *expr) {
       for( i=0; i<3; i++) {
         SNetMemFree( expr->content.expr[i]);
       }
+      SNetMemFree(expr->content.expr);
       break;
     case NOT:
     case ABS:
       SNetMemFree( expr->content.expr[0]);
+      SNetMemFree(expr->content.expr);
       break;
     default:
       for( i=0; i<2; i++) {
         SNetMemFree( expr->content.expr[i]);
       }
+      SNetMemFree(expr->content.expr);
   }
   SNetMemFree( expr);
 }
@@ -122,36 +125,27 @@ void SNetEdestroyExpr( snet_expr_t *expr) {
 
 extern snet_expr_t *SNetEconsti( int val) {
   snet_expr_t *new;
-  int *value;
 
-  value = SNetMemAlloc( sizeof( int));
-  *value = val;
   new = CreateExpr( CONSTI);
-  new->content.ival = value;
+  *new->content.ival = val;
   
  return( new); 
 }
 
 extern snet_expr_t *SNetEconstb( bool val) {
   snet_expr_t *new;
-  bool *value;
 
-  value = SNetMemAlloc( sizeof( bool));
-  *value = val;
   new = CreateExpr( CONSTB);
-  new->content.bval = value;
+  *new->content.bval = val;
   
  return( new); 
 }
 
 static snet_expr_t *CreateTagExpr( snet_expr_type_t t, int id) {
   snet_expr_t *new;
-  int *value;
 
-  value = SNetMemAlloc( sizeof( int));
-  *value = id;
   new = CreateExpr( t);
-  new->content.ival = value;
+  *new->content.ival = id;
   
  return( new); 
 }
@@ -303,6 +297,7 @@ extern void SNetEdestroyList( snet_expr_list_t *lst)
 	SNetEdestroyExpr(lst->list[i]);
       }
     }
+    SNetMemFree(lst->list);
     
     SNetMemFree(lst);
   }

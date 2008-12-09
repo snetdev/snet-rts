@@ -9,8 +9,10 @@
 #include "typeencode.h"
 #include "stream_layer.h"
 #include "threading.h" /* for enumeration */
-//#define FILTER_DEBUG
 
+#ifdef DISTRIBUTED_SNET
+#include "distribution.h"
+#endif
 /* ------------------------------------------------------------------------- */
 /*  SNetFilter                                                               */
 /* ------------------------------------------------------------------------- */
@@ -77,13 +79,18 @@ extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcod
 }
 
 
-extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr) {
-  
-  SNetMemFree( instr->data);
-  //SNetMemFree( instr->expr);
+extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr) 
+{
+  if(instr->data != NULL) {
+    SNetMemFree( instr->data);
+  }
+  if(instr->expr != NULL) {
 #ifdef FILTER_VERSION_2
-  SNetEdestroyExpr(instr->expr);
+    SNetEdestroyExpr(instr->expr);
+#else
+    SNetMemFree(instr->expr);
 #endif
+  }
   SNetMemFree( instr);
 }
 
@@ -139,29 +146,34 @@ extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList( i
   return( lst);
 }
 
+extern void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set) {
+
+  int i;
+
+  for( i=0; i<set->num; i++) {
+    if(set->instructions[i] != NULL) {
+      SNetDestroyFilterInstruction(set->instructions[i]);
+    }
+  }
+
+  SNetMemFree( set->instructions);
+  SNetMemFree( set);
+}
+
 extern void
 SNetDestroyFilterInstructionSetList( snet_filter_instruction_set_list_t *lst)
 {
   int i;
   
   for( i=0; i<lst->num; i++) {
-    SNetMemFree(lst->lst[i]);
+   if(lst->lst[i] != NULL) {
+      SNetDestroyFilterInstructionSet(lst->lst[i]);
+    }
   }
-
+  SNetMemFree(lst->lst);
   SNetMemFree(lst);
 }
 
-extern void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set) {
-
-  int i;
-
-  for( i=0; i<set->num; i++) {
-    SNetDestroyFilterInstruction( set->instructions[i]);
-  }
-
-  SNetMemFree( set->instructions);
-  SNetMemFree( set);
-}
 #ifdef FILTER_VERSION_2
 inline static void InitTypeArrayEntry( snet_typeencoding_t **type_array,
                                                 int i) {
@@ -337,26 +349,31 @@ FilterInheritFromInrec( snet_typeencoding_t *in_type,
   int i;
   int *names;
 
-  names = SNetRecGetFieldNames( in_rec);
+  names = SNetRecGetUnconsumedFieldNames( in_rec);
 
   for( i=0; i<SNetRecGetNumFields( in_rec); i++) {
-    if( !( FilterInTypeHasField( in_type, SNetRecGetFieldNames( in_rec)[i]))) {
+    if( !( FilterInTypeHasField( in_type, names[i]))) {
       if( SNetRecAddField( out_rec, names[i])) {
-	SNetRecCopyFieldToRec(in_rec, names[i], out_rec, names[i]);
+	SNetRecCopyFieldToRec(in_rec, names[i], 
+			      out_rec, names[i]);
       }
     }
   }
 
-  names = SNetRecGetTagNames( in_rec);
+  SNetMemFree(names);
+
+  names = SNetRecGetUnconsumedTagNames( in_rec);
   for( i=0; i<SNetRecGetNumTags( in_rec); i++) {
-    if( !( FilterInTypeHasTag( in_type, SNetRecGetTagNames( in_rec)[i]))) {
+    if( !( FilterInTypeHasTag( in_type, names[i]))) {
       if( SNetRecAddTag( out_rec, names[i])) {
         SNetRecSetTag( out_rec, names[i], 
                          SNetRecGetTag( in_rec, names[i])); 
       }
     }
   }
-  
+
+  SNetMemFree(names);
+
   return( out_rec);
 }
 
@@ -376,9 +393,9 @@ static void *FilterThread( void *hnd)
   done = false;
   terminate = false;
 
-  #ifdef FILTER_DEBUG
+#ifdef FILTER_DEBUG
   SNetUtilDebugNotice("(CREATION FILTER)");
-  #endif
+#endif
   instream = SNetHndGetInput( hnd);
   outstream = SNetHndGetOutput( hnd);
   guard_list = SNetHndGetGuardList( hnd);
@@ -442,19 +459,19 @@ static void *FilterThread( void *hnd)
                   } // forall instructions of current_set
 
                   out_rec = FilterInheritFromInrec( in_type, in_rec, out_rec);
-                  #ifdef DEBUG_FILTER
-                    SNetUtilDebugNotice("FILTER %x: outputting %x",
-                      (unsigned int) outstream, (unsigned int) out_rec);
-                  #endif
-                  SNetTlWrite( outstream, out_rec);
+#ifdef DEBUG_FILTER
+		  SNetUtilDebugNotice("FILTER %x: outputting %x",
+				      (unsigned int) outstream, (unsigned int) out_rec);
+#endif
+		  SNetTlWrite( outstream, out_rec);
                 } // forall variants of selected out_type
               } // if guard is true
             } // forall guards
             SNetRecDestroy( in_rec);
             if( !( done)) {
-              #ifdef DEBUG_FILTER
+#ifdef DEBUG_FILTER
               SNetUtilDebugFatal("[Filter] All guards evaluated to FALSE.\n\n");
-              #endif
+#endif
             }
         break; // case rec_data
         case REC_sync:
@@ -463,10 +480,10 @@ static void *FilterThread( void *hnd)
           SNetRecDestroy( in_rec);
         break;
         case REC_collect:
-          #ifdef DEBUG_FILTER
+#ifdef DEBUG_FILTER
           SNetUtilDebugNotice("[Filter] Unhandled control record, destroying "
                               "it\n\n");
-          #endif
+#endif
           SNetRecDestroy( in_rec);
         break;
         case REC_sort_begin:
@@ -484,16 +501,25 @@ static void *FilterThread( void *hnd)
         case REC_probe:
           SNetTlWrite(SNetHndGetOutput(hnd), in_rec);
         break;
+#ifdef DISTRIBUTED_SNET
+    case REC_route_update:
+	break;
+    case REC_route_redirect:
+	break;
+#endif /* DISTRIBUTED_SNET */
     } // switch rec_descr
   } // while not terminate
   return( NULL);
 }
 
 
-extern snet_tl_stream_t*
-SNetFilter( snet_tl_stream_t *instream,
-             snet_typeencoding_t *in_type,
-             snet_expr_list_t *guards, ... )
+extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
+#ifdef DISTRIBUTED_SNET
+				     snet_dist_info_t *info, 
+				     int location,
+#endif /* DISTRIBUTED_SNET */
+				     snet_typeencoding_t *in_type,
+				     snet_expr_list_t *guards, ... )
 {
   int i;
   int num_outtypes;
@@ -505,37 +531,53 @@ SNetFilter( snet_tl_stream_t *instream,
   snet_typeencoding_list_t *out_types;
   va_list args;
 
-  outstream = SNetTlCreateStream(BUFFER_SIZE);
-  guard_expr = guards;
+#ifdef DISTRIBUTED_SNET
+  instream = SNetRoutingInfoUpdate(info->routing, location, instream);
 
-  if( guard_expr == NULL) {
-    guard_expr = SNetEcreateList( 1, SNetEconstb( true));
+  if(location == info->self) {
+#endif /* DISTRIBUTED_SNET */
+
+    outstream = SNetTlCreateStream(BUFFER_SIZE);
+    guard_expr = guards;
+    
+    if( guard_expr == NULL) {
+      guard_expr = SNetEcreateList( 1, SNetEconstb( true));
+    }
+    
+    num_outtypes = SNetElistGetNumExpressions( guard_expr);
+    
+    instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
+    
+    va_start( args, guards);
+    for( i=0; i<num_outtypes; i++) {
+      lst = va_arg( args, snet_filter_instruction_set_list_t*);
+      instr_list[i] = lst == NULL ? SNetCreateFilterInstructionList( 0) : lst;
+    }
+    va_end( args);
+    
+    out_types = FilterComputeTypes( num_outtypes, instr_list);
+    
+    hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
+    
+    SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
+
+#ifdef DISTRIBUTED_SNET
+  } else {
+    outstream = instream;
   }
+#endif /* DISTRIBUTED_SNET */
 
-  num_outtypes = SNetElistGetNumExpressions( guard_expr);
-
-  instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
-
-  va_start( args, guards);
-  for( i=0; i<num_outtypes; i++) {
-    lst = va_arg( args, snet_filter_instruction_set_list_t*);
-    instr_list[i] = lst == NULL ? SNetCreateFilterInstructionList( 0) : lst;
-  }
-  va_end( args);
-
-  out_types = FilterComputeTypes( num_outtypes, instr_list);
-
-  hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
-
-  SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
   return( outstream);
 }
 
 
-extern snet_tl_stream_t*
-SNetTranslate( snet_tl_stream_t *instream,
-                snet_typeencoding_t *in_type,
-                snet_expr_list_t *guards, ... )
+extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
+#ifdef DISTRIBUTED_SNET
+					snet_dist_info_t *info, 
+					int location,
+#endif /* DISTRIBUTED_SNET */
+					snet_typeencoding_t *in_type,
+					snet_expr_list_t *guards, ... )
 {
 
   int i;
@@ -547,28 +589,40 @@ SNetTranslate( snet_tl_stream_t *instream,
   snet_typeencoding_list_t *out_types;
   va_list args;
 
-  outstream = SNetTlCreateStream(BUFFER_SIZE);
-  guard_expr = guards;
+#ifdef DISTRIBUTED_SNET
+  instream = SNetRoutingInfoUpdate(info->routing, location, instream);
 
-  if( guard_expr == NULL) {
-    guard_expr = SNetEcreateList( 1, SNetEconstb( true));
+  if(location == info->self) {
+#endif /* DISTRIBUTED_SNET */
+    
+    outstream = SNetTlCreateStream(BUFFER_SIZE);
+    guard_expr = guards;
+    
+    if( guard_expr == NULL) {
+      guard_expr = SNetEcreateList( 1, SNetEconstb( true));
+    }
+    
+    num_outtypes = SNetElistGetNumExpressions( guard_expr);
+    
+    instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
+    
+    va_start( args, guards);
+    for( i=0; i<num_outtypes; i++) {
+      instr_list[i] = va_arg( args, snet_filter_instruction_set_list_t*);
+    }
+    va_end( args);
+    
+    out_types = FilterComputeTypes( num_outtypes, instr_list);
+    
+    hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
+    
+    SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
+    
+#ifdef DISTRIBUTED_SNET
+  } else {
+    outstream = instream;
   }
-
-  num_outtypes = SNetElistGetNumExpressions( guard_expr);
-
-  instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
-
-  va_start( args, guards);
-  for( i=0; i<num_outtypes; i++) {
-    instr_list[i] = va_arg( args, snet_filter_instruction_set_list_t*);
-  }
-  va_end( args);
-
-  out_types = FilterComputeTypes( num_outtypes, instr_list);
-
-  hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
-
-  SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
+#endif /* DISTRIBUTED_SNET */
 
   return( outstream);
 }
@@ -651,6 +705,12 @@ static void *NameshiftThread( void *h)
       case REC_probe:
         SNetTlWrite(SNetHndGetOutput(hnd), rec);
       break;
+#ifdef DISTRIBUTED_SNET
+    case REC_route_update:
+      break;
+    case REC_route_redirect:
+      break;
+#endif /* DISTRIBUTED_SNET */
     }
   }
 
@@ -658,23 +718,38 @@ static void *NameshiftThread( void *h)
 }
 
 
-extern snet_tl_stream_t
-*SNetNameShift( snet_tl_stream_t *instream,
-                int offset,
-                snet_variantencoding_t *untouched)
+extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
+#ifdef DISTRIBUTED_SNET
+					snet_dist_info_t *info, 
+					int location,
+#endif /* DISTRIBUTED_SNET */
+					int offset,
+					snet_variantencoding_t *untouched)
 {
   snet_tl_stream_t *outstream;
   snet_handle_t *hnd;
 
-  outstream = SNetTlCreateStream( BUFFER_SIZE);
+#ifdef DISTRIBUTED_SNET
+  instream = SNetRoutingInfoUpdate(info->routing, location, instream);
 
-  hnd = SNetHndCreate( HND_filter, instream, outstream,
-                       SNetTencTypeEncode( 1, untouched),
-                       NULL, // outtypes
-                       SNetEcreateList( 1, SNetEconsti( offset)),
-                       NULL); // instructions
+  if(location == info->self) {
+#endif /* DISTRIBUTED_SNET */
 
-  SNetThreadCreate( NameshiftThread, (void*)hnd, ENTITY_filter);
+    outstream = SNetTlCreateStream( BUFFER_SIZE);
+
+    hnd = SNetHndCreate( HND_filter, instream, outstream,
+			 SNetTencTypeEncode( 1, untouched),
+			 NULL, // outtypes
+			 SNetEcreateList( 1, SNetEconsti( offset)),
+			 NULL); // instructions
+    
+    SNetThreadCreate( NameshiftThread, (void*)hnd, ENTITY_filter);
+    
+#ifdef DISTRIBUTED_SNET
+  } else {
+    outstream = instream;
+  }
+#endif /* DISTRIBUTED_SNET */
 
   return( outstream);
 }
@@ -869,7 +944,6 @@ extern snet_tl_stream_t *SNetFilter( snet_tl_stream_t *instream,
 
 //  set = SNetMemAlloc( SNetTencGetNumVariants( out_type) * sizeof( snet_filter_instruction_set_t*));
   va_start( args, guards);
-
 
   va_end( args);
 

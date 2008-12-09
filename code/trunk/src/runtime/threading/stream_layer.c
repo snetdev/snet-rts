@@ -158,6 +158,9 @@ static void UnifiedDestroy(snet_tl_stream_t *stream_to_destroy)
   } else {
     SNetBufDestroy(stream_to_destroy->buffers.buffer);
   }
+  pthread_mutex_destroy(stream_to_destroy->access);
+  SNetMemFree(stream_to_destroy->access);
+  SNetMemFree(stream_to_destroy);
 }
 
 static snet_tl_stream_t *UnifiedRegisterDispatcher(snet_tl_stream_t *stream,
@@ -228,6 +231,8 @@ snet_tl_stream_t *SNetTlCreateUnboundedStream()
 
 snet_tl_stream_t *SNetTlMarkObsolete(snet_tl_stream_t *obsolete_stream)
 {
+  snet_tl_streamset_t *set = NULL;
+
   if(obsolete_stream == NULL) {
     SNetUtilDebugFatal("cannot mark NULL obsolete!");
   }
@@ -238,7 +243,13 @@ snet_tl_stream_t *SNetTlMarkObsolete(snet_tl_stream_t *obsolete_stream)
 
   obsolete_stream->is_obsolete = true;
   if(UnifiedIsEmpty(obsolete_stream)) {
-    Unlock(obsolete_stream);
+    if(obsolete_stream->is_in_streamset) {
+      set = obsolete_stream->containing_streamset;
+      Unlock(obsolete_stream);
+      SNetTlDeleteFromStreamset(set, obsolete_stream);
+    } else {
+      Unlock(obsolete_stream);
+    }
     UnifiedDestroy(obsolete_stream);
     return NULL;
   } else {
@@ -371,15 +382,15 @@ SNetTlDeleteFromStreamset(snet_tl_streamset_t *stream_container,
 snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
 {
   snet_record_t *result;
-  #ifdef STREAM_LAYER_DEBUG
+#ifdef STREAM_LAYER_DEBUG
   char message[100];
-  #endif
+#endif
   if(record_source == NULL) {
     SNetUtilDebugFatal("SnetTLRead(NULL)!");
   }
-  #ifdef STREAM_LAYER_DEBUG
+#ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugNotice("Read(%p)", record_source);
-  #endif
+#endif
   if(record_source->is_in_streamset) {
     LockStreamset(record_source->containing_streamset);
   }
@@ -388,11 +399,11 @@ snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
   result = UnifiedRead(record_source);
 
   if(record_source->is_in_streamset) {
-    #ifdef STREAM_LAYER_DEBUG
+#ifdef STREAM_LAYER_DEBUG
     SNetUtilDebugNotice("(Streamset %p) At entry of Read many: semaphore has value %d",
                         record_source->containing_streamset,
                         SNetExSemGetValue(record_source->containing_streamset->record_counter));
-    #endif
+#endif
     SNetExSemDecrement(record_source->containing_streamset->record_counter);
   }
 
@@ -402,9 +413,13 @@ snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
   }
  
   if(record_source->is_obsolete && UnifiedIsEmpty(record_source)) {
-    Unlock(record_source);
     if(record_source->is_in_streamset) {
+      Unlock(record_source);
       UnlockStreamset(record_source->containing_streamset);
+      SNetTlDeleteFromStreamset(record_source->containing_streamset,
+				record_source);
+    }else {
+      Unlock(record_source);
     }
     UnifiedDestroy(record_source);
   }else {
@@ -414,12 +429,12 @@ snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
     }
   }
 
-  #ifdef STREAM_LAYER_DEBUG
+#ifdef STREAM_LAYER_DEBUG
   SNetUtilDebugDumpRecord(result, message);
   SNetUtilDebugNotice("Read(%p) = %s",
                       record_source,
                       message);
-  #endif
+#endif
   return result;
 }
 

@@ -11,6 +11,10 @@
 #include "list.h"
 #include "stream_layer.h"
 
+#ifdef DISTRIBUTED_SNET
+#include "distribution.h"
+#endif
+
 //#define SYNCRO_DEBUG
 
 /* --------------------------------------------------------
@@ -79,7 +83,7 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
     for( j=0; j<SNetTencGetNumFields( variant); j++) {
       name = names[j];
       if( SNetRecAddField( rec, name)) {
-        SNetRecSetField( rec, name, SNetRecTakeField( storage[i], name));  
+	SNetRecMoveFieldToRec(storage[i], name, rec, name);
       }
     }
     names = SNetTencGetTagNames( variant);
@@ -118,14 +122,12 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
       // set value in outrec of field (referenced by its new name) to the
       // according value of the original record (old name)
       if( storage[i] != NULL) {
-        void *ptr;
-        ptr = SNetRecTakeField( storage[i], SNetTencGetFieldNames( pat)[j]);
-        SNetRecSetField( outrec, SNetTencGetFieldNames( pat)[j], ptr);
+	SNetRecMoveFieldToRec(storage[i], SNetTencGetFieldNames( pat)[j],
+			      outrec, SNetTencGetFieldNames( pat)[j]);
       }
       for( j=0; j<SNetTencGetNumTags( pat); j++) {
-        int tag;
-        tag = SNetRecTakeTag( storage[i], SNetTencGetTagNames( pat)[j]);
-        SNetRecSetTag( outrec, SNetTencGetTagNames( pat)[j], tag);
+        SNetRecSetTag( outrec, SNetTencGetTagNames( pat)[j], 
+		       SNetRecTakeTag( storage[i], SNetTencGetTagNames( pat)[j]));
       }
     }
   }
@@ -152,7 +154,7 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
       num = SNetRecGetNumFields( storage[i]);
       for( j=0; j<num; j++) {
         if( SNetRecAddField( outrec, names[j])) {
-          SNetRecSetField( outrec, names[j], SNetRecTakeField( storage[i], names[j]));
+	  SNetRecMoveFieldToRec(storage[i], name[j], outrec, names[j]);
         }
       }
       SNetMemFree( names);
@@ -213,9 +215,9 @@ static void *SyncBoxThread( void *hndl) {
   //snet_util_list_t *to_free;
   //snet_util_stack_t *temp_stack;
 
-  #ifdef SYNCRO_DEBUG
+#ifdef SYNCRO_DEBUG
   SNetUtilDebugNotice("(CREATION SYNCRO)");
-  #endif
+#endif
   output = SNetHndGetOutput( hnd);
   outtype = SNetHndGetType( hnd);
   patterns = SNetHndGetPatterns( hnd);
@@ -229,17 +231,17 @@ static void *SyncBoxThread( void *hndl) {
   match_cnt = 0;
   
   while( !( terminate)) {
-    #ifdef SYNCRO_DEBUG
+#ifdef SYNCRO_DEBUG
     SNetUtilDebugNotice("SYNCRO %p: reading %p",
                         output,
                         SNetHndGetInput(hnd));
-    #endif
+#endif
     rec = SNetTlRead( SNetHndGetInput( hnd));
-    #ifdef SYNCRO_DEBUG
-      SNetUtilDebugNotice("SYNCRO %p: got record %p", 
-                          output,
-                          rec);
-    #endif
+#ifdef SYNCRO_DEBUG
+    SNetUtilDebugNotice("SYNCRO %p: got record %p", 
+			output,
+			rec);
+#endif
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
         new_matches = 0;
@@ -254,51 +256,54 @@ static void *SyncBoxThread( void *hndl) {
           }
         }
  
-        #ifdef SYNCRO_DEBUG
+#ifdef SYNCRO_DEBUG
         SNetUtilDebugNotice("SYNCRO %p: record %p matched %d patterns", 
                             output,
                             rec,
                             new_matches);
-        #endif
+#endif
 
         if( new_matches == 0) {
-          #ifdef SYNCRO_DEBUG
+#ifdef SYNCRO_DEBUG
             SNetUtilDebugNotice("SYNCRO %p: Record didnt match anything,"
                                 " fowarding it", output);
-          #endif
+#endif
           SNetTlWrite(output, rec);
         }
         else {
-          #ifdef SYNCRO_DEBUG
+#ifdef SYNCRO_DEBUG
           SNetUtilDebugNotice("SYNCRO %p: storing record", 
                               output);
-          #endif
+#endif
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
-            #ifdef SYNC_FI_VARIANT_1
+#ifdef SYNC_FI_VARIANT_1
             temp_record = Merge( storage, patterns, outtype);
-	          SNetRecSetInterfaceId( temp_record, SNetRecGetInterfaceId( rec));
-	          SNetRecSetDataMode( temp_record, SNetRecGetDataMode( rec));
-            #endif
-            #ifdef SYNC_FI_VARIANT_2
-            temp_record =  Merge( storage, patterns, outtype, rec);
-            #endif
+	    SNetRecSetInterfaceId( temp_record, SNetRecGetInterfaceId( rec));
+	    SNetRecSetDataMode( temp_record, SNetRecGetDataMode( rec));
+#endif
+#ifdef SYNC_FI_VARIANT_2
+	    temp_record =  Merge( storage, patterns, outtype, rec);
+#endif
 
-            #ifdef SYNCRO_DEBUG
-              SNetUtilDebugNotice("SYNCRO %p: synccell synched => %p",
-                                  output,
+#ifdef SYNCRO_DEBUG
+	    SNetUtilDebugNotice("SYNCRO %p: synccell synched => %p",
+				output,
                                   temp_record);
-            #endif
+#endif
             SNetTlWrite(output, temp_record);
             /* current_state->terminated = true; */
             SNetTlWrite(output, SNetRecCreate(REC_sync, 
                                               SNetHndGetInput(hnd)));
+
+	    SNetTlMarkObsolete(output);
+
             terminate = true;
           }
-          #ifdef SYNCRO_DEBUG
+#ifdef SYNCRO_DEBUG
           SNetUtilDebugNotice("SYNCRO %p: record processed", 
                               output);
-          #endif
+#endif
         }
       break;
     case REC_sync:
@@ -340,7 +345,7 @@ static void *SyncBoxThread( void *hndl) {
         }
         SNetUtilListDestroy(to_free);
         */
-        SNetMemFree(storage);
+
         terminate = true;
         SNetTlWrite( output, rec);
       break;
@@ -348,8 +353,15 @@ static void *SyncBoxThread( void *hndl) {
       case REC_probe:
         SNetTlWrite(SNetHndGetOutput(hnd), rec);
       break;
+#ifdef DISTRIBUTED_SNET
+    case REC_route_update:
+      break;
+    case REC_route_redirect:
+      break;
+#endif /* DISTRIBUTED_SNET */
     }
   }
+  SNetMemFree(storage);
   SNetTlMarkObsolete(output);
   SNetDestroyTypeEncoding( outtype);
   SNetDestroyTypeEncoding( patterns);
@@ -360,29 +372,46 @@ static void *SyncBoxThread( void *hndl) {
 
 
 extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *inbuf,
-                                snet_typeencoding_t *outtype,
-                                snet_typeencoding_t *patterns,
-                                snet_expr_list_t *guards ) {
+#ifdef DISTRIBUTED_SNET
+				   snet_dist_info_t *info, 
+				   int location,
+#endif /* DISTRIBUTED_SNET */
+				   snet_typeencoding_t *outtype,
+				   snet_typeencoding_t *patterns,
+				   snet_expr_list_t *guards ) {
 
   snet_tl_stream_t *outbuf;
   snet_handle_t *hnd;
 
-//  outbuf = SNetBufCreate( BUFFER_SIZE);
-  BUF_CREATE( outbuf, BUFFER_SIZE);
-  #ifdef SYNCRO_DEBUG
-  SNetUtilDebugNotice("-");
-  SNetUtilDebugNotice("| SYNCRO CREATED");
-  SNetUtilDebugNotice("| input: %p", inbuf);
-  SNetUtilDebugNotice("| output: %p", outbuf);
-  SNetUtilDebugNotice("-");
-  #endif
-  hnd = SNetHndCreate( HND_sync, inbuf, outbuf, outtype, patterns, guards);
+#ifdef DISTRIBUTED_SNET
+  input = SNetRoutingInfoUpdate(info->routing, location, input);
 
+  if(location == info->self) {
+#endif /* DISTRIBUTED_SNET */
 
-  SNetTlCreateComponent( SyncBoxThread, (void*)hnd, ENTITY_sync);
+    //  outbuf = SNetBufCreate( BUFFER_SIZE);
+    BUF_CREATE( outbuf, BUFFER_SIZE);
 #ifdef SYNCRO_DEBUG
-  SNetUtilDebugNotice("SYNCRO CREATION DONE");
+    SNetUtilDebugNotice("-");
+    SNetUtilDebugNotice("| SYNCRO CREATED");
+    SNetUtilDebugNotice("| input: %p", inbuf);
+    SNetUtilDebugNotice("| output: %p", outbuf);
+    SNetUtilDebugNotice("-");
 #endif
+    hnd = SNetHndCreate( HND_sync, inbuf, outbuf, outtype, patterns, guards);
+    
+    
+    SNetTlCreateComponent( SyncBoxThread, (void*)hnd, ENTITY_sync);
+#ifdef SYNCRO_DEBUG
+    SNetUtilDebugNotice("SYNCRO CREATION DONE");
+#endif
+    
+#ifdef DISTRIBUTED_SNET
+  } else {
+    output = input;
+  }
+#endif /* DISTRIBUTED_SNET */
+
   return( outbuf);
 }
 

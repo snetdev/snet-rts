@@ -10,6 +10,7 @@
 #include <handle.h>
 
 #include <bool.h>
+#include "snettypes.h"
 #include "stream_layer.h"
 #include "debug.h"
 
@@ -51,7 +52,7 @@ typedef struct {
   snet_tl_stream_t *input;
   snet_tl_stream_t *output_a;
   snet_record_t *rec;
-  void (*boxfun_a)( snet_handle_t*);
+  snet_box_fun_t boxfun_a;
   snet_box_sign_t *sign;
   name_mapping_t *mapping;
 } box_handle_t;
@@ -66,8 +67,8 @@ typedef struct {
 typedef struct {
   snet_tl_stream_t *input;
   snet_tl_stream_t *output_a;
-  void (*boxfun_a)( snet_handle_t*);
-  void (*boxfun_b)( snet_handle_t*);
+  snet_box_fun_t boxfun_a;
+  snet_box_fun_t boxfun_b;
   snet_typeencoding_t *type;
   snet_expr_list_t *guard_list;
   bool is_incarnate;
@@ -84,9 +85,12 @@ typedef struct {
 typedef struct {
   snet_tl_stream_t *input;
   snet_tl_stream_t *output_a;
-  void (*boxfun_a)( snet_handle_t*);
+  snet_box_fun_t boxfun_a;
   int tag_a;
   int tag_b;
+#ifdef DISTRIBUTED_SNET
+  bool split_by_location;
+#endif /* DISTRIBUTED_SNET */
 } split_handle_t;
 
 
@@ -227,11 +231,13 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
             SPLIT_HND( boxfun_a) = va_arg( args, void*);
             SPLIT_HND( tag_a) = va_arg( args, int);
             SPLIT_HND( tag_b) = va_arg( args, int);
-
+#ifdef DISTRIBUTED_SNET
+	    SPLIT_HND( split_by_location) = va_arg( args, bool);
+#endif /* DISTRIBUTED_SNET */
             break;
     }
 
-    #ifdef FILTER_VERSION_2
+#ifdef FILTER_VERSION_2
     case HND_filter:
       HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
       FILTER_HND( input) = va_arg( args, snet_tl_stream_t*);
@@ -489,6 +495,22 @@ extern bool SNetHndIsDet( snet_handle_t *hnd) {
 
   return( result);
 }
+
+#ifdef DISTRIBUTED_SNET
+extern bool SNetHndIsSplitByLocation( snet_handle_t *hnd) {
+
+  bool result;
+
+  switch( hnd->descr) {
+    case HND_split:
+      result = SPLIT_HND( split_by_location) 
+      break;
+    default: WrongHandleType();
+  }
+
+  return( result);
+}
+#endif /* DISTRIBUTED_SNET */
 
 extern void *SNetHndGetBoxfun( snet_handle_t *hnd){
 

@@ -5,7 +5,11 @@
 /* ------------------------------------------------------------------------- */
 
 extern snet_tl_stream_t *SNetAlias( snet_tl_stream_t *inbuf,
-                                 snet_tl_stream_t *(*net)(snet_tl_stream_t*)) {
-
+#ifdef DISTRIBUTED_SNET
+				    snet_dist_info_t *info, 
+				    int location,
+#endif /* DISTRIBUTED_SNET */
+				    snet_startup_fun_t net)
+{
   return( net( inbuf));
 }

@@ -291,6 +291,7 @@ extern void SNetRecDestroy( snet_record_t *rec)
         num = SNetRecGetNumFields( rec);
         names = SNetRecGetUnconsumedFieldNames( rec);
         freefun = SNetGetFreeFunFromRec( rec);
+
         for( i=0; i<num; i++) {
           freefun( SNetRecTakeField( rec, names[i]));
         }
@@ -324,7 +325,19 @@ extern void SNetRecDestroy( snet_record_t *rec)
     
     case REC_terminate:
       break;
-    
+
+
+#ifdef DISTRIBUTED_SNET
+  case REC_route_update:
+    SNetMemFree(RECORD(rec, update_rec));
+    break;
+
+  case REC_route_redirect:
+    SNetMemFree(RECORD(rec, redirect_rec));
+    break;
+
+#endif /* DISTRIBUTED_SNET */
+
     default:
       SNetUtilDebugFatal("Unknown control record description, in RECdestroy");
       break;
@@ -811,13 +824,16 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec)
                                               REC_DESCR( rec));
   }
 
-  new_rec->iteration_counters = SNetUtilStackCreate();
   current_iteration = SNetUtilStackBottom(rec->iteration_counters);
+
   while(SNetUtilStackIterCurrDefined(current_iteration)) {
     temp = SNetUtilStackIterGet(current_iteration);
     SNetUtilStackPush(new_rec->iteration_counters, temp);
     current_iteration = SNetUtilStackIterNext(current_iteration);
   }
+
+  SNetUtilStackIterDestroy(current_iteration);
+
   return( new_rec);
 }
 /*
@@ -946,3 +962,29 @@ extern void SNetRecCopyFieldToRec( snet_record_t *from, int old_name ,
 
   return; 
 }
+
+extern void SNetRecMoveFieldToRec( snet_record_t *from, int old_name,
+				   snet_record_t *to, int new_name)
+{
+  int offset_old;
+  int offset_new;
+
+  offset_old = FindName( SNetTencGetFieldNames( GetVEnc( from)),
+			 SNetTencGetNumFields( GetVEnc( from)), old_name);
+
+  offset_new = FindName( SNetTencGetFieldNames( GetVEnc( to)),
+			SNetTencGetNumFields( GetVEnc( to)), new_name);
+
+  if( offset_new == NOT_FOUND || offset_old == NOT_FOUND) {
+    NotFoundError( new_name, "get", "field");
+  }
+
+  SNetTencRenameField( GetVEnc( from), old_name, CONSUMED);
+
+  DATA_REC( to, fields[offset_new]) = DATA_REC( from, fields[offset_old]);
+
+  DATA_REC( from, fields[offset_old]) = NULL; 
+
+  return; 
+}
+

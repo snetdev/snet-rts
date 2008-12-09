@@ -108,6 +108,9 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec);
 extern void SNetRecCopyFieldToRec( snet_record_t *from, int old_name, 
 				   snet_record_t *to, int new_name);
 
+extern void SNetRecMoveFieldToRec( snet_record_t *from, int old_name,
+				   snet_record_t *to, int new_name);
+
 extern void SNetRecRenameTag( snet_record_t *rec, int name, int new_name);
 extern void SNetRecRenameBTag( snet_record_t *rec, int name, int new_name);
 extern void SNetRecRenameField( snet_record_t *rec, int name, int new_name);

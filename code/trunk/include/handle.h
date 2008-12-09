@@ -133,6 +133,10 @@ extern snet_handle_t *SNetHndCopy( snet_handle_t *hnd);
 
 extern bool SNetHndIsDet( snet_handle_t *hnd);
 
+#ifdef DISTRIBUTED_SNET
+extern bool SNetHndIsSplitByLocation( snet_handle_t *hnd);
+#endif /* DISTRIBUTED_SNET */
+
 snet_box_sign_t *SNetHndGetBoxSign( snet_handle_t *hnd);
 
 #endif

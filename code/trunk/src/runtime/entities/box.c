@@ -5,6 +5,10 @@
 #include "debug.h"
 #include "stream_layer.h"
 
+#ifdef DISTRIBUTED_SNET
+#include "distribution.h"
+#endif
+
 //#define BOX_DEBUG
 /* ------------------------------------------------------------------------- */
 /*  SNetBox                                                                  */
@@ -73,6 +77,12 @@ static void *BoxThread( void *hndl) {
       case REC_probe:
         SNetTlWrite(SNetHndGetOutput(hnd), rec);
       break;
+#ifdef DISTRIBUTED_SNET
+      case REC_route_update:
+	break;
+      case REC_route_redirect:
+	break;
+#endif /* DISTRIBUTED_SNET */
     }
   }
    return( NULL);
@@ -80,25 +90,41 @@ static void *BoxThread( void *hndl) {
 }
 
 extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
-                                        void (*boxfun)( snet_handle_t*),
-                             snet_box_sign_t *out_signs) {
-
+#ifdef DISTRIBUTED_SNET
+				  snet_dist_info_t *info, 
+				  int location,
+#endif /* DISTRIBUTED_SNET */ 
+				  snet_box_fun_t boxfun,
+				  snet_box_sign_t *out_signs) 
+{
   snet_tl_stream_t *output;
   snet_handle_t *hndl;
 
-  output = SNetTlCreateStream(BUFFER_SIZE);
+#ifdef DISTRIBUTED_SNET
+  input = SNetRoutingInfoUpdate(info->routing, location, input);
 
-  #ifdef BOX_DEBUG
-  SNetUtilDebugNotice("-");
-  SNetUtilDebugNotice("| BOX");
-  SNetUtilDebugNotice("| input: %x", input);
-  SNetUtilDebugNotice("| output: %x", output);
-  SNetUtilDebugNotice("-");
-  #endif
+  if(location == info->self) {
+#endif /* DISTRIBUTED_SNET */
 
-  hndl = SNetHndCreate( HND_box, input, output, NULL, boxfun, out_signs);
-
-  SNetTlCreateComponent((void*)BoxThread, (void*)hndl, ENTITY_box);
+    output = SNetTlCreateStream(BUFFER_SIZE);
+    
+#ifdef BOX_DEBUG
+    SNetUtilDebugNotice("-");
+    SNetUtilDebugNotice("| BOX");
+    SNetUtilDebugNotice("| input: %x", input);
+    SNetUtilDebugNotice("| output: %x", output);
+    SNetUtilDebugNotice("-");
+#endif
+    
+    hndl = SNetHndCreate( HND_box, input, output, NULL, boxfun, out_signs);
+    
+    SNetTlCreateComponent((void*)BoxThread, (void*)hndl, ENTITY_box);
+    
+#ifdef DISTRIBUTED_SNET
+  } else {
+    output = input;
+  }
+#endif /* DISTRIBUTED_SNET */
 
   return( output);
 }

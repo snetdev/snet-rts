@@ -159,7 +159,7 @@ static void SNetInClose(FILE *file)
 int SNetInRun(int argc, char *argv[],
 	      char *static_labels[], int number_of_labels, 
 	      char *static_interfaces[], int number_of_interfaces, 
-	      snet_tl_stream_t *(snetfun)(snet_tl_stream_t *))
+	      snet_startup_fun_t fun)
 {
   FILE *input = stdin;
   FILE *output = stdout;
@@ -271,7 +271,7 @@ int SNetInRun(int argc, char *argv[],
   
   SNetObserverInit(labels, interfaces);
   
-  out_buf = snetfun(in_buf);
+  out_buf = fun(in_buf);
   
   if(SNetInOutputInit(output, labels, interfaces, out_buf) != 0){
     /* TODO: free resources! */

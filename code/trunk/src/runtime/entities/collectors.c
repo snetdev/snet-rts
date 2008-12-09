@@ -208,16 +208,14 @@ static void *Collector( void *info) {
   int counter = 0;
   int sort_end_counter = 0;
 
-  snet_util_list_iter_t *read_position;
-
   snet_tl_streamset_t *inputs;
   snet_tl_stream_t *current_stream;
   snet_tl_stream_record_pair_t peek_result;
 
-  #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
   char record_message[100];
   SNetUtilDebugNotice("(CREATION COLLECTOR)");
-  #endif
+#endif
 
   inputs = SNetTlCreateStreamset();
   SNetTlAddToStreamset(inputs, inf->from_stream);
@@ -228,7 +226,6 @@ static void *Collector( void *info) {
 
   lst = SNetUtilListCreate();
   lst = SNetUtilListAddBeginning(lst, elem);
-  read_position = SNetUtilListFirst(lst);
 
   while(!(terminate)) {
     do {
@@ -238,20 +235,20 @@ static void *Collector( void *info) {
       current_stream = peek_result.stream;
       elem = FindElement(lst, current_stream);
 
-      #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
       SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (start of main loop) "
                           "(reading stream %p))",
           output, current_stream);
-      #endif
+#endif
 
       if( rec != NULL) {
-        #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
           SNetUtilDebugDumpRecord(rec, record_message);
           SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (start of main loop) "
                               "(found %s))",
                               output, 
                               record_message);
-        #endif
+#endif
 
         if(CompareSortRecords(elem->current, current_sort_rec)) {
           if(SNetRecGetDescriptor(rec) != REC_probe) {
@@ -259,10 +256,10 @@ static void *Collector( void *info) {
           }
           switch( SNetRecGetDescriptor( rec)) {
             case REC_data:
-              #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
                 SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in switch) (outputting data))",
                   output);
-              #endif
+#endif
               SNetTlWrite(output, rec);
               processed_record = true;
             break;
@@ -277,10 +274,10 @@ static void *Collector( void *info) {
               tmp_elem = SNetMemAlloc(sizeof( snet_collect_elem_t));
               tmp_elem->stream = SNetRecGetStream(rec);
 
-              #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
               SNetUtilDebugNotice("(MODIFICATION (COLLECTOR %p) (ADD (STREAM %p)))",
                                   output, tmp_elem->stream);
-              #endif
+#endif
               if(current_sort_rec == NULL) {
                 tmp_elem->current = NULL;
               }
@@ -300,7 +297,8 @@ static void *Collector( void *info) {
               if( counter == SNetUtilListCount(lst)) {
                 counter = 0;
                 current_sort_rec = SNetRecCopy( rec);
-                SNetRecDestroy( current_sort_rec);
+		// What's the point in this line?
+		// SNetRecDestroy( current_sort_rec);
                 if(is_det) {
                   if( SNetRecGetLevel( rec) > 0) {
                     SNetRecSetLevel( rec, SNetRecGetLevel( rec) - 1);
@@ -315,10 +313,10 @@ static void *Collector( void *info) {
                     SNetRecDestroy(rec);
                   }
                 } else {
-                  #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
                    SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in switch) (found enough sort"
                       "records outputing sort stuff))", output);
-                  #endif
+#endif
                   SNetTlWrite(output, rec);
                 }
               } else {
@@ -345,11 +343,11 @@ static void *Collector( void *info) {
                     SNetRecDestroy(rec);
                   }
                 } else {
-                  #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
                     SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in switch) "
                                         "(found enoguh sort end records, outputtting things))", 
                                         output);
-                  #endif
+#endif
                   SNetTlWrite(output, rec);
                 }
               } else {
@@ -359,17 +357,17 @@ static void *Collector( void *info) {
             break;
 
             case REC_terminate:
-              #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
               SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in switch, before DeleteStream) "
                                   "(%d buffers left before deletion))",
                                   output, SNetUtilListCount(lst));
-              #endif
+#endif
               DeleteStream(lst, inputs, current_stream);
-              #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
                 SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) "
                                     "(in switch, after DeleteStream) (%d buffers left))",
                                     output, SNetUtilListCount(lst));
-              #endif
+#endif
               if(SNetUtilListIsEmpty(lst)) {
                 terminate = true;
                 SNetTlWrite(output, rec);
@@ -386,15 +384,21 @@ static void *Collector( void *info) {
                 RemoveProbes(lst, output);
               }
             break;
+#ifdef DISTRIBUTED_SNET
+	  case REC_route_update:
+	    break;
+	  case REC_route_redirect:
+	    break;
+#endif /* DISTRIBUTED_SNET */
           } // switch
         } // if sort record fits
-        #ifdef COLLECTOR_DEBUG 
+#ifdef COLLECTOR_DEBUG 
           else {
             SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in some else far below)"
                                 "(rejected due to sort record))",
                                 output);
           }
-        #endif
+#endif
       } // if
     } while( processed_record && !(terminate));
   } // while !terminate
@@ -419,7 +423,7 @@ CollectorStartup(snet_tl_stream_t *initial_stream, bool is_det)
   streams->from_stream = initial_stream;
   streams->to_stream = output;
 
-  #ifdef COLLECTOR_DEBUG
+#ifdef COLLECTOR_DEBUG
   SNetUtilDebugNotice("-");
   if(is_det) {
     SNetUtilDebugNotice("| DET COLLECTOR CREATED");
@@ -429,7 +433,7 @@ CollectorStartup(snet_tl_stream_t *initial_stream, bool is_det)
   SNetUtilDebugNotice("| input: %p", initial_stream);
   SNetUtilDebugNotice("| output: %p", output);
   SNetUtilDebugNotice("-");
-  #endif
+#endif
 
   streams->is_det = is_det;
   if( is_det) {

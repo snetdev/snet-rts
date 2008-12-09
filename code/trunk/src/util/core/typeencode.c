@@ -531,6 +531,8 @@ extern void SNetTencDestroyTypeEncodingList( snet_typeencoding_list_t *t_list)
     SNetDestroyTypeEncoding( (t_list->types)[i]);
   }
 
+  SNetMemFree(t_list->types);
+
   SNetMemFree( t_list);
 }
 

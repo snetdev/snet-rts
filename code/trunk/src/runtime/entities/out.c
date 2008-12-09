@@ -85,6 +85,8 @@ extern snet_handle_t
 
    out_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( venc));
 
+   SNetRecSetInterfaceId( out_rec, if_id);
+
    names = SNetTencGetFieldNames( venc);
    for( i=0; i<SNetTencGetNumFields( venc); i++) {
      SNetRecSetField( out_rec, names[i], fields[i]);
@@ -131,11 +133,10 @@ extern snet_handle_t
 
 
   // output record
-  #ifdef BOX_DEBUG
+#ifdef BOX_DEBUG
     SNetUtilDebugNotice("BOX %x: outputting %x",
       (unsigned int) SNetHndGetOutput(hnd), (unsigned int) out_rec);
-  #endif
-  SNetRecSetInterfaceId( out_rec, if_id);
+#endif
   SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
   SNetTlWrite( SNetHndGetOutput( hnd), out_rec);
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
@@ -180,6 +181,9 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
             variant_num);
 
    out_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( venc));
+
+   SNetRecSetInterfaceId( out_rec, id);
+
    num_entries = SNetTencGetNumFields( venc) +
                  SNetTencGetNumTags( venc) +
                  SNetTencGetNumBTags( venc);
@@ -234,7 +238,6 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
     SNetRecCopyIterations(old_rec, out_rec);
   }
   // output record
-  SNetRecSetInterfaceId( out_rec, id);
   SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
   SNetTlWrite( SNetHndGetOutput( hnd), out_rec);
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
