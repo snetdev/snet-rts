@@ -14,6 +14,7 @@
 #include <expression.h>
 #include <stdio.h>
 
+#include "alias.h"
 #include "filter.h"
 #include "box.h"
 #include "collectors.h"
