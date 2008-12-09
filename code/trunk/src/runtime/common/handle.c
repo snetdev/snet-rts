@@ -503,7 +503,7 @@ extern bool SNetHndIsSplitByLocation( snet_handle_t *hnd) {
 
   switch( hnd->descr) {
     case HND_split:
-      result = SPLIT_HND( split_by_location) 
+      result = SPLIT_HND( split_by_location); 
       break;
     default: WrongHandleType();
   }
