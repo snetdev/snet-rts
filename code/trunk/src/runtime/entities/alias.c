@@ -11,5 +11,9 @@ extern snet_tl_stream_t *SNetAlias( snet_tl_stream_t *inbuf,
 #endif /* DISTRIBUTED_SNET */
 				    snet_startup_fun_t net)
 {
+#ifdef DISTRIBUTED_SNET
+  return( net( inbuf, info, location));
+#else
   return( net( inbuf));
+#endif /* DISTRIBUTED_SNET */
 }

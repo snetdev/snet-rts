@@ -29,12 +29,22 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
   SNetUtilDebugNotice("Serial creation started");
   SNetUtilDebugNotice("box_a = %p, box_b = %p", box_a, box_b);
 #endif
+
+#ifdef DISTRIBUTED_SNET
+  internal_stream = (*box_a)(input, info, location);
+#else
   internal_stream = (*box_a)(input);
+#endif /* DISTRIBUTED_SNET */
 
 #ifdef SERIAL_DEBUG
   SNetUtilDebugNotice("Serial creation halfway done");
 #endif
+
+#ifdef DISTRIBUTED_SNET
+  output = (*box_b)(internal_stream, info, location);
+#else
   output = (*box_b)(internal_stream);
+#endif /* DISTRIBUTED_SNET */
 
 #ifdef SERIAL_DEBUG
   SNetUtilDebugNotice("-");

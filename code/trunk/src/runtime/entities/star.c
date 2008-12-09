@@ -422,7 +422,7 @@ static void *DetStarBoxThread( void *hndl) {
 	  
 	    starstream = SNetRoutingInfoFinalize(info.routing, SNetSerial(our_output, &info, info.self , box, self));
 	  
-	    SNetTlWrite( real_outstream, SNetRecCreate( REC_collect, starstream));
+	    SNetTlWrite( real_output, SNetRecCreate( REC_collect, starstream));
 	
 	    SNetRoutingInfoDestroy(info.routing);
 #else

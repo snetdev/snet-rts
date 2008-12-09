@@ -317,7 +317,7 @@ extern snet_tl_stream_t *SNetLocSplit(snet_tl_stream_t *input,
     
     output = CreateCollector(initial);
     
-    SNetTlCreateComponent(SplitLocBoxThread, (void*)hnd, ENTITY_split_nondet);
+    SNetTlCreateComponent(SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
 
   } else {
     output = input;
@@ -423,9 +423,9 @@ static void *DetSplitBoxThread( void *hndl) {
 	      
 	      temp_stream = SNetRoutingInfoFinalize(info.routing, boxfun(elem->stream, &info, i));
 	    } else {
-	      info.routing =  SNetRoutingInfoInit( SNetRoutingGetNewID(), info.self, info.self, &fun_id, info->self);
+	      info.routing =  SNetRoutingInfoInit( SNetRoutingGetNewID(), info.self, info.self, &fun_id, info.self);
 	      
-	      temp_stream = SNetRoutingInfoFinalize(info.routing, boxfun(elem->stream, &info, info->self));
+	      temp_stream = SNetRoutingInfoFinalize(info.routing, boxfun(elem->stream, &info, info.self));
 	    }
 
 	    if(temp_stream != NULL) {
@@ -576,7 +576,7 @@ snet_tl_stream_t *SNetLocSplitDet(snet_tl_stream_t *input,
     
     output = CreateDetCollector( initial);
     
-    SNetThreadCreate( DetSplitLocBoxThread, (void*)hnd, ENTITY_split_det);
+    SNetThreadCreate( DetSplitBoxThread, (void*)hnd, ENTITY_split_det);
 
   } else {
     output = input;

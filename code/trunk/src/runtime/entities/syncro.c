@@ -371,7 +371,7 @@ static void *SyncBoxThread( void *hndl) {
 }
 
 
-extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *inbuf,
+extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
 				   snet_dist_info_t *info, 
 				   int location,
@@ -380,7 +380,7 @@ extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *inbuf,
 				   snet_typeencoding_t *patterns,
 				   snet_expr_list_t *guards ) {
 
-  snet_tl_stream_t *outbuf;
+  snet_tl_stream_t *output;
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
@@ -389,16 +389,16 @@ extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *inbuf,
   if(location == info->self) {
 #endif /* DISTRIBUTED_SNET */
 
-    //  outbuf = SNetBufCreate( BUFFER_SIZE);
-    BUF_CREATE( outbuf, BUFFER_SIZE);
+    //  output = SNetBufCreate( BUFFER_SIZE);
+    BUF_CREATE( output, BUFFER_SIZE);
 #ifdef SYNCRO_DEBUG
     SNetUtilDebugNotice("-");
     SNetUtilDebugNotice("| SYNCRO CREATED");
-    SNetUtilDebugNotice("| input: %p", inbuf);
-    SNetUtilDebugNotice("| output: %p", outbuf);
+    SNetUtilDebugNotice("| input: %p", input);
+    SNetUtilDebugNotice("| output: %p", output);
     SNetUtilDebugNotice("-");
 #endif
-    hnd = SNetHndCreate( HND_sync, inbuf, outbuf, outtype, patterns, guards);
+    hnd = SNetHndCreate( HND_sync, input, output, outtype, patterns, guards);
     
     
     SNetTlCreateComponent( SyncBoxThread, (void*)hnd, ENTITY_sync);
@@ -412,6 +412,6 @@ extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *inbuf,
   }
 #endif /* DISTRIBUTED_SNET */
 
-  return( outbuf);
+  return( output);
 }
 

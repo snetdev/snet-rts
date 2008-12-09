@@ -271,8 +271,13 @@ int SNetInRun(int argc, char *argv[],
   
   SNetObserverInit(labels, interfaces);
   
+#ifdef DISTRIBUTED_SNET
+  /* TODO:*/
+  out_buf = fun(in_buf, NULL, 0);
+#else
   out_buf = fun(in_buf);
-  
+#endif /* DISTRIBUTED_SNET */  
+
   if(SNetInOutputInit(output, labels, interfaces, out_buf) != 0){
     /* TODO: free resources! */
     printf("Abort: Could not initialize output component!\n");
