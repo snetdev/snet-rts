@@ -1,9 +1,12 @@
+include $(SNETBASE)/src/makefiles/config.mkf
+
 CC        = gcc
-CCFLAGS  = -Wall -g -fPIC
+CCFLAGS   = -Wall -g -fPIC
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include
 SOFLAGS   = -shared -dy -Wl -allow-shlib-undefined 
 COPY      = cp
+DISTFLAGS = -DDISTRIBUTED_SNET
 
 # = = = = = = = = = = = = = = = = = = = =
 OBJECTS     = C4SNet.o base64.o 
@@ -17,6 +20,12 @@ TARGETDIR   = $(SNETBASE)/lib
 
 all:
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
+	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
+	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
+	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
+
+mpi:
+	$(CC) $(MPIFLAGS) $(DISTFLAGS) $(CCFLAGS) $(INCDIRS) -c *.c
 	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
 	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)

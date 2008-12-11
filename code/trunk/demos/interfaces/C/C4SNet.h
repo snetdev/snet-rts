@@ -9,8 +9,8 @@
  *
  * The language interface contains all the functionality required 
  * by S-Net runtime environment and supports all the C primary data
- * types. C4SNet also offers a set of functions for the programmers to use 
- * in their box codes.
+ * types and arrays of promary types. C4SNet also offers a set of 
+ * functions for the programmers to use in their box codes.
  *
  * Currently structured data types and pointers are nott supported.
  *
@@ -38,6 +38,20 @@ typedef struct container c4snet_container_t;
 
 /** <!--********************************************************************-->
  *
+ * @enum c4snet_vtype_t
+ *
+ *   @brief  C4SNet mapping for variable types.    
+ *
+ *****************************************************************************/
+
+typedef enum{
+    VTYPE_unknown, /*!< unkown data type. Not a valid type! */
+    VTYPE_simple,  /*!< simple type */
+    VTYPE_array    /*!< array  type */
+}c4snet_vtype_t;
+
+/** <!--********************************************************************-->
+ *
  * @enum c4snet_type_t
  *
  *   @brief  C4SNet mapping for C primary types.    
@@ -58,11 +72,6 @@ typedef enum{
     CTYPE_double,  /*!< double */
     CTYPE_ldouble, /*!< long double */
 }c4snet_type_t;
-
-
-
-
-
 
 /** <!--********************************************************************-->
  *
@@ -116,11 +125,6 @@ void C4SNetOut( void *hnd, int variant, ...);
 
 /*@}*/
 
-
-
-
-
-
 /** <!--********************************************************************-->
  *
  * @name Data functions
@@ -130,18 +134,54 @@ void C4SNetOut( void *hnd, int variant, ...);
 
 /** <!--********************************************************************-->
  *
+ * @fn int C4SNetSizeof(c4snet_data_t *data)
+ *
+ *   @brief Returns size of the data inside c4snet_data_t struct in bytes.
+ *          In case of an data array, size of one array element is returned.
+ *
+ *   @param data Pointer to the data.
+ *
+ *   @return size of the data inside c4snet_data_t struct in bytes.   
+ *
+ *****************************************************************************/
+
+int C4SNetSizeof(c4snet_data_t *data);
+
+/** <!--********************************************************************-->
+ *
  * @fn c4snet_data_t *C4SNetDataCreate( c4snet_type_t type, void *data)
  *
  *   @brief  Creates a new c4snet_data_t struct.
  *
  *   @param type Type of the data.
  *   @param data Pointer to the data.
+ * 
+ *   @notice In case of primary types the data will be copied!
  *
  *   @return Pointer to the created struct, or NULL in case of error.        
  *
  *****************************************************************************/
 
-c4snet_data_t *C4SNetDataCreate( c4snet_type_t type, void *data);
+c4snet_data_t *C4SNetDataCreate( c4snet_type_t type, const void *data);
+
+/** <!--********************************************************************-->
+ *
+ * @fn c4snet_data_t *C4SNetDataCreateArray( c4snet_type_t type, void *data)
+ *
+ *   @brief  Creates a new c4snet_data_t struct.
+ *
+ *   @param type Type of the data.
+ *   @param size Number of elements in the array.
+ *   @param data Pointer to the data.
+ *
+ *   @notice Unlike in case of primary types the data will NOT be copied!
+ *
+ *   @return Pointer to the created struct, or NULL in case of error.        
+ *
+ *****************************************************************************/
+
+c4snet_data_t *C4SNetDataCreateArray( c4snet_type_t type, int size, void *data);
+
 
 /** <!--********************************************************************-->
  *
@@ -196,6 +236,35 @@ void *C4SNetDataGetData( c4snet_data_t *ptr);
  *****************************************************************************/
 
 c4snet_type_t C4SNetDataGetType( c4snet_data_t *c);
+
+/** <!--********************************************************************-->
+ *
+ * @fn c4snet_type_t C4SNetDataGetVType( c4snet_data_t *c)
+ *
+ *   @brief Returns the vtype of the data.
+ *
+ *   @param ptr Pointer to type c4snet_data_t struct. 
+ *
+ *   @return VType of the data or VTYPE_unknown in case of an error. 
+ *
+ *****************************************************************************/
+
+c4snet_vtype_t C4SNetDataGetVType( c4snet_data_t *c);
+
+/** <!--********************************************************************-->
+ *
+ * @fn int C4SNetDataGetArraySize( c4snet_data_t *c);
+ *
+ *   @brief Returns number of elements in the data array
+ *
+ *   @param ptr Pointer to type c4snet_data_t struct. 
+ *
+ *   @return Number of elements in the data array or -1 in case the data is not an array
+ *
+ *****************************************************************************/
+
+int C4SNetDataGetArraySize( c4snet_data_t *c);
+
 
 /*@}*/
 
