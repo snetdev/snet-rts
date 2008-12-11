@@ -1,0 +1,178 @@
+#include "snet-gwrt.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void list_test(const snet_domain_t *snetd)
+{
+    unsigned int i = 0;
+    unsigned int test_sz = 1000000;
+
+    unsigned int int_lst_item0 = 111;
+    unsigned int int_lst_item1 = 222;
+
+    snet_list_t *lst = SNetListCreate(0, snetd);
+
+    for (i=0; i < test_sz; i++) {
+        unsigned int id = SNetListPushBack(lst, &int_lst_item0);
+
+        printf("Pushed item %u with id %u\n", i, id);
+
+        printf(
+            "Empty = %u, Size = %u, Capacity = %u\n",
+            SNetListIsEmpty(lst),
+            SNetListGetSize(lst),
+            SNetListGetCapacity(lst));
+    }
+
+    i=0;
+    printf("\n/*---*/\n\n");
+
+    while (!SNetListIsEmpty(lst)) {
+        unsigned int *item = (unsigned int *) 
+            SNetListItemGetValue(lst, SNetListBegin(lst));
+
+        SNetListRemove(lst, SNetListBegin(lst));
+
+        assert(item != NULL);
+
+        printf("Poped item %u: %u\n", i, *item);
+        
+        printf(
+            "Empty = %u, Size = %u, Capacity = %u\n",
+            SNetListIsEmpty(lst),
+            SNetListGetSize(lst),
+            SNetListGetCapacity(lst));
+
+        i++;
+    }
+
+    printf("\n/*---*/\n\n");
+
+    for (i=0; i < test_sz; i++) {
+
+        if (i % 3 < 2 || SNetListIsEmpty(lst)) {
+            unsigned int id = SNetListPushFront(lst, &int_lst_item0);
+            printf("Pushed item: id = %u\n", id);
+        } else {
+            srand(SNetListGetSize(lst));
+
+            unsigned int n = 
+                ((unsigned int) rand()) % SNetListGetSize(lst);
+
+            printf("Popping %u items\n", n);
+            
+            for (unsigned int j=0; j < n; j++) {
+                unsigned int *item = (unsigned int *) SNetListPopFront(lst);
+
+                assert(item != NULL);
+
+                printf("Poped item %u: %u\n", j, *item);
+            }
+        }
+
+        printf(
+            "Empty = %u, Size = %u, Capacity = %u\n",
+            SNetListIsEmpty(lst),
+            SNetListGetSize(lst),
+            SNetListGetCapacity(lst));
+    }
+
+    printf("\n/*---*/\n\n");
+
+    while (!SNetListIsEmpty(lst)) {
+        SNetListPopBack(lst);
+
+        printf(
+            "Empty = %u, Size = %u, Capacity = %u\n",
+            SNetListIsEmpty(lst),
+            SNetListGetSize(lst),
+            SNetListGetCapacity(lst));
+    }
+
+    printf("\n/*---*/\n\n");
+
+    int ints[] = {
+        0, 1, 2, 3, 4,
+        5, 6, 7, 8, 9 
+    };
+
+    for (i=0; i < 10; i++)
+        SNetListPushBack(lst, ints + i);
+       
+    for (unsigned int it = SNetListBegin(lst); 
+         it != 0; it = SNetListItemGetNext(lst, it)) {
+
+        int *item = (int *) SNetListItemGetValue(lst, it);
+
+        assert(item != NULL);
+        printf("Item(%u) = %d\n", it, *item);
+    }
+
+    printf("\n/*---*/\n\n");
+
+    unsigned int id = 0;
+    
+    id = SNetListFindItem(lst, ints + 2);
+    SNetListInsertAfter(lst, id, &int_lst_item0);
+
+    id = SNetListFindItem(lst, ints + 5);
+    SNetListInsertAfter(lst, id, &int_lst_item0);
+    
+    id = SNetListFindItem(lst, ints + 9);
+    SNetListInsertAfter(lst, id, &int_lst_item0);
+
+    id = SNetListFindItem(lst, ints + 0);
+    SNetListInsertBefore(lst, id, &int_lst_item1);
+
+    id = SNetListFindItem(lst, ints + 3);
+    SNetListInsertBefore(lst, id, &int_lst_item1);
+
+    id = SNetListFindItem(lst, ints + 8);
+    SNetListInsertBefore(lst, id, &int_lst_item1);
+
+    for (unsigned int it = SNetListBegin(lst); 
+         it != 0; it = SNetListItemGetNext(lst, it)) {
+
+        int *item = (int *) SNetListItemGetValue(lst, it);
+
+        assert(item != NULL);
+        printf("Item(%u) = %d\n", it, *item);
+    }
+
+    printf("\n/*---*/\n\n");
+
+    snet_list_t *lst_copy = SNetListCreateCopy(lst);
+
+    for (unsigned int it = SNetListBegin(lst_copy); 
+         it != 0; it = SNetListItemGetNext(lst_copy, it)) {
+
+        int *item = (int *) SNetListItemGetValue(lst_copy, it);
+
+        assert(item != NULL);
+        printf("Item(%u) = %d\n", it, *item);
+    }
+
+    printf("\n/*---*/\n\n");
+
+    for (unsigned int it = SNetListEnd(lst_copy); 
+         it != 0; it = SNetListItemGetPrev(lst_copy, it)) {
+
+        int *item = (int *) SNetListItemGetValue(lst_copy, it);
+
+        assert(item != NULL);
+        printf("Item(%u) = %d\n", it, *item);
+    }
+
+    SNetListDestroy(lst_copy);
+    SNetListDestroy(lst);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/

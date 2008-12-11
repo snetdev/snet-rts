@@ -54,7 +54,7 @@ CXX_FLAGS               := -c
 CXX_OUTF_FLAG           := -o
 CXX_INCL_DIRS_FLAGS     := $(foreach d,$(INCLUDE_DIRS),-I$(d))
 
-AR_FLAGS                := rvu
+AR_FLAGS                := ru
 ARINX_FLAGS             :=
 
 #-------------------------------------------------------------------------------

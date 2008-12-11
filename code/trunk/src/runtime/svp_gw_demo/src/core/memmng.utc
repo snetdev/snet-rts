@@ -84,6 +84,12 @@ void SNetMemFree(void *p)
     free(p);
 }
 
+void SNetMemSet(void *p, int value, unsigned int sz)
+{
+    assert(p != NULL);
+    memset(p, value, (size_t) sz);
+}
+
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 

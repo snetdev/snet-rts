@@ -37,7 +37,6 @@ void SNetBaseTypeInit(snet_base_t *var, const snet_domain_t *domain)
     assert(domain != NULL);
 
     var->domain    = (snet_domain_t *) domain;
-    var->ref_cnt   = 0;
     var->plc_flags = 0;
 }
 
@@ -63,18 +62,6 @@ void SNetBaseTypeSetPlaces(
         var->plc_flags |= 0x04;
         var->places.spec_mod = *spec_mod;
     }
-}
-
-/*----------------------------------------------------------------------------*/
-
-void SNetBaseTypeIncrRefCnt(snet_base_t *var)
-{
-    assert(var != NULL); var->ref_cnt++;
-}
-
-void SNetBaseTypeDecrRefCnt(snet_base_t *var)
-{
-    assert(var != NULL); var->ref_cnt--;
 }
 
 /*----------------------------------------------------------------------------*/

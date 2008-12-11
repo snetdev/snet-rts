@@ -3,12 +3,14 @@
 
 ../../src/core/record.utc
 ../../src/core/domain.utc
+../../src/core/snetbli.utc
 ../../src/core/typeencode.utc
 ../../src/core/basetype.utc
 ../../src/core/gw.utc
 ../../src/core/handle.utc
 ../../src/core/conslist.utc
 ../../src/core/memmng.utc
+../../src/core/list.utc
 ../../src/core/buffer.utc
 ../../src/core/expression.utc
 ../../src/core/graph.utc

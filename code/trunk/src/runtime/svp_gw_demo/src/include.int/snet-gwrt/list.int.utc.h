@@ -10,14 +10,14 @@
                          
       -------------------------------------------------------------------
 
-    File Name      : snet-gwrt.utc.h
+    File Name      : list.int.utc.h
 
     File Type      : Header File
 
     ---------------------------------------
 
     File 
-    Description    : Master header.
+    Description    :
 
     Updates 
     Description    : N/A
@@ -25,16 +25,25 @@
 */
 /*----------------------------------------------------------------------------*/
 
-#ifndef __SVPSNETGWRT_SNET_GWRT_MASTER_HEADER
-#define __SVPSNETGWRT_SNET_GWRT_MASTER_HEADER
+#ifndef __SVPSNETGWRT_LIST_INT_H
+#define __SVPSNETGWRT_LIST_INT_H
 
-#include "snet-gwrt/snet.utc.h"
-#include "snet-gwrt/list.utc.h"
-#include "snet-gwrt/buffer.utc.h"
-#include "snet-gwrt/entities.utc.h"
+#include "list.utc.h"
 
-#endif // __SVPSNETGWRT_SNET_GWRT_MASTER_HEADER
+/*---*/
+
+#include "common.int.utc.h"
+#include "basetype.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+extern const snet_base_t*
+SNetListToBase(const snet_list_t *lst);
+
+#endif // __SVPSNETGWRT_LIST_INT_H
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/
+
 

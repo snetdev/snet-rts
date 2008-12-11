@@ -8,6 +8,7 @@
 ../../src/test-app/test_snet/00/test00.snet.utc
 ../../src/test-app/net_ioproc_test.utc
 ../../src/test-app/testapp.utc
+../../src/test-app/list_test.utc
 ../../src/test-app/ginx_test.utc
 ../../src/test-app/buffer_test.utc
 ../../src/test-app/graph_test.utc

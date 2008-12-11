@@ -886,6 +886,7 @@ void SNetGNodeSetupExternConn(snet_gnode_t *n, snet_domain_t *snetd)
     assert(n->type == GRAPH_NODE_TYPE_EXTERN_CONNECTION);
     assert(n->data.normal->entity.extern_conn->snetd == NULL);
 
+    assert(SNetDomainGetType(snetd) != DOMAIN_TYPE_WORKER);
     assert(!SNetDomainIsSame(snetd, SNetBaseTypeGetDomain(&n->base)));
 
     n->data.normal->entity.extern_conn->snetd = snetd;

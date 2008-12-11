@@ -45,7 +45,6 @@ typedef struct domain snet_domain_t;
 typedef struct {
     snet_domain_t *domain;
 
-    unsigned int   ref_cnt;
     unsigned int   plc_flags;
 
     struct {
@@ -74,14 +73,6 @@ SNetBaseTypeSetPlaces(
 
 /*---*/
 
-extern void
-SNetBaseTypeIncrRefCnt(snet_base_t *var);
-
-extern void
-SNetBaseTypeDecrRefCnt(snet_base_t *var);
-
-/*---*/
-
 extern bool
 SNetBaseTypeSameDomain(const snet_base_t *var1, const snet_base_t *var2);
 
@@ -98,12 +89,6 @@ static inline unsigned int
 SNetBaseTypeGetPlcFlags(const snet_base_t *var)
 {
     assert(var != NULL); return var->plc_flags;
-}
-
-static inline unsigned int
-SNetBaseTypeGetRefCount(const snet_base_t *var)
-{
-    assert(var != NULL); return var->ref_cnt;
 }
 
 /*----------------------------------------------------------------------------*/

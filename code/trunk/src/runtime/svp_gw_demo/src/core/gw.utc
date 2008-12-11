@@ -30,7 +30,6 @@
 /*---*/
 
 #include "graphstructs.int.utc.h"
-#include "conslist.int.utc.h"
 #include "domain.int.utc.h"
 #include "buffer.int.utc.h"
 
@@ -39,79 +38,146 @@
 /*----------------------------------------------------------------------------*/
 /* Handler functions for graph nodes */
 
-static bool gnode_hnd_nop(snet_gnode_t *n)
+static bool gnode_hnd_nop(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_box(snet_gnode_t *n)
+static bool gnode_hnd_box(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_synccell(snet_gnode_t *n)
+static bool gnode_hnd_synccell(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_filter(snet_gnode_t *n)
+static bool gnode_hnd_filter(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_star(snet_gnode_t *n)
+static bool gnode_hnd_star(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_star_merge(snet_gnode_t *n)
+static bool gnode_hnd_star_merge(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_split(snet_gnode_t *n)
+static bool gnode_hnd_split(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_parallel(snet_gnode_t *n)
+static bool gnode_hnd_parallel(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_parallel_merge(snet_gnode_t *n)
+static bool gnode_hnd_parallel_merge(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_extern_conn(snet_gnode_t *n)
+static bool gnode_hnd_extern_conn(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static bool gnode_hnd_extern_conn_merge(snet_gnode_t *n)
+static bool gnode_hnd_extern_conn_merge(
+    snet_gnode_t *gnode, snet_conslst_node_t *cons_node)
 {
     return false;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Functions to insert new records to the cons-list */
+
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Infimum propagation related functions */
+
+static void update_infimum(snet_conslst_node_t *cons_node)
+{
+}
+
+static void propagate_infimum(snet_conslst_node_t *cons_node)
+{
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Graph Walking function */
+
+static void graph_walk(snet_conslst_node_t *cons_node)
+{
+    const snet_gnode_t *gnode = SNetConsLstNodeGetGraphNode(cons_node);
+
+    while (gnode != NULL) {
+        snet_gnode_contlink_t *lnk = (
+            gnode->type == GRAPH_NODE_TYPE_NOP ?
+            &gnode->data.nop->lnk : &gnode->data.normal->lnk);
+
+        gnode = (lnk->cached_node == NULL ? lnk->node : lnk->cached_node);
+
+        assert(!lnk->merge || 
+                gnode->type == GRAPH_NODE_TYPE_COMB_STAR  || 
+                gnode->type == GRAPH_NODE_TYPE_COMB_SPLIT || 
+                gnode->type == GRAPH_NODE_TYPE_COMB_PARALLEL);
+
+        if (gnode->type == GRAPH_NODE_TYPE_NOP) {
+            continue;
+        }
+
+        snet_gnode_hnd_fptr_t gnode_hnd_func = (
+            lnk->merge ? 
+            gnode->data.normal->hnd_func : 
+            gnode->data.normal->hnd_func_merge);
+
+        if (gnode_hnd_func == NULL) {
+            continue;
+        }
+
+        if (! (*gnode_hnd_func)((snet_gnode_t *) gnode, cons_node)) {
+            break;
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -203,31 +269,67 @@ void SNetGWSetupNormalGNodeHndFuncs(snet_gnode_t *n)
 /*----------------------------------------------------------------------------*/
 /* SNetGWxxx() thread functions */
 
-thread void SNetGW(
-    snet_handle_t *hnd, snet_record_t *rec)
+thread void SNetGW(snet_handle_t *hnd, snet_record_t *rec)
 {
-    printf("GW created!!!\n");
+    // 1. hnd == NULL && rec != NULL
+    //    New record to be added at the end of the cons-list (input record).
+    //
+    // 2. hnd != NULL && rec == NULL
+    //    Continue processing of the cons-node pointed by "hnd". Output
+    //    record within the handle.
+    //
+    // 3. hnd != NULL && rec != NULL
+    //    New record due to box having multiplicity greater than 1. New
+    //    cons-node required to be inserted after the node pointed by
+    //    "hnd".
+    assert(hnd != NULL || rec != NULL);
+    
+    //if (hnd == NULL)
+    //    hnd = conslst_insert_record();
 
-    push_to_output_buf(
-        SNetBaseTypeGetDomain(SNetRecToBase(rec)), rec);
+    if (rec == NULL) {
+
+    } else {
+
+    }
 }
 
-thread void SNetGWRaw(
-    snet_handle_t *hnd, int variant_num, void **args)
-{
-    /**
-     * Not impelemented yet.
-     */
-}
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-thread void SNetGWRawArray(
-    snet_handle_t *hnd, 
-    int if_id, int var_num, void **fields, int **tags, int **btags)
-{
-    /**
-     * Not implemented yet.
-     */
-}
+//void tmp()
+//{
+    // // Create a new cons-list node.
+    // snet_conslst_node_t *cons_node = SNetConsLstNodeCreate(snetd);
+
+    // // Set the graph node of the new cons-node to the
+    // // root of the graph and then add the cons-node to the
+    // // cons-list.
+    // SNetConsLstNodeSetGraphNode(
+    //     cons_node,
+    //     SNetDomainGetGraphRoot(snetd));
+
+    // SNetConsLstPush(SNetDomainGetConsList(snetd), cons_node);
+
+    // // Create a handle that points to the new cons-node
+    // // and then create the 1st GW instance giving it
+    // // the handle.
+    // snet_handle_t *hnd = SNetHandleCreate(cons_node);
+//}
+
+//void foo(snet_handle_t *hnd)
+//{
+//    place p = get_place();
+//
+//    snet_domain_t *snetd_alias =
+//        SNetDomainCreateAlias(
+//            SNetBaseTypeGetDomain(SNetHndToBase(hnd)));
+//
+//    unsigned int wdid =~ create p~>SNetDomainCreateWorker(snetd_alias);
+//    
+//    snet_handle_t *hnd_ser = SNetHndCreateSerializable(hnd);
+//}
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

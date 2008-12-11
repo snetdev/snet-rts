@@ -44,6 +44,20 @@
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
+/**
+ * Because the BLI "public" functions are declared within the "snet.utc.h" and
+ * so far there is no need for an "internal" version of it and the 2
+ * functions below are the only ones that are "internal" used only within
+ * this file we declare them here (If this situation changes and a 
+ * "snet.int.utc.h" is created in the future the 2 declarations below
+ * can/should be moved there).
+ */
+
+extern void SNetBLISubSystemInit();
+extern void SNetBLISubSystemDestroy();
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /**
  * Global initialization and termination and box lanugage interface related
@@ -52,110 +66,14 @@
 
 void SNetGlobalInitialize()
 {
-    /**
-     * Not implemented yet
-     */
+    SNetBLISubSystemInit();
+    SNetDomainSubSystemInit();
 }
 
 void SNetGlobalDestroy()
 {
-    /**
-     * Not implemented yet
-     */
-}
-
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-
-bool SNetGlobalRegisterInterface(
-    int id,
-    void  (*freefun) (void *),
-    void* (*copyfun) (void *),
-    int   (*serfun)  (void *, char **),
-    void* (*deserfun)(char *, int))
-{
-    /**
-     * Not implemented yet
-     */
-
-     return false;
-}
-
-/*----------------------------------------------------------------------------*/
-
-void* SNetGetCopyFun(int id)
-{
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
-}
-
-void* SNetGetFreeFun(int id)
-{
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
-}
-
-void* SNetGetSerializationFun(int id)
-{
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
-}
-
-void* SNetGetDeserializationFun(int id)
-{
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
-}
-
-/*----------------------------------------------------------------------------*/
-
-void* SNetGetCopyFunFromRec(snet_record_t *rec)
-{
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
-}
-
-void* SNetGetFreeFunFromRec(snet_record_t *rec)
-{
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
-}
-
-void* SNetGetSerializationFunFromRec(snet_record_t *rec)
-{
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
-}
-
-void* SNetGetDeserializationFunFromRec(snet_record_t *rec)
-{
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
+    SNetBLISubSystemDestroy();
+    SNetDomainSubSystemDestroy();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -196,32 +114,18 @@ void SNetPushIn(snet_domain_t *snetd, snet_record_t *rec)
 
     assert(SNetDomainIsSame(
         snetd, SNetBaseTypeGetDomain(SNetRecToBase(rec))));
-
-    if (rec == NULL) {
-        return;
-    }
-    
-    // Create a new cons-list node.
-    snet_conslst_node_t *cons_node = SNetConsLstNodeCreate(snetd);
-
-    // Set the graph node of the new cons-node to the
-    // root of the graph and then add the cons-node to the
-    // cons-list.
-    SNetConsLstNodeSetGraphNode(
-        cons_node,
-        SNetDomainGetGraphRoot(snetd));
-
-    SNetConsLstPush(SNetDomainGetConsList(snetd), cons_node);
-
-    // Create a handle that points to the new cons-node
-    // and then create the 1st GW instance giving it
-    // the handle.
-    snet_handle_t *hnd = SNetHandleCreate(cons_node);
-    
+     
     family fid;
     place  gw_plc = SNetDomainGetGWPlace(snetd); 
 
-    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec);
+    create (fid; gw_plc; 0; 0; 1; 1;;) 
+        SNetGW((snet_handle_t *)(NULL), rec);
+
+    /**
+     * !!!NOTE!!!: This should not be here but since the uTC-PTL 
+     * does not support continuation creates yet it is required
+     * because otherwise the application does not terminate.
+     */
     sync(fid);
 }
 
@@ -286,6 +190,21 @@ snet_record_t* SNetPopOut(snet_domain_t *snetd, bool block)
  * output records.
  */
 
+static thread void set_handle_out_record(
+    snet_handle_t *hnd, snet_record_t *rec, shared bool has_out_rec)
+{
+    if (SNetHndGetOutRecord(hnd) == NULL) {
+        SNetHndSetOutRecord(hnd, rec);
+
+        has_out_rec = false;
+        return;
+    }
+
+    has_out_rec = true;
+}
+
+/*----------------------------------------------------------------------------*/
+
 void SNetOut(snet_handle_t *hnd, snet_record_t *rec)
 {
     assert(hnd != NULL);
@@ -294,14 +213,23 @@ void SNetOut(snet_handle_t *hnd, snet_record_t *rec)
     hnd = (snet_handle_t *) SNetUnmaskPointer(hnd);
 
     assert(SNetBaseTypeSameDomain(
-        SNetHandleToBase(hnd), SNetRecToBase(rec)));
+        SNetHndToBase(hnd), SNetRecToBase(rec)));
 
     family fid;
+    bool   is_first_call = false;
+    place  hnd_mutex     = SNetBaseTypeGetMutexPlace(SNetHndToBase(hnd));
 
-    place  gw_plc = SNetDomainGetGWPlace(
-        SNetBaseTypeGetDomain(SNetHandleToBase(hnd))); 
+    create (fid; hnd_mutex; 0; 0; 1; 1;;)
+        set_handle_out_record(hnd, rec, is_first_call);
 
-    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec);
+    sync(fid);
+
+    if (!is_first_call) {
+        place  gw_plc = SNetDomainGetGWPlace(
+            SNetBaseTypeGetDomain(SNetHndToBase(hnd))); 
+
+        create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec);
+    }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -314,34 +242,26 @@ void SNetOutRaw(snet_handle_t *hnd, int variant_num, ...)
         return;
     }
 
-    hnd = (snet_handle_t *) SNetUnmaskPointer(hnd);
-
-    family  fid;
     va_list vargs;
 
-    place  gw_plc = SNetDomainGetGWPlace(
-        SNetBaseTypeGetDomain(SNetHandleToBase(hnd))); 
-
-    // !!NOTE!!: The "args" array allocated here
-    // is going to be freed by the GW created below.
-    void **args = (void **) SNetMemAlloc(variant_num * sizeof(void *));
-
-    if (args == NULL) {
-        /**
-         * !!TODO!!: Handle runtime error.
-         */
-         abort();
-    }
+    // Create a new record structure
+    // and with the data given as arguments.
+    snet_record_t *rec = SNetRecCreate(
+        REC_DESCR_DATA,
+        SNetBaseTypeGetDomain(SNetHndToBase(
+            (snet_handle_t *)SNetUnmaskPointer(hnd))));
 
     va_start(vargs, variant_num);
 
     for (int i=0; i < variant_num; i++) {
-        args[i] = va_arg(vargs, void*);
+        /**
+         * !!TODO!!: Setup the record
+         */
     }
 
-    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGWRaw(hnd, variant_num, args);
-
     va_end(vargs);
+
+    SNetOut(hnd, rec);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -352,15 +272,18 @@ void SNetOutRawArray(
 {
     assert(hnd != NULL);
 
-    hnd = (snet_handle_t *) SNetUnmaskPointer(hnd);
+    // Create a new record structure
+    // and with the data given as arguments.
+    snet_record_t *rec = SNetRecCreate(
+        REC_DESCR_DATA,
+        SNetBaseTypeGetDomain(SNetHndToBase(
+            (snet_handle_t *)SNetUnmaskPointer(hnd))));
 
-    family fid;
+    /**
+     * !!TODO!!: Setup the record
+     */
 
-    place  gw_plc = SNetDomainGetGWPlace(
-        SNetBaseTypeGetDomain(SNetHandleToBase(hnd))); 
-
-    create (fid; gw_plc; 0; 0; 1; 1;;)
-        SNetGWRawArray(hnd, if_id, var_num, fields, tags, btags);
+    SNetOut(hnd, rec);
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

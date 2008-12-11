@@ -1,0 +1,158 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : snetbli.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    : This file contains functions that implement the box
+                     language interface related functions from the primary 
+                     services of the runtime.
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "snet.utc.h"
+
+/*---*/
+
+#include "common.int.utc.h"
+#include "memmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Sub-system initialization functions */
+
+void SNetBLISubSystemInit()
+{
+    /**
+     * Not implemented yet
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetBLISubSystemDestroy()
+{
+    /**
+     * Not implemented yet
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Interface registration function */
+
+bool SNetGlobalRegisterInterface(
+    int id,
+    void  (*freefun) (void *),
+    void* (*copyfun) (void *),
+    int   (*serfun)  (void *, char **),
+    void* (*deserfun)(char *, int))
+{
+    /**
+     * Not implemented yet
+     */
+
+     return false;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Functions to retrieve box language interface functions by interface id */
+
+void* SNetGetCopyFun(int id)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetFreeFun(int id)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetSerializationFun(int id)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetDeserializationFun(int id)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Functions to retrieve box language interface functions from records */
+
+void* SNetGetCopyFunFromRec(snet_record_t *rec)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetFreeFunFromRec(snet_record_t *rec)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetSerializationFunFromRec(snet_record_t *rec)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+void* SNetGetDeserializationFunFromRec(snet_record_t *rec)
+{
+    /**
+     * Not implemented yet
+     */
+
+     return NULL;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/

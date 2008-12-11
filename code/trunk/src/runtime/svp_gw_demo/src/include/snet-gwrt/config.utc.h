@@ -73,17 +73,6 @@
  */
 // #define SVPSNETGWRT_DEBUG 5
 
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-
-/**
- * Sets the size (in terms of index items) a graph index increases
- * with each re-allocation (For long networks bigger values will improve
- * performance).
- */
-#define SVPSNETGWRT_GRAPH_INDEX_INCR_STEP 4
-
 #endif // __SVPSNETGWRT_CONFIG_H
 
 /*------------------------------- END OF FILE --------------------------------*/

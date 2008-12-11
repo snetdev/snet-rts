@@ -29,6 +29,7 @@
 #define __SVPSNETGWRT_GRAPHSTRUCTS_INT_H
 
 #include "graph.int.utc.h"
+#include "conslist.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -126,7 +127,8 @@ typedef struct {
 
 /*---*/
 
-typedef bool (*snet_gnode_hnd_fptr_t)(snet_gnode_t *node);
+typedef bool (*snet_gnode_hnd_fptr_t)(
+    snet_gnode_t *node, snet_conslst_node_t *cons_node);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/

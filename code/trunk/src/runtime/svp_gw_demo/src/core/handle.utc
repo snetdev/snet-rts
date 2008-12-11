@@ -47,7 +47,7 @@ struct handle {
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void SNetHandleInit(
+void SNetHndInit(
     snet_handle_t *hnd, const snet_conslst_node_t *cons_node)
 {
     assert(hnd != NULL);
@@ -69,7 +69,7 @@ void SNetHandleInit(
 
 /*----------------------------------------------------------------------------*/
 
-snet_handle_t* SNetHandleCreate(const snet_conslst_node_t *cons_node)
+snet_handle_t* SNetHndCreate(const snet_conslst_node_t *cons_node)
 {
     snet_handle_t *hnd = 
         (snet_handle_t *) SNetMemAlloc(sizeof(snet_handle_t));
@@ -81,14 +81,14 @@ snet_handle_t* SNetHandleCreate(const snet_conslst_node_t *cons_node)
         abort();
     }
 
-    SNetHandleInit(hnd, cons_node);
+    SNetHndInit(hnd, cons_node);
 
     return hnd;
 }
 
 /*----------------------------------------------------------------------------*/
 
-void SNetHandleDestroy(snet_handle_t *hnd)
+void SNetHndDestroy(snet_handle_t *hnd)
 {
     assert(hnd != NULL);
     SNetMemFree(hnd);
@@ -96,7 +96,7 @@ void SNetHandleDestroy(snet_handle_t *hnd)
 
 /*----------------------------------------------------------------------------*/
 
-void SNetHandleSetupMutex(snet_handle_t *hnd, const place *p)
+void SNetHndSetupMutex(snet_handle_t *hnd, const place *p)
 {
     assert(hnd != NULL);
     SNetBaseTypeSetPlaces(&hnd->base, NULL, p, NULL);
@@ -105,13 +105,21 @@ void SNetHandleSetupMutex(snet_handle_t *hnd, const place *p)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-snet_conslst_node_t* SNetHandleGetConsNode(const snet_handle_t *hnd)
+snet_conslst_node_t* SNetHndGetConsNode(const snet_handle_t *hnd)
 {
     assert(hnd != NULL);
     return (snet_conslst_node_t *)(hnd->cons_node);
 }
 
-snet_record_t* SNetHandleGetOutRecord(const snet_handle_t *hnd)
+/*----------------------------------------------------------------------------*/
+
+snet_record_t* SNetHndGetRecord(const snet_handle_t *hnd)
+{
+    assert(hnd != NULL);
+    return NULL;
+}
+
+snet_record_t* SNetHndGetOutRecord(const snet_handle_t *hnd)
 {
     assert(hnd != NULL);
     return (snet_record_t *)(hnd->out_rec);
@@ -120,7 +128,7 @@ snet_record_t* SNetHandleGetOutRecord(const snet_handle_t *hnd)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void SNetHandleSetOutRecord(snet_handle_t *hnd, const snet_record_t *rec)
+void SNetHndSetOutRecord(snet_handle_t *hnd, const snet_record_t *rec)
 {
     assert(hnd != NULL);
 
@@ -133,7 +141,7 @@ void SNetHandleSetOutRecord(snet_handle_t *hnd, const snet_record_t *rec)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-const snet_base_t* SNetHandleToBase(const snet_handle_t *hnd)
+const snet_base_t* SNetHndToBase(const snet_handle_t *hnd)
 {
     assert(hnd != NULL); return &hnd->base;
 }

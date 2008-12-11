@@ -38,17 +38,9 @@
 
 extern void SNetGWSetupNormalGNodeHndFuncs(snet_gnode_t *n);
 
-/*----------------------------------------------------------------------------*/
+/*---*/
 
-extern thread void SNetGW(
-    snet_handle_t *hnd, snet_record_t *rec);
-
-extern thread void SNetGWRaw(
-    snet_handle_t *hnd, int variant_num, void **args);
-
-extern thread void SNetGWRawArray(
-    snet_handle_t *hnd, 
-    int if_id, int var_num, void **fields, int **tags, int **btags);
+extern thread void SNetGW(snet_handle_t *hnd, snet_record_t *rec);
 
 #endif // __SVPSNETGWRT_GW_INT_H
 

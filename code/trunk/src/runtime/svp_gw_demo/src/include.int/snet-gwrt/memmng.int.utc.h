@@ -56,6 +56,10 @@ SNetMemRealloc(void *p, unsigned int sz);
 
 extern void SNetMemFree(void *p);
 
+/*---*/
+
+extern void SNetMemSet(void *p, int value, unsigned int sz);
+
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 

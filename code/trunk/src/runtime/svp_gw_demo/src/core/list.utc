@@ -1,0 +1,998 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+
+                   Computer Systems Architecture (CSA) Group
+                             Informatics Institute
+                         University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : list.utc
+
+    File Type      : Header File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "list.int.utc.h"
+
+#include "memmng.int.utc.h"
+#include "plcmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+
+#define PARTIAL_FREE_BUCKETS_LST  0
+#define COMPLETE_FREE_BUCKETS_LST 1
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+typedef struct list_node {
+    bool                notfree;
+    const void         *value;
+
+    struct list_node   *next;
+    struct list_node   *prev;
+
+    unsigned int        binx;
+
+} snet_list_node_t;
+
+/*---*/
+
+typedef struct list_bucket {
+    unsigned int      fill_cnt;
+    snet_list_node_t *nodes;
+    
+    struct {
+        unsigned int      sz;
+
+        snet_list_node_t *head;
+        snet_list_node_t *tail;
+
+    } free_nodes_lst;
+
+    unsigned int blst_id;
+    unsigned int blst_next;
+    unsigned int blst_prev;
+
+} snet_list_bucket_t;
+
+/*----------------------------------------------------------------------------*/
+
+struct list {
+    snet_base_t  base;
+
+    unsigned int bucket_sz;
+    unsigned int buckets_cnt;
+    unsigned int buckets_vec_sz;
+ 
+    snet_list_bucket_t *buckets;
+    snet_list_bucket_t *cur_bucket;
+
+    struct {
+        unsigned int      sz;
+
+        snet_list_node_t *head;
+        snet_list_node_t *tail;
+
+    } linked_lst;
+
+    struct {
+        unsigned int sz;
+
+        unsigned int head;
+        unsigned int tail;
+
+    } free_buckets_lst[2];
+
+}; // struct list
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static functions */
+
+static inline unsigned int
+calc_node_id(const snet_list_t *lst, const snet_list_node_t *n)
+{
+    return 1 + (n->binx * lst->bucket_sz) +
+        (unsigned int)(n - lst->buckets[n->binx].nodes);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void reset_bucket(snet_list_bucket_t *b)
+{
+    b->fill_cnt = 0;
+    b->nodes    = NULL;
+
+    b->free_nodes_lst.sz   = 0;
+    b->free_nodes_lst.head = 0;
+    b->free_nodes_lst.tail = 0;
+
+    b->blst_id   = 0;
+    b->blst_next = 0;
+    b->blst_prev = 0;
+}
+
+static void init_bucket(snet_list_bucket_t *b, unsigned int sz)
+{
+    reset_bucket(b);
+
+    b->nodes = 
+        (snet_list_node_t *) 
+            SNetMemAlloc(sz * sizeof(snet_list_node_t));
+
+    if (b->nodes == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    SNetMemSet(b->nodes, 0, sz * sizeof(snet_list_node_t));
+}
+
+static void destroy_bucket(snet_list_bucket_t *b)
+{
+    if (b->nodes != NULL)
+        SNetMemFree(b->nodes);
+
+    reset_bucket(b);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static snet_list_bucket_t*
+pop_free_bucket(snet_list_t *lst, unsigned int blst_inx)
+{
+    if (lst->free_buckets_lst[blst_inx].sz == 0) {
+        return NULL;
+    }
+
+    snet_list_bucket_t *bucket =
+        lst->buckets + lst->free_buckets_lst[blst_inx].tail;
+
+    if (bucket->free_nodes_lst.sz > 1) {
+        return bucket;
+    }
+
+    lst->free_buckets_lst[blst_inx].tail = bucket->blst_next;
+    lst->free_buckets_lst[blst_inx].sz--;
+
+    bucket->blst_id = 0;
+
+    return bucket;
+}
+
+static void
+remove_free_bucket(snet_list_t *lst, snet_list_bucket_t *bucket)
+{
+    if (bucket->blst_id == 0) {
+        return;
+    }
+
+    bool has_next = true;
+    bool has_prev = true;
+
+    unsigned int blst_inx = bucket->blst_id - 1;
+    unsigned int binx     = (unsigned int)(bucket - lst->buckets);
+
+    if (binx == lst->free_buckets_lst[blst_inx].head) {
+        has_next = false;
+        lst->free_buckets_lst[blst_inx].head = bucket->blst_prev;
+    }
+
+    if (binx == lst->free_buckets_lst[blst_inx].tail) {
+        has_prev = false;
+        lst->free_buckets_lst[blst_inx].tail = bucket->blst_next;
+    }
+
+    if (has_next)
+        lst->buckets[bucket->blst_next].blst_prev = bucket->blst_prev;
+
+    if (has_prev)
+        lst->buckets[bucket->blst_prev].blst_next = bucket->blst_next;
+
+    lst->free_buckets_lst[blst_inx].sz--;
+
+    bucket->blst_id = 0;
+}
+
+static void
+push_free_bucket(
+    snet_list_t *lst,
+    snet_list_bucket_t *bucket, unsigned int blst_inx)
+{
+    if (bucket->blst_id != 0) {
+        return;
+    }
+
+    bucket->blst_id   = blst_inx + 1;
+    bucket->blst_prev = lst->free_buckets_lst[blst_inx].head;
+
+    unsigned int binx = (unsigned int)(bucket - lst->buckets);
+
+    if (lst->free_buckets_lst[blst_inx].sz == 0)
+        lst->free_buckets_lst[blst_inx].tail = binx;
+    else
+        lst->buckets[lst->free_buckets_lst[blst_inx].head].blst_next = binx;
+
+    lst->free_buckets_lst[blst_inx].head = binx;
+    lst->free_buckets_lst[blst_inx].sz++;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void expand_bucket_vector(snet_list_t *lst)
+{
+    void *buf = (
+        lst->buckets == NULL ?
+        SNetMemAlloc(
+            sizeof(snet_list_bucket_t) * 
+                SVPSNETGWRT_LIST_BUCKET_VEC_INCR_STEP) :
+        SNetMemRealloc(
+            lst->buckets, 
+            sizeof(snet_list_bucket_t) * 
+                (lst->buckets_vec_sz +
+                 SVPSNETGWRT_LIST_BUCKET_VEC_INCR_STEP)));
+
+    if (buf == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    lst->buckets         = (snet_list_bucket_t *) buf;
+    lst->cur_bucket      = lst->buckets + lst->buckets_vec_sz;
+    lst->buckets_vec_sz += SVPSNETGWRT_LIST_BUCKET_VEC_INCR_STEP;
+
+    init_bucket(lst->cur_bucket, lst->bucket_sz);
+
+    lst->buckets_cnt++;
+    
+    SNetMemSet(
+        lst->cur_bucket + 1,
+        0, 
+        sizeof(snet_list_bucket_t) *
+            (SVPSNETGWRT_LIST_BUCKET_VEC_INCR_STEP - 1));
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void shrink_bucket_vector(snet_list_t *lst)
+{
+    if (lst->linked_lst.sz > 0) {
+        return;
+    }
+
+    unsigned int new_buckets_vec_sz = 
+        (lst->buckets_vec_sz >> 1) + SVPSNETGWRT_LIST_BUCKET_VEC_INCR_STEP;
+
+    if (new_buckets_vec_sz >= lst->buckets_vec_sz) {
+        return;
+    }
+
+    for (unsigned int i = new_buckets_vec_sz; i < lst->buckets_vec_sz; i++) {
+        snet_list_bucket_t *b = lst->buckets + i;
+
+        remove_free_bucket(lst, b);
+        destroy_bucket(b);
+    }
+
+    void *buf = SNetMemRealloc(
+        lst->buckets, sizeof(snet_list_bucket_t) * new_buckets_vec_sz);
+
+    if (buf == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    lst->buckets        = (snet_list_bucket_t *) buf;
+    lst->cur_bucket     = lst->buckets + (new_buckets_vec_sz - 1);
+    lst->buckets_vec_sz = new_buckets_vec_sz;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static snet_list_node_t*
+get_free_node(snet_list_t *lst, snet_list_bucket_t *pref_bucket)
+{
+    snet_list_node_t *node = NULL;
+
+    snet_list_bucket_t *bucket = (
+        pref_bucket == NULL ? NULL : (
+            pref_bucket->fill_cnt < lst->bucket_sz ||
+            pref_bucket->free_nodes_lst.sz > 0 ? pref_bucket : NULL));
+
+    if (bucket != NULL && bucket->free_nodes_lst.sz == 1) {
+        remove_free_bucket(lst, bucket);
+    }
+
+    if (bucket == NULL)
+        bucket = pop_free_bucket(lst, PARTIAL_FREE_BUCKETS_LST);
+
+    if (bucket == NULL && lst->cur_bucket->fill_cnt < lst->bucket_sz) {
+        bucket = lst->cur_bucket;
+    }
+
+    if (bucket == NULL)
+        bucket = pop_free_bucket(lst, COMPLETE_FREE_BUCKETS_LST);
+
+    if (bucket == NULL) {
+        if (lst->cur_bucket == lst->buckets + (lst->buckets_vec_sz - 1))
+            expand_bucket_vector(lst);
+        else
+            lst->cur_bucket++;
+
+        bucket = lst->cur_bucket;
+    }
+
+    if (bucket->nodes == NULL) {
+        init_bucket(bucket, lst->bucket_sz);
+        lst->buckets_cnt++;
+    }
+
+    if (bucket->free_nodes_lst.sz > 0) {
+        node = bucket->free_nodes_lst.tail;
+
+        bucket->free_nodes_lst.tail = 
+            bucket->free_nodes_lst.tail->next;
+
+        if (bucket->free_nodes_lst.tail == NULL)
+            bucket->free_nodes_lst.head = NULL;
+        else
+            bucket->free_nodes_lst.tail->prev = NULL;
+
+        bucket->free_nodes_lst.sz--;
+
+        node->next = NULL;
+        node->prev = NULL;
+    }
+
+    if (node == NULL) {
+        assert(bucket == lst->cur_bucket);
+        assert(bucket->fill_cnt < lst->bucket_sz);
+
+        node = bucket->nodes + bucket->fill_cnt;
+        bucket->fill_cnt++;
+    }
+
+    node->notfree = true;
+    node->binx    = (unsigned int)(bucket - lst->buckets);
+
+    return node;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void free_node(snet_list_t *lst, snet_list_node_t *n)
+{
+    snet_list_bucket_t *bucket = lst->buckets + n->binx;
+    
+    n->notfree = false;
+    n->value   = NULL;
+
+    n->next = NULL;
+    n->prev = bucket->free_nodes_lst.head;
+
+    if (bucket->free_nodes_lst.head != NULL)
+        bucket->free_nodes_lst.head->next = n;
+
+    bucket->free_nodes_lst.head = n;
+
+    if (bucket->free_nodes_lst.tail == NULL) {
+        bucket->free_nodes_lst.tail = n;
+    }
+    
+    bucket->free_nodes_lst.sz++;
+
+    if (bucket->fill_cnt < lst->bucket_sz) {
+        return;
+    }
+
+    if (bucket->free_nodes_lst.sz < lst->bucket_sz) {
+        push_free_bucket(
+            lst, bucket, PARTIAL_FREE_BUCKETS_LST);
+
+    } else {
+        unsigned int pref_capacity = 
+            lst->bucket_sz + 
+            lst->linked_lst.sz + (lst->linked_lst.sz >> 3);
+
+        unsigned int curr_capacity = lst->bucket_sz * lst->buckets_cnt;
+
+        if (curr_capacity <= pref_capacity) {
+            push_free_bucket(
+                lst, bucket, PARTIAL_FREE_BUCKETS_LST);
+
+        } else {
+            remove_free_bucket(lst, bucket);
+            destroy_bucket(bucket);
+
+            lst->buckets_cnt--;
+
+            push_free_bucket(
+                lst, bucket, COMPLETE_FREE_BUCKETS_LST);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static snet_list_node_t* 
+get_node_by_id(const snet_list_t *lst, unsigned int item_id)
+{
+    if (item_id == 0) {
+        return NULL;
+    }
+
+    item_id--;
+
+    unsigned int binx = item_id / lst->bucket_sz;
+
+    if (binx >= lst->buckets_vec_sz) {
+        return NULL;
+    }
+
+    if (lst->buckets[binx].nodes == NULL) {
+        return NULL;
+    }
+
+    snet_list_node_t *node = 
+        lst->buckets[binx].nodes + (item_id % lst->bucket_sz);
+
+    if (node->notfree) {
+        return node;
+    }
+
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_list_node_t* 
+get_node_by_val(const snet_list_t *lst, const void *item_val)
+{
+    snet_list_node_t *n = lst->linked_lst.tail;
+
+    while (n != NULL) {
+        assert(n->notfree);
+
+        if (n->value == item_val) {
+            break;
+        }
+
+        n = n->next;
+    }
+
+    return n;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void remove(snet_list_t *lst, snet_list_node_t *n)
+{
+    if (n == NULL) {
+        return;
+    }
+
+    if (n->next != NULL)
+        n->next->prev = n->prev;
+
+    if (n->prev != NULL)
+        n->prev->next = n->next;
+
+    if (lst->linked_lst.head == n)
+        lst->linked_lst.head = n->prev;
+
+    if (lst->linked_lst.tail == n)
+        lst->linked_lst.tail = n->next;
+
+    lst->linked_lst.sz--;    
+
+    free_node(lst, n);
+    shrink_bucket_vector(lst);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetListInit(
+    snet_list_t *lst,
+    unsigned int bucket_sz, 
+    const snet_domain_t *snetd)
+{
+    assert(lst != NULL);
+    assert(snetd != NULL);
+
+    if (bucket_sz == 0)
+        bucket_sz = SVPSNETGWRT_LIST_DEFAULT_BUCKET_SZ;
+
+    snetd = (const snet_domain_t *) SNetUnmaskPointer(snetd);
+
+    place owner_plc = SNetGetMyPlace();
+
+    SNetBaseTypeInit(&lst->base, snetd);
+    SNetBaseTypeSetPlaces(&lst->base, &owner_plc, NULL, NULL);
+
+    lst->bucket_sz      = bucket_sz;
+    lst->buckets_cnt    = 0;
+    lst->buckets_vec_sz = 0;
+    lst->buckets        = NULL;
+    lst->cur_bucket     = NULL;
+    
+    lst->linked_lst.sz   = 0;
+    lst->linked_lst.head = NULL;
+    lst->linked_lst.tail = NULL;
+    
+    for (unsigned int i=0; i < 2; i++) {
+        lst->free_buckets_lst[i].sz   = 0;
+        lst->free_buckets_lst[i].head = 0;
+        lst->free_buckets_lst[i].tail = 0;
+    }
+    
+    // The function "expand_bucket_vector()"
+    // will also initialize the field "lst->cur_bucket
+    // to point to the 1st allocated one.
+    expand_bucket_vector(lst);
+}
+
+void SNetListInitCopy(snet_list_t *lst, const snet_list_t *src_lst)
+{
+    assert(lst != NULL);
+    assert(src_lst != NULL);
+
+    SNetListInit(
+        lst, 
+        src_lst->bucket_sz, 
+        SNetBaseTypeGetDomain(&src_lst->base));
+
+    for (unsigned int it = SNetListBegin(src_lst);
+         it != 0; it = SNetListItemGetNext(src_lst, it)) {
+         
+         SNetListPushBack(lst, SNetListItemGetValue(src_lst, it));
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_list_t*
+SNetListCreate(unsigned int bucket_sz, const snet_domain_t *snetd)
+{
+    snet_list_t *lst = 
+        (snet_list_t *) SNetMemAlloc(sizeof(snet_list_t));
+
+    if (lst == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error
+         */
+        abort();
+    }
+
+    SNetListInit(lst, bucket_sz, snetd);
+
+    return lst;
+}
+
+snet_list_t*
+SNetListCreateCopy(const snet_list_t *src_lst)
+{
+    snet_list_t *lst = 
+        (snet_list_t *) SNetMemAlloc(sizeof(snet_list_t));
+
+    if (lst == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error
+         */
+        abort();
+    }
+
+    SNetListInitCopy(lst, src_lst);
+
+    return lst;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetListDestroy(snet_list_t *lst)
+{
+    assert(lst != NULL);
+
+    for (unsigned int i=0; i < lst->buckets_vec_sz; i++) {
+        destroy_bucket(lst->buckets + i);
+    }
+
+    SNetMemFree(lst->buckets);
+    SNetMemFree(lst);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetListSetupMutex(snet_list_t *lst, const place *p)
+{
+    assert(lst != NULL);
+    SNetBaseTypeSetPlaces(&lst->base, NULL, p, NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+bool SNetListIsEmpty(const snet_list_t *lst)
+{
+    assert(lst != NULL);
+    return (lst->linked_lst.sz == 0);
+}
+
+unsigned int
+SNetListGetSize(const snet_list_t *lst)
+{
+    assert(lst != NULL);
+    return lst->linked_lst.sz;
+}
+
+unsigned int
+SNetListGetCapacity(const snet_list_t *lst)
+{
+    assert(lst != NULL);
+    return lst->buckets_cnt * lst->bucket_sz;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetListPushBack(snet_list_t *lst, const void *item_val)
+{
+    assert(lst != NULL);
+    assert(item_val != NULL);
+
+    snet_list_node_t *n = get_free_node(lst, NULL);
+    
+    n->value = item_val;
+    
+    if (lst->linked_lst.head != NULL)
+        lst->linked_lst.head->next = n;
+
+
+    n->next = NULL;
+    n->prev = lst->linked_lst.head;
+
+    lst->linked_lst.head = n;
+
+    if (lst->linked_lst.tail == NULL) {
+        lst->linked_lst.tail = n;
+    }
+
+    lst->linked_lst.sz++;
+
+    return calc_node_id(lst, n);
+}
+
+unsigned int
+SNetListPushFront(snet_list_t *lst, const void *item_val)
+{
+    assert(lst != NULL);
+    assert(item_val != NULL);
+
+    snet_list_node_t *n = get_free_node(lst, NULL);
+    
+    n->value = item_val;
+    
+    if (lst->linked_lst.tail != NULL)
+        lst->linked_lst.tail->prev = n;
+
+
+    n->next = lst->linked_lst.tail;
+    n->prev = NULL;
+
+    lst->linked_lst.tail = n;
+
+    if (lst->linked_lst.head == NULL) {
+        lst->linked_lst.head = n;
+    }
+
+    lst->linked_lst.sz++;
+
+    return calc_node_id(lst, n);
+}
+
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetListInsertAfter(
+    snet_list_t *lst, 
+    unsigned int item_id, const void *item_val)
+{
+    assert(lst != NULL);
+    assert(item_val != NULL);
+
+    snet_list_node_t *ln = get_node_by_id(lst, item_id);
+
+    if (ln == NULL) {
+        return 0;
+    }
+
+    snet_list_node_t *n = 
+        get_free_node(lst, lst->buckets + ln->binx);
+
+    n->value = item_val;
+    n->prev  = ln;
+    n->next  = ln->next;
+    ln->next = n;
+
+    if (n->next != NULL)
+        n->next->prev = n;
+
+    if (lst->linked_lst.head == ln) {
+        lst->linked_lst.head = n;
+    }
+
+    lst->linked_lst.sz++;
+
+    return calc_node_id(lst, n);
+}
+
+unsigned int
+SNetListInsertBefore(
+    snet_list_t *lst, 
+    unsigned int item_id, const void *item_val)
+{
+    assert(lst != NULL);
+    assert(item_val != NULL);
+
+    snet_list_node_t *ln = get_node_by_id(lst, item_id);
+
+    if (ln == NULL) {
+        return 0;
+    }
+
+    snet_list_node_t *n =
+        get_free_node(lst, lst->buckets + ln->binx);
+
+    n->value = item_val;
+    n->next  = ln;
+    n->prev  = ln->prev;
+    ln->prev = n;
+
+    if (n->prev != NULL)
+        n->prev->next = n;
+
+    if (lst->linked_lst.tail == ln) {
+        lst->linked_lst.tail = n;
+    }
+
+    lst->linked_lst.sz++;
+
+    return calc_node_id(lst, n);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void* SNetListPopBack(snet_list_t *lst)
+{
+    assert(lst != NULL);
+
+    if (lst->linked_lst.sz == 0) {
+        return NULL;
+    }
+
+    const void *val = 
+        lst->linked_lst.head->value;
+
+    remove(lst, lst->linked_lst.head);
+
+    return (void *)(val);
+}
+
+void* SNetListPopFront(snet_list_t *lst)
+{
+    assert(lst != NULL);
+
+    if (lst->linked_lst.sz == 0) {
+        return NULL;
+    }
+
+    const void *val = 
+        lst->linked_lst.tail->value;
+
+    remove(lst, lst->linked_lst.tail);
+
+    return (void *)(val);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetListRemove(snet_list_t *lst, unsigned int item_id)
+{
+    assert(lst != NULL);
+    remove(lst, get_node_by_id(lst, item_id));
+}
+
+void SNetListRemoveByVal(snet_list_t *lst, const void *item_val)
+{
+    assert(lst != NULL);
+    remove(lst, get_node_by_val(lst, item_val));
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+unsigned int SNetListBegin(const snet_list_t *lst)
+{
+    assert(lst != NULL);
+
+    if (lst->linked_lst.tail == NULL) {
+        return 0;
+    }
+
+    return calc_node_id(lst, lst->linked_lst.tail);
+
+}
+
+unsigned int SNetListEnd(const snet_list_t *lst)
+{
+    assert(lst != NULL);
+
+    if (lst->linked_lst.head == NULL) {
+        return 0;
+    }
+
+    return calc_node_id(lst, lst->linked_lst.head);
+}
+
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetListItemGetNext(const snet_list_t *lst, unsigned int item_id)
+{
+    assert(lst != NULL);
+
+    if (item_id == 0) {
+        return 0;
+    }
+
+    snet_list_node_t *n = NULL;
+
+    n = get_node_by_id(lst, item_id);
+
+    if (n == NULL) {
+        return 0;
+    }
+
+    assert(n->notfree);
+
+    n = n->next;
+
+    if (n == NULL) {
+        return 0;
+    }
+
+    return calc_node_id(lst, n);
+}
+
+unsigned int 
+SNetListItemGetPrev(const snet_list_t *lst, unsigned int item_id)
+{
+    assert(lst != NULL);
+
+    if (item_id == 0) {
+        return 0;
+    }
+
+    snet_list_node_t *n = NULL;
+
+    n = get_node_by_id(lst, item_id);
+
+    if (n == NULL) {
+        return 0;
+    }
+
+    assert(n->notfree);
+
+    n = n->prev;
+
+    if (n == NULL) {
+        return 0;
+    }
+
+    return calc_node_id(lst, n);
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetListItemIsLast(const snet_list_t *lst, unsigned int item_id)
+{
+    assert(lst != NULL);
+
+    snet_list_node_t *n = get_node_by_id(lst, item_id);
+
+    return (n == NULL ? false : (lst->linked_lst.head == n));
+}
+
+bool SNetListItemIsFirst(const snet_list_t *lst, unsigned int item_id)
+{
+    assert(lst != NULL);
+
+    snet_list_node_t *n = get_node_by_id(lst, item_id);
+
+    return (n == NULL ? false : (lst->linked_lst.tail == n));
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void* SNetListItemGetValue(const snet_list_t *lst, unsigned int item_id)
+{
+    assert(lst != NULL);
+
+    snet_list_node_t *n =
+        get_node_by_id(lst, item_id);
+
+    return (n == NULL ? NULL : (void *) n->value);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetListFindItem(const snet_list_t *lst, const void *item_val)
+{
+    assert(lst != NULL);
+
+    snet_list_node_t *n = get_node_by_val(lst, item_val);
+
+    if (n == NULL) {
+        return 0;
+    }
+
+    return calc_node_id(lst, n);
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetListContainsItem(const snet_list_t *lst, unsigned int item_id)
+{
+    assert(lst != NULL);    
+    return (get_node_by_id(lst, item_id) != NULL);
+}
+
+bool SNetListContainsItem(const snet_list_t *lst, const void *item_val)
+{
+    assert(lst != NULL);
+    return (get_node_by_val(lst, item_val) != NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const snet_base_t* SNetListToBase(const snet_list_t *lst)
+{
+    assert(lst != NULL); return &lst->base;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

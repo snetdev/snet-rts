@@ -34,7 +34,7 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-typedef struct domain_gw_info {
+struct domain_gw_info {
     bool          valid;
     family        fid;
     snet_gnode_t *gnode;
@@ -43,46 +43,114 @@ typedef struct domain_gw_info {
 
     struct domain_gw_info *next;
 
-} snet_domain_gw_info_t;
+};
 
-/*---*/
+/*----------------------------------------------------------------------------*/
+/* Structures for the different types of domains */
 
-struct domain {
-    snet_base_t base;
-    
-    /*---*/
+typedef struct {
+    unsigned int id;
+    place        owner_plc;
 
     snet_gnode_t   *graph_root;
-    snet_gnode_t   *graph_root_alias;
-
     snet_conslst_t *cons_list;
     snet_buffer_t  *out_buffer;
 
-    /*---*/
-
-    snet_domain_gw_info_t *gws_lst_head;
-    snet_domain_gw_info_t *gws_lst_tail;
-
-    /*---*/
-
     struct {
+        snet_domain_gw_info_t *head;
+        snet_domain_gw_info_t *tail;
+
+    } gws_lst;
+
+    struct { 
         snet_place_contract_t *mutex;
         snet_place_contract_t *gw;
         snet_place_contract_t *out_buf_mutex;
 
-    } plc_contracts;
+    } plc_contr;
+
+    struct {
+        snet_domain_t *next;
+        snet_domain_t *prev;
+
+    } sys_lst_node;
+
+} snet_domain_net_t;
+
+/*---*/
+
+typedef struct {
+    snet_domain_type_t snetd_orig_type;
+    unsigned int       snetd_orig_id;
+    place              snetd_orig_plc;
+    place              gw_plc;
+
+} snet_domain_alias_t;
+
+/*---*/
+
+typedef struct {
+    unsigned int   id;
+    place          owner_plc;
+
+    unsigned int   snetd_master_id;
+    place          snetd_master_plc;
+
+    place          gw_plc;
+
+    struct {
+        snet_place_contract_t *mutex;
+
+    } plc_contr;
+
+    struct {
+        snet_domain_t *next;
+        snet_domain_t *prev;
+
+    } sys_lst_node;
+
+} snet_domain_worker_t;
+
+/*----------------------------------------------------------------------------*/
+
+struct domain {
+    snet_domain_type_t type;
+
+    union {
+        snet_domain_net_t    net;
+        snet_domain_alias_t  alias;
+        snet_domain_worker_t worker;
+
+    } data;
 
 }; // struct domain
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
-/* Public functions used by both the runtime and user code */
+/* Module's private static data */
 
-snet_domain_t* SNetDomainCreate()
+static bool IS_SUB_SYS_INIT = false;
+
+/*---*/
+
+static struct {
+    unsigned int   ids_gen_cnt;
+
+    snet_domain_t *head;
+    snet_domain_t *tail;
+
+    snet_place_contract_t *mutex_plc_contr;
+
+} DOMAINS_LST;
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static functions */
+
+static snet_domain_t* alloc_domain()
 {
-    snet_place_specs_t mutex_plc_specs;
-
     snet_domain_t *snetd = 
         (snet_domain_t *) SNetMemAlloc(sizeof(snet_domain_t));
 
@@ -93,49 +161,83 @@ snet_domain_t* SNetDomainCreate()
          abort();
     }
 
+    return snetd;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static unsigned int push_to_domain_list(snet_domain_t *snetd)
+{
+    /**
+     * Not implemented yet.
+     */
+    return 1;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void remove_from_domain_list(snet_domain_t *snetd)
+{
+    /**
+     * Not implemented yet.
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void init_net_domain(snet_domain_t *snetd)
+{
+    snet_place_specs_t mutex_plc_specs;
+
+    assert(snetd != NULL);
+
+    snetd->type = DOMAIN_TYPE_NET;
+
+    snetd->data.net.owner_plc  = SNetGetMyPlace();
+    snetd->data.net.graph_root = NULL;
+    snetd->data.net.cons_list  = SNetConsLstCreate(snetd);
+
+    snetd->data.net.out_buffer = SNetBufCreate(
+        true, 0, (snet_domain_t *) SNetMaskPointer(snetd));
+
+    snetd->data.net.gws_lst.head = NULL;
+    snetd->data.net.gws_lst.tail = NULL;
+
     mutex_plc_specs.expires        = false;
     mutex_plc_specs.mutex          = true;
     mutex_plc_specs.type           = PLACE_TYPE_SNET_RT_SPEC;
     mutex_plc_specs.type_spec_data = NULL;
 
-    snetd->plc_contracts.mutex = SNetPlaceAlloc(&mutex_plc_specs);
+    snetd->data.net.plc_contr.mutex = SNetPlaceAlloc(&mutex_plc_specs);
 
-    if (snetd->plc_contracts.mutex == NULL) {
+    if (snetd->data.net.plc_contr.mutex == NULL) {
+        SNetBufDestroy(snetd->data.net.out_buffer);
+        SNetConsLstDestroy(snetd->data.net.cons_list);
+
         SNetMemFree(snetd);
 
         /**
          * !!TODO!!: Handle runtime error.
          */
-         abort();
+        abort();
     }
-
-    place owner_plc = SNetGetMyPlace();
-    place mutex_plc = SNetPlaceGetFromContract(snetd->plc_contracts.mutex);
-
-    SNetBaseTypeInit(&snetd->base, snetd);
-    SNetBaseTypeSetPlaces(&snetd->base, &owner_plc, &mutex_plc, NULL);
-
-    snetd->graph_root       = NULL;
-    snetd->graph_root_alias = NULL;
-    
-    snetd->cons_list  = SNetConsLstCreate(snetd);
-
-    snetd->out_buffer = SNetBufCreate(
-        true, 0, (snet_domain_t *) SNetMaskPointer(snetd));
-
-    snetd->gws_lst_head = NULL;
-    snetd->gws_lst_tail = NULL;
 
     // For now no special place is
     // used for the GW
-    snetd->plc_contracts.gw = NULL;
+    snetd->data.net.plc_contr.gw = NULL;
 
     // Create and setup a mutex place for the
     // output buffer.
-    snetd->plc_contracts.out_buf_mutex = SNetPlaceAlloc(&mutex_plc_specs);
+    snetd->data.net.plc_contr.
+        out_buf_mutex = SNetPlaceAlloc(&mutex_plc_specs);
 
-    if (snetd->plc_contracts.out_buf_mutex == NULL) {
-        SNetPlaceFree(snetd->plc_contracts.mutex);
+    if (snetd->data.net.plc_contr.out_buf_mutex == NULL) {
+        SNetBufDestroy(snetd->data.net.out_buffer);
+        SNetConsLstDestroy(snetd->data.net.cons_list);
+        SNetPlaceFree(snetd->data.net.plc_contr.mutex);
+
         SNetMemFree(snetd);
 
         /**
@@ -145,9 +247,269 @@ snet_domain_t* SNetDomainCreate()
     }
 
     place out_buf_mutex_plc =
-        SNetPlaceGetFromContract(snetd->plc_contracts.out_buf_mutex);
+        SNetPlaceGetFromContract(
+            snetd->data.net.plc_contr.out_buf_mutex);
 
-    SNetBufSetupMutex(snetd->out_buffer, &out_buf_mutex_plc);
+    SNetBufSetupMutex(snetd->data.net.out_buffer, &out_buf_mutex_plc);
+
+    snetd->data.net.sys_lst_node.next = NULL;
+    snetd->data.net.sys_lst_node.prev = NULL;
+
+    snetd->data.net.id = push_to_domain_list(snetd);
+
+    if (snetd->data.net.id == 0) {
+        SNetBufDestroy(snetd->data.net.out_buffer);
+        SNetConsLstDestroy(snetd->data.net.cons_list);
+
+        SNetPlaceFree(snetd->data.net.plc_contr.mutex);
+        SNetPlaceFree(snetd->data.net.plc_contr.out_buf_mutex);
+
+        SNetMemFree(snetd);
+
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void init_alias_domain(
+    snet_domain_t *snetd, const snet_domain_t *snetd_orig)
+{
+    assert(snetd != NULL);
+    assert(snetd_orig != NULL);
+
+    snetd->type = DOMAIN_TYPE_ALIAS;
+
+    switch (snetd_orig->type) {
+        case DOMAIN_TYPE_NET:
+            snetd->data.alias.snetd_orig_type = DOMAIN_TYPE_NET;
+            snetd->data.alias.snetd_orig_id   = snetd_orig->data.net.id;
+            snetd->data.alias.snetd_orig_plc  = snetd_orig->data.net.owner_plc;
+
+            snetd->data.alias.gw_plc = (
+                snetd_orig->data.net.plc_contr.gw == NULL ?
+                snetd_orig->data.net.owner_plc :
+                SNetPlaceGetFromContract(snetd_orig->data.net.plc_contr.gw));
+
+            break;
+
+        case DOMAIN_TYPE_ALIAS:
+            snetd->data.alias = snetd_orig->data.alias;
+            break;
+
+        case DOMAIN_TYPE_WORKER:
+            snetd->data.alias.snetd_orig_type = DOMAIN_TYPE_WORKER;
+
+            snetd->data.alias.snetd_orig_id =
+                snetd_orig->data.worker.snetd_master_id;
+
+            snetd->data.alias.snetd_orig_plc =
+                snetd_orig->data.worker.snetd_master_plc;
+
+            snetd->data.alias.gw_plc = snetd_orig->data.worker.gw_plc;
+
+            break;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void init_worker_domain(
+    snet_domain_t *snetd, const snet_domain_t *snetd_master)
+{
+    assert(snetd != NULL);
+    assert(snetd_master != NULL);
+
+    snetd->data.worker.owner_plc = SNetGetMyPlace();
+
+    switch (snetd_master->type) {
+        case DOMAIN_TYPE_NET:
+            snetd->data.worker.
+                snetd_master_id  = snetd_master->data.net.id;
+
+            snetd->data.worker.
+                snetd_master_plc = snetd_master->data.net.owner_plc;
+
+            snetd->data.worker.gw_plc = (
+                snetd_master->data.net.plc_contr.gw == NULL ?
+                snetd_master->data.net.owner_plc :
+                SNetPlaceGetFromContract(snetd_master->data.net.plc_contr.gw));
+
+            break;
+
+        case DOMAIN_TYPE_ALIAS:
+            snetd->data.worker.snetd_master_id = 
+                snetd_master->data.alias.snetd_orig_id;
+
+            snetd->data.worker.snetd_master_plc =
+                snetd_master->data.alias.snetd_orig_plc;
+
+            snetd->data.worker.gw_plc =
+                snetd_master->data.alias.gw_plc;
+
+            break;
+
+        case DOMAIN_TYPE_WORKER:
+            snetd->data.worker.snetd_master_id = 
+                snetd_master->data.worker.snetd_master_id;
+
+            snetd->data.worker.snetd_master_plc =
+                snetd_master->data.worker.snetd_master_plc;
+
+            snetd->data.worker.gw_plc =
+                snetd_master->data.worker.gw_plc;
+
+            break;
+    }
+
+    snet_place_specs_t mutex_plc_specs;
+
+    mutex_plc_specs.expires        = false;
+    mutex_plc_specs.mutex          = true;
+    mutex_plc_specs.type           = PLACE_TYPE_SNET_RT_SPEC;
+    mutex_plc_specs.type_spec_data = NULL;
+
+    snetd->data.worker.plc_contr.mutex = SNetPlaceAlloc(&mutex_plc_specs);
+
+    if (snetd->data.worker.plc_contr.mutex == NULL) {
+        SNetMemFree(snetd);
+
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    snetd->data.worker.sys_lst_node.next = NULL;
+    snetd->data.worker.sys_lst_node.prev = NULL;
+
+    snetd->data.worker.id = push_to_domain_list(snetd);
+
+    if (snetd->data.worker.id == 0) {
+        SNetPlaceFree(snetd->data.worker.plc_contr.mutex);
+        SNetMemFree(snetd);
+
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void destroy_net_domain(snet_domain_t *snetd)
+{
+    /**
+     * !!TODO!!: Cleanup domain.
+     */
+    remove_from_domain_list(snetd);
+
+    SNetBufDestroy(snetd->data.net.out_buffer);
+    SNetConsLstDestroy(snetd->data.net.cons_list);
+    
+    if (snetd->data.net.graph_root != NULL) {
+        /**
+         * !!TODO!!: Destroy Graph
+         */
+        SNetGNodeDestroy(snetd->data.net.graph_root, true);
+    }
+
+    SNetPlaceFree(snetd->data.net.plc_contr.mutex);
+
+    if (snetd->data.net.plc_contr.gw != NULL)
+        SNetPlaceFree(snetd->data.net.plc_contr.gw);
+    
+    SNetPlaceFree(snetd->data.net.plc_contr.out_buf_mutex);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void destroy_alias_domain(snet_domain_t *snetd)
+{
+    /**
+     * Nothing to do!!!
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void destroy_worker_domain(snet_domain_t *snetd)
+{
+    remove_from_domain_list(snetd);
+    SNetPlaceFree(snetd->data.net.plc_contr.mutex);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Sub-system initialization related functions (internal only) */
+
+void SNetDomainSubSystemInit()
+{
+    assert(!IS_SUB_SYS_INIT);
+
+    if (IS_SUB_SYS_INIT) {
+        return;
+    }
+
+    DOMAINS_LST.ids_gen_cnt = 0;
+
+    DOMAINS_LST.head = NULL;
+    DOMAINS_LST.tail = NULL;
+
+    snet_place_specs_t mutex_plc_specs;
+
+    mutex_plc_specs.expires        = false;
+    mutex_plc_specs.mutex          = true;
+    mutex_plc_specs.type           = PLACE_TYPE_SNET_RT_SPEC;
+    mutex_plc_specs.type_spec_data = NULL;
+
+    DOMAINS_LST.mutex_plc_contr = SNetPlaceAlloc(&mutex_plc_specs);
+
+    if (DOMAINS_LST.mutex_plc_contr == NULL) {
+        /**
+         * !!TODO!!: Handle runtime error.
+         */
+        abort();
+    }
+
+    IS_SUB_SYS_INIT = true;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetDomainSubSystemDestroy()
+{
+    assert(IS_SUB_SYS_INIT);
+
+    if (!IS_SUB_SYS_INIT) {
+        return;
+    }
+
+    /**
+     * !!TODO!!: Stop, destroy all domains
+     * in the list.
+     */
+    SNetPlaceFree(DOMAINS_LST.mutex_plc_contr);
+
+    IS_SUB_SYS_INIT = false;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Public functions used by both the runtime and user code */
+
+snet_domain_t* SNetDomainCreate()
+{
+    snet_domain_t *snetd = alloc_domain();
+    
+    init_net_domain(snetd);
 
     return (snet_domain_t *) SNetMaskPointer(snetd);
 }
@@ -160,23 +522,20 @@ void SNetDomainDestroy(snet_domain_t *snetd)
 
     snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
 
-    /**
-     * !!TODO!!: Cleanup domain.
-     */
+    switch (snetd->type) {
+        case DOMAIN_TYPE_NET:
+            destroy_net_domain(snetd);
+            break;
 
-    SNetBufDestroy(snetd->out_buffer);
-    SNetConsLstDestroy(snetd->cons_list);
-    
-    /**
-     * !!TODO!!: Destroy Graph
-     */
+        case DOMAIN_TYPE_ALIAS:
+            destroy_alias_domain(snetd);
+            break;
 
-    SNetPlaceFree(snetd->plc_contracts.mutex);
+        case DOMAIN_TYPE_WORKER:
+            destroy_worker_domain(snetd);
+            break;
+    }
 
-    if (snetd->plc_contracts.gw != NULL)
-        SNetPlaceFree(snetd->plc_contracts.gw);
-    
-    SNetPlaceFree(snetd->plc_contracts.out_buf_mutex);
     SNetMemFree(snetd);
 }
 
@@ -185,8 +544,8 @@ void SNetDomainDestroy(snet_domain_t *snetd)
 
 void SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *root)
 {
-    assert(snetd != NULL);
     assert(root  != NULL);
+    assert(snetd != NULL);
 
     if (snetd == NULL || root == NULL) {
         return;
@@ -195,9 +554,10 @@ void SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *root)
     snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
     root = (snet_gnode_t *) SNetUnmaskPointer(root);
 
-    assert(snetd->graph_root == NULL);
+    assert(snetd->type == DOMAIN_TYPE_NET);
+    assert(snetd->data.net.graph_root == NULL);
 
-    if (snetd->graph_root != NULL) {
+    if (snetd->data.net.graph_root != NULL) {
         return;
     }
 
@@ -210,9 +570,9 @@ void SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *root)
         return;
     }
 
-    snetd->graph_root = root;
+    snetd->data.net.graph_root = root;
 
-    SNetGraphEnumerate(snetd->graph_root);
+    SNetGraphEnumerate(snetd->data.net.graph_root);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -230,33 +590,110 @@ void SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *root)
 /*----------------------------------------------------------------------------*/
 /* Private functions only used within the runtime */
 
+snet_domain_t*
+SNetDomainCreateAlias(const snet_domain_t *snetd_orig)
+{
+    snet_domain_t *snetd = alloc_domain();
+    
+    init_alias_domain(snetd, snetd_orig);
+
+    return (snet_domain_t *) SNetMaskPointer(snetd);
+}
+
+snet_domain_t*
+SNetDomainCreateWorker(const snet_domain_t *snetd_master)
+{
+    snet_domain_t *snetd = alloc_domain();
+    
+    init_worker_domain(snetd, snetd_master);
+
+    return (snet_domain_t *) SNetMaskPointer(snetd);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
 bool SNetDomainIsSame(
     const snet_domain_t *snetd1, const snet_domain_t *snetd2)
 {
     assert(snetd1 != NULL);
     assert(snetd2 != NULL);
 
-    return (snetd1 == snetd2);
+    if (snetd1 == snetd2) {
+        return true;
+    }
+
+    if (snetd1->type == DOMAIN_TYPE_NET &&
+        snetd2->type == DOMAIN_TYPE_NET) {
+
+        return false;
+    }
+
+    const place plc1 = (
+        snetd1->type == DOMAIN_TYPE_NET ?
+        snetd1->data.net.owner_plc : (
+            snetd1->type == DOMAIN_TYPE_ALIAS ?
+            snetd1->data.alias.snetd_orig_plc :
+            snetd1->data.worker.snetd_master_plc));
+            
+    const place plc2 = (
+        snetd2->type == DOMAIN_TYPE_NET ?
+        snetd2->data.net.owner_plc : (
+            snetd2->type == DOMAIN_TYPE_ALIAS ?
+            snetd2->data.alias.snetd_orig_plc :
+            snetd2->data.worker.snetd_master_plc));
+
+    const unsigned int id1 = (
+        snetd1->type == DOMAIN_TYPE_NET ?
+        snetd1->data.net.id : (
+            snetd1->type == DOMAIN_TYPE_ALIAS ?
+            snetd1->data.alias.snetd_orig_id  :
+            snetd1->data.worker.snetd_master_id));
+            
+    const unsigned int id2 = (
+        snetd2->type == DOMAIN_TYPE_NET ?
+        snetd2->data.net.id : (
+            snetd2->type == DOMAIN_TYPE_ALIAS ?
+            snetd2->data.alias.snetd_orig_id  :
+            snetd2->data.worker.snetd_master_id));
+
+    return (plc1 == plc2 && id1 == id2);
 }
 
 /*----------------------------------------------------------------------------*/
 
+snet_domain_type_t
+SNetDomainGetType(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+    return snetd->type;
+}
+
 snet_conslst_t*
 SNetDomainGetConsList(const snet_domain_t *snetd)
 {
-    assert(snetd != NULL); return snetd->cons_list;
+    assert(snetd != NULL);
+    assert(snetd->type == DOMAIN_TYPE_NET);
+    
+    return snetd->data.net.cons_list;
 }
 
 const snet_gnode_t*
 SNetDomainGetGraphRoot(const snet_domain_t *snetd)
 {
-    assert(snetd != NULL); return snetd->graph_root;
+    assert(snetd != NULL);
+    assert(snetd->type == DOMAIN_TYPE_NET);
+    
+    return snetd->data.net.graph_root;
 }
 
 snet_buffer_t*
 SNetDomainGetOutBuffer(const snet_domain_t *snetd)
 {
-    assert(snetd != NULL); return snetd->out_buffer;
+    assert(snetd != NULL);
+    assert(snetd->type == DOMAIN_TYPE_NET);
+
+    return snetd->data.net.out_buffer;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -265,14 +702,30 @@ place SNetDomainGetGWPlace(const snet_domain_t *snetd)
 {
     assert(snetd != NULL); 
 
-    if (snetd->plc_contracts.gw == NULL)
-        return SNetGetMyPlace();
-    else
-        return SNetPlaceGetFromContract(snetd->plc_contracts.gw);
+    switch (snetd->type) {
+        case DOMAIN_TYPE_NET:
+            if (snetd->data.net.plc_contr.gw != NULL)
+                return SNetPlaceGetFromContract(snetd->data.net.plc_contr.gw);
+
+            break;
+        
+        case DOMAIN_TYPE_ALIAS:
+            return snetd->data.alias.gw_plc;
+
+        case DOMAIN_TYPE_WORKER:
+            return snetd->data.worker.gw_plc;
+    }
+
+    return SNetGetMyPlace();
 }
+
+/*----------------------------------------------------------------------------*/
 
 place SNetDomainGetOutBufferCondPlace(const snet_domain_t *snetd)
 {
+    assert(snetd != NULL); 
+    assert(snetd->type == DOMAIN_TYPE_NET);
+
     return SNetGetMyPlace();
 }
 

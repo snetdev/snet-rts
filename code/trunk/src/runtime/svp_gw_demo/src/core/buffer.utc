@@ -205,7 +205,6 @@ SNetBufCreate(bool dynamic, unsigned int sz, const snet_domain_t *domain)
     }
 
     SNetBufInit(buf, dynamic, sz, domain);
-    SNetBaseTypeIncrRefCnt(&buf->base);
 
     return buf;
 }
@@ -330,7 +329,7 @@ void* SNetBufPop(snet_buffer_t *buf)
     }
 
     if (empty_bucket != NULL && empty_bucket != &buf->init_bucket) {
-        unsigned int pref_capacity = buf->bucket_sz + (buf->sz * 2);
+        unsigned int pref_capacity = buf->bucket_sz + (buf->sz << 1);
         unsigned int curr_capacity = buf->bucket_sz * (buf->buckets_cnt + 1);
 
         if (curr_capacity - buf->bucket_sz > pref_capacity) {

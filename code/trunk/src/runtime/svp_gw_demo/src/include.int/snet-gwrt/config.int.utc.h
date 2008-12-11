@@ -44,7 +44,7 @@
  * with each re-allocation (For long networks bigger values will improve
  * performance).
  */
-#define SVPSNETGWRT_GRAPH_INDEX_INCR_STEP 4
+#define SVPSNETGWRT_GRAPH_INDEX_INCR_STEP 16
 
 /**
  * Size in decimal digits that an index item can be. Used by
@@ -58,7 +58,20 @@
 /**
  * Defines the default bucket size for a buffer
  */
-#define SVPSNETGWRT_BUFFER_DEFAULT_BUCKET_SZ 512
+#define SVPSNETGWRT_BUFFER_DEFAULT_BUCKET_SZ  512
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Defines the default bucket size for a list
+ */
+#define SVPSNETGWRT_LIST_DEFAULT_BUCKET_SZ    128
+
+/**
+ * Defined the size by which the vector of buckets
+ * will increase in a list.
+ */
+#define SVPSNETGWRT_LIST_BUCKET_VEC_INCR_STEP 8
 
 #endif // __SVPSNETGWRT_CONFIG_INT_H
 

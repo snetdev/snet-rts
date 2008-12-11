@@ -12,6 +12,7 @@
 /*----------------------------------------------------------------------------*/
 
 extern void ginx_test(const snet_domain_t *snetd);
+extern void list_test(const snet_domain_t *snetd);
 extern void graph_test(const snet_domain_t *snetd);
 extern void buffer_test(const snet_domain_t *snetd);
 extern void conslst_test(const snet_domain_t *snetd);
@@ -76,10 +77,11 @@ static void help()
     printf("       1       Test of graph indexes.\n");
     printf("       2       Test of \"buffer\" data structure.\n");
     printf("       3       Test of network input and output of records.\n");
-    printf("       4       Test of cons-list structure.\n\n");
-    printf("      50       Test of graph structure for network \"test\" build\n");
+    printf("       4       Test of \"cons-list\" structure.\n");
+    printf("       5       Test of \"list\" data structure.\n\n");
+    printf("      50       Test of \"graph\" structure for network \"test\" build\n");
     printf("               from sources in src/test-app/test_snet\n");
-    printf("     100       Test of graph structure for network \"test00\"\n");
+    printf("     100       Test of \"graph\" structure for network \"test00\"\n");
     printf("               build from sources in src/test-app/test_snet/00\n\n");
 
     printf("List of networks:\n");
@@ -198,6 +200,12 @@ static void Runtime_tests(unsigned int tid)
             printf("Cons-List Test!!\n\n");
 
             conslst_test(snetd);
+            break;
+
+        case 5:
+            printf("List Test!!\n\n");
+
+            list_test(snetd);
             break;
 
         /*---*/
