@@ -24,7 +24,7 @@ typedef int (*snet_mpi_serialize_type_fun_t)(MPI_Comm, void *, void*, int);
 typedef MPI_Datatype (*snet_mpi_deserialize_type_fun_t)(MPI_Comm, void *, int);
 
 typedef void* (*snet_mpi_pack_fun_t)(MPI_Comm, void *, MPI_Datatype *, int *);
-typedef void* (*snet_mpi_unpack_fun_t)(MPI_Comm, void *, int);
+typedef void* (*snet_mpi_unpack_fun_t)(MPI_Comm, void *, MPI_Datatype, int);
 typedef void (*snet_mpi_cleanup_fun_t)(MPI_Datatype, void*);
 #endif /* DISTRIBUTED_SNET */
 
