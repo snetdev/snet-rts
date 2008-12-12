@@ -16,6 +16,11 @@ typedef union record_types snet_record_types_t;
 #include "constants.h"
 #include "stream_layer.h"
 #include "stack.h"
+
+#ifdef DISTRIBUTED_SNET
+#include "node.h"
+#endif /* DISTRIBUTED_SNET */
+
 /* 
  * data structure for the record
  */
@@ -28,7 +33,11 @@ typedef enum {
 	REC_sort_begin,
 	REC_sort_end,
 	REC_terminate,
-  REC_probe
+#ifdef DISTRIBUTED_SNET
+	REC_route_update,
+	REC_route_redirect,
+#endif
+	REC_probe,
 } snet_record_descr_t;
 
 typedef enum {
@@ -106,9 +115,6 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec);
  * NOTICE: This should be used instead of "get-copy-set"!
  */
 extern void SNetRecCopyFieldToRec( snet_record_t *from, int old_name, 
-				   snet_record_t *to, int new_name);
-
-extern void SNetRecMoveFieldToRec( snet_record_t *from, int old_name,
 				   snet_record_t *to, int new_name);
 
 extern void SNetRecRenameTag( snet_record_t *rec, int name, int new_name);
@@ -279,7 +285,8 @@ extern void *SNetRecGetField( snet_record_t *r, int id);
 
 extern void *SNetRecTakeField( snet_record_t *r, int id);
 
-
+extern void SNetRecMoveFieldToRec( snet_record_t *from, int old_name ,
+				   snet_record_t *to, int new_name);
 
 
 
@@ -345,6 +352,22 @@ extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id);
 
 extern snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec);
 extern snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mode);
+
+
+#ifdef DISTRIBUTED_SNET
+extern int SNetRecGetNode( snet_record_t *rec);
+extern int SNetRecGetIndex( snet_record_t *rec);
+
+extern void SNetRecSetRemoteField( snet_record_t *rec, int name, int location, int node, int index);
+
+extern int SNetRecGetFieldLocation(snet_record_t *rec, int name);
+extern snet_id_t SNetRecGetFieldID(snet_record_t *rec, int name);
+
+extern snet_record_t *SNetRecGetNext(snet_record_t *rec);
+extern snet_record_t *SNetRecSetNext(snet_record_t *rec, snet_record_t *next);
+
+extern void SNetRecMarkConsumed( snet_record_t *rec, int name);
+#endif
 
 #endif
 

@@ -130,7 +130,7 @@ static void *StarBoxThread( void *hndl)
             // starstream is returned by self, which is SNetStarIncarnate
 #ifdef DISTRIBUTED_SNET
 	    info.routing =  SNetRoutingInfoInit( SNetRoutingGetNewID(), 
-						 info.self, info.self, &fun_id, -1);
+						 info.self, info.self, &fun_id, info.self);
 	  
 	    starstream = SNetRoutingInfoFinalize(info.routing, 
 						 SNetSerial(our_outstream, &info, 
@@ -376,7 +376,7 @@ static void *DetStarBoxThread( void *hndl) {
           else {
             if(starstream == NULL) {
 #ifdef DISTRIBUTED_SNET
-	      info.routing =  SNetRoutingInfoInit( SNetRoutingGetNewID(), info.self, info.self, &fun_id, -1);
+	      info.routing =  SNetRoutingInfoInit( SNetRoutingGetNewID(), info.self, info.self, &fun_id, info.self);
 	      
 	      starstream = SNetRoutingInfoFinalize(info.routing, SNetSerial(our_output, &info, info.self , box, self));
 	      
