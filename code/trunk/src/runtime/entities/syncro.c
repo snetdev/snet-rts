@@ -12,8 +12,8 @@
 #include "stream_layer.h"
 
 #ifdef DISTRIBUTED_SNET
-#include "distribution.h"
-#endif
+#include "routing.h"
+#endif /* DISTRIBUTED_SNET */
 
 //#define SYNCRO_DEBUG
 
@@ -373,7 +373,7 @@ static void *SyncBoxThread( void *hndl) {
 
 extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
-				   snet_dist_info_t *info, 
+				   snet_info_t *info, 
 				   int location,
 #endif /* DISTRIBUTED_SNET */
 				   snet_typeencoding_t *outtype,
@@ -384,9 +384,9 @@ extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(info->routing, location, input);
+  input = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, input);
 
-  if(location == info->self) {
+  if(location == SNetInfoGetNode(info)) {
 #endif /* DISTRIBUTED_SNET */
 
     //  output = SNetBufCreate( BUFFER_SIZE);

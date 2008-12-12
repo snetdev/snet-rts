@@ -8,7 +8,7 @@
 
 extern snet_tl_stream_t *SNetStar( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-				   snet_dist_info_t *info, 
+				   snet_info_t *info, 
 				   int location,
 #endif /* DISTRIBUTED_SNET */
                                    snet_typeencoding_t *type,
@@ -20,7 +20,7 @@ extern snet_tl_stream_t *SNetStar( snet_tl_stream_t *inbuf,
 extern
 snet_tl_stream_t *SNetStarIncarnate( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-				     snet_dist_info_t *info, 
+				     snet_info_t *info, 
 				     int location,
 #endif /* DISTRIBUTED_SNET */
 				     snet_typeencoding_t *type,
@@ -31,7 +31,7 @@ snet_tl_stream_t *SNetStarIncarnate( snet_tl_stream_t *inbuf,
 
 extern snet_tl_stream_t *SNetStarDet( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-				      snet_dist_info_t *info, 
+				      snet_info_t *info, 
 				      int location,
 #endif /* DISTRIBUTED_SNET */
                                       snet_typeencoding_t *type,
@@ -41,7 +41,7 @@ extern snet_tl_stream_t *SNetStarDet( snet_tl_stream_t *inbuf,
 extern
 snet_tl_stream_t *SNetStarDetIncarnate( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-					snet_dist_info_t *info, 
+					snet_info_t *info, 
 					int location,
 #endif /* DISTRIBUTED_SNET */
 					snet_typeencoding_t *type,

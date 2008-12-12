@@ -1,12 +1,13 @@
 #include "alias.h"
 #include "stream_layer.h"
+
 /* ------------------------------------------------------------------------- */
 /*  SNetAlias                                                                */
 /* ------------------------------------------------------------------------- */
 
 extern snet_tl_stream_t *SNetAlias( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-				    snet_dist_info_t *info, 
+				    snet_info_t *info, 
 				    int location,
 #endif /* DISTRIBUTED_SNET */
 				    snet_startup_fun_t net)

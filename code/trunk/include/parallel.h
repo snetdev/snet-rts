@@ -15,7 +15,7 @@ typedef struct {
 
 snet_tl_stream_t *SNetParallel(snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-			       snet_dist_info_t *info, 
+			       snet_info_t *info, 
 			       int location,
 #endif /* DISTRIBUTED_SNET */
 			       snet_typeencoding_list_t *types,
@@ -23,7 +23,7 @@ snet_tl_stream_t *SNetParallel(snet_tl_stream_t *instream,
 
 snet_tl_stream_t *SNetParallelDet(snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-				  snet_dist_info_t *info, 
+				  snet_info_t *info, 
 				  int location,
 #endif /* DISTRIBUTED_SNET */
 				  snet_typeencoding_list_t *types,

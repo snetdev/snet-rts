@@ -281,7 +281,7 @@ static void *ParallelBoxThread( void *hndl) {
 
 static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-					      snet_dist_info_t *info, 
+					      snet_info_t *info, 
 					      int location,
 #endif /* DISTRIBUTED_SNET */
 					      snet_typeencoding_list_t *types,
@@ -298,9 +298,9 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
   snet_entity_id_t my_id;
 
 #ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingInfoUpdate(info->routing, location, instream);
+  instream = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, instream);
 
-  if(location == info->self) {
+  if(location == SNetInfoGetNode(info)) {
 #endif /* DISTRIBUTED_SNET */
 
     num = SNetTencGetNumTypes( types);
@@ -313,13 +313,13 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
     fun = funs[0];
 
 #ifdef DISTRIBUTED_SNET
-    SNetRoutingInfoPushLevel(info->routing);
+    SNetRoutingInfoPushLevel(SNetInfoGetRoutingInfo(info));
 
-    transits[0] = SNetRoutingInfoUpdate(info->routing, location, transits[0]);
+    transits[0] = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, transits[0]);
 
     outstreams[0] = (*fun)( transits[0], info, location);
 
-    outstreams[0] = SNetRoutingInfoPopLevel(info->routing, outstreams[0]);
+    outstreams[0] = SNetRoutingInfoPopLevel(SNetInfoGetRoutingInfo(info), outstreams[0]);
 #else
     outstreams[0] = (*fun)( transits[0]);
 #endif /* DISTRIBUTED_SNET */
@@ -336,13 +336,13 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
       fun = funs[i];
 
 #ifdef DISTRIBUTED_SNET
-      SNetRoutingInfoPushLevel(info->routing);
+      SNetRoutingInfoPushLevel(SNetInfoGetRoutingInfo(info));
       
-      transits[i] = SNetRoutingInfoUpdate(info->routing, location, transits[i]);
+      transits[i] = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, transits[i]);
       
       outstreams[i] = (*fun)( transits[i], info, location);
       
-      outstreams[i] = SNetRoutingInfoPopLevel(info->routing, outstreams[i]);
+      outstreams[i] = SNetRoutingInfoPopLevel(SNetInfoGetRoutingInfo(info), outstreams[i]);
 #else
       outstreams[i] = (*fun)( transits[i]);
 #endif /* DISTRIBUTED_SNET */
@@ -380,15 +380,15 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
     num = SNetTencGetNumTypes( types);
 
     for(i = 0; i < num; i++) {
-      SNetRoutingInfoPushLevel(info->routing);
+      SNetRoutingInfoPushLevel(SNetInfoGetRoutingInfo(info));
 
       fun = funs[i];
 
-      instream  = SNetRoutingInfoUpdate(info->routing, location, instream);
+      instream  = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, instream);
       
       instream  = (*fun)(instream, info, location);
       
-      instream  = SNetRoutingInfoPopLevel(info->routing, instream);
+      instream  = SNetRoutingInfoPopLevel(SNetInfoGetRoutingInfo(info), instream);
     }
 
     outstream = instream;
@@ -402,7 +402,7 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
 
 extern snet_tl_stream_t *SNetParallel( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-				       snet_dist_info_t *info, 
+				       snet_info_t *info, 
 				       int location,
 #endif /* DISTRIBUTED_SNET */
 				       snet_typeencoding_list_t *types,
@@ -434,7 +434,7 @@ extern snet_tl_stream_t *SNetParallel( snet_tl_stream_t *instream,
 
 extern snet_tl_stream_t *SNetParallelDet( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-					  snet_dist_info_t *info, 
+					  snet_info_t *info, 
 					  int location,
 #endif /* DISTRIBUTED_SNET */
 					  snet_typeencoding_list_t *types,

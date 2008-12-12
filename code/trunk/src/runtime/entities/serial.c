@@ -1,6 +1,11 @@
 #include "serial.h"
 #include "buffer.h"
 #include "debug.h"
+
+#ifdef DISTRIBUTED_SNET
+#include "routing.h"
+#endif /* DISTRIBUTED_SNET */
+
 //#define SERIAL_DEBUG
 
 /* ------------------------------------------------------------------------- */
@@ -9,7 +14,7 @@
 
 extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input, 
 #ifdef DISTRIBUTED_SNET
-				    snet_dist_info_t *info, 
+				    snet_info_t *info, 
 				    int location,
 #endif /* DISTRIBUTED_SNET */
 				    snet_startup_fun_t box_a,
@@ -22,7 +27,7 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
   /* This section forces input stream into root node. 
    * Otherwise, the root node is ignored.
    */
-  input = SNetRoutingInfoUpdate(info->routing, location, input); 
+  input = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, input); 
 #endif /* IGNORE_ROOT_NODE */
 
 #ifdef SERIAL_DEBUG
@@ -59,7 +64,7 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
   /* This section forces output stream into root node. 
    * Otherwise, the root node is ignored.
    */
-  output = SNetRoutingInfoUpdate(info->routing, location, output);
+  output = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, output);
 #endif /* IGNORE_ROOT_NODE */
 
   return(output);

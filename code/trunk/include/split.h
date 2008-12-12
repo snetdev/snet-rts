@@ -13,7 +13,7 @@ typedef struct {
 
 extern snet_tl_stream_t *SNetSplit( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-				    snet_dist_info_t *info, 
+				    snet_info_t *info, 
 				    int location,
 #endif /* DISTRIBUTED_SNET */
 				    snet_startup_fun_t box_a,
@@ -23,7 +23,7 @@ extern snet_tl_stream_t *SNetSplit( snet_tl_stream_t *inbuf,
 extern 
 snet_tl_stream_t *SNetSplitDet( snet_tl_stream_t *inbuf, 
 #ifdef DISTRIBUTED_SNET
-				snet_dist_info_t *info, 
+				snet_info_t *info, 
 				int location,
 #endif /* DISTRIBUTED_SNET */
 				snet_startup_fun_t box_a,
@@ -32,14 +32,14 @@ snet_tl_stream_t *SNetSplitDet( snet_tl_stream_t *inbuf,
 
 #ifdef DISTRIBUTED_SNET
 extern snet_tl_stream_t *SNetLocSplit(snet_tl_stream_t *instream,
-				      snet_dist_info_t *info, 
+				      snet_info_t *info, 
 				      int location,
 				      snet_startup_fun_t box_a,
 				      int ltag, int utag);
 
 extern 
 snet_tl_stream_t *SNetLocSplitDet(snet_tl_stream_t *instream,
-				  snet_dist_info_t *info, 
+				  snet_info_t *info, 
 				  int location,
 				  snet_startup_fun_t box_a,
 				  int ltag,

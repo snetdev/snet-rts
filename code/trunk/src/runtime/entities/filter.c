@@ -11,7 +11,7 @@
 #include "threading.h" /* for enumeration */
 
 #ifdef DISTRIBUTED_SNET
-#include "distribution.h"
+#include "routing.h"
 #endif
 /* ------------------------------------------------------------------------- */
 /*  SNetFilter                                                               */
@@ -515,7 +515,7 @@ static void *FilterThread( void *hnd)
 
 extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-				     snet_dist_info_t *info, 
+				     snet_info_t *info, 
 				     int location,
 #endif /* DISTRIBUTED_SNET */
 				     snet_typeencoding_t *in_type,
@@ -532,9 +532,9 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
   va_list args;
 
 #ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingInfoUpdate(info->routing, location, instream);
+  instream = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, instream);
 
-  if(location == info->self) {
+  if(location == SNetInfoGetNode(info)) {
 #endif /* DISTRIBUTED_SNET */
 
     outstream = SNetTlCreateStream(BUFFER_SIZE);
@@ -573,7 +573,7 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
 
 extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-					snet_dist_info_t *info, 
+					snet_info_t *info, 
 					int location,
 #endif /* DISTRIBUTED_SNET */
 					snet_typeencoding_t *in_type,
@@ -590,9 +590,9 @@ extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
   va_list args;
 
 #ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingInfoUpdate(info->routing, location, instream);
+  instream = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, instream);
 
-  if(location == info->self) {
+  if(location == SNetInfoGetNode(info)) {
 #endif /* DISTRIBUTED_SNET */
     
     outstream = SNetTlCreateStream(BUFFER_SIZE);
@@ -720,7 +720,7 @@ static void *NameshiftThread( void *h)
 
 extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-					snet_dist_info_t *info, 
+					snet_info_t *info, 
 					int location,
 #endif /* DISTRIBUTED_SNET */
 					int offset,
@@ -730,9 +730,9 @@ extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingInfoUpdate(info->routing, location, instream);
+  instream = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, instream);
 
-  if(location == info->self) {
+  if(location == SNetInfoGetNode(info)) {
 #endif /* DISTRIBUTED_SNET */
 
     outstream = SNetTlCreateStream( BUFFER_SIZE);

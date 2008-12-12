@@ -6,7 +6,7 @@
 #include "stream_layer.h"
 
 #ifdef DISTRIBUTED_SNET
-#include "distribution.h"
+#include "routing.h"
 #endif
 
 //#define BOX_DEBUG
@@ -91,7 +91,7 @@ static void *BoxThread( void *hndl) {
 
 extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
-				  snet_dist_info_t *info, 
+				  snet_info_t *info, 
 				  int location,
 #endif /* DISTRIBUTED_SNET */ 
 				  snet_box_fun_t boxfun,
@@ -101,9 +101,9 @@ extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
   snet_handle_t *hndl;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(info->routing, location, input);
+  input = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, input);
 
-  if(location == info->self) {
+  if(location == SNetInfoGetNode(info)) {
 #endif /* DISTRIBUTED_SNET */
 
     output = SNetTlCreateStream(BUFFER_SIZE);

@@ -16,7 +16,7 @@ extern void SNetDestroyFilterInstructionSetList( snet_filter_instruction_set_lis
 #ifdef FILTER_VERSION_2
 extern snet_tl_stream_t *SNetFilter( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-				     snet_dist_info_t *info, 
+				     snet_info_t *info, 
 				     int location,
 #endif /* DISTRIBUTED_SNET */
 				     snet_typeencoding_t *in_type,
@@ -25,7 +25,7 @@ extern snet_tl_stream_t *SNetFilter( snet_tl_stream_t *inbuf,
 
 extern snet_tl_stream_t *SNetTranslate( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-					snet_dist_info_t *info, 
+					snet_info_t *info, 
 					int location,
 #endif /* DISTRIBUTED_SNET */
 					snet_typeencoding_t *in_type,
@@ -44,7 +44,7 @@ extern snet_tl_stream_t *SNetTranslate( snet_tl_stream_t *inbuf,
 
 extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-					snet_dist_info_t *info, 
+					snet_info_t *info, 
 					int location,
 #endif /* DISTRIBUTED_SNET */
 					int offset,
