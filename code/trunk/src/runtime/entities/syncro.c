@@ -384,32 +384,28 @@ extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, input);
-
-  if(location == SNetInfoGetNode(info)) {
+  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
 #endif /* DISTRIBUTED_SNET */
 
-    //  output = SNetBufCreate( BUFFER_SIZE);
-    BUF_CREATE( output, BUFFER_SIZE);
+  //  output = SNetBufCreate( BUFFER_SIZE);
+  BUF_CREATE( output, BUFFER_SIZE);
 #ifdef SYNCRO_DEBUG
-    SNetUtilDebugNotice("-");
-    SNetUtilDebugNotice("| SYNCRO CREATED");
-    SNetUtilDebugNotice("| input: %p", input);
-    SNetUtilDebugNotice("| output: %p", output);
-    SNetUtilDebugNotice("-");
+  SNetUtilDebugNotice("-");
+  SNetUtilDebugNotice("| SYNCRO CREATED");
+  SNetUtilDebugNotice("| input: %p", input);
+  SNetUtilDebugNotice("| output: %p", output);
+  SNetUtilDebugNotice("-");
 #endif
-    hnd = SNetHndCreate( HND_sync, input, output, outtype, patterns, guards);
-    
-    
-    SNetTlCreateComponent( SyncBoxThread, (void*)hnd, ENTITY_sync);
+  hnd = SNetHndCreate( HND_sync, input, output, outtype, patterns, guards);
+  
+  
+  SNetTlCreateComponent( SyncBoxThread, (void*)hnd, ENTITY_sync);
 #ifdef SYNCRO_DEBUG
-    SNetUtilDebugNotice("SYNCRO CREATION DONE");
+  SNetUtilDebugNotice("SYNCRO CREATION DONE");
 #endif
-    
+  
 #ifdef DISTRIBUTED_SNET
-  } else {
-    output = input;
-  }
+  DISTRIBUTED_STARTUP_EXIT(input, output);
 #endif /* DISTRIBUTED_SNET */
 
   return( output);

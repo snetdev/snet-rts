@@ -68,8 +68,7 @@ static void *StarBoxThread( void *hndl)
 #ifdef DISTRIBUTED_SNET
   int node_id;
   snet_fun_id_t fun_id;
-  snet_info_t *info;
-  snet_routing_info_t *rinfo;
+  snet_routing_info_t *info;
 #endif /* DISTRIBUTED_SNET */
 
 #ifdef STAR_DEBUG
@@ -86,7 +85,6 @@ static void *StarBoxThread( void *hndl)
 
 #ifdef DISTRIBUTED_SNET
   node_id = SNetNodeGetNodeID();
-  info = SNetInfoCreate(node_id, NULL);
 
   if(!SNetDistFunFun2ID(box, &fun_id)) {
     /* TODO: This is an error!*/
@@ -132,12 +130,10 @@ static void *StarBoxThread( void *hndl)
             // register new buffer with dispatcher,
             // starstream is returned by self, which is SNetStarIncarnate
 #ifdef DISTRIBUTED_SNET
-	    rinfo =  SNetRoutingInfoInit( SNetRoutingGetNewID(), 
-					  node_id, node_id, &fun_id, node_id);
+	    info =  SNetRoutingInfoInit( SNetRoutingGetNewID(), 
+					 node_id, node_id, &fun_id, node_id);
 	  
-	    SNetInfoSetRoutingInfo(info, rinfo);
-
-	    starstream = SNetRoutingInfoFinalize(rinfo, 
+	    starstream = SNetRoutingInfoFinalize(info, 
 						 SNetSerial(our_outstream, info, 
 							    node_id , box, self));
 
@@ -145,7 +141,7 @@ static void *StarBoxThread( void *hndl)
 	      SNetTlWrite(real_outstream, SNetRecCreate(REC_collect, starstream));
 	    }
 	    
-	    SNetRoutingInfoDestroy(rinfo);
+	    SNetRoutingInfoDestroy(info);
 #else
             starstream = SNetSerial(our_outstream, box, self);
 
@@ -234,8 +230,6 @@ static void *StarBoxThread( void *hndl)
     }
   }
 
-  SNetInfoDestroy(info);
-
   return( NULL);
 }
 
@@ -253,25 +247,21 @@ extern snet_tl_stream_t *SNetStar( snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, input);
-
-  if(location == SNetInfoGetNode(info)) {
+  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
 #endif /* DISTRIBUTED_SNET */
-
-    star_output = SNetTlCreateStream(BUFFER_SIZE);
+  
+  star_output = SNetTlCreateStream(BUFFER_SIZE);
     
-    hnd = SNetHndCreate(HND_star,
-			input, star_output, box_a, box_b, type, guards, false);
-    
-    
-    SNetTlCreateComponent(StarBoxThread, hnd, ENTITY_star_nondet);
-    
-    dispatch_output = CreateCollector( star_output);
+  hnd = SNetHndCreate(HND_star,
+		      input, star_output, box_a, box_b, type, guards, false);
+  
+  
+  SNetTlCreateComponent(StarBoxThread, hnd, ENTITY_star_nondet);
+  
+  dispatch_output = CreateCollector( star_output);
     
 #ifdef DISTRIBUTED_SNET
-  } else {
-    dispatch_output = input;
-  }
+  DISTRIBUTED_STARTUP_EXIT(input, dispatch_output);
 #endif /* DISTRIBUTED_SNET */
 
   return( dispatch_output);
@@ -292,25 +282,20 @@ extern snet_tl_stream_t *SNetStarIncarnate(snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, input);
-
-  if(location == SNetInfoGetNode(info)) {
+  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
 #endif /* DISTRIBUTED_SNET */
 
-    output = SNetTlCreateStream( BUFFER_SIZE);
+  output = SNetTlCreateStream( BUFFER_SIZE);
     
-    
-    hnd = SNetHndCreate(HND_star,
-			input, output, box_a, box_b, type, guards, true);
-    
-    SNetTlCreateComponent(StarBoxThread, hnd, ENTITY_star_nondet);
-    
+  hnd = SNetHndCreate(HND_star,
+		      input, output, box_a, box_b, type, guards, true);
+  
+  SNetTlCreateComponent(StarBoxThread, hnd, ENTITY_star_nondet);
+  
 #ifdef DISTRIBUTED_SNET
-  } else {
-    output = input;
-  }
+  DISTRIBUTED_STARTUP_EXIT(input, output);
 #endif /* DISTRIBUTED_SNET */
-
+  
   return( output);
 }
 
@@ -339,8 +324,7 @@ static void *DetStarBoxThread( void *hndl) {
 #ifdef DISTRIBUTED_SNET
   int node_id;
   snet_fun_id_t fun_id;
-  snet_info_t *info;
-  snet_routing_info_t *rinfo;
+  snet_routing_info_t *info;
 #endif /* DISTRIBUTED_SNET */
 
   real_output = SNetHndGetOutput( hnd);
@@ -353,7 +337,6 @@ static void *DetStarBoxThread( void *hndl) {
 
 #ifdef DISTRIBUTED_SNET
   node_id = SNetNodeGetNodeID();
-  info = SNetInfoCreate(node_id, NULL);
 
   if(!SNetDistFunFun2ID(box, &fun_id)) {
     /* TODO: This is an error!*/
@@ -387,18 +370,16 @@ static void *DetStarBoxThread( void *hndl) {
           else {
             if(starstream == NULL) {
 #ifdef DISTRIBUTED_SNET
-	      rinfo =  SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, node_id);
-	      
-	      SNetInfoSetRoutingInfo(info, rinfo);
+	      info =  SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, node_id);
 
-	      starstream = SNetRoutingInfoFinalize(rinfo, SNetSerial(our_output, info, node_id , box, self));
+	      starstream = SNetRoutingInfoFinalize(info, SNetSerial(our_output, info, node_id , box, self));
 	      
 	      if(starstream != NULL) {
 		SNetTlWrite( real_output, 
 			     SNetRecCreate( REC_collect, starstream));
 	      }
 	      
-	      SNetRoutingInfoDestroy(rinfo);
+	      SNetRoutingInfoDestroy(info);
 #else
 	      starstream = SNetSerial(our_output, box, self);
 	      
@@ -431,15 +412,13 @@ static void *DetStarBoxThread( void *hndl) {
              // starstream is returned by self, which is SNetStarIncarnate
 
 #ifdef DISTRIBUTED_SNET
-	     rinfo =  SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, node_id);
+	     info =  SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, node_id);
 	  
-	     SNetInfoSetRoutingInfo(info, rinfo);
-
-	     starstream = SNetRoutingInfoFinalize(rinfo, SNetSerial(our_output, info, node_id , box, self));
+	     starstream = SNetRoutingInfoFinalize(info, SNetSerial(our_output, info, node_id , box, self));
 	  
 	     SNetTlWrite( real_output, SNetRecCreate( REC_collect, starstream));
 	
-	     SNetRoutingInfoDestroy(rinfo);
+	     SNetRoutingInfoDestroy(info);
 #else
 	     starstream = SNetSerial(our_output, box, self);
 #endif /* DISTRIBUTED_SNET */      
@@ -518,8 +497,6 @@ static void *DetStarBoxThread( void *hndl) {
     }
   }
 
-  SNetInfoDestroy(info);
-
   return( NULL);
 }
 
@@ -539,33 +516,29 @@ extern snet_tl_stream_t *SNetStarDet(snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, input);
-
-  if(location == SNetInfoGetNode(info)) {
+  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
 #endif /* DISTRIBUTED_SNET */
 
-    star_output = SNetTlCreateStream( BUFFER_SIZE);
-    
-    hnd = SNetHndCreate( HND_star, 
-			 input, star_output, 
-			 box_a, box_b, 
-			 type, guards, false);
+  star_output = SNetTlCreateStream( BUFFER_SIZE);
+  
+  hnd = SNetHndCreate( HND_star, 
+		       input, star_output, 
+		       box_a, box_b, 
+		       type, guards, false);
 #ifdef STAR_DEBUG
-    SNetUtilDebugNotice("-");
-    SNetUtilDebugNotice("| DET STAR CREATED");
-    SNetUtilDebugNotice("| input: %p", input);
-    SNetUtilDebugNotice("| output: %p", star_output);
-    SNetUtilDebugNotice("-");
+  SNetUtilDebugNotice("-");
+  SNetUtilDebugNotice("| DET STAR CREATED");
+  SNetUtilDebugNotice("| input: %p", input);
+  SNetUtilDebugNotice("| output: %p", star_output);
+  SNetUtilDebugNotice("-");
 #endif
-    
-    SNetTlCreateComponent(DetStarBoxThread, hnd, ENTITY_star_det);
-    
-    dispatch_output = CreateDetCollector( star_output);
-    
+  
+  SNetTlCreateComponent(DetStarBoxThread, hnd, ENTITY_star_det);
+  
+  dispatch_output = CreateDetCollector( star_output);
+  
 #ifdef DISTRIBUTED_SNET
-  } else {
-    dispatch_output = input;
-  }
+  DISTRIBUTED_STARTUP_EXIT(input, dispatch_output);
 #endif /* DISTRIBUTED_SNET */
 
   return(dispatch_output);
@@ -585,34 +558,30 @@ extern snet_tl_stream_t *SNetStarDetIncarnate(snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, input);
-
-  if(location == SNetInfoGetNode(info)) {
+  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
 #endif /* DISTRIBUTED_SNET */
 
-    output = SNetTlCreateStream(BUFFER_SIZE);
-    
-    hnd = SNetHndCreate( HND_star, \
-			 input, output, 
-			 box_a, box_b, 
-			 type, guards, true);
-    
+  output = SNetTlCreateStream(BUFFER_SIZE);
+  
+  hnd = SNetHndCreate( HND_star, \
+		       input, output, 
+		       box_a, box_b, 
+		       type, guards, true);
+  
 #ifdef STAR_DEBUG
-    SNetUtilDebugNotice("-");
-    SNetUtilDebugNotice("| DET STAR INCARNATE CREATED");
-    SNetUtilDebugNotice("| input: %p", input);
-    SNetUtilDebugNotice("| output: %p", output);
-    SNetUtilDebugNotice("-");
+  SNetUtilDebugNotice("-");
+  SNetUtilDebugNotice("| DET STAR INCARNATE CREATED");
+  SNetUtilDebugNotice("| input: %p", input);
+  SNetUtilDebugNotice("| output: %p", output);
+  SNetUtilDebugNotice("-");
 #endif
-
-    SNetTlCreateComponent(DetStarBoxThread, hnd, ENTITY_star_det);
-    
+  
+  SNetTlCreateComponent(DetStarBoxThread, hnd, ENTITY_star_det);
+  
 #ifdef DISTRIBUTED_SNET
-  } else {
-    output = input;
-  }
+  DISTRIBUTED_STARTUP_EXIT(input, output);
 #endif /* DISTRIBUTED_SNET */
-
+  
   return( output);
 }
 

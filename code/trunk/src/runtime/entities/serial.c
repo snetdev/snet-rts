@@ -27,7 +27,8 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
   /* This section forces input stream into root node. 
    * Otherwise, the root node is ignored.
    */
-  input = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, input); 
+
+  DISTRIBUTED_STARTUP_SERIAL(info, location, input);
 #endif /* IGNORE_ROOT_NODE */
 
 #ifdef SERIAL_DEBUG
@@ -63,8 +64,9 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
 #ifdef IGNORE_ROOT_NODE
   /* This section forces output stream into root node. 
    * Otherwise, the root node is ignored.
-   */
-  output = SNetRoutingInfoUpdate(SNetInfoGetRoutingInfo(info), location, output);
+   */ 
+
+  DISTRIBUTED_STARTUP_SERIAL(info, location, output);
 #endif /* IGNORE_ROOT_NODE */
 
   return(output);
