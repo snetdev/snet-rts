@@ -298,79 +298,101 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
   snet_entity_id_t my_id;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_PARALLEL_ENTRY(info, location, instream);
+  instream = SNetRoutingInfoUpdate(info, location, instream); 
+
+  if(location == SNetNodeGetNodeID()) {
+
 #endif /* DISTRIBUTED_SNET */
 
-  num = SNetTencGetNumTypes( types);
-  outstreams = SNetMemAlloc( num * sizeof( snet_tl_stream_t*));
-  transits = SNetMemAlloc( num * sizeof( snet_tl_stream_t*));
-  
-  transits[0] = SNetTlCreateStream( BUFFER_SIZE);
-  
-  fun = funs[0];
-
-#ifdef DISTRIBUTED_SNET
-  SNetRoutingInfoPushLevel(info); 
-
-  transits[0] = SNetRoutingInfoUpdate(info, location, transits[0]);
-
-  outstreams[0] = (*fun)( transits[0], info, location);
-
-  outstreams[0] = SNetRoutingInfoPopLevel(info, outstreams[0]);
-#else
-  outstreams[0] = (*fun)( transits[0]);
-#endif /* DISTRIBUTED_SNET */
-  
-  outstream = CreateDetCollector( outstreams[0]);
-  my_id = is_det ? ENTITY_parallel_det : ENTITY_parallel_nondet;
-  if( is_det) {
-    SNetTlWrite(outstreams[0], SNetRecCreate( REC_sort_begin, 0, 0));
-  }
-  
-  for( i=1; i<num; i++) {
-    transits[i] = SNetTlCreateStream( BUFFER_SIZE);
+    num = SNetTencGetNumTypes( types);
+    outstreams = SNetMemAlloc( num * sizeof( snet_tl_stream_t*));
+    transits = SNetMemAlloc( num * sizeof( snet_tl_stream_t*));
     
-    fun = funs[i];
+    transits[0] = SNetTlCreateStream( BUFFER_SIZE);
+    
+    fun = funs[0];
     
 #ifdef DISTRIBUTED_SNET
     SNetRoutingInfoPushLevel(info); 
-
-    transits[i] = SNetRoutingInfoUpdate(info, location, transits[i]);
-
-    outstreams[i] = (*fun)( transits[i], info, location);
-
-    outstreams[i] = SNetRoutingInfoPopLevel(info, outstreams[i]);
+    
+    transits[0] = SNetRoutingInfoUpdate(info, location, transits[0]);
+    
+    outstreams[0] = (*fun)( transits[0], info, location);
+    
+    outstreams[0] = SNetRoutingInfoPopLevel(info, outstreams[0]);
 #else
-    outstreams[i] = (*fun)( transits[i]);
+    outstreams[0] = (*fun)( transits[0]);
 #endif /* DISTRIBUTED_SNET */
     
-    SNetTlWrite( outstreams[0], SNetRecCreate( REC_collect, outstreams[i]));
+    outstream = CreateDetCollector( outstreams[0]);
+    my_id = is_det ? ENTITY_parallel_det : ENTITY_parallel_nondet;
     if( is_det) {
-      SNetTlWrite( outstreams[i], SNetRecCreate( REC_sort_end, 0, 0));
+      SNetTlWrite(outstreams[0], SNetRecCreate( REC_sort_begin, 0, 0));
     }
-  }
-  
-  if( is_det) {
-    SNetTlWrite( outstreams[0], SNetRecCreate( REC_sort_end, 0, 0));
-  }
-  hnd = SNetHndCreate( HND_parallel, instream, transits, types, is_det);
-  
-#ifdef PARALLEL_DEBUG
-  SNetUtilDebugNotice("-");
-  SNetUtilDebugNotice("| PARALLEL CREATED");
-  SNetUtilDebugNotice("| input: %p", SNetHndGetInput(hnd));
-  SNetUtilDebugNotice("| internal network inputs::");
-  for(i = 0; i < num; i++) {
-    SNetUtilDebugNotice("| - %p", transits[i]);
-  }
-  SNetUtilDebugNotice("-");
-#endif
-  SNetTlCreateComponent(ParallelBoxThread, (void*)hnd, my_id);
-  
-  SNetMemFree(outstreams);
-
+    
+    for( i=1; i<num; i++) {
+      transits[i] = SNetTlCreateStream( BUFFER_SIZE);
+      
+      fun = funs[i];
+      
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_PARALLEL_EXIT(info, location, instream, outstream, types, funs, fun);
+      SNetRoutingInfoPushLevel(info); 
+      
+      transits[i] = SNetRoutingInfoUpdate(info, location, transits[i]);
+      
+      outstreams[i] = (*fun)( transits[i], info, location);
+      
+      outstreams[i] = SNetRoutingInfoPopLevel(info, outstreams[i]);
+#else
+      outstreams[i] = (*fun)( transits[i]);
+#endif /* DISTRIBUTED_SNET */
+      
+      SNetTlWrite( outstreams[0], SNetRecCreate( REC_collect, outstreams[i]));
+      if( is_det) {
+	SNetTlWrite( outstreams[i], SNetRecCreate( REC_sort_end, 0, 0));
+      }
+    }
+    
+    if( is_det) {
+      SNetTlWrite( outstreams[0], SNetRecCreate( REC_sort_end, 0, 0));
+    }
+    hnd = SNetHndCreate( HND_parallel, instream, transits, types, is_det);
+    
+#ifdef PARALLEL_DEBUG
+    SNetUtilDebugNotice("-");
+    SNetUtilDebugNotice("| PARALLEL CREATED");
+    SNetUtilDebugNotice("| input: %p", SNetHndGetInput(hnd));
+    SNetUtilDebugNotice("| internal network inputs::");
+    for(i = 0; i < num; i++) {
+    SNetUtilDebugNotice("| - %p", transits[i]);
+    }
+    SNetUtilDebugNotice("-");
+#endif
+    SNetTlCreateComponent(ParallelBoxThread, (void*)hnd, my_id);
+    
+    SNetMemFree(outstreams);
+    
+#ifdef DISTRIBUTED_SNET
+  } else { 
+
+    num = SNetTencGetNumTypes( types); 
+
+    for(i = 0; i < num; i++) { 
+      fun = funs[i]; 
+
+      SNetRoutingInfoPushLevel(info); 
+
+      instream = SNetRoutingInfoUpdate(info, location, instream); 
+
+      instream = (*fun)(instream, info, location); 
+
+      instream = SNetRoutingInfoPopLevel(info, instream); 
+    } 
+
+    SNetTencDestroyTypeEncodingList( types);
+
+    outstream  = instream; 
+  }
 #endif /* DISTRIBUTED_SNET */
   
   SNetMemFree( funs);

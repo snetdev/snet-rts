@@ -247,21 +247,30 @@ extern snet_tl_stream_t *SNetStar( snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
+  input = SNetRoutingInfoUpdate(info, location, input); 
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
   
-  star_output = SNetTlCreateStream(BUFFER_SIZE);
+    star_output = SNetTlCreateStream(BUFFER_SIZE);
     
-  hnd = SNetHndCreate(HND_star,
-		      input, star_output, box_a, box_b, type, guards, false);
-  
-  
-  SNetTlCreateComponent(StarBoxThread, hnd, ENTITY_star_nondet);
-  
-  dispatch_output = CreateCollector( star_output);
+    hnd = SNetHndCreate(HND_star,
+			input, star_output, box_a, box_b, type, guards, false);
+    
+    
+    SNetTlCreateComponent(StarBoxThread, hnd, ENTITY_star_nondet);
+    
+    dispatch_output = CreateCollector( star_output);
     
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(input, dispatch_output);
+  } else {
+
+    SNetEdestroyList( guards);
+
+    SNetDestroyTypeEncoding( type);
+
+    dispatch_output = input;
+}
 #endif /* DISTRIBUTED_SNET */
 
   return( dispatch_output);
@@ -282,18 +291,26 @@ extern snet_tl_stream_t *SNetStarIncarnate(snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
+  input = SNetRoutingInfoUpdate(info, location, input);
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
 
-  output = SNetTlCreateStream( BUFFER_SIZE);
+    output = SNetTlCreateStream( BUFFER_SIZE);
     
-  hnd = SNetHndCreate(HND_star,
-		      input, output, box_a, box_b, type, guards, true);
-  
-  SNetTlCreateComponent(StarBoxThread, hnd, ENTITY_star_nondet);
-  
+    hnd = SNetHndCreate(HND_star,
+			input, output, box_a, box_b, type, guards, true);
+    
+    SNetTlCreateComponent(StarBoxThread, hnd, ENTITY_star_nondet);
+    
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(input, output);
+  } else {
+    SNetEdestroyList( guards);
+
+    SNetDestroyTypeEncoding( type);
+
+    output = input;
+}
 #endif /* DISTRIBUTED_SNET */
   
   return( output);
@@ -516,29 +533,37 @@ extern snet_tl_stream_t *SNetStarDet(snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
+  input = SNetRoutingInfoUpdate(info, location, input);
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
 
-  star_output = SNetTlCreateStream( BUFFER_SIZE);
-  
-  hnd = SNetHndCreate( HND_star, 
-		       input, star_output, 
-		       box_a, box_b, 
-		       type, guards, false);
+    star_output = SNetTlCreateStream( BUFFER_SIZE);
+    
+    hnd = SNetHndCreate( HND_star, 
+			 input, star_output, 
+			 box_a, box_b, 
+			 type, guards, false);
 #ifdef STAR_DEBUG
-  SNetUtilDebugNotice("-");
-  SNetUtilDebugNotice("| DET STAR CREATED");
-  SNetUtilDebugNotice("| input: %p", input);
-  SNetUtilDebugNotice("| output: %p", star_output);
-  SNetUtilDebugNotice("-");
+    SNetUtilDebugNotice("-");
+    SNetUtilDebugNotice("| DET STAR CREATED");
+    SNetUtilDebugNotice("| input: %p", input);
+    SNetUtilDebugNotice("| output: %p", star_output);
+    SNetUtilDebugNotice("-");
 #endif
-  
-  SNetTlCreateComponent(DetStarBoxThread, hnd, ENTITY_star_det);
-  
-  dispatch_output = CreateDetCollector( star_output);
-  
+    
+    SNetTlCreateComponent(DetStarBoxThread, hnd, ENTITY_star_det);
+    
+    dispatch_output = CreateDetCollector( star_output);
+    
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(input, dispatch_output);
+  } else {
+    SNetEdestroyList( guards);
+
+    SNetDestroyTypeEncoding( type);
+
+    dispatch_output = input;
+}
 #endif /* DISTRIBUTED_SNET */
 
   return(dispatch_output);
@@ -558,28 +583,36 @@ extern snet_tl_stream_t *SNetStarDetIncarnate(snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
+  input = SNetRoutingInfoUpdate(info, location, input);
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
 
-  output = SNetTlCreateStream(BUFFER_SIZE);
-  
-  hnd = SNetHndCreate( HND_star, \
-		       input, output, 
-		       box_a, box_b, 
-		       type, guards, true);
-  
+    output = SNetTlCreateStream(BUFFER_SIZE);
+    
+    hnd = SNetHndCreate( HND_star, \
+			 input, output, 
+			 box_a, box_b, 
+			 type, guards, true);
+    
 #ifdef STAR_DEBUG
-  SNetUtilDebugNotice("-");
-  SNetUtilDebugNotice("| DET STAR INCARNATE CREATED");
-  SNetUtilDebugNotice("| input: %p", input);
-  SNetUtilDebugNotice("| output: %p", output);
-  SNetUtilDebugNotice("-");
+    SNetUtilDebugNotice("-");
+    SNetUtilDebugNotice("| DET STAR INCARNATE CREATED");
+    SNetUtilDebugNotice("| input: %p", input);
+    SNetUtilDebugNotice("| output: %p", output);
+    SNetUtilDebugNotice("-");
 #endif
-  
-  SNetTlCreateComponent(DetStarBoxThread, hnd, ENTITY_star_det);
-  
+    
+    SNetTlCreateComponent(DetStarBoxThread, hnd, ENTITY_star_det);
+    
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(input, output);
+  } else {
+    SNetEdestroyList( guards);
+
+    SNetDestroyTypeEncoding( type);
+
+    output = input;
+}
 #endif /* DISTRIBUTED_SNET */
   
   return( output);

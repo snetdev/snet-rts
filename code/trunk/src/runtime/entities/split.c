@@ -281,18 +281,22 @@ extern snet_tl_stream_t *SNetSplit( snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
+  input = SNetRoutingInfoUpdate(info, location, input);
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
   
-  initial = SNetTlCreateStream( BUFFER_SIZE);
-  hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, false);
-  
-  output = CreateCollector(initial);
-  
-  SNetTlCreateComponent(SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
-  
+    initial = SNetTlCreateStream( BUFFER_SIZE);
+    hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, false);
+    
+    output = CreateCollector(initial);
+    
+    SNetTlCreateComponent(SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
+    
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(input, output);
+  } else { 
+    output = input; 
+  }
 #endif /* DISTRIBUTED_SNET */
 
   return(output);
@@ -308,7 +312,9 @@ extern snet_tl_stream_t *SNetLocSplit(snet_tl_stream_t *input,
   snet_tl_stream_t *initial, *output;
   snet_handle_t *hnd;
 
-  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
+  input = SNetRoutingInfoUpdate(info, location, input); 
+
+  if(location == SNetNodeGetNodeID()) {
 
   initial = SNetTlCreateStream( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true);
@@ -316,8 +322,10 @@ extern snet_tl_stream_t *SNetLocSplit(snet_tl_stream_t *input,
   output = CreateCollector(initial);
   
   SNetTlCreateComponent(SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
-  
-  DISTRIBUTED_STARTUP_EXIT(input, output);
+
+  } else { 
+    output = input; 
+  }
 
   return(output);
 }
@@ -536,18 +544,22 @@ extern snet_tl_stream_t *SNetSplitDet( snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
+  input = SNetRoutingInfoUpdate(info, location, input); 
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
-
-  initial = SNetTlCreateStream( BUFFER_SIZE);
-  hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, false);
-  
-  output = CreateDetCollector( initial);
-  
-  SNetThreadCreate( DetSplitBoxThread, (void*)hnd, ENTITY_split_det);
-
+    
+    initial = SNetTlCreateStream( BUFFER_SIZE);
+    hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, false);
+    
+    output = CreateDetCollector( initial);
+    
+    SNetThreadCreate( DetSplitBoxThread, (void*)hnd, ENTITY_split_det);
+    
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(input, output);
+  } else { 
+    output = input; 
+  }
 #endif /* DISTRIBUTED_SNET */
 
   return( output);
@@ -564,16 +576,20 @@ snet_tl_stream_t *SNetLocSplitDet(snet_tl_stream_t *input,
   snet_tl_stream_t *initial, *output;
   snet_handle_t *hnd;
 
-  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
+  input = SNetRoutingInfoUpdate(info, location, input); 
+							  
+  if(location == SNetNodeGetNodeID()) {
 
-  initial = SNetTlCreateStream( BUFFER_SIZE);
-  hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true);
-  
-  output = CreateDetCollector( initial);
-  
-  SNetThreadCreate( DetSplitBoxThread, (void*)hnd, ENTITY_split_det);
-  
-  DISTRIBUTED_STARTUP_EXIT(input, output);
+    initial = SNetTlCreateStream( BUFFER_SIZE);
+    hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true);
+    
+    output = CreateDetCollector( initial);
+    
+    SNetThreadCreate( DetSplitBoxThread, (void*)hnd, ENTITY_split_det);
+    
+  } else { 
+    output = input; 
+  }
 
   return( output);
 }

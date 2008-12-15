@@ -101,25 +101,31 @@ extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
   snet_handle_t *hndl;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, input);
+  input = SNetRoutingInfoUpdate(info, location, input);
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
 
-  output = SNetTlCreateStream(BUFFER_SIZE);
+    output = SNetTlCreateStream(BUFFER_SIZE);
     
 #ifdef BOX_DEBUG
-  SNetUtilDebugNotice("-");
-  SNetUtilDebugNotice("| BOX");
-  SNetUtilDebugNotice("| input: %x", input);
-  SNetUtilDebugNotice("| output: %x", output);
-  SNetUtilDebugNotice("-");
+    SNetUtilDebugNotice("-");
+    SNetUtilDebugNotice("| BOX");
+    SNetUtilDebugNotice("| input: %x", input);
+    SNetUtilDebugNotice("| output: %x", output);
+    SNetUtilDebugNotice("-");
 #endif
-  
-  hndl = SNetHndCreate( HND_box, input, output, NULL, boxfun, out_signs);
     
-  SNetTlCreateComponent((void*)BoxThread, (void*)hndl, ENTITY_box);
-  
+    hndl = SNetHndCreate( HND_box, input, output, NULL, boxfun, out_signs);
+    
+    SNetTlCreateComponent((void*)BoxThread, (void*)hndl, ENTITY_box);
+    
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(input, output);
+  } else {
+    SNetTencBoxSignDestroy(out_signs);
+
+    output = input;
+  }
 #endif /* DISTRIBUTED_SNET */
 
   return( output);

@@ -532,35 +532,60 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
   va_list args;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, instream);
+  instream = SNetRoutingInfoUpdate(info, location, instream); 
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
 
-  outstream = SNetTlCreateStream(BUFFER_SIZE);
-  guard_expr = guards;
-  
-  if( guard_expr == NULL) {
-    guard_expr = SNetEcreateList( 1, SNetEconstb( true));
-  }
-  
-  num_outtypes = SNetElistGetNumExpressions( guard_expr);
-  
-  instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
-  
-  va_start( args, guards);
-  for( i=0; i<num_outtypes; i++) {
-    lst = va_arg( args, snet_filter_instruction_set_list_t*);
-    instr_list[i] = lst == NULL ? SNetCreateFilterInstructionList( 0) : lst;
-  }
-  va_end( args);
-  
-  out_types = FilterComputeTypes( num_outtypes, instr_list);
+    outstream = SNetTlCreateStream(BUFFER_SIZE);
+    guard_expr = guards;
     
-  hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
-  
-  SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
-
+    if( guard_expr == NULL) {
+      guard_expr = SNetEcreateList( 1, SNetEconstb( true));
+    }
+    
+    num_outtypes = SNetElistGetNumExpressions( guard_expr);
+    
+    instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
+    
+    va_start( args, guards);
+    for( i=0; i<num_outtypes; i++) {
+      lst = va_arg( args, snet_filter_instruction_set_list_t*);
+      instr_list[i] = lst == NULL ? SNetCreateFilterInstructionList( 0) : lst;
+    }
+    va_end( args);
+    
+    out_types = FilterComputeTypes( num_outtypes, instr_list);
+    
+    hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
+    
+    SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
+    
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(instream, outstream);
+  } else {
+    SNetDestroyTypeEncoding(in_type);
+    
+    num_outtypes = SNetElistGetNumExpressions( guards);
+    
+    if(num_outtypes == 0) {
+      num_outtypes += 1;
+    }
+    
+    va_start( args, guards);
+
+    for( i=0; i<num_outtypes; i++) {
+      lst = va_arg( args, snet_filter_instruction_set_list_t*);
+      if(lst != NULL) {
+	SNetDestroyFilterInstructionSetList(lst);
+      }
+      
+    }
+    va_end( args);
+    
+    SNetEdestroyList( guards);
+
+    outstream = instream;
+  }
 #endif /* DISTRIBUTED_SNET */
   
   return( outstream);
@@ -586,34 +611,57 @@ extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
   va_list args;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, instream);
+  instream = SNetRoutingInfoUpdate(info, location, instream); 
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
     
-  outstream = SNetTlCreateStream(BUFFER_SIZE);
-  guard_expr = guards;
-  
-  if( guard_expr == NULL) {
-    guard_expr = SNetEcreateList( 1, SNetEconstb( true));
-  }
-  
-  num_outtypes = SNetElistGetNumExpressions( guard_expr);
-  
-  instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
-  
-  va_start( args, guards);
-  for( i=0; i<num_outtypes; i++) {
-    instr_list[i] = va_arg( args, snet_filter_instruction_set_list_t*);
-  }
-  va_end( args);
-  
-  out_types = FilterComputeTypes( num_outtypes, instr_list);
-  
-  hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
-  
-  SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
+    outstream = SNetTlCreateStream(BUFFER_SIZE);
+    guard_expr = guards;
+    
+    if( guard_expr == NULL) {
+      guard_expr = SNetEcreateList( 1, SNetEconstb( true));
+    }
+    
+    num_outtypes = SNetElistGetNumExpressions( guard_expr);
+    
+    instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
+    
+    va_start( args, guards);
+    for( i=0; i<num_outtypes; i++) {
+      instr_list[i] = va_arg( args, snet_filter_instruction_set_list_t*);
+    }
+    va_end( args);
+    
+    out_types = FilterComputeTypes( num_outtypes, instr_list);
+    
+    hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
+    
+    SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
   
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(instream, outstream);
+  } else {
+    SNetDestroyTypeEncoding(in_type);
+    
+    num_outtypes = SNetElistGetNumExpressions( guards);
+    
+    if(num_outtypes == 0) {
+      num_outtypes += 1;
+    }
+    
+    va_start( args, guards);
+
+    for( i=0; i<num_outtypes; i++) {
+      SNetDestroyFilterInstructionSetList(va_arg( args, snet_filter_instruction_set_list_t*));
+      
+    }
+
+    va_end( args);
+    
+    SNetEdestroyList( guards);
+
+    outstream = instream;
+  }
 #endif /* DISTRIBUTED_SNET */
 
   return( outstream);
@@ -722,21 +770,28 @@ extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_ENTRY(info, location, instream);
+  instream = SNetRoutingInfoUpdate(info, location, instream); 
+
+  if(location == SNetNodeGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
 
-  outstream = SNetTlCreateStream( BUFFER_SIZE);
-  
-  hnd = SNetHndCreate( HND_filter, instream, outstream,
-		       SNetTencTypeEncode( 1, untouched),
-		       NULL, // outtypes
-		       SNetEcreateList( 1, SNetEconsti( offset)),
-		       NULL); // instructions
-  
-  SNetThreadCreate( NameshiftThread, (void*)hnd, ENTITY_filter);
+    outstream = SNetTlCreateStream( BUFFER_SIZE);
+    
+    hnd = SNetHndCreate( HND_filter, instream, outstream,
+			 SNetTencTypeEncode( 1, untouched),
+			 NULL, // outtypes
+			 SNetEcreateList( 1, SNetEconsti( offset)),
+			 NULL); // instructions
+    
+    SNetThreadCreate( NameshiftThread, (void*)hnd, ENTITY_filter);
   
 #ifdef DISTRIBUTED_SNET
-  DISTRIBUTED_STARTUP_EXIT(instream, outstream);
+  } else {
+    
+    SNetTencDestroyVariantEncoding( untouched);
+
+    outstream = instream;
+  }
 #endif /* DISTRIBUTED_SNET */
   
   return( outstream);
