@@ -18,7 +18,8 @@ typedef union record_types snet_record_types_t;
 #include "stack.h"
 
 #ifdef DISTRIBUTED_SNET
-#include "node.h"
+#include <mpi.h>
+#include "id.h"
 #endif /* DISTRIBUTED_SNET */
 
 /* 
@@ -358,15 +359,8 @@ extern snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t
 extern int SNetRecGetNode( snet_record_t *rec);
 extern int SNetRecGetIndex( snet_record_t *rec);
 
-extern void SNetRecSetRemoteField( snet_record_t *rec, int name, int location, int node, int index);
-
-extern int SNetRecGetFieldLocation(snet_record_t *rec, int name);
-extern snet_id_t SNetRecGetFieldID(snet_record_t *rec, int name);
-
-extern snet_record_t *SNetRecGetNext(snet_record_t *rec);
-extern snet_record_t *SNetRecSetNext(snet_record_t *rec, snet_record_t *next);
-
-extern void SNetRecMarkConsumed( snet_record_t *rec, int name);
+extern int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, int buf_size);
+extern snet_record_t *SNetRecUnpack(MPI_Comm comm, int *pos, void *buf, int buf_size);
 #endif
 
 #endif

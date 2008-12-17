@@ -103,9 +103,8 @@ extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
   input = SNetRoutingInfoUpdate(info, location, input);
 
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
-
     output = SNetTlCreateStream(BUFFER_SIZE);
     
 #ifdef BOX_DEBUG

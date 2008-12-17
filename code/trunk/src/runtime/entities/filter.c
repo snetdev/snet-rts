@@ -534,7 +534,7 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
   instream = SNetRoutingInfoUpdate(info, location, instream); 
 
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
 
     outstream = SNetTlCreateStream(BUFFER_SIZE);
@@ -613,7 +613,7 @@ extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
   instream = SNetRoutingInfoUpdate(info, location, instream); 
 
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
     
     outstream = SNetTlCreateStream(BUFFER_SIZE);
@@ -772,7 +772,7 @@ extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
   instream = SNetRoutingInfoUpdate(info, location, instream); 
 
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
 
     outstream = SNetTlCreateStream( BUFFER_SIZE);

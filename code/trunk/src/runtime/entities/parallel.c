@@ -300,7 +300,7 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
   instream = SNetRoutingInfoUpdate(info, location, instream); 
 
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 
 #endif /* DISTRIBUTED_SNET */
 

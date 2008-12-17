@@ -348,6 +348,7 @@ static void *SyncBoxThread( void *hndl) {
 
         terminate = true;
         SNetTlWrite( output, rec);
+	SNetTlMarkObsolete(output);
       break;
 
       case REC_probe:
@@ -362,7 +363,6 @@ static void *SyncBoxThread( void *hndl) {
     }
   }
   SNetMemFree(storage);
-  SNetTlMarkObsolete(output);
   SNetDestroyTypeEncoding( outtype);
   SNetDestroyTypeEncoding( patterns);
   SNetHndDestroy( hnd);
@@ -386,7 +386,7 @@ extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
   input = SNetRoutingInfoUpdate(info, location, input); 
 
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
     
     //  output = SNetBufCreate( BUFFER_SIZE);

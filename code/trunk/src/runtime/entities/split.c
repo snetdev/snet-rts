@@ -14,7 +14,6 @@
 #ifdef DISTRIBUTED_SNET
 #include "routing.h"
 #include "fun.h"
-#include "node.h"
 #endif /* DISTRIBUTED_SNET */
 
 /* ------------------------------------------------------------------------- */
@@ -70,7 +69,7 @@ static void *SplitBoxThread( void *hndl) {
   utag = SNetHndGetTagB( hnd);
 
 #ifdef DISTRIBUTED_SNET
-  node_id = SNetNodeGetNodeID();
+  node_id = SNetIDServiceGetNodeID();
 
   if(!SNetDistFunFun2ID(boxfun, &fun_id)) {
     /* TODO: This is an error!*/
@@ -283,7 +282,7 @@ extern snet_tl_stream_t *SNetSplit( snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
   input = SNetRoutingInfoUpdate(info, location, input);
 
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
   
     initial = SNetTlCreateStream( BUFFER_SIZE);
@@ -314,7 +313,7 @@ extern snet_tl_stream_t *SNetLocSplit(snet_tl_stream_t *input,
 
   input = SNetRoutingInfoUpdate(info, location, input); 
 
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 
   initial = SNetTlCreateStream( BUFFER_SIZE);
   hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true);
@@ -358,7 +357,7 @@ static void *DetSplitBoxThread( void *hndl) {
   utag = SNetHndGetTagB(hnd);
 
 #ifdef DISTRIBUTED_SNET
-  node_id = SNetNodeGetNodeID();
+  node_id = SNetIDServiceGetNodeID();
 
   if(!SNetDistFunFun2ID(boxfun, &fun_id)) {
     /* TODO: This is an error!*/
@@ -546,7 +545,7 @@ extern snet_tl_stream_t *SNetSplitDet( snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
   input = SNetRoutingInfoUpdate(info, location, input); 
 
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 #endif /* DISTRIBUTED_SNET */
     
     initial = SNetTlCreateStream( BUFFER_SIZE);
@@ -578,7 +577,7 @@ snet_tl_stream_t *SNetLocSplitDet(snet_tl_stream_t *input,
 
   input = SNetRoutingInfoUpdate(info, location, input); 
 							  
-  if(location == SNetNodeGetNodeID()) {
+  if(location == SNetIDServiceGetNodeID()) {
 
     initial = SNetTlCreateStream( BUFFER_SIZE);
     hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true);

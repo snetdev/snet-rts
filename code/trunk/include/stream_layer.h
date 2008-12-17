@@ -54,4 +54,6 @@ SNetTlReplaceInStreamset(snet_tl_streamset_t *set_to_modify,
                          snet_tl_stream_t *old_stream,
                          snet_tl_stream_t *replacement_stream);
 
+bool SNetTlGetFlag(snet_tl_stream_t *stream);
+bool SNetTlSetFlag(snet_tl_stream_t *stream, bool flag);
 #endif

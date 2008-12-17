@@ -1,0 +1,18 @@
+net factorial
+{
+        box leq1( (x) -> (x,p));
+        box condif( (p) -> (<T>) | (<F>));
+
+        net compute
+        {
+                box sub( (x) -> (xx));
+                box mult( (xm,rm) -> (rrm));
+        }
+        connect [{<F>,x,r} -> {xm=x,rm=r}; {x=x}] .. 
+					(sub|mult) .. 
+					  ([|{xx},{rrm} |]*{xx,rrm})@2 ..
+					    [{xx,rrm}->{x=xx,r=rrm}];
+
+}
+connect ((leq1 .. condif)@3 .. ([{<T>} -> {<stop>}] | compute)@1)*{<stop>};
+
