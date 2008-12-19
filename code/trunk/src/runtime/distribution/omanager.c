@@ -199,7 +199,11 @@ static void *OManagerThread( void *ptr)
       break;
     }
 
-    if(pair.stream != imanager && SNetTlGetFlag(pair.stream)) {
+    if(pair.stream != imanager 
+       /* In this case the stream is already destroyed! */
+       && SNetRecGetDescriptor(pair.record) != REC_terminate
+       && SNetTlGetFlag(pair.stream)) {
+
       /* Empty stream! */
       
       /* TODO: Start redirection. */

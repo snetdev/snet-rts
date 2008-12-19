@@ -5,11 +5,13 @@
 #include <string.h>
 
 #include "datastorage.h"
+#include "bitmap.h"
 #include "memfun.h"
 #include "hashtable.h"
 #include "interface_functions.h"
 
 #define HASHTABLE_SIZE 32
+#define MAX_REQUESTS 32
 
 #define TAG_DATA_OP 0 
 
@@ -17,7 +19,9 @@ typedef enum {
   OP_copy, 
   OP_delete,
   OP_fetch,
-  OP_terminate
+  OP_terminate,
+  OP_type,
+  OP_data
 } snet_data_op_t;
 
 typedef struct snet_msg_data_op {
@@ -38,111 +42,186 @@ typedef struct storage {
 
 static storage_t storage;
 
+typedef struct snet_fetch_request {
+  snet_data_op_t op;
+  int id;
+  snet_ref_t *ref;
+  void *buf;
+  int buf_size;
+  int interface;
+  void *data;
+  int dest;
+  MPI_Datatype type;
+} snet_fetch_request_t;
+
 void *DataManagerThread(void *ptr)
 {
   MPI_Status status;
-  MPI_Datatype datatype;
+
   MPI_Aint true_lb;
   MPI_Aint true_extent;
+
   bool terminate = false;
   int result;
   void *buf = NULL;
   int buf_size = 0;
-  void *data;
-  void *type_buf;
-  int type_buf_size;
+ 
   int count;
 
   snet_msg_data_op_t *msg;
   snet_ref_t *ref;
 
-  int interface;
   int size;
+
+  MPI_Status req_status;
+
+  MPI_Request requests[MAX_REQUESTS + 1];
+  snet_fetch_request_t ops[MAX_REQUESTS];
+
+  snet_util_bitmap_t *map;
+  int bit;
+  bool recv;
+
+  map = SNetUtilBitmapCreate(MAX_REQUESTS);
 
   result = MPI_Type_get_true_extent(storage.op_type, &true_lb, &true_extent);
 
   buf_size = true_extent;
-  buf = SNetMemAlloc( sizeof(char) * buf_size);
+  buf = SNetMemAlloc(buf_size);
 
-  type_buf_size = 128;
-  type_buf = SNetMemAlloc(sizeof(char) * type_buf_size);
+  for(bit = 0; bit < MAX_REQUESTS; bit++) {
+    requests[bit] = MPI_REQUEST_NULL;
+    ops[bit].op = OP_type;
+    ops[bit].ref = NULL;
+    ops[bit].buf_size = 128;
+    ops[bit].buf = SNetMemAlloc(sizeof(char) * ops[bit].buf_size);
+    ops[bit].interface = 0;
+    ops[bit].data = NULL;;
+    ops[bit].type = MPI_DATATYPE_NULL;
+  }
+
+  recv = true;
 
   while(!terminate) {
-    memset(buf, 0, buf_size);
-      
-    result = MPI_Recv(buf, 1, storage.op_type,  MPI_ANY_SOURCE, TAG_DATA_OP, storage.comm, &status);
-
-    msg = (snet_msg_data_op_t *)buf;
-
-    switch(msg->op) {
-    case OP_copy:
-
-      ref = SNetDataStorageCopy(msg->id);
-
-       if(ref == NULL) {
-	printf("Remote copy failed %lld\n", msg->id);
-	abort();
-      }
-
-      break;
-      
-    case OP_delete:    
-
-      ref = SNetDataStorageGet(msg->id);
-
-      if(ref != NULL) {
-	SNetRefDestroy(ref);
-      } 
-  
-      break;
-
-    case OP_fetch:
-
-      ref = SNetDataStorageGet(msg->id);
-
-      if(ref != NULL) {
-	/* TODO: Error handling! */
-
-	interface = SNetRefGetInterface(ref);
-
-	size = SNetGetSerializeTypeFun(interface)(storage.comm,
-						  SNetRefGetData(ref),
-						  type_buf, 
-						  type_buf_size);
-
-
-	MPI_Send(type_buf, size, MPI_PACKED, status.MPI_SOURCE, msg->op_id, storage.comm);
-
-	data = SNetGetPackFun(interface)(storage.comm,
-					 SNetRefGetData(ref), 
-					 &datatype, 
-					 &count);
-
-	MPI_Send(data, count, datatype, status.MPI_SOURCE, msg->op_id, storage.comm);
-
-	SNetGetCleanupFun(interface)(datatype,
-				     data);
-
-	SNetRefDestroy(ref);
-
-      } else {
-
-	printf("Fatal error: Unknown data referred in data fetch %lld\n", msg->id);
-	abort();
-      }
-    
-      break;
-
-    case OP_terminate:
-      terminate = true;
-      
-      break;
+       
+    if(recv) {
+      memset(buf, 0, buf_size);
+      result = MPI_Irecv(buf, 1, storage.op_type, MPI_ANY_SOURCE, TAG_DATA_OP, 
+			 storage.comm, &requests[MAX_REQUESTS]);
+      recv = false;
     }
+
+    result = MPI_Waitany(MAX_REQUESTS + 1, requests, &bit, &status);
+
+    if(bit == MAX_REQUESTS) {
+      recv = true;
+      msg = (snet_msg_data_op_t *)buf;
+
+      switch(msg->op) {
+      case OP_copy:
+	
+	ref = SNetDataStorageCopy(msg->id);
+	
+	if(ref == NULL) {
+	  printf("Remote copy failed %lld\n", msg->id);
+	  abort();
+	}
+	
+	break;
+	
+      case OP_delete:    
+	
+	ref = SNetDataStorageGet(msg->id);
+	
+	if(ref != NULL) {
+	  SNetRefDestroy(ref);
+	} else {
+	  printf("Remote destroy failed %lld\n", msg->id);
+	  abort();
+	}
+	
+	break;
+	
+      case OP_fetch:
+	
+	ref = SNetDataStorageGet(msg->id);
+	
+	if(ref != NULL) {
+	  
+	  if((bit = SNetUtilBitmapFindNSet(map)) == SNET_BITMAP_ERR) {
+	    result = MPI_Waitany(MAX_REQUESTS, requests, &bit, &req_status);
+	    SNetUtilBitmapSet(map, bit);
+	  }
+	  
+	  ops[bit].ref = ref;
+	  ops[bit].dest = status.MPI_SOURCE;
+	  ops[bit].id = msg->op_id;
+	  
+	  ops[bit].interface = SNetRefGetInterface(ops[bit].ref);
+	  
+	  size = SNetGetSerializeTypeFun(ops[bit].interface)(storage.comm,
+							     SNetRefGetData(ops[bit].ref),
+							     ops[bit].buf, 
+							     ops[bit].buf_size);
+	  
+	  result = MPI_Isend(ops[bit].buf, size, MPI_PACKED, ops[bit].dest, 
+			     ops[bit].id, storage.comm, &requests[bit]);
+	  
+	  ops[bit].op = OP_type;
+	  
+	} else {
+	  
+	  printf("Fatal error: Unknown data referred in data fetch %lld\n", msg->id);
+	  abort();
+	}
+	
+	break;
+	
+      case OP_terminate:
+	terminate = true;
+	
+	break;
+      default:
+	break;
+      }
+    } else {
+      switch(ops[bit].op) {
+	
+      case OP_type:
+	
+	ops[bit].data = SNetGetPackFun(ops[bit].interface)(storage.comm,
+							   SNetRefGetData(ops[bit].ref), 
+							   &ops[bit].type, 
+							   &count);
+
+	result = MPI_Isend(ops[bit].data, count, ops[bit].type, ops[bit].dest, 
+			   ops[bit].id, storage.comm, &requests[bit]);
+	
+	ops[bit].op = OP_data;
+	break;
+      case OP_data:
+	SNetGetCleanupFun(ops[bit].interface)(ops[bit].type, ops[bit].data);
+	
+	SNetRefDestroy(ops[bit].ref);
+	
+	SNetUtilBitmapClear(map, bit);
+	break;
+      default:
+	break;
+      }
+    }
+    
     msg = NULL;
   }
 
+  /* TODO: Handle pending requests! */
+
+  SNetUtilBitmapDestroy(map);
   SNetMemFree(buf);
-  SNetMemFree(type_buf);
+
+  for(bit = 0; bit < MAX_REQUESTS; bit++) {
+    SNetMemFree(ops[bit].buf);
+  }
 
   return NULL;
 }
@@ -319,7 +398,7 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   
   result = MPI_Type_get_true_extent(MPI_PACKED, &true_lb, &true_extent);
   
-  buf = SNetMemAlloc(sizeof(char) * true_extent * count);  
+  buf = SNetMemAlloc(true_extent * count);  
   
   result = MPI_Recv(buf, count, MPI_PACKED, location, 
 		    msg.op_id, storage.comm, &status);
@@ -327,7 +406,7 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   type = SNetGetDeserializeTypeFun(interface)(storage.comm, buf, count);
   
   SNetMemFree(buf);
-  
+
   result = MPI_Probe(location, msg.op_id, storage.comm, &status);
   
   result = MPI_Get_count(&status, type, &count);
@@ -335,15 +414,15 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   result = MPI_Type_get_true_extent(type, &true_lb, &true_extent);
   
   
-  buf = SNetMemAlloc(sizeof(char) * true_extent * count);  
-  
+  buf = SNetMemAlloc(true_extent * count);  
+
   result = MPI_Recv(buf, count, type, location, 
 		    msg.op_id, storage.comm, &status);
   
   data = SNetGetUnpackFun(interface)(storage.comm, buf, type, count);
   
   SNetGetCleanupFun(interface)(type, buf);
-  
+
   return data;
 }
 

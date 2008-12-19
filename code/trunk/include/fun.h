@@ -10,8 +10,8 @@
 #define SNET_FUN_ERROR -2
 
 typedef struct {
+  int id;
   char lib[SNET_LIBNAME_MAX_LENGTH];
-  int fun_id;
 } snet_fun_id_t;
 
 typedef int (*snet_fun2id_fun_t)(snet_startup_fun_t);

@@ -5,6 +5,7 @@
 
 #include "record.h"
 #include "stream_layer.h"
+#include "fun.h"
 
 /* Message types. 
  *
@@ -59,10 +60,10 @@ typedef struct snet_msg_route_index {
 
 typedef struct snet_msg_create_network {
   int op_id;
+  int starter;
   int parent;
-  int fun_id;
   int tag;
-  char lib[32];
+  snet_fun_id_t fun_id;
 } snet_msg_create_network_t;
 
 

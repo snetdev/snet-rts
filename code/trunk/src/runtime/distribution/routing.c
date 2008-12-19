@@ -51,12 +51,13 @@ static void CreateNetwork(snet_routing_info_t *info, int node)
   MPI_Datatype type;
 
   msg.op_id = info->id;
+  msg.starter = info->starter;
   msg.parent = info->parent;
-  msg.fun_id = info->fun_id.fun_id;
+  msg.fun_id.id = info->fun_id.id;
   msg.tag = info->tag;
 
-  memset(msg.lib, 0, sizeof(char) * 32);
-  strcpy(msg.lib, info->fun_id.lib);
+  memset(msg.fun_id.lib, 0, sizeof(char) * 32);
+  strcpy(msg.fun_id.lib, info->fun_id.lib);
 
   type = SNetMessageGetMPIType(SNET_msg_create_network);
 
@@ -242,7 +243,8 @@ snet_routing_info_t *SNetRoutingInfoInit(int id, int starter_node, int parent_no
   info->parent = parent_node;
 
   strcpy(info->fun_id.lib, fun_id->lib);
-  info->fun_id.fun_id = fun_id->fun_id;
+
+  info->fun_id.id = fun_id->id;
 
   info->tag = tag;
 

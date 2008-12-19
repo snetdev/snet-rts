@@ -7,6 +7,19 @@
    fun:_YampiMemPoll
    fun:_YampiPollP2P
    fun:_YampiTestReqs
+   fun:_YampiTestRequest
+   fun:PMPI_Waitany
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_YampiReqCreate
+   fun:_YampiMemPull
+   fun:_YampiMemPoll
+   fun:_YampiPollP2P
+   fun:_YampiTestReqs
    fun:_YampiMPI_Recv
    fun:DataManagerThread
 }

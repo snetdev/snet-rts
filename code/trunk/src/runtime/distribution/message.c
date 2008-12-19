@@ -64,11 +64,11 @@ void SNetMessageTypesInit()
   types[0] = MPI_INT;
   types[1] = MPI_CHAR;
   
-  block_lengths[0] = 4;
+  block_lengths[0] = 5;
   block_lengths[1] = 32;
   
   MPI_Address(&create_network.op_id, displacements);
-  MPI_Address(&create_network.lib[0], displacements + 1);
+  MPI_Address(&create_network.fun_id.lib[0], displacements + 1);
   
   displacements[1] -= displacements[0];
   displacements[0] = 0;

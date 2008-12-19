@@ -60,7 +60,7 @@ int SNetDistFunFun2ID(snet_startup_fun_t fun, snet_fun_id_t *id)
     fun_id = next->fun2id(fun);
     if(fun_id != -1) {
       strcpy(id->lib, next->libname);
-      id->fun_id = fun_id;
+      id->id = fun_id;
       return SNET_FUN_SUCCESS;
     }
 
@@ -77,7 +77,7 @@ int SNetDistFunID2Fun(snet_fun_id_t *id, snet_startup_fun_t *fun)
   
   while(next != NULL) {
     if(strcmp(next->libname, id->lib) == 0) {
-      temp_fun = next->id2fun(id->fun_id);
+      temp_fun = next->id2fun(id->id);
       if(temp_fun != NULL) {
 	*fun = temp_fun;
 	return SNET_FUN_SUCCESS;
