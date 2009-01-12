@@ -503,10 +503,13 @@ static void *FilterThread( void *hnd)
         break;
 #ifdef DISTRIBUTED_SNET
     case REC_route_update:
-	break;
     case REC_route_redirect:
-	break;
+    case REC_route_concatenate:
 #endif /* DISTRIBUTED_SNET */
+    default:
+      SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( in_rec));
+      SNetRecDestroy(in_rec);
+      break;
     } // switch rec_descr
   } // while not terminate
   return( NULL);
@@ -747,10 +750,13 @@ static void *NameshiftThread( void *h)
       break;
 #ifdef DISTRIBUTED_SNET
     case REC_route_update:
-      break;
     case REC_route_redirect:
-      break;
+    case REC_route_concatenate:
 #endif /* DISTRIBUTED_SNET */
+    default:
+      SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
+      SNetRecDestroy( rec);
+      break;
     }
   }
 

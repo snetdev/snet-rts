@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <mpi.h>
 #include <stdio.h>
+#include "unistd.h"
 
 #include "omanager.h"
 #include "record.h"
@@ -9,11 +10,10 @@
 #include "memfun.h"
 #include "hashtable.h"
 #include "message.h"
+#include "debug.h"
 
-/* TODO: 
- *  - Route redirection
- *  - Route concatenation
- */
+//#define OMANAGER_DEBUG
+#define DIST_IO_OPTIMIZATIONS
 
 #define HASHTABLE_SIZE 32
 #define ORIGINAL_MAX_MSG_SIZE 256
@@ -23,11 +23,10 @@ typedef struct {
   int id;
 } pair_t;
      
-static int compare_fun(void *a, void *b) {
+static int compare_fun(void *b, void *a) {
   pair_t *a2 = (pair_t *)a;
-  pair_t *b2 = (pair_t *)b;
 
-  return (a2->node == b2->node) && (a2->id == b2->id);
+  return  (a2->id == *(int *)b);
 }
 
 static pair_t *CreatePair(int node, int id) 
@@ -66,6 +65,23 @@ static void *OManagerThread( void *ptr)
   int position;
   int result;
 
+#ifdef DIST_IO_OPTIMIZATIONS 
+  MPI_Datatype type;
+
+  bool undo = false;
+  int index;
+  int node;
+
+  snet_msg_route_concatenate_t msg_concat;
+  snet_msg_route_redirect_internal_t msg_redir;
+
+  snet_tl_stream_t *redirected = NULL;
+#endif /* DIST_IO_OPTIMIZATIONS */
+
+#ifdef OMANAGER_DEBUG
+  int debug_record_count = 0;
+#endif /* OMANAGER_DEBUG */
+
   routing_table = SNetHashtableCreate(HASHTABLE_SIZE, compare_fun);
 
   MPI_Comm_rank( MPI_COMM_WORLD, &my_rank );
@@ -79,13 +95,21 @@ static void *OManagerThread( void *ptr)
 
   while(!terminate) {
 
+#ifndef DIST_IO_OPTIMIZATIONS 
     pair = SNetTlReadMany(set);
+
+#else /* DIST_IO_OPTIMIZATIONS */
+    pair = SNetTlPeekMany(set);
+#endif /* DIST_IO_OPTIMIZATIONS */
 
     switch(SNetRecGetDescriptor(pair.record)) {
     case REC_sync:
-      stream = SNetRecGetStream(pair.record);
 
-      // TODO: Check if this is the output stream of imanager!
+#ifdef DIST_IO_OPTIMIZATIONS 
+      pair.record = SNetTlRead(pair.stream);
+#endif /* DIST_IO_OPTIMIZATIONS */
+
+      stream = SNetRecGetStream(pair.record);
 
       key = HASHTABLE_PTR_TO_KEY(pair.stream);
 
@@ -95,50 +119,113 @@ static void *OManagerThread( void *ptr)
 
       SNetHashtablePut(routing_table, key, value_pair);    
 
-      SNetTlReplaceInStreamset(set, pair.stream, stream);
+      set = SNetTlReplaceInStreamset(set, pair.stream, stream);
 
+      SNetRecDestroy(pair.record);
+
+#ifdef DIST_IO_OPTIMIZATIONS
+      if(SNetTlGetFlag(stream) && redirected == NULL && stream != imanager) {
+
+	/* Empty stream detected! */
+
+	msg_redir.node = value_pair->node;
+	msg_redir.stream = stream;
+	
+	type = SNetMessageGetMPIType(SNET_msg_route_redirect_internal);
+	
+	MPI_Send(&msg_redir, 1, type, my_rank, SNET_msg_route_redirect_internal, MPI_COMM_WORLD);
+	
+	redirected = stream;
+      }
+#endif /* DIST_IO_OPTIMIZATIONS */
       break;
+    case REC_data:
     case REC_collect:
     case REC_sort_begin:	
     case REC_sort_end:
     case REC_probe:
-    case REC_data: 
+#ifdef OMANAGER_DEBUG
+      debug_record_count++;
+#endif /* OMANAGER_DEBUG */
+
       key = HASHTABLE_PTR_TO_KEY(pair.stream);
 
       value_pair = (pair_t *)SNetHashtableGet(routing_table, key); 
 
-      if(value_pair->node == my_rank) {
-	// TODO: Fragmentation detected: concatenate streams!
-      }
+#ifdef DIST_IO_OPTIMIZATIONS
+      if((undo == false) && (value_pair->node == my_rank) && (redirected == NULL) && (pair.stream != imanager)) {
+	/* Fragmentation detected: concatenate streams! */
 
-      position = 0;
+	msg_concat.index = value_pair->id;
+	msg_concat.stream = pair.stream;
 
-      result = MPI_Pack(&value_pair->id, 1, MPI_INT, buf, buf_size, &position, MPI_COMM_WORLD);
-
-      while(SNetRecPack(pair.record, MPI_COMM_WORLD, &position, buf, buf_size) != MPI_SUCCESS) {
-	SNetMemFree(buf);
-
-	buf_size += ORIGINAL_MAX_MSG_SIZE;
-
-	buf = SNetMemAlloc(sizeof(char) * buf_size);
+	type = SNetMessageGetMPIType(SNET_msg_route_concatenate);
 	
-	position = 0;
-    
-	result = MPI_Pack(&value_pair->id, 1, MPI_INT, buf, buf_size, &position, MPI_COMM_WORLD);
-      }
+	value_pair = (pair_t *)SNetHashtableRemove(routing_table, key);
 
-      MPI_Send(buf, position, MPI_PACKED, value_pair->node, SNET_msg_record, MPI_COMM_WORLD);
+	set = SNetTlDeleteFromStreamset(set, pair.stream);
+
+	MPI_Send(&msg_concat, 1, type, my_rank, SNET_msg_route_concatenate, MPI_COMM_WORLD);
+
+	DestroyPair(value_pair);
+
+#ifdef OMANAGER_DEBUG
+	debug_record_count--;
+#endif /* OMANAGER_DEBUG */
+      } else {
+        if(undo == true) {
+	  undo = false;
+	}
+
+	pair.record = SNetTlRead(pair.stream);
+
+#endif /* DIST_IO_OPTIMIZATIONS */
+
+	position = 0;
+	
+	result = MPI_Pack(&value_pair->id, 1, MPI_INT, buf, buf_size, &position, MPI_COMM_WORLD);
+	
+	while(SNetRecPack(pair.record, MPI_COMM_WORLD, &position, buf, buf_size) != MPI_SUCCESS) {
+
+	  SNetMemFree(buf);
+	  
+	  buf_size += ORIGINAL_MAX_MSG_SIZE;
+	  
+	  buf = SNetMemAlloc(sizeof(char) * buf_size);
+	  
+	  position = 0;
+
+	  result = MPI_Pack(&value_pair->id, 1, MPI_INT, buf, buf_size, &position, MPI_COMM_WORLD);
+	}
+
+	MPI_Send(buf, position, MPI_PACKED, value_pair->node, SNET_msg_record, MPI_COMM_WORLD);
+
+	SNetRecDestroy(pair.record);
+
+
+#ifdef DIST_IO_OPTIMIZATIONS
+      }
+#endif /* DIST_IO_OPTIMIZATIONS */
 
       break;
     case REC_terminate:
+#ifdef DIST_IO_OPTIMIZATIONS 
+	pair.record = SNetTlRead(pair.stream);
+#endif /* DIST_IO_OPTIMIZATIONS */
+
       if(pair.stream == imanager) {
 	
 	terminate = true;
+
+	set = SNetTlDeleteFromStreamset(set, pair.stream);
 
       } else {
 	key = HASHTABLE_PTR_TO_KEY(pair.stream);
 
 	value_pair = (pair_t *)SNetHashtableRemove(routing_table, key);
+
+
+	set = SNetTlDeleteFromStreamset(set, pair.stream);
 
 	/* No need to check for message size, as buf_size will always be greater! */
 
@@ -146,16 +233,24 @@ static void *OManagerThread( void *ptr)
 
 	result = MPI_Pack(&value_pair->id, 1, MPI_INT, buf, buf_size, &position, MPI_COMM_WORLD);
 
+
 	SNetRecPack(pair.record, MPI_COMM_WORLD, &position, buf, buf_size);
 
 	MPI_Send(buf, position, MPI_PACKED, value_pair->node, SNET_msg_record, MPI_COMM_WORLD);
-  
-	DestroyPair(value_pair);
-      }
 
-      set = SNetTlDeleteFromStreamset(set, pair.stream);
+	DestroyPair(value_pair);
+
+#ifdef OMANAGER_DEBUG
+	debug_record_count++;
+#endif /* OMANAGER_DEBUG */
+      }
+      SNetRecDestroy(pair.record);
+
       break;
     case REC_route_update:
+#ifdef DIST_IO_OPTIMIZATIONS 
+      pair.record = SNetTlRead(pair.stream);
+#endif /* DIST_IO_OPTIMIZATIONS */
 
       stream = SNetRecGetStream(pair.record);
 
@@ -168,48 +263,95 @@ static void *OManagerThread( void *ptr)
 
       set = SNetTlAddToStreamset(set, stream);
 
+      SNetRecDestroy(pair.record);
       break;
+#ifdef DIST_IO_OPTIMIZATIONS
     case REC_route_redirect:
+      pair.record = SNetTlRead(pair.stream);
+
+      index = SNetRecGetIndex(pair.record);
+      node = SNetRecGetNode(pair.record);
+
       if(pair.stream == imanager) {
-	/* TODO: set route according to the record! */
 
+	if(node == -1 && index == -1) {
+	  /* Cancelled */
+	  redirected = NULL;
+
+	} else {
+	  key = SNetHashtableGetKey(routing_table, &index);
+	  
+	  value_pair = (pair_t *)SNetHashtableGet(routing_table, key);
+	  
+	  if(value_pair != NULL) {
+#ifdef OMANAGER_DEBUG
+	    debug_record_count++;
+#endif /* OMANAGER_DEBUG */
+ 
+	    node = value_pair->node;
+	    
+	    value_pair->node = SNetRecGetNode(pair.record);
+	    
+	    SNetRecSetNode(pair.record, my_rank);
+	    
+	    position = 0;
+	    
+	    result = MPI_Pack(&value_pair->id, 1, MPI_INT, buf, buf_size, &position, MPI_COMM_WORLD);
+	    
+	    SNetRecPack(pair.record, MPI_COMM_WORLD, &position, buf, buf_size);
+	    
+	    MPI_Send(buf, position, MPI_PACKED, node, SNET_msg_record, MPI_COMM_WORLD);
+
+	  } 
+	}
       } else {
-	
+#ifdef OMANAGER_DEBUG
+	debug_record_count++;
+#endif /* OMANAGER_DEBUG */
 	key = HASHTABLE_PTR_TO_KEY(pair.stream);
-
+	
 	value_pair = (pair_t *)SNetHashtableRemove(routing_table, key);
 	
+	set = SNetTlDeleteFromStreamset(set, pair.stream);
+
 	/* No need to check for message size, as buf_size will always be greater! */
 	
 	position = 0;
-
+	
 	result = MPI_Pack(&value_pair->id, 1, MPI_INT, buf, buf_size, &position, MPI_COMM_WORLD);
-
+	
 	SNetRecPack(pair.record, MPI_COMM_WORLD, &position, buf, buf_size);
-
+		
 	MPI_Send(buf, position, MPI_PACKED, value_pair->node, SNET_msg_record, MPI_COMM_WORLD);
-
-	set = SNetTlDeleteFromStreamset(set, pair.stream);
-
+		
 	DestroyPair(value_pair);
 	
-	}
+	redirected = NULL;
+      }
+
+      SNetRecDestroy(pair.record);
       break;
-    default:
+      case REC_route_concatenate:
+
+	pair.record = SNetTlRead(pair.stream);
+
+	stream = SNetRecGetStream(pair.record);
+
+	set = SNetTlAddToStreamset(set, stream);	
+
+	key = HASHTABLE_PTR_TO_KEY(stream);
+
+	SNetHashtablePut(routing_table, key, CreatePair(my_rank, SNetRecGetIndex(pair.record)));
+
+	SNetRecDestroy(pair.record);
+
+	undo = true;
+
+	break;
+#endif /* DIST_IO_OPTIMIZATIONS */
+      default:
       break;
     }
-
-    if(pair.stream != imanager 
-       /* In this case the stream is already destroyed! */
-       && SNetRecGetDescriptor(pair.record) != REC_terminate
-       && SNetTlGetFlag(pair.stream)) {
-
-      /* Empty stream! */
-      
-      /* TODO: Start redirection. */
-    }
-
-    SNetRecDestroy(pair.record);
   }
 
   SNetMemFree(buf);
@@ -217,6 +359,10 @@ static void *OManagerThread( void *ptr)
   SNetHashtableDestroy(routing_table);
 
   SNetTlDestroyStreamset(set);
+
+#ifdef OMANAGER_DEBUG
+  SNetUtilDebugNotice("Node %d: omanager sent %d records", my_rank, debug_record_count);
+#endif /* OMANAGER_DEBUG */
 
   return NULL;
 }

@@ -104,7 +104,7 @@ maketools       = cse cb
 compiler        = tree global support parse preproc flat typeinf opt postproc \
                   codegen invokecc print
 
-runtime         = common entities netinterface observer utility threading interfacing
+runtime         = common entities netinterface observer utility threading interfacing distribution
 
 util		= core metadata
 
@@ -189,10 +189,10 @@ entities        = filter.o graphics.o\
                   syncro.o out.o box.o alias.o\
                   serial.o collectors.o parallel.o star.o split.o
 
-utility		= list.o debug.o stack.o tree.o bitmap.o
+utility		= list.o debug.o stack.o tree.o bitmap.o hashtable.o queue.o
 
 threading       = threading.o extended_semaphore.o stream_layer.o buffer.o\
-                  feedbackbuffer.o
+                  feedbackbuffer.o ubuffer.o
 
 interfacing     = interface_functions.o
 
@@ -200,6 +200,9 @@ netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o\
                   networkinterface.o
 
 observer	= observers.o
+
+distribution    = distribution.o datastorage.o message.o fun.o imanager.o \
+                  id.o omanager.o routing.o reference.o 
 
 ###############################################################################
 #

@@ -879,8 +879,9 @@ static MPI_Datatype C4SNetTypeToMPIType(c4snet_type_t type)
   return MPI_DATATYPE_NULL;
 }
 
-static c4snet_type_t  C4SNetMPITypeToType(MPI_Datatype type)
+static c4snet_type_t C4SNetMPITypeToType(MPI_Datatype type)
 {
+  /*  
   switch(type) {
   case MPI_UNSIGNED_CHAR:
     return CTYPE_uchar; 
@@ -918,6 +919,31 @@ static c4snet_type_t  C4SNetMPITypeToType(MPI_Datatype type)
   case MPI_DATATYPE_NULL:
   default:
     break;
+  }
+  
+  */
+  if(type == MPI_UNSIGNED_CHAR) {
+    return CTYPE_uchar; 
+  } else if(type == MPI_CHAR) {
+    return CTYPE_char;
+  } else if(type == MPI_UNSIGNED_SHORT) {
+    return CTYPE_ushort;
+  } else if(type == MPI_SHORT) {
+    return CTYPE_short;
+  } else if(type == MPI_UNSIGNED) {
+    return CTYPE_uint;
+  } else if(type == MPI_INT) {
+    return CTYPE_int;
+  } else if(type == MPI_UNSIGNED_LONG) {
+    return CTYPE_ulong;
+  } else if(type == MPI_LONG) {
+    return CTYPE_long;
+  } else if(type == MPI_FLOAT) {
+    return CTYPE_float;
+  } else if(type == MPI_DOUBLE) {
+    return CTYPE_double;
+  } else if(type == MPI_LONG_DOUBLE) {
+    return CTYPE_ldouble;
   }
 
   return CTYPE_unknown;

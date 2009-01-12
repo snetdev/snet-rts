@@ -63,6 +63,7 @@
 #ifdef DISTRIBUTED_SNET
 #define UPDATE_REC( name, component) RECORD( name, update_rec)->component
 #define REDIRECT_REC( name, component) RECORD( name, redirect_rec)->component
+#define CONCAT_REC( name, component) RECORD( name, concat_rec)->component
 #endif
 
 #ifdef DISTRIBUTED_SNET
@@ -121,8 +122,14 @@ typedef struct {
 } route_update_t;
 
 typedef struct {
-  /* TODO */
+  int node;
+  int index;
 } route_redirect_t;
+
+typedef struct {
+  int index;
+  snet_tl_stream_t *stream;
+} route_concatenate_t;
 #endif
 
 union record_types {
@@ -136,6 +143,7 @@ union record_types {
 #ifdef DISTRIBUTED_SNET
   route_update_t *update_rec;
   route_redirect_t *redirect_rec;
+  route_concatenate_t *concat_rec;
 #endif
 };
 
@@ -313,8 +321,15 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
     case REC_route_redirect:
       RECPTR(rec) = SNetMemAlloc(sizeof(snet_record_types_t));
       RECORD(rec, redirect_rec) = SNetMemAlloc(sizeof(route_redirect_t));
-      /* TODO: !!!*/
+      REDIRECT_REC( rec, node)  = va_arg( args, int);
+      REDIRECT_REC( rec, index) = va_arg( args, int);
     break;
+    case REC_route_concatenate:
+      RECPTR(rec) = SNetMemAlloc(sizeof(snet_record_types_t));
+      RECORD(rec, redirect_rec) = SNetMemAlloc(sizeof(route_redirect_t));
+      CONCAT_REC( rec, index)   = va_arg( args, int);
+      CONCAT_REC( rec, stream)  = va_arg( args, snet_tl_stream_t *);
+    break;      
 #endif
 
     default:
@@ -403,6 +418,10 @@ extern void SNetRecDestroy( snet_record_t *rec)
     break;
 
   case REC_route_redirect:
+    SNetMemFree(RECORD(rec, redirect_rec));
+    break;
+
+  case REC_route_concatenate:
     SNetMemFree(RECORD(rec, redirect_rec));
     break;
 
@@ -535,6 +554,9 @@ extern snet_tl_stream_t *SNetRecGetStream( snet_record_t *rec)
 #ifdef DISTRIBUTED_SNET
   case REC_route_update:
     result = UPDATE_REC( rec, stream);
+    break;
+  case REC_route_concatenate:
+    result = CONCAT_REC( rec, stream);
     break;
 #endif
   default:
@@ -937,8 +959,12 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec)
 			    UPDATE_REC(rec, index), UPDATE_REC(rec, stream));
     break;
   case REC_route_redirect:
-    /* TODO: !!*/
-    new_rec = SNetRecCreate(REC_DESCR( rec));
+    new_rec = SNetRecCreate(REC_DESCR( rec), REDIRECT_REC(rec, node),
+			    REDIRECT_REC(rec, index));
+    break;
+  case REC_route_concatenate:
+    new_rec = SNetRecCreate(REC_DESCR( rec), CONCAT_REC(rec, index),
+			    CONCAT_REC(rec, stream), SNetRecCopy(CONCAT_REC(rec, rec)));
     break;
 #endif
     default:
@@ -946,53 +972,17 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec)
                                               REC_DESCR( rec));
   }
   
-#ifndef DISTRIBUTED_SNET
-  new_rec->iteration_counters = SNetUtilStackCreate();
-#endif
   current_iteration = SNetUtilStackBottom(rec->iteration_counters);
   while(SNetUtilStackIterCurrDefined(current_iteration)) {
     temp = SNetUtilStackIterGet(current_iteration);
     SNetUtilStackPush(new_rec->iteration_counters, temp);
     current_iteration = SNetUtilStackIterNext(current_iteration);
   }
-#ifdef DISTRIBUTED_SNET
+
   SNetUtilStackIterDestroy(current_iteration);
-#endif
   
   return( new_rec);
 }
-/*
-extern snet_lang_descr_t SNetRecGetLanguage( snet_record_t *rec) {
-
-  snet_lang_descr_t res;
-
-  switch( REC_DESCR( rec)) {
-    case REC_data:
-      res = DATA_REC( rec, lang);
-      break;
-    default:
-      printf("\n\n ** Fatal Error ** : Wrong type in SNetGetLanguage() (%d)"
-             "\n\n", REC_DESCR( rec));
-      exit( 1);
-      break;
-  }
-  return( res);
-}
-
-extern void SNetRecSetLanguage( snet_record_t *rec, snet_lang_descr_t lang) {
-
-  switch( REC_DESCR( rec)) {
-    case REC_data:
-      DATA_REC( rec, lang) = lang;
-      break;
-    default:
-      printf("\n\n ** Fatal Error ** : Wrong type in SNetSetLanguage() (%d)"
-             "\n\n", REC_DESCR( rec));
-      exit( 1);
-      break;
-  }
-}
-*/
 
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec)
 {
@@ -1130,12 +1120,32 @@ extern int SNetRecGetNode( snet_record_t *rec)
   case REC_route_update:
     result = UPDATE_REC( rec, node);
     break;
+  case REC_route_redirect:
+    result = REDIRECT_REC( rec, node);
+    break;
   default:
     SNetUtilDebugFatal("Wrong type in SNetRecGetNode() (%d)", REC_DESCR(rec));
     break;
   }
   
   return result;
+}
+
+extern void SNetRecSetNode( snet_record_t *rec, int node)
+{
+
+  switch( REC_DESCR( rec)) {
+  case REC_route_update:
+    UPDATE_REC( rec, node) = node;
+    break;
+  case REC_route_redirect:
+    REDIRECT_REC( rec, node) = node;
+    break;
+  default:
+    SNetUtilDebugFatal("Wrong type in SNetRecGetNode() (%d)", REC_DESCR(rec));
+    break;
+  }
+ 
 }
 
 extern int SNetRecGetIndex( snet_record_t *rec)
@@ -1145,6 +1155,12 @@ extern int SNetRecGetIndex( snet_record_t *rec)
   switch( REC_DESCR( rec)) {
   case REC_route_update:
     result = UPDATE_REC( rec, index);
+    break;
+  case REC_route_redirect:
+    result = REDIRECT_REC( rec, index);
+    break;
+  case REC_route_concatenate:
+    result = CONCAT_REC( rec, index);
     break;
   default:
     SNetUtilDebugFatal("Wrong type in SNetRecGetIndex() (%d)", REC_DESCR(rec));
@@ -1193,6 +1209,8 @@ extern int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, i
       if((result = SNetRefPack(DATA_REC( rec, fields[offset]), comm, pos, buf, buf_size)) != MPI_SUCCESS) {
 	return result; 
       }
+
+      //DATA_REC( rec, fields[offset]) = NULL;
 
       SNetTencRenameField( GetVEnc( rec), names[i], CONSUMED);
     }
@@ -1266,8 +1284,8 @@ extern int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, i
     SNetUtilDebugFatal("Tried to deserialize REC_route_update.");
     break;
   case REC_route_redirect:
-   /* TODO: */
-    SNetUtilDebugFatal("Tried to deserialize REC_route_redirect.");
+   /* Pack node and index */
+    return MPI_Pack(&REDIRECT_REC( rec, node), 2, MPI_INT, buf, buf_size, pos, comm);
     break;
   case REC_sync:
     SNetUtilDebugFatal("Tried to serialize REC_sync.");
@@ -1396,7 +1414,10 @@ extern snet_record_t *SNetRecUnpack(MPI_Comm comm, int *pos, void *buf, int buf_
       /* TODO: */
       break;
     case REC_route_redirect:
-      /* TODO: */
+      /* Unpack node and index. */ 
+      if(MPI_Unpack(buf, buf_size, pos, &temp_buf, 2, MPI_INT, comm) == MPI_SUCCESS) {
+	return SNetRecCreate(REC_route_redirect, temp_buf[0], temp_buf[1]);
+      }
       SNetUtilDebugFatal("Tried to deserialize REC_route_redirect.");
       break;
     case REC_sync:

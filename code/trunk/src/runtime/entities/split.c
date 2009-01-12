@@ -254,10 +254,13 @@ static void *SplitBoxThread( void *hndl) {
       break;
 #ifdef DISTRIBUTED_SNET
     case REC_route_update:
-      break;
     case REC_route_redirect:
-      break;
+    case REC_route_concatenate:
 #endif /* DISTRIBUTED_SNET */
+    default:
+      SNetUtilDebugNotice("[Split] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
+      SNetRecDestroy( rec);
+      break;
     }
   }
 
@@ -515,10 +518,13 @@ static void *DetSplitBoxThread( void *hndl) {
 	break;
 #ifdef DISTRIBUTED_SNET
     case REC_route_update:
-      break;
     case REC_route_redirect:
-      break;
+    case REC_route_concatenate:
 #endif /* DISTRIBUTED_SNET */
+    default:
+      SNetUtilDebugNotice("[Split] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
+      SNetRecDestroy( rec);
+      break;
     }
   }
 

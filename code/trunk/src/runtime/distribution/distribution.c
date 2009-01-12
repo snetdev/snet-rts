@@ -68,7 +68,7 @@ int DistributionDestroy()
     MPI_Comm_size( MPI_COMM_WORLD, &num_nodes);
 
     for(i = 0; i < num_nodes; i++) {
-      MPI_Send(&i, 0, MPI_INT, i, SNET_msg_terminate, MPI_COMM_WORLD); 
+      MPI_Send(&i, 0, MPI_INT, i, SNET_msg_terminate, MPI_COMM_WORLD);
     }
 
     SNetRoutingNotifyAll();

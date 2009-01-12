@@ -56,6 +56,10 @@ extern char* SNetUtilDebugDumpRecord(snet_record_t *source, char* storage) {
       sprintf(storage, "(RECORD %p ROUTE_REDIRECT)",
 	      source);
       break;
+    case REC_route_concatenate:
+      sprintf(storage, "(RECORD %p ROUTE_CONCATENATE)",
+	      source);
+      break;
 #endif /* DISTRIBUTED_SNET */
     }
   }
@@ -66,7 +70,7 @@ extern void SNetUtilDebugFatal(char* m, ...) {
   va_list p;
 
   va_start(p, m);
-  fprintf(stderr, "(SNET FATAL (THREAD %x) ", (unsigned int) pthread_self());
+  fprintf(stderr, "(SNET FATAL (THREAD %lu) ", pthread_self());
   vfprintf(stderr, m, p);
   fputs(")\n\n", stderr);
   va_end(p);
@@ -77,7 +81,7 @@ extern void SNetUtilDebugNotice(char *m, ...) {
   va_list p;
 
   va_start(p, m);
-  fprintf(stderr, "(SNET NOTICE (THREAD %x) ", (unsigned int) pthread_self());
+  fprintf(stderr, "(SNET NOTICE (THREAD %lu) ", pthread_self());
   vfprintf(stderr, m, p);
   fputs(")\n", stderr);
   fflush(stderr);

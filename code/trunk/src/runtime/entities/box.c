@@ -78,11 +78,14 @@ static void *BoxThread( void *hndl) {
         SNetTlWrite(SNetHndGetOutput(hnd), rec);
       break;
 #ifdef DISTRIBUTED_SNET
-      case REC_route_update:
-	break;
-      case REC_route_redirect:
-	break;
+    case REC_route_update:
+    case REC_route_redirect:
+    case REC_route_concatenate:
 #endif /* DISTRIBUTED_SNET */
+    default:
+      SNetUtilDebugNotice("[Box] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
+      SNetRecDestroy( rec);
+      break;
     }
   }
    return( NULL);

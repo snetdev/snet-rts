@@ -18,7 +18,10 @@ typedef enum {
   SNET_msg_record,
   SNET_msg_route_update,   /* This message is to be used only inside a node!*/
   SNET_msg_route_index,
-  SNET_msg_create_network
+  SNET_msg_create_network,
+  SNET_msg_route_concatenate,
+  SNET_msg_route_redirect,
+  SNET_msg_route_redirect_internal
 } snet_message_t;
 
 
@@ -68,8 +71,14 @@ typedef struct snet_msg_create_network {
 
 
 /* TODO: */
-typedef struct snet_msg_route_redirect {
+typedef struct snet_msg_route_redirect_internal {
+  int node;
+  snet_tl_stream_t *stream;
+} snet_msg_route_redirect_internal_t;
 
+typedef struct snet_msg_route_redirect {
+  int node;
+  int index;
 } snet_msg_route_redirect_t;
 
 
@@ -77,7 +86,6 @@ typedef struct snet_msg_route_redirect {
 typedef struct snet_msg_route_concatenate {
   int index;
   snet_tl_stream_t *stream;
-  snet_record_t *rec;
 } snet_msg_route_concatenate_t;
 
 

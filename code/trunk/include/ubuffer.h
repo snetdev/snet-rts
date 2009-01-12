@@ -17,6 +17,8 @@ typedef struct snet_ubuffer snet_ubuffer_t;
 
 extern bool SNetUBufIsEmpty(snet_ubuffer_t *buf);
 
+extern unsigned int SNetUBufSize(snet_ubuffer_t *buf);
+
 extern snet_ubuffer_t *SNetUBufCreate(pthread_mutex_t *lock);
 
 extern void SNetUBufDestroy( snet_ubuffer_t *buf);
@@ -29,7 +31,9 @@ extern void *SNetUBufShow( snet_ubuffer_t *buf);
 
 extern bool SNetUBufIsEmpty(snet_ubuffer_t *buf);
   
-extern void SNetUBufRegisterDispatcher( snet_ubuffer_t *buf, snet_ex_sem_t *sem);
+extern int SNetUBufRegisterDispatcher( snet_ubuffer_t *buf, snet_ex_sem_t *sem);
+
+extern int SNetUBufUnregisterDispatcher( snet_ubuffer_t *buf, snet_ex_sem_t *sem);
 
 extern bool SNetUBufGetFlag(snet_ubuffer_t *buf);
 

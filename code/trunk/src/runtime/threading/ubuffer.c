@@ -34,6 +34,19 @@ extern bool SNetUBufIsEmpty(snet_ubuffer_t *buf)
   return (buf->elements == 0);
 }
 
+extern unsigned int SNetUBufSize(snet_ubuffer_t *buf)
+{
+  int lock_status;
+  lock_status = pthread_mutex_trylock(buf->mxCounter);
+  if(lock_status != EBUSY) {
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetUBufIsEmpty (buf %p)) "
+                       "(Buffer is not locked.))",
+                       buf, buf);
+  }
+
+  return buf->elements;
+}
+
 extern snet_ubuffer_t *SNetUBufCreate(pthread_mutex_t *lock) 
 {
   snet_ubuffer_t *new;
@@ -169,7 +182,7 @@ extern void SNetUBufSetFlag(snet_ubuffer_t *buf, bool flag)
   buf->flag = flag;
 }
 
-extern void SNetUBufRegisterDispatcher( snet_ubuffer_t *buf, snet_ex_sem_t *sem) 
+extern int SNetUBufRegisterDispatcher( snet_ubuffer_t *buf, snet_ex_sem_t *sem) 
 {
   int i;
   int lock_status;
@@ -184,6 +197,27 @@ extern void SNetUBufRegisterDispatcher( snet_ubuffer_t *buf, snet_ex_sem_t *sem)
   for(i = 0; i< buf->elements; i++) {
     SNetExSemIncrement( sem);
   }
+
+  return buf->elements;
+}
+
+extern int SNetUBufUnregisterDispatcher( snet_ubuffer_t *buf, snet_ex_sem_t *sem) 
+{
+  int i;
+  int lock_status;
+
+  lock_status = pthread_mutex_trylock(buf->mxCounter);
+
+  if(lock_status != EBUSY) {
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (BufRegisterDispatcher (bf %p) (sem %p))"
+                       "(Buffer not locked))");
+  }
+
+  for(i = 0; i< buf->elements; i++) {
+    SNetExSemDecrement( sem);
+  }
+
+  return buf->elements;
 }
 
 extern void SNetUBufDestroy( snet_ubuffer_t *buf) 

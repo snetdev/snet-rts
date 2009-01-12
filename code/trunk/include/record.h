@@ -37,8 +37,9 @@ typedef enum {
 #ifdef DISTRIBUTED_SNET
 	REC_route_update,
 	REC_route_redirect,
+	REC_route_concatenate,
 #endif
-	REC_probe,
+	REC_probe
 } snet_record_descr_t;
 
 typedef enum {
@@ -357,6 +358,7 @@ extern snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t
 
 #ifdef DISTRIBUTED_SNET
 extern int SNetRecGetNode( snet_record_t *rec);
+extern void SNetRecSetNode( snet_record_t *rec, int node);
 extern int SNetRecGetIndex( snet_record_t *rec);
 
 extern int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, int buf_size);

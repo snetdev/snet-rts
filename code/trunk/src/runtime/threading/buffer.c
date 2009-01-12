@@ -17,8 +17,6 @@
 
 #include "extended_semaphore.h"
 
-//#define BUFFER_DEBUG
-
 struct buffer  {
   void **ringBuffer;
   unsigned int bufferCapacity;
@@ -39,22 +37,27 @@ bool SNetBufIsEmpty(snet_buffer_t *buf) {
                        "(Buffer is not locked.))",
                        buf, buf);
   }
-#ifdef BUFFER_DEBUG
-  SNetUtilDebugNotice("buffer mutex: %p", buf->mxCounter);
-#endif
+
   return SNetExSemIsMinimal(buf->record_count);
+}
+
+unsigned int SNetBufSize( snet_buffer_t *buf) 
+{
+  int lock_status;
+  lock_status = pthread_mutex_trylock(buf->mxCounter);
+  if(lock_status != EBUSY) {
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufSize (buf %p)) "
+                       "(Buffer is not locked.))",
+                       buf, buf);
+  }
+
+  return buf->bufferCapacity - buf->bufferSpaceLeft;
 }
 
 snet_buffer_t *SNetBufCreate( unsigned int size, pthread_mutex_t *lock) {
   snet_buffer_t *theBuffer;
        
   theBuffer = SNetMemAlloc( sizeof( snet_buffer_t));
-#ifdef BUFFER_DEBUG
-  SNetUtilDebugNotice("(CREATION (BUFFER %p) ((size %d) (lock %p)))",
-                      theBuffer,
-                      size,
-                      lock);
-#endif
 
   theBuffer->ringBuffer = SNetMemAlloc( size * sizeof( void**));
   theBuffer->bufferCapacity=size;
@@ -67,17 +70,12 @@ snet_buffer_t *SNetBufCreate( unsigned int size, pthread_mutex_t *lock) {
                                             true, 0,
                                             true, size,
                                             0);
-
   return( theBuffer);
 }
 
 snet_buffer_t *SNetBufPut( snet_buffer_t *bf, void* elem) {
   int lock_status;
 
-  #ifdef BUFFER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (BUFFER %p) (SNetBufPut (buf %p) (elem %p)))",
-                      bf, bf, elem);
-  #endif
   lock_status = pthread_mutex_trylock(bf->mxCounter);
   if(lock_status != EBUSY) {
     SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufPut (buf %p)) (elem %p) "
@@ -106,19 +104,13 @@ extern void *SNetBufGet( snet_buffer_t *bf) {
 		       bf, bf);
   }
 
-#ifdef BUFFER_DEBUG
-  SNetUtilDebugNotice("spaceLeft = %d, capacity = %d, semaphore value = %d",
-                      bf->bufferSpaceLeft, bf->bufferCapacity, 
-                      SNetExSemGetValue(bf->record_count));
-#endif
-
   bf->record_count = SNetExSemDecrement(bf->record_count);
 
   /* get the data from the buffer*/
   result = (bf->ringBuffer[ bf->bufferEnd++ ]);   
   bf->bufferEnd %= bf->bufferCapacity;
   bf->bufferSpaceLeft += 1;
-  
+
   return result;
 }
 
@@ -127,9 +119,6 @@ extern void *SNetBufShow( snet_buffer_t *buf) {
   void *result;
   lock_status = pthread_mutex_trylock(buf->mxCounter);
 
-#ifdef BUFFER_DEBUG
-  SNetUtilDebugNotice("lock_status = %d, EBUSY = %d", lock_status, EBUSY);
-#endif
   if(lock_status != EBUSY) {
     SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufShow (buf %p)) "
                        "(Buffer is not locked))", buf, 
@@ -141,12 +130,12 @@ extern void *SNetBufShow( snet_buffer_t *buf) {
   } else {
     result = buf->ringBuffer[buf->bufferEnd];
   }
-    
+
   return result;
 }
   
 /* TODO: Rename to something like 'increase semaphore by record_count' */
-extern void SNetBufRegisterDispatcher( snet_buffer_t *bf, snet_ex_sem_t *sem) {
+extern int SNetBufRegisterDispatcher( snet_buffer_t *bf, snet_ex_sem_t *sem) {
   int i;
   int lock_status;
   int buffer_capacity;
@@ -163,7 +152,33 @@ extern void SNetBufRegisterDispatcher( snet_buffer_t *bf, snet_ex_sem_t *sem) {
   for( i=0; i<( buffer_capacity - space_left); i++) {
     SNetExSemIncrement( sem);
   }
+
+  return buffer_capacity - space_left;
 }
+
+extern int SNetBufUnregisterDispatcher( snet_buffer_t *bf, snet_ex_sem_t *sem) {
+  int i;
+  int lock_status;
+  int buffer_capacity;
+  int space_left;
+  lock_status = pthread_mutex_trylock(bf->mxCounter);
+  if(lock_status != EBUSY) {
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (BufRegisterDispatcher (bf %p) (sem %p))"
+                       "(Buffer not locked))");
+  }
+
+
+  /* TODO: make this use getvalue of the semaphore? */
+  buffer_capacity = bf->bufferCapacity;
+  space_left = bf->bufferSpaceLeft;
+
+  for( i=0; i<( buffer_capacity - space_left); i++) {
+    SNetExSemDecrement( sem);
+  }
+
+  return buffer_capacity - space_left;
+}
+
 
 extern void SNetBufDestroy( snet_buffer_t *bf) {
   SNetMemFree( bf->ringBuffer);

@@ -1,6 +1,7 @@
 include $(SNETBASE)/src/makefiles/config.mkf
 
 CC        = gcc
+MPICC     = mpicc
 CCFLAGS   = -Wall -g -fPIC
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include
@@ -25,9 +26,9 @@ all:
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
 
 mpi:
-	$(CC) $(MPIFLAGS) $(DISTFLAGS) $(CCFLAGS) $(INCDIRS) -c *.c
-	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
-	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
+	$(MPICC) $(MPIFLAGS) $(DISTFLAGS) $(CCFLAGS) $(INCDIRS) -c *.c
+	$(MPICC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
+	$(MPICC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
 
 clean:

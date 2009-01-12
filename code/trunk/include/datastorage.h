@@ -3,6 +3,7 @@
 
 #include "id.h"
 #include "reference.h"
+#include "bool.h"
 
 void SNetDataStorageInit();
 
@@ -14,7 +15,7 @@ snet_ref_t *SNetDataStorageCopy(snet_id_t id);
 
 snet_ref_t *SNetDataStorageGet(snet_id_t id);
 
-void SNetDataStorageRemove(snet_id_t id);
+bool SNetDataStorageRemove(snet_id_t id);
 
 void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int location);
 

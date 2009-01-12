@@ -25,14 +25,7 @@ struct snet_hashtable{
  *
  */
 
-#define SNetHashtableHash(table, key) (key % table->size)
-
-/*
-static unsigned int SNetHashtableHash(snet_hashtable_t *table, uint64_t key)
-{
-  //TODO:
-}
-*/
+#define SNetHashtableHash(table, key) (int)(key % table->size)
 
 snet_hashtable_t *SNetHashtableCreate(int size, snet_hashtable_compare_fun_t compare_fun)
 {
@@ -94,9 +87,8 @@ void *SNetHashtableGet(snet_hashtable_t *table, uint64_t key)
     while(temp != NULL && temp->key != key) {
       temp = temp->next;
     }
-    
-    if(temp != NULL) {
 
+    if(temp != NULL) {
       return temp->value;
     }
   }
@@ -117,7 +109,7 @@ uint64_t SNetHashtableGetKey(snet_hashtable_t *table,
       
       while(temp != NULL) {
 	if(table->compare_fun(value, temp->value)) {
-	return temp->key;
+	  return temp->key;
 	}
       
 	temp = temp->next;
@@ -146,9 +138,9 @@ int SNetHashtablePut(snet_hashtable_t *table, uint64_t key, void *value)
 
     if(temp->next == NULL) {
       break;
-    } else {
-      temp = temp->next;
     }
+     
+    temp = temp->next;
   }
   
   new = SNetMemAlloc(sizeof(hashtable_entry_t));
@@ -172,7 +164,6 @@ void *SNetHashtableReplace(snet_hashtable_t *table, uint64_t key, void *new_valu
 {
   unsigned int index;
   hashtable_entry_t *temp;
-  hashtable_entry_t *last = NULL;
   void *value = NULL;
 
   index = SNetHashtableHash(table, key);
@@ -180,7 +171,6 @@ void *SNetHashtableReplace(snet_hashtable_t *table, uint64_t key, void *new_valu
   temp = table->entries[index];
 
   while(temp != NULL && temp->key != key) {
-    last = temp;
     temp = temp->next;
   }
 
@@ -219,9 +209,9 @@ void *SNetHashtableRemove(snet_hashtable_t *table, uint64_t key)
     }
 
     SNetMemFree(temp);
-  }
 
-  table->elements--;
+    table->elements--;
+  }
 
   return value;
 }

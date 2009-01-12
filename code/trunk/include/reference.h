@@ -13,6 +13,8 @@ snet_ref_t *SNetRefDestroy(snet_ref_t *ref);
 
 snet_ref_t *SNetRefCopy(snet_ref_t *ref);
 
+int SNetRefGetRefCount(snet_ref_t *ref);
+
 void *SNetRefGetData(snet_ref_t *ref);
 
 void *SNetRefTakeData(snet_ref_t *ref);

@@ -556,6 +556,8 @@ Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
 
 	      /* TODO: test that the atoi call worked? */
 	      SNetRecSetTag(current.record, label, atoi($4));
+
+	      SNetMemFree($4);
 	    } else{
 	      yyerror("Tag without label found!");
 	    }
@@ -584,6 +586,8 @@ Btag:     BTAG_BEGIN Attributes STARTTAG_SHORTEND
 
 	      /* TODO: test that the atoi call worked correctly? */
 	      SNetRecSetBTag(current.record, label, atoi($4));
+
+	      SNetMemFree($4);
 	    } else{
 	      yyerror("Btag without label found!");
 	    }

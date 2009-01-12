@@ -16,16 +16,24 @@
 #include "hashtable.h"
 #include "id.h"
 #include "queue.h"
+#include "debug.h"
 
 /* TODO: 
- *  - Route redirection
- *  - Route concatenation
- *  - Fetch of network description
+ *  - Fetch of network description?
  */
+
+//#define IMANAGER_DEBUG
+#define DIST_IO_OPTIMIZATIONS
 
 #define HASHTABLE_SIZE 32
 #define ORIGINAL_MAX_MSG_SIZE 256  
 #define INVALID_INDEX -1
+
+#ifdef IMANAGER_DEBUG
+static int debug_record_count = 0;
+static int debug_redirection_count = 0;
+static int debug_concatenation_count = 0;
+#endif /* IMANAGER_DEBUG */
 
 typedef struct snet_ru_entry {
   int op_id;
@@ -43,8 +51,7 @@ typedef struct snet_rec_entry {
   int node;
   int index;
   snet_queue_t *recs;
-} snet_rec_entry_t;
-
+} snet_rec_entry_t; 
 
 static int compare_fun(void *a, void *b)
 {
@@ -78,51 +85,86 @@ static void *IManagerCreateNetwork(void *op)
   return NULL;
 }
 
+static void IManagerSendBufferedRecords(snet_queue_t *record_queue, snet_tl_stream_t *stream, int node, int index, snet_hashtable_t *routing_table, snet_id_t key, int my_rank, snet_tl_stream_t *omanager);
+
 /* return true if the routing table entry can be removed: */
-static bool IManagerPutRecordToStream(snet_record_t *rec, snet_tl_stream_t *stream) 
+static void IManagerPutRecordToStream(snet_record_t *rec, snet_tl_stream_t *stream, snet_hashtable_t *routing_table, snet_id_t key, snet_queue_t *record_queue, int my_rank, snet_tl_stream_t *omanager) 
 {
-  bool ret = false;
+#ifdef DIST_IO_OPTIMIZATIONS
+  int node;
+  int index;
+#endif /* DIST_IO_OPTIMIZATIONS */
 
   switch( SNetRecGetDescriptor(rec)) {
-  case REC_sync:
-    /* TODO: This is an error! */
-    break;
   case REC_data:
   case REC_collect:
   case REC_sort_begin:	
   case REC_sort_end:
   case REC_probe: 
+#ifdef IMANAGER_DEBUG
+    debug_record_count++;
+#endif /* IMANAGER_DEBUG */
     SNetTlWrite(stream, rec);
     break;
-  case REC_terminate:  
+  case REC_terminate:
+#ifdef IMANAGER_DEBUG
+    debug_record_count++;
+#endif /* IMANAGER_DEBUG */
     SNetTlWrite(stream, rec);
-    
     SNetTlMarkObsolete(stream);
-    
-    ret = true;
+
+    stream = SNetHashtableRemove(routing_table, key);
+
     break;
-  case REC_route_update:
-    /* TODO: This is an error! */
-    break;
+#ifdef DIST_IO_OPTIMIZATIONS
   case REC_route_redirect:
-    /* TODO: */
-    break;     
+#ifdef IMANAGER_DEBUG
+    debug_record_count++;
+#endif /* IMANAGER_DEBUG */
+
+    node = SNetRecGetNode(rec);
+    index = SNetRecGetIndex(rec);
+
+    if(node == -1 && index == -1) {
+      SNetTlWrite(omanager, rec);
+
+    } else if(node == SNET_ID_GET_NODE(key) && index == SNET_ID_GET_ID(key)) {
+      SNetTlWrite(stream, rec);
+      
+      SNetTlMarkObsolete(stream); 
+      
+      stream = SNetHashtableRemove(routing_table, key);
+    } else {
+#ifdef IMANAGER_DEBUG
+      debug_redirection_count++;
+#endif /* IMANAGER_DEBUG */
+      stream = (snet_tl_stream_t *)SNetHashtableRemove(routing_table, key);
+  
+      key = SNET_ID_CREATE(node, index);
+
+      SNetHashtablePut(routing_table, key, (void *)stream);
+
+      SNetRecDestroy(rec);
+
+      IManagerSendBufferedRecords(record_queue, stream, node, index, routing_table, key, my_rank, omanager);
+
+    }
+    break; 
+#endif /* DIST_IO_OPTIMIZATIONS */
+  case REC_sync:
+  case REC_route_update:
   default:
-    /* TODO: This is a error! */
-    printf("IManager: Decoded unknown record!\n");
+    SNetUtilDebugFatal("IManager: Decoded unsupported record!\n");
     break;
   }
-
-  return ret;
 }
 
 /* return true if the routing table entry can be removed: */
-static bool IManagerSendBufferedRecords(snet_queue_t *record_queue, snet_tl_stream_t *stream, int node, int index) 
+static void IManagerSendBufferedRecords(snet_queue_t *record_queue, snet_tl_stream_t *stream, int node, int index, snet_hashtable_t *routing_table, snet_id_t key, int my_rank, snet_tl_stream_t *omanager)
 {
   snet_queue_iterator_t q_iter;
   snet_rec_entry_t *rec_entry;
   snet_record_t *rec;
-  bool ret = false;
   
   q_iter = SNetQueueIteratorBegin(record_queue);
 
@@ -137,19 +179,14 @@ static bool IManagerSendBufferedRecords(snet_queue_t *record_queue, snet_tl_stre
   
   if(rec_entry != NULL) {
     rec_entry = (snet_rec_entry_t *)SNetQueueIteratorGet(record_queue, q_iter);
-    
+
     while((rec = (snet_record_t *)SNetQueueGet(rec_entry->recs)) != NULL) {
-      
-      if(IManagerPutRecordToStream(rec, stream)) {
-	ret = true;
-      } 
+      IManagerPutRecordToStream(rec, stream, routing_table, key, record_queue, my_rank, omanager);
     }
     
     SNetQueueDestroy(rec_entry->recs);
     SNetMemFree(rec_entry);
   }
-
-  return ret;
 }
 
 static void IManagerPutRecordToBuffer(snet_queue_t *record_queue, snet_record_t *rec, int node, int index) 
@@ -168,6 +205,7 @@ static void IManagerPutRecordToBuffer(snet_queue_t *record_queue, snet_record_t 
     q_iter = SNetQueueIteratorNext(record_queue, q_iter);
   }   
 
+  
   if(rec_entry != NULL) {
     SNetQueuePut(rec_entry->recs, rec);
   } else {
@@ -261,6 +299,7 @@ static void *IManagerThread( void *ptr) {
   MPI_Status status;
   MPI_Aint true_lb;
   MPI_Aint true_extent;
+  MPI_Datatype datatype;
 
   int my_rank;
   int result;
@@ -292,8 +331,13 @@ static void *IManagerThread( void *ptr) {
   snet_msg_route_index_t *msg_route_index;
   snet_msg_create_network_t *msg_create_network;
 
-  MPI_Datatype datatype;
-  
+#ifdef DIST_IO_OPTIMIZATIONS
+  snet_msg_route_concatenate_t *msg_route_concatenate;
+  snet_msg_route_redirect_t *msg_route_redirect;
+  snet_msg_route_redirect_internal_t *msg_route_redirect_internal;
+#endif /* DIST_IO_OPTIMIZATIONS */
+
+
   buf_size = ORIGINAL_MAX_MSG_SIZE;
 
   buf = SNetMemAlloc(sizeof(char) * buf_size);
@@ -334,14 +378,14 @@ static void *IManagerThread( void *ptr) {
       /* Stream index is stored in front of the record: */
       result = MPI_Unpack(buf, buf_size, &position, &index, 1, MPI_INT, MPI_COMM_WORLD);
 
+
       if((rec = SNetRecUnpack(MPI_COMM_WORLD, &position, buf, buf_size)) != NULL) {
-	
+
 	key = SNET_ID_CREATE(status.MPI_SOURCE, index);
 
-	if((stream = SNetHashtableGet(routing_table, key)) != NULL) {  
-	  if(IManagerPutRecordToStream(rec, stream)) {
-	    SNetHashtableRemove(routing_table, key);
-	  } 
+	if((stream = SNetHashtableGet(routing_table, key)) != NULL) { 
+
+	  IManagerPutRecordToStream(rec, stream, routing_table, key, record_queue, my_rank, omanager); 
 	} else {
 	  /* No stream yet, let's buffer this record until there is one. */
 	  IManagerPutRecordToBuffer(record_queue, rec, status.MPI_SOURCE, index); 
@@ -356,7 +400,7 @@ static void *IManagerThread( void *ptr) {
 
       datatype = SNetMessageGetMPIType(SNET_msg_route_update);
 
-      result = MPI_Recv(buf, 1, datatype, status.MPI_SOURCE, 
+      result = MPI_Recv(buf, 2, datatype, status.MPI_SOURCE, 
 			status.MPI_TAG, MPI_COMM_WORLD, &status);
 
       msg_route_update = (snet_msg_route_update_t *)buf;
@@ -371,13 +415,14 @@ static void *IManagerThread( void *ptr) {
 	
 	if(SNetHashtablePut(routing_table, key, msg_route_update->stream) == 0) {
 
-	  if(IManagerSendBufferedRecords(record_queue, 
-					 msg_route_update->stream, 
-					 msg_route_update->node, 
-					 index)) {
-
-	    SNetHashtableRemove(routing_table, key);
-	  } 
+	  IManagerSendBufferedRecords(record_queue, 
+				      msg_route_update->stream, 
+				      msg_route_update->node, 
+				      index,
+				      routing_table,
+				      key,
+				      my_rank,
+				      omanager);
 
 	} 
       } else {
@@ -391,7 +436,7 @@ static void *IManagerThread( void *ptr) {
     case SNET_msg_route_index:
       datatype = SNetMessageGetMPIType(SNET_msg_route_index);
 
-      result = MPI_Recv(buf, 1, datatype, status.MPI_SOURCE, 
+      result = MPI_Recv(buf, 2, datatype, status.MPI_SOURCE, 
 			status.MPI_TAG, MPI_COMM_WORLD, &status);
 
       msg_route_index = (snet_msg_route_index_t *)buf;
@@ -403,16 +448,16 @@ static void *IManagerThread( void *ptr) {
       if(stream  != NULL) {
 	key = SNET_ID_CREATE(msg_route_index->node, msg_route_index->index);
 	
-	if(SNetHashtablePut(routing_table, key, stream) == 0) {	
-  
-	  if(IManagerSendBufferedRecords(record_queue, 
-					 stream, 
-					 msg_route_index->node, 
-					 msg_route_index->index)) {
+	if(SNetHashtablePut(routing_table, key, stream) == 0) {
 
-	    SNetHashtableRemove(routing_table, key);
-	  } 
-	  
+	  IManagerSendBufferedRecords(record_queue, 
+				      stream, 
+				      msg_route_index->node, 
+				      msg_route_index->index,
+				      routing_table,
+				      key,
+				      my_rank,
+				      omanager);	  
 	}
       } else {
 	IOManagerPutIndexToBuffer(index_queue, 
@@ -429,7 +474,7 @@ static void *IManagerThread( void *ptr) {
 
       msg_create_network = SNetMemAlloc(true_extent);
 
-      result = MPI_Recv(msg_create_network, 1, datatype, status.MPI_SOURCE, 
+      result = MPI_Recv(msg_create_network, 2, datatype, status.MPI_SOURCE, 
       			status.MPI_TAG, MPI_COMM_WORLD, &status);
 
       pthread_create(&thread, NULL, IManagerCreateNetwork, (void *)msg_create_network); 
@@ -437,6 +482,9 @@ static void *IManagerThread( void *ptr) {
 
       break;
     case SNET_msg_terminate:
+      result = MPI_Recv(buf, 0, MPI_INT, status.MPI_SOURCE, 
+			SNET_msg_terminate, MPI_COMM_WORLD, &status);
+
       SNetTlWrite(omanager, SNetRecCreate(REC_terminate));
       SNetTlMarkObsolete(omanager);
       if(status.MPI_SOURCE != my_rank) {
@@ -445,6 +493,72 @@ static void *IManagerThread( void *ptr) {
       
       terminate = true;
       break;
+#ifdef DIST_IO_OPTIMIZATIONS
+    case SNET_msg_route_concatenate:
+
+      datatype = SNetMessageGetMPIType(SNET_msg_route_concatenate);
+
+      result = MPI_Recv(buf, 2, datatype, status.MPI_SOURCE, 
+			status.MPI_TAG, MPI_COMM_WORLD, &status);
+
+      msg_route_concatenate = (snet_msg_route_concatenate_t *)buf;
+      
+      key = SNET_ID_CREATE(my_rank, msg_route_concatenate->index);
+
+      if((stream = SNetHashtableRemove(routing_table, key)) != NULL) { 
+
+      	SNetTlWrite(stream, SNetRecCreate(REC_sync, msg_route_concatenate->stream));
+      	SNetTlMarkObsolete(stream);
+#ifdef IMANAGER_DEBUG
+	debug_concatenation_count++;
+#endif /* IMANAGER_DEBUG */
+      } else {
+	
+	SNetTlWrite(omanager, SNetRecCreate(REC_route_concatenate,
+					    msg_route_concatenate->index,
+					    msg_route_concatenate->stream));	
+      }
+
+      break;
+    case SNET_msg_route_redirect_internal:
+      datatype = SNetMessageGetMPIType(SNET_msg_route_redirect_internal);
+
+      result = MPI_Recv(buf, 2, datatype, status.MPI_SOURCE, 
+			status.MPI_TAG, MPI_COMM_WORLD, &status);
+
+      msg_route_redirect_internal = (snet_msg_route_redirect_internal_t *)buf;
+
+
+      key = SNetHashtableGetKey(routing_table, msg_route_redirect_internal->stream);
+
+      if(key != UINT64_MAX) {
+	msg_route_redirect = (snet_msg_route_redirect_t *)buf;
+
+	msg_route_redirect->node = msg_route_redirect_internal->node;
+	msg_route_redirect->index = SNET_ID_GET_ID(key);
+
+	datatype = SNetMessageGetMPIType(SNET_msg_route_redirect);
+	
+	MPI_Send(msg_route_redirect, 1, datatype, SNET_ID_GET_NODE(key), 
+		 SNET_msg_route_redirect, MPI_COMM_WORLD);
+      } else {
+	SNetTlWrite(omanager, SNetRecCreate(REC_route_redirect, -1, -1));
+      }
+      break;
+    case SNET_msg_route_redirect:
+
+      datatype = SNetMessageGetMPIType(SNET_msg_route_redirect);
+
+      result = MPI_Recv(buf, 2, datatype, status.MPI_SOURCE, 
+			status.MPI_TAG, MPI_COMM_WORLD, &status);
+
+      msg_route_redirect = (snet_msg_route_redirect_t *)buf;
+
+      SNetTlWrite(omanager, SNetRecCreate(REC_route_redirect, msg_route_redirect->node,
+					  msg_route_redirect->index));
+   
+      break;
+#endif /* DIST_IO_OPTIMIZATIONS */
     default:
       // ERROR: This should never happen!
       break;
@@ -456,6 +570,12 @@ static void *IManagerThread( void *ptr) {
   SNetQueueDestroy(index_queue);
   SNetQueueDestroy(record_queue);
   SNetHashtableDestroy(routing_table);
+
+#ifdef IMANAGER_DEBUG
+  SNetUtilDebugNotice("Node %d: imanager received %d records", my_rank, debug_record_count);
+  SNetUtilDebugNotice("Node %d: %d redirections", my_rank, debug_redirection_count);
+  SNetUtilDebugNotice("Node %d: %d concatenations", my_rank, debug_concatenation_count);
+#endif /* IMANAGER_DEBUG */
 
   return NULL;
 }

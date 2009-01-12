@@ -10,285 +10,191 @@
 #include "buffer.h"
 #include "debug.h"
 #include "memfun.h"
-
-//#define UBUFFER
-
-#ifdef UBUFFER
 #include "ubuffer.h"
-#endif /* UBUFFER */
 
-//#define STREAM_LAYER_DEBUG
+/* NOTICE:
+ *
+ * Locking:
+ * 
+ * - Stream is locked first and then the stream set (if needed)
+ *   -> Always in this order or a deadlock may occur!
+ *
+ * Stream sets:
+ *
+ * - Streams that belong to a set are not destroyed before they are 
+ *   removed from the set.
+ * - Stream belonging to a set must be removed from the set before
+ *   it can be added into another set
+ *
+ * Read/write
+ *
+ * - Any number of threads may write into any streams
+ * - Only a single thread (at the time) may use Read/ReadMany/Peek/PeekMany
+ *   on a stream that belongs to a stream set, otherwise a deadlock is very likely.
+ *   - This should not be a problem in any case so far, but
+ *     makes the synchronization simpler.
+ * - Only the thread reading a stream set may use stream set operations.
+ *   - i.e. no stream set operations during Read/ReadMany/Peek/PeekMany
+ *     for streams belonging in a set.
+ *
+ */
+
+#define INVALID_INDEX -1
+#define SET_INCREASE_SIZE 1
 
 struct streamset {
-  pthread_mutex_t access;
+  pthread_mutex_t access;        /* Mutex to guard access to the set */
 
-  snet_ex_sem_t *record_counter;
+  unsigned int stream_count;     /* Number of streams in the set */
+  unsigned int size;             /* Max streams in the set */
 
-  snet_util_list_t *streams;
+  unsigned int *rec_counts;      /* Count of records in each stream, used to
+				  * determine if a set contains records */
+  snet_tl_stream_t **streams;    /* Streams in the set */
+
+  snet_ex_sem_t *record_counter; /* This semaphore is used to count the records */
 };
 
 struct stream {
-  pthread_mutex_t access;
+  pthread_mutex_t access;      /* Mutex to guard access to the stream */
 
   union buffers {
     snet_buffer_t *buffer;
-#ifdef UBUFFER
     snet_ubuffer_t *ubuffer;
-#else
-    snet_fbckbuffer_t *feedback_buffer;
-#endif /* UBUFFER */
-  } buffers;
-  bool is_unbounded;
-  bool is_obsolete;
+  } buffers;                   /* The actual record buffer */
+ 
+  bool is_unbounded;           /* The type of the buffer */
+  bool is_obsolete;            /* Is this stream obsolete */
 
-  bool is_in_streamset;
-  snet_tl_streamset_t *containing_streamset;
+  snet_tl_streamset_t *set;    /* The set the stream belong to, or NULL */
+  int set_index;               /* Index of the stream in the set */
 };
 
-static void Lock(snet_tl_stream_t *target) {
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (STREAM %p) (Lock (stream  %p)))",
-                      target, target);
-  SNetUtilDebugNotice("Stream mutex: %p", target->access);
-#endif
-  pthread_mutex_lock(&target->access);
-}
 
-static void Unlock(snet_tl_stream_t *target) {
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (STREAM %p) (Unlock (stream %p)))",
-                      target, target);
-#endif
-  pthread_mutex_unlock(&target->access);
-}
-
-static void LockStreamset(snet_tl_streamset_t *target) {
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (STREAMSET %p) (LockStreamset (stream %p)))",
-                      target, target);
-#endif
-  pthread_mutex_lock(&target->access);
-}
-static void UnlockStreamset(snet_tl_streamset_t *target) {
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (STREAMSET %p) (UnlockStreamset (stream %p)))",
-                      target, target);
-#endif
-  pthread_mutex_unlock(&target->access);
-}
-static void LockStreamAndStreamset(snet_tl_stream_t *target) 
+static snet_record_t *UnifiedPeek(snet_tl_stream_t *stream)
 {
-  snet_tl_streamset_t *set = NULL;
-
-  pthread_mutex_lock(&target->access);
-
-  if(target->is_in_streamset) {
-    set = target->containing_streamset;
-  }
-  pthread_mutex_unlock(&target->access);
-
-  if(set != NULL) {
-    pthread_mutex_lock(&set->access);
-  }
-
-  pthread_mutex_lock(&target->access);
-}
-
-static void UnlockStreamAndStreamset(snet_tl_stream_t *target) 
-{
-  if(target->is_in_streamset) {
-    pthread_mutex_unlock(&target->containing_streamset->access);
-  }
-
-  pthread_mutex_unlock(&target->access);
-}
-
-static snet_record_t *UnifiedPeek(snet_tl_stream_t *record_source)
-{
-  //snet_buffer_msg_t buffer_message;
-  //snet_fbckbuffer_msg_t feedback_message;
-
   snet_record_t *result = NULL;
-  if(record_source->is_unbounded) {
-#ifdef UBUFFER
-    result = SNetUBufShow(record_source->buffers.ubuffer);
-#else
-    result = SNetFbckBufShow(record_source->buffers.feedback_buffer);
-#endif /* UBUFFER */
+
+  if(stream->is_unbounded) {
+    result = SNetUBufShow(stream->buffers.ubuffer);
   } else {
-    result = SNetBufShow(record_source->buffers.buffer);
+    result = SNetBufShow(stream->buffers.buffer);
   }
+
   return result;
 }
 
-static snet_record_t *UnifiedRead(snet_tl_stream_t *record_source)
+static snet_record_t *UnifiedRead(snet_tl_stream_t *stream)
 {
-  #ifdef STREAM_LAYER_DEBUG
-  char record_message[100];
-  #endif
   snet_record_t *result;
-  if(record_source->is_unbounded) {
-#ifdef UBUFFER
-    result = SNetUBufGet(record_source->buffers.ubuffer);
-#else
-    result = SNetFbckBufGet(record_source->buffers.feedback_buffer);
-#endif /* UBUFFER */
+
+  if(stream->is_unbounded) {
+    result = SNetUBufGet(stream->buffers.ubuffer);
   } else {
-    result = SNetBufGet(record_source->buffers.buffer);
+    result = SNetBufGet(stream->buffers.buffer);
   }
 
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugDumpRecord(result, record_message);
-  SNetUtilDebugNotice("STREAMLAYER: UnifiedRead(%p) = %s",
-                      record_source,
-                      record_message);
-#endif
   return result;
 }
 
-static bool UnifiedIsEmpty(snet_tl_stream_t *record_source)
+static bool UnifiedIsEmpty(snet_tl_stream_t *stream)
 {
   bool result;
-  if(record_source->is_unbounded) {
-#ifdef UBUFFER
-    result = SNetUBufIsEmpty(record_source->buffers.ubuffer);
-#else
-    result = SNetFbckBufIsEmpty(record_source->buffers.feedback_buffer);
-#endif /* UBUFFER */
+
+  if(stream->is_unbounded) {
+    result = SNetUBufIsEmpty(stream->buffers.ubuffer);
   } else {
-    result = SNetBufIsEmpty(record_source->buffers.buffer);
+    result = SNetBufIsEmpty(stream->buffers.buffer);
   }
   return result;
 }
 
-static bool UnifiedGetFlag(snet_tl_stream_t *record_source)
+static unsigned int UnifiedSize(snet_tl_stream_t *stream)
+{
+  unsigned int result;
+
+  if(stream->is_unbounded) {
+    result = SNetUBufSize(stream->buffers.ubuffer);
+  } else {
+    result = SNetBufSize(stream->buffers.buffer);
+  }
+  return result;
+}
+
+static bool UnifiedGetFlag(snet_tl_stream_t *stream)
 {
   bool result = false;
 
-  if(record_source->is_unbounded) {
-#ifdef UBUFFER
-    result = SNetUBufGetFlag(record_source->buffers.ubuffer);
-#else
-    result = false;
-#endif /* UBUFFER */
+  if(stream->is_unbounded) {
+    result = SNetUBufGetFlag(stream->buffers.ubuffer);
   } 
 
   return result;
 }
 
-static bool UnifiedSetFlag(snet_tl_stream_t *record_source, bool flag)
+static bool UnifiedSetFlag(snet_tl_stream_t *stream, bool flag)
 {
   bool result = false;
 
-  if(record_source->is_unbounded) {
-#ifdef UBUFFER
-    SNetUBufSetFlag(record_source->buffers.ubuffer, flag);
+  if(stream->is_unbounded) {
+    SNetUBufSetFlag(stream->buffers.ubuffer, flag);
     result = true;
-#else
-    result = false;
-#endif /* UBUFFER */
   } 
 
   return result;
 }
 
-static bool UnifiedWrite(snet_tl_stream_t *record_destination,
-                            snet_record_t *data)
+static bool UnifiedWrite(snet_tl_stream_t *stream,
+			 snet_record_t *rec)
 {
   bool record_written = true;
 
-  if(record_destination->is_obsolete) {
-    SNetUtilDebugFatal("Writing to write record %p to obsolete stream %p!",
-                       data,
-                       record_destination);
-  }
-  if(record_destination->is_unbounded) {
-#ifdef UBUFFER
-    record_written = SNetUBufPut(record_destination->buffers.ubuffer, data);
-#else
-    SNetFbckBufPut(record_destination->buffers.feedback_buffer, data);
-    record_written = true;
-#endif /* UBUFFER */
+  if(stream->is_unbounded) {
+    record_written = SNetUBufPut(stream->buffers.ubuffer, rec);
   } else {    
-      SNetBufPut(record_destination->buffers.buffer, data);
-    
+    SNetBufPut(stream->buffers.buffer, rec);    
   }
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("UnifiedTryWrite(destination=%p, data=%p) = %s",
-                      record_destination,
-                      data,
-                      record_written ? "true" : "false");
-#endif
+
   return record_written;
 }
 
-static void UnifiedDestroy(snet_tl_stream_t *stream_to_destroy)
-{
-  snet_util_list_iter_t *current_position;
-  snet_tl_stream_t *current_stream;
-
-  if(stream_to_destroy == NULL) {
-    SNetUtilDebugFatal("Cannot destroy NULL-stream!");
-  }
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("destroying %p", stream_to_destroy);
-#endif
-  if(!stream_to_destroy->is_obsolete) {
-    SNetUtilDebugFatal("Stream to destroy must be marked obsolete!");
-  }
-  if(stream_to_destroy->is_unbounded) {
-#ifdef UBUFFER
-    SNetUBufDestroy(stream_to_destroy->buffers.ubuffer);
-#else
-    SNetFbckBufDestroy(stream_to_destroy->buffers.feedback_buffer);
-#endif /* UBUFFER */
-  } else {
-    SNetBufDestroy(stream_to_destroy->buffers.buffer);
-  }
-
-  /* Remove stream from stream set if in any. */
-  LockStreamAndStreamset(stream_to_destroy);
-  
-  if(stream_to_destroy->is_in_streamset) {
-    for(current_position = SNetUtilListFirst(stream_to_destroy->containing_streamset->streams);
-	SNetUtilListIterCurrentDefined(current_position);
-	current_position = SNetUtilListIterNext(current_position)) {
-
-      current_stream = (snet_tl_stream_t*)SNetUtilListIterGet(current_position);
-
-      if(current_stream == stream_to_destroy) {
-        stream_to_destroy->containing_streamset->streams = SNetUtilListIterDelete(current_position);
-        break;
-      }
-    }
-
-    SNetUtilListIterDestroy(current_position);
-
-    stream_to_destroy->is_in_streamset = false;
-    UnlockStreamset(stream_to_destroy->containing_streamset);
-    stream_to_destroy->is_in_streamset = false;     
-  } 
-  
-  UnlockStreamAndStreamset(stream_to_destroy);
-  
-
-  pthread_mutex_destroy(&stream_to_destroy->access);
-  SNetMemFree(stream_to_destroy);
-}
-
-static snet_tl_stream_t *UnifiedRegisterDispatcher(snet_tl_stream_t *stream,
-                                                  snet_ex_sem_t *dispatcher)
+static void UnifiedDestroy(snet_tl_stream_t *stream)
 {
   if(stream->is_unbounded) {
-#ifdef UBUFFER
-    SNetUBufRegisterDispatcher(stream->buffers.ubuffer, dispatcher);
-#else
-    /*SNetFbckBufRegisterDispatcher(stream->buffers.feedbackbuffer, dispatcher);*/
-#endif /* UBUFFER */
+    SNetUBufDestroy(stream->buffers.ubuffer);
   } else {
-    SNetBufRegisterDispatcher(stream->buffers.buffer, dispatcher);
+    SNetBufDestroy(stream->buffers.buffer);
   }
-  return stream;
+  
+  pthread_mutex_destroy(&stream->access);
+  SNetMemFree(stream);
+}
+
+static int UnifiedRegisterDispatcher(snet_tl_stream_t *stream,
+				     snet_ex_sem_t *dispatcher)
+{
+  int ret;
+
+  if(stream->is_unbounded) {
+    ret = SNetUBufRegisterDispatcher(stream->buffers.ubuffer, dispatcher);
+  } else {
+    ret = SNetBufRegisterDispatcher(stream->buffers.buffer, dispatcher);
+  }
+
+  return ret;
+}
+
+static int UnifiedUnregisterDispatcher(snet_tl_stream_t *stream,
+				       snet_ex_sem_t *dispatcher)
+{
+  int ret;
+
+  if(stream->is_unbounded) {
+    ret = SNetUBufUnregisterDispatcher(stream->buffers.ubuffer, dispatcher);
+  } else {
+    ret = SNetBufUnregisterDispatcher(stream->buffers.buffer, dispatcher);
+  }
+  return ret;
 }
 
 void
@@ -297,228 +203,245 @@ SNetTlCreateComponent(void* (*func)(void*),
                       snet_entity_id_t type)
 {
   SNetThreadCreate( (void*)func, (void*)args, type);
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("CREATE COMPONENT DONE");
-#endif
-}
-
-void SNetTlTerminate(snet_tl_component_t *terminated_component)
-{
-  /* empty right now */
 }
 
 snet_tl_stream_t *SNetTlCreateStream(int size)
 {
-  snet_tl_stream_t *result;
+  snet_tl_stream_t *stream;
 
-  if(size <= 0) {
-    SNetUtilDebugFatal("CreateStream: size must be >= 0 and not %d", size);
-  }
-  result = SNetMemAlloc(sizeof(snet_tl_stream_t));
-  pthread_mutex_init(&result->access, NULL);
+  stream = (snet_tl_stream_t *)SNetMemAlloc(sizeof(snet_tl_stream_t));
+  
+  pthread_mutex_init(&stream->access, NULL);
 
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CREATION (STREAM %p) (mutex %p))",
-                      result, &result->access);
-#endif
+  stream->buffers.buffer = SNetBufCreate(size, &stream->access);
 
-  result->is_obsolete = false;
-  result->is_unbounded = false;
-  result->buffers.buffer = SNetBufCreate(size, &result->access);
+  stream->is_unbounded = false;
 
-  result->is_in_streamset = false;
-  return result;
+  stream->is_obsolete = false;
+
+  stream->set = NULL;
+  stream->set_index = INVALID_INDEX;
+
+  return stream;
 }
 
 snet_tl_stream_t *SNetTlCreateUnboundedStream()
 {
-  snet_tl_stream_t *result;
-  result = SNetMemAlloc(sizeof(snet_tl_stream_t));
+  snet_tl_stream_t *stream;
 
-  pthread_mutex_init(&result->access, NULL);
+  stream = (snet_tl_stream_t *)SNetMemAlloc(sizeof(snet_tl_stream_t));
+  
+  pthread_mutex_init(&stream->access, NULL);
 
-  result->is_obsolete = false;
-  result->is_unbounded = true;
-#ifdef UBUFFER
-  result->buffers.ubuffer = SNetUBufCreate(&result->access);
-#else
-  result->buffers.feedback_buffer = SNetFbckBufCreate();
-#endif /* UBUFFER */
-  result->is_in_streamset = false;
-  return result;
+  stream->buffers.ubuffer = SNetUBufCreate(&stream->access);
+
+  stream->is_unbounded = true;
+
+  stream->is_obsolete = false;
+
+  stream->set = NULL;
+  stream->set_index = INVALID_INDEX;
+
+  return stream;
 }
 
-snet_tl_stream_t *SNetTlMarkObsolete(snet_tl_stream_t *obsolete_stream)
+snet_tl_stream_t *SNetTlMarkObsolete(snet_tl_stream_t *stream)
 {
-  if(obsolete_stream == NULL) {
-    SNetUtilDebugFatal("cannot mark NULL obsolete!");
-  }
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("%p  marked obsolete!", obsolete_stream);
-#endif
-  Lock(obsolete_stream);
 
-  obsolete_stream->is_obsolete = true;
+  pthread_mutex_lock(&stream->access);
 
-  if(UnifiedIsEmpty(obsolete_stream)) {
-    Unlock(obsolete_stream);
+  stream->is_obsolete = true;
 
-    UnifiedDestroy(obsolete_stream);
-    return NULL;
+  if(UnifiedIsEmpty(stream) && stream->set == NULL) {
+    pthread_mutex_unlock(&stream->access);
+
+    UnifiedDestroy(stream);
   } else {
-    Unlock(obsolete_stream);
-    return obsolete_stream;
+    pthread_mutex_unlock(&stream->access);
   }
+
+  return stream;
 }
 
 snet_tl_streamset_t *SNetTlCreateStreamset()
 {
-  snet_tl_streamset_t *result;
+  snet_tl_streamset_t *set;
 
-  result = SNetMemAlloc(sizeof(snet_tl_streamset_t));
+  set = (snet_tl_streamset_t *)SNetMemAlloc(sizeof(snet_tl_streamset_t));
 
-  pthread_mutex_init(&result->access, NULL);
+  pthread_mutex_init(&set->access, NULL);
 
-  result->record_counter = SNetExSemCreate(&result->access,
-                                           true, 0,
-                                           false, -1,
-                                           0);
+  set->size = 0;
+  set->stream_count = 0;
 
-  result->streams = SNetUtilListCreate();
-  return result;
+  set->rec_counts = NULL;
+  set->streams = NULL;
+
+  set->record_counter = SNetExSemCreate(&set->access,
+					true, 0,
+					false, -1,
+					0);
+
+  return set;
+}
+
+void SNetTlDestroyStreamset(snet_tl_streamset_t *set)
+{
+  pthread_mutex_destroy(&set->access);
+
+  if(set->size > 0) {
+    SNetMemFree(set->rec_counts);
+    SNetMemFree(set->streams);
+  }
+
+  SNetExSemDestroy(set->record_counter);
+  SNetMemFree(set);
+}
+
+snet_tl_streamset_t*
+SNetTlAddToStreamset(snet_tl_streamset_t *set, snet_tl_stream_t *stream)
+{
+  unsigned int *new_counts;
+  snet_tl_stream_t **new_streams;
+  int new_size;
+  int i;
+
+  pthread_mutex_lock(&stream->access);
+
+  pthread_mutex_lock(&set->access);
+
+  if(stream->set != NULL) {
+
+    SNetUtilDebugFatal("SNetTlAddToStreamset: Stream already belongs to another set!");
+  }
+
+  if(set->stream_count == set->size) {
+    new_size = set->size + SET_INCREASE_SIZE;
+
+    new_counts = SNetMemAlloc(sizeof(unsigned int) * new_size);
+    new_streams = SNetMemAlloc(sizeof(snet_tl_stream_t *) * new_size);
+
+    for(i = 0; i < set->size; i++) {
+      new_counts[i] = set->rec_counts[i];
+      new_streams[i] = set->streams[i];
+    }
+    
+    for(i = set->size; i < new_size; i++) {
+      new_counts[i] = 0;
+      new_streams[i] = NULL;
+    }
+
+    i = set->size;
+
+    SNetMemFree(set->rec_counts);
+    SNetMemFree(set->streams);
+    
+    set->size = new_size;
+    set->rec_counts = new_counts;
+    set->streams = new_streams;
+ 
+  } else {
+
+    for(i = 0; i < set->size; i++) {
+      if(set->streams[i] == NULL) {
+	break;
+      }
+    }
+  
+  }
+
+  stream->set_index = i;
+
+  set->stream_count++;
+  set->streams[stream->set_index] = stream;
+  set->rec_counts[stream->set_index] = UnifiedSize(stream);
+
+  UnifiedRegisterDispatcher(stream, set->record_counter);
+  
+  stream->set = set;
+
+  pthread_mutex_unlock(&set->access);
+
+  pthread_mutex_unlock(&stream->access);
+
+  return set;
+}
+
+snet_tl_streamset_t*
+SNetTlDeleteFromStreamset(snet_tl_streamset_t *set,
+                          snet_tl_stream_t *stream)
+{
+
+  pthread_mutex_lock(&stream->access);
+
+  set = stream->set;
+
+  pthread_mutex_lock(&set->access);
+
+  set->rec_counts[stream->set_index] = 0;
+  set->streams[stream->set_index] = NULL;
+  set->stream_count--;
+
+  UnifiedUnregisterDispatcher(stream, set->record_counter);
+
+  pthread_mutex_unlock(&set->access);
+
+  stream->set = 0;
+  stream->set_index = INVALID_INDEX;
+
+  if(stream->is_obsolete && UnifiedIsEmpty(stream)) {
+    pthread_mutex_unlock(&stream->access);
+
+    UnifiedDestroy(stream);
+  } else {
+    pthread_mutex_unlock(&stream->access);
+  }
+
+  return set;
 }
 
 snet_tl_streamset_t* 
-SNetTlReplaceInStreamset(snet_tl_streamset_t *set_to_modify,
+SNetTlReplaceInStreamset(snet_tl_streamset_t *set,
                          snet_tl_stream_t *old_stream,
-                         snet_tl_stream_t *replacement_stream) {
-  snet_util_list_iter_t *current_position;
-  snet_tl_stream_t *current_stream;
-
-  if(set_to_modify == NULL) {
-    SNetUtilDebugFatal("ReplaceInStreamset: set_to_modify == NULL");
-  }
-  if(old_stream == NULL) {
-    SNetUtilDebugFatal("ReplaceInStreamset: old_stream == NULL");
-  }
-  if(replacement_stream == NULL) {
-    SNetUtilDebugFatal("ReplaceInStreamset: replacement_stream == NULL");
-  }
-
-  LockStreamset(set_to_modify);
-  Lock(old_stream);
-  Lock(replacement_stream);
-
-  /* name is not good: basically, this increments the record_counter 
-   * semaphore by the amount of records currently in the stream
-   */
-  UnifiedRegisterDispatcher(replacement_stream, set_to_modify->record_counter);
-
-  replacement_stream->is_in_streamset = true;
-  replacement_stream->containing_streamset = set_to_modify;
-
-  Unlock(replacement_stream);
-
-  current_position = SNetUtilListFirst(set_to_modify->streams);
-  while(SNetUtilListIterCurrentDefined(current_position)) {
-    current_stream = SNetUtilListIterGet(current_position);
-    if(current_stream == old_stream) {
-      set_to_modify->streams = SNetUtilListIterSet(current_position, 
-                                          replacement_stream);
-      break;
-    }
-    current_position = SNetUtilListIterNext(current_position);
-  }
-
-  old_stream->is_in_streamset = false;
-  old_stream->containing_streamset = NULL;
-
-  Unlock(old_stream);
-
-  UnlockStreamset(set_to_modify);
-  return set_to_modify;
-}
-
-void SNetTlDestroyStreamset(snet_tl_streamset_t *set_to_destroy)
+                         snet_tl_stream_t *new_stream) 
 {
-  snet_tl_stream_t *stream;
 
-  LockStreamset(set_to_destroy);
+  pthread_mutex_lock(&old_stream->access);
+  pthread_mutex_lock(&new_stream->access);
 
-  while(!SNetUtilListIsEmpty(set_to_destroy->streams)) {
-    stream = (snet_tl_stream_t*)SNetUtilListGetFirst(set_to_destroy->streams);
+    pthread_mutex_lock(&old_stream->set->access);
 
-    Lock(stream);
-    stream->is_in_streamset = false;
-    stream->containing_streamset = NULL;
-    Unlock(stream);
+  if(new_stream->set != NULL) {
 
-    SNetUtilListDeleteFirst(set_to_destroy->streams);
+    SNetUtilDebugFatal("SNetTlReplaceInStreamset: Stream already belongs to another set!");
   }
 
-  UnlockStreamset(set_to_destroy);
+  new_stream->set = old_stream->set;
+  old_stream->set = NULL;
 
-  pthread_mutex_destroy(&set_to_destroy->access);
-  SNetUtilListDestroy(set_to_destroy->streams);
-  SNetExSemDestroy(set_to_destroy->record_counter);
-  SNetMemFree(set_to_destroy);
+  new_stream->set_index = old_stream->set_index;
+  old_stream->set_index = INVALID_INDEX;
+
+  new_stream->set->streams[new_stream->set_index] = new_stream;
+  new_stream->set->rec_counts[new_stream->set_index] = UnifiedSize(new_stream);
+
+  UnifiedRegisterDispatcher(new_stream, set->record_counter);
+  UnifiedUnregisterDispatcher(old_stream, set->record_counter);
+  
+  pthread_mutex_unlock(&new_stream->set->access);
+ 
+  pthread_mutex_unlock(&new_stream->access);
+
+  if(old_stream->is_obsolete && UnifiedIsEmpty(old_stream)) {
+    pthread_mutex_unlock(&old_stream->access);
+
+    UnifiedDestroy(old_stream);
+  } else {
+    pthread_mutex_unlock(&old_stream->access);
+  }
+
+  return set;
 }
-
-snet_tl_streamset_t*
-SNetTlAddToStreamset(snet_tl_streamset_t *stream_destination,
-                     snet_tl_stream_t *new_stream)
-{
-  if(stream_destination == NULL) {
-    SNetUtilDebugFatal("Cannot add %p to Streamset NULL",
-		       new_stream);
-  }
-  if(new_stream == NULL) {
-    SNetUtilDebugFatal("Cannot add stream NULL to streamset %p",
-		       stream_destination);
-  }
-
-  LockStreamset(stream_destination); 
-  Lock(new_stream);
-
-  /* increment so many times, see above */
-  UnifiedRegisterDispatcher(new_stream, stream_destination->record_counter);
-
-  new_stream->is_in_streamset = true;
-  new_stream->containing_streamset = stream_destination;
-
-  SNetUtilListAddBeginning(stream_destination->streams, new_stream);
-
-  Unlock(new_stream);
-  UnlockStreamset(stream_destination);
-
-  return stream_destination;
-}
-
-snet_tl_streamset_t*
-SNetTlDeleteFromStreamset(snet_tl_streamset_t *stream_container,
-                          snet_tl_stream_t *stream_to_remove)
-{
-  snet_util_list_iter_t *current_position;
-  snet_tl_stream_t *current_stream;
-
-  LockStreamset(stream_container);
-  for(current_position = SNetUtilListFirst(stream_container->streams);
-      SNetUtilListIterCurrentDefined(current_position);
-      current_position = SNetUtilListIterNext(current_position)) {
-      current_stream = (snet_tl_stream_t*)SNetUtilListIterGet(current_position);
-      if(current_stream == stream_to_remove) {
-        Lock(current_stream);
-        current_stream->is_in_streamset = false;
-        Unlock(current_stream);
-        stream_container->streams = SNetUtilListIterDelete(current_position);
-        break;
-      }
-  }
-  SNetUtilListIterDestroy(current_position);
-  UnlockStreamset(stream_container);
-  return stream_container;
-}
-
 
 bool SNetTlGetFlag(snet_tl_stream_t *stream)
 {
@@ -526,11 +449,11 @@ bool SNetTlGetFlag(snet_tl_stream_t *stream)
 
   if(stream != NULL) {
 
-    Lock(stream);
+    pthread_mutex_lock(&stream->access);
   
     result = UnifiedGetFlag(stream);
     
-    Unlock(stream); 
+    pthread_mutex_unlock(&stream->access);
   }
 
   return result;
@@ -542,309 +465,159 @@ bool SNetTlSetFlag(snet_tl_stream_t *stream, bool flag)
 
   if(stream != NULL) {
 
-    Lock(stream);
+    pthread_mutex_lock(&stream->access);
     
     result = UnifiedSetFlag(stream, flag);
     
-    Unlock(stream);
+    pthread_mutex_unlock(&stream->access);
   }
 
   return result;
 }
 
-snet_record_t *SNetTlRead(snet_tl_stream_t *record_source)
+snet_record_t *SNetTlRead(snet_tl_stream_t *stream)
 {
-  snet_record_t *result;
-#ifdef STREAM_LAYER_DEBUG
-  char message[100];
-#endif
-  if(record_source == NULL) {
-    SNetUtilDebugFatal("SnetTLRead(NULL)!");
-  }
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("Read(%p)", record_source);
-#endif
+  snet_record_t *rec;
 
-  LockStreamAndStreamset(record_source);
+  pthread_mutex_lock(&stream->access);
 
-  result = UnifiedRead(record_source);
+  rec = UnifiedRead(stream);
 
-  if(record_source->is_in_streamset) {
-#ifdef STREAM_LAYER_DEBUG
-    SNetUtilDebugNotice("(Streamset %p) At entry of Read many: semaphore has value %d",
-                        record_source->containing_streamset,
-                        SNetExSemGetValue(record_source->containing_streamset->record_counter));
-#endif
-    SNetExSemDecrement(record_source->containing_streamset->record_counter);
+  if(stream->set != NULL) {
+    pthread_mutex_lock(&stream->set->access);
+
+    SNetExSemDecrement(stream->set->record_counter);
+    
+    stream->set->rec_counts[stream->set_index]--;
+
+    pthread_mutex_unlock(&stream->set->access);
   }
 
-  if(result == NULL) {
-    SNetUtilDebugFatal("Scheduler invariant broken:"
-                          " Could not read data after waiting");
-  }
- 
-  if(record_source->is_obsolete && UnifiedIsEmpty(record_source)) {
+  if(stream->is_obsolete && UnifiedIsEmpty(stream) && stream->set == NULL) {
+    pthread_mutex_unlock(&stream->access);
 
-    UnlockStreamAndStreamset(record_source);
-
-    UnifiedDestroy(record_source);
-  }else {
-    UnlockStreamAndStreamset(record_source);
+    UnifiedDestroy(stream);
+  } else {
+    pthread_mutex_unlock(&stream->access);
   }
 
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugDumpRecord(result, message);
-  SNetUtilDebugNotice("Read(%p) = %s",
-                      record_source,
-                      message);
-#endif
-  return result;
+  return rec;
 }
 
-static snet_tl_stream_record_pair_t
-ReadAny(snet_tl_streamset_t *possible_sources, bool remove_record)
+
+snet_tl_stream_record_pair_t
+SNetTlReadMany(snet_tl_streamset_t *set)
 {
-  snet_tl_stream_record_pair_t result;
-  snet_util_list_iter_t *current_position;
-  snet_tl_stream_t *current_stream;
-  snet_record_t *read_record;
-  result.stream = NULL;
-  result.record = NULL;
+  snet_tl_stream_record_pair_t pair;
+  int i;
 
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(STATEINFO (STREAMSET %p)"
-                      "(ReadAny (possible sources %p) (remove_record %s))"
-                      "(at entry) (length of possible_sources->streams %d)",
-                      possible_sources,
-                      possible_sources, remove_record?"true":"false",
-                      SNetUtilListCount(possible_sources->streams));
-  SNetUtilListDump(possible_sources->streams);
-#endif /* STREAM_LAYER_DEBUG */
+  pthread_mutex_lock(&set->access);
 
-  /* Notice: possible_sources is locked already */
-  for(current_position = SNetUtilListFirst(possible_sources->streams);
-      SNetUtilListIterCurrentDefined(current_position);
-      current_position = SNetUtilListIterNext(current_position)) {
-    current_stream = SNetUtilListIterGet(current_position);
+  SNetExSemDecrement(set->record_counter);
 
-    Lock(current_stream);
-    read_record = UnifiedPeek(current_stream);
-#ifdef STREAM_LAYER_DEBUG
-    SNetUtilDebugNotice("(STATEINFO (STREAMSET %p) "
-                        "(ReadAny (possible sources %p) (remove_record %s))"
-                        "(in the loop in ReadAny)"
-                        "((current_stream %p) (read_record %p)))",
-                        possible_sources,
-                        possible_sources,
-                        remove_record ? "true" : "false",
-                        current_stream, read_record);
-#endif /* STREAM_LAYER_DEBUG */
-    if(read_record != NULL) {
-      if(remove_record) {
-        UnifiedRead(current_stream);
-      }
-      possible_sources->streams = SNetUtilListIterMoveToBack(current_position);
-      result.stream = current_stream;
-      result.record = read_record;
-
-      Unlock(current_stream);
-     
+  for(i = 0; i < set->size; i++) {
+    if(set->streams[i] != NULL && set->rec_counts[i] > 0) {
       break;
-    } else {
-      Unlock(current_stream);
     }
   }
-  SNetUtilListIterDestroy(current_position);
-  return result;
+
+  if(i == set->size) {
+    SNetUtilDebugFatal("ReadMany: Invalid stream set index %d (set size = %d)", i, set->size);
+  } 
+
+  set->rec_counts[i]--;
+
+  pair.stream = set->streams[i];
+  
+  pthread_mutex_unlock(&set->access);
+
+  pthread_mutex_lock(&pair.stream->access);
+
+  pair.record = UnifiedRead(pair.stream);
+
+  if(pair.stream->is_obsolete && UnifiedIsEmpty(pair.stream) && pair.stream->set == NULL) {
+    pthread_mutex_unlock(&pair.stream->access);
+
+    UnifiedDestroy(pair.stream);
+  } else {
+    pthread_mutex_unlock(&pair.stream->access);
+  }
+
+  return pair;
+}
+
+snet_record_t *SNetTlPeek(snet_tl_stream_t *stream)
+{
+  snet_record_t *rec;
+
+  pthread_mutex_lock(&stream->access);
+
+  rec = UnifiedPeek(stream);
+
+  pthread_mutex_unlock(&stream->access);
+
+  return rec;
 }
 
 snet_tl_stream_record_pair_t
-SNetTlReadMany(snet_tl_streamset_t *possible_sources)
+SNetTlPeekMany(snet_tl_streamset_t *set)
 {
-  snet_tl_stream_record_pair_t result;
-#ifdef STREAM_LAYER_DEBUG
-  char record_representation[100];
-#endif
+  snet_tl_stream_record_pair_t pair;
+  int i;
 
-  if(possible_sources == NULL) {
-    SNetUtilDebugFatal("Cant read from NULL!");
-  }
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("ReadMany(%p)", possible_sources);
-#endif
-  LockStreamset(possible_sources);
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(streamset %p) At entry of Read many: semaphore has value %d",
-                      possible_sources,
-                      SNetExSemGetValue(possible_sources->record_counter));
-#endif
-  SNetExSemDecrement(possible_sources->record_counter);
-  result = ReadAny(possible_sources, true);
-  UnlockStreamset(possible_sources);
+  pthread_mutex_lock(&set->access);
 
-  if(result.record == NULL) {
-    LockStreamset(possible_sources);
-    SNetUtilDebugNotice("STREAMLAYER: Invariant broken: No data after waiting");
-    SNetUtilDebugNotice("record count value in streamset: %d",
-                         SNetExSemGetValue(possible_sources->record_counter));
-    UnlockStreamset(possible_sources);
-    SNetUtilDebugFatal("");
+  SNetExSemWaitWhileMinValue(set->record_counter);
+
+  for(i = 0; i < set->size; i++) {
+    if(set->streams[i] != NULL && set->rec_counts[i] > 0) {
+      break;
+    }
   }
 
-  
-  Lock(result.stream);
-  if(result.stream->is_obsolete && UnifiedIsEmpty(result.stream)) {
-    Unlock(result.stream);
-    UnifiedDestroy(result.stream);
-  } else {
-    Unlock(result.stream);
-  }
-  
-#ifdef  STREAM_LAYER_DEBUG
-  SNetUtilDebugDumpRecord(result.record, record_representation);
-  SNetUtilDebugNotice("ReadMany(%p) = (%p, %s)",
-                      possible_sources,
-                      result.stream, record_representation);
-#endif
+  if(i == set->size) {
+    SNetUtilDebugFatal("PeekMany: Invalid stream set index %d (set size = %d)", i, set->size);
+  } 
 
-  return result;
-}
+  pair.stream = set->streams[i];
 
-snet_record_t *SNetTlPeek(snet_tl_stream_t *record_source)
-{
-  snet_record_t *result;
-#ifdef STREAM_LAYER_DEBUG
-  char record_representation[100];
-  SNetUtilDebugNotice("Peek(%p)", record_source);
-#endif
+  pthread_mutex_unlock(&set->access);
 
-  Lock(record_source);
-  result = UnifiedPeek(record_source);
-  Unlock(record_source);
+  pthread_mutex_lock(&pair.stream->access);
 
-#ifdef  STREAM_LAYER_DEBUG
-  SNetUtilDebugDumpRecord(result, record_representation);
-  SNetUtilDebugNotice("Peek(%p) = %s",
-                      record_source,
-                      record_representation);
-#endif
-  return result;
-}
+  pair.record = UnifiedPeek(pair.stream);
 
-snet_tl_stream_record_pair_t
-SNetTlPeekMany(snet_tl_streamset_t *possible_sources)
-{
-  snet_tl_stream_record_pair_t result;
-#ifdef STREAM_LAYER_DEBUG
-  char record_string[100];
-#endif
+  pthread_mutex_unlock(&pair.stream->access);
 
-  if(possible_sources == NULL) {
-    SNetUtilDebugFatal("Cant read from NULL!");
-  }
-
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(CALLINFO (PeekMany (possible_sources %p)))", 
-                      possible_sources);
-#endif
-  LockStreamset(possible_sources);
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("(streamset %p) At entry of Peek Many: semaphore has value %d",
-                      possible_sources,
-                      SNetExSemGetValue(possible_sources->record_counter));
-#endif
-  SNetExSemWaitWhileMinValue(possible_sources->record_counter);
-  result = ReadAny(possible_sources, false);
-  UnlockStreamset(possible_sources);
-
-  if(result.record == NULL) {
-    LockStreamset(possible_sources);
-    SNetUtilDebugNotice("STREAMLAYER: Invariant broken: No data after waiting");
-    SNetUtilDebugNotice("record count value in streamset: %d",
-                         SNetExSemGetValue(possible_sources->record_counter));
-    UnlockStreamset(possible_sources);
-    SNetUtilDebugFatal("");
-  }
-
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugDumpRecord(result.record, record_string);
-  SNetUtilDebugNotice("Peekmany(%p) = (%p, %s)",
-                      possible_sources,
-                      result.stream,
-                      record_string);
-#endif
-  return result;
+  return pair;
 }
 
 snet_tl_stream_t*
-SNetTlWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
+SNetTlWrite(snet_tl_stream_t *stream, snet_record_t *rec)
 {
-  bool record_written;
+  pthread_mutex_lock(&stream->access);
 
-#ifdef STREAM_LAYER_DEBUG
-  char message_space[100];
-  SNetUtilDebugDumpRecord(data, message_space);
-  SNetUtilDebugNotice("Write(stream=%p,record=%s)", 
-                      record_destination,
-                      message_space);
-#endif
-  LockStreamAndStreamset(record_destination);
+  UnifiedWrite(stream, rec);
 
-  record_written = UnifiedWrite(record_destination, data);
+  if(stream->set != NULL) {
+    pthread_mutex_lock(&stream->set->access);
 
-  if(record_destination->is_in_streamset) {
-#ifdef STREAM_LAYER_DEBUG
-    SNetUtilDebugNotice("(Streamset %p) At entry of Write: semaphore has value %d",
-                        
-                        record_destination->containing_streamset,
-                        SNetExSemGetValue(record_destination->containing_streamset->
-                                          record_counter));
-#endif
-    SNetExSemIncrement(record_destination->containing_streamset->record_counter);
+    stream->set->rec_counts[stream->set_index]++;
+
+    SNetExSemIncrement(stream->set->record_counter);
+
+    pthread_mutex_unlock(&stream->set->access);
   }
 
-  if(!record_written) {
-    SNetUtilDebugFatal("Scheduler invariant broken:"
-                       " Could not write record after waiting for space!");
-  }
-#ifdef STREAM_LAYER_DEBUG
-  SNetUtilDebugNotice("Write(%p, %p) exited",
-                      record_destination,
-                      data);
-#endif
-  UnlockStreamAndStreamset(record_destination);
+  pthread_mutex_unlock(&stream->access);
 
-  return record_destination;
+  return stream; 
 }
 
-/* TODO */
-snet_tl_stream_t*
-SNetTlTryWrite(snet_tl_stream_t *record_destination, snet_record_t *data)
+bool SNetTlTryWrite(snet_tl_stream_t *stream, 
+		    snet_record_t *data)
 {
-  bool record_written;
- 
-#ifdef STREAM_LAYER_DEBUG
-  char message_space[100];
+  SNetUtilDebugFatal("SNetTlTryWrite not yet implemented");
 
-  SNetUtilDebugDumpRecord(data, message_space);
-  SNetUtilDebugNotice("(CALLINFO (STREAM %p) (TryWrite (stream %p) (record %s)))",
-                      record_destination, 
-                      record_destination, message_space);
-#endif
-
-  LockStreamAndStreamset(record_destination);
-
-  record_written = UnifiedWrite(record_destination, data);
-
-  if(record_destination->is_in_streamset) {
-    SNetExSemIncrement(record_destination->containing_streamset->record_counter);
-  }
-
-  UnlockStreamAndStreamset(record_destination);
-
-  if(record_written) {
-    return record_destination;
-  } else {
-    return NULL;
-  }
+  return false;
 }

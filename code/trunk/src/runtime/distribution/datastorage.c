@@ -9,6 +9,7 @@
 #include "memfun.h"
 #include "hashtable.h"
 #include "interface_functions.h"
+#include "debug.h"
 
 #define HASHTABLE_SIZE 32
 #define MAX_REQUESTS 32
@@ -35,6 +36,7 @@ typedef struct storage {
   MPI_Comm comm;
   MPI_Datatype op_type;
   pthread_mutex_t mutex;
+  pthread_mutex_t id_mutex;
   snet_hashtable_t *hashtable;
   unsigned int op_id;
   pthread_t thread;
@@ -42,6 +44,9 @@ typedef struct storage {
 
 static storage_t storage;
 
+#define CONCURRENT_DATA_OPERATIONS
+
+#ifdef CONCURRENT_DATA_OPERATIONS
 typedef struct snet_fetch_request {
   snet_data_op_t op;
   int id;
@@ -92,18 +97,21 @@ void *DataManagerThread(void *ptr)
   for(bit = 0; bit < MAX_REQUESTS; bit++) {
     requests[bit] = MPI_REQUEST_NULL;
     ops[bit].op = OP_type;
+    ops[bit].id = 0;
     ops[bit].ref = NULL;
     ops[bit].buf_size = 128;
     ops[bit].buf = SNetMemAlloc(sizeof(char) * ops[bit].buf_size);
     ops[bit].interface = 0;
-    ops[bit].data = NULL;;
+    ops[bit].data = NULL;
     ops[bit].type = MPI_DATATYPE_NULL;
   }
+
+  requests[MAX_REQUESTS] = MPI_REQUEST_NULL;
 
   recv = true;
 
   while(!terminate) {
-       
+  
     if(recv) {
       memset(buf, 0, buf_size);
       result = MPI_Irecv(buf, 1, storage.op_type, MPI_ANY_SOURCE, TAG_DATA_OP, 
@@ -123,21 +131,35 @@ void *DataManagerThread(void *ptr)
 	ref = SNetDataStorageCopy(msg->id);
 	
 	if(ref == NULL) {
-	  printf("Remote copy failed %lld\n", msg->id);
-	  abort();
+	SNetUtilDebugFatal("Node %d: Remote copy from %d failed (%d:%d)\n",
+			   storage.self, 
+			   status.MPI_SOURCE, 
+			   SNET_ID_GET_NODE(msg->id), 
+			   SNET_ID_GET_ID(msg->id));
+	} else {
+
+	  /* TODO: this could be non-blocking */
+	  result = MPI_Send(&msg, 0, MPI_INT, status.MPI_SOURCE, 
+			    msg->op_id, storage.comm);
+
 	}
-	
+
 	break;
 	
-      case OP_delete:    
+      case OP_delete:  
 	
 	ref = SNetDataStorageGet(msg->id);
 	
 	if(ref != NULL) {
+
 	  SNetRefDestroy(ref);
+
 	} else {
-	  printf("Remote destroy failed %lld\n", msg->id);
-	  abort();
+	  SNetUtilDebugFatal("Node %d: Remote delete from %d failed (%d:%d)\n",
+			     storage.self, 
+			     status.MPI_SOURCE, 
+			     SNET_ID_GET_NODE(msg->id), 
+			     SNET_ID_GET_ID(msg->id));
 	}
 	
 	break;
@@ -150,6 +172,11 @@ void *DataManagerThread(void *ptr)
 	  
 	  if((bit = SNetUtilBitmapFindNSet(map)) == SNET_BITMAP_ERR) {
 	    result = MPI_Waitany(MAX_REQUESTS, requests, &bit, &req_status);
+
+	    /* TODO: Handle the completed call! */
+
+	    SNetUtilDebugFatal("Max number of concurrent remote data operations: Waiting feature not yet implemented!");
+	  
 	    SNetUtilBitmapSet(map, bit);
 	  }
 	  
@@ -158,21 +185,20 @@ void *DataManagerThread(void *ptr)
 	  ops[bit].id = msg->op_id;
 	  
 	  ops[bit].interface = SNetRefGetInterface(ops[bit].ref);
-	  
-	  size = SNetGetSerializeTypeFun(ops[bit].interface)(storage.comm,
-							     SNetRefGetData(ops[bit].ref),
-							     ops[bit].buf, 
-							     ops[bit].buf_size);
-	  
+
+	  size = SNetGetSerializeTypeFun(ops[bit].interface)(storage.comm, SNetRefGetData(ops[bit].ref), ops[bit].buf, ops[bit].buf_size);
+
 	  result = MPI_Isend(ops[bit].buf, size, MPI_PACKED, ops[bit].dest, 
 			     ops[bit].id, storage.comm, &requests[bit]);
 	  
 	  ops[bit].op = OP_type;
-	  
+  
 	} else {
-	  
-	  printf("Fatal error: Unknown data referred in data fetch %lld\n", msg->id);
-	  abort();
+	  SNetUtilDebugFatal("Node %d: Remote fetch from %d failed (%d:%d)\n",
+			     storage.self, 
+			     status.MPI_SOURCE, 
+			     SNET_ID_GET_NODE(msg->id), 
+			     SNET_ID_GET_ID(msg->id));
 	}
 	
 	break;
@@ -214,8 +240,6 @@ void *DataManagerThread(void *ptr)
     msg = NULL;
   }
 
-  /* TODO: Handle pending requests! */
-
   SNetUtilBitmapDestroy(map);
   SNetMemFree(buf);
 
@@ -225,6 +249,141 @@ void *DataManagerThread(void *ptr)
 
   return NULL;
 }
+
+#else /* CONCURRENT_DATA_OPERATIONS*/
+
+void *DataManagerThread(void *ptr)
+{
+  MPI_Status status;
+
+  MPI_Datatype type;
+
+  MPI_Aint true_lb;
+  MPI_Aint true_extent;
+
+  bool terminate = false;
+  int result;
+  void *buf = NULL;
+  int buf_size = 0;
+ 
+  int count;
+
+  snet_msg_data_op_t *msg;
+  snet_ref_t *ref;
+
+  int interface;
+
+  snet_id_t id;
+  int op_id;
+
+  void *data;
+
+  int size;
+
+  result = MPI_Type_get_true_extent(storage.op_type, &true_lb, &true_extent);
+
+  buf_size = true_extent;
+  buf = SNetMemAlloc(buf_size);
+
+  type = MPI_DATATYPE_NULL;
+
+  while(!terminate) {
+    
+    memset(buf, 0, buf_size);
+
+    result = MPI_Recv(buf, 1, storage.op_type, MPI_ANY_SOURCE, TAG_DATA_OP, 
+		      storage.comm, &status);
+ 
+    msg = (snet_msg_data_op_t *)buf;
+
+    switch(msg->op) {
+    case OP_copy:
+
+      ref = SNetDataStorageCopy(msg->id);
+      
+      if(ref == NULL) {
+	SNetUtilDebugFatal("Node %d: Remote copy from %d failed (%d:%d)\n",
+			   storage.self, 
+			   status.MPI_SOURCE, 
+			   SNET_ID_GET_NODE(msg->id), 
+			   SNET_ID_GET_ID(msg->id));
+      } else {
+
+	result = MPI_Send(&msg, 0, MPI_INT, status.MPI_SOURCE, 
+			  msg->op_id, storage.comm);
+      }
+      
+      break;
+      
+    case OP_delete:    
+
+      ref = SNetDataStorageGet(msg->id);
+	
+      if(ref != NULL) {
+	SNetRefDestroy(ref);
+      } else {
+	SNetUtilDebugFatal("Node %d: Remote delete from %d failed (%d:%d)\n",
+			   storage.self, 
+			   status.MPI_SOURCE, 
+			   SNET_ID_GET_NODE(msg->id), 
+			   SNET_ID_GET_ID(msg->id));
+      }
+      
+      break;
+      
+    case OP_fetch:
+      
+      ref = SNetDataStorageGet(msg->id);
+
+      id = msg->id;
+      op_id =msg->op_id;
+      
+      if(ref != NULL) {
+
+	interface = SNetRefGetInterface(ref);
+	
+	size = SNetGetSerializeTypeFun(interface)(storage.comm, SNetRefGetData(ref), buf, buf_size);
+
+	result = MPI_Ssend(buf, size, MPI_PACKED, status.MPI_SOURCE, 
+			   op_id, storage.comm);
+       
+	data = SNetGetPackFun(interface)(storage.comm,
+					 SNetRefGetData(ref), 
+					 &type, 
+					 &count);
+
+	result = MPI_Ssend(data, count, type, status.MPI_SOURCE, 
+			   op_id, storage.comm);
+	
+	SNetGetCleanupFun(interface)(type, data);
+	
+	SNetRefDestroy(ref);
+
+      } else {
+	SNetUtilDebugFatal("Node %d: Remote fetch from %d failed (%d:%d)\n",
+			   storage.self, 
+			   status.MPI_SOURCE, 
+			   SNET_ID_GET_NODE(msg->id), 
+			   SNET_ID_GET_ID(msg->id));
+      }
+      break;
+      
+    case OP_terminate:
+      terminate = true;
+      
+      break;
+    default:
+      break;
+    }
+    
+    msg = NULL;
+  }
+
+  SNetMemFree(buf);
+
+  return NULL;
+}
+#endif /* CONCURRENT_DATA_OPERATIONS*/
 
 static void DataManagerInit()
 {
@@ -252,12 +411,15 @@ void SNetDataStorageInit()
   MPI_Aint base;
   snet_msg_data_op_t msg;
   int i;
+  int result;
 
-  MPI_Comm_dup(MPI_COMM_WORLD, &storage.comm);
+  result = MPI_Comm_dup(MPI_COMM_WORLD, &storage.comm);
 
-  MPI_Comm_rank(storage.comm, &storage.self);
+  result = MPI_Comm_rank(storage.comm, &storage.self);
 
   pthread_mutex_init(&storage.mutex, NULL);
+
+  pthread_mutex_init(&storage.id_mutex, NULL);
 
   storage.hashtable = SNetHashtableCreate(HASHTABLE_SIZE, NULL);
 
@@ -297,6 +459,8 @@ void SNetDataStorageDestroy()
 
   pthread_mutex_destroy(&storage.mutex);
 
+  pthread_mutex_destroy(&storage.id_mutex);
+
   MPI_Type_free(&storage.op_type);
 
   MPI_Comm_free(&storage.comm);
@@ -312,16 +476,18 @@ snet_ref_t *SNetDataStoragePut(snet_id_t id, snet_ref_t *ref)
   
   if(SNetHashtablePut(storage.hashtable, id, ref) != 0){
 
-    temp = SNetHashtableGet(storage.hashtable, id);
-    
+    temp = SNetHashtableGet(storage.hashtable, id);  
+
     temp = SNetRefCopy(temp);
+
+    pthread_mutex_unlock(&storage.mutex);
     
     SNetRefDestroy(ref);
     
     ref = temp;
+  } else {
+    pthread_mutex_unlock(&storage.mutex);
   }
-
-  pthread_mutex_unlock(&storage.mutex);
 
   return ref;
 }
@@ -356,13 +522,25 @@ snet_ref_t *SNetDataStorageGet(snet_id_t id)
   return ref;
 }
 
-void SNetDataStorageRemove(snet_id_t id)
+bool SNetDataStorageRemove(snet_id_t id)
 {
+  bool ret = false;
+  snet_ref_t *ref;
+
   pthread_mutex_lock(&storage.mutex);
 
-  SNetHashtableRemove(storage.hashtable, id);
+  ref = SNetHashtableGet(storage.hashtable, id);
+
+  if(SNetRefGetRefCount(ref) == 1) {
+
+    SNetHashtableRemove(storage.hashtable, id);
+
+    ret = true;
+  }
 
   pthread_mutex_unlock(&storage.mutex);
+
+  return ret;
 }
 
 void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int location)
@@ -370,14 +548,14 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   snet_msg_data_op_t msg;
   MPI_Status status;
   MPI_Datatype type;
-  int result;
-  void *buf;
-  void *data;
-  int count;
+  int result = 0;
+  void *buf = NULL;
+  void *data = NULL;
+  int count = 0;
   MPI_Aint true_lb;
   MPI_Aint true_extent;
 
-  pthread_mutex_lock(&storage.mutex);
+  pthread_mutex_lock(&storage.id_mutex);
     
   msg.op_id = storage.op_id++;
   
@@ -385,11 +563,11 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
     msg.op_id = TAG_DATA_OP + 1;
   }
   
-  pthread_mutex_unlock(&storage.mutex);
+  pthread_mutex_unlock(&storage.id_mutex);
     
   msg.op = OP_fetch;
   msg.id = id;
-  
+
   MPI_Send(&msg, 1, storage.op_type, location, TAG_DATA_OP, storage.comm);
   
   result = MPI_Probe(location, msg.op_id, storage.comm, &status);
@@ -418,7 +596,7 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
 
   result = MPI_Recv(buf, count, type, location, 
 		    msg.op_id, storage.comm, &status);
-  
+
   data = SNetGetUnpackFun(interface)(storage.comm, buf, type, count);
   
   SNetGetCleanupFun(interface)(type, buf);
@@ -429,12 +607,26 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   void SNetDataStorageRemoteCopy(snet_id_t id, unsigned int location)
 {
   snet_msg_data_op_t msg;
+  MPI_Status status;
 
   msg.op = OP_copy;
   msg.op_id = 0;
   msg.id = id;
 
+  pthread_mutex_lock(&storage.id_mutex);
+    
+  msg.op_id = storage.op_id++;
+  
+  if(msg.op_id == TAG_DATA_OP) {
+    msg.op_id = TAG_DATA_OP + 1;
+  }
+  
+  pthread_mutex_unlock(&storage.id_mutex);
+  
   MPI_Send(&msg, 1, storage.op_type, location, TAG_DATA_OP, storage.comm);
+
+  MPI_Recv(&msg, 0, MPI_INT, location, msg.op_id, storage.comm, &status);
+
 }
 
 void SNetDataStorageRemoteDelete(snet_id_t id, unsigned int location) 
@@ -445,6 +637,10 @@ void SNetDataStorageRemoteDelete(snet_id_t id, unsigned int location)
   msg.op_id = 0;
   msg.id = id;
 
+  pthread_mutex_lock(&storage.id_mutex);
+    
+  pthread_mutex_unlock(&storage.id_mutex);
+  
   MPI_Send(&msg, 1, storage.op_type, location, TAG_DATA_OP, storage.comm);
 }
 
