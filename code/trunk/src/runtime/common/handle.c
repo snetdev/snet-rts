@@ -339,12 +339,17 @@ extern void SNetHndDestroy( snet_handle_t *hnd) {
     case HND_filter: 
       SNetDestroyTypeEncoding( FILTER_HND( in_type));
 #ifdef FILTER_VERSION_2
-      SNetTencDestroyTypeEncodingList( FILTER_HND( out_types));
+      if(FILTER_HND( out_types) != NULL) {
+	SNetTencDestroyTypeEncodingList( FILTER_HND( out_types));
+      }
 
-      for( i=0; i<SNetElistGetNumExpressions( FILTER_HND(guard_list)); i++) {
-	SNetDestroyFilterInstructionSetList( FILTER_HND(instr_lists)[i]);
-      }                               
-      SNetMemFree( FILTER_HND(instr_lists));
+      if(FILTER_HND( instr_lists) != NULL) {
+	for( i=0; i<SNetElistGetNumExpressions( FILTER_HND(guard_list)); i++) {
+	  SNetDestroyFilterInstructionSetList( FILTER_HND(instr_lists)[i]);
+	}                    
+	
+	SNetMemFree( FILTER_HND(instr_lists));
+      }
 #endif
       SNetEdestroyList( FILTER_HND(guard_list));
       SNetMemFree( HANDLE( filter_hnd)); 

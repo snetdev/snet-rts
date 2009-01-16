@@ -3,6 +3,8 @@
 #include "queue.h"
 #include "memfun.h"
 
+/* This isn't exactly a queue anymore, but an ordered list! */
+
 #define NUM_INITIAL_ELEMENTS 32
 
 struct snet_queue{

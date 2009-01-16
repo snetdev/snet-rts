@@ -5,9 +5,11 @@
 #include "stream_layer.h"
 #include "fun.h"
 
-snet_tl_stream_t *DistributionInit(int argc, char *argv[], snet_startup_fun_t fun);
+int DistributionInit(int argc, char *argv[]);
 
-int DistributionDestroy();
+snet_tl_stream_t *DistributionStart(snet_startup_fun_t fun);
+void DistributionStop();
+void DistributionDestroy();
 
 snet_tl_stream_t *DistributionWaitForInput();
 snet_tl_stream_t *DistributionWaitForOutput();

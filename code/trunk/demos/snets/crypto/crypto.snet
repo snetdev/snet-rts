@@ -1,0 +1,49 @@
+/* 
+ * A simple dictionary-based brute force cracker 
+ *
+ */
+
+<?xml version="1.0"?>
+<metadata xmlns="snet-home.org" >
+  <!-- C4SNet is the default interface -->
+  <interface name="C4SNet" default="true" />
+</metadata>
+
+
+net crypto ({dictionary, entries, <dictionary_size>, <num_entries>, <num_nodes>} -> {word, <entry>}|{<false>, <entry>})
+{
+	
+	net task_divider ({entries, <num_entries>}->{password, salt, <entry>}) 
+        {
+
+		box split((entries, <entry>)->(password, salt, <entry>));
+
+                net assigner {
+
+                } connect [{<num_entries>} -> 
+			               if <num_entries>1> 
+                                         then 
+				           {<entry = num_entries - 1>};
+				           {<num_entries = num_entries - 1>}
+			               else
+				           {<entry=0>}
+		          ];
+
+	} connect assigner * {<entry>} .. split;
+
+	net load_balancer ({<entry>,<num_nodes>}->{<entry>,<node>})
+        {
+
+        } connect [{<entry>,<num_nodes>} -> {<entry>,<node = entry % num_nodes>}]; 
+
+
+	net cracker ({password, salt, dictionary, <dictionary_size>}->{word}|{<false>})
+        {
+
+		box algorithm ((password, salt, dictionary, <dictionary_size>)->(word)|(<false>)); 
+
+	} connect algorithm;
+	
+
+
+} connect task_divider .. load_balancer .. cracker!@<node>;

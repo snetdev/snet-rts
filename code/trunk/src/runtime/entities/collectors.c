@@ -296,6 +296,9 @@ static void *Collector( void *info) {
               /* got a sort begin on all inbound streams */
               if( counter == SNetUtilListCount(lst)) {
                 counter = 0;
+		if(current_sort_rec != NULL) {
+		  SNetRecDestroy( current_sort_rec);
+		}
                 current_sort_rec = SNetRecCopy( rec);
 		// What's the point in this line?
 		// SNetRecDestroy( current_sort_rec);
