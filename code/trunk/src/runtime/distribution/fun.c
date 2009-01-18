@@ -1,23 +1,76 @@
 #ifdef DISTRIBUTED_SNET
+
+/** <!--********************************************************************-->
+ * $Id$
+ *
+ * @file fun.c
+ *
+ * @brief Implements system to map S-Net startup-functions to IDs.
+ *
+ *        These IDs are used to name functions so that different
+ *        in remote operation between nodes.
+ *
+ *
+ * @author Jukka Julku, VTT Technical Research Centre of Finland
+ *
+ * @date 13.1.2009
+ *
+ *****************************************************************************/
+
 #include <string.h>
 
 #include "fun.h"
 #include "memfun.h"
 
-/* TODO: 
+/** <!--********************************************************************-->
  *
- * - The same system could later be used to save and transfer libraries to other nodes! 
+ * @name Fun
+ *
+ * <!--
+ * int SNetDistFunRegisterLibrary(const char *libname, snet_fun2id_fun_t fun2id, snet_id2fun_fun_t id2fun) : Registers a library
+ * void SNetDistFunCleanup() : Frees all recources hold by the libraries.
+ * int SNetDistFunFun2ID(snet_startup_fun_t fun, snet_fun_id_t *id) : Map function to id.
+ * int SNetDistFunID2Fun(snet_fun_id_t *id, snet_startup_fun_t *fun) : Map id to function.
+ * -->
+ *
+ *****************************************************************************/
+/*@{*/
+
+/** @struct fun_table_entry_t;
+ *
+ *   @brief Type to hold a library data.
+ *
  */
 
 typedef struct fun_table_entry {
-  char libname[SNET_LIBNAME_MAX_LENGTH];
-  snet_fun2id_fun_t fun2id;
-  snet_id2fun_fun_t id2fun;
-  struct fun_table_entry *next;
+  char libname[SNET_LIBNAME_MAX_LENGTH];  /**< Name if the library. */
+  snet_fun2id_fun_t fun2id;               /**< A function to map fun -> id. */
+  snet_id2fun_fun_t id2fun;               /**< A function to map id -> fun. */
+  struct fun_table_entry *next;           /**< Next library. */
 } fun_table_entry_t;
 
 static fun_table_entry_t *fun_table = NULL;
 
+
+/** <!--********************************************************************-->
+ *
+ * @fn  int SNetDistFunRegisterLibrary(const char *libname, snet_fun2id_fun_t fun2id, snet_id2fun_fun_t id2fun) 
+ *
+ *   @brief Registers new library to ID system.
+ *
+ *          After a succesfull call the startup-functions of the library
+ *          can be mapped into IDs. 
+ *
+ *          Name of the library must be at most SNET_LIBNAME_MAX_LENGTH - 1 
+ *          characters.
+ *
+ *   @param libname  Name of the library.
+ *   @param fun2id   Function to map startup-function to id.
+ *   @param id2fun   Function to map id to startup-function.
+ *
+ *   @return         SNET_FUN_SUCCESS in case of success, SNET_FUN_ERROR otherwise
+ *
+ ******************************************************************************/
 
 int SNetDistFunRegisterLibrary(const char *libname, snet_fun2id_fun_t fun2id, snet_id2fun_fun_t id2fun) 
 {
@@ -38,6 +91,15 @@ int SNetDistFunRegisterLibrary(const char *libname, snet_fun2id_fun_t fun2id, sn
   return SNET_FUN_SUCCESS;
 }
 
+
+/** <!--********************************************************************-->
+ *
+ * @fn  void SNetDistFunCleanup() 
+ *
+ *   @brief Frees resources allocated by calls to SNetDistFunRegisterLibrary.
+ *
+ ******************************************************************************/
+
 void SNetDistFunCleanup() 
 {
   fun_table_entry_t *next;
@@ -51,6 +113,21 @@ void SNetDistFunCleanup()
 }
 
 
+/** <!--********************************************************************-->
+ *
+ * @fn  int SNetDistFunFun2ID(snet_startup_fun_t fun, snet_fun_id_t *id) 
+ *
+ *   @brief  Maps functions to IDs.
+ *
+ *
+ *   @note  Only functions that belong to regitered library can be mapped!
+ *
+ *   @param fun  Pointer to function to be mapped.
+ *   @param id   Address into which the id is written.
+ *
+ *   @return     SNET_FUN_SUCCESS in case of success, SNET_FUN_UNKNOWN otherwise
+ *
+ ******************************************************************************/
 int SNetDistFunFun2ID(snet_startup_fun_t fun, snet_fun_id_t *id) 
 {
   fun_table_entry_t *next = fun_table;
@@ -69,6 +146,22 @@ int SNetDistFunFun2ID(snet_startup_fun_t fun, snet_fun_id_t *id)
   
   return SNET_FUN_UNKNOWN;
 }
+
+
+/** <!--********************************************************************-->
+ *
+ * @fn  int SNetDistFunID2Fun(snet_fun_id_t *id, snet_startup_fun_t *fun) 
+ *
+ *   @brief  Maps IDs to functions.
+ *
+ *   @note  Only functions that belong to regitered library can be mapped!
+ *
+ *   @param id   ID of the function.
+ *   @param fun  Address into which the function pointer is written.
+ *
+ *   @return     SNET_FUN_SUCCESS in case of success, SNET_FUN_UNKNOWN otherwise
+ *
+ ******************************************************************************/
 
 int SNetDistFunID2Fun(snet_fun_id_t *id, snet_startup_fun_t *fun) 
 {
@@ -89,4 +182,7 @@ int SNetDistFunID2Fun(snet_fun_id_t *id, snet_startup_fun_t *fun)
   
   return SNET_FUN_UNKNOWN;
 }
+
+/*@}*/
+
 #endif /* DISTRIBUTED_SNET */
