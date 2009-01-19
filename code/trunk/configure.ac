@@ -2,12 +2,12 @@ dnl
 dnl $Id$
 dnl
 
-dnl configure script for building snet compiler 
+dnl configure script (based on SAC scripts) for building snet compiler 
 dnl on different hosts and os
 
 dnl tell configure who we are
 dnl parameters: package name, version, where to send bugreports
-AC_INIT(snetc, svn, c.grelck@herts.ac.uk)
+AC_INIT(snetc, svn, info@snet-home.org)
 
 dnl set source directory and scripting directory
 AC_CONFIG_SRCDIR(.)
@@ -43,7 +43,7 @@ AC_TRY_COMPILE(,
 AC_MSG_RESULT(yes)
 SUNC=yes,
 AC_MSG_RESULT(no)
-suNC=no
+SUNC=no
 )
 
 dnl check whether its compaqs (or dec) cc
@@ -84,17 +84,6 @@ AC_PROG_CPP()
 
 dnl check for ranlib
 AC_PROG_RANLIB()
-if test "$RANLIB"; then
-  AC_MSG_CHECKING([whether ranlibs needs extra argument])
-  case "$target_os" in
-    *darwin*) RANLIB="$RANLIB -c"
-    AC_MSG_RESULT([adding -c flag for OS X])
-    ;;
-    *)
-    AC_MSG_RESULT([no])
-    ;;
-  esac
-fi
 
 dnl check, whether we need -traditional flag
 AC_PROG_GCC_TRADITIONAL
@@ -125,25 +114,63 @@ AC_SUBST(CB, $CB)
 dnl search for bison, byacc or yacc
 AC_PROG_YACC()
 
+
+dnl
+dnl check whether a non yacc works
+dnl
+
+if [ test "$YACC" != "yacc" ]; then
+  AC_MSG_CHECKING([whether $YACC works])
+  mkdir .ac_yacc_test
+  cd .ac_yacc_test
+  cp ../src/compiler/parse/snet.y .
+  if [ $YACC snet.y >/dev/null 2>/dev/null ]; then
+    AC_MSG_RESULT(ok)
+  else
+    AC_MSG_RESULT(failed)
+    AC_CHECK_PROG(YACC, [yacc], [yacc], [!fail])
+    if [ test "$YACC" != "yacc" ]; then
+      AC_MSG_ERROR([cannot find working bison/yacc], 10)
+    else
+      AC_MSG_NOTICE([using yacc instead])
+    fi
+  fi
+  cd ..
+  rm -rf .ac_yacc_test
+fi
 dnl search for flex or lex
 AC_PROG_LEX()
-
 dnl search for xlst engine
 AC_CHECK_PROGS(XSLT, [xsltproc sabcmd], [!fail])
 
-dnl search for m4 macro processor
-AC_CHECK_PROGS(M4, [gm4 m4], [!fail])
+if [ test "$XSLT" = "!fail" ]; then
+  AC_MSG_ERROR( [Cannot find a usable xslt processor.])
+fi
 
-dnl search for pk gtk configuration script 
-AC_CHECK_PROGS(PKGCONF, [pkg-config], [!fail])
-AC_SUBST(GTKLIBS, `pkg-config --libs gtk+-2.0`)
-AC_SUBST(GTKFLAGS, `pkg-config --cflags gtk+-2.0`)
 
 dnl search for malloc.h
 AC_CHECK_HEADERS(malloc.h)
 
 dnl check for mkdtemp
 AC_CHECK_FUNCS(mkdtemp)
+
+dnl search for pthread.h
+AC_CHECK_HEADER(pthread.h,[
+
+dnl if found, enable multi threading
+AC_DEFINE(HAVE_PTHREAD_H, 1, set to 1 if you have the <pthread.h> header file)
+AC_SUBST(DISABLE_MT, no)
+
+],[
+
+dnl otherwise disable mt
+AC_DEFINE(DISABLE_MT, 1, set to 1 to disable multi threading)
+AC_SUBST(DISABLE_MT, yes)
+
+])
+
+dnl check whether to link math library
+AC_SEARCH_LIBS(sqrt, m)
 
 dnl check whether to link dlopen library
 AC_SEARCH_LIBS(dlopen, dl)
@@ -185,6 +212,14 @@ else
   AC_MSG_RESULT(no)
 fi
 
+
+dnl
+dnl when not using bison, we need to reference YYLABELS
+dnl
+
+if test "$YACC" = "obsolete_yacc"; then
+  AC_DEFINE(MUST_REFERENCE_YYLABELS, 1, set to 1 if gcc complains about unused labels)
+fi
 dnl check for pthread flag on gcc
 if test "$GCC" = yes; then
   AC_MSG_CHECKING([existence of pthread flag])
@@ -199,22 +234,27 @@ if test "$GCC" = yes; then
   rm -f .snet_configure_temp.c .snet_configure_temp
 fi
 
-dnl check whether we need to link libm
-AC_CHECK_LIB(,sqrt,
-    AC_SUBST( LIB_M, ""),
-    AC_SUBST( LIB_M, "-lm"))
 
 dnl check for socket libs
-AC_CHECK_LIB(,bind,
-    AC_SUBST( LIB_SOCKET, ""),
-    AC_CHECK_LIB(socket,bind,
-      AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),
-      AC_SUBST( LIB_SOCKET, "")))
+dnl AC_CHECK_LIB(,bind,
+dnl     AC_SUBST( LIB_SOCKET, ""),
+dnl     AC_CHECK_LIB(socket,bind,
+dnl       AC_SUBST( LIB_SOCKET, ""),
+dnl       AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv")))
 
 dnl check if we need -lrt
-AC_CHECK_LIB(,sem_init,
-    AC_SUBST( LIB_RT, ""),
-    AC_SUBST( LIB_RT, "-lrt"))
+dnl AC_CHECK_LIB(,sem_open,
+dnl     AC_SUBST( LIB_RT, ""),
+dnl     AC_SUBST( LIB_RT, "-lrt"))
+AC_SEARCH_LIBS(socket,,
+   AC_SUBST( LIB_SOCKET, ""),
+   AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),)
+AC_SEARCH_LIBS(sem_open,,
+   AC_SUBST( LIB_RT, ""),
+   AC_CHECK_LIB( rt, sem_open,
+      AC_SUBST( LIB_RT, "-lrt"),
+      AC_MSG_ERROR( "Cannot find library for semaphores."),))
+
 
 
 dnl test for compiler flags
@@ -227,9 +267,10 @@ if [ test "$GCC" = yes ]; then
   AC_SUBST(OPT_O3, [-O3])
   AC_SUBST(OPT_g, [-g])
   AC_SUBST(RCLDFLAGS, [""])
-  AC_SUBST(RCCCFLAGS, ["-Wall -Wno-unused -fno-builtin -fPIC -DPIC"])
+  AC_SUBST(RCCCFLAGS, ["-Wall -Wno-unused -fno-builtin -std=c99"])
   AC_SUBST(MKCCFLAGS, ["-Wall -g -std=c99"])
   AC_SUBST(PDCCFLAGS, ["-Wall -g -O3 -std=c99"])
+  AC_SUBST(GENPIC, ["-fPIC -DPIC"])
   AC_SUBST(DEPSFLAG, ["-M"])
   AC_SUBST(CPPFILE, ["gcc -E -C -x c"])
   AC_SUBST(CCMTLINK, [$GCC_PTHREADS])
@@ -242,8 +283,9 @@ elif [ test "$SUNC" = yes ]; then
   AC_SUBST(OPT_g, [-g])
   AC_SUBST(RCLDFLAGS, [""])
   AC_SUBST(RCCCFLAGS, ["-dalign -fsimple -xsafe=mem"])
-  AC_SUBST(MKCCFLAGS, ["-erroff=E_CAST_DOESNT_YIELD_LVALUE -g"])
-  AC_SUBST(PDCCFLAGS, ["-erroff=E_CAST_DOESNT_YIELD_LVALUE -g -xO4"])
+  AC_SUBST(MKCCFLAGS, ["-erroff=E_CAST_DOESNT_YIELD_LVALUE -g -xc99=all"])
+  AC_SUBST(PDCCFLAGS, ["-erroff=E_CAST_DOESNT_YIELD_LVALUE -g -xO4 -xc99=all -KPIC"])
+  AC_SUBST(GENPIC, ["-KPIC"])
   AC_SUBST(DEPSFLAG, ["-xM"])
   AC_SUBST(CPPFILE, ["cc -E -C -x c"])
   AC_SUBST(CCMTLINK, ["-lpthread"])
@@ -258,6 +300,7 @@ elif [ test "$DECC" = yes ]; then
   AC_SUBST(RCCCFLAGS, [""])
   AC_SUBST(MKCCFLAGS, ["-g"])
   AC_SUBST(PDCCFLAGS, ["-g3"])
+  AC_SUBST(GENPIC, [""])
   AC_SUBST(DEPSFLAG, ["-M"])
   AC_SUBST(CPPFILE, ["cc -E -C -x c"])
   AC_SUBST(CCMTLINK, ["-pthread"])
@@ -270,10 +313,11 @@ elif [ test "$MACC" = yes ]; then
   AC_SUBST(OPT_g, [-g])
   AC_SUBST(RCLDFLAGS, [""])
   AC_SUBST(RCCCFLAGS, ["-Wall -no-cpp-precomp -Wno-unused -fno-builtin"])
-  AC_SUBST(MKCCFLAGS, ["-g -Wall -std=c99"])
-  AC_SUBST(PDCCFLAGS, ["-g -std=c99"])
+  AC_SUBST(MKCCFLAGS, ["-Wall -std=c99 -g"])
+  AC_SUBST(PDCCFLAGS, ["-std=c99"])
+  AC_SUBST(GENPIC, [""])
   AC_SUBST(DEPSFLAG, ["-M"])
-  AC_SUBST(CPPFILE, ["cpp3 -C -traditional-cpp"])
+  AC_SUBST(CPPFILE, ["gcc -E -C -x c"])
   AC_SUBST(CCMTLINK, [""])
   AC_MSG_RESULT([Apple cc settings])
 else
@@ -286,6 +330,7 @@ else
   AC_SUBST(RCCCFLAGS, [""])
   AC_SUBST(MKCCFLAGS, [""])
   AC_SUBST(PDCCFLAGS, [""])
+  AC_SUBST(GENPIC, [""])
   AC_SUBST(DEPSFLAG, ["-M"])
   AC_SUBST(CPPFILE, ["cpp -C"])
   AC_SUBST(CCMTLINK, [""])
@@ -296,34 +341,53 @@ dnl generate specific flags for known os
 AC_MSG_CHECKING([sac2crc system flags])
 OSFLAGS=""
 case "$target_os" in
+  solaris*)     
+    OSFLAGS=["-D__EXTENSIONS__ -DMUST_INIT_YY -DPIC"]
+    LD_DYNAMIC=["-G -dy"]
+    LD_PATH=["-R"]
+    LD_FLAGS="-Wl,-z,nodefs,-z,lazyload"
+    AC_MSG_RESULT([solaris settings])
+    ;;
   *linux*)      
     OSFLAGS=["-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint"]
-    LD_DYNAMIC=["ld -G -dy -shared -allow-shlib-undefined"]
+    LD_DYNAMIC=["-dy -shared -allow-shlib-undefined"]
     LD_PATH=["-Wl,-rpath,"]
+    LD_FLAGS="-Wl,-allow-shlib-undefined"
     AC_MSG_RESULT([linux settings])
-    ;;
-  *solaris*)     
-    OSFLAGS=["-D__EXTENSIONS__ -DMUST_INIT_YY -fPIC -DPIC"]
-    LD_DYNAMIC=["ld -dy -G"]
-    LD_PATH=["-R"]
-    AC_MSG_RESULT([solaris settings])
     ;;
   *osf*)	
     OSFLAGS=["-D_OSF_SOURCE"]
     LD_DYNAMIC=[""]
     LD_PATH=[""]
+    LD_FLAGS=""
     AC_MSG_RESULT([OSF settings])
     ;;
   *darwin*)      
+    dnl darwin needs some extra flags
+    RANLIB="$RANLIB -c"
     OSFLAGS=["-no-cpp-precomp -Wno-long-double"]
-    LD_DYNAMIC=["ld -undefined suppress -flat_namespace -bundle /usr/lib/bundle1.o"]
-    LD_PATH=["-install_name"]
-    AC_MSG_RESULT([OS X settings])
+    case "$target_os" in
+      *darwin9\.*)
+        LD_DYNAMIC=["-undefined suppress -flat_namespace -dynamiclib -install_name '@rpath/%libname%' "]
+        LD_PATH=["-Wl,-rpath,"]
+        LD_FLAGS=""
+        AC_MSG_RESULT([darwin 9.x settings])
+        ;;
+      [*darwin[6-8]\.*)]
+        LD_DYNAMIC=["-undefined suppress -flat_namespace -bundle"]
+        LD_PATH=["-L"]
+        LD_FLAGS=""
+        AC_MSG_RESULT([darwin 7.x/8.x settings])
+      ;;
+      *)
+        AC_MSG_RESULT([unknown darwin system])
+    esac
     ;;
   *bsd*)
     OSFLAGS=["-fpic"]
     LD_DYNAMIC=["ld -dy -shared -symbolic"]
     LD_PATH=["-Wl,-rpath,"]
+    LD_FLAGS=""
     AC_MSG_RESULT([BSD settings])
     ;;
   *)
@@ -333,6 +397,8 @@ esac
 AC_SUBST(OSFLAGS)
 AC_SUBST(LD_DYNAMIC)
 AC_SUBST(LD_PATH)
+AC_SUBST(LD_FLAGS)
+
 
 dnl 
 dnl static sac2c settings for config.h
