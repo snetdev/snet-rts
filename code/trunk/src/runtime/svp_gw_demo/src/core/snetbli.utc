@@ -10,7 +10,7 @@
                          
       -------------------------------------------------------------------
 
-    File Name      : snetbli.utc
+    File Name      : bli.utc
 
     File Type      : Header File
 
@@ -32,7 +32,52 @@
 /*---*/
 
 #include "common.int.utc.h"
-#include "memmng.int.utc.h"
+#include "domain.int.utc.h"
+#include "record.int.utc.h"
+#include "list.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+typedef struct {
+    snet_bli_id_t        id;
+
+    snet_bli_freefptr_t  freefun;
+    snet_bli_copyfptr_t  copyfun;
+    snet_bli_serfptr_t   serfun;
+    snet_bli_deserfptr_t deserfun;
+
+} snet_bli_t;
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static data */
+
+/**
+ * List of registered interfaces
+ */
+static snet_list_t *BLI_REGISTRY = NULL;
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static functions */
+
+static unsigned int find_bli_with_id(snet_bli_id_t id)
+{
+    for (unsigned int it = SNetListBegin(BLI_REGISTRY); 
+         it != 0; it = SNetListItemGetNext(BLI_REGISTRY, it)) {
+
+        snet_bli_t *bli = (snet_bli_t *) 
+            SNetListItemGetValueByRef(BLI_REGISTRY, it);
+
+        if (bli->id == id) {
+            return it;
+        }
+    }
+
+    return 0;
+}
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -41,18 +86,25 @@
 
 void SNetBLISubSystemInit()
 {
-    /**
-     * Not implemented yet
-     */
+    if (BLI_REGISTRY != NULL) {
+        return;
+    }
+
+    BLI_REGISTRY = SNetListCreate(
+        sizeof(snet_bli_t),
+        4,
+        SNetDomainGetSystem());
 }
 
 /*----------------------------------------------------------------------------*/
 
 void SNetBLISubSystemDestroy()
 {
-    /**
-     * Not implemented yet
-     */
+    if (BLI_REGISTRY == NULL) {
+        return;
+    }
+
+    SNetListDestroy(BLI_REGISTRY);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -61,98 +113,129 @@ void SNetBLISubSystemDestroy()
 /* Interface registration function */
 
 bool SNetGlobalRegisterInterface(
-    int id,
-    void  (*freefun) (void *),
-    void* (*copyfun) (void *),
-    int   (*serfun)  (void *, char **),
-    void* (*deserfun)(char *, int))
+    snet_bli_id_t id,
+    snet_bli_freefptr_t  freefun,
+    snet_bli_copyfptr_t  copyfun,
+    snet_bli_serfptr_t   serfun,
+    snet_bli_deserfptr_t deserfun)
 {
-    /**
-     * Not implemented yet
-     */
+    assert(BLI_REGISTRY != NULL);
 
-     return false;
+    if (find_bli_with_id(id) > 0) {
+        return false;
+    }
+
+    snet_bli_t new_bli = {
+        id,
+        freefun,
+        copyfun,
+        serfun,
+        deserfun
+    };
+
+    return (SNetListPushBack(BLI_REGISTRY, &new_bli) > 0);
 }
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /* Functions to retrieve box language interface functions by interface id */
 
-void* SNetGetCopyFun(int id)
+snet_bli_freefptr_t
+SNetGetFreeFun(snet_bli_id_t id)
 {
-    /**
-     * Not implemented yet
-     */
+    assert(BLI_REGISTRY != NULL);
 
-     return NULL;
+    unsigned int bli_regid = find_bli_with_id(id);
+
+    if (bli_regid == 0) {
+        return NULL;
+    }
+
+    snet_bli_t *bli = (snet_bli_t *)
+        SNetListItemGetValueByRef(BLI_REGISTRY, bli_regid);
+
+    return bli->freefun;
 }
 
-void* SNetGetFreeFun(int id)
+snet_bli_copyfptr_t
+SNetGetCopyFun(snet_bli_id_t id)
 {
-    /**
-     * Not implemented yet
-     */
+    assert(BLI_REGISTRY != NULL);
 
-     return NULL;
+    unsigned int bli_regid = find_bli_with_id(id);
+
+    if (bli_regid == 0) {
+        return NULL;
+    }
+
+    snet_bli_t *bli = (snet_bli_t *)
+        SNetListItemGetValueByRef(BLI_REGISTRY, bli_regid);
+
+    return bli->copyfun;
 }
 
-void* SNetGetSerializationFun(int id)
+snet_bli_serfptr_t
+SNetGetSerializationFun(snet_bli_id_t id)
 {
-    /**
-     * Not implemented yet
-     */
+    assert(BLI_REGISTRY != NULL);
 
-     return NULL;
+    unsigned int bli_regid = find_bli_with_id(id);
+
+    if (bli_regid == 0) {
+        return NULL;
+    }
+
+    snet_bli_t *bli = (snet_bli_t *)
+        SNetListItemGetValueByRef(BLI_REGISTRY, bli_regid);
+
+    return bli->serfun;
 }
 
-void* SNetGetDeserializationFun(int id)
+snet_bli_deserfptr_t
+SNetGetDeserializationFun(snet_bli_id_t id)
 {
-    /**
-     * Not implemented yet
-     */
+    assert(BLI_REGISTRY != NULL);
 
-     return NULL;
+    unsigned int bli_regid = find_bli_with_id(id);
+
+    if (bli_regid == 0) {
+        return NULL;
+    }
+
+    snet_bli_t *bli = (snet_bli_t *)
+        SNetListItemGetValueByRef(BLI_REGISTRY, bli_regid);
+
+    return bli->deserfun;
 }
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /* Functions to retrieve box language interface functions from records */
 
-void* SNetGetCopyFunFromRec(snet_record_t *rec)
+snet_bli_freefptr_t 
+SNetGetFreeFunFromRec(snet_record_t *rec)
 {
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
+    return SNetGetFreeFun(SNetRecGetInterfaceId(rec));
 }
 
-void* SNetGetFreeFunFromRec(snet_record_t *rec)
+snet_bli_copyfptr_t
+SNetGetCopyFunFromRec(snet_record_t *rec)
 {
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
+    return SNetGetCopyFun(SNetRecGetInterfaceId(rec));
 }
 
-void* SNetGetSerializationFunFromRec(snet_record_t *rec)
+snet_bli_serfptr_t
+SNetGetSerializationFunFromRec(snet_record_t *rec)
 {
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
+    return SNetGetSerializationFun(SNetRecGetInterfaceId(rec));
 }
 
-void* SNetGetDeserializationFunFromRec(snet_record_t *rec)
+snet_bli_deserfptr_t 
+SNetGetDeserializationFunFromRec(snet_record_t *rec)
 {
-    /**
-     * Not implemented yet
-     */
-
-     return NULL;
+    return SNetGetDeserializationFun(SNetRecGetInterfaceId(rec));
 }
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/
+
