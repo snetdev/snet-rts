@@ -66,7 +66,7 @@
 #ifdef NDEBUG
 #define SVPSNETGWRT_DEBUG 0
 #else
-#define SVPSNETGWRT_DEBUG 5
+#define SVPSNETGWRT_DEBUG 1
 #endif
 #endif
 

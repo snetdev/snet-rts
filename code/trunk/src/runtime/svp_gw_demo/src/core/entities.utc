@@ -44,6 +44,7 @@ static snet_gnode_t* create_parallel_gnode(
     bool is_det, snet_typeencoding_list_t *types, va_list vargs)
 {
     assert(in != NULL);
+    assert(types != NULL);
 
     in = (snet_gnode_t *) SNetUnmaskPointer(in);
 
@@ -51,10 +52,8 @@ static snet_gnode_t* create_parallel_gnode(
         GRAPH_NODE_TYPE_COMB_PARALLEL,
         SNetBaseTypeGetDomain(SNetGNodeToBase(in)));
 
-    unsigned int branches_cnt = 2;
-
-    // unsigned int branches_cnt = 
-    //     (unsigned int) SNetTencGetNumTypes(types);
+    unsigned int branches_cnt = 
+         (unsigned int) SNetListGetSize(types);
 
     SNetGNodeSetupParallel(out, is_det, branches_cnt); 
 
@@ -69,12 +68,17 @@ static snet_gnode_t* create_parallel_gnode(
             (snet_gnode_t *) SNetUnmaskPointer(
                 (*branch_fun)((snet_gnode_t *) SNetMaskPointer(branch_root)));
 
-        SNetGNodeParallelSetupBranch(out, i, branch_root);
+        snet_typeencoding_t *branch_type = NULL;
+        
+        SNetListItemGetValue(types, i + 1, &branch_type);
+        SNetGNodeParallelSetupBranch(out, i, branch_root, branch_type);
+
         SNetGNodeConnect(branch_out, out, true);
     }
 
     SNetGNodeConnect(in, out, false);
-
+    SNetListDestroy(types);
+    
     return (snet_gnode_t *) SNetMaskPointer(out);
 }
 
@@ -88,7 +92,17 @@ static snet_gnode_t* create_star_gnode(
     snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
 {
     assert(in != NULL);
-    // assert(op_b == NULL);
+
+#if SVPSNETGWRT_DEBUG > 0
+    if (op_b != NULL) {
+        SNetReportWarning(
+            SNET_WRN_IGNORED,
+            "incarnation generation function in star combinator",
+            "not required by this implementation");
+
+        SNetOnWarning();
+    }
+#endif
 
     in = (snet_gnode_t *) SNetUnmaskPointer(in);
 
@@ -120,6 +134,23 @@ static snet_gnode_t* create_split_gnode(
 {
     assert(in != NULL);
 
+    // The feature of broadcasting a record to multiple "incarnations" 
+    // of a network in an index split has been abandoned. However the
+    // compiler still emits code that provides both lower and upper
+    // bound tags. Here we use only the lower bound one as the single
+    // tag and ignore the upper bound one. We give a warning until
+    // the compiler is fixed!
+#if SVPSNETGWRT_DEBUG > 0
+    if (utag != ltag) {
+        SNetReportWarning(
+            SNET_WRN_IGNORED,
+            "upper bound tag in index split combinator",
+            "feature removed");
+
+        SNetOnWarning();
+    }
+#endif
+
     in = (snet_gnode_t *) SNetUnmaskPointer(in);
 
     snet_gnode_t *out = SNetGNodeCreate(
@@ -134,7 +165,7 @@ static snet_gnode_t* create_split_gnode(
         (snet_gnode_t *) SNetUnmaskPointer(
             (*op)((snet_gnode_t *) SNetMaskPointer(split_root)));
 
-    SNetGNodeSetupSplit(out, is_det, split_root);
+    SNetGNodeSetupSplit(out, is_det, split_root, ltag);
 
     SNetGNodeConnect(split_out, out, true);
     SNetGNodeConnect(in, out, false);
@@ -298,29 +329,6 @@ snet_gnode_t* SNetSplitDet(
 snet_gnode_t* SNetFilter(
     snet_gnode_t *in,
     snet_typeencoding_t *in_type, snet_expr_list_t *guards, ...)
-{
-    /**
-     * Not implemented yet.
-     */
-    return NULL;
-}
-
-/*----------------------------------------------------------------------------*/
-
-snet_gnode_t* SNetTranslate(
-    snet_gnode_t *in,
-    snet_typeencoding_t *in_type, snet_expr_list_t *guards, ...)
-{
-    /**
-     * Not implemented yet.
-     */
-    return NULL;
-}
-
-/*----------------------------------------------------------------------------*/
-
-snet_gnode_t* SNetNameShift(
-    snet_gnode_t *in, int offset, snet_variantencoding_t *untouched)
 {
     /**
      * Not implemented yet.

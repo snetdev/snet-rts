@@ -3,7 +3,7 @@
 
 ../../src/core/record.utc
 ../../src/core/domain.utc
-../../src/core/snetbli.utc
+../../src/core/filteriset.utc
 ../../src/core/typeencode.utc
 ../../src/core/basetype.utc
 ../../src/core/gw.utc
@@ -12,8 +12,10 @@
 ../../src/core/memmng.utc
 ../../src/core/list.utc
 ../../src/core/buffer.utc
+../../src/core/errwrn.utc
 ../../src/core/expression.utc
 ../../src/core/graph.utc
+../../src/core/bli.utc
 ../../src/core/graphindex.utc
 ../../src/core/snet.utc
 ../../src/core/entities.utc

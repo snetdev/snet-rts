@@ -33,6 +33,7 @@
 #include "domain.utc.h"
 #include "typeencode.utc.h"
 #include "expression.utc.h"
+#include "filteriset.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -131,16 +132,6 @@ extern snet_gnode_t*
 SNetFilter(
     snet_gnode_t *in,
     snet_typeencoding_t *in_type, snet_expr_list_t *guards, ...);
-
-extern snet_gnode_t*
-SNetTranslate(
-    snet_gnode_t *in,
-    snet_typeencoding_t *in_type, snet_expr_list_t *guards, ...);
-
-extern snet_gnode_t*
-SNetNameShift(
-    snet_gnode_t *in, 
-    int offset, snet_variantencoding_t *untouched);
 
 /*----------------------------------------------------------------------------*/
 

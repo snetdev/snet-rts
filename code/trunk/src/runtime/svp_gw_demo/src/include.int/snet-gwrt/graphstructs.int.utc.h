@@ -29,7 +29,9 @@
 #define __SVPSNETGWRT_GRAPHSTRUCTS_INT_H
 
 #include "graph.int.utc.h"
+#include "domain.int.utc.h"
 #include "conslist.int.utc.h"
+#include "list.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -45,19 +47,38 @@ typedef struct {
 typedef struct {
     snet_ginx_t *inx;
 
-    //snet_list_t *mins;
-    //snet_list_t *rec_buffers;
+    snet_list_t *min_inxs;
+    snet_list_t *rec_buffers;
 
 } snet_synccell_state_t;
+
+/*---*/
+
+typedef struct {
+    unsigned int           snetd_id;
+    snet_domain_type_t     snetd_type;
+    snet_place_contract_t *cntr;
+
+} snet_box_execplc_t;
+
+/*---*/
+
+typedef struct {
+    unsigned int         taken_cnt;
+    snet_gnode_t        *groot;        
+    snet_typeencoding_t *type;
+
+} snet_par_comb_branch_t;
 
 /*----------------------------------------------------------------------------*/
 /* Box nodes */
 
 typedef struct {
-    snet_box_fptr_t  func;
-    snet_box_sign_t *sign;
+    snet_box_fptr_t     func;
+    snet_box_sign_t    *sign;
 
-    //snet_list_t   *plc_cache;
+    snet_list_t        *exec_plc_cache;
+    snet_box_execplc_t  exec_plc_default;
 
 } snet_box_gnode_t;
 
@@ -68,7 +89,7 @@ typedef struct {
     snet_typeencoding_t *patterns;
     snet_expr_list_t    *guards;
 
-    //snet_list_t       *states;
+    snet_list_t         *states;
 
 } snet_synccell_gnode_t;
 
@@ -82,12 +103,9 @@ typedef struct {
 /* Combinator nodes */
 
 typedef struct {
-    bool           is_det;   
-
-    unsigned int   last_taken;
-    unsigned int   branches_cnt;
-
-    snet_gnode_t **branches;
+    bool                    is_det;   
+    unsigned int            branches_cnt;
+    snet_par_comb_branch_t *branches;
 
 } snet_parallel_gnode_t;
 
@@ -96,14 +114,15 @@ typedef struct {
 typedef struct {
     snet_typeencoding_t *type;
     snet_expr_list_t    *guards;
-    snet_gnode_t        *root;
+    snet_gnode_t        *groot;
 
 } snet_star_gnode_t;
 
 /*---*/
 
 typedef struct {
-    snet_gnode_t *root;
+    int           tag;
+    snet_gnode_t *groot;
 
 } snet_split_gnode_t;
 
@@ -128,7 +147,11 @@ typedef struct {
 /*---*/
 
 typedef bool (*snet_gnode_hnd_fptr_t)(
-    snet_gnode_t *node, snet_conslst_node_t *cons_node);
+    snet_gnode_t *gnode, snet_handle_t *hnd);
+
+typedef snet_gnode_t* 
+    (*snet_gnode_walk_hnd_fptr_t)(snet_gnode_t *gnode, snet_handle_t *hnd);
+
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -152,8 +175,9 @@ typedef struct normal_graph_node {
 
     /*---*/
 
-    snet_gnode_hnd_fptr_t  hnd_func;
-    snet_gnode_hnd_fptr_t  hnd_func_merge;
+    snet_gnode_hnd_fptr_t      hnd_func;
+    snet_gnode_walk_hnd_fptr_t walk_hnd_func;
+    snet_gnode_walk_hnd_fptr_t walk_hnd_func_merge;
 
     /*---*/
 

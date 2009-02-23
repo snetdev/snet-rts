@@ -10,7 +10,7 @@
                          
       -------------------------------------------------------------------
 
-    File Name      : handle.utc.h
+    File Name      : filteriset.utc.h
 
     File Type      : Header File
 
@@ -25,34 +25,23 @@
 */
 /*----------------------------------------------------------------------------*/
 
-#ifndef __SVPSNETGWRT_HANDLE_H
-#define __SVPSNETGWRT_HANDLE_H
+#ifndef __SVPSNETGWRT_FILTERISET_H
+#define __SVPSNETGWRT_FILTERISET_H
 
 #include "common.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-/**
- * Generic S-Net handle.
- */
-typedef struct handle snet_handle_t;
+typedef enum {
+	FILTER_OP_TAG,
+	FILTER_OP_BTAG,
+	FILTER_OP_FIELD,
+	FILTER_OP_CREATE_REC
 
-/**
- * Datatype for a record (forward declaration
- * to avoid including the file "record.utc.h").
- */
-typedef struct record snet_record_t;
+} snet_filter_opcode_t;
 
-/*----------------------------------------------------------------------------*/
-/**
- * Returns the input record with which
- * a box was called.
- */
-
-extern snet_record_t* SNetHndGetRecord(snet_handle_t *hnd);
-
-#endif // __SVPSNETGWRT_HANDLE_H
+#endif // __SVPSNETGWRT_FILTERISET_H
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

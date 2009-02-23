@@ -30,22 +30,81 @@
 /*---*/
 
 #include <stdlib.h>
+#include <string.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC
+/**
+ * Mutex to protect the variables that
+ * keep the statistics about memory usage.
+ *
+ * To make it a bit more efficient and since this
+ * feature of memory usage monitoring is only for
+ * debugging the runtime the mutex is implemented
+ * in platform specific way and currently there is
+ * support only for uTC-PTL platform.
+ */
+#ifdef SVPSNETGWRT_PLATFORM_PTL
+static pthread_mutex_t MONITOR_MUTEX;
+#else
+#error \
+Memory usage monitoring cannot \
+be enabled for the selected platform.
+#endif
+
+/**
+ * Counters used for in memory
+ * usage monitoring.
+ */
+static unsigned long MALLOC_SZ    = 0;
+static unsigned long MALLOC_COUNT = 0;
+
+#endif
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+#ifndef SVPSNETGWRT_NO_PONTER_MASKING
 static void* get_ptr_mask()
 {
     return (void *)(&get_ptr_mask);
 }
+#endif
 
 /*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetMemMngSubSystemInit()
+{
+#ifdef SVPSNETGWRT_MONITOR_MALLOC
+#ifdef SVPSNETGWRT_PLATFORM_PTL
+    pthread_mutex_init(&MONITOR_MUTEX, NULL);
+#endif
+#endif
+}
+
+void SNetMemMngSubSystemDestroy()
+{
+#ifdef SVPSNETGWRT_MONITOR_MALLOC
+#ifdef SVPSNETGWRT_PLATFORM_PTL
+    pthread_mutex_destroy(&MONITOR_MUTEX);
+#endif
+#endif
+}
+
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 void* SNetMaskPointer(const void *ptr)
 {
+#ifdef SVPSNETGWRT_NO_PONTER_MASKING
+    return (void *) ptr;
+
+#else
     void *mask = get_ptr_mask();
 
     assert(ptr != NULL);
@@ -53,13 +112,41 @@ void* SNetMaskPointer(const void *ptr)
 
     assert(sizeof(unsigned long) >= sizeof(void *));
 
-    // return ptr;
     return (void *)((unsigned long)(ptr) ^ (unsigned long)(mask));
+#endif
 }
 
 void* SNetUnmaskPointer(const void *ptr)
 {
+#ifdef SVPSNETGWRT_NO_PONTER_MASKING
+    return (void *) ptr;
+#else
     return SNetMaskPointer(ptr);
+#endif
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC
+unsigned long SNetGetMemAllocSize()
+{
+    return MALLOC_SZ;    
+}
+
+unsigned long SNetGetMemAllocCount()
+{
+    return MALLOC_COUNT;
+}
+#endif
+
+unsigned long SNetGetMemBlockSize(const void *p)
+{
+    if (p == NULL) {
+        return 0;
+    }
+    
+    return 0;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -67,20 +154,100 @@ void* SNetUnmaskPointer(const void *ptr)
 
 void* SNetMemAlloc(unsigned int sz)
 {
-    return malloc((size_t) sz);
+    void *p = SNetTryMemAlloc(sz);
+
+    if (p == NULL) {
+        SNetReportError(SNET_ERR_MEMORY, "allocation failed");
+        SNetOnError();
+    }
+
+    return p;
 }
+
+/*----------------------------------------------------------------------------*/
+
+void* SNetTryMemAlloc(unsigned int sz)
+{
+    void *p = malloc((size_t)  sz);
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC
+    if (p != NULL) {
+#ifdef SVPSNETGWRT_PLATFORM_PTL
+        pthread_mutex_lock(&MONITOR_MUTEX);
+#endif
+        MALLOC_SZ += SNetGetMemBlockSize(p);
+        MALLOC_COUNT++;
+#ifdef SVPSNETGWRT_PLATFORM_PTL
+        pthread_mutex_unlock(&MONITOR_MUTEX);
+#endif
+    }
+#endif
+
+    return p;
+}
+
+/*----------------------------------------------------------------------------*/
 
 void* SNetMemRealloc(void *p, unsigned int sz)
 {
-    assert(p != NULL);
-    return realloc(p, (size_t) sz);
+    p = SNetTryMemRealloc(p, sz);
+
+    if (p == NULL) {
+        SNetReportError(SNET_ERR_MEMORY, "reallocation failed");
+        SNetOnError();
+    }
+
+    return p;
 }
 
+/*----------------------------------------------------------------------------*/
+
+void* SNetTryMemRealloc(void *p, unsigned int sz)
+{
+    assert(p != NULL);
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC
+    unsigned long oldSz = SNetGetMemBlockSize(p);
+#endif
+
+    p = realloc(p, (size_t) sz);
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC
+    if (p != NULL) {
+#ifdef SVPSNETGWRT_PLATFORM_PTL
+        pthread_mutex_lock(&MONITOR_MUTEX);
+#endif
+        MALLOC_SZ -= oldSz;
+        MALLOC_SZ += SNetGetMemBlockSize(p);
+#ifdef SVPSNETGWRT_PLATFORM_PTL
+        pthread_mutex_unlock(&MONITOR_MUTEX);
+#endif
+    }
+#endif
+
+    return p;
+}
+
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 void SNetMemFree(void *p)
 {
     assert(p != NULL);
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC
+    assert(MALLOC_COUNT > 0);
+
+#ifdef SVPSNETGWRT_PLATFORM_PTL
+    pthread_mutex_lock(&MONITOR_MUTEX);
+#endif
+    MALLOC_SZ -= SNetGetMemBlockSize(p);
+    MALLOC_COUNT--;
+#ifdef SVPSNETGWRT_PLATFORM_PTL
+    pthread_mutex_unlock(&MONITOR_MUTEX);
+#endif
+#endif
+    
     free(p);
 }
 
@@ -93,7 +260,8 @@ void SNetMemSet(void *p, int value, unsigned int sz)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-bool SNetRemoteMemAlloc(place p, unsigned int sz, snet_remote_mem_block_t *blk)
+bool SNetRemoteMemAlloc(
+    place p, unsigned int sz, snet_remote_mem_block_t *blk)
 {
     assert(blk != NULL);
 

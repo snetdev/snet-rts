@@ -31,6 +31,7 @@
 #include "snet-gwrt/snet.utc.h"
 #include "snet-gwrt/list.utc.h"
 #include "snet-gwrt/buffer.utc.h"
+#include "snet-gwrt/record.utc.h"
 #include "snet-gwrt/entities.utc.h"
 
 #endif // __SVPSNETGWRT_SNET_GWRT_MASTER_HEADER

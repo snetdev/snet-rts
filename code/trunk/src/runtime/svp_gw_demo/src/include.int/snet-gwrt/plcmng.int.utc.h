@@ -65,12 +65,20 @@ typedef struct place_contract {
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+extern void SNetPlcMngSubSystemInit();
+extern void SNetPlcMngSubSystemDestroy();
+
+/*----------------------------------------------------------------------------*/
+
 extern place SNetGetMyPlace();
 
 /*----------------------------------------------------------------------------*/
 
 extern snet_place_contract_t*
 SNetPlaceAlloc(const snet_place_specs_t *specs);
+
+extern snet_place_contract_t*
+SNetTryPlaceAlloc(const snet_place_specs_t *specs);
 
 /*---*/
 

@@ -73,7 +73,7 @@ SNetGraphCreate(snet_domain_t *snetd);
 
 /*---*/
 
-extern void SNetGraphDestroy(snet_gnode_t *root);
+extern void SNetGraphDestroy(snet_gnode_t *groot);
 
 #endif // __SVPSNETGWRT_GRAPH_H
 

@@ -29,14 +29,14 @@ static void print_ginx(const snet_ginx_t *ginx)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void ginx_test(const snet_domain_t *snetd)
+void ginx_test()
 {
     snet_ginx_item_t ginx_init[] = { 100000, 20, 30, 40, 50 };
 
-    snet_ginx_t *ginx0 = SNetGInxCreateFromStr(snetd, "0.0.0.0");
-    snet_ginx_t *ginx1 = SNetGInxCreateFromStr(snetd, "1.-2.3.-4");
-    snet_ginx_t *ginx2 = SNetGInxCreateFromArray(snetd, ginx_init, 5);
-    snet_ginx_t *ginx3 = SNetGInxCreateFromStr(snetd, NULL);
+    snet_ginx_t *ginx0 = SNetGInxCreateFromStr("0.0.0.0");
+    snet_ginx_t *ginx1 = SNetGInxCreateFromStr("1.-2.3.-4");
+    snet_ginx_t *ginx2 = SNetGInxCreateFromArray(ginx_init, 5);
+    snet_ginx_t *ginx3 = SNetGInxCreateFromStr(NULL);
 
     printf("%u: ", SNetGInxGetLen(ginx0)); print_ginx(ginx0); printf("\n");
     printf("%u: ", SNetGInxGetLen(ginx1)); print_ginx(ginx1); printf("\n");
@@ -80,18 +80,18 @@ void ginx_test(const snet_domain_t *snetd)
 
     printf("\n/*---*/\n\n");
 
-    SNetGInxConcat(ginx0, ginx3);
+    SNetGInxConcat(ginx0, ginx3, 0);
     printf("%u: ", SNetGInxGetLen(ginx0)); print_ginx(ginx0); printf("\n\n");
 
-    SNetGInxConcat(ginx0, ginx0);
+    SNetGInxConcat(ginx0, ginx0, 0);
     printf("%u: ", SNetGInxGetLen(ginx0)); print_ginx(ginx0); printf("\n\n");
 
-    SNetGInxConcat(ginx0, ginx0);
+    SNetGInxConcat(ginx0, ginx0, 0);
     printf("%u: ", SNetGInxGetLen(ginx0)); print_ginx(ginx0); printf("\n\n");
 
     
     SNetGInxSetToInfinite(ginx3);
-    SNetGInxConcat(ginx0, ginx3);
+    SNetGInxConcat(ginx0, ginx3, 0);
     printf("%u: ", SNetGInxGetLen(ginx0)); print_ginx(ginx0); printf("\n\n");
 
     SNetGInxConcatStr(ginx3, "3.3.3.3.3");
@@ -171,17 +171,17 @@ void ginx_test(const snet_domain_t *snetd)
     printf("\n/*---*/\n");
     printf("\n/*---*/\n\n");
 
-    ginx0 = SNetGInxCreateFromStr(snetd, "1.0.4.1");
-    ginx1 = SNetGInxCreateFromStr(snetd, "1.-2.3");
+    ginx0 = SNetGInxCreateFromStr("1.0.4.1");
+    ginx1 = SNetGInxCreateFromStr("1.-2.3");
 
     snet_ginx_t *infimum     = SNetGInxCalcInfimum(ginx0, ginx1);
-    snet_ginx_t *infimum_ext = SNetGInxCalcInfimumExt(ginx0, ginx1);
+    snet_ginx_t *infimum_ext = SNetGInxCalcInfimumEx(ginx0, ginx1);
 
     printf("%u: ", SNetGInxGetLen(ginx0)); print_ginx(ginx0); printf("\n");
     printf("%u: ", SNetGInxGetLen(ginx1)); print_ginx(ginx1); printf("\n\n");
     
     printf("CMPRES       = %u\n", SNetGInxCompare(ginx0, ginx1));
-    printf("CMPRES(ext)  = %u\n", SNetGInxCompareExt(ginx0, ginx1));
+    printf("CMPRES(ext)  = %u\n", SNetGInxCompareEx(ginx0, ginx1));
 
     printf("INFIMUM      = %u: ", SNetGInxGetLen(infimum));
     print_ginx(infimum);

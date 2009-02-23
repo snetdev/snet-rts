@@ -1,0 +1,240 @@
+#include "snet-gwrt.utc.h"
+#include "snet-gwrt.int.utc.h"
+#include "printing.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void free_record_field(void *f)
+{
+    printf("Freeing field %p\n", f);
+}
+
+static void* copy_record_field(void *f)
+{
+    printf("Copying field %p\n", f);
+    return f;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+#define F_a         1
+#define F_b         2
+#define F_c         3
+#define F_d         4
+#define F_e         5
+#define F_f         6
+#define T_T         7
+#define T_T1        8
+#define T_BT        9
+#define T_BT1      10
+
+/*----------------------------------------------------------------------------*/
+
+void record_test(const snet_domain_t *snetd)
+{
+    const char *labels[] = {
+        "<nil>",
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "T",
+        "T1",
+        "BT",
+        "BT1"
+    };
+
+    /*---*/
+
+    SNetGlobalRegisterInterface(
+        0, 
+        &free_record_field, &copy_record_field, NULL, NULL);
+
+    int a = 100;
+    int b = 200;
+    int c = 300;
+
+    int d = 1000;
+    int e = 2000;
+    int f = 3000;
+    
+    printf("&a = %p, &b = %p, &c = %p\n", &a, &b, &c);
+    printf("&d = %p, &e = %p, &f = %p\n", &d, &e, &f);
+
+    printf("\n----\n");
+
+    snet_variantencoding_t *venc1 = 
+        SNetTencVariantEncode(
+            SNetTencVectorCreate(3, F_a, F_b, F_c), NULL, NULL);
+
+    snet_record_t *rec1 =
+        SNetRecCreate(REC_DESCR_DATA, venc1, &a, &b, &c);
+
+    SNetRecSetDataDisposeMode(rec1, REC_DATA_DISPOSE_MODE_ALL);
+
+    print_record(rec1, labels);
+    printf("\n");
+
+    /*---*/
+
+    snet_record_t *rec2 = SNetRecCreateCopy(rec1);
+    
+    print_record(rec2, labels);
+    printf("\n");
+
+    /*---*/
+
+    printf("\n----\n");
+
+    SNetRecAddTag(rec2, T_T);
+    SNetRecAddBTag(rec2, T_BT);
+    SNetRecAddField(rec2, F_d);
+
+    print_record(rec2, labels);
+    printf("\n");
+
+    SNetRecSetTag(rec2, T_T,  11);
+    SNetRecSetBTag(rec2, T_BT, 22);
+    SNetRecSetField(rec2, F_d, &d);
+
+    print_record(rec2, labels);
+    printf("\n");
+
+    SNetRecRemoveField(rec2, F_b);
+
+    print_record(rec2, labels);
+    printf("\n");
+
+    SNetRecTakeField(rec2, F_a);
+    SNetRecTakeField(rec2, F_c);
+
+    SNetRecRemoveField(rec2, F_a);
+    SNetRecRemoveField(rec2, F_c);
+
+    print_record(rec2, labels);
+    printf("\n");
+
+    SNetRecAddField(rec2, F_d);
+    SNetRecAddField(rec2, F_e);
+    SNetRecAddField(rec2, F_f);
+
+    print_record(rec2, labels);
+    printf("\n");
+
+    SNetRecSetField(rec2, F_d, &d);
+    SNetRecSetField(rec2, F_e, &e);
+    SNetRecSetField(rec2, F_f, &f);
+
+    print_record(rec2, labels);
+    printf("\n");
+
+    /*---*/
+
+    printf("\n----\n");
+
+    SNetRecCopyTag(rec2, rec1, T_T, T_T1, false);
+    SNetRecCopyBTag(rec2, rec1, T_BT, T_BT1, false);
+    SNetRecCopyField(rec2, rec1, F_d, F_d, false);
+
+    print_record(rec1, labels);
+    printf("\n");
+
+    SNetRecTakeField(rec2, F_e);
+    
+    SNetRecCopyItems(
+        rec2, 
+        rec1, 
+        REC_ITEMS_COPY_UNCONSUMED, NULL);
+
+    print_record(rec1, labels);
+    printf("\n");
+
+    print_record(rec2, labels);
+    printf("\n");
+
+    /*---*/
+
+    printf("\n----\n");
+
+    int rmi[] = { 
+        F_d,
+        F_f,
+        T_T,
+        T_BT 
+    };
+
+    SNetRecRemoveItems(rec1, rmi, 2, 1, 1);
+
+    print_record(rec1, labels);
+    printf("\n");
+    print_record(rec2, labels);
+    printf("\n");
+
+    /*---*/
+
+    printf("\n----\n");
+ 
+    SNetRecCopyItems(
+        rec2, 
+        rec1, 
+        REC_ITEMS_COPY_UNCONSUMED | 
+            REC_ITEMS_COPY_MOVE   | REC_ITEMS_COPY_BTAGS,
+        NULL);
+
+    print_record(rec1, labels);
+    printf("\n");
+
+    print_record(rec2, labels);
+    printf("\n");
+
+    /*---*/
+
+    printf("\n----\n");
+
+    SNetRecTakeTag(rec2, T_T);
+    SNetRecResetConsumedField(rec2, F_e);
+
+
+    int mv_names[]     = { F_d, F_e, F_f, T_T };
+    int mv_new_names[] = { F_d, F_a, F_f, T_T };
+
+    snet_record_items_copy_specs_t mv_specs = {
+        mv_names,
+        mv_new_names,
+        3,
+        1,
+        0
+    };
+
+    SNetRecCopyItems(
+        rec2, 
+        rec1, 
+        REC_ITEMS_COPY_UNCONSUMED | 
+            REC_ITEMS_COPY_MOVE   |
+            REC_ITEMS_COPY_TAGS   | REC_ITEMS_COPY_FIELDS,
+        &mv_specs);
+
+    print_record(rec1, labels);
+    printf("\n");
+
+    print_record(rec2, labels);
+    printf("\n");
+
+    /*---*/
+
+    printf("\n\n----\n");
+    
+    SNetRecSetDataDisposeMode(rec1, REC_DATA_DISPOSE_MODE_ALL);
+    //SNetRecSetDataDisposeMode(rec2, REC_DATA_DISPOSE_MODE_ALL);
+
+    SNetRecDestroy(rec1);
+    SNetRecDestroy(rec2);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+

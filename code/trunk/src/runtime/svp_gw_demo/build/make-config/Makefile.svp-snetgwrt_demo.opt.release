@@ -17,12 +17,12 @@ MAKEDEP_INCL_DIRS_FLAGS_release_so :=
 
 #---
 
-UTC2CPP_FLAGS_release           :=
+UTC2CPP_FLAGS_release           := --cpp:-DNDEBUG
 UTC2CPP_INCL_DIRS_FLAGS_release :=
 
 #---
 
-CXX_FLAGS_release           := -DNDEBUG -O1 -Wall
+CXX_FLAGS_release           := -DNDEBUG -O1
 CXX_INCL_DIRS_FLAGS_release :=
 
 #---

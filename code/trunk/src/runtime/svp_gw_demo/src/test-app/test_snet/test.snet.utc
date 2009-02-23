@@ -34,6 +34,7 @@ static int SNet__test__A(snet_handle_t *hnd)
 
     //SNetCall__A(hnd, field_a);
 
+    printf("Executing box A\n");
     return 0;
 }
 
@@ -50,6 +51,7 @@ static int SNet__test__B(snet_handle_t *hnd)
 
     //SNetCall__B(hnd, field_b);
 
+    printf("Executing box B\n");
     return 0;
 }
 
@@ -66,6 +68,7 @@ static int SNet__test__C(snet_handle_t *hnd)
 
     //SNetCall__C(hnd, field_c);
 
+    printf("Executing box C\n");
     return 0;
 }
 
@@ -81,6 +84,8 @@ static int SNet__test__D(snet_handle_t *hnd)
     //field_d = SNetRecTakeField(rec, F__test__d);
 
     //SNetCall__D(hnd, field_d);
+
+    printf("Executing box D\n");
     return 0;
 }
 
@@ -96,6 +101,8 @@ static int SNet__test__E(snet_handle_t *hnd)
     //field_e = SNetRecTakeField(rec, F__test__e);
 
     //SNetCall__E(hnd, field_e);
+
+    printf("Executing box E\n");
     return 0;
 }
 
@@ -111,18 +118,20 @@ SNet__test___SL___SL(snet_gnode_t *in)
     out_type = SNetTencTypeEncode(
     2, 
     SNetTencVariantEncode(
-        SNetTencCreateVector(1, F__test__b), 
-        SNetTencCreateVector(0), 
-        SNetTencCreateVector(0)), 
+        SNetTencVectorCreate(1, F__test__b), 
+        SNetTencVectorCreate(0), 
+        SNetTencVectorCreate(0)), 
     SNetTencVariantEncode(
-        SNetTencCreateVector(1, F__test__b), 
-        SNetTencCreateVector(1, T__test__T), 
-        SNetTencCreateVector(0)));
+        SNetTencVectorCreate(1, F__test__b), 
+        SNetTencVectorCreate(1, T__test__T), 
+        SNetTencVectorCreate(0)));
 
-    //out_sign = SNetTencBoxSignEncode(
-    //    out_type, 
-    //    SNetTencCreateVector(1, field), 
-    //    SNetTencCreateVector(2, field, tag));
+    out_sign = SNetTencBoxSignEncode(
+        out_type, 
+        SNetTencVectorCreate(
+            1, VARIANT_ITEM_TYPE_FIELD),
+        SNetTencVectorCreate(
+            2, VARIANT_ITEM_TYPE_FIELD, VARIANT_ITEM_TYPE_TAG));
 
     return SNetBox(in, &SNet__test__A, out_sign);
 }
@@ -138,18 +147,20 @@ SNet__test___SL___SR___SL(snet_gnode_t *in)
     out_type = SNetTencTypeEncode(
         2,
         SNetTencVariantEncode(
-            SNetTencCreateVector(1, F__test__c), 
-            SNetTencCreateVector(0), 
-            SNetTencCreateVector(0)), 
+            SNetTencVectorCreate(1, F__test__c), 
+            SNetTencVectorCreate(0), 
+            SNetTencVectorCreate(0)), 
         SNetTencVariantEncode(
-            SNetTencCreateVector(1, F__test__d), 
-            SNetTencCreateVector(0), 
-            SNetTencCreateVector(0)));
+            SNetTencVectorCreate(1, F__test__d), 
+            SNetTencVectorCreate(0), 
+            SNetTencVectorCreate(0)));
 
-    //out_sign = SNetTencBoxSignEncode(
-    //    out_type, 
-    //    SNetTencCreateVector(1, field), 
-    //    SNetTencCreateVector(1, field));
+    out_sign = SNetTencBoxSignEncode(
+        out_type, 
+        SNetTencVectorCreate(
+            1, VARIANT_ITEM_TYPE_FIELD),
+        SNetTencVectorCreate(
+            1, VARIANT_ITEM_TYPE_FIELD));
 
     return SNetBox(in, &SNet__test__B, out_sign);
 }
@@ -165,23 +176,26 @@ SNet__test___SL___SR___SR___PL(snet_gnode_t *in)
     out_type = SNetTencTypeEncode(
         3, 
         SNetTencVariantEncode(
-            SNetTencCreateVector(1, F__test__b), 
-            SNetTencCreateVector(0), 
-            SNetTencCreateVector(0)), 
+            SNetTencVectorCreate(1, F__test__b), 
+            SNetTencVectorCreate(0), 
+            SNetTencVectorCreate(0)), 
         SNetTencVariantEncode(
-            SNetTencCreateVector(1, F__test__b), 
-            SNetTencCreateVector(1, T__test__T), 
-            SNetTencCreateVector(0)), 
+            SNetTencVectorCreate(1, F__test__b), 
+            SNetTencVectorCreate(1, T__test__T), 
+            SNetTencVectorCreate(0)), 
         SNetTencVariantEncode(
-            SNetTencCreateVector(1, F__test__e), 
-            SNetTencCreateVector(1, T__test__T), 
-            SNetTencCreateVector(0)));
+            SNetTencVectorCreate(1, F__test__e), 
+            SNetTencVectorCreate(1, T__test__T), 
+            SNetTencVectorCreate(0)));
 
-    //out_sign = SNetTencBoxSignEncode(
-    //    out_type, 
-    //    SNetTencCreateVector(1, field), 
-    //    SNetTencCreateVector(2, field, tag), 
-    //    SNetTencCreateVector(2, field, tag));
+    out_sign = SNetTencBoxSignEncode(
+        out_type, 
+        SNetTencVectorCreate(
+            1, VARIANT_ITEM_TYPE_FIELD),
+        SNetTencVectorCreate(
+            2, VARIANT_ITEM_TYPE_FIELD, VARIANT_ITEM_TYPE_TAG),
+        SNetTencVectorCreate(
+            2, VARIANT_ITEM_TYPE_FIELD, VARIANT_ITEM_TYPE_TAG));
 
     return SNetBox(in, &SNet__test__C, out_sign);
 }
@@ -197,23 +211,26 @@ SNet__test___SL___SR___SR___PR(snet_gnode_t *in)
   out_type = SNetTencTypeEncode(
     3, 
     SNetTencVariantEncode(
-        SNetTencCreateVector(1, F__test__b), 
-        SNetTencCreateVector(0), 
-        SNetTencCreateVector(0)), 
+        SNetTencVectorCreate(1, F__test__b), 
+        SNetTencVectorCreate(0), 
+        SNetTencVectorCreate(0)), 
     SNetTencVariantEncode(
-        SNetTencCreateVector(1, F__test__b), 
-        SNetTencCreateVector(1, T__test__T), 
-        SNetTencCreateVector(0)), 
+        SNetTencVectorCreate(1, F__test__b), 
+        SNetTencVectorCreate(1, T__test__T), 
+        SNetTencVectorCreate(0)), 
     SNetTencVariantEncode(
-        SNetTencCreateVector(1, F__test__e), 
-        SNetTencCreateVector(1, T__test__T), 
-        SNetTencCreateVector(0)));
+        SNetTencVectorCreate(1, F__test__e), 
+        SNetTencVectorCreate(1, T__test__T), 
+        SNetTencVectorCreate(0)));
 
-    //out_sign = SNetTencBoxSignEncode(
-    //    out_type,
-    //    SNetTencCreateVector(1, field), 
-    //    SNetTencCreateVector(2, field, tag), 
-    //    SNetTencCreateVector(2, field, tag));
+    out_sign = SNetTencBoxSignEncode(
+        out_type, 
+        SNetTencVectorCreate(
+            1, VARIANT_ITEM_TYPE_FIELD),
+        SNetTencVectorCreate(
+            2, VARIANT_ITEM_TYPE_FIELD, VARIANT_ITEM_TYPE_TAG),
+        SNetTencVectorCreate(
+            2, VARIANT_ITEM_TYPE_FIELD, VARIANT_ITEM_TYPE_TAG));
 
     return SNetBox(in, &SNet__test__D, out_sign);
 }
@@ -230,15 +247,15 @@ SNet__test___SL___SR___SR(snet_gnode_t *in)
             SNetTencTypeEncode(
                 1, 
                 SNetTencVariantEncode(
-                    SNetTencCreateVector(1, F__test__c), 
-                    SNetTencCreateVector(0), 
-                    SNetTencCreateVector(0))), 
+                    SNetTencVectorCreate(1, F__test__c), 
+                    SNetTencVectorCreate(0), 
+                    SNetTencVectorCreate(0))), 
             SNetTencTypeEncode(
                 1, 
                 SNetTencVariantEncode(
-                    SNetTencCreateVector(1, F__test__d), 
-                    SNetTencCreateVector(0), 
-                    SNetTencCreateVector(0)))), 
+                    SNetTencVectorCreate(1, F__test__d), 
+                    SNetTencVectorCreate(0), 
+                    SNetTencVectorCreate(0)))), 
         &SNet__test___SL___SR___SR___PL, 
         &SNet__test___SL___SR___SR___PR);
 }
@@ -276,13 +293,13 @@ SNet__test___SR(snet_gnode_t *in)
     out_type = SNetTencTypeEncode(
         1, 
         SNetTencVariantEncode(
-            SNetTencCreateVector(1, F__test__f), 
-            SNetTencCreateVector(0), 
-            SNetTencCreateVector(0)));
+            SNetTencVectorCreate(1, F__test__f), 
+            SNetTencVectorCreate(0), 
+            SNetTencVectorCreate(0)));
 
-    //out_sign = SNetTencBoxSignEncode(
-    //    out_type, 
-    //    SNetTencCreateVector(1, field));
+    out_sign = SNetTencBoxSignEncode(
+        out_type, 
+        SNetTencVectorCreate(1, VARIANT_ITEM_TYPE_FIELD));
 
     return SNetBox(in, &SNet__test__E, out_sign);
 }

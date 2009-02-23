@@ -1,49 +1,74 @@
 #include "snet-gwrt.utc.h"
+#include "printing.utc.h"
 
 /*---*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
+
+/*---*/
+
+#define PRINT_RECS
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-static thread void read_stdin(snet_domain_t *snetd)
+static thread void record_feeder(snet_domain_t *snetd, int max_recs_cnt)
 {
-    snet_record_t *rec = NULL;
-    unsigned int   num = 0;
+    for (int i=0; i < max_recs_cnt; i++) {
+        snet_variantencoding_t *venc = 
+            SNetTencVariantEncode(
+                NULL, SNetTencVectorCreate(1, 1), NULL);
 
-    do {
-        scanf("%u", &num);
-        //num++;
+        snet_record_t *rec = SNetDataRecCreate(venc, i);
 
-        if (num == 0)
-            rec = SNetRecCreate(REC_DESCR_CTRL, snetd);
-        else
-            rec = SNetRecCreate(REC_DESCR_DATA, snetd, num);
+#ifdef PRINT_RECS
+        printf("Pushing record %p: ", rec);
+        print_record(rec, NULL);
+        printf("...");
+#endif
 
         SNetPushIn(snetd, rec);
 
-    } while (num != 0 && num < 1000);
+#ifdef PRINT_RECS
+        printf("done (%p)\n", rec);
+#endif
+
+        //usleep(1000);
+    }
+
+    printf("Exiting input process!!!\n");
 }
 
-static thread void write_stdout(snet_domain_t *snetd)
+static thread void 
+write_record_to_stdout(snet_domain_t *snetd, int max_recs_cnt)
 {
-    snet_record_t       *rec;
-    snet_record_descr_t  rec_descr;
+    snet_record_t *rec;
 
     do {
         rec = SNetPopOut(snetd, false);
 
         if (rec != NULL) {
-            rec_descr = SNetRecGetDescription(rec);
+#ifdef PRINT_RECS
+            printf("Popped record %p: ", rec);
+            print_record(rec, NULL);
+            printf("\n");
+#endif
 
-            printf("\n\nPoped record %p: Type = %u\n", rec, rec_descr);
+            if (SNetRecGetTag(rec, 1) == max_recs_cnt - 1) {
+                printf("Popped last!!!\n");
+                break;
+            }
+
+            SNetRecSetDataDisposeMode(rec, REC_DATA_DISPOSE_MODE_ALL);
             SNetRecDestroy(rec);
         }
 
-    } while (rec == NULL || rec_descr == REC_DESCR_DATA);
+    } while (true);
+
+    printf("Exiting output process!!!\n");
 }
 
 /*----------------------------------------------------------------------------*/
@@ -51,19 +76,29 @@ static thread void write_stdout(snet_domain_t *snetd)
 
 void net_ioproc_test(snet_domain_t *snetd)
 {
+    int test_sz = 10000;
+
+    int    exit_code;
     family in_proc_fid;
     family out_proc_fid;
 
-    /**
-     * !!TODO!!: Setup network (call to snet
-     * compiler generated code).
-     */
+    create<root>
+        (in_proc_fid; ; 0; 0; 1; 1;;) 
+            record_feeder(snetd, test_sz);
+    
+    create<root>
+        (out_proc_fid; ; 0; 0; 1; 1;;) 
+            write_record_to_stdout(snetd, test_sz);
 
-    create (in_proc_fid; ; 0; 0; 1; 1;;) read_stdin(snetd);
-    create (out_proc_fid; ; 0; 0; 1; 1;;) write_stdout(snetd);
+    //usleep(20000);
+    //kill(in_proc_fid);
+    //kill(out_proc_fid);
 
-    sync(in_proc_fid);
-    sync(out_proc_fid);
+    exit_code = sync(in_proc_fid);
+    printf("Record input process finished (exit_code = %d)!!!\n", exit_code);
+
+    exit_code = sync(out_proc_fid);
+    printf("Record output process finished (exit_code = %d)!!!\n", exit_code);
 }
 
 /*----------------------------------------------------------------------------*/

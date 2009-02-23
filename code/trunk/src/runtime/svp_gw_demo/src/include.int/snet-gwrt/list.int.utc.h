@@ -38,8 +38,11 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+extern snet_base_t*
+SNetListToBase(snet_list_t *lst);
+
 extern const snet_base_t*
-SNetListToBase(const snet_list_t *lst);
+SNetListToBaseConst(const snet_list_t *lst);
 
 #endif // __SVPSNETGWRT_LIST_INT_H
 

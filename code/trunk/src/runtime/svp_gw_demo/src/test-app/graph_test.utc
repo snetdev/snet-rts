@@ -92,36 +92,36 @@ static void print_graph(const snet_gnode_t *n, unsigned int indent)
        
         switch (n->type) {
             case GRAPH_NODE_TYPE_COMB_STAR:         {
-                snet_gnode_t *star_root =
-                    n->data.normal->entity.star->root;
+                snet_gnode_t *star_groot =
+                    n->data.normal->entity.star->groot;
 
-                print_graph(star_root, indent + INDENT_STEP);
+                print_graph(star_groot, indent + INDENT_STEP);
                 break;
             }
 
             case GRAPH_NODE_TYPE_COMB_SPLIT:        {
-                snet_gnode_t *split_root =
-                    n->data.normal->entity.split->root;
+                snet_gnode_t *split_groot =
+                    n->data.normal->entity.split->groot;
 
-                print_graph(split_root, indent + INDENT_STEP);
+                print_graph(split_groot, indent + INDENT_STEP);
                 break;
             }
 
             case GRAPH_NODE_TYPE_COMB_PARALLEL:     {
-                snet_gnode_t **branch_ptr = 
+                snet_par_comb_branch_t *branch = 
                     n->data.normal->entity.parallel->branches;
 
                 unsigned int branches_cnt =
                     n->data.normal->entity.parallel->branches_cnt;
 
-                for (unsigned int i=0; i < branches_cnt; i++, branch_ptr++) {
+                for (unsigned int i=0; i < branches_cnt; i++, branch++) {
                     print_indent(indent + INDENT_STEP);
 
-                    if (*branch_ptr != NULL) {
+                    if (branch->groot != NULL) {
                         printf("BRANCH(%u)\n", i);
 
                         print_graph(
-                            *branch_ptr, 
+                            branch->groot, 
                             indent + INDENT_STEP + INDENT_STEP / 2);
 
                     } else {

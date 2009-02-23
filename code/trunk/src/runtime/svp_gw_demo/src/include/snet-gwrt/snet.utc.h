@@ -32,41 +32,95 @@
 #include "common.utc.h"
 #include "domain.utc.h"
 #include "handle.utc.h"
-#include "record.utc.h"
+
+/*---*/
+
+$include <stdio.h>
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /**
- * Global initialization and termination and box lanugage interface related
- * routines for the runtime.
+ * Datatype for a record (forward declaration
+ * to avoid including the file "record.utc.h").
+ */
+typedef struct record snet_record_t;
+
+
+/**
+ * Types related to the box language
+ * interface system.
  */
 
-extern void SNetGlobalInitialize();
+typedef unsigned int snet_bli_id_t;
+
+/**
+ * Functions a box language interface
+ * should provide.
+ */
+typedef void  (*snet_bli_freefptr_t)(void *);
+typedef void* (*snet_bli_copyfptr_t)(void *);
 
 /*---*/
 
+typedef unsigned int (*snet_bli_serfptr_t)(void *, char **);
+typedef void*        (*snet_bli_deserfptr_t)(char *, unsigned int);
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Global initialization and termination
+ */
+extern void SNetGlobalInitialize();
 extern void SNetGlobalDestroy();
 
 /*----------------------------------------------------------------------------*/
+/**
+ * Sets the stream where the runtime will output its
+ * error and warning messages (if any). If not set
+ * the default will be "stderr".
+ */
+extern void SNetGlobalSetErrorStream(FILE *stream);
 
-extern bool SNetGlobalRegisterInterface(
-    int id,
-    void  (*freefun) (void *),
-    void* (*copyfun) (void *),
-    int   (*serfun)  (void *, char **),
-    void* (*deserfun)(char *, int));
+/*----------------------------------------------------------------------------*/
+/**
+ * Box lanugage interface related routines.
+ */
+
+extern bool
+SNetGlobalRegisterInterface(
+    snet_bli_id_t        id,
+    snet_bli_freefptr_t  freefun,
+    snet_bli_copyfptr_t  copyfun,
+    snet_bli_serfptr_t   serfun,
+    snet_bli_deserfptr_t deserfun);
 
 /*---*/
 
-extern void* SNetGetCopyFun(int id);
-extern void* SNetGetFreeFun(int id);
-extern void* SNetGetSerializationFun(int id);
-extern void* SNetGetDeserializationFun(int id);
+extern snet_bli_freefptr_t
+SNetGetFreeFun(snet_bli_id_t id);
 
-extern void* SNetGetCopyFunFromRec(snet_record_t *rec);
-extern void* SNetGetFreeFunFromRec(snet_record_t *rec);
-extern void* SNetGetSerializationFunFromRec(snet_record_t *rec);
-extern void* SNetGetDeserializationFunFromRec(snet_record_t *rec);
+extern snet_bli_copyfptr_t
+SNetGetCopyFun(snet_bli_id_t id);
+
+extern snet_bli_serfptr_t
+SNetGetSerializationFun(snet_bli_id_t id);
+
+extern snet_bli_deserfptr_t
+SNetGetDeserializationFun(snet_bli_id_t id);
+
+/*---*/
+
+extern snet_bli_freefptr_t  
+SNetGetFreeFunFromRec(snet_record_t *rec);
+
+extern snet_bli_copyfptr_t
+SNetGetCopyFunFromRec(snet_record_t *rec);
+
+extern snet_bli_serfptr_t
+SNetGetSerializationFunFromRec(snet_record_t *rec);
+
+extern snet_bli_deserfptr_t
+SNetGetDeserializationFunFromRec(snet_record_t *rec);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -103,11 +157,13 @@ extern void SNetOut(
     snet_handle_t *hnd, snet_record_t *rec);
 
 extern void SNetOutRaw(
-    snet_handle_t *hnd, int variant_num, ...);
+    snet_handle_t *hnd, 
+    snet_bli_id_t blid, int variant_inx, ...);
 
 extern void SNetOutRawArray(
     snet_handle_t *hnd, 
-    int if_id, int var_num, void **fields, int **tags, int **btags);
+    snet_bli_id_t blid,
+    int variant_inx, void **fields, int *tags, int *btags);
 
 #endif // __SVPSNETGWRT_SNET_H
 

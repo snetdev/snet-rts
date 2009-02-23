@@ -37,6 +37,19 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+typedef enum {
+    CONS_NODE_STATE_INIT,
+    CONS_NODE_STATE_WALKING,
+
+    CONS_NODE_STATE_WAIT_OUT,
+    CONS_NODE_STATE_WAIT_SYNC,
+    CONS_NODE_STATE_WAIT_EXTERN_CONN
+
+} snet_conslst_node_state_t;
+
+
+/*---*/
+
 typedef struct cons_list      snet_conslst_t;
 typedef struct cons_list_node snet_conslst_node_t;
 
@@ -55,27 +68,49 @@ SNetConsLstNodeCreate(const snet_domain_t *domain);
 
 extern void SNetConsLstNodeDestroy(snet_conslst_node_t *n);
 
-/*---*/
-
-extern void
-SNetConsLstNodeSetupMutex(snet_conslst_node_t *n, const place *p);
-
 /*----------------------------------------------------------------------------*/
 
 extern void
-SNetConsLstNodeSetRecord(
-    snet_conslst_node_t *n, const snet_record_t *rec);
-
-extern void 
-SNetConsLstNodeSetGraphNode(
-    snet_conslst_node_t *n, const snet_gnode_t *gnode);
+SNetConsLstNodeSetState(
+    snet_conslst_node_t *n,
+    snet_conslst_node_state_t state);
 
 /*---*/
 
-extern const snet_record_t*
+extern void
+SNetConsLstNodeSetFlags(
+    snet_conslst_node_t *n, unsigned int value);
+
+extern void
+SNetConsLstNodeSetRecord(
+    snet_conslst_node_t *n, snet_record_t *rec);
+
+extern void 
+SNetConsLstNodeSetGraphNode(
+    snet_conslst_node_t *n, snet_gnode_t *gnode);
+
+/*---*/
+
+extern snet_conslst_t*
+SNetConsLstNodeGetList(const snet_conslst_node_t *n);
+
+extern snet_conslst_node_t*
+SNetConsLstNodeGetNext(const snet_conslst_node_t *n);
+
+/*---*/
+
+extern snet_conslst_node_state_t
+SNetConsLstNodeGetState(const snet_conslst_node_t *n);
+
+extern unsigned int
+SNetConsLstNodeGetFlags(const snet_conslst_node_t *n);
+
+/*---*/
+
+extern snet_record_t*
 SNetConsLstNodeGetRecord(const snet_conslst_node_t *n);
 
-extern const snet_gnode_t*
+extern snet_gnode_t*
 SNetConsLstNodeGetGraphNode(const snet_conslst_node_t *n);
 
 /*----------------------------------------------------------------------------*/
@@ -89,22 +124,19 @@ SNetConsLstNodeGetMinGInx(snet_conslst_node_t *n);
 /*---*/
 
 extern void 
-SNetConsLstNodeAddDynInx(
+SNetConsLstNodeAddDynGInx(
     snet_conslst_node_t *n, const snet_ginx_t *ginx);
 
-extern void SNetConsLstNodeRemoveDynInx(snet_conslst_node_t *n);
+extern void
+SNetConsLstNodeAddSameDynGInxAs(
+    snet_conslst_node_t *n1, const snet_conslst_node_t *n2);
 
-/*---*/
-
-extern void SNetConsLstNodeSetMinInxModifiedFlag(snet_conslst_node_t *n);
-extern void SNetConsLstNodeResetMinInxModifiedFlag(snet_conslst_node_t *n);
-
-/*----------------------------------------------------------------------------*/
-
-extern snet_conslst_node_t*
-SNetConsLstNodeGetNext(snet_conslst_node_t *n);
+extern void SNetConsLstNodeRemoveDynGInx(snet_conslst_node_t *n);
 
 /*----------------------------------------------------------------------------*/
+
+extern bool
+SNetConsLstNodeIsNull(const snet_conslst_node_t *n);
 
 extern bool
 SNetConsLstNodeIsHead(const snet_conslst_node_t *n);
@@ -115,9 +147,18 @@ SNetConsLstNodeIsTail(const snet_conslst_node_t *n);
 extern bool
 SNetConsLstNodeIsAttached(const snet_conslst_node_t *n);
 
+/*---*/
+
+extern bool
+SNetConsLstNodeIsDynGInxNew(const snet_conslst_node_t *n);
+
 /*----------------------------------------------------------------------------*/
 
-extern const snet_base_t* SNetConsLstNodeToBase(const snet_conslst_node_t *n);
+extern snet_base_t* 
+SNetConsLstNodeToBase(snet_conslst_node_t *n);
+
+extern const snet_base_t* 
+SNetConsLstNodeToBaseConst(const snet_conslst_node_t *n);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -135,17 +176,12 @@ SNetConsLstCreate(const snet_domain_t *domain);
 extern void
 SNetConsLstDestroy(snet_conslst_t *lst);
 
-/*---*/
-
-extern void
-SNetConsLstSetupMutex(snet_conslst_t *lst, const place *p);
-
 /*----------------------------------------------------------------------------*/
 
-extern const snet_conslst_node_t*
+extern snet_conslst_node_t*
 SNetConsLstGetHead(const snet_conslst_t *lst);
 
-extern const snet_conslst_node_t*
+extern snet_conslst_node_t*
 SNetConsLstGetTail(const snet_conslst_t *lst);
 
 /*----------------------------------------------------------------------------*/
@@ -164,7 +200,11 @@ extern snet_conslst_node_t* SNetConsLstPop(snet_conslst_t *lst);
 
 /*---*/
 
-extern const snet_base_t* SNetConsLstToBase(const snet_conslst_t *lst);
+extern snet_base_t*
+SNetConsLstToBase(snet_conslst_t *lst);
+
+extern const snet_base_t*
+SNetConsLstToBaseConst(const snet_conslst_t *lst);
 
 #endif // __SVPSNETGWRT_CONSLIST_INT_H
 

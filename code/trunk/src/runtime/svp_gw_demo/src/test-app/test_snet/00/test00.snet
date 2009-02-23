@@ -1,9 +1,9 @@
 net test00 {
-  box A((a) -> (b) | (b, <T>));
-  box B((b) -> (c) | (d));
-  box C((c) -> (b) | (b, <T>) | (e, <T>));
-  box D((d) -> (b) | (b, <T>) | (e, <T>));
-  box E((e) -> (f));
+    box A((a) -> (b) | (b, <T>));
+    box B((b) -> (c) | (d));
+    box C((c) -> (b) | (b, <T>) | (b, e, <T>));
+    box D((d) -> (b) | (b, <T>) | (b, e, <T>));
+    box E((e) -> (f));
 
-} connect A .. (B .. (C || D))*{<T>} .. E;
+} connect A .. (B .. (C || D))*{e, <T>} if <T < 5> .. E!<T>;
 

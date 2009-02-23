@@ -32,6 +32,23 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+void SNetPlcMngSubSystemInit()
+{
+    /**
+     * Nothing to do yet!
+     */
+}
+
+void SNetPlcMngSubSystemDestroy()
+{
+    /**
+     * Nothing to do yet!
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
 place SNetGetMyPlace()
 {
     return PLACE_GROUP;
@@ -43,14 +60,27 @@ place SNetGetMyPlace()
 snet_place_contract_t* 
 SNetPlaceAlloc(const snet_place_specs_t *specs)
 {
+    snet_place_contract_t* cntr = SNetTryPlaceAlloc(specs);
+
+    if (cntr == NULL) {
+        SNetReportError(SNET_ERR_PLACE, "allocation failed");
+        SNetOnError();
+    }
+
+    return cntr;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_place_contract_t* 
+SNetTryPlaceAlloc(const snet_place_specs_t *specs)
+{
     snet_place_contract_t *contract = 
-        (snet_place_contract_t *) SNetMemAlloc(sizeof(snet_place_contract_t));
+        (snet_place_contract_t *)
+            SNetTryMemAlloc(sizeof(snet_place_contract_t));
 
     if (contract == NULL) {
-        /**
-         * !!TODO!!: Handle runtime error.
-         */
-        abort();
+        return NULL;
     }
 
     contract->expires   = false;
@@ -62,15 +92,12 @@ SNetPlaceAlloc(const snet_place_specs_t *specs)
         contract->expires = specs->expires;
 
         contract->plc_specs =
-            (snet_place_specs_t *) SNetMemAlloc(sizeof(snet_place_specs_t));
+            (snet_place_specs_t *)
+                SNetTryMemAlloc(sizeof(snet_place_specs_t));
 
         if (contract->plc_specs == NULL) {
             SNetMemFree(contract);
-
-            /**
-             * !!TODO!!: Handle runtime error.
-             */
-            abort();
+            return NULL;
         }
 
         contract->plc_specs->expires           = specs->expires;
@@ -83,21 +110,18 @@ SNetPlaceAlloc(const snet_place_specs_t *specs)
             && specs->type_spec_data_sz > 0) {
 
             contract->plc_specs->type_spec_data = 
-                SNetMemAlloc(specs->type_spec_data_sz);
+                SNetTryMemAlloc(specs->type_spec_data_sz);
 
             if (contract->plc_specs->type_spec_data == NULL) {
                 SNetMemFree(contract->plc_specs);
                 SNetMemFree(contract);
 
-                /**
-                 * !!TODO!!: Handle runtime error
-                 */
-                abort();
-             }
+                return NULL;
+            }
 
-             contract->plc_specs->type_spec_data_sz = specs->type_spec_data_sz;
+            contract->plc_specs->type_spec_data_sz = specs->type_spec_data_sz;
 
-             SNetMemCopy(
+            SNetMemCopy(
                 specs->type_spec_data, 
                 contract->plc_specs->type_spec_data, 
                 contract->plc_specs->type_spec_data_sz);
@@ -109,7 +133,7 @@ SNetPlaceAlloc(const snet_place_specs_t *specs)
     // is defined and an implementation of SEP exists.
 
     uTC::PlaceInfo *plc_info = 
-        (uTC::PlaceInfo *) SNetMemAlloc(sizeof(uTC::PlaceInfo));
+        (uTC::PlaceInfo *) SNetTryMemAlloc(sizeof(uTC::PlaceInfo));
 
     if (plc_info == NULL) {
         if (contract->plc_specs != NULL) {
@@ -121,10 +145,7 @@ SNetPlaceAlloc(const snet_place_specs_t *specs)
 
         SNetMemFree(contract);
 
-        /**
-         * !!TODO!!: Handle runtime error.
-         */
-        abort();
+        return NULL;
     }
 
     contract->plc = (place) plc_info;

@@ -74,28 +74,13 @@ struct buffer {
 static void init_bucket(snet_buf_bucket_t *bucket, unsigned int sz)
 {
     bucket->store = (void **) SNetMemAlloc(sz * sizeof(void *));
-
-    if (bucket->store == NULL) {
-        /**
-         * !!TODO!!: Handle runtime error.
-         */
-        abort();
-    }
-
-    bucket->next = NULL;
+    bucket->next  = NULL;
 }
 
 static snet_buf_bucket_t* create_bucket(unsigned int sz)
 {
     snet_buf_bucket_t *bucket =
         (snet_buf_bucket_t *) SNetMemAlloc(sizeof(snet_buf_bucket_t));
-
-    if (bucket == NULL) {
-        /**
-         * !!TODO!!: Handle runtime error.
-         */
-        abort();
-    }
 
     init_bucket(bucket, sz);
 
@@ -116,16 +101,16 @@ static void destroy_bucket(snet_buf_bucket_t *bucket, bool is_init)
 
 void SNetBufInit(
     snet_buffer_t *buf, 
-    bool dynamic, unsigned int sz,  const snet_domain_t *domain)
+    bool dynamic, unsigned int sz,  const snet_domain_t *snetd)
 {
     assert(buf != NULL);
-    assert(domain != NULL);
+    assert(snetd != NULL);
 
-    domain = (const snet_domain_t *) SNetUnmaskPointer(domain);
+    snetd = (const snet_domain_t *) SNetUnmaskPointer(snetd);
 
     place owner_plc = SNetGetMyPlace();
 
-    SNetBaseTypeInit(&buf->base, domain);
+    SNetBaseTypeInit(&buf->base, snetd);
     SNetBaseTypeSetPlaces(&buf->base, &owner_plc, NULL, NULL);
 
     buf->dynamic     = dynamic;
@@ -171,13 +156,6 @@ void SNetBufInitCopy(
     for (unsigned int i=0; i < src_buf->sz; i++) {
         assert(it.bucket != NULL);
 
-        if (!SNetBufPush(buf, it.bucket->store[it.inx])) {
-            /**
-             * !!TODO!!: Handle runtime error.
-             */
-            abort();
-        }
-
         it.inx++;
 
         if (it.inx == src_buf->bucket_sz) {
@@ -190,21 +168,14 @@ void SNetBufInitCopy(
 /*----------------------------------------------------------------------------*/
 
 snet_buffer_t* 
-SNetBufCreate(bool dynamic, unsigned int sz, const snet_domain_t *domain)
+SNetBufCreate(bool dynamic, unsigned int sz, const snet_domain_t *snetd)
 {
-    assert(domain != NULL);
+    assert(snetd != NULL);
 
     snet_buffer_t *buf = 
         (snet_buffer_t *) SNetMemAlloc(sizeof(snet_buffer_t));
 
-    if (buf == NULL) {
-        /**
-         * !!TODO:!!: Handle runtime error
-         */
-         abort();
-    }
-
-    SNetBufInit(buf, dynamic, sz, domain);
+    SNetBufInit(buf, dynamic, sz, snetd);
 
     return buf;
 }
@@ -215,13 +186,6 @@ snet_buffer_t* SNetBufCreateCopy(const snet_buffer_t *src_buf, bool shalow)
 
     snet_buffer_t *buf = 
         (snet_buffer_t *) SNetMemAlloc(sizeof(snet_buffer_t));
-
-    if (buf == NULL) {
-        /**
-         * !!TODO:!!: Handle runtime error
-         */
-         abort();
-    }
 
     SNetBufInitCopy(buf, src_buf, shalow);
 
@@ -261,15 +225,8 @@ void SNetBufDestroy(snet_buffer_t *buf)
         b = buf->empty_buckets_tail;
     }
 
+    SNetBaseTypeDestroy(&buf->base);
     SNetMemFree(buf);
-}
-
-/*----------------------------------------------------------------------------*/
-
-void SNetBufSetupMutex(snet_buffer_t *buf, const place *p)
-{
-    assert(buf != NULL);
-    SNetBaseTypeSetPlaces(&buf->base, NULL, p, NULL);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -432,7 +389,12 @@ bool SNetBufPush(snet_buffer_t *buf, const void *elem)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-const snet_base_t* SNetBufToBase(const snet_buffer_t *buf)
+snet_base_t* SNetBufToBase(snet_buffer_t *buf)
+{
+    assert(buf != NULL); return &buf->base;
+}
+
+const snet_base_t* SNetBufToBaseConst(const snet_buffer_t *buf)
 {
     assert(buf != NULL); return &buf->base;
 }

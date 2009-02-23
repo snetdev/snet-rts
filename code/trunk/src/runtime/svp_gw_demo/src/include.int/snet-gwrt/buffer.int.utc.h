@@ -38,8 +38,11 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+extern snet_base_t*
+SNetBufToBase(snet_buffer_t *buf);
+
 extern const snet_base_t*
-SNetBufToBase(const snet_buffer_t *buf);
+SNetBufToBaseConst(const snet_buffer_t *buf);
 
 #endif // __SVPSNETGWRT_BUFFER_INT_H
 

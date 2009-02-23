@@ -34,6 +34,31 @@
 
 /*----------------------------------------------------------------------------*/
 
+#define field 0
+#define tag   1
+#define btag  2
+
+/*---*/
+
+#define REC_data      REC_DESCR_DATA
+#define REC_terminate REC_DESCR_CTRL
+
+#define MODE_textual  REC_DATA_MODE_TXT
+#define MODE_binary   REC_DATA_MODE_BIN
+
+/*---*/
+
+#define snet_tag      FILTER_OP_TAG
+#define snet_btag     FILTER_OP_BTAG
+#define snet_field    FILTER_OP_FIELD,
+#define create_record FILTER_OP_CREATE_REC
+
+/*---*/
+
+#define SNetEcreateList      SNetEListCreate
+#define SNetTencCreateVector SNetTencVectorCreate
+
+/*----------------------------------------------------------------------------*/
 /**
  * Datatype representing a stream that is
  * used by the S-Net compiler as input for the

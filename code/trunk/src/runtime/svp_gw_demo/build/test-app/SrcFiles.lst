@@ -5,11 +5,16 @@
 ../../src/test-app/test_snet/test.snet.utc
 ../../src/test-app/test_snet/test.utc
 ../../src/test-app/test_snet/00/test00.utc
+../../src/test-app/test_snet/00/test00.boxes.utc
 ../../src/test-app/test_snet/00/test00.snet.utc
 ../../src/test-app/net_ioproc_test.utc
+../../src/test-app/contcreate_test.utc
 ../../src/test-app/testapp.utc
 ../../src/test-app/list_test.utc
+../../src/test-app/printing.utc
+../../src/test-app/record_test.utc
 ../../src/test-app/ginx_test.utc
 ../../src/test-app/buffer_test.utc
 ../../src/test-app/graph_test.utc
+../../src/test-app/typeencode_test.utc
 

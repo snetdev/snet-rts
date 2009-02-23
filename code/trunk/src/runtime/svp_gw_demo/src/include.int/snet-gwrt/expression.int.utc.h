@@ -10,7 +10,7 @@
                          
       -------------------------------------------------------------------
 
-    File Name      : handle.utc.h
+    File Name      : expression.int.utc.h
 
     File Type      : Header File
 
@@ -25,34 +25,26 @@
 */
 /*----------------------------------------------------------------------------*/
 
-#ifndef __SVPSNETGWRT_HANDLE_H
-#define __SVPSNETGWRT_HANDLE_H
+#ifndef __SVPSNETGWRT_EXPRESSION_INT_H
+#define __SVPSNETGWRT_EXPRESSION_INT_H
 
-#include "common.utc.h"
+#include "expression.utc.h"
 
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
+/*---*/
 
-/**
- * Generic S-Net handle.
- */
-typedef struct handle snet_handle_t;
-
-/**
- * Datatype for a record (forward declaration
- * to avoid including the file "record.utc.h").
- */
-typedef struct record snet_record_t;
+#include "common.int.utc.h"
+#include "record.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
-/**
- * Returns the input record with which
- * a box was called.
- */
+/*----------------------------------------------------------------------------*/
 
-extern snet_record_t* SNetHndGetRecord(snet_handle_t *hnd);
+extern int 
+SNetEEvaluateInt(const snet_expr_t *expr, const snet_record_t *rec); 
 
-#endif // __SVPSNETGWRT_HANDLE_H
+extern bool
+SNetEEvaluateBool(const snet_expr_t *expr, const snet_record_t *rec); 
+
+#endif // __SVPSNETGWRT_EXPRESSION_INT_H
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

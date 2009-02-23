@@ -37,6 +37,7 @@
  * Datatype of a list object
  */
 typedef struct list snet_list_t;
+typedef void*       snet_list_item_t;
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -44,6 +45,7 @@ typedef struct list snet_list_t;
 extern void
 SNetListInit(
     snet_list_t *lst, 
+    unsigned int item_sz, 
     unsigned int bucket_sz, 
     const snet_domain_t *snetd);
 
@@ -56,6 +58,7 @@ SNetListInitCopy(
 
 extern snet_list_t*
 SNetListCreate(
+    unsigned int item_sz, 
     unsigned int bucket_sz, 
     const snet_domain_t *snetd);
 
@@ -66,10 +69,6 @@ SNetListCreateCopy(const snet_list_t *src_lst);
 
 extern void
 SNetListDestroy(snet_list_t *lst);
-
-/*---*/
-
-extern void SNetListSetupMutex(snet_list_t *lst, const place *p);
 
 /*----------------------------------------------------------------------------*/
 
@@ -106,11 +105,11 @@ SNetListInsertBefore(
 
 /*----------------------------------------------------------------------------*/
 
-extern void*
-SNetListPopBack(snet_list_t *lst);
+extern bool
+SNetListPopBack(snet_list_t *lst, void *item_val);
 
-extern void*
-SNetListPopFront(snet_list_t *lst);
+extern bool
+SNetListPopFront(snet_list_t *lst, void *item_val);
 
 /*---*/
 
@@ -143,8 +142,13 @@ SNetListItemIsFirst(const snet_list_t *lst, unsigned int item_id);
 
 /*----------------------------------------------------------------------------*/
 
+extern bool
+SNetListItemGetValue(
+    const snet_list_t *lst,
+    unsigned int item_id, void *item_val);
+
 extern void*
-SNetListItemGetValue(const snet_list_t *lst, unsigned int item_id);
+SNetListItemGetValueByRef(const snet_list_t *lst, unsigned int item_id);
 
 /*----------------------------------------------------------------------------*/
 
@@ -154,10 +158,10 @@ SNetListFindItem(const snet_list_t *lst, const void *item_val);
 /*---*/
 
 extern bool
-SNetListContainsItem(const snet_list_t *lst, unsigned int item_id);
+SNetListContainsItem(const snet_list_t *lst, const void *item_val);
 
 extern bool
-SNetListContainsItem(const snet_list_t *lst, const void *item_val);
+SNetListContainsItemWithId(const snet_list_t *lst, unsigned int item_id);
 
 #endif // __SVPSNETGWRT_LIST_H
 

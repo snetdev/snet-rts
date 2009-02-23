@@ -21,7 +21,7 @@ UTC2CPP_INCL_DIRS_FLAGS_debug :=
 
 #---
 
-CXX_FLAGS_debug           := -DDEBUG -O0 -Wall
+CXX_FLAGS_debug           := -DDEBUG -O0
 CXX_INCL_DIRS_FLAGS_debug :=
 
 #-------------------------------------------------------------------------------

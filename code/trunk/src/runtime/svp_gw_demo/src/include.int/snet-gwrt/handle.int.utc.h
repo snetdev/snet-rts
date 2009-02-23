@@ -43,43 +43,46 @@
 extern void
 SNetHndInit(
     snet_handle_t *hnd,
-    const snet_conslst_node_t *cons_node);
+    snet_conslst_node_t *cons_node);
 
 /*---*/
 
 extern snet_handle_t*
-SNetHndCreate(
-    const snet_conslst_node_t *cons_node);
+SNetHndCreate(snet_conslst_node_t *cons_node);
 
 /*---*/
 
 extern void SNetHndDestroy(snet_handle_t *hnd);
 
-/*---*/
-
-extern void SNetHndSetupMutex(snet_handle_t *hnd, const place *p);
-
 /*----------------------------------------------------------------------------*/
 
 extern snet_conslst_node_t*
-SNetHndGetConsNode(const snet_handle_t *hnd);
+SNetHndGetConsNode(snet_handle_t *hnd);
 
 /*---*/
 
 extern snet_record_t*
-SNetHndGetRecord(const snet_handle_t *hnd);
+SNetHndGetOutRecord(snet_handle_t *hnd);
 
-extern snet_record_t*
-SNetHndGetOutRecord(const snet_handle_t *hnd);
+extern snet_record_t* 
+SNetHndGetConsNodeRecord(snet_handle_t *hnd);
+
+extern snet_variantencoding_t*
+SNetHndCreateVEncForOutRecord(
+    const snet_handle_t *hnd, unsigned int variant_inx);
 
 /*---*/
 
 extern void 
-SNetHndSetOutRecord(snet_handle_t *hnd, const snet_record_t *rec);
+SNetHndSetOutRecord(snet_handle_t *hnd, snet_record_t *rec);
 
 /*----------------------------------------------------------------------------*/
 
-extern const snet_base_t* SNetHndToBase(const snet_handle_t *hnd); 
+extern snet_base_t*
+SNetHndToBase(snet_handle_t *hnd); 
+
+extern const snet_base_t*
+SNetHndToBaseConst(const snet_handle_t *hnd); 
 
 #endif // __SVPSNETGWRT_HANDLE_INT_H
 

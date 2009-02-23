@@ -35,11 +35,9 @@
 #include "common.int.utc.h"
 #include "basetype.int.utc.h"
 #include "graphindex.int.utc.h"
-
-/*---*/
-
-#include "typeencode.utc.h"
-#include "expression.utc.h"
+#include "typeencode.int.utc.h"
+#include "expression.int.utc.h"
+#include "filteriset.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -60,10 +58,6 @@ SNetGNodeCreate(
 /*---*/
 
 extern void SNetGNodeDestroy(snet_gnode_t *n, bool deep);
-
-/*---*/
-
-extern void SNetGNodeSetupMutex(snet_gnode_t *n, const place *p);
 
 /*----------------------------------------------------------------------------*/
 
@@ -103,13 +97,15 @@ extern void SNetGNodeSetupFilter(snet_gnode_t *n);
 extern void
 SNetGNodeSetupStar(
     snet_gnode_t *n,
-    bool is_det, snet_typeencoding_t *type, 
-    snet_expr_list_t *guards, snet_gnode_t *root);
+    bool is_det,
+    snet_typeencoding_t *type, 
+    snet_expr_list_t *guards, snet_gnode_t *groot);
 
 /*---*/
 
 extern void
-SNetGNodeSetupSplit(snet_gnode_t *n, bool is_det, snet_gnode_t *root);
+SNetGNodeSetupSplit(
+    snet_gnode_t *n, bool is_det, snet_gnode_t *groot, int tag);
 
 /*----------------------------------------------------------------------------*/
 
@@ -123,7 +119,8 @@ SNetGNodeSetupParallel(
 extern void
 SNetGNodeParallelSetupBranch(
     snet_gnode_t *n,
-    unsigned int inx, snet_gnode_t *branch_root);
+    unsigned int inx,
+    snet_gnode_t *groot, snet_typeencoding_t *type);
 
 /*----------------------------------------------------------------------------*/
 
@@ -132,7 +129,16 @@ SNetGNodeSetupExternConn(snet_gnode_t *n, snet_domain_t *snetd);
 
 /*----------------------------------------------------------------------------*/
 
-extern const snet_base_t* SNetGNodeToBase(const snet_gnode_t *n);
+extern const snet_box_sign_t*
+SNetGNodeGetBoxTypeSignature(const snet_gnode_t *n);
+
+/*----------------------------------------------------------------------------*/
+
+extern snet_base_t* 
+SNetGNodeToBase(snet_gnode_t *n);
+
+extern const snet_base_t* 
+SNetGNodeToBaseConst(const snet_gnode_t *n);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/

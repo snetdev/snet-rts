@@ -60,52 +60,34 @@ typedef enum {
 /* Initialization, Creation and Destruction */
 
 extern void
-SNetGInxInit(
-    snet_ginx_t *inx,
-    const snet_domain_t *domain);
+SNetGInxInit(snet_ginx_t *inx);
 
 extern void
-SNetGInxInitCopy(
-    snet_ginx_t *inx,
-    const snet_ginx_t *val, bool clone);
+SNetGInxInitCopy(snet_ginx_t *inx, bool clone);
 
 extern void
-SNetGInxInitFromStr(
-    snet_ginx_t *inx,
-    const snet_domain_t *domain, const char *val);
+SNetGInxInitFromStr(snet_ginx_t *inx, const char *val);
 
 extern void
 SNetGInxInitFromArray(
-    snet_ginx_t *inx,
-    const snet_domain_t *domain,
-    const snet_ginx_item_t *a, unsigned int aSize);
+    snet_ginx_t *inx, const snet_ginx_item_t *a, unsigned int aSize);
 
 /*---*/
 
-extern snet_ginx_t*
-SNetGInxCreate(
-    const snet_domain_t *domain);
+extern snet_ginx_t* SNetGInxCreate();
 
 extern snet_ginx_t*
-SNetGInxCreateCopy(
-    const snet_ginx_t *val, bool clone);
+SNetGInxCreateCopy(const snet_ginx_t *val, bool clone);
 
 extern snet_ginx_t*
-SNetGInxCreateFromStr(
-    const snet_domain_t *domain, const char *val);
+SNetGInxCreateFromStr(const char *val);
 
 extern snet_ginx_t*
-SNetGInxCreateFromArray(
-    const snet_domain_t *domain,
-    const snet_ginx_item_t *arr, unsigned int arr_sz);
+SNetGInxCreateFromArray(const snet_ginx_item_t *arr, unsigned int arr_sz);
 
 /*---*/
 
 extern void SNetGInxDestroy(snet_ginx_t *inx);
-
-/*---*/
-
-extern void SNetGInxSetupMutex(snet_ginx_t *inx, const place *p);
 
 /*----------------------------------------------------------------------------*/
 /* Value changing */
@@ -170,7 +152,7 @@ SNetGInxCompare(const snet_ginx_t *inx1, const snet_ginx_t *inx2);
 /*---*/
 
 extern snet_ginx_cmp_result_t
-SNetGInxCompareExt(const snet_ginx_t *inx1, const snet_ginx_t *inx2);
+SNetGInxCompareEx(const snet_ginx_t *inx1, const snet_ginx_t *inx2);
 
 /*----------------------------------------------------------------------------*/
 /* Infimum calculation */
@@ -181,13 +163,16 @@ SNetGInxCalcInfimum(const snet_ginx_t *inx1, const snet_ginx_t *inx2);
 /*---*/
 
 extern snet_ginx_t*
-SNetGInxCalcInfimumExt(const snet_ginx_t *inx1, const snet_ginx_t *inx2);
+SNetGInxCalcInfimumEx(const snet_ginx_t *inx1, const snet_ginx_t *inx2);
 
 /*----------------------------------------------------------------------------*/
 /* Concatenation */
 
 extern void 
-SNetGInxConcat(snet_ginx_t *inx1, const snet_ginx_t *inx2);
+SNetGInxConcat(
+    snet_ginx_t *inx1,
+    const snet_ginx_t *inx2, 
+    unsigned int start_item_inx);
 
 extern void 
 SNetGInxConcatStr(snet_ginx_t *inx, const char *str);
@@ -208,11 +193,6 @@ SNetGInxChopRight(snet_ginx_t *inx, unsigned int count);
 
 /*----------------------------------------------------------------------------*/
 /* Convertion */
-
-extern const snet_base_t*
-SNetGInxToBase(const snet_ginx_t *inx);
-
-/*---*/
 
 extern snet_ginx_item_t* 
 SNetGInxToArray(

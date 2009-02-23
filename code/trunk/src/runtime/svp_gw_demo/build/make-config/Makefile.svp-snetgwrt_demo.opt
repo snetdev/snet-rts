@@ -50,7 +50,7 @@ UTC2CPP_FLAGS           := --dollar-directives
 UTC2CPP_OUTF_FLAG       := -o
 UTC2CPP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),--cpp:-I$(d))
 
-CXX_FLAGS               := -c
+CXX_FLAGS               := -c -Wall -fno-exceptions -gdwarf-2
 CXX_OUTF_FLAG           := -o
 CXX_INCL_DIRS_FLAGS     := $(foreach d,$(INCLUDE_DIRS),-I$(d))
 

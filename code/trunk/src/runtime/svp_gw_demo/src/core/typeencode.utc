@@ -25,93 +25,1002 @@
 */
 /*----------------------------------------------------------------------------*/
 
-#include "typeencode.utc.h"
+#include "typeencode.int.utc.h"
+#include "domain.int.utc.h"
+#include "memmng.int.utc.h"
+
+/*---*/
+
+#include <stdarg.h>
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-/**
- * Types' definitions
- */
+struct vector {
+    unsigned int  sz;
+    signed   int *items;
+};
+
+struct variant_encoding {
+    snet_vector_t *fields;
+    snet_vector_t *tags;
+    snet_vector_t *btags;
+};
+
+/*---*/
+
+struct type_encoding {
+    unsigned int             variants_cnt;
+    snet_variantencoding_t **variants;
+};
+
+/*---*/
+
+struct box_sign {
+    snet_typeencoding_t *out_type;
+    snet_list_t         *mappings;
+};
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
+/* Vector functions */
 
-snet_vector_t* SNetTencCreateVector(int num, ...)
+void SNetTencVectorInit(snet_vector_t *vec, unsigned int sz)
 {
-    /**
-     * Not implemented yet.
-     */
-    return NULL;
+    assert(vec != NULL);
+
+    vec->sz    = 0;
+    vec->items = NULL;
+
+    SNetTencVectorResize(vec, sz);
+}
+
+void SNetTencVectorInitCopy(snet_vector_t *vec, const snet_vector_t *src_vec)
+{
+    assert(vec != NULL);
+    assert(src_vec != NULL);
+
+    vec->sz    = 0;
+    vec->items = NULL;
+    
+    SNetTencVectorResize(vec, src_vec->sz);
+
+    if (vec->sz > 0) {
+        SNetMemCopy(
+            src_vec->items,
+            vec->items, src_vec->sz * sizeof(int));
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_vector_t* SNetTencVectorCreate(unsigned int sz, ...)
+{
+    snet_vector_t *vec = 
+        (snet_vector_t *) SNetMemAlloc(sizeof(snet_vector_t));
+
+    SNetTencVectorInit(vec, sz);
+
+    va_list  vargs;
+    va_start(vargs, sz);
+
+    for (unsigned int i=0; i < sz; i++)
+        vec->items[i] = va_arg(vargs, int);
+
+    va_end(vargs);
+
+    return vec;
+}
+
+snet_vector_t* SNetTencVectorCreateEmpty(unsigned int sz)
+{
+    snet_vector_t *vec = 
+        (snet_vector_t *) SNetMemAlloc(sizeof(snet_vector_t));
+
+    SNetTencVectorInit(vec, sz);
+
+    return vec;
+}
+
+snet_vector_t* SNetTencVectorCreateCopy(const snet_vector_t *vec)
+{
+    assert(vec != NULL);
+
+    snet_vector_t *new_vec = 
+        (snet_vector_t *) SNetMemAlloc(sizeof(snet_vector_t));
+
+    SNetTencVectorInitCopy(new_vec, vec);
+
+    return new_vec;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetTencVectorDestroy(snet_vector_t *vec)
+{
+    assert(vec != NULL);
+
+    if (vec->items != NULL)
+        SNetMemFree(vec->items);
+
+    SNetMemFree(vec);
+}
+
+/*----------------------------------------------------------------------------*/
+
+int SNetTencVectorGetEntry(const snet_vector_t *vec, unsigned int inx)
+{
+    assert(vec != NULL);
+    assert(inx < vec->sz);
+
+    return vec->items[inx];
+}
+
+void SNetTencVectorSetEntry(snet_vector_t *vec, unsigned int inx, int val)
+{
+    assert(vec != NULL);
+    assert(inx < vec->sz);
+
+    vec->items[inx] = val;
+}
+
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetTencVectorGetSize(const snet_vector_t *vec)
+{
+    assert(vec != NULL); return vec->sz;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetTencVectorRemoveUnsetEntries(snet_vector_t *vec)
+{
+    assert(vec != NULL);
+
+    unsigned int cur_inx = 0;
+
+    for (unsigned int i=0; i < vec->sz; i++) {
+        if (vec->items[i] != TENC_VEC_UNSET_ITEM_VAL) {
+            if (i != cur_inx)
+                vec->items[cur_inx] = vec->items[i];
+
+            cur_inx++;
+        }
+    }
+    
+    SNetTencVectorResize(vec, cur_inx);
+}
+
+void SNetTencVectorResize(snet_vector_t *vec, unsigned int sz)
+{
+    assert(vec != NULL);
+
+    if (sz == 0) {
+        if (vec->items != NULL)
+            SNetMemFree(vec->items);
+
+        vec->sz    = 0;
+        vec->items = NULL;
+
+        return;
+    }
+
+    vec->items = (int *) (
+        vec->items == NULL ?
+        SNetMemAlloc(sz * sizeof(int)) :
+        SNetMemRealloc(vec->items, sz * sizeof(int)));
+
+    for (unsigned int i = vec->sz; i < sz; i++) {
+        vec->items[i] = TENC_VEC_UNSET_ITEM_VAL;
+    }
+
+    vec->sz = sz;
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetTencVectorContainsItem(
+    const snet_vector_t *vec, int item_val, unsigned int *item_inx)
+{
+    assert(vec != NULL);
+
+    for (unsigned int i=0; i < vec->sz; i++) {
+        if (vec->items[i] == item_val) {
+            if (item_inx != NULL) {
+                (*item_inx) = i;
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+unsigned int SNetTencVectorCompare(
+    const snet_vector_t *vec1, const snet_vector_t *vec2)
+{
+    if (vec1 == NULL || vec2 == NULL) {
+        return 0;
+    }
+
+    unsigned int matched_items = 0;
+
+    if (vec2->sz < vec1->sz) {
+        const snet_vector_t *tmp = vec1;
+
+        vec1 = vec2;
+        vec2 = tmp;
+    }
+
+    for (unsigned int i=0; i < vec1->sz; i++) {
+        if (SNetTencVectorContainsItem(vec2, vec1->items[i], NULL)) {
+            matched_items++;
+        }
+    }
+
+    return matched_items;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Variant encoding functions */
+
+static void variant_rename_item(
+    snet_vector_t *items_vec, int name, int new_name)
+{
+    if (items_vec == NULL) {
+        return;
+    }
+
+    unsigned int inx;
+
+    if (SNetTencVectorContainsItem(items_vec, name, &inx)) {
+        SNetTencVectorSetEntry(items_vec, inx, new_name);
+    }
+}
+
+static bool variant_add_item(snet_vector_t **items_vec, int name)
+{
+    if ((*items_vec) == NULL) {
+        (*items_vec) = SNetTencVectorCreate(1, name);
+        return true;
+    }
+
+    if (SNetTencVectorContainsItem((*items_vec), name, NULL)) {
+        return false;
+    }
+
+    unsigned int vsz = 
+        SNetTencVectorGetSize((*items_vec));
+
+    SNetTencVectorResize((*items_vec), vsz + 1);
+    SNetTencVectorSetEntry((*items_vec), vsz, name);
+
+    return true;
+}
+
+static bool variant_remove_item(
+    snet_vector_t *items_vec,
+    int name, unsigned int *inx_out, bool mark_only)
+{
+    if (items_vec == NULL) {
+        return false;
+    }
+
+    unsigned int inx;
+
+    if (!SNetTencVectorContainsItem(items_vec, name, &inx)) {
+        return false;
+    }
+
+    SNetTencVectorSetEntry(
+        items_vec, inx, TENC_VEC_UNSET_ITEM_VAL);
+
+    if (!mark_only)
+        SNetTencVectorRemoveUnsetEntries(items_vec);
+
+    if (inx_out != NULL) {
+        (*inx_out) = inx;
+    }
+
+    return true;
 }
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-snet_variantencoding_t* SNetTencVariantEncode(
-    snet_vector_t *field_v, snet_vector_t *tag_v, snet_vector_t *btag_v)
+void SNetTencVariantInit(
+    snet_variantencoding_t *venc,
+    snet_vector_t *fields, snet_vector_t *tags, snet_vector_t *btags)
 {
-    /**
-     * Not implemented yet.
-     */
-    return NULL;
+    assert(venc != NULL);
+
+    venc->fields = fields;
+    venc->tags   = tags;
+    venc->btags  = btags;
+}
+
+void SNetTencVariantInitCopy(
+    snet_variantencoding_t *venc, const snet_variantencoding_t *src_venc)
+{
+    assert(venc != NULL);
+    assert(src_venc != NULL);
+
+    venc->fields = (
+        src_venc->fields == NULL ?
+        NULL : SNetTencVectorCreateCopy(src_venc->fields));
+
+    venc->tags   = (
+        src_venc->tags == NULL ?
+        NULL : SNetTencVectorCreateCopy(src_venc->tags));
+
+    venc->btags  = (
+        src_venc->tags == NULL ?
+        NULL : SNetTencVectorCreateCopy(src_venc->btags));
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_variantencoding_t*
+SNetTencVariantEncode(
+    snet_vector_t *fields,
+    snet_vector_t *tags, snet_vector_t *btags)
+{
+    snet_variantencoding_t *venc =
+        (snet_variantencoding_t *) 
+            SNetMemAlloc(sizeof(snet_variantencoding_t));
+
+    SNetTencVariantInit(venc, fields, tags, btags);
+
+    return venc;
+}
+
+snet_variantencoding_t*
+SNetTencVariantCreateCopy(const snet_variantencoding_t *src_venc)
+{
+    snet_variantencoding_t *venc =
+        (snet_variantencoding_t *) 
+            SNetMemAlloc(sizeof(snet_variantencoding_t));
+    
+    SNetTencVariantInitCopy(venc, src_venc);
+
+    return venc;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetTencVariantDestroy( snet_variantencoding_t *venc)
+{
+    assert(venc != NULL);
+
+    if (venc->fields != NULL) 
+        SNetTencVectorDestroy(venc->fields);
+
+    if (venc->tags != NULL) 
+        SNetTencVectorDestroy(venc->tags);
+
+    if (venc->btags != NULL) 
+        SNetTencVectorDestroy(venc->btags);
+
+    SNetMemFree(venc);
 }
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-snet_typeencoding_t* SNetTencTypeEncode(int num, ...)
+const snet_vector_t* 
+SNetTencVariantGetFields(const snet_variantencoding_t *venc)
 {
-    /**
-     * Not implemented yet.
-     */
-    return NULL;
+    assert(venc != NULL); return venc->fields;
+}
+
+const snet_vector_t* 
+SNetTencVariantGetTags(const snet_variantencoding_t *venc)
+{
+    assert(venc != NULL); return venc->tags;
+}
+
+const snet_vector_t* 
+SNetTencVariantGetBTags(const snet_variantencoding_t *venc)
+{
+    assert(venc != NULL); return venc->btags;
 }
 
 /*----------------------------------------------------------------------------*/
+
+unsigned int SNetTencVariantGetFieldsCount(const snet_variantencoding_t *venc)
+{
+    assert(venc != NULL);
+    return (venc->fields == NULL ? 0 : SNetTencVectorGetSize(venc->fields));
+}
+
+unsigned int SNetTencVariantGetTagsCount(const snet_variantencoding_t *venc)
+{
+    assert(venc != NULL);
+    return (venc->tags == NULL ? 0 : SNetTencVectorGetSize(venc->tags));
+}
+
+unsigned int SNetTencVariantGetBTagsCount(const snet_variantencoding_t *venc)
+{
+    assert(venc != NULL);
+    return (venc->btags == NULL ? 0 : SNetTencVectorGetSize(venc->btags));
+}
+
+/*----------------------------------------------------------------------------*/
+
+int SNetTencVariantGetField(
+    const snet_variantencoding_t *venc, unsigned int inx)
+{
+    assert(venc != NULL);
+    assert(venc->fields != NULL);
+    assert(inx < SNetTencVectorGetSize(venc->fields));
+
+    return SNetTencVectorGetEntry(venc->fields, inx);
+}
+
+int SNetTencVariantGetTag(
+    const snet_variantencoding_t *venc, unsigned int inx)
+{
+    assert(venc != NULL);
+    assert(venc->tags != NULL);
+    assert(inx < SNetTencVectorGetSize(venc->tags));
+
+    return SNetTencVectorGetEntry(venc->tags, inx);
+}
+
+int SNetTencVariantGetBTag(
+    const snet_variantencoding_t *venc, unsigned int inx)
+{
+    assert(venc != NULL);
+    assert(venc->btags != NULL);
+    assert(inx < SNetTencVectorGetSize(venc->btags));
+
+    return SNetTencVectorGetEntry(venc->btags, inx);
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetTencVariantContainsField(
+    const snet_variantencoding_t *venc, int name, unsigned int *inx)
+{
+    assert(venc != NULL); 
+    return SNetTencVectorContainsItem(venc->fields, name, inx);
+}
+
+bool SNetTencVariantContainsTag(
+    const snet_variantencoding_t *venc, int name, unsigned int *inx)
+{
+    assert(venc != NULL); 
+    return SNetTencVectorContainsItem(venc->tags, name, inx);
+}
+
+bool SNetTencVariantContainsBTag(
+    const snet_variantencoding_t *venc, int name, unsigned int *inx)
+{
+    assert(venc != NULL); 
+    return SNetTencVectorContainsItem(venc->btags, name, inx);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetTencVariantRenameField(
+    snet_variantencoding_t *venc, int name, int new_name)
+{
+    assert(venc != NULL);
+    variant_rename_item(venc->fields, name, new_name);
+}
+
+void SNetTencVariantRenameTag(
+    snet_variantencoding_t *venc, int name, int new_name)
+{
+    assert(venc != NULL);
+    variant_rename_item(venc->tags, name, new_name);
+}
+
+void SNetTencVariantRenameBTag(
+    snet_variantencoding_t *venc, int name, int new_name)
+{
+    assert(venc != NULL);
+    variant_rename_item(venc->btags, name, new_name);
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetTencVariantAddField(snet_variantencoding_t *venc, int name)
+{
+    assert(venc != NULL);
+    return variant_add_item(&venc->fields, name);
+}
+
+bool SNetTencVariantAddTag(snet_variantencoding_t *venc, int name)
+{
+    assert(venc != NULL);
+    return variant_add_item(&venc->tags, name);
+}
+
+bool SNetTencVariantAddBTag(snet_variantencoding_t *venc, int name)
+{
+    assert(venc != NULL);
+    return variant_add_item(&venc->btags, name);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetTencVariantRemoveField(
+    snet_variantencoding_t *venc, int name)
+{
+    assert(venc != NULL);
+    variant_remove_item(venc->fields, name, NULL, false);
+}
+
+void SNetTencVariantRemoveTag(
+    snet_variantencoding_t *venc, int name)
+{
+    assert(venc != NULL);
+    variant_remove_item(venc->tags, name, NULL, false);
+}
+
+void SNetTencVariantRemoveBTag(
+    snet_variantencoding_t *venc, int name)
+{
+    assert(venc != NULL);
+    variant_remove_item(venc->btags, name, NULL, false);
+}
+
+bool SNetTencVariantRemoveFieldEx(
+    snet_variantencoding_t *venc,
+    int name, unsigned int *inx, bool mark_only)
+{
+    assert(venc != NULL);
+
+    return variant_remove_item(
+        venc->fields, name, inx, mark_only);
+}
+
+bool SNetTencVariantRemoveTagEx(
+    snet_variantencoding_t *venc,
+    int name, unsigned *inx, bool mark_only)
+{
+    assert(venc != NULL);
+
+    return variant_remove_item(
+        venc->tags, name, inx, mark_only);
+}
+
+bool SNetTencVariantRemoveBTagEx(
+    snet_variantencoding_t *venc,
+    int name, unsigned int *inx, bool mark_only)
+{
+    assert(venc != NULL);
+
+    return variant_remove_item(
+        venc->btags, name, inx, mark_only);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetTencVariantRemoveMarked(snet_variantencoding_t *venc)
+{
+    SNetTencVariantRemoveMarkedFields(venc);
+    SNetTencVariantRemoveMarkedTags(venc);
+    SNetTencVariantRemoveMarkedBTags(venc);
+}
+
+void SNetTencVariantRemoveMarkedFields(snet_variantencoding_t *venc)
+{
+    assert(venc != NULL);
+
+    if (venc->fields != NULL)
+        SNetTencVectorRemoveUnsetEntries(venc->fields);
+}
+
+void SNetTencVariantRemoveMarkedTags(snet_variantencoding_t *venc)
+{
+    assert(venc != NULL);
+
+    if (venc->tags != NULL)
+        SNetTencVectorRemoveUnsetEntries(venc->tags);
+}
+
+void SNetTencVariantRemoveMarkedBTags(snet_variantencoding_t *venc)
+{
+    assert(venc != NULL);
+
+    if (venc->btags != NULL)
+        SNetTencVectorRemoveUnsetEntries(venc->btags);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+int SNetTencVariantsMatch(
+    const snet_variantencoding_t *venc1, 
+    const snet_variantencoding_t *venc2, bool *matched_ident)
+{
+    assert(venc1 != NULL);
+    assert(venc2 != NULL);
+    
+    const snet_vector_t *venc1_btags = SNetTencVariantGetBTags(venc1);
+    const snet_vector_t *venc2_btags = SNetTencVariantGetBTags(venc2);
+
+    unsigned int venc1_btags_sz =
+        (venc1_btags != NULL ? SNetTencVectorGetSize(venc1_btags) : 0);
+    
+    unsigned int venc2_btags_sz =
+        (venc2_btags != NULL ? SNetTencVectorGetSize(venc2_btags) : 0);
+
+    if (venc1_btags_sz != venc2_btags_sz) {
+        return 0;
+    }
+
+    if (venc1_btags_sz != SNetTencVectorCompare(venc1_btags, venc2_btags)) {
+        return 0;
+    }
+
+    const snet_vector_t *venc1_tags   = SNetTencVariantGetTags(venc1);
+    const snet_vector_t *venc1_fields = SNetTencVariantGetFields(venc1);
+
+    const snet_vector_t *venc2_tags   = SNetTencVariantGetTags(venc2);
+    const snet_vector_t *venc2_fields = SNetTencVariantGetFields(venc2);
+
+    int venc1_items_total_cnt = 
+        venc1_btags_sz +
+        (venc1_tags   == NULL ? 0 :
+            (int) SNetTencVectorGetSize(venc1_tags)) +
+        (venc1_fields == NULL ? 0 :
+            (int) SNetTencVectorGetSize(venc1_fields));
+
+    int venc2_items_total_cnt = 
+        venc2_btags_sz +
+        (venc2_tags   == NULL ? 0 :
+            (int) SNetTencVectorGetSize(venc2_tags)) +
+        (venc2_fields == NULL ? 0 :
+            (int) SNetTencVectorGetSize(venc2_fields));
+     
+    int match_cnt = (int) venc1_btags_sz;
+
+    match_cnt += SNetTencVectorCompare(venc1_tags, venc2_tags);
+    match_cnt += SNetTencVectorCompare(venc1_fields, venc2_fields);
+
+    if (match_cnt != venc1_items_total_cnt) {
+        // "venc1" variant does not match all its
+        // elements with "venc2" variant. 
+        // Thus it is either a subtype, not related at all
+        // or venc2 is the identity.
+
+        if (venc2_items_total_cnt >= venc1_items_total_cnt) {
+            match_cnt = 0;
+        }
+
+        if (venc2_items_total_cnt == 0 && matched_ident != NULL) {
+            // "venc2" is the identity. In this case 
+            // "match_cnt" must already be equal to zero.
+            // So the only thing left to do is to set the
+            // identity match flag.
+            (*matched_ident) = true;
+        }
+
+    } else {
+        // "venc1" variant matches all its elements
+        // with "venc2" variant.
+        // Thus "venc1" variant is either a supertype,
+        // an exact match or they are both the identity.
+
+        if (match_cnt == 0 && matched_ident != NULL) {
+            // If this happens then it means
+            // that both variants are the identity.
+            (*matched_ident) = true;
+
+        } else if (venc2_items_total_cnt > venc1_items_total_cnt) {
+            match_cnt -= venc2_items_total_cnt;
+        }
+    }
+    
+    return match_cnt;
+}
+
+/*----------------------------------------------------------------------------*/
+
+int SNetTencVariantMatchesType(
+    const snet_variantencoding_t *venc, 
+    const snet_typeencoding_t    *tenc,
+    unsigned int *matched_venc_inx, bool *matched_ident)
+{
+    assert(venc != NULL);
+    assert(tenc != NULL);
+    
+    signed   int match_cnt       = 0;
+    unsigned int matched_variant = 0;
+    unsigned int variants_cnt    = SNetTencTypeGetVariantsCount(tenc);
+
+    for (unsigned int i=0; i < variants_cnt; i++) {
+        int cur_venc_match_cnt = 
+            SNetTencVariantsMatch(
+                venc, SNetTencTypeGetVariant(tenc, i), matched_ident);
+
+        if ((cur_venc_match_cnt != 0 || matched_ident) && 
+            (match_cnt < cur_venc_match_cnt || match_cnt == 0)) {
+
+            match_cnt       = cur_venc_match_cnt;
+            matched_variant = i;
+        }
+    }
+
+    if (matched_venc_inx != NULL && match_cnt != 0) {
+        (*matched_venc_inx) = matched_variant;
+    }
+
+    return match_cnt;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Type encoding functions */
+
+void SNetTencTypeInit(
+    snet_typeencoding_t *tenc, unsigned int variants_cnt)
+{
+    assert(tenc != NULL);
+
+    tenc->variants_cnt = variants_cnt;
+
+    if (variants_cnt == 0) {
+        tenc->variants = NULL;
+        return;
+    }
+
+    tenc->variants = (snet_variantencoding_t **) 
+        SNetMemAlloc(variants_cnt * sizeof(snet_variantencoding_t *));
+
+    SNetMemSet(
+        tenc->variants,
+        0,
+        variants_cnt * sizeof(snet_variantencoding_t *));
+}
+
+void SNetTencTypeInitCopy(
+    snet_typeencoding_t *tenc, snet_typeencoding_t *src_tenc)
+{
+    assert(tenc != NULL);
+    assert(src_tenc != NULL);
+
+    SNetTencTypeInit(tenc, src_tenc->variants_cnt);
+
+    for (unsigned int i=0; i < src_tenc->variants_cnt; i++)
+        tenc->variants[i] = SNetTencVariantCreateCopy(src_tenc->variants[i]);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_typeencoding_t* 
+SNetTencTypeEncode(unsigned int variants_cnt, ...)
+{
+    snet_typeencoding_t *tenc =
+        (snet_typeencoding_t *)
+            SNetMemAlloc(sizeof(snet_typeencoding_t));
+
+    SNetTencTypeInit(tenc, variants_cnt);
+
+    va_list  vargs;
+    va_start(vargs, variants_cnt);
+
+    for (unsigned int i=0; i < variants_cnt; i++)
+        tenc->variants[i] = va_arg(vargs, snet_variantencoding_t *);
+
+    va_end(vargs);
+
+    return tenc;
+}
+
+snet_typeencoding_t*
+SNetTencTypeCreateCopy(snet_typeencoding_t *src_tenc)
+{
+    assert(src_tenc != NULL);
+
+    snet_typeencoding_t *tenc =
+        (snet_typeencoding_t *)
+            SNetMemAlloc(sizeof(snet_typeencoding_t));
+
+    SNetTencTypeInitCopy(tenc, src_tenc);
+
+    return tenc;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetTencTypeDestroy(snet_typeencoding_t *tenc)
+{
+    assert(tenc != NULL);
+
+    for (unsigned int i=0; i < tenc->variants_cnt; i++) {
+        if (tenc->variants[i] != NULL)
+            SNetTencVariantDestroy(tenc->variants[i]);
+    }
+
+    SNetMemFree(tenc->variants);
+    SNetMemFree(tenc);
+}
+
+/*----------------------------------------------------------------------------*/
+
+unsigned int 
+SNetTencTypeGetVariantsCount(const snet_typeencoding_t *tenc)
+{
+    assert(tenc != NULL); return tenc->variants_cnt;
+}
+
+snet_variantencoding_t*
+SNetTencTypeGetVariant(const snet_typeencoding_t *tenc, unsigned int inx)
+{
+    assert(tenc != NULL);
+    assert(inx < tenc->variants_cnt);
+
+    return tenc->variants[inx];
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Type encoding list functions */
 
 snet_typeencoding_list_t*
-SNetTencCreateTypeEncodingList(int num, ...)
+SNetTencCreateTypeEncodingList(unsigned int sz, ...)
 {
-    /**
-     * Not implemented yet.
-     */
-    return NULL;
+    snet_list_t *lst = SNetListCreate(
+       sizeof(snet_typeencoding_t *),
+       sz + 4,
+       SNetDomainGetSystem());
+
+    va_list  vargs;
+    va_start(vargs, sz);
+
+    for (unsigned int i=0; i < sz; i++) {
+        snet_typeencoding_t *tenc = 
+            va_arg(vargs, snet_typeencoding_t *);
+
+        SNetListPushBack(lst, &tenc);
+    }
+
+    va_end(vargs);
+
+    return (snet_typeencoding_list_t *) lst;
 }
- 
-/*----------------------------------------------------------------------------*/
 
-snet_typeencoding_list_t*
-SNetTencCreateTypeEncodingListFromArray(int num, snet_typeencoding_t **t)
+void SNetTencTypeEncodingListDestroy(snet_typeencoding_list_t *tenc_lst)
 {
-    /**
-     * Not implemented yet.
-     */
-    return NULL;
-}
-
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-
-snet_box_sign_t* SNetTencBoxSignEncode(snet_typeencoding_t *t, ...)
-{
-    /**
-     * Not implemented yet.
-     */
-    return NULL;
+    SNetListDestroy((snet_list_t *) tenc_lst);
 }
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Box signature encoding functions */
 
-snet_patternencoding_t* 
-SNetTencPatternEncode(int num_tags, int num_fields, ...)
+void SNetTencBoxSignInit(snet_box_sign_t *sign, snet_typeencoding_t *tenc)
 {
-    /**
-     * Not implemented yet.
-     */
-    return NULL;
+    assert(sign != NULL);
+    assert(tenc != NULL);
+
+    sign->out_type = tenc;
+    
+    sign->mappings =
+        SNetListCreate(
+            sizeof(snet_vector_t *),
+            SNetTencTypeGetVariantsCount(tenc) + 2,
+            SNetDomainGetSystem());
+}
+
+void SNetTencBoxSignInitCopy(
+    snet_box_sign_t *sign, snet_box_sign_t *src_sign)
+{
+    assert(sign != NULL);
+    assert(src_sign != NULL);
+
+    SNetTencBoxSignInit(sign, SNetTencTypeCreateCopy(src_sign->out_type));
+
+    for (unsigned int it = SNetListBegin(src_sign->mappings);
+         it != 0; it = SNetListItemGetNext(src_sign->mappings, it)) {
+
+        snet_vector_t * vec; 
+
+        SNetListItemGetValue(
+            src_sign->mappings, it, &vec);
+        
+        snet_vector_t *vec_clone = 
+            SNetTencVectorCreateCopy(vec);
+
+        SNetListPushBack(sign->mappings, &vec_clone);
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_box_sign_t*
+SNetTencBoxSignEncode(snet_typeencoding_t *tenc, ...)
+{
+    assert(tenc != NULL);
+
+    snet_box_sign_t *sign = 
+        (snet_box_sign_t *) 
+            SNetMemAlloc(sizeof(snet_box_sign_t *));
+
+    SNetTencBoxSignInit(sign, tenc);
+
+    va_list  vargs;
+    va_start(vargs, tenc);
+
+    unsigned int variants_cnt = 
+        SNetTencTypeGetVariantsCount(tenc);
+
+    for (unsigned int i=0; i < variants_cnt; i++) {
+        snet_vector_t *vec = va_arg(vargs, snet_vector_t *);
+
+        assert(vec != NULL);
+        SNetListPushBack(sign->mappings, &vec);
+    }
+            
+    va_end(vargs);
+    return sign;
+}
+
+snet_box_sign_t*
+SNetTencBoxSignCreateCopy(snet_box_sign_t *src_sign)
+{
+    assert(src_sign != NULL);
+
+    snet_box_sign_t *sign = 
+        (snet_box_sign_t *) 
+            SNetMemAlloc(sizeof(snet_box_sign_t *));
+
+    SNetTencBoxSignInitCopy(sign, src_sign);
+
+    return sign;
+}
+
+void SNetTencBoxSignDestroy(snet_box_sign_t *sign)
+{
+    assert(sign != NULL);
+
+    if (sign->out_type != NULL)
+        SNetTencTypeDestroy(sign->out_type);
+
+    if (sign->mappings == NULL) {
+        return;
+    }
+        
+    snet_vector_t *vec;
+
+    while (SNetListPopFront(sign->mappings, &vec)) {
+        if (vec != NULL)
+            SNetTencVectorDestroy(vec);
+    }
+
+    SNetListDestroy(sign->mappings);
+    SNetMemFree(sign);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_typeencoding_t*
+SNetTencBoxSignGetType(const snet_box_sign_t *sign)
+{
+    assert(sign != NULL); return sign->out_type;
+}
+
+snet_vector_t*
+SNetTencBoxSignGetMapping(const snet_box_sign_t *sign, unsigned int inx)
+{
+    assert(sign != NULL);
+    
+    snet_vector_t *vec = NULL;
+    
+    SNetListItemGetValue(sign->mappings, inx + 1, &vec);
+    return vec;
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

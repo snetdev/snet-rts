@@ -11,16 +11,18 @@
 
 void list_test(const snet_domain_t *snetd)
 {
-    unsigned int i = 0;
-    unsigned int test_sz = 1000000;
+    unsigned int i;
+    unsigned int id;
+    unsigned int item;
+    unsigned int test_sz = 100000;
 
     unsigned int int_lst_item0 = 111;
     unsigned int int_lst_item1 = 222;
 
-    snet_list_t *lst = SNetListCreate(0, snetd);
+    snet_list_t *lst = SNetListCreate(sizeof(unsigned int), 4, snetd);
 
     for (i=0; i < test_sz; i++) {
-        unsigned int id = SNetListPushBack(lst, &int_lst_item0);
+        id = SNetListPushBack(lst, &i);
 
         printf("Pushed item %u with id %u\n", i, id);
 
@@ -35,14 +37,10 @@ void list_test(const snet_domain_t *snetd)
     printf("\n/*---*/\n\n");
 
     while (!SNetListIsEmpty(lst)) {
-        unsigned int *item = (unsigned int *) 
-            SNetListItemGetValue(lst, SNetListBegin(lst));
-
+        SNetListItemGetValue(lst, SNetListBegin(lst), &item);
         SNetListRemove(lst, SNetListBegin(lst));
 
-        assert(item != NULL);
-
-        printf("Poped item %u: %u\n", i, *item);
+        printf("Poped item %u: %u\n", i, item);
         
         printf(
             "Empty = %u, Size = %u, Capacity = %u\n",
@@ -58,7 +56,7 @@ void list_test(const snet_domain_t *snetd)
     for (i=0; i < test_sz; i++) {
 
         if (i % 3 < 2 || SNetListIsEmpty(lst)) {
-            unsigned int id = SNetListPushFront(lst, &int_lst_item0);
+            id = SNetListPushFront(lst, &i);
             printf("Pushed item: id = %u\n", id);
         } else {
             srand(SNetListGetSize(lst));
@@ -69,11 +67,8 @@ void list_test(const snet_domain_t *snetd)
             printf("Popping %u items\n", n);
             
             for (unsigned int j=0; j < n; j++) {
-                unsigned int *item = (unsigned int *) SNetListPopFront(lst);
-
-                assert(item != NULL);
-
-                printf("Poped item %u: %u\n", j, *item);
+                SNetListPopFront(lst, &item);
+                printf("Poped item %u: %u\n", j, item);
             }
         }
 
@@ -87,7 +82,7 @@ void list_test(const snet_domain_t *snetd)
     printf("\n/*---*/\n\n");
 
     while (!SNetListIsEmpty(lst)) {
-        SNetListPopBack(lst);
+        SNetListPopBack(lst, NULL);
 
         printf(
             "Empty = %u, Size = %u, Capacity = %u\n",
@@ -96,54 +91,49 @@ void list_test(const snet_domain_t *snetd)
             SNetListGetCapacity(lst));
     }
 
-    printf("\n/*---*/\n\n");
-
-    int ints[] = {
-        0, 1, 2, 3, 4,
-        5, 6, 7, 8, 9 
-    };
+    printf("\n/*-aa--*/\n\n");
 
     for (i=0; i < 10; i++)
-        SNetListPushBack(lst, ints + i);
+        SNetListPushBack(lst, &i);
        
     for (unsigned int it = SNetListBegin(lst); 
          it != 0; it = SNetListItemGetNext(lst, it)) {
 
-        int *item = (int *) SNetListItemGetValue(lst, it);
-
-        assert(item != NULL);
-        printf("Item(%u) = %d\n", it, *item);
+        SNetListItemGetValue(lst, it, &item);
+        printf("Item(%u) = %d\n", it, item);
     }
 
     printf("\n/*---*/\n\n");
+ 
+    item = 2;
+    id   = SNetListFindItem(lst, &item);
+    SNetListInsertAfter(lst, id, &int_lst_item0);
 
-    unsigned int id = 0;
+    item = 5;
+    id   = SNetListFindItem(lst, &item);
+    SNetListInsertAfter(lst, id, &int_lst_item0);
     
-    id = SNetListFindItem(lst, ints + 2);
+    item = 9;
+    id   = SNetListFindItem(lst, &item);
     SNetListInsertAfter(lst, id, &int_lst_item0);
 
-    id = SNetListFindItem(lst, ints + 5);
-    SNetListInsertAfter(lst, id, &int_lst_item0);
-    
-    id = SNetListFindItem(lst, ints + 9);
-    SNetListInsertAfter(lst, id, &int_lst_item0);
-
-    id = SNetListFindItem(lst, ints + 0);
+    item = 0;
+    id   = SNetListFindItem(lst, &item);
     SNetListInsertBefore(lst, id, &int_lst_item1);
 
-    id = SNetListFindItem(lst, ints + 3);
+    item = 3;
+    id   = SNetListFindItem(lst, &item);
     SNetListInsertBefore(lst, id, &int_lst_item1);
 
-    id = SNetListFindItem(lst, ints + 8);
+    item = 8;
+    id   = SNetListFindItem(lst, &item);
     SNetListInsertBefore(lst, id, &int_lst_item1);
 
     for (unsigned int it = SNetListBegin(lst); 
          it != 0; it = SNetListItemGetNext(lst, it)) {
-
-        int *item = (int *) SNetListItemGetValue(lst, it);
-
-        assert(item != NULL);
-        printf("Item(%u) = %d\n", it, *item);
+        
+        SNetListItemGetValue(lst, it, &item);
+        printf("Item(%u) = %d\n", it, item);
     }
 
     printf("\n/*---*/\n\n");
@@ -153,10 +143,8 @@ void list_test(const snet_domain_t *snetd)
     for (unsigned int it = SNetListBegin(lst_copy); 
          it != 0; it = SNetListItemGetNext(lst_copy, it)) {
 
-        int *item = (int *) SNetListItemGetValue(lst_copy, it);
-
-        assert(item != NULL);
-        printf("Item(%u) = %d\n", it, *item);
+        SNetListItemGetValue(lst_copy, it, &item);
+        printf("Item(%u) = %d\n", it, item);
     }
 
     printf("\n/*---*/\n\n");
@@ -164,10 +152,8 @@ void list_test(const snet_domain_t *snetd)
     for (unsigned int it = SNetListEnd(lst_copy); 
          it != 0; it = SNetListItemGetPrev(lst_copy, it)) {
 
-        int *item = (int *) SNetListItemGetValue(lst_copy, it);
-
-        assert(item != NULL);
-        printf("Item(%u) = %d\n", it, *item);
+        SNetListItemGetValue(lst_copy, it, &item);
+        printf("Item(%u) = %d\n", it, item);
     }
 
     SNetListDestroy(lst_copy);

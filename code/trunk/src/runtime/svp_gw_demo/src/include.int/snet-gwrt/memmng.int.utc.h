@@ -30,6 +30,14 @@
 
 #include "common.int.utc.h"
 
+/*---*/
+
+#ifndef SVPSNETGWRT_MONITOR_MALLOC
+#if SVPSNETGWRT_DEBUG > 0
+#define SVPSNETGWRT_MONITOR_MALLOC
+#endif
+#endif
+
 /*----------------------------------------------------------------------------*/
 
 typedef struct {
@@ -41,8 +49,22 @@ typedef struct {
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+extern void SNetMemMngSubSystemInit();
+extern void SNetMemMngSubSystemDestroy();
+
+/*----------------------------------------------------------------------------*/
+
 extern void* SNetMaskPointer(const void *ptr);
 extern void* SNetUnmaskPointer(const void *ptr);
+
+/*----------------------------------------------------------------------------*/
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC
+extern unsigned long SNetGetMemAllocSize();
+extern unsigned long SNetGetMemAllocCount();
+#endif
+
+extern unsigned long SNetGetMemBlockSize(const void *p);
 
 /*----------------------------------------------------------------------------*/
 
@@ -50,9 +72,17 @@ extern void*
 SNetMemAlloc(unsigned int sz);
 
 extern void*
-SNetMemRealloc(void *p, unsigned int sz);
+SNetTryMemAlloc(unsigned int sz);
 
 /*---*/
+
+extern void*
+SNetMemRealloc(void *p, unsigned int sz);
+
+extern void*
+SNetTryMemRealloc(void *p, unsigned int sz);
+
+/*----------------------------------------------------------------------------*/
 
 extern void SNetMemFree(void *p);
 

@@ -38,7 +38,22 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
+/**
+ * When defined pointers for objects created by the
+ * the runtime to "user" code are not being masked
+ * as it is done by default.
+ */
+// #define SVPSNETGWRT_NO_PONTER_MASKING
 
+/**
+ * Sets whether memory allocations should
+ * be monitored (for debug builds this is always
+ * defined).
+ */
+#define SVPSNETGWRT_MONITOR_MALLOC
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 /**
  * Sets the size (in terms of index items) a graph index increases
  * with each re-allocation (For long networks bigger values will improve

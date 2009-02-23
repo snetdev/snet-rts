@@ -16,12 +16,12 @@ MAKEDEP_INCL_DIRS_FLAGS_debug :=
 
 #---
 
-UTC2CPP_FLAGS_debug           :=
+UTC2CPP_FLAGS_debug           := --cpp:-DDEBUG
 UTC2CPP_INCL_DIRS_FLAGS_debug :=
 
 #---
 
-CXX_FLAGS_debug           := -DDEBUG -O0 -Wall
+CXX_FLAGS_debug           := -DDEBUG -O0
 CXX_INCL_DIRS_FLAGS_debug :=
 
 #---

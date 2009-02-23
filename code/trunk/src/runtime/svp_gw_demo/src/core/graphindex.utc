@@ -53,7 +53,6 @@ typedef struct {
 /*---*/
 
 struct graph_index {
-    snet_base_t       base;
     snet_ginx_data_t *data;
 
 }; // graph_index;
@@ -69,13 +68,6 @@ static snet_ginx_data_t* alloc_data_struct(int init_len)
         sizeof(snet_ginx_data_t) +
         sizeof(snet_ginx_item_t) * init_len +
         sizeof(snet_ginx_item_t) * SVPSNETGWRT_GRAPH_INDEX_INCR_STEP);
-
-    if (buf == NULL) {
-        /**
-         * !!TODO!!: Handle runtime error.
-         */
-         abort();
-    }
 
     snet_ginx_data_t *ginxd = (snet_ginx_data_t *) buf;
 
@@ -120,9 +112,9 @@ static snet_ginx_data_t* realloc_data_struct(
         SNetMemCopy(
             inx->data->items + copy_start,
             inx->data->items, copy_count * sizeof(snet_ginx_item_t));
-
-        inx->data->len = copy_count;
     }
+
+    inx->data->len = copy_count;
 
     if (inx->data->buf_sz < new_len || 
         inx->data->buf_sz > new_len + (
@@ -134,16 +126,8 @@ static snet_ginx_data_t* realloc_data_struct(
             sizeof(snet_ginx_item_t) * new_len +
             sizeof(snet_ginx_item_t) * SVPSNETGWRT_GRAPH_INDEX_INCR_STEP);
 
-        if (buf == NULL) {
-            /**
-             * !!TODO!!: Handle runtime error.
-             */
-             abort();
-        }
-
         inx->data         = (snet_ginx_data_t *)(buf);
         inx->data->items  = (snet_ginx_item_t *)(inx->data + 1);
-
         inx->data->buf_sz = new_len + SVPSNETGWRT_GRAPH_INDEX_INCR_STEP;
     }
 
@@ -175,14 +159,10 @@ static unsigned int str_ginx_len(const char *str)
 
 /*----------------------------------------------------------------------------*/
 
-static bool set_from_str(
+static void set_from_str(
     snet_ginx_item_t *inx_item, const char *str, unsigned int str_len)
 {
     char *inx_item_buf = (char *) SNetMemAlloc(sizeof(char) * (str_len + 1));
-
-    if (inx_item_buf == NULL) {
-        return false;
-    }
 
     while (*str != 0) {
         char *inx_buf_item = inx_item_buf;
@@ -205,8 +185,6 @@ static bool set_from_str(
     }
 
     SNetMemFree(inx_item_buf);
-
-    return true;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -217,7 +195,6 @@ compare(const snet_ginx_t *inx1, const snet_ginx_t *inx2, bool ext)
 {
     assert(inx1 != NULL);
     assert(inx2 != NULL);
-    assert(SNetBaseTypeSameDomain(&inx1->base, &inx2->base));
 
     if (inx1 == inx2)
         return GRAPH_INX_CMP_RES_EQUAL;
@@ -282,7 +259,6 @@ calc_infimum(const snet_ginx_t *inx1, const snet_ginx_t *inx2, bool ext)
 {
     assert(inx1 != NULL);
     assert(inx2 != NULL);
-    assert(SNetBaseTypeSameDomain(&inx1->base, &inx2->base));
 
     if (SNetGInxIsInfinite(inx1))
         return SNetGInxCreateCopy(inx2, true);
@@ -290,8 +266,7 @@ calc_infimum(const snet_ginx_t *inx1, const snet_ginx_t *inx2, bool ext)
     if (SNetGInxIsInfinite(inx2))
         return SNetGInxCreateCopy(inx1, true);
 
-    snet_ginx_t *infimum =
-        SNetGInxCreate(SNetBaseTypeGetDomain(&inx1->base));
+    snet_ginx_t *infimum = SNetGInxCreate();
 
     unsigned int min_len = (
         inx1->data->len < inx2->data->len ? 
@@ -335,22 +310,13 @@ calc_infimum(const snet_ginx_t *inx1, const snet_ginx_t *inx2, bool ext)
 /*----------------------------------------------------------------------------*/
 /* Initialization, Creation and Destruction */
 
-void SNetGInxInit(snet_ginx_t *inx, const snet_domain_t *domain)
+void SNetGInxInit(snet_ginx_t *inx)
 {
     assert(inx != NULL);
-    assert(domain != NULL);
-
-    place owner_plc = SNetGetMyPlace();
-
-    SNetBaseTypeInit(&inx->base, domain);
-    SNetBaseTypeSetPlaces(&inx->base, &owner_plc, NULL, NULL);
-
     inx->data = NULL;
 }
 
-void SNetGInxInitCopy(
-    snet_ginx_t *inx,
-    const snet_ginx_t *val, bool clone)
+void SNetGInxInitCopy(snet_ginx_t *inx, const snet_ginx_t *val, bool clone)
 {
     assert(inx != val);
 
@@ -361,12 +327,10 @@ void SNetGInxInitCopy(
         return;
     }
 
-    place owner_plc = SNetGetMyPlace();
-
-    SNetBaseTypeInit(
-        &inx->base, SNetBaseTypeGetDomain(&val->base));
-        
-    SNetBaseTypeSetPlaces(&inx->base, &owner_plc, NULL, NULL);
+    if (val->data == NULL) {
+        inx->data = NULL;
+        return;
+    }
 
     if (! clone) {
         inx->data = val->data;
@@ -385,15 +349,9 @@ void SNetGInxInitCopy(
     inx->data->len = val->data->len;
 }
 
-void SNetGInxInitFromStr(
-    snet_ginx_t *inx, const snet_domain_t *domain, const char *val)
+void SNetGInxInitFromStr(snet_ginx_t *inx, const char *val)
 {
     assert(inx != NULL);
-   
-    place owner_plc = SNetGetMyPlace();
-
-    SNetBaseTypeInit(&inx->base, domain);
-    SNetBaseTypeSetPlaces(&inx->base, &owner_plc, NULL, NULL);
 
     if (val == NULL) {
         inx->data = NULL;
@@ -402,32 +360,17 @@ void SNetGInxInitFromStr(
 
     unsigned int val_len = (unsigned int) str_ginx_len(val);
 
-    inx->data = alloc_data_struct(val_len);
-
-    if (! set_from_str(inx->data->items, val, strlen(val))) {
-        SNetMemFree(inx->data);
-
-        /**
-         * !!TODO:!!: Handle runtime error
-         */
-         abort();
-    }
-
+    inx->data      = alloc_data_struct(val_len);
     inx->data->len = val_len;
+
+    set_from_str(inx->data->items, val, strlen(val));
 }
 
 void SNetGInxInitFromArray(
-    snet_ginx_t *inx,
-    const snet_domain_t *domain,
-    const snet_ginx_item_t *arr, unsigned int arr_sz)
+    snet_ginx_t *inx, const snet_ginx_item_t *arr, unsigned int arr_sz)
 {
     assert(inx != NULL);
     assert(arr != NULL);
-
-    place owner_plc = SNetGetMyPlace();
-
-    SNetBaseTypeInit(&inx->base, domain);
-    SNetBaseTypeSetPlaces(&inx->base, &owner_plc, NULL, NULL);
 
     inx->data = alloc_data_struct(arr_sz); 
 
@@ -441,21 +384,11 @@ void SNetGInxInitFromArray(
 
 /*----------------------------------------------------------------------------*/
 
-snet_ginx_t* SNetGInxCreate(const snet_domain_t *domain)
+snet_ginx_t* SNetGInxCreate()
 {
-    assert(domain != NULL);
-
     snet_ginx_t *inx = (snet_ginx_t *) SNetMemAlloc(sizeof(snet_ginx_t));
 
-    if (inx == NULL) {
-        /**
-         * !!TODO:!!: Handle runtime error
-         */
-         abort();
-    }
-
-    SNetGInxInit(inx, domain);
-
+    SNetGInxInit(inx);
     return inx;
 }
 
@@ -465,56 +398,26 @@ snet_ginx_t* SNetGInxCreateCopy(const snet_ginx_t *val, bool clone)
 
     snet_ginx_t *inx = (snet_ginx_t *) SNetMemAlloc(sizeof(snet_ginx_t));
 
-    if (inx == NULL) {
-        /**
-         * !!TODO:!!: Handle runtime error
-         */
-         abort();
-    }
-
     SNetGInxInitCopy(inx, val, clone);
-
     return inx;
 }
 
-snet_ginx_t* SNetGInxCreateFromStr(
-    const snet_domain_t *domain,  const char *val)
+snet_ginx_t* SNetGInxCreateFromStr(const char *val)
 {
-    assert(domain != NULL);
-
     snet_ginx_t *inx = (snet_ginx_t *) SNetMemAlloc(sizeof(snet_ginx_t));
 
-    if (inx == NULL) {
-        /**
-         * !!TODO:!!: Handle runtime error
-         */
-         abort();
-    }
-
-    SNetGInxInitFromStr(inx, domain, val);
-
+    SNetGInxInitFromStr(inx, val);
     return inx;
 }
 
 snet_ginx_t* 
-SNetGInxCreateFromArray(
-    const snet_domain_t *domain,
-    const snet_ginx_item_t *arr, unsigned int arr_sz)
+SNetGInxCreateFromArray(const snet_ginx_item_t *arr, unsigned int arr_sz)
 {
     assert(arr != NULL);
-    assert(domain != NULL);
 
     snet_ginx_t *inx = (snet_ginx_t *) SNetMemAlloc(sizeof(snet_ginx_t));
 
-    if (inx == NULL) {
-        /**
-         * !!TODO:!!: Handle runtime error
-         */
-         abort();
-    }
-
-    SNetGInxInitFromArray(inx, domain, arr, arr_sz);
-
+    SNetGInxInitFromArray(inx, arr, arr_sz);
     return inx;
 }
 
@@ -531,14 +434,6 @@ void SNetGInxDestroy(snet_ginx_t *inx)
     }
 
     SNetMemFree(inx);
-}
-
-/*----------------------------------------------------------------------------*/
-
-void SNetGInxSetupMutex(snet_ginx_t *inx, const place *p)
-{
-    assert(inx != NULL);
-    SNetBaseTypeSetPlaces(&inx->base, NULL, p, NULL);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -573,7 +468,6 @@ void SNetGInxSetValue(
 {
     assert(inx1 != NULL);
     assert(inx2 != NULL);
-    assert(SNetBaseTypeSameDomain(&inx1->base, &inx2->base));
 
     if (inx1 == inx2) {
         return;
@@ -628,13 +522,7 @@ void SNetGInxSetValueFromStr(snet_ginx_t *inx, const char *val)
     unsigned int val_len = str_ginx_len(val);
 
     realloc_data_struct(inx, val_len, 0, 0);
-
-    if (! set_from_str(inx->data->items, val, strlen(val))) {
-        /**
-         * !!TODO:!!: Handle runtime error
-         */
-         abort();
-    }
+    set_from_str(inx->data->items, val, strlen(val));
 
     inx->data->len = val_len;
 }
@@ -765,7 +653,7 @@ SNetGInxCompare(const snet_ginx_t *inx1, const snet_ginx_t *inx2)
 }
 
 snet_ginx_cmp_result_t
-SNetGInxCompareExt(const snet_ginx_t *inx1, const snet_ginx_t *inx2)
+SNetGInxCompareEx(const snet_ginx_t *inx1, const snet_ginx_t *inx2)
 {
     return compare(inx1, inx2, true);
 }
@@ -781,7 +669,7 @@ SNetGInxCalcInfimum(const snet_ginx_t *inx1, const snet_ginx_t *inx2)
 }
 
 snet_ginx_t*
-SNetGInxCalcInfimumExt(const snet_ginx_t *inx1, const snet_ginx_t *inx2)
+SNetGInxCalcInfimumEx(const snet_ginx_t *inx1, const snet_ginx_t *inx2)
 {
     return calc_infimum(inx1, inx2, true);
 }
@@ -790,11 +678,13 @@ SNetGInxCalcInfimumExt(const snet_ginx_t *inx1, const snet_ginx_t *inx2)
 /*----------------------------------------------------------------------------*/
 /* Concatenation */
 
-void SNetGInxConcat(snet_ginx_t *inx1, const snet_ginx_t *inx2)
+void SNetGInxConcat(
+    snet_ginx_t *inx1, 
+    const snet_ginx_t *inx2, unsigned int start_item_inx)
 {
     assert(inx1 != NULL);
     assert(inx2 != NULL);
-    assert(SNetBaseTypeSameDomain(&inx1->base, &inx2->base));
+    assert(start_item_inx < SNetGInxGetLen(inx2));
 
     unsigned int len1 = SNetGInxGetLen(inx1);
     unsigned int len2 = SNetGInxGetLen(inx2);
@@ -803,10 +693,12 @@ void SNetGInxConcat(snet_ginx_t *inx1, const snet_ginx_t *inx2)
         return;
     }
 
+    len2 -= start_item_inx;
+
     realloc_data_struct(inx1, len1 + len2, 0, len1);
 
     SNetMemCopy(
-        inx2->data->items,
+        inx2->data->items + len2,
         inx1->data->items + len1,
         len2 * sizeof(snet_ginx_item_t));
 
@@ -825,13 +717,7 @@ void SNetGInxConcatStr(snet_ginx_t *inx, const char *str)
     unsigned int len2 = str_ginx_len(str);
 
     realloc_data_struct(inx, len1 + len2, 0, len1);
-
-    if (! set_from_str(inx->data->items + len1, str, strlen(str))) {
-        /**
-         * !!TODO:!!: Handle runtime error
-         */
-         abort();
-    }
+    set_from_str(inx->data->items + len1, str, strlen(str));
 
     inx->data->len = len1 + len2;
 }
@@ -900,11 +786,6 @@ void SNetGInxChopRight(snet_ginx_t *inx, unsigned int count)
 /*----------------------------------------------------------------------------*/
 /* Convertion */
 
-const snet_base_t* SNetGInxToBase(const snet_ginx_t *inx)
-{
-    assert(inx != NULL); return &inx->base;
-}
-
 snet_ginx_item_t* 
 SNetGInxToArray(const snet_ginx_t *inx, snet_ginx_item_t *arr)
 {
@@ -948,15 +829,7 @@ SNetGInxToString(const snet_ginx_t *inx, char *str)
 
     if (str == NULL) {
         new_str_sz = SVPSNETGWRT_GRAPH_INDEX_ITEM_MAX_DEC_DIGITS;
-
-        new_str = (char *) SNetMemAlloc(new_str_sz * sizeof(char));
-
-        if (new_str == NULL) {
-            /**
-             * !!TODO!!: Handle runtime error.
-             */
-             abort();
-        }
+        new_str    = (char *) SNetMemAlloc(new_str_sz * sizeof(char));
 
         c = new_str;
     }
@@ -981,17 +854,20 @@ SNetGInxToString(const snet_ginx_t *inx, char *str)
         }
 
         if (item_len < 0) {
-            /**
-             * !!TODO!!: Handle runtime error.
-             */
-             abort();
+            SNetReportError(
+                SNET_ERR_UNEXPECTED,
+                "failed to convert graph index to string");
+
+            SNetOnError();
         }
             
         if (item_len >= SVPSNETGWRT_GRAPH_INDEX_ITEM_MAX_DEC_DIGITS) {
-            /**
-             * !!TODO!!: Handle runtime error.
-             */
-             abort();
+            SNetReportError(
+                SNET_ERR_UNEXPECTED,
+                "failed to convert graph index to string "
+                "due to index item exceeding max size in decimal digits");
+
+            SNetOnError();
         }
 
         str_len += item_len;
@@ -1005,13 +881,6 @@ SNetGInxToString(const snet_ginx_t *inx, char *str)
                 new_str = (char *) 
                     SNetMemRealloc(new_str, new_str_sz * sizeof(char));
 
-                if (new_str == NULL) {
-                    /**
-                     * !!TODO!!: Handle runtime error.
-                     */
-                     abort();
-                }
-
                 c = new_str + str_len;
                 continue;
             }
@@ -1019,6 +888,8 @@ SNetGInxToString(const snet_ginx_t *inx, char *str)
 
         c += item_len;
     }
+
+    (*c) = 0;
 
     if (str == NULL) {
         new_str = (char *)

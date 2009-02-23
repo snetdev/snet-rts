@@ -58,7 +58,7 @@ extern void SNetDomainDestroy(snet_domain_t *snetd);
 /*----------------------------------------------------------------------------*/
 
 extern void 
-SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *root);
+SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *groot);
 
 /*---*/
 

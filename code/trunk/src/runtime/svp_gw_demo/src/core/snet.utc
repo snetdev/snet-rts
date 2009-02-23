@@ -40,6 +40,7 @@
 
 /*---*/
 
+#include <stdio.h>
 #include <stdarg.h>
 
 /*----------------------------------------------------------------------------*/
@@ -52,9 +53,19 @@
  * "snet.int.utc.h" is created in the future the 2 declarations below
  * can/should be moved there).
  */
-
 extern void SNetBLISubSystemInit();
 extern void SNetBLISubSystemDestroy();
+
+/**
+ * Same as the above 2 functions but for
+ * the error reporting sub-system. However there for
+ * error reporting there are "internal" functions but still
+ * there is no need for a "internal" header because those
+ * are declared in "common.int.utc.h" because we want them
+ * to be available almost everywhere.
+ */
+extern void SNetErrorSubSystemInit();
+extern void SNetErrorSubSystemDestroy();
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -66,14 +77,20 @@ extern void SNetBLISubSystemDestroy();
 
 void SNetGlobalInitialize()
 {
-    SNetBLISubSystemInit();
+    SNetErrorSubSystemInit();
+    SNetMemMngSubSystemInit();
+    SNetPlcMngSubSystemInit();
     SNetDomainSubSystemInit();
+    SNetBLISubSystemInit();
 }
 
 void SNetGlobalDestroy()
 {
     SNetBLISubSystemDestroy();
     SNetDomainSubSystemDestroy();
+    SNetPlcMngSubSystemDestroy();
+    SNetMemMngSubSystemDestroy();
+    SNetErrorSubSystemDestroy();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -112,20 +129,10 @@ void SNetPushIn(snet_domain_t *snetd, snet_record_t *rec)
 
     snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
 
-    assert(SNetDomainIsSame(
-        snetd, SNetBaseTypeGetDomain(SNetRecToBase(rec))));
-     
     family fid;
     place  gw_plc = SNetDomainGetGWPlace(snetd); 
 
-    create (fid; gw_plc; 0; 0; 1; 1;;) 
-        SNetGW((snet_handle_t *)(NULL), rec);
-
-    /**
-     * !!!NOTE!!!: This should not be here but since the uTC-PTL 
-     * does not support continuation creates yet it is required
-     * because otherwise the application does not terminate.
-     */
+    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGWInitial(snetd, rec);
     sync(fid);
 }
 
@@ -149,7 +156,7 @@ static thread void read_net_out_buffer(
 
     if (r == NULL) {
         /**
-         * !!TODO!!: Suspend ?????????
+         * !!TODO!!: Suspend ???
          */
     }
 }
@@ -190,17 +197,15 @@ snet_record_t* SNetPopOut(snet_domain_t *snetd, bool block)
  * output records.
  */
 
-static thread void set_handle_out_record(
-    snet_handle_t *hnd, snet_record_t *rec, shared bool has_out_rec)
+static thread void
+set_handle_out_record(snet_handle_t *hnd, shared snet_record_t *rec)
 {
-    if (SNetHndGetOutRecord(hnd) == NULL) {
+    snet_record_t *hnd_out_rec = SNetHndGetOutRecord(hnd);
+
+    if (hnd_out_rec == NULL)
         SNetHndSetOutRecord(hnd, rec);
-
-        has_out_rec = false;
-        return;
-    }
-
-    has_out_rec = true;
+    
+    rec = hnd_out_rec;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -212,55 +217,71 @@ void SNetOut(snet_handle_t *hnd, snet_record_t *rec)
 
     hnd = (snet_handle_t *) SNetUnmaskPointer(hnd);
 
-    assert(SNetBaseTypeSameDomain(
-        SNetHndToBase(hnd), SNetRecToBase(rec)));
-
     family fid;
-    bool   is_first_call = false;
-    place  hnd_mutex     = SNetBaseTypeGetMutexPlace(SNetHndToBase(hnd));
+    place  hnd_mutex = SNetBaseTypeGetMutexPlace(SNetHndToBase(hnd));
+
+    snet_record_t *rec_local = rec;
 
     create (fid; hnd_mutex; 0; 0; 1; 1;;)
-        set_handle_out_record(hnd, rec, is_first_call);
+        set_handle_out_record(hnd, rec_local);
 
     sync(fid);
 
-    if (!is_first_call) {
-        place  gw_plc = SNetDomainGetGWPlace(
-            SNetBaseTypeGetDomain(SNetHndToBase(hnd))); 
-
-        create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec);
+    if (rec_local == NULL) {
+        return;
     }
+
+    place gw_plc = SNetDomainGetGWPlace(
+        SNetBaseTypeGetDomain(SNetHndToBase(hnd))); 
+
+    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec);
+    sync(fid);
 }
 
 /*----------------------------------------------------------------------------*/
 
-void SNetOutRaw(snet_handle_t *hnd, int variant_num, ...)
+void SNetOutRaw(
+    snet_handle_t *hnd, 
+    snet_bli_id_t  blid, int variant_inx, ...)
 {
     assert(hnd != NULL);
     
-    if (variant_num == 0) {
-        return;
-    }
-
-    va_list vargs;
-
     // Create a new record structure
-    // and with the data given as arguments.
-    snet_record_t *rec = SNetRecCreate(
-        REC_DESCR_DATA,
-        SNetBaseTypeGetDomain(SNetHndToBase(
-            (snet_handle_t *)SNetUnmaskPointer(hnd))));
+    // with the data given as arguments.
 
-    va_start(vargs, variant_num);
+    // First we need a variant encoding for the record.
+    snet_variantencoding_t *venc = 
+        SNetHndCreateVEncForOutRecord(
+            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_inx);
 
-    for (int i=0; i < variant_num; i++) {
-        /**
-         * !!TODO!!: Setup the record
-         */
+    if (venc == NULL) {
+        // For this to happen possible causes are:
+        //
+        // 1. This function was not called from with in 
+        // "box" code or generally not properly.
+        // 
+        // 2. Something is seriously wrong within the runtime.
+        // For this to happen it means that either the cons-node
+        // associated with the handle is not on a "box" node
+        // which probably means a bug in the GW algorithms
+        // or that the "box" node is not initialized properly
+        // meaning a bug in the graph related code or in the
+        // code within "entities.utc".
+        SNetReportError(
+            SNET_ERR_UNEXPECTED,
+            "invalid call to SNetOutRaw()");
+
+        SNetOnError();
     }
+
+    va_list  vargs;
+    va_start(vargs, variant_inx);
+
+    snet_record_t *rec = SNetDataRecVCreate(venc, vargs);
 
     va_end(vargs);
 
+    SNetRecSetInterfaceId(rec, blid);
     SNetOut(hnd, rec);
 }
 
@@ -268,21 +289,33 @@ void SNetOutRaw(snet_handle_t *hnd, int variant_num, ...)
 
 void SNetOutRawArray(
     snet_handle_t *hnd, 
-    int if_id, int var_num, void **fields, int **tags, int **btags)
+    snet_bli_id_t  blid,
+    int variant_inx, void **fields, int *tags, int *btags)
 {
     assert(hnd != NULL);
-
+    
     // Create a new record structure
-    // and with the data given as arguments.
-    snet_record_t *rec = SNetRecCreate(
-        REC_DESCR_DATA,
-        SNetBaseTypeGetDomain(SNetHndToBase(
-            (snet_handle_t *)SNetUnmaskPointer(hnd))));
+    // with the data given as arguments.
 
-    /**
-     * !!TODO!!: Setup the record
-     */
+    // First we need a variant encoding for the record.
+    snet_variantencoding_t *venc = 
+        SNetHndCreateVEncForOutRecord(
+            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_inx);
 
+    if (venc == NULL) {
+        // See related comment in the 
+        // function SNetOutRaw().
+        SNetReportError(
+            SNET_ERR_UNEXPECTED,
+            "invalid call to SNetOutRawArray()");
+
+        SNetOnError();
+    }
+
+    snet_record_t *rec = 
+        SNetDataRecCreateFromArrays(venc, fields, tags, btags);
+
+    SNetRecSetInterfaceId(rec, blid);
     SNetOut(hnd, rec);
 }
 

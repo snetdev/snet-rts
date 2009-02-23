@@ -165,7 +165,7 @@ static snet_tl_stream_t *SNet__test00___SL___SR___ST___SR___PL(snet_tl_stream_t 
                 SNetTencCreateVector(1, T__test00__T), 
                 SNetTencCreateVector(0)), 
               SNetTencVariantEncode(
-                SNetTencCreateVector(1, F__test00__e), 
+                SNetTencCreateVector(2, F__test00__b, F__test00__e), 
                 SNetTencCreateVector(1, T__test00__T), 
                 SNetTencCreateVector(0)));
 
@@ -173,7 +173,7 @@ static snet_tl_stream_t *SNet__test00___SL___SR___ST___SR___PL(snet_tl_stream_t 
   out_sign = SNetTencBoxSignEncode( out_type, 
               SNetTencCreateVector(1, field), 
               SNetTencCreateVector(2, field, tag), 
-              SNetTencCreateVector(2, field, tag));
+              SNetTencCreateVector(3, field, field, tag));
 
 
   out_buf = SNetBox(in_buf, 
@@ -199,7 +199,7 @@ static snet_tl_stream_t *SNet__test00___SL___SR___ST___SR___PR(snet_tl_stream_t 
                 SNetTencCreateVector(1, T__test00__T), 
                 SNetTencCreateVector(0)), 
               SNetTencVariantEncode(
-                SNetTencCreateVector(1, F__test00__e), 
+                SNetTencCreateVector(2, F__test00__b, F__test00__e), 
                 SNetTencCreateVector(1, T__test00__T), 
                 SNetTencCreateVector(0)));
 
@@ -207,7 +207,7 @@ static snet_tl_stream_t *SNet__test00___SL___SR___ST___SR___PR(snet_tl_stream_t 
   out_sign = SNetTencBoxSignEncode( out_type, 
               SNetTencCreateVector(1, field), 
               SNetTencCreateVector(2, field, tag), 
-              SNetTencCreateVector(2, field, tag));
+              SNetTencCreateVector(3, field, field, tag));
 
 
   out_buf = SNetBox(in_buf, 
@@ -257,10 +257,13 @@ static snet_tl_stream_t *SNet____STAR_INCARNATE_test00___SL___SR(snet_tl_stream_
   out_buf = SNetStarIncarnate(in_buf, 
               SNetTencTypeEncode(1, 
                 SNetTencVariantEncode(
-                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(1, F__test00__e), 
                   SNetTencCreateVector(1, T__test00__T), 
                   SNetTencCreateVector(0))), 
-              NULL, 
+              SNetEcreateList(1, 
+                SNetElt( 
+                  SNetEtag( T__test00__T), 
+                  SNetEconsti( 5))), 
               &SNet__test00___SL___SR___ST, 
               &SNet____STAR_INCARNATE_test00___SL___SR);
 
@@ -274,10 +277,13 @@ static snet_tl_stream_t *SNet__test00___SL___SR(snet_tl_stream_t *in_buf)
   out_buf = SNetStar(in_buf, 
               SNetTencTypeEncode(1, 
                 SNetTencVariantEncode(
-                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(1, F__test00__e), 
                   SNetTencCreateVector(1, T__test00__T), 
                   SNetTencCreateVector(0))), 
-              NULL, 
+              SNetEcreateList(1, 
+                SNetElt( 
+                  SNetEtag( T__test00__T), 
+                  SNetEconsti( 5))), 
               &SNet__test00___SL___SR___ST, 
               &SNet____STAR_INCARNATE_test00___SL___SR);
 
@@ -295,7 +301,7 @@ static snet_tl_stream_t *SNet__test00___SL(snet_tl_stream_t *in_buf)
   return (out_buf);
 }
 
-static snet_tl_stream_t *SNet__test00___SR(snet_tl_stream_t *in_buf)
+static snet_tl_stream_t *SNet__test00___SR___IS(snet_tl_stream_t *in_buf)
 {
   snet_tl_stream_t *out_buf = NULL;
   snet_typeencoding_t *out_type = NULL;
@@ -315,6 +321,16 @@ static snet_tl_stream_t *SNet__test00___SR(snet_tl_stream_t *in_buf)
   out_buf = SNetBox(in_buf, 
               &SNet__test00__E, 
               out_sign);
+
+  return (out_buf);
+}
+
+static snet_tl_stream_t *SNet__test00___SR(snet_tl_stream_t *in_buf)
+{
+  snet_tl_stream_t *out_buf = NULL;
+
+  out_buf = SNetSplit(in_buf, 
+              &SNet__test00___SR___IS, T__test00__T, T__test00__T);
 
   return (out_buf);
 }

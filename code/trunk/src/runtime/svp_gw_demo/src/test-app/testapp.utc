@@ -11,11 +11,17 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-extern void ginx_test(const snet_domain_t *snetd);
+extern void contcreate_test();
+extern void ginx_test();
+
+/*---*/
+
 extern void list_test(const snet_domain_t *snetd);
 extern void graph_test(const snet_domain_t *snetd);
 extern void buffer_test(const snet_domain_t *snetd);
+extern void record_test(const snet_domain_t *snetd);
 extern void conslst_test(const snet_domain_t *snetd);
+extern void typeencode_test(const snet_domain_t *snetd);
 
 /*---*/
 
@@ -68,27 +74,35 @@ static void help()
     printf("                 <netid> (generated from the source code in\n");
     printf("                 the directory src/test-app/test_snet/<netid>)\n");
     printf("                 will also be run.\n\n");
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC    
+    printf("    --show-mem   Prints info about the memory usage at exit (used to detect memory leaks).\n\n");
+#endif
+
     printf("    --help       Displays this message.\n\n");
 
     printf("List of tests:\n");
     printf("    test_id    description\n");
-    printf("    -----------------------------------------------------------------------\n");
+    printf("    --------------------------------------------------------------------------------------\n");
     printf("       0       Test of mutual exclussion uTC \"places\".\n");
-    printf("       1       Test of graph indexes.\n");
-    printf("       2       Test of \"buffer\" data structure.\n");
-    printf("       3       Test of network input and output of records.\n");
-    printf("       4       Test of \"cons-list\" structure.\n");
-    printf("       5       Test of \"list\" data structure.\n\n");
+    printf("       1       Test of \"continuation creates\".\n");
+    printf("       2       Test of graph indexes.\n");
+    printf("       3       Test of \"buffer\" data structure.\n");
+    printf("       4       Test of network input and output of records.\n");
+    printf("       5       Test of \"cons-list\" structure.\n");
+    printf("       6       Test of \"list\" data structure.\n");
+    printf("       7       Test of type encoding.\n");
+    printf("       8       Test of \"record\" data structure.\n\n");
     printf("      50       Test of \"graph\" structure for network \"test\" build\n");
     printf("               from sources in src/test-app/test_snet\n");
     printf("     100       Test of \"graph\" structure for network \"test00\"\n");
     printf("               build from sources in src/test-app/test_snet/00\n\n");
 
     printf("List of networks:\n");
-    printf("    netid   name     description                 source directory\n");
-    printf("    -----------------------------------------------------------------------\n");
-    printf("     -1     test     A..(B..(C || D))..E         src/test-app/test_snet    \n");
-    printf("      0     test00   A..(B..(C || D))*{<T>}..E   src/test-app/test_snet/00 \n");
+    printf("    netid   name     description                                source directory\n");
+    printf("    --------------------------------------------------------------------------------------\n");
+    printf("     -1     test     A..(B..(C || D))..E                        src/test-app/test_snet    \n");
+    printf("      0     test00   A..(B..(C || D))*{e, <T>} if <T < 5> ..E!  src/test-app/test_snet/00 \n");
 
     printf("\n\n");
 }
@@ -164,48 +178,52 @@ static void Runtime_tests(unsigned int tid)
 
     /*---*/
 
-    snet_domain_t *snetd = 
-        (snet_domain_t *) SNetUnmaskPointer(SNetDomainCreate());
+    snet_domain_t *snetd = SNetDomainCreate();
 
     switch (tid) {
         case 0:
-            printf("Mutual Exclussion Places Test!!\n\n");
-            
+            printf("Mutual Exclussion Places Test!!\n\n");            
             mutexplc_test();
             break;
         
         case 1:
-            printf("Graph Index Test!!\n\n");
-
-            ginx_test(snetd);
+            printf("Continuation Creates Test!!\n\n");
+            contcreate_test();
             break;
 
         case 2:
-            printf("Buffer Test!!\n\n");
-
-            buffer_test(
-                (snet_domain_t *) SNetMaskPointer(snetd));
-
+            printf("Graph Index Test!!\n\n");
+            ginx_test();
             break;
 
         case 3:
-            printf("Network Record Input/Output Test!!\n\n");
-
-            net_ioproc_test(
-                (snet_domain_t *) SNetMaskPointer(snetd));
-
+            printf("Buffer Test!!\n\n");
+            buffer_test(snetd);
             break;
 
         case 4:
-            printf("Cons-List Test!!\n\n");
-
-            conslst_test(snetd);
+            printf("Network Record Input/Output Test!!\n\n");
+            net_ioproc_test(snetd);
             break;
 
         case 5:
-            printf("List Test!!\n\n");
+            printf("Cons-List Test!!\n\n");
+            conslst_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            break;
 
+        case 6:
+            printf("List Test!!\n\n");
             list_test(snetd);
+            break;
+
+        case 7:
+            printf("Type Encoding Test!!\n\n");
+            typeencode_test(snetd);
+            break;
+
+        case 8:
+            printf("Record Test!!\n\n");
+            record_test(snetd);
             break;
 
         /*---*/
@@ -213,29 +231,18 @@ static void Runtime_tests(unsigned int tid)
         case 50:
             printf("Graph Test (net = \"test\")!!\n\n");
 
-            SNet__test___setup(
-                (snet_domain_t *) SNetMaskPointer(snetd));
+            SNet__test___setup(snetd);
 
-            graph_test(snetd);
+            graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
             break;
 
         case 100:
             printf("Graph Test (net = \"test00\")!!\n\n");
 
-            SNet__test00___setup(
-                (snet_domain_t *) SNetMaskPointer(snetd));
+            SNet__test00___setup(snetd);
 
-            graph_test(snetd);
+            graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
             break;
-
-        //case 101:
-            //printf("Graph Test (net = \"test01\")!!\n\n");
-
-            //SNet__test01___setup(
-            //    (snet_domain_t *) SNetMaskPointer(snetd));
-
-            //graph_test(snetd);
-            //break;
         
         default:
             printf("\nERROR: Invalid  test id (%u)\n", tid);
@@ -244,10 +251,8 @@ static void Runtime_tests(unsigned int tid)
     
     /*---*/
 
-    SNetDomainDestroy((snet_domain_t *) SNetMaskPointer(snetd));
+    SNetDomainDestroy(snetd);
     SNetGlobalDestroy();
-
-    printf("\n\nDONE!!\n\n");
 }
 
 /*----------------------------------------------------------------------------*/
@@ -268,6 +273,10 @@ thread void main(int argc, const char **argv)
     int rt_test    = -1;
     int run_net_id = -1;
 
+#ifdef SVPSNETGWRT_MONITOR_MALLOC    
+    bool show_mem_use_at_exit = false;
+#endif
+
     /*---*/
 
     for (int i=1; i < largc; i++) {
@@ -281,6 +290,11 @@ thread void main(int argc, const char **argv)
 
             help_arg = true;
             break;
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC    
+        } else if (strcmp(arg, "--show-mem") == 0) {
+            show_mem_use_at_exit = true;
+#endif
 
         } else if (strcmp(arg, "-n") == 0) {
             if (run_net) {
@@ -361,29 +375,37 @@ thread void main(int argc, const char **argv)
 
     /*---*/
 
-    if (!run_net) {
-        return;
+    if (run_net) {
+        switch (run_net_id) {
+            case -1:
+                printf("Running network \"test\"...\n\n");
+
+                SNetMain__test(0, NULL);
+                break;
+
+            case  0:
+                printf("Running network \"test00\"...\n\n");
+
+                SNetMain__test00(0, NULL);
+                break;
+
+            default:
+                printf("\nERROR: Invalid network id (%d)\n\n", run_net_id);
+                return;
+        }
     }
+    
+    printf("\n\nDONE!!\n");
 
-    switch (run_net_id) {
-        case -1:
-            printf("Running network \"test\"...\n\n");
-
-            SNetMain__test(0, NULL);
-            break;
-
-        case  0:
-            printf("Running network \"test00\"...\n\n");
-
-            SNetMain__test00(0, NULL);
-            break;
-
-        default:
-            printf("\nERROR: Invalid network id (%d)\n\n", run_net_id);
-            return;
+#ifdef SVPSNETGWRT_MONITOR_MALLOC    
+    if (show_mem_use_at_exit) {
+        printf("Memory usage at exit:\n");
+        printf("  Number of allocations      = %lu\n", SNetGetMemAllocCount());
+        printf("  Amount of allocated memory = %lu\n", SNetGetMemAllocSize());
     }
+#endif
 
-    printf("\n\nDONE!!\n\n");
+    printf("\n\n");
 }
 
 /*----------------------------------------------------------------------------*/

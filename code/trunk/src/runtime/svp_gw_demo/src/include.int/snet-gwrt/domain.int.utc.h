@@ -43,9 +43,10 @@
  */
 
 typedef enum {
+    DOMAIN_TYPE_SYS,
     DOMAIN_TYPE_NET,
     DOMAIN_TYPE_ALIAS,
-    DOMAIN_TYPE_WORKER
+    DOMAIN_TYPE_WORKER,
 
 } snet_domain_type_t;
 
@@ -54,7 +55,6 @@ typedef enum {
  * Instances of the data type below represent
  * a running instance of the Graph Walker.
  */
-
 typedef struct domain_gw_info snet_domain_gw_info_t;
 
 /*----------------------------------------------------------------------------*/
@@ -62,6 +62,10 @@ typedef struct domain_gw_info snet_domain_gw_info_t;
 
 extern void SNetDomainSubSystemInit();
 extern void SNetDomainSubSystemDestroy();
+
+/*---*/
+
+extern const snet_domain_t* SNetDomainGetSystem();
 
 /*----------------------------------------------------------------------------*/
 
@@ -84,7 +88,7 @@ SNetDomainGetType(const snet_domain_t *snetd);
 extern snet_conslst_t*
 SNetDomainGetConsList(const snet_domain_t *snetd);
 
-extern const snet_gnode_t*
+extern snet_gnode_t*
 SNetDomainGetGraphRoot(const snet_domain_t *snetd);
 
 extern snet_buffer_t*

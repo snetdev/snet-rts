@@ -45,7 +45,7 @@ extern void SNetBufInit(
     snet_buffer_t *buf, 
     bool dynamic,
     unsigned int sz, 
-    const snet_domain_t *domain); 
+    const snet_domain_t *snetd); 
 
 extern void SNetBufInitCopy(
     snet_buffer_t *buf,
@@ -57,7 +57,7 @@ extern snet_buffer_t*
 SNetBufCreate(
     bool dynamic, 
     unsigned int sz, 
-    const snet_domain_t *domain); 
+    const snet_domain_t *snetd); 
 
 extern snet_buffer_t*
 SNetBufCreateCopy(const snet_buffer_t *src_buf, bool shalow); 
@@ -65,10 +65,6 @@ SNetBufCreateCopy(const snet_buffer_t *src_buf, bool shalow);
 /*---*/
 
 extern void SNetBufDestroy(snet_buffer_t *buf);
-
-/*---*/
-
-extern void SNetBufSetupMutex(snet_buffer_t *buf, const place *p);
 
 /*----------------------------------------------------------------------------*/
 
