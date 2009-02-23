@@ -141,6 +141,7 @@ int main(int argc, char *argv[])
 
   snet_tl_stream_t *res_stream;
   pthread_t ithread;
+  int node;
 
   initialise();
 
@@ -149,12 +150,20 @@ int main(int argc, char *argv[])
 			     SNetID2Fun_factorial);
 
 
-  res_stream = DistributionInit(argc, argv, SNet__factorial___factorial);
-  
+  node = DistributionInit(argc, argv);
+
+  if(node == 0) {
+    res_stream = DistributionStart(SNet__factorial___factorial);
+  }
+   
   pthread_create(&ithread, NULL, InputThread, NULL);
   pthread_detach(ithread);
 
   OutputThread(NULL);
+
+  if(node == 0) {
+    DistributionStop();
+  }
 
   DistributionDestroy();
 

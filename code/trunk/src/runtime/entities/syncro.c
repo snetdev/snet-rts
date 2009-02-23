@@ -175,18 +175,17 @@ MatchPattern( snet_record_t *rec,
   bool is_match, found_name;
   is_match = true;
 
-  if( SNetEevaluateBool( guard, rec)) {
-    found_name = false;
-    FIND_NAME_IN_PATTERN( SNetTencGetNumTags, SNetRecGetNumTags, 
-                          SNetTencGetTagNames, SNetRecGetUnconsumedTagNames);
+  found_name = false;
+  FIND_NAME_IN_PATTERN( SNetTencGetNumTags, SNetRecGetNumTags, 
+			SNetTencGetTagNames, SNetRecGetUnconsumedTagNames);
 
-    if( is_match) {
-      FIND_NAME_IN_PATTERN( SNetTencGetNumFields, SNetRecGetNumFields, 
-                            SNetTencGetFieldNames, SNetRecGetUnconsumedFieldNames);
-    }
+  if( is_match) {
+    FIND_NAME_IN_PATTERN( SNetTencGetNumFields, SNetRecGetNumFields, 
+			  SNetTencGetFieldNames, SNetRecGetUnconsumedFieldNames);
   }
-  else {
-    is_match = false;
+
+  if(is_match && !SNetEevaluateBool( guard, rec)) {
+    is_match = false; 
   }
 
   return( is_match);

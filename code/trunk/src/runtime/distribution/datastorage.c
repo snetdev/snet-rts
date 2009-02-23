@@ -131,7 +131,7 @@ typedef struct snet_fetch_request {
   void *buf;         /**< Buffer used to send data. */
   int buf_size;      /**< Size of the buffer. */
   int interface;     /**< Langauge interface of the data. */
-  void *data;        /**< Data to be sent. */
+  void *opt;         /**< Optional return value. */
   int dest;          /**< Destionation node (rank). */
   MPI_Datatype type; /**< MPI type of the data. */
 } snet_fetch_request_t;
@@ -163,6 +163,7 @@ static void *DataManagerThread(void *ptr)
   void *buf = NULL;
   int buf_size = 0;
   int count;
+  void *data;
 
   snet_msg_data_op_t *msg;
   snet_ref_t *ref;
@@ -192,7 +193,7 @@ static void *DataManagerThread(void *ptr)
     ops[bit].buf_size = 128;
     ops[bit].buf = SNetMemAlloc(sizeof(char) * ops[bit].buf_size);
     ops[bit].interface = 0;
-    ops[bit].data = NULL;
+    ops[bit].opt = NULL;
     ops[bit].type = MPI_DATATYPE_NULL;
   }
 
@@ -312,12 +313,13 @@ static void *DataManagerThread(void *ptr)
       case OP_type:
 	/* Remote fetch, part 2 - Send data */
 
-	ops[bit].data = SNetGetPackFun(ops[bit].interface)(storage.comm,
-							   SNetRefGetData(ops[bit].ref), 
-							   &ops[bit].type, 
-							   &count);
+	count = SNetGetPackFun(ops[bit].interface)(storage.comm,
+						   SNetRefGetData(ops[bit].ref), 
+						   &ops[bit].type, 
+						   &data,
+						   &ops[bit].opt);
 
-	result = MPI_Isend(ops[bit].data, count, ops[bit].type, ops[bit].dest, 
+	result = MPI_Isend(data, count, ops[bit].type, ops[bit].dest, 
 			   ops[bit].id, storage.comm, &requests[bit]);
 	
 
@@ -325,7 +327,7 @@ static void *DataManagerThread(void *ptr)
 	break;
       case OP_data:
 	/* Remote fetch, part 3 - Cleanup*/
-	SNetGetCleanupFun(ops[bit].interface)(ops[bit].type, ops[bit].data);
+	SNetGetCleanupFun(ops[bit].interface)(ops[bit].type, ops[bit].opt);
 	
 	SNetRefDestroy(ops[bit].ref);
 	
@@ -388,6 +390,7 @@ static void *DataManagerThread(void *ptr)
   int op_id;
   void *data;
   int size;
+  void *opt;
 
   result = MPI_Type_get_true_extent(storage.op_type, &true_lb, &true_extent);
 
@@ -463,15 +466,16 @@ static void *DataManagerThread(void *ptr)
        
 	/* Send data: */
 
-	data = SNetGetPackFun(interface)(storage.comm,
-					 SNetRefGetData(ref), 
-					 &type, 
-					 &count);
+	count = SNetGetPackFun(interface)(storage.comm,
+					  SNetRefGetData(ref), 
+					  &type,
+					  &data,
+					  &opt);
 
 	result = MPI_Send(data, count, type, status.MPI_SOURCE, 
-			   op_id, storage.comm);
+			  op_id, storage.comm);
 	
-	SNetGetCleanupFun(interface)(type, data);
+	SNetGetCleanupFun(interface)(type, opt);
 
 	/* Decrease ref count by one: */
 
@@ -794,6 +798,7 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   void *buf = NULL;
   void *data = NULL;
   int count = 0;
+  void *opt = NULL;
 
   /* Acquire operation id: */
   pthread_mutex_lock(&storage.id_mutex);
@@ -826,7 +831,7 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   result = MPI_Recv(buf, count, MPI_PACKED, location, 
 		    msg.op_id, storage.comm, &status);
   
-  type = SNetGetDeserializeTypeFun(interface)(storage.comm, buf, count);
+  count = SNetGetDeserializeTypeFun(interface)(storage.comm, buf, count, &type, &opt);
   
   SNetMemFree(buf);
 
@@ -835,7 +840,7 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
 
   result = MPI_Probe(location, msg.op_id, storage.comm, &status);
   
-  result = MPI_Get_count(&status, type, &count);
+  //result = MPI_Get_count(&status, type, &count);
   
   result = MPI_Type_get_true_extent(type, &true_lb, &true_extent);
   
@@ -845,9 +850,7 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   result = MPI_Recv(buf, count, type, location, 
 		    msg.op_id, storage.comm, &status);
 
-  data = SNetGetUnpackFun(interface)(storage.comm, buf, type, count);
-  
-  SNetGetCleanupFun(interface)(type, buf);
+  data = SNetGetUnpackFun(interface)(storage.comm, buf, type, count, opt);
 
   return data;
 }

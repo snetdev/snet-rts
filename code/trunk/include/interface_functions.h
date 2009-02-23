@@ -20,12 +20,73 @@ typedef void* (*snet_decode_fun_t)( FILE *);
 
 #ifdef DISTRIBUTED_SNET
 
-typedef int (*snet_mpi_serialize_type_fun_t)(MPI_Comm, void *, void*, int);
-typedef MPI_Datatype (*snet_mpi_deserialize_type_fun_t)(MPI_Comm, void *, int);
+#define SNET_INTERFACE_ERR     -1
+#define SNET_INTERFACE_ERR_BUF -2
 
-typedef void* (*snet_mpi_pack_fun_t)(MPI_Comm, void *, MPI_Datatype *, int *);
-typedef void* (*snet_mpi_unpack_fun_t)(MPI_Comm, void *, MPI_Datatype, int);
+/* MPI_Pack data type information into buffer for sending.
+ *
+ * 1: IN:     comm
+ * 2: IN:     data
+ * 3: IN/OUT: buffer
+ * 4: IN:     size of the buffer
+ *
+ * return: position in the buffer (Used as count for MPI_Send (as position from MPI_Pack))
+ */
+
+typedef int (*snet_mpi_serialize_type_fun_t)(MPI_Comm, void*, void*, int);
+
+/* Prepare data for sending.
+ *
+ * 1: IN:  comm
+ * 2: IN:  data
+ * 3: OUT: MPI type (Used as type for MPI_Send)
+ * 4: OUT: address of the buffer to send (Used as buffer for MPI_Send)
+ * 5: OUT: optional return value that is passed to cleanup_fun
+ *
+ * return: count of elements of returned type (Used as count for MPI_Send)
+ */ 
+
+typedef int (*snet_mpi_pack_fun_t)(MPI_Comm, void*, MPI_Datatype*, void**, void**);
+
+/* Free resources used in sending.
+ *
+ * 1: IN: type value returned by pack_fun.
+ * 2: IN: optional return value of pack_fun.
+ *
+ * Note: Expected to free all resources (MPI type, possible buffer for packing,
+ *       optional return value etc.) reserved by the pack_fun!
+ */
+
 typedef void (*snet_mpi_cleanup_fun_t)(MPI_Datatype, void*);
+
+/* Deserialize data type from buffer.
+ *
+ * 1: IN:  comm
+ * 2: IN:  buffer
+ * 3: IN:  size of the buffer
+ * 4: OUT: MPI type (Used as type for MPI_Recv)
+ * 5: OUT: Optional return value that is passed to unpack_fun
+ *
+ * return: count of elements of returned type (Used as count for MPI_Recv)
+ *
+ */
+
+typedef int (*snet_mpi_deserialize_type_fun_t)(MPI_Comm, void*, int, MPI_Datatype*, void**);
+
+/* 1: IN: comm
+ * 2: IN: buffer (buffer received by MPI_Recv, function must free this, or it can be used directly as the data)
+ * 3: IN: MPI type returned by deserialize_type_fun (Function must free this)
+ * 4: IN: count of elements of type
+ * 5: IN: Optional return value returned by deserialize_type_fun (Function must free this)
+ *
+ * Return: data
+ *
+ * Note: Expected to free all resources (MPI type, possible buffer for packing if
+ *       not used directly etc.) used in this and deserialize_type_fun.
+ */
+
+typedef void* (*snet_mpi_unpack_fun_t)(MPI_Comm, void*, MPI_Datatype, int, void*);
+
 #endif /* DISTRIBUTED_SNET */
 
 typedef struct {

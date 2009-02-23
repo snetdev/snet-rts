@@ -244,6 +244,12 @@ static void NotFoundError( int name, char *action, char *type)
   SNetUtilDebugFatal("Attempted '%s' on non-existent %s [%d]",
                       action, type, name);
 }
+
+static void FailedError( int name, char *action, char *type)
+{
+  SNetUtilDebugFatal("Failed to'%s' %s [%d]",
+                      action, type, name);
+}
 /* *********************************************************** */
 
 extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
@@ -606,6 +612,7 @@ extern void SNetRecSetField( snet_record_t *rec, int name, void *val)
 extern int SNetRecGetTag( snet_record_t *rec, int name)
 {
   int offset;
+
   offset = FindName( SNetTencGetTagNames( GetVEnc( rec)),
                           SNetTencGetNumTags( GetVEnc( rec)), name);
   if( offset == NOT_FOUND) {
@@ -1069,8 +1076,17 @@ extern void SNetRecCopyFieldToRec( snet_record_t *from, int old_name ,
   offset_new = FindName( SNetTencGetFieldNames( GetVEnc( to)),
 			SNetTencGetNumFields( GetVEnc( to)), new_name);
 
-  if( offset_new == NOT_FOUND || offset_old == NOT_FOUND) {
-    NotFoundError( new_name, "get", "field");
+  if(offset_old == NOT_FOUND) {
+    NotFoundError( new_name, "copy", "field");
+  }
+
+  if(offset_new == NOT_FOUND) {
+    if(SNetRecAddField(to, new_name)) {
+      FailedError( new_name, "add", "field");
+    }
+
+    offset_new = FindName( SNetTencGetFieldNames( GetVEnc( to)),
+			   SNetTencGetNumFields( GetVEnc( to)), new_name);
   }
 
 #ifdef DISTRIBUTED_SNET
@@ -1097,8 +1113,17 @@ extern void SNetRecMoveFieldToRec( snet_record_t *from, int old_name ,
   offset_new = FindName( SNetTencGetFieldNames( GetVEnc( to)),
 			SNetTencGetNumFields( GetVEnc( to)), new_name);
 
-  if( offset_new == NOT_FOUND || offset_old == NOT_FOUND) {
-    NotFoundError( new_name, "get", "field");
+  if(offset_old == NOT_FOUND) {
+    NotFoundError( new_name, "move", "field");
+  }
+
+  if(offset_new == NOT_FOUND) {
+    if(SNetRecAddField(to, new_name)) {
+      FailedError( new_name, "add", "field");
+    }
+
+    offset_new = FindName( SNetTencGetFieldNames( GetVEnc( to)),
+			   SNetTencGetNumFields( GetVEnc( to)), new_name);
   }
 
   SNetTencRenameField( GetVEnc( from), old_name, CONSUMED);

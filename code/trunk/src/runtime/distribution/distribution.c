@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#include "debug.h"
 #include "distribution.h"
 #include "constants.h"
 #include "routing.h"
@@ -66,6 +67,14 @@ int DistributionInit(int argc, char *argv[])
   snet_tl_stream_t *stream;
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level); 
+
+  if(level != MPI_THREAD_MULTIPLE) {
+
+    MPI_Finalize();
+
+    SNetUtilDebugFatal("MPI thread support level \"MPI_THREAD_MULTIPLE\" required.");
+    return -1;
+  } 
  
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 

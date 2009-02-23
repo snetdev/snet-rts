@@ -230,14 +230,15 @@ static void *SplitBoxThread( void *hndl) {
 	  } while(!SNetUtilListIsEmpty(repos));
 
           SNetUtilListIterDestroy(current_position);
+
+	  SNetUtilListDestroy(repos);
         } else {
 #ifdef DEBUG_SPLIT
           SNetUtilDebugNotice("[SPLIT] got termination record with nowhere"
               " send it!");
 #endif
-          SNetRecDestroy(rec);
+          //SNetRecDestroy(rec);
         }
-        SNetUtilListDestroy(repos);
 
         SNetTlWrite(initial, rec);
         break;
