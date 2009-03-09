@@ -33,11 +33,11 @@ CCPROD_FLAGS := @PDCCFLAGS@ @OSFLAGS@
 DEBUG_FLAGS  :=
 CFLAGS       := -DSHOW_MALLOC -DCLEANMEM -DFILTER_VERSION_2 $(DEBUG_FLAGS)
 CPROD_FLAGS  := -DDBUG_OFF -DPRODUCTION  -DFILTER_VERSION_2
-SOFLAGS      := -shared
+SOFLAGS      := @SOFLAGS@
 LIBTOOL      := # $(PROJECT_ROOT)/libtool --silent --mode=link 
-GTKFLAGS     := @GTKFLAGS@
+#GTKFLAGS     := @GTKFLAGS@
 XSLTENGINE   := @XSLT@
-M4PROC       := @M4@
+#M4PROC       := @M4@
 
 MAKE_NORM    := $(MAKE) CC="$(CC)" CCFLAGS="$(CCFLAGS)" CFLAGS="$(CFLAGS)"
 MAKE_PROD    := $(MAKE) CC="$(CCPROD)" CCFLAGS="$(CCPROD_FLAGS)" CFLAGS="$(CPROD_FLAGS)"
@@ -59,7 +59,7 @@ EXCLUDE_INCS := xml
 INCS         := -I../../inc \
                 $(patsubst %,-I../%,$(filter-out $(EXCLUDE_INCS),\
                                   $(notdir $(wildcard ../*))))
-LIBS         := @LIBS@ @LIB_M@
+LIBS         := @LIBS@ #@LIB_M@
 LIBS_LEX     := @LEXLIB@
 GTKLIBS	     := @GTKLIBS@
 SOCKETLIBS   := @LIB_SOCKET@

@@ -30,9 +30,9 @@ targets_util_devel     	  := libsnetutil.so
 targets_util_prod      	  := libsnetutil.prod.so 
 targets_util_default   	  := $(targets_util_devel)
 
-targets_tools_devel       := FeederFront.devel RecordInspector.devel
-targets_tools_prod        := FeederFront RecordInspector
-targets_tools_default     := $(targets_tools_devel)
+#targets_tools_devel       := FeederFront.devel RecordInspector.devel
+#targets_tools_prod        := FeederFront RecordInspector
+#targets_tools_default     := $(targets_tools_devel)
 
 #targets_demo_devel        := factorial.devel graphicFactorial.devel
 #targets_demo_prod         := factorial graphicFactorial
@@ -83,9 +83,9 @@ clean_util             	  :=
 clean_util_devel       	  :=
 clean_util_prod		  :=
 
-clean_tools               :=
-clean_tools_devel         :=
-clean_tools_prod          :=
+#clean_tools               :=
+#clean_tools_devel         :=
+#clean_tools_prod          :=
 
 clean_demo                :=
 clean_demo_devel          :=
@@ -108,7 +108,7 @@ runtime         = common entities netinterface observer utility threading interf
 
 util		= core metadata
 
-tools           = RecordInspector FeederFront 
+#tools           = RecordInspector FeederFront 
 
 demo            = factorial graphicFactorial
 
