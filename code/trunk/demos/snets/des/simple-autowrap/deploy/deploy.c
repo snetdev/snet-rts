@@ -143,8 +143,8 @@ int main(int argc, char **argv)
   snet_tl_stream_t *inbuf, *outbuf;
   pthread_t feeder, reader;
 
-  /* if cmdl argument given, decipher */
-  DECIPHER = (argc > 1) ? true : false;
+  /* if cmdl argument given, we're in decipher mode */
+  DECIPHER = (argc > 1);
 
 
   /* Prepare buffer */
