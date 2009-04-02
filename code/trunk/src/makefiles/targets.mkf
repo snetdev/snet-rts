@@ -161,7 +161,7 @@ preproc         = dcr.o tcheck.o boxex.o boxexfile.o mod.o tres.o
 
 flat            = flat.o
 
-typeinf         = typing.o typeinf.o
+typeinf         = typing.o siginf.o routeinf.o typechk.o
 
 opt             = 
 
