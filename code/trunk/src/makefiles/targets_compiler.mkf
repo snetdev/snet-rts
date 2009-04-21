@@ -1,0 +1,86 @@
+#
+# $Id$
+#
+#
+
+
+###############################################################################
+#
+# Collection of targets
+#
+
+targets_compiler_devel    := snetc
+targets_compiler_prod     := snetc.prod
+targets_compiler_efence   := snetc.efence
+targets_compiler_default  := $(targets_compiler_devel)
+
+
+###############################################################################
+#
+# Collection of target directories
+#
+
+targetdir_compiler        := bin
+
+
+###############################################################################
+#
+# Collection of additional files to be cleaned
+#
+
+clean_compiler            := snetc.efence \
+                             ../src/compiler/global/build.c \
+                             ../src/compiler/global/build_prod.c
+
+clean_compiler_devel      := snetc.efence \
+                             ../src/compiler/global/build.c
+
+clean_compiler_prod       := ../src/compiler/global/build_prod.c
+
+
+###############################################################################
+#
+# Collection of source directories
+#
+
+compiler        = tree global support parse preproc flat typeinf opt postproc \
+                  codegen invokecc print
+
+
+###############################################################################
+#
+# Collection of compiler object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+global          = main.o config_file.o init.o usage.o memory.o lookup_table.o \
+                  globals.o options.o ctinfo.o phase.o phase_drivers.o set.o
+
+support         = buffer.o str.o system.o maths.o
+
+tree            = check.o check_attribs.o check_lib.o check_mem.o \
+                  check_node.o checktst.o free.o free_attribs.o free_node.o \
+                  node_basic.o traverse.o traverse_helper.o traverse_tables.o \
+                  tree_basic.o tree_compound.o copy.o copy_attribs.o copy_node.o \
+
+parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o mdinterp.o \
+		  mdcol.o mdns.o mdaux.o sploc.o
+
+preproc         = dcr.o tcheck.o boxex.o boxexfile.o mod.o tres.o
+
+flat            = flat.o
+
+typeinf         = typing.o typeinf.o
+
+opt             = 
+
+postproc        = ptypcln.o ptran.o ploc.o netren.o netflat.o
+
+codegen         = codegen.o codefile.o cchoice.o cexpr.o cfilt.o cserial.o \
+		  cshield.o csplit.o cstar.o csync.o ctext.o ctrans.o cwrap.o \
+		  cvar.o cgenwrap.o cfun.o
+
+invokecc        = invokecc.o
+
+print           = print.o 

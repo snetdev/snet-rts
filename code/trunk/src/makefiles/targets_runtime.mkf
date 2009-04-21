@@ -1,0 +1,70 @@
+#
+# $Id$
+#
+#
+
+
+###############################################################################
+#
+# Collection of targets
+#
+
+targets_runtime_devel     := libsnet.a 
+targets_runtime_prod      := libsnet.prod.a 
+targets_runtime_default   := $(targets_runtime_devel)
+
+
+###############################################################################
+#
+# Collection of target directories
+#
+
+targetdir_runtime         := lib
+
+
+###############################################################################
+#
+# Collection of additional files to be cleaned
+#
+
+clean_runtime             :=
+clean_runtime_devel       :=
+clean_runtime_prod        :=
+
+
+###############################################################################
+#
+# Collection of source directories
+#
+
+runtime         = common entities netinterface observer utility threading \
+                    interfacing distribution
+
+
+###############################################################################
+#
+# Collection of runtime object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+common          = handle.o record.o expression.o
+
+entities        = filter.o graphics.o\
+                  syncro.o out.o box.o alias.o\
+                  serial.o collectors.o parallel.o star.o split.o
+
+utility		= list.o debug.o stack.o tree.o bitmap.o hashtable.o queue.o
+
+threading       = threading.o extended_semaphore.o stream_layer.o buffer.o\
+                  feedbackbuffer.o ubuffer.o
+
+interfacing     = interface_functions.o
+
+netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o\
+                  networkinterface.o
+
+observer	= observers.o
+
+distribution    = distribution.o datastorage.o message.o fun.o imanager.o \
+                  id.o omanager.o routing.o reference.o 
