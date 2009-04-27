@@ -1,13 +1,11 @@
-include $(SNETBASE)/src/makefiles/config.mkf
-
 CC        = mpicc
 CCFLAGS  = -Wall -g -DFILTER_VERSION_2 -DDISTRIBUTED_SNET
-SNETC     = snetc -DFILTER_VERSION_2 -DDISTRIBUTED_SNET
+SNETC     = snetc
 SNETCFLAGS= -b7 -distributed
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
-LIBS      = -lpthread -lC4SNet -lC4SNetc -lsnet -lsnetutil -lcrypt
+LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C -L$(MPIROOT)/lib
+LIBS      = -lpthread -lC4SNet -lC4SNetc -lmpich -lsnet -lsnetutil -lcrypt 
 
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = crypto
@@ -15,7 +13,7 @@ TARGET    = crypto
 
 
 all:   
-	$(SNETC) $(SNETCFLAGS) $(TARGET).snet 
+	$(SNETC) $(SNETCFLAGS) -m $(TARGET).md $(TARGET).snet 
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
 	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(LIBS)
 clean:
