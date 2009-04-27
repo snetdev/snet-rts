@@ -55,4 +55,5 @@ bool SNetTlSetFlag(snet_tl_stream_t *stream, bool flag);
 bool SNetTlTryWrite(snet_tl_stream_t *stream, 
 		    snet_record_t *data);
 
+
 #endif /* _SNET_STREAM_LAYER_H_ */

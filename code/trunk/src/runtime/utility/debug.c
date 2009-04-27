@@ -2,6 +2,11 @@
 #include "pthread.h"
 #include "record.h"
 
+#ifdef DISTRIBUTED_SNET
+#include <mpi.h>
+#endif /* DISTRIBUTED_SNET */
+
+
 extern char* SNetUtilDebugDumpRecord(snet_record_t *source, char* storage) {
   if(source == NULL) {
     sprintf(storage, "(RECORD NONE)");
@@ -47,20 +52,6 @@ extern char* SNetUtilDebugDumpRecord(snet_record_t *source, char* storage) {
         sprintf(storage, "(RECORD %p PROBE)",
               source);
       break;
-#ifdef DISTRIBUTED_SNET
-    case REC_route_update:
-      sprintf(storage, "(RECORD %p ROUTE_UPDATE)",
-              source);
-      break;
-    case REC_route_redirect:
-      sprintf(storage, "(RECORD %p ROUTE_REDIRECT)",
-	      source);
-      break;
-    case REC_route_concatenate:
-      sprintf(storage, "(RECORD %p ROUTE_CONCATENATE)",
-	      source);
-      break;
-#endif /* DISTRIBUTED_SNET */
     }
   }
   return storage;
@@ -68,9 +59,18 @@ extern char* SNetUtilDebugDumpRecord(snet_record_t *source, char* storage) {
 
 extern void SNetUtilDebugFatal(char* m, ...) {
   va_list p;
+#ifdef DISTRIBUTED_SNET
+  int my_rank;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
   va_start(p, m);
+  fprintf(stderr, "(SNET FATAL (NODE %d THREAD %lu) ", my_rank, pthread_self());
+#else
+  va_start(p, m);
   fprintf(stderr, "(SNET FATAL (THREAD %lu) ", pthread_self());
+#endif /* DISTRIBUTED_SNET */
+
   vfprintf(stderr, m, p);
   fputs(")\n\n", stderr);
   va_end(p);
@@ -80,8 +80,17 @@ extern void SNetUtilDebugFatal(char* m, ...) {
 extern void SNetUtilDebugNotice(char *m, ...) {
   va_list p;
 
+#ifdef DISTRIBUTED_SNET
+  int my_rank;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+  va_start(p, m);
+  fprintf(stderr, "(SNET NOTICE (NODE %d THREAD %lu) ", my_rank, pthread_self());
+#else
   va_start(p, m);
   fprintf(stderr, "(SNET NOTICE (THREAD %lu) ", pthread_self());
+#endif /* DISTRIBUTED_SNET */
   vfprintf(stderr, m, p);
   fputs(")\n", stderr);
   fflush(stderr);

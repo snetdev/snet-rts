@@ -387,11 +387,6 @@ static void *Collector( void *info) {
                 RemoveProbes(lst, output);
               }
             break;
-#ifdef DISTRIBUTED_SNET
-	  case REC_route_update:
-	  case REC_route_redirect:
-	  case REC_route_concatenate:
-#endif /* DISTRIBUTED_SNET */
 	  default:
 	    SNetUtilDebugNotice("[Collector] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
 	    SNetRecDestroy( rec);

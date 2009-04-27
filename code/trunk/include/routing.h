@@ -1,13 +1,13 @@
 #ifndef _SNET_ROUTING_H_
 #define _SNET_ROUTING_H_
 
+#include "bool.h"
 #include "stream_layer.h"
 #include "fun.h"
 
-#define SNET_LOCATION_NONE    -1
-#define SNET_LOCATION_UNKNOWN -2
+#define SNET_LOCATION_NONE -1
 
-typedef struct snet_routing_info snet_routing_info_t;
+typedef struct snet_routing_context snet_routing_context_t;
 
 void SNetRoutingInit(snet_tl_stream_t *omngr);
 
@@ -15,21 +15,30 @@ void SNetRoutingDestroy();
 
 int SNetRoutingGetNewID();
 
+snet_routing_context_t *SNetRoutingContextInit(int id, bool is_master, int parent, snet_fun_id_t *fun_id, int tag);
 
-snet_routing_info_t *SNetRoutingInfoInit(int id, int starter, int parent, snet_fun_id_t *fun_id, int tag);
+void SNetRoutingContextDestroy(snet_routing_context_t *context);
 
-void SNetRoutingInfoDestroy(snet_routing_info_t *info);
+int SNetRoutingContextGetID(snet_routing_context_t *context);
 
+void SNetRoutingContextSetLocation(snet_routing_context_t *context, int location);
+int SNetRoutingContextGetLocation(snet_routing_context_t *context);
 
-snet_tl_stream_t *SNetRoutingInfoUpdate(snet_routing_info_t *info, int node, snet_tl_stream_t *stream);
+void SNetRoutingContextSetParent(snet_routing_context_t *context, int parent);
+int SNetRoutingContextGetParent(snet_routing_context_t *context);
 
-void SNetRoutingInfoPushLevel(snet_routing_info_t *info);
+bool SNetRoutingContextIsMaster(snet_routing_context_t *context);
 
-snet_tl_stream_t *SNetRoutingInfoPopLevel(snet_routing_info_t *info, snet_tl_stream_t *stream);
+const snet_fun_id_t *SNetRoutingContextGetFunID(snet_routing_context_t *context);
 
-snet_tl_stream_t *SNetRoutingInfoFinalize(snet_routing_info_t *info, snet_tl_stream_t *stream);
+void SNetRoutingContextSetNodeVisited(snet_routing_context_t *context, int node);
+bool SNetRoutingContextIsNodeVisited(snet_routing_context_t *context, int node);
 
+int SNetRoutingContextGetTag(snet_routing_context_t *context);
 
+snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet_tl_stream_t* stream, int location);
+
+snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl_stream_t* stream);
 
 snet_tl_stream_t *SNetRoutingGetGlobalInput();
 

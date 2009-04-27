@@ -3,6 +3,8 @@
 
 #include "stream_layer.h"
 
-void OManagerCreate(snet_tl_stream_t *imanager);
+void OManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int index);
+
+void OManagerCreate();
 
 #endif /* _SNET_OMANAGER_H_ */

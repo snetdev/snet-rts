@@ -1,3 +1,4 @@
+
 #ifdef DISTRIBUTED_SNET
 #include <mpi.h>
 #include <pthread.h>
@@ -13,7 +14,6 @@
 #include "interface_functions.h"
 #include "stream_layer.h"
 #include "fun.h"
-#include "hashtable.h"
 #include "id.h"
 #include "queue.h"
 #include "debug.h"
@@ -21,6 +21,392 @@
 /* TODO: 
  *  - Fetch of network description?
  */
+
+#define ORIGINAL_MAX_MSG_SIZE 256  
+#define INVALID_INDEX -1
+
+typedef struct snet_ru_entry {
+  int op_id;
+  int node;
+  snet_tl_stream_t *stream;
+} snet_ru_entry_t;
+
+typedef struct snet_ri_entry {
+  int op_id;
+  int node;
+  int index;
+} snet_ri_entry_t;
+
+typedef struct {
+  snet_tl_stream_t *stream;
+  int node;
+  int index;
+} imanager_data_t;
+
+static void *IManagerInputThread( void *ptr) 
+{
+  bool terminate = false;
+
+  imanager_data_t *data = (imanager_data_t *)ptr;
+
+  int result;
+  int count;
+  void *buf;
+  int buf_size;
+
+  int position;
+
+  snet_record_t *record;
+
+  MPI_Status status;
+
+
+  buf_size = ORIGINAL_MAX_MSG_SIZE;
+
+  buf = SNetMemAlloc(sizeof(char) * buf_size);
+
+  while(!terminate) {
+    result = MPI_Probe(data->node, data->index, MPI_COMM_WORLD, &status);
+
+    MPI_Get_count(&status, MPI_PACKED, &count);
+      
+    if(count > buf_size) {
+      SNetMemFree(buf);
+      buf_size = count;
+      buf = SNetMemAlloc(sizeof(char) * buf_size);
+    }     
+  
+    result = MPI_Recv(buf, buf_size, MPI_PACKED, status.MPI_SOURCE, 
+		      status.MPI_TAG, MPI_COMM_WORLD, &status);
+
+    position = 0;
+
+    if((record = SNetRecUnpack(MPI_COMM_WORLD, &position, buf, buf_size)) == NULL) {
+      SNetUtilDebugFatal("IManager: Could not decode a record!");
+    }
+
+    switch( SNetRecGetDescriptor(record)) {
+    case REC_data:
+    case REC_collect:
+    case REC_sort_begin:	
+    case REC_sort_end:
+    case REC_probe: 
+
+      SNetTlWrite(data->stream, record);
+
+      break;
+    case REC_terminate:
+
+      SNetTlWrite(data->stream, record);
+      SNetTlMarkObsolete(data->stream);
+
+      terminate = true;
+      break;
+    case REC_sync:
+      SNetUtilDebugFatal("IManager: REC_sync should not be passed between nodes!");
+    break;
+    default:
+      SNetUtilDebugFatal("IManager: Decoded unknown record!");
+    break;
+
+    }
+
+  }
+
+  SNetMemFree(buf);
+  SNetMemFree(data);
+
+  return NULL;
+}
+
+static void IManagerCreateInput(snet_tl_stream_t *stream, int node, int index)
+{
+  pthread_t thread;
+  imanager_data_t *data;
+
+  data = SNetMemAlloc(sizeof(imanager_data_t));
+
+  data->stream = stream;
+  data->node = node;
+  data->index = index;
+
+  pthread_create(&thread, NULL, IManagerInputThread, (void *)data);
+  pthread_detach(thread);
+
+  return;
+}
+
+static void *IManagerCreateNetwork(void *op) 
+{
+  snet_tl_stream_t *stream;
+  snet_info_t *info;
+  snet_startup_fun_t fun;
+  snet_msg_create_network_t *msg;
+
+  msg = (snet_msg_create_network_t *)op;
+
+  SNetDistFunID2Fun(&msg->fun_id, &fun);
+  
+  stream = SNetTlCreateStream(BUFFER_SIZE);
+
+  SNetTlSetFlag(stream, true);
+
+  info = SNetInfoInit();
+
+  SNetInfoSetRoutingContext(info, SNetRoutingContextInit(msg->op_id, false, msg->parent, &msg->fun_id, msg->tag));
+  
+  stream = fun(stream, info, msg->tag);
+
+  stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), stream);
+  
+  stream = SNetTlMarkObsolete(stream);
+
+  SNetInfoDestroy(info);
+
+  SNetMemFree(op);
+  
+  return NULL;
+}
+static int IManagerMatchUpdateToIndex(snet_queue_t *queue, int op, int node)
+{ 
+  snet_ri_entry_t *ri;
+  snet_queue_iterator_t q_iter;
+  int index = INVALID_INDEX;
+
+  q_iter = SNetQueueIteratorBegin(queue);
+  
+  while((ri = (snet_ri_entry_t *)SNetQueueIteratorPeek(queue, q_iter)) != NULL) {
+    
+    if((op == ri->op_id) && (node == ri->node)) {
+      ri = (snet_ri_entry_t *)SNetQueueIteratorGet(queue, q_iter);
+      index = ri->index;
+      SNetMemFree(ri);
+      break;
+    }
+    
+    q_iter = SNetQueueIteratorNext(queue, q_iter);
+  }   
+
+  return index;
+}
+
+static void IOManagerPutIndexToBuffer(snet_queue_t *queue, int op, int node, int index)
+{
+  snet_ri_entry_t *ri;
+
+  ri = SNetMemAlloc(sizeof(snet_ri_entry_t));
+  
+  ri->op_id = op;
+  ri->node = node;
+  ri->index = index;
+
+  SNetQueuePut(queue, ri);
+}
+
+static snet_tl_stream_t *IManagerMatchIndexToUpdate(snet_queue_t *queue, int op, int node)
+{
+  
+  snet_ru_entry_t *ru;
+  snet_queue_iterator_t q_iter;
+
+  snet_tl_stream_t *stream = NULL;
+
+  q_iter = SNetQueueIteratorBegin(queue);
+  
+  while((ru = (snet_ru_entry_t *)SNetQueueIteratorPeek(queue, q_iter)) != NULL) {
+    
+    if((op == ru->op_id) && (node == ru->node)) {
+      ru = (snet_ru_entry_t *)SNetQueueIteratorGet(queue, q_iter);
+      stream = ru->stream;
+      SNetMemFree(ru);
+      break;
+    }
+    
+    q_iter = SNetQueueIteratorNext(queue, q_iter);
+  }   
+  
+  return stream;
+}
+
+static void IOManagerPutUpdateToBuffer(snet_queue_t *queue, int op, int node, snet_tl_stream_t *stream)
+{
+  snet_ru_entry_t *ru;
+
+  ru = SNetMemAlloc(sizeof(snet_ru_entry_t));
+  
+  ru->op_id = op;
+  ru->node = node;
+  ru->stream = stream;
+  
+  SNetQueuePut(queue, ru);
+}
+
+#define NUM_MESSAGE_TYPES 4
+
+#define TYPE_TERMINATE 0
+#define TYPE_UPDATE 1
+#define TYPE_INDEX 2
+#define TYPE_CREATE 3
+
+static void *IManagerMasterThread( void *ptr) 
+{
+  bool terminate = false;
+
+  MPI_Status status;
+  MPI_Aint true_lb;
+  MPI_Aint true_extent;
+
+  MPI_Request requests[NUM_MESSAGE_TYPES];
+  char *bufs[NUM_MESSAGE_TYPES];
+  int tags[NUM_MESSAGE_TYPES];
+  MPI_Datatype types[NUM_MESSAGE_TYPES];
+
+  int index;
+  int i;
+
+  pthread_t thread;
+
+  int my_rank;
+
+  snet_queue_t *update_queue;
+  snet_queue_t *index_queue;
+
+  snet_msg_route_update_t *msg_route_update;
+  snet_msg_route_index_t *msg_route_index;
+  snet_msg_create_network_t *msg_create_network;
+
+  snet_tl_stream_t * stream = NULL;
+
+  MPI_Comm_rank( MPI_COMM_WORLD, &my_rank );
+
+  update_queue = SNetQueueCreate();
+  index_queue = SNetQueueCreate();
+
+  tags[TYPE_TERMINATE] = SNET_msg_terminate;
+  tags[TYPE_UPDATE] = SNET_msg_route_update;
+  tags[TYPE_INDEX] = SNET_msg_route_index;
+  tags[TYPE_CREATE] = SNET_msg_create_network;
+
+  tags[TYPE_TERMINATE] = SNET_msg_terminate;
+
+  for(index = 0; index < NUM_MESSAGE_TYPES; index++) {
+    types[index] = SNetMessageGetMPIType(tags[index]);
+
+    MPI_Type_get_true_extent(types[index], &true_lb, &true_extent);
+    
+    bufs[index] = SNetMemAlloc(true_extent);
+    
+    MPI_Irecv(bufs[index], 2, types[index], MPI_ANY_SOURCE, tags[index], MPI_COMM_WORLD, &requests[index]);
+  }
+
+  while(!terminate) {
+    MPI_Waitany(NUM_MESSAGE_TYPES, requests, &index, &status);
+
+    switch(index) {
+    case TYPE_TERMINATE:
+      if(status.MPI_SOURCE != my_rank) {
+	SNetRoutingNotifyAll();
+      }
+      
+      terminate = true;
+      break;
+    case TYPE_UPDATE:
+
+      msg_route_update = (snet_msg_route_update_t *)bufs[index];
+
+      i = IManagerMatchUpdateToIndex(index_queue, 
+				     msg_route_update->op_id, 
+				     msg_route_update->node);
+
+      if(i != INVALID_INDEX) {
+	IManagerCreateInput(msg_route_update->stream, msg_route_update->node, i);
+
+#ifdef DISTRIBUTED_DEBUG
+	SNetUtilDebugNotice("Input from %d:%d added",msg_route_update->node , i);
+#endif /* DISTRIBUTED_DEBUG */
+
+      } else {
+	IOManagerPutUpdateToBuffer(update_queue, 
+				   msg_route_update->op_id, 
+				   msg_route_update->node, 
+				   msg_route_update->stream);
+      }
+
+      break;
+    case TYPE_INDEX:
+
+      msg_route_index = (snet_msg_route_index_t *)bufs[index];
+
+      stream = IManagerMatchIndexToUpdate(update_queue,
+					  msg_route_index->op_id, 
+					  msg_route_index->node);
+
+      if(stream  != NULL) {
+	IManagerCreateInput(stream, msg_route_index->node, msg_route_index->index);
+
+#ifdef DISTRIBUTED_DEBUG
+	SNetUtilDebugNotice("Input from %d:%d added", msg_route_index->node, msg_route_index->index);
+#endif /* DISTRIBUTED_DEBUG */
+
+      } else {
+	IOManagerPutIndexToBuffer(index_queue, 
+				  msg_route_index->op_id, 
+				  msg_route_index->node, 
+				  msg_route_index->index);
+      }
+
+      break;
+    case TYPE_CREATE:
+      msg_create_network = (snet_msg_create_network_t *)bufs[index];
+
+      MPI_Type_get_true_extent(types[index], &true_lb, &true_extent);
+
+      bufs[index] = SNetMemAlloc(true_extent);
+
+      pthread_create(&thread, NULL, IManagerCreateNetwork, (void *)msg_create_network); 
+      pthread_detach(thread);
+      break;
+    default:
+      break;
+    }
+    
+    MPI_Irecv(bufs[index], 2, types[index], MPI_ANY_SOURCE, tags[index], MPI_COMM_WORLD, &requests[index]); 
+  } 
+
+  for(index = 0; index < NUM_MESSAGE_TYPES; index++) {
+    MPI_Cancel(&requests[index]);
+    MPI_Request_free(&requests[index]);
+    SNetMemFree(bufs[index]);
+  }
+
+  SNetQueueDestroy(update_queue);
+  SNetQueueDestroy(index_queue);
+
+  return NULL;
+}
+
+void IManagerCreate()
+{
+  pthread_t thread;
+
+  pthread_create(&thread, NULL, IManagerMasterThread, NULL);
+  pthread_detach(thread);
+
+  return;
+}
+
+
+
+
+
+#ifdef DUMMY
+/* NOTICE:
+ *
+ * This is the old code for input manager, saved only as re-routing capacility is not yet added to
+ * the current version. Otherwise obsolete.
+ *
+ */
+
 
 //#define IMANAGER_DEBUG
 #define DIST_IO_OPTIMIZATIONS
@@ -589,4 +975,5 @@ void IManagerCreate(snet_tl_stream_t *omngr)
   pthread_detach(thread);
 }
 
+#endif /* DUMMY */
 #endif /* DISTRIBUTED_SNET */

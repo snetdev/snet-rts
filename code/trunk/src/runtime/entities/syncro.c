@@ -353,11 +353,6 @@ static void *SyncBoxThread( void *hndl) {
       case REC_probe:
         SNetTlWrite(SNetHndGetOutput(hnd), rec);
       break;
-#ifdef DISTRIBUTED_SNET
-    case REC_route_update:
-    case REC_route_redirect:
-    case REC_route_concatenate:
-#endif /* DISTRIBUTED_SNET */
     default:
       SNetUtilDebugNotice("[Synchro] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
@@ -386,9 +381,14 @@ extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(info, location, input); 
+  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 
 
   if(location == SNetIDServiceGetNodeID()) {
+
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("Synchrocell created");
+#endif /* DISTRIBUTED_DEBUG */
+
 #endif /* DISTRIBUTED_SNET */
     
     //  output = SNetBufCreate( BUFFER_SIZE);

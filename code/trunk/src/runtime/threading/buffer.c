@@ -27,6 +27,7 @@ struct buffer  {
   pthread_mutex_t *mxCounter;
 
   snet_ex_sem_t *record_count;
+  bool flag;
 };
 
 bool SNetBufIsEmpty(snet_buffer_t *buf) {
@@ -70,6 +71,8 @@ snet_buffer_t *SNetBufCreate( unsigned int size, pthread_mutex_t *lock) {
                                             true, 0,
                                             true, size,
                                             0);
+
+  theBuffer->flag = false;
   return( theBuffer);
 }
 
@@ -184,4 +187,34 @@ extern void SNetBufDestroy( snet_buffer_t *bf) {
   SNetMemFree( bf->ringBuffer);
   SNetExSemDestroy(bf->record_count);
   SNetMemFree( bf);
+}
+
+extern bool SNetBufGetFlag(snet_buffer_t *buf)
+{
+  int lock_status;
+
+  lock_status = pthread_mutex_trylock(buf->mxCounter);
+
+  if(lock_status != EBUSY) {
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufGetFlag (buf %p)) "
+                       "(Buffer is not locked))", buf, 
+                       buf);
+  }
+
+  return buf->flag;
+}
+  
+extern void SNetBufSetFlag(snet_buffer_t *buf, bool flag)
+{
+  int lock_status;
+
+  lock_status = pthread_mutex_trylock(buf->mxCounter);
+
+  if(lock_status != EBUSY) {
+    SNetUtilDebugFatal("(ERROR (BUFFER %p) (SNetBufSetFlag (buf %p)) "
+                       "(Buffer is not locked))", buf, 
+                       buf);
+  }
+
+  buf->flag = flag;
 }

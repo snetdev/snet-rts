@@ -7,7 +7,7 @@
 
 int DistributionInit(int argc, char *argv[]);
 
-snet_tl_stream_t *DistributionStart(snet_startup_fun_t fun);
+void DistributionStart(snet_startup_fun_t fun);
 void DistributionStop();
 void DistributionDestroy();
 

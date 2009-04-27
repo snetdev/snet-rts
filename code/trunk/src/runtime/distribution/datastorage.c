@@ -54,8 +54,10 @@
 #define MAX_REQUESTS 32
 #endif /* CONCURRENT_DATA_OPERATIONS */
 
-/* Number of chains in data storage hashtable. */
-#define HASHTABLE_SIZE 32
+/* Number of chains in data storage hashtable. 
+ * This value should be a prime number!
+ */
+#define HASHTABLE_SIZE 31
 
 /* MPI TAG for data operations. */
 #define TAG_DATA_OP 0 
@@ -265,16 +267,44 @@ static void *DataManagerThread(void *ptr)
 	if(ref != NULL) {
 	  
 	  /* Acquire free index for the operation. */
-	  if((bit = SNetUtilBitmapFindNSet(map)) == SNET_BITMAP_ERR) {
+	  while((bit = SNetUtilBitmapFindNSet(map)) == SNET_BITMAP_ERR) {
+	    /* No free indices, wait until a fetch operation ends */
+
 	    result = MPI_Waitany(MAX_REQUESTS, requests, &bit, &req_status);
 
-	    /* TODO: Handle the completed call! */
-
-	    SNetUtilDebugFatal("Max number of concurrent remote data operations: Waiting feature not yet implemented!");
-	  
-	    SNetUtilBitmapSet(map, bit);
+	    switch(ops[bit].op) {
+	
+	    case OP_type:
+	      /* Remote fetch, part 2 - Send data */
+	      
+	      count = SNetGetPackFun(ops[bit].interface)(storage.comm,
+							 SNetRefGetData(ops[bit].ref), 
+							 &ops[bit].type, 
+							 &data,
+							 &ops[bit].opt);
+	      
+	      result = MPI_Isend(data, count, ops[bit].type, ops[bit].dest, 
+				 ops[bit].id, storage.comm, &requests[bit]);
+	      
+	      
+	      ops[bit].op = OP_data;
+	      break;
+	    case OP_data:
+	      /* Remote fetch, part 3 - Cleanup*/
+	      SNetGetCleanupFun(ops[bit].interface)(ops[bit].type, ops[bit].opt);
+	      
+	      SNetRefDestroy(ops[bit].ref);
+	      
+	      SNetUtilBitmapClear(map, bit);
+	      break;
+	    default:
+	      break;
+	    }
 	  }
+
+	  SNetUtilBitmapSet(map, bit);
 	  
+
 	  ops[bit].ref = ref;
 	  ops[bit].dest = status.MPI_SOURCE;
 	  ops[bit].id = msg->op_id;

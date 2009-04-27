@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "omanager.h"
 #include "routing.h"
 #include "message.h"
 #include "memfun.h"
@@ -13,27 +14,14 @@
  * 
  */
 
-#define MAX_LEVELS 32
-#define FIRST_NODE -1
-
-struct snet_routing_info{
-  int id;
-  int level;
-  int *stack;
-  int stack_size;
-  int *nodes;
-  int parent;
-  int starter;
-  snet_fun_id_t fun_id;
-  int tag;
-};
+#define COUNTER_START SNET_MESSAGE_NUM_CONTROL_MESSAGES
 
 typedef struct {
   int next_id;
+  int next_index;
   pthread_mutex_t mutex;
   int self;
   int max_nodes;
-  int next_index;
   snet_tl_stream_t *omngr;
   bool terminate;
   snet_tl_stream_t *global_in;
@@ -41,23 +29,206 @@ typedef struct {
   pthread_cond_t input_cond;
   pthread_cond_t output_cond;
 } global_routing_info_t;
+
+struct snet_routing_context{
+  int id;
+  int current_location;
+  bool *nodes;
+  int parent;
+  bool is_master;
+  snet_fun_id_t fun_id;
+  int tag;
+};
  
-static global_routing_info_t *routing_info = NULL;
+static global_routing_info_t *r_info = NULL;
 
 
-static void CreateNetwork(snet_routing_info_t *info, int node)
+/****************************** Global routing info ******************************/
+
+void SNetRoutingInit(snet_tl_stream_t *omngr)
+{
+  r_info = SNetMemAlloc(sizeof(global_routing_info_t));
+
+  r_info->next_id = 0;
+  r_info->next_index = COUNTER_START;
+
+  pthread_mutex_init(&r_info->mutex, NULL);
+
+  MPI_Comm_rank( MPI_COMM_WORLD, &(r_info->self));
+  MPI_Comm_size( MPI_COMM_WORLD, &(r_info->max_nodes));
+
+  r_info->omngr = omngr;
+
+  r_info->global_out = NULL;
+  r_info->global_in = NULL;
+
+  r_info->terminate = false;
+
+  pthread_cond_init(&r_info->input_cond, NULL);
+  pthread_cond_init(&r_info->output_cond, NULL);
+}
+
+
+void SNetRoutingDestroy()
+{
+  pthread_mutex_destroy(&r_info->mutex);
+
+  SNetMemFree(r_info);
+}
+
+static int SNetRoutingGetNewIndex()
+{
+  int ret;
+  
+  pthread_mutex_lock(&r_info->mutex);
+  
+  ret = r_info->next_index++;
+  
+  pthread_mutex_unlock(&r_info->mutex);
+
+  return ret;
+}
+
+static int SNetRoutingGetSelf() 
+{
+  return r_info->self;
+}
+
+static int SNetRoutingGetNumNodes() 
+{
+  return r_info->max_nodes;
+}
+
+static void SNetRoutingSetGlobalInput(snet_tl_stream_t *stream) 
+{
+  pthread_mutex_lock(&r_info->mutex);
+
+  r_info->global_in = stream;
+
+  pthread_cond_signal(&r_info->input_cond);
+
+  pthread_mutex_unlock(&r_info->mutex);
+}
+
+static void SNetRoutingSetGlobalOutput(snet_tl_stream_t *stream) 
+{
+  pthread_mutex_lock(&r_info->mutex);
+
+  r_info->global_out = stream;
+  
+  pthread_cond_signal(&r_info->output_cond);
+
+  pthread_mutex_unlock(&r_info->mutex);
+}
+
+snet_tl_stream_t *SNetRoutingGetGlobalInput() 
+{
+  snet_tl_stream_t *stream;
+  
+  pthread_mutex_lock(&r_info->mutex);
+
+  stream = r_info->global_in;
+
+  pthread_mutex_unlock(&r_info->mutex);
+
+  return stream;
+}
+
+snet_tl_stream_t *SNetRoutingGetGlobalOutput() 
+{
+  snet_tl_stream_t *stream;
+
+  pthread_mutex_lock(&r_info->mutex);
+
+  stream = r_info->global_out;
+  
+  pthread_mutex_unlock(&r_info->mutex);
+
+  return stream;
+}
+
+snet_tl_stream_t *SNetRoutingWaitForGlobalInput() 
+{
+  snet_tl_stream_t *stream;
+  
+  pthread_mutex_lock(&r_info->mutex);
+
+  stream = r_info->global_in;
+
+  while(stream == NULL && r_info->terminate == false) {
+    pthread_cond_wait(&r_info->input_cond, &r_info->mutex);
+
+    stream = r_info->global_in;
+  }
+
+  pthread_mutex_unlock(&r_info->mutex);
+
+  return stream;
+}
+
+snet_tl_stream_t *SNetRoutingWaitForGlobalOutput() 
+{
+  snet_tl_stream_t *stream;
+
+  pthread_mutex_lock(&r_info->mutex);
+
+  stream = r_info->global_out;
+
+  while(stream == NULL && r_info->terminate == false) {
+    pthread_cond_wait(&r_info->output_cond, &r_info->mutex);
+
+    stream = r_info->global_out;
+  }
+
+  pthread_mutex_unlock(&r_info->mutex);
+
+  return stream;
+}
+
+void SNetRoutingNotifyAll()
+{
+  pthread_mutex_lock(&r_info->mutex);
+
+  r_info->terminate = true;
+
+  pthread_cond_signal(&r_info->input_cond);
+  pthread_cond_signal(&r_info->output_cond);
+
+  pthread_mutex_unlock(&r_info->mutex);
+}
+
+
+int SNetRoutingGetNewID()
+{
+  int ret;
+  
+  pthread_mutex_lock(&r_info->mutex);
+  
+  ret = r_info->next_id++;
+  
+  pthread_mutex_unlock(&r_info->mutex);
+
+  return ret;
+}
+
+
+/****************************** Message functions ******************************/
+
+static void CreateNetwork(snet_routing_context_t *info, int node)
 {
   snet_msg_create_network_t msg;
   MPI_Datatype type;
+  const snet_fun_id_t *fun_id;
 
-  msg.op_id = info->id;
-  msg.starter = info->starter;
-  msg.parent = info->parent;
-  msg.fun_id.id = info->fun_id.id;
-  msg.tag = info->tag;
+  msg.op_id = SNetRoutingContextGetID(info);
+  msg.parent = SNetRoutingContextGetParent(info);
+  msg.tag = SNetRoutingContextGetTag(info);
+
+  fun_id = SNetRoutingContextGetFunID(info);
+  msg.fun_id.id = fun_id->id;
 
   memset(msg.fun_id.lib, 0, sizeof(char) * 32);
-  strcpy(msg.fun_id.lib, info->fun_id.lib);
+  strcpy(msg.fun_id.lib, fun_id->lib);
 
   type = SNetMessageGetMPIType(SNET_msg_create_network);
 
@@ -75,7 +246,8 @@ static void UpdateITable(int id, int node, snet_tl_stream_t *stream)
 
   type = SNetMessageGetMPIType(SNET_msg_route_update);
 
-  MPI_Send(&msg, 1, type, routing_info->self, SNET_msg_route_update, MPI_COMM_WORLD);
+  MPI_Send(&msg, 1, type, SNetRoutingGetSelf(), SNET_msg_route_update, MPI_COMM_WORLD);
+
 }
 
 static void UpdateOTable(int id, int node, int index, snet_tl_stream_t *stream) 
@@ -84,10 +256,10 @@ static void UpdateOTable(int id, int node, int index, snet_tl_stream_t *stream)
   MPI_Datatype type;
 
   msg.op_id = id;
-  msg.node = routing_info->self;
+  msg.node = SNetRoutingGetSelf();
   msg.index = index;
 
-  SNetTlWrite(routing_info->omngr, SNetRecCreate(REC_route_update, node, index, stream));
+  OManagerUpdateRoutingTable(stream, node, index);
 
   type = SNetMessageGetMPIType(SNET_msg_route_index);
 
@@ -95,296 +267,170 @@ static void UpdateOTable(int id, int node, int index, snet_tl_stream_t *stream)
 }
 
 
-void SNetRoutingInit(snet_tl_stream_t *omngr)
+/****************************** Routing context ******************************/
+
+snet_routing_context_t *SNetRoutingContextInit(int id, bool is_master, int parent, snet_fun_id_t *fun_id, int tag)
 {
-  routing_info = SNetMemAlloc(sizeof(global_routing_info_t));
+  snet_routing_context_t *new;
 
-  routing_info->next_id = 0;
-  routing_info->next_index = 0;
+  new = SNetMemAlloc(sizeof(snet_routing_context_t));
 
-  pthread_mutex_init(&routing_info->mutex, NULL);
+  new->id = id;
 
-  MPI_Comm_rank( MPI_COMM_WORLD, &(routing_info->self));
-  MPI_Comm_size( MPI_COMM_WORLD, &(routing_info->max_nodes));
-
-  routing_info->omngr = omngr;
-
-  routing_info->global_out = NULL;
-  routing_info->global_in = NULL;
-
-  routing_info->terminate = false;
-
-  pthread_cond_init(&routing_info->input_cond, NULL);
-  pthread_cond_init(&routing_info->output_cond, NULL);
-}
-
-
-void SNetRoutingDestroy()
-{
-  pthread_mutex_destroy(&routing_info->mutex);
-
-  SNetMemFree(routing_info);
-}
-
-
-snet_tl_stream_t *SNetRoutingGetGlobalInput() 
-{
-  snet_tl_stream_t *stream;
+  new->nodes = SNetMemAlloc(sizeof(bool) * SNetRoutingGetNumNodes());
   
-  pthread_mutex_lock(&routing_info->mutex);
+  memset(new->nodes, false, sizeof(bool) * SNetRoutingGetNumNodes());
 
-  stream = routing_info->global_in;
+  new->current_location = parent;
 
-  pthread_mutex_unlock(&routing_info->mutex);
+  new->is_master = is_master;
 
-  return stream;
+  new->parent = parent;
+
+  strcpy(new->fun_id.lib, fun_id->lib);
+
+  new->fun_id.id = fun_id->id;
+
+  new->tag = tag;
+
+  return new;
 }
 
-snet_tl_stream_t *SNetRoutingGetGlobalOutput() 
+void SNetRoutingContextDestroy(snet_routing_context_t *context)
 {
-  snet_tl_stream_t *stream;
-
-  pthread_mutex_lock(&routing_info->mutex);
-
-  stream = routing_info->global_out;
-  
-  pthread_mutex_unlock(&routing_info->mutex);
-
-  return stream;
+  SNetMemFree(context->nodes);
+  SNetMemFree(context);
 }
 
-snet_tl_stream_t *SNetRoutingWaitForGlobalInput() 
+int SNetRoutingContextGetID(snet_routing_context_t *context)
 {
-  snet_tl_stream_t *stream;
-  
-  pthread_mutex_lock(&routing_info->mutex);
-
-  stream = routing_info->global_in;
-
-  while(stream == NULL && routing_info->terminate == false) {
-    pthread_cond_wait(&routing_info->input_cond, &routing_info->mutex);
-
-    stream = routing_info->global_in;
-  }
-
-  pthread_mutex_unlock(&routing_info->mutex);
-
-  return stream;
+  return context->id;
 }
 
-snet_tl_stream_t *SNetRoutingWaitForGlobalOutput() 
+void SNetRoutingContextSetLocation(snet_routing_context_t *context, int location)
 {
-  snet_tl_stream_t *stream;
-
-  pthread_mutex_lock(&routing_info->mutex);
-
-  stream = routing_info->global_out;
-
-  while(stream == NULL && routing_info->terminate == false) {
-    pthread_cond_wait(&routing_info->output_cond, &routing_info->mutex);
-
-    stream = routing_info->global_out;
-  }
-
-  pthread_mutex_unlock(&routing_info->mutex);
-
-  return stream;
+  context->current_location = location;
 }
 
-void SNetRoutingNotifyAll()
+int SNetRoutingContextGetLocation(snet_routing_context_t *context)
 {
-  pthread_mutex_lock(&routing_info->mutex);
-
-  routing_info->terminate = true;
-
-  pthread_cond_signal(&routing_info->input_cond);
-  pthread_cond_signal(&routing_info->output_cond);
-
-  pthread_mutex_unlock(&routing_info->mutex);
+  return context->current_location;
 }
 
-
-int SNetRoutingGetNewID()
+void SNetRoutingContextSetParent(snet_routing_context_t *context, int parent)
 {
-  int ret;
-  
-  pthread_mutex_lock(&routing_info->mutex);
-  
-  ret = routing_info->next_id++;
-  
-  pthread_mutex_unlock(&routing_info->mutex);
-
-  return ret;
+  context->parent = parent;
 }
 
-snet_routing_info_t *SNetRoutingInfoInit(int id, int starter_node, int parent_node, snet_fun_id_t *fun_id, int tag) 
+int SNetRoutingContextGetParent(snet_routing_context_t *context)
 {
-  snet_routing_info_t *info;
-
-  info = SNetMemAlloc(sizeof(snet_routing_info_t));
-
-  info->id = id;
-
-  info->level = 0;
-
-  info->stack_size = MAX_LEVELS;
-  info->stack = SNetMemAlloc(sizeof(int) * info->stack_size);
-
-  memset(info->stack, 0, sizeof(int) * info->stack_size);
-
-  info->nodes = SNetMemAlloc(sizeof(int) * routing_info->max_nodes);
-  
-  memset(info->nodes, 0, sizeof(int) * routing_info->max_nodes);
-
-  info->stack[info->level] = parent_node;
-
-  info->starter = starter_node;
-
-  info->parent = parent_node;
-
-  strcpy(info->fun_id.lib, fun_id->lib);
-
-  info->fun_id.id = fun_id->id;
-
-  info->tag = tag;
-
-  SNetRoutingInfoPushLevel(info);
-
-
-  return info;
+  return context->parent;
 }
 
-void SNetRoutingInfoDestroy(snet_routing_info_t *info) 
+bool SNetRoutingContextIsMaster(snet_routing_context_t *context)
 {
-  SNetMemFree(info->stack);
-  SNetMemFree(info->nodes);
-  SNetMemFree(info);
+  return context->is_master;
 }
 
-snet_tl_stream_t *SNetRoutingInfoUpdate(snet_routing_info_t *info, int node, snet_tl_stream_t *stream)
+const snet_fun_id_t *SNetRoutingContextGetFunID(snet_routing_context_t *context)
+{
+  return &context->fun_id;
+}
+
+int SNetRoutingContextGetTag(snet_routing_context_t *context)
+{
+  return context->tag;
+}
+
+void SNetRoutingContextSetNodeVisited(snet_routing_context_t *context, int node)
+{
+  context->nodes[node] = true;
+}
+
+bool SNetRoutingContextIsNodeVisited(snet_routing_context_t *context, int node)
+{
+  return context->nodes[node];
+}
+
+snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet_tl_stream_t* stream, int location)
 {
   int index;
-  if(info->stack[info->level] != node) {
 
-    if(info->stack[info->level] == routing_info->self) {
+  int previous = SNetRoutingContextGetLocation(context);
 
-      pthread_mutex_lock(&routing_info->mutex);
+  if(previous != location) {
 
-      index = routing_info->next_index++;
+    if(previous == SNetRoutingGetSelf()) {
+  
+      index = SNetRoutingGetNewIndex();
+     
+      UpdateOTable(SNetRoutingContextGetID(context), location, index, stream);
 
-      pthread_mutex_unlock(&routing_info->mutex);
-      
-      UpdateOTable(info->id, node, index, stream);
+      stream = SNetTlCreateStream(BUFFER_SIZE);
 
-      stream = SNetTlCreateUnboundedStream();
+    } else if(location == SNetRoutingGetSelf()) {
 
-    } else if(node == routing_info->self) {
+      if(previous == SNET_LOCATION_NONE) {
 
-      if(info->stack[info->level] == FIRST_NODE) {
-
-	pthread_mutex_lock(&routing_info->mutex);
-
-	routing_info->global_in = stream;
-
-	pthread_cond_signal(&routing_info->input_cond);
-
-	pthread_mutex_unlock(&routing_info->mutex);
+	SNetRoutingSetGlobalInput(stream);
 
       } else {
+
 	SNetTlSetFlag(stream, true);
 
-	UpdateITable(info->id, info->stack[info->level], stream);
+	UpdateITable(SNetRoutingContextGetID(context), previous, stream);
       }
-    }
-    
-    info->stack[info->level] = node;
+    } 
+
+
+    SNetRoutingContextSetLocation(context, location);
   }
 
-  if(info->nodes[node] == 0 && node != routing_info->self && info->starter == routing_info->self) {
-    info->nodes[node] = 1;
+  if(SNetRoutingContextIsNodeVisited(context, location) == false 
+     && location !=  SNetRoutingGetSelf()
+     && SNetRoutingContextIsMaster(context)) {
+
+    SNetRoutingContextSetNodeVisited(context, location);
     
-    CreateNetwork(info, node);
+    CreateNetwork(context, location);
   }
 
   return stream;
 }
 
-void SNetRoutingInfoPushLevel(snet_routing_info_t *info)
+snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl_stream_t* stream)
 {
-  int *new;
-  int size;
-
-  info->level++;
-
-  if(info->level == info->stack_size) {
-    size = info->stack_size + MAX_LEVELS;
-
-    new = SNetMemAlloc(sizeof(int) * size);
-
-    memcpy(new, info->stack, info->stack_size);
-  }
-
-  info->stack[info->level] = info->stack[info->level - 1];
-}
-
-snet_tl_stream_t *SNetRoutingInfoPopLevel(snet_routing_info_t *info, snet_tl_stream_t *stream)
-{
+  int previous = SNetRoutingContextGetLocation(context);
+  int location = SNetRoutingContextGetParent(context);
   int index;
 
-  info->level--;
-
-  if(info->stack[info->level] != info->stack[info->level + 1]) {
-    if(info->stack[info->level] == routing_info->self) {
+  if(location != previous) {
+    if(location == SNetRoutingGetSelf()) {
 
       SNetTlSetFlag(stream, true);
 
-      UpdateITable(info->id, info->stack[info->level + 1], stream);
+      UpdateITable(SNetRoutingContextGetID(context), previous, stream);
 
-    } else if(info->stack[info->level + 1] == routing_info->self) {
+    } else if(previous == SNetRoutingGetSelf()) {
 
-      if(info->stack[info->level] == FIRST_NODE) {
+      if(location == SNET_LOCATION_NONE) {
 
-	pthread_mutex_lock(&routing_info->mutex);
+	SNetRoutingSetGlobalOutput(stream);
 
-	routing_info->global_out = stream;
-
-	pthread_cond_signal(&routing_info->output_cond);
-
-	pthread_mutex_unlock(&routing_info->mutex);
+	stream = NULL;
       } else {
+	index = SNetRoutingGetNewIndex();
 
-	pthread_mutex_lock(&routing_info->mutex);
+	UpdateOTable(SNetRoutingContextGetID(context), location, index, stream);
 
-	index = routing_info->next_index++;
-
-	pthread_mutex_unlock(&routing_info->mutex);
-	
-	UpdateOTable(info->id, info->stack[info->level], index, stream);
+	stream = SNetTlCreateStream(BUFFER_SIZE);
       }
- 
-      stream = SNetTlCreateUnboundedStream();  
-    }
+    } 
   }
 
-  return stream;
-}
+  SNetRoutingContextSetLocation(context, location);
 
-snet_tl_stream_t *SNetRoutingInfoFinalize(snet_routing_info_t *info, snet_tl_stream_t *stream)
-{
-  stream = SNetRoutingInfoPopLevel(info, stream);
-  
-  if(info->stack[info->level] == FIRST_NODE
-     && info->stack[info->level + 1] == routing_info->self) {
-    SNetTlMarkObsolete(stream);
-    stream = NULL;  
-  } else if(info->stack[info->level] == routing_info->self) {
-    // Do nothing?
 
-  } else {  
-    SNetTlMarkObsolete(stream);
-    stream = NULL;  
-  }
-  
   return stream;
 }
 

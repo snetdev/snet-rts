@@ -39,6 +39,10 @@
  *
  */
 
+#ifdef DISTRIBUTED_SNET
+#define INVALID_LOCATION -1
+#endif /* DISTRIBUTED_SNET*/
+
 #define INVALID_INDEX -1
 #define SET_INCREASE_SIZE 1
 
@@ -68,6 +72,10 @@ struct stream {
 
   snet_tl_streamset_t *set;    /* The set the stream belong to, or NULL */
   int set_index;               /* Index of the stream in the set */
+
+#ifdef DISTRIBUTED_SNET
+  int location;                /* The location from where the stream originates */
+#endif /* DISTRIBUTED_SNET*/
 };
 
 
@@ -127,6 +135,8 @@ static bool UnifiedGetFlag(snet_tl_stream_t *stream)
 
   if(stream->is_unbounded) {
     result = SNetUBufGetFlag(stream->buffers.ubuffer);
+  } else {
+    result = SNetBufGetFlag(stream->buffers.buffer);
   } 
 
   return result;
@@ -138,6 +148,9 @@ static bool UnifiedSetFlag(snet_tl_stream_t *stream, bool flag)
 
   if(stream->is_unbounded) {
     SNetUBufSetFlag(stream->buffers.ubuffer, flag);
+    result = true;
+  } else {
+    SNetBufSetFlag(stream->buffers.buffer, flag);
     result = true;
   } 
 
@@ -222,6 +235,10 @@ snet_tl_stream_t *SNetTlCreateStream(int size)
   stream->set = NULL;
   stream->set_index = INVALID_INDEX;
 
+#ifdef DISTRIBUTED_SNET
+  stream->location = INVALID_LOCATION;
+#endif /* DISTRIBUTED_SNET*/
+
   return stream;
 }
 
@@ -241,6 +258,10 @@ snet_tl_stream_t *SNetTlCreateUnboundedStream()
 
   stream->set = NULL;
   stream->set_index = INVALID_INDEX;
+
+#ifdef DISTRIBUTED_SNET
+  stream->location = INVALID_LOCATION;
+#endif /* DISTRIBUTED_SNET*/
 
   return stream;
 }

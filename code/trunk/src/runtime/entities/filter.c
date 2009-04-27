@@ -501,11 +501,6 @@ static void *FilterThread( void *hnd)
         case REC_probe:
           SNetTlWrite(SNetHndGetOutput(hnd), in_rec);
         break;
-#ifdef DISTRIBUTED_SNET
-    case REC_route_update:
-    case REC_route_redirect:
-    case REC_route_concatenate:
-#endif /* DISTRIBUTED_SNET */
     default:
       SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( in_rec));
       SNetRecDestroy(in_rec);
@@ -535,9 +530,14 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
   va_list args;
 
 #ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingInfoUpdate(info, location, instream); 
+  instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location); 
 
   if(location == SNetIDServiceGetNodeID()) {
+
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("Filter created");
+#endif /* DISTRIBUTED_DEBUG */
+
 #endif /* DISTRIBUTED_SNET */
 
     outstream = SNetTlCreateStream(BUFFER_SIZE);
@@ -614,9 +614,14 @@ extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
   va_list args;
 
 #ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingInfoUpdate(info, location, instream); 
+  instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location); 
 
   if(location == SNetIDServiceGetNodeID()) {
+
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("Translate created");
+#endif /* DISTRIBUTED_DEBUG */
+
 #endif /* DISTRIBUTED_SNET */
     
     outstream = SNetTlCreateStream(BUFFER_SIZE);
@@ -748,11 +753,6 @@ static void *NameshiftThread( void *h)
       case REC_probe:
         SNetTlWrite(SNetHndGetOutput(hnd), rec);
       break;
-#ifdef DISTRIBUTED_SNET
-    case REC_route_update:
-    case REC_route_redirect:
-    case REC_route_concatenate:
-#endif /* DISTRIBUTED_SNET */
     default:
       SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
@@ -776,9 +776,14 @@ extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingInfoUpdate(info, location, instream); 
+  instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location);
 
   if(location == SNetIDServiceGetNodeID()) {
+
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("Nameshift created");
+#endif /* DISTRIBUTED_DEBUG */
+
 #endif /* DISTRIBUTED_SNET */
 
     outstream = SNetTlCreateStream( BUFFER_SIZE);

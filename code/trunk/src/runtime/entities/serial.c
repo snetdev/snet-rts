@@ -28,7 +28,7 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
   /* This section forces input stream into root node. 
    * Otherwise, the root node is ignored.
    */
-  input = SNetRoutingInfoUpdate(info, location, input);
+  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
 
 #endif /* DISTRIBUTED_BUILD_SERIAL */
 #endif /* DISTRIBUTED_SNET */
@@ -68,7 +68,7 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
   /* This section forces output stream into root node. 
    * Otherwise, the root node is ignored.
    */ 
-  output = SNetRoutingInfoUpdate(info, location, output); 
+  output = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), output, location); 
  
 #endif /* DISTRIBUTED_BUILD_SERIAL */
 #endif /* DISTRIBUTED_SNET */

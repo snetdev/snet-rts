@@ -8,9 +8,132 @@
 #include "record.h"
 #include "stream_layer.h"
 #include "memfun.h"
-#include "hashtable.h"
 #include "message.h"
 #include "debug.h"
+
+#define ORIGINAL_MAX_MSG_SIZE 256
+
+typedef struct {
+  snet_tl_stream_t *stream;
+  int node;
+  int index;
+} omanager_data_t;
+
+static void *OManagerThread(void *ptr)
+{
+  bool terminate = false;
+
+  omanager_data_t *data = (omanager_data_t *)ptr;
+
+  snet_record_t *record;
+
+  int position;
+  int *buf;
+  int buf_size;
+
+  buf_size = ORIGINAL_MAX_MSG_SIZE;
+  buf = SNetMemAlloc(sizeof(char) * buf_size);
+
+  while(!terminate) {
+
+    record = SNetTlRead(data->stream);
+
+    switch(SNetRecGetDescriptor(record)) {
+    case REC_sync:
+
+      data->stream = SNetRecGetStream(record);
+
+      SNetRecDestroy(record);
+      break;
+    case REC_data:
+    case REC_collect:
+    case REC_sort_begin:	
+    case REC_sort_end:
+    case REC_probe:
+      position = 0;
+     
+      while(SNetRecPack(record, MPI_COMM_WORLD, &position, buf, buf_size) != MPI_SUCCESS) {
+	
+	SNetMemFree(buf);
+	
+	buf_size += ORIGINAL_MAX_MSG_SIZE;
+	
+	buf = SNetMemAlloc(sizeof(char) * buf_size);
+	
+	position = 0;
+
+      }
+      
+      MPI_Send(buf, position, MPI_PACKED, data->node, data->index, MPI_COMM_WORLD);
+     
+      SNetRecDestroy(record);
+      break;
+    case REC_terminate:
+      terminate = true;
+
+      /* No need to check for message size, as buf_size will always be greater! */
+
+      position = 0;
+
+      SNetRecPack(record, MPI_COMM_WORLD, &position, buf, buf_size);
+
+      MPI_Send(buf, position, MPI_PACKED, data->node, data->index, MPI_COMM_WORLD);
+
+      SNetRecDestroy(record);
+      break;
+    default:
+      SNetUtilDebugFatal("OManager: Unknown record received!");
+      break;
+    }
+
+
+  }
+
+  SNetMemFree(buf);
+  SNetMemFree(data);
+
+  return NULL;
+}
+
+void OManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int index)
+{
+  pthread_t thread;
+  omanager_data_t *data;
+
+#ifdef DISTRIBUTED_DEBUG
+  int my_rank;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+  SNetUtilDebugNotice("Output to %d:%d added", node , index);
+#endif /* DISTRIBUTED_DEBUG */
+
+  data = SNetMemAlloc(sizeof(omanager_data_t));
+
+  data->stream = stream;
+  data->node = node;
+  data->index = index;
+  
+  pthread_create(&thread, NULL, OManagerThread, (void *)data);
+  pthread_detach(thread);
+  
+  return;
+}
+
+void OManagerCreate(snet_tl_stream_t *imanager)
+{
+  return;
+}
+
+
+
+#ifdef DUMMY
+/* NOTICE:
+ *
+ * This is the old code for output manager, saved only as re-routing capacility is not yet added to
+ * the current version. Otherwise obsolete.
+ *
+ */
 
 //#define OMANAGER_DEBUG
 #define DIST_IO_OPTIMIZATIONS
@@ -378,4 +501,5 @@ void OManagerCreate(snet_tl_stream_t *imanager)
 
   return;
 }
+#endif /* DUMMY */
 #endif /* DISTRIBUTED_SNET */

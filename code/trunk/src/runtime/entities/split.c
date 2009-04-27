@@ -59,7 +59,7 @@ static void *SplitBoxThread( void *hndl) {
 #ifdef DISTRIBUTED_SNET
   int node_id;
   snet_fun_id_t fun_id;
-  snet_routing_info_t *info;
+  snet_info_t *info;
   snet_tl_stream_t *temp_stream;
 #endif /* DISTRIBUTED_SNET */
 
@@ -92,21 +92,29 @@ static void *SplitBoxThread( void *hndl) {
           elem->stream = SNetTlCreateStream( BUFFER_SIZE);
 
 #ifdef DISTRIBUTED_SNET
+	  info = SNetInfoInit();
+
 	  if(SNetHndIsSplitByLocation( hnd)) {
-	    info = SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, ltag_val);
 
-	    temp_stream = SNetRoutingInfoFinalize(info, boxfun(elem->stream, info, ltag_val));
+	    SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, ltag_val));
+	     
+	    temp_stream = boxfun(elem->stream, info, ltag_val);    
+
+	    temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
+	     
 	  } else {
-	    info = SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, node_id);
+	    SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
+	     
+	    temp_stream = boxfun(elem->stream, info, node_id);    
 
-	    temp_stream = SNetRoutingInfoFinalize(info, boxfun(elem->stream, info, node_id));
+	    temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
 	  }	 
 	  
 	  if(temp_stream != NULL) {
 	    SNetTlWrite( initial, SNetRecCreate( REC_collect, temp_stream));
 	  }
 
-	  SNetRoutingInfoDestroy(info);
+	  SNetInfoDestroy(info);
 #else
           SNetTlWrite( initial, 
                        SNetRecCreate( REC_collect, boxfun( elem->stream)));
@@ -128,21 +136,28 @@ static void *SplitBoxThread( void *hndl) {
             repos = SNetUtilListAddBeginning(repos, elem);
 
 #ifdef DISTRIBUTED_SNET
+	    info = SNetInfoInit();
+
 	    if(SNetHndIsSplitByLocation( hnd)) {
-	      info = SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, i);
-	    
-	      temp_stream = SNetRoutingInfoFinalize(info, boxfun(elem->stream, info, i));
+	      SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, i));
+	      
+	      temp_stream = boxfun(elem->stream, info, i);    
+	      
+	      temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
+	      
 	    } else {
-	      info = SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, node_id);
-	    
-	      temp_stream = SNetRoutingInfoFinalize(info, boxfun(elem->stream, info, node_id));
+	      SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
+	      
+	      temp_stream = boxfun(elem->stream, info, node_id);    
+	      
+	      temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
 	    }
 
 	    if(temp_stream != NULL) {
 	      SNetTlWrite( initial, SNetRecCreate( REC_collect, temp_stream));
 	    }
 	    
-	    SNetRoutingInfoDestroy(info);
+	    SNetInfoDestroy(info);
 #else
 	    SNetTlWrite( initial, 
                          SNetRecCreate( REC_collect, boxfun( elem->stream)));
@@ -253,11 +268,6 @@ static void *SplitBoxThread( void *hndl) {
           current_position = SNetUtilListIterNext(current_position);
         }
       break;
-#ifdef DISTRIBUTED_SNET
-    case REC_route_update:
-    case REC_route_redirect:
-    case REC_route_concatenate:
-#endif /* DISTRIBUTED_SNET */
     default:
       SNetUtilDebugNotice("[Split] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
@@ -284,9 +294,14 @@ extern snet_tl_stream_t *SNetSplit( snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(info, location, input);
+  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
 
   if(location == SNetIDServiceGetNodeID()) {
+
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("Split created");
+#endif /* DISTRIBUTED_DEBUG */
+
 #endif /* DISTRIBUTED_SNET */
   
     initial = SNetTlCreateStream( BUFFER_SIZE);
@@ -315,17 +330,21 @@ extern snet_tl_stream_t *SNetLocSplit(snet_tl_stream_t *input,
   snet_tl_stream_t *initial, *output;
   snet_handle_t *hnd;
 
-  input = SNetRoutingInfoUpdate(info, location, input); 
+  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 
 
   if(location == SNetIDServiceGetNodeID()) {
 
-  initial = SNetTlCreateStream( BUFFER_SIZE);
-  hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true);
-  
-  output = CreateCollector(initial);
-  
-  SNetTlCreateComponent(SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("LocSplit created");
+#endif /* DISTRIBUTED_DEBUG */
 
+    initial = SNetTlCreateStream( BUFFER_SIZE);
+    hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true);
+    
+    output = CreateCollector(initial);
+    
+    SNetTlCreateComponent(SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
+    
   } else { 
     output = input; 
   }
@@ -351,7 +370,7 @@ static void *DetSplitBoxThread( void *hndl) {
 #ifdef DISTRIBUTED_SNET
   int node_id;
   snet_fun_id_t fun_id;
-  snet_routing_info_t *info;
+  snet_info_t *info;
   snet_tl_stream_t *temp_stream;
 #endif /* DISTRIBUTED_SNET */
 
@@ -383,21 +402,29 @@ static void *DetSplitBoxThread( void *hndl) {
           SNetTlWrite(initial, SNetRecCreate(REC_sort_begin, 0, 0));
 
 #ifdef DISTRIBUTED_SNET
+	  info = SNetInfoInit();
+
 	  if(SNetHndIsSplitByLocation( hnd)) {
-	    info =  SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, ltag_val);
-
-	    temp_stream = SNetRoutingInfoFinalize(info, boxfun(elem->stream, info, ltag_val));
+	    SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, ltag_val));
+	    
+	    temp_stream = boxfun(elem->stream, info, ltag_val);    
+	    
+	    temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
+	    
 	  } else {
-	    info =  SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, node_id);
-
-	    temp_stream = SNetRoutingInfoFinalize(info, boxfun(elem->stream, info, node_id));
+	    SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
+	    
+	    temp_stream = boxfun(elem->stream, info, node_id);    
+	    
+	    temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
 	  }
+
 	  
 	  if(temp_stream != NULL) {
 	    SNetTlWrite( initial, SNetRecCreate( REC_collect, temp_stream));
 	  }
 
-	  SNetRoutingInfoDestroy(info);
+	  SNetInfoDestroy(info);
 #else
           tmp = boxfun(elem->stream);
           SNetTlWrite(initial, SNetRecCreate(REC_collect, tmp));
@@ -429,21 +456,28 @@ static void *DetSplitBoxThread( void *hndl) {
             elem->stream = SNetTlCreateStream(BUFFER_SIZE);
             repos = SNetUtilListAddBeginning(repos, elem);
 #ifdef DISTRIBUTED_SNET
+	    info = SNetInfoInit();
+
 	    if(SNetHndIsSplitByLocation( hnd)) {
-	      info =  SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, i);
+	      SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, i));
 	      
-	      temp_stream = SNetRoutingInfoFinalize(info, boxfun(elem->stream, info, i));
+	      temp_stream = boxfun(elem->stream, info, i);    
+	      
+	      temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
+	      
 	    } else {
-	      info =  SNetRoutingInfoInit( SNetRoutingGetNewID(), node_id, node_id, &fun_id, node_id);
+	      SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
 	      
-	      temp_stream = SNetRoutingInfoFinalize(info, boxfun(elem->stream, info, node_id));
+	      temp_stream = boxfun(elem->stream, info, node_id);    
+	      
+	      temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
 	    }
 
 	    if(temp_stream != NULL) {
 	      SNetTlWrite( initial, SNetRecCreate( REC_collect, temp_stream));
 	    }
 
-	    SNetRoutingInfoDestroy(info);
+	    SNetInfoDestroy(info);
 #else
             SNetTlWrite( initial, SNetRecCreate( REC_collect, boxfun( elem->stream)));
 #endif /* DISTRIBUTED_SNET */
@@ -517,11 +551,6 @@ static void *DetSplitBoxThread( void *hndl) {
           current_position = SNetUtilListIterNext(current_position);
         }
 	break;
-#ifdef DISTRIBUTED_SNET
-    case REC_route_update:
-    case REC_route_redirect:
-    case REC_route_concatenate:
-#endif /* DISTRIBUTED_SNET */
     default:
       SNetUtilDebugNotice("[Split] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
@@ -550,9 +579,14 @@ extern snet_tl_stream_t *SNetSplitDet( snet_tl_stream_t *input,
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
-  input = SNetRoutingInfoUpdate(info, location, input); 
+  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 
 
   if(location == SNetIDServiceGetNodeID()) {
+
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("DetSplit created");
+#endif /* DISTRIBUTED_DEBUG */
+
 #endif /* DISTRIBUTED_SNET */
     
     initial = SNetTlCreateStream( BUFFER_SIZE);
@@ -582,9 +616,14 @@ snet_tl_stream_t *SNetLocSplitDet(snet_tl_stream_t *input,
   snet_tl_stream_t *initial, *output;
   snet_handle_t *hnd;
 
-  input = SNetRoutingInfoUpdate(info, location, input); 
+  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 
 							  
   if(location == SNetIDServiceGetNodeID()) {
+
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("DetLocSplit created");
+#endif /* DISTRIBUTED_DEBUG */
+
 
     initial = SNetTlCreateStream( BUFFER_SIZE);
     hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true);

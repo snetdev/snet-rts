@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
       return 1;
     }
     
-    res_stream = DistributionStart(SNet__crypto___crypto);
+    DistributionStart(SNet__crypto___crypto);
     
     pthread_create(&ithread, NULL, InputThread, &info);
     pthread_detach(ithread);

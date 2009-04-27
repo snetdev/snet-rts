@@ -139,7 +139,6 @@ void *OutputThread(void *ptr)
 int main(int argc, char *argv[]) 
 {
 
-  snet_tl_stream_t *res_stream;
   pthread_t ithread;
   int node;
 
@@ -153,7 +152,7 @@ int main(int argc, char *argv[])
   node = DistributionInit(argc, argv);
 
   if(node == 0) {
-    res_stream = DistributionStart(SNet__factorial___factorial);
+    DistributionStart(SNet__factorial___factorial);
   }
    
   pthread_create(&ithread, NULL, InputThread, NULL);

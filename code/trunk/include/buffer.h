@@ -86,5 +86,9 @@ extern int SNetBufUnregisterDispatcher( snet_buffer_t *buf, snet_ex_sem_t *sem);
 extern void SNetBufDestroy( snet_buffer_t *bf);
 
 
+extern bool SNetBufGetFlag(snet_buffer_t *buf);
+  
+extern void SNetBufSetFlag(snet_buffer_t *buf, bool flag);
+
 #endif /* _SNET_BUFFER_H_ */
 

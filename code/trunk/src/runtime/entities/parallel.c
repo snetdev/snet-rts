@@ -265,11 +265,6 @@ static void *ParallelBoxThread( void *hndl) {
           }
         }
         break;
-#ifdef DISTRIBUTED_SNET
-    case REC_route_update:
-    case REC_route_redirect:
-    case REC_route_concatenate:
-#endif /* DISTRIBUTED_SNET */
     default:
       SNetUtilDebugNotice("[Parallel] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
@@ -301,9 +296,20 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
   snet_entity_id_t my_id;
 
 #ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingInfoUpdate(info, location, instream); 
+  int parent;
+  snet_routing_context_t *context;
+
+  context = SNetInfoGetRoutingContext(info);
+
+  parent = SNetRoutingContextGetParent(context);
+
+  instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location); 
 
   if(location == SNetIDServiceGetNodeID()) {
+
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("Parallel created");
+#endif /* DISTRIBUTED_DEBUG */
 
 #endif /* DISTRIBUTED_SNET */
 
@@ -316,13 +322,14 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
     fun = funs[0];
     
 #ifdef DISTRIBUTED_SNET
-    SNetRoutingInfoPushLevel(info); 
+
+    SNetRoutingContextSetParent(context, location);
+
+    transits[0] = SNetRoutingContextUpdate(context, transits[0], location);
     
-    transits[0] = SNetRoutingInfoUpdate(info, location, transits[0]);
-    
-    outstreams[0] = (*fun)( transits[0], info, location);
-    
-    outstreams[0] = SNetRoutingInfoPopLevel(info, outstreams[0]);
+    outstreams[0] = (*fun)(transits[0], info, location);
+
+    outstreams[0] = SNetRoutingContextEnd(context, outstreams[0]);
 #else
     outstreams[0] = (*fun)( transits[0]);
 #endif /* DISTRIBUTED_SNET */
@@ -339,13 +346,13 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
       fun = funs[i];
       
 #ifdef DISTRIBUTED_SNET
-      SNetRoutingInfoPushLevel(info); 
-      
-      transits[i] = SNetRoutingInfoUpdate(info, location, transits[i]);
-      
-      outstreams[i] = (*fun)( transits[i], info, location);
-      
-      outstreams[i] = SNetRoutingInfoPopLevel(info, outstreams[i]);
+      transits[i] = SNetRoutingContextUpdate(context, transits[i], location);
+    
+      outstreams[i] = (*fun)(transits[i], info, location);
+
+      outstreams[i] = SNetRoutingContextEnd(context, outstreams[i]);
+   
+      SNetRoutingContextSetParent(context, parent);
 #else
       outstreams[i] = (*fun)( transits[i]);
 #endif /* DISTRIBUTED_SNET */
@@ -381,16 +388,18 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
     num = SNetTencGetNumTypes( types); 
 
     for(i = 0; i < num; i++) { 
-      fun = funs[i]; 
+      fun = funs[i];
 
-      SNetRoutingInfoPushLevel(info); 
+      SNetRoutingContextSetParent(context, location);
 
-      instream = SNetRoutingInfoUpdate(info, location, instream); 
+      instream = SNetRoutingContextUpdate(context,  instream, location);
+    
+      instream = (*fun)( instream, info, location);
 
-      instream = (*fun)(instream, info, location); 
-
-      instream = SNetRoutingInfoPopLevel(info, instream); 
+      instream  = SNetRoutingContextEnd(context, instream);
     } 
+
+    SNetRoutingContextSetParent(context, parent);
 
     SNetTencDestroyTypeEncodingList( types);
 
