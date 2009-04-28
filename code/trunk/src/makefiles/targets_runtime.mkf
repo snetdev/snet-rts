@@ -48,7 +48,7 @@ runtime         = common entities netinterface observer utility threading \
 # Note that the variable names must coincide with the directory names above.
 #
 
-common          = handle.o record.o expression.o
+common          = handle.o record.o expression.o info.o
 
 entities        = filter.o syncro.o out.o box.o alias.o\
                   serial.o collectors.o parallel.o star.o split.o
