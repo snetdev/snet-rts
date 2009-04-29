@@ -24,6 +24,10 @@
 #include "interface_functions.h"
 #include "debug.h"
 
+#ifdef SNET_TIME_COUNTERS
+#include "debugtime.h"
+#endif /* SNET_TIME_COUNTERS  */
+
 /** <!--********************************************************************-->
  *
  * @name Datastorage
@@ -830,6 +834,16 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   int count = 0;
   void *opt = NULL;
 
+#ifdef SNET_TIME_COUNTERS 
+  snet_time_t time_in;
+  snet_time_t time_out;
+  long mseconds;
+#endif /* SNET_TIME_COUNTERS */
+
+#ifdef SNET_TIME_COUNTERS 
+  SNetDebugTimeGetTime(&time_in);
+#endif /* SNET_TIME_COUNTERS */
+
   /* Acquire operation id: */
   pthread_mutex_lock(&storage.id_mutex);
     
@@ -870,8 +884,6 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
 
   result = MPI_Probe(location, msg.op_id, storage.comm, &status);
   
-  //result = MPI_Get_count(&status, type, &count);
-  
   result = MPI_Type_get_true_extent(type, &true_lb, &true_extent);
   
   
@@ -881,6 +893,14 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
 		    msg.op_id, storage.comm, &status);
 
   data = SNetGetUnpackFun(interface)(storage.comm, buf, type, count, opt);
+
+#ifdef SNET_TIME_COUNTERS
+  SNetDebugTimeGetTime(&time_out);
+
+  mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
+
+  SNetDebugTimeIncreaseTimeCounter(mseconds, SNET_TIME_COUNTER_DATA_TRANSFER);
+#endif /* SNET_TIME_COUNTERS */
 
   return data;
 }

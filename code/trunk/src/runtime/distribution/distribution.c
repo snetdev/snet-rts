@@ -28,6 +28,10 @@
 #include "message.h"
 #include "id.h"
 
+#ifdef SNET_TIME_COUNTERS
+#include "debugtime.h"
+#endif /* SNET_TIME_COUNTERS  */
+
 /** <!--********************************************************************-->
  *
  * @name Ref
@@ -60,9 +64,10 @@
  *
  ******************************************************************************/
 
-#ifdef DEBUG_TIME
-static double distribution_time;
-#endif /* DEBUG_TIME */
+#ifdef SNET_TIME_COUNTERS
+static snet_time_t execution_start_time;
+#endif /* SNET_TIME_COUNTERS */
+
 
 int DistributionInit(int argc, char *argv[])
 {
@@ -72,9 +77,10 @@ int DistributionInit(int argc, char *argv[])
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level); 
 
-#ifdef DEBUG_TIME
-  distribution_time = MPI_Wtime();
-#endif /* DEBUG_TIME */
+#ifdef SNET_TIME_COUNTERS
+  SNetDebugTimeGetTime(&execution_start_time);
+#endif /* SNET_TIME_COUNTERS  */
+
 
   if(level != MPI_THREAD_MULTIPLE) {
 
@@ -180,9 +186,12 @@ void DistributionStop()
  ******************************************************************************/
 void DistributionDestroy()
 {
-#ifdef DEBUG_TIME
-  int my_rank;
-#endif /* DEBUG_TIME */
+#ifdef SNET_TIME_COUNTERS
+  snet_time_t execution_end_time;
+  long mseconds; 
+  long mseconds_in_box;
+  long mseconds_in_transfers;
+#endif /* SNET_TIME_COUNTERS  */
 
   SNetDataStorageDestroy();
 
@@ -194,13 +203,21 @@ void DistributionDestroy()
 
   SNetMessageTypesDestroy();
 
-#ifdef DEBUG_TIME
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+#ifdef SNET_TIME_COUNTERS
+  SNetDebugTimeGetTime(&execution_end_time);
 
-  distribution_time = MPI_Wtime() - distribution_time;
+  mseconds = SNetDebugTimeDifferenceInMilliseconds(&execution_start_time, 
+						   &execution_end_time);
 
-  printf("%d: Time: %lf ms\n", my_rank, distribution_time * 1000);
-#endif /* DEBUG_TIME */
+  mseconds_in_box = SNetDebugTimeGetTimeCounter(SNET_TIME_COUNTER_BOX);
+  mseconds_in_transfers = SNetDebugTimeGetTimeCounter(SNET_TIME_COUNTER_DATA_TRANSFER);
+
+
+  SNetUtilDebugNotice("\nExecution time %ld milliseconds.\nTime spent in boxes: %ld milliseconds (%0.2lf%%)\nTime spent in data fetches: %ld milliseconds (%0.2lf%%).", 
+		      mseconds, 
+		      mseconds_in_box, ((double)mseconds_in_box * 100.0) / mseconds, 
+		      mseconds_in_transfers, ((double)mseconds_in_transfers * 100.0)/ mseconds);
+#endif /* SNET_TIME_COUNTERS  */
 
   MPI_Finalize();
 }
