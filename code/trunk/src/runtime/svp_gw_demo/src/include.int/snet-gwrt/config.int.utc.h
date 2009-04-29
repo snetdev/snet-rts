@@ -50,7 +50,7 @@
  * be monitored (for debug builds this is always
  * defined).
  */
-#define SVPSNETGWRT_MONITOR_MALLOC
+// #define SVPSNETGWRT_MONITOR_MALLOC
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/

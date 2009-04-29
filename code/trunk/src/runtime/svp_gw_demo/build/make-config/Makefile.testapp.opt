@@ -1,22 +1,22 @@
-PROJ_NAME    := testapp
-BIN_NAME     := $(PROJ_NAME)
+PROJ_NAME := testapp
+BIN_NAME  := $(PROJ_NAME)
 
 #---
 
-CONFIGS      := debug release
+CONFIGS   := debug release
 #---
 
-SOURCE_DIR   := ../../src/test-app
-SCRIPTS_DIR  := ../../scripts
-
-#---
-
-TARGET_DIR   := ..
-INTERM_DIR   := intermediate
+SOURCE_DIR    := ../../src/test-app
+SCRIPTS_DIR   := ../../scripts
 
 #---
 
-SRCFILES_LST := SrcFiles.lst
+TARGET_DIR    := ..
+INTERM_DIR    := intermediate
+
+#---
+
+SRC_FILES_LST := SrcFiles.lst
 
 #---
 
@@ -32,15 +32,16 @@ LD      := g++
 
 #-------------------------------------------------------------------------------
 
-INCLUDE_DIRS :=                  \
-    ../../src/include            \
-    ../../src/include.int        \
-    ../../src/include.snetc      \
-    ../../src/include/snet-gwrt  \
-                                 \
-    ../../src/test-app           \
-    ../../src/test-app/test_snet \
-    ../../src/test-app/test_snet/00
+INCLUDE_DIRS :=                  	\
+    ../../src/include            	\
+    ../../src/include.int        	\
+    ../../src/include.snetc      	\
+    ../../src/include/snet-gwrt  	\
+                                 	\
+    ../../src/test-app          	\
+    ../../src/test-app/test_snet	\
+    ../../src/test-app/test_snet/00 \
+    ../../src/test-app/test_snet/01
 
 #-------------------------------------------------------------------------------
 

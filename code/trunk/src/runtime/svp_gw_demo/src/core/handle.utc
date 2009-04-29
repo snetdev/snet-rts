@@ -12,7 +12,7 @@
 
     File Name      : handle.utc
 
-    File Type      : Header File
+    File Type      : Code File
 
     ---------------------------------------
 
@@ -42,6 +42,8 @@ struct handle {
     snet_record_t       *out_rec;
     snet_conslst_node_t *cons_node;
 
+    unsigned int         out_recs_cnt;
+
 }; // struct handle
 
 //struct worker_handle {
@@ -68,8 +70,9 @@ void SNetHndInit(
 
     SNetBaseTypeSetPlaces(&hnd->base, &owner_plc, NULL, NULL);
 
-    hnd->out_rec   = NULL;
-    hnd->cons_node = cons_node;
+    hnd->out_rec      = NULL;
+    hnd->cons_node    = cons_node;
+    hnd->out_recs_cnt = 0;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -97,14 +100,8 @@ void SNetHndDestroy(snet_handle_t *hnd)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-snet_conslst_node_t* SNetHndGetConsNode(snet_handle_t *hnd)
-{
-    assert(hnd != NULL); return hnd->cons_node;
-}
-
-/*----------------------------------------------------------------------------*/
-
-snet_record_t* SNetHndGetRecord(snet_handle_t *hnd)
+snet_record_t*
+SNetHndGetRecord(const snet_handle_t *hnd)
 {
     assert(hnd != NULL); 
 
@@ -113,29 +110,32 @@ snet_record_t* SNetHndGetRecord(snet_handle_t *hnd)
     return SNetConsLstNodeGetRecord(hnd->cons_node);
 }
 
-snet_record_t* SNetHndGetOutRecord(snet_handle_t *hnd)
+snet_conslst_node_t*
+SNetHndGetConsNode(const snet_handle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->cons_node;
+}
+
+snet_record_t*
+SNetHndGetOutRecord(const snet_handle_t *hnd)
 {
     assert(hnd != NULL); return hnd->out_rec;
 }
 
-snet_record_t* SNetHndGetConsNodeRecord(snet_handle_t *hnd)
+snet_record_t*
+SNetHndGetConsNodeRecord(const snet_handle_t *hnd)
 {
     assert(hnd != NULL); 
     return SNetConsLstNodeGetRecord(hnd->cons_node);
 }
 
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-
-void SNetHndSetOutRecord(snet_handle_t *hnd, snet_record_t *rec)
+unsigned int
+SNetHndGetOutRecordsCount(const snet_handle_t *hnd)
 {
-    assert(hnd != NULL);
-
-    // "rec" can be NULL (thus no
-    // check with "assert" is done.
-    hnd->out_rec = rec;
+    assert(hnd != NULL); return hnd->out_recs_cnt;
 }
 
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 snet_variantencoding_t*
@@ -173,6 +173,24 @@ SNetHndCreateVEncForOutRecord(
 
     return SNetTencVariantCreateCopy(
         SNetTencTypeGetVariant(tenc, variant_inx));
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetHndSetOutRecord(snet_handle_t *hnd, snet_record_t *rec)
+{
+    assert(hnd != NULL);
+
+    hnd->out_rec      = rec;
+    hnd->out_recs_cnt = (rec == NULL ? 0 : hnd->out_recs_cnt + 1);
+}
+
+void SNetHndSetConsNode(snet_handle_t *hnd, snet_conslst_node_t *cnode)
+{
+    assert(hnd != NULL);
+    assert(cnode != NULL);
+
+    hnd->cons_node = cnode;
 }
 
 /*----------------------------------------------------------------------------*/

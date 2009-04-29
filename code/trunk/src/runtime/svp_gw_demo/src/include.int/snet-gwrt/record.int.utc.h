@@ -37,12 +37,13 @@
 
 /*----------------------------------------------------------------------------*/
 
-#define REC_ITEMS_COPY_MOVE       0x01
-#define REC_ITEMS_COPY_UNCONSUMED 0x02
-#define REC_ITEMS_COPY_CONSUMED   0x04
-#define REC_ITEMS_COPY_FIELDS     0x08
-#define REC_ITEMS_COPY_TAGS       0x10
-#define REC_ITEMS_COPY_BTAGS      0x20
+#define REC_ITEMS_COPY_MOVE                       0x01
+#define REC_ITEMS_COPY_UNCONSUMED                 0x02
+#define REC_ITEMS_COPY_CONSUMED                   0x04
+#define REC_ITEMS_COPY_FIELDS                     0x08
+#define REC_ITEMS_COPY_TAGS                       0x10
+#define REC_ITEMS_COPY_BTAGS                      0x20
+#define REC_ITEMS_COPY_CONSUME_INTERSECTION_ITEMS 0x40
 
 /*----------------------------------------------------------------------------*/
 

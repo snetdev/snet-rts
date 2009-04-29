@@ -11,7 +11,7 @@
 
 /*---*/
 
-// #define PRINT_RECS
+#define PRINT_RECS
 // #define PRINT_ON_COPY_FREE_FIELD
 
 /*----------------------------------------------------------------------------*/
@@ -83,7 +83,7 @@ static void* create_input_record_type_a_field()
         abort();
     }
 
-    (*fa) = (field_a_t) rand() % 1000;
+    (*fa) = ((field_a_t) rand() % 1000) + 222;
 
     return fa;
 }
@@ -96,11 +96,11 @@ static thread void record_feeder(snet_domain_t *snetd, int max_recs_cnt)
         snet_variantencoding_t *venc = 
             SNetTencVariantEncode(
                 SNetTencVectorCreate(1, F__test00__a),
-                NULL,
+                SNetTencVectorCreate(1, T__test00__I),
                 NULL);
 
         void          *fa  = create_input_record_type_a_field();
-        snet_record_t *rec = SNetDataRecCreate(venc, fa);
+        snet_record_t *rec = SNetDataRecCreate(venc, fa, i);
 
 #ifdef PRINT_RECS
         printf("Pushing record %p: ", rec);
@@ -114,7 +114,7 @@ static thread void record_feeder(snet_domain_t *snetd, int max_recs_cnt)
         printf("done (%p)\n", rec);
 #endif
 
-        usleep(100);
+        //usleep(1);
     }
 
     printf("Pushing control record carrying termination code!!\n");
@@ -161,7 +161,6 @@ write_record_to_stdout(snet_domain_t *snetd, int max_recs_cnt)
                 print_record(rec, snet_test00_labels);
                 printf("\n");
 #endif
-        
 
                 SNetRecSetDataDisposeMode(rec, REC_DATA_DISPOSE_MODE_ALL);
                 SNetRecDestroy(rec);
@@ -185,10 +184,8 @@ write_record_to_stdout(snet_domain_t *snetd, int max_recs_cnt)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-static int SNet__test00___run(snet_domain_t *snetd)
+static int SNet__test00___run(snet_domain_t *snetd, int test_sz)
 {
-    int test_sz = 100000;
-
     int    exit_code;
     family in_proc_fid;
     family out_proc_fid;
@@ -236,7 +233,35 @@ bool SNet__test00___setup(snet_domain_t *snetd)
 
 int SNetMain__test00(int argc, char* argv[])
 {
-    int ret = 0;
+    int ret     = 0;
+    int test_sz = 0;
+
+    if (argc == 1) {
+        printf(
+            "!!S-Net(00)!!: WARNING: "
+            "Number of test records was not specified; "
+            "using default value of 0.\n");
+
+    } else if (argc == 2) {
+        char *endptr = NULL;
+
+        test_sz = (int) strtol(argv[1], &endptr, 0);
+
+        if (endptr == argv[1]) {
+            printf(
+                "!!S-Net(00)!!: ERROR: "
+                "Invalid number of test records. "
+                "using default value of 0.\n");
+            
+            exit(-1);
+        }
+    } else {
+        printf(
+            "!!S-Net(00)!!: ERROR: "
+            "Invalid argument \"%s\".\n", argv[3]);
+
+        exit(-1);
+    }
 
     // Initialize runtime
     SNetGlobalInitialize();
@@ -254,7 +279,7 @@ int SNetMain__test00(int argc, char* argv[])
     }
 
     // Run
-    ret = SNet__test00___run(snetd);
+    ret = SNet__test00___run(snetd, test_sz);
     
     // Cleanup
     SNetDomainDestroy(snetd);

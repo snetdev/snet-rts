@@ -12,7 +12,7 @@
 
     File Name      : graph.utc
 
-    File Type      : Header File
+    File Type      : Code File
 
     ---------------------------------------
 
@@ -105,7 +105,13 @@ static void init_sync_node(snet_gnode_t *n)
     n->data.normal->entity.synccell->states =
         SNetListCreate(
             sizeof(snet_synccell_state_t),
-            64,
+            16,
+            SNetBaseTypeGetDomain(SNetGNodeToBase(n)));
+
+    n->data.normal->entity.synccell->ident_states_inxs =
+        SNetListCreate(
+            sizeof(snet_ginx_t *),
+            32,
             SNetBaseTypeGetDomain(SNetGNodeToBase(n)));
             
     // The synchro-cell requires a mutex
@@ -270,25 +276,20 @@ static void destroy_box_node(snet_gnode_t *n)
 
 /*----------------------------------------------------------------------------*/
 
-static void destroy_synccell_state(snet_synccell_state_t *s)
+static void destroy_synccell_state(
+    snet_synccell_gnode_t *gnode, snet_synccell_state_t *s)
 {
-    SNetGInxDestroy(s->inx);
+    // We have to check for NULL because this function is also
+    // used by the SNetSyncCellGNodeRemoveState() function which
+    // pushes the index to the list of indexes of identity synchro-cells.
+    // In this case we do not want the index to be destroyed. The function
+    // SNetSyncCellGNodeRemoveState() (or any other that will need similar
+    // functionality should) set the index of the state to NULL to indicate
+    // to this one that the index must not be destroyed.
+    if (s->inx != NULL)
+        SNetGInxDestroy(s->inx);
 
-    snet_ginx_t *inx;
-    snet_list_t *rec_buf;
-
-    while (SNetListPopFront(s->min_inxs, &inx)) {
-        SNetGInxDestroy(inx);
-    }
-
-    while (SNetListPopFront(s->rec_buffers, &rec_buf)) {
-        SNetListDestroy(rec_buf);
-    }
-
-    SNetListDestroy(s->min_inxs);
-    SNetListDestroy(s->rec_buffers);
-
-    SNetMemFree(s);
+    SNetMemFree(s->mhnds);
 }
 
 static void destroy_sync_node(snet_gnode_t *n)
@@ -305,15 +306,28 @@ static void destroy_sync_node(snet_gnode_t *n)
     snet_list_t *states_lst =
         n->data.normal->entity.synccell->states;
 
+    snet_list_t *ident_states_inxs_lst =
+        n->data.normal->entity.synccell->ident_states_inxs;
+
     for (unsigned int it = SNetListBegin(states_lst);
          it != 0; it = SNetListItemGetNext(states_lst, it)) {
 
         destroy_synccell_state(
+            n->data.normal->entity.synccell,
             (snet_synccell_state_t *)
                 SNetListItemGetValueByRef(states_lst, it));
     }
 
+    for (unsigned int it = SNetListBegin(ident_states_inxs_lst);
+         it != 0; it = SNetListItemGetNext(ident_states_inxs_lst, it)) {
+
+        //SNetGInxDestroy((snet_ginx_t *)
+        //    SNetListItemGetValueByRef(ident_states_inxs_lst, it));
+    }
+
     SNetListDestroy(states_lst);
+    SNetListDestroy(ident_states_inxs_lst);
+
     SNetMemFree(n->data.normal->entity.synccell);
 }
 
@@ -530,7 +544,8 @@ void SNetGNodeInit(
     SNetBaseTypeInit(&n->base, snetd);
     SNetBaseTypeSetPlaces(&n->base, &owner_plc, NULL, NULL);
 
-    n->type = type;
+    n->type            = type;
+    n->synccells_ahead = false;
 
     switch (type) {
         case GRAPH_NODE_TYPE_NOP:
@@ -959,6 +974,78 @@ void SNetGraphEnumerate(snet_gnode_t *start_node)
     enumerate_graph_segment(start_node, inx);
 
     SNetGInxDestroy(inx);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_synccell_state_t*
+SNetSyncCellGNodeAddState(snet_gnode_t *gnode, const snet_ginx_t *ginx)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_SYNC);
+
+    unsigned int patterns_cnt = 
+        SNetTencTypeGetVariantsCount(
+            gnode->data.normal->entity.synccell->patterns);
+
+    snet_synccell_state_t new_state = {
+        0,
+
+        SNetGInxCreateCopy(ginx, true), 
+
+        0,
+
+        (snet_handle_t **) SNetMemAlloc(
+            patterns_cnt * sizeof(snet_handle_t *))
+    };
+
+    for (unsigned int i=0; i < patterns_cnt; i++) {
+        new_state.mhnds[i] = NULL;
+    }
+
+    unsigned int new_state_id = 
+        SNetListPushBack(
+            gnode->data.normal->entity.synccell->states, &new_state);
+
+    snet_synccell_state_t *new_state_ref =
+        (snet_synccell_state_t *) 
+            SNetListItemGetValueByRef(            
+                gnode->data.normal->entity.synccell->states, new_state_id);
+
+    new_state_ref->id = new_state_id;
+    return new_state_ref;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetSyncCellGNodeRemoveState(
+    snet_gnode_t *gnode,
+    unsigned int state_id, bool set_as_ident)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_SYNC);
+
+    snet_synccell_state_t state;
+            
+    SNetListItemGetValue(
+        gnode->data.normal->entity.synccell->states, state_id, &state);
+
+    SNetListRemove(gnode->data.normal->entity.synccell->states, state_id);
+
+    if (set_as_ident) {
+        snet_list_t *ident_states_inx_lst =
+            gnode->data.normal->entity.synccell->ident_states_inxs;
+
+        SNetListPushBack(ident_states_inx_lst, &state.inx);
+
+        // Now that we pushed the state's index into the list of indexes for
+        // identity synchrocells we will set it to NULL so that it will not 
+        // be destroyed by the function destroy_synccell_state() (see related 
+        // comment in that function).
+        state.inx = NULL;
+    }
+
+    destroy_synccell_state(gnode->data.normal->entity.synccell, &state);
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

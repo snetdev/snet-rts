@@ -12,7 +12,7 @@
 
     File Name      : domain.utc
 
-    File Type      : Header File
+    File Type      : Code File
 
     ---------------------------------------
 
@@ -64,7 +64,15 @@ typedef struct {
     snet_conslst_t *cons_list;
     snet_buffer_t  *out_buffer;
 
-    snet_place_contract_t *gw_plc_contr;
+    snet_place_contract_t *gw_plc_cntr;
+
+#ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+    bool   out_buf_wait_fam_exists;
+    bool   out_buf_wait_fid_valid;
+    family out_buf_wait_fid;
+
+    snet_place_contract_t *out_buf_cond_plc_cntr;
+#endif
 
 } snet_domain_net_t;
 
@@ -187,10 +195,6 @@ static void init_net_domain(snet_domain_t *snetd)
     snetd->data.net.out_buffer = SNetBufCreate(
         true, 0, (snet_domain_t *) SNetMaskPointer(snetd));
 
-    // For now no special place is
-    // used for the GW
-    snetd->data.net.gw_plc_contr = NULL;
-
     // Create and setup a mutex places for the domain's 
     // data structures.
     snet_place_specs_t mutex_plc_specs = {
@@ -220,6 +224,16 @@ static void init_net_domain(snet_domain_t *snetd)
         NULL, 
         SNetPlaceAlloc(&mutex_plc_specs),
         NULL);
+
+    // For now no special place is
+    // used for the GW
+    snetd->data.net.gw_plc_cntr = NULL;
+
+#ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+    snetd->data.net.out_buf_wait_fam_exists  = false;
+    snetd->data.net.out_buf_wait_fid_valid   = false;
+    snetd->data.net.out_buf_cond_plc_cntr = SNetPlaceAlloc(&mutex_plc_specs);
+#endif
 
     // Add domain to system domains list. We do a "create" because
     // this operation must be done with mutual exclussion on the
@@ -259,9 +273,9 @@ static void init_alias_domain(
             snetd->data.alias.snetd_orig_plc  = snetd_orig->data.net.owner_plc;
 
             snetd->data.alias.gw_plc = (
-                snetd_orig->data.net.gw_plc_contr == NULL ?
+                snetd_orig->data.net.gw_plc_cntr == NULL ?
                 snetd_orig->data.net.owner_plc :
-                SNetPlaceGetFromContract(snetd_orig->data.net.gw_plc_contr));
+                SNetPlaceGetFromContract(snetd_orig->data.net.gw_plc_cntr));
 
             break;
 
@@ -313,9 +327,9 @@ static void init_worker_domain(
                 snetd_master_plc = snetd_master->data.net.owner_plc;
 
             snetd->data.worker.gw_plc = (
-                snetd_master->data.net.gw_plc_contr == NULL ?
+                snetd_master->data.net.gw_plc_cntr == NULL ?
                 snetd_master->data.net.owner_plc :
-                SNetPlaceGetFromContract(snetd_master->data.net.gw_plc_contr));
+                SNetPlaceGetFromContract(snetd_master->data.net.gw_plc_cntr));
 
             break;
 
@@ -408,8 +422,13 @@ static void destroy_net_domain(snet_domain_t *snetd)
         SNetGNodeDestroy(snetd->data.net.graph_root, true);
     }
 
-    if (snetd->data.net.gw_plc_contr != NULL)
-        SNetPlaceFree(snetd->data.net.gw_plc_contr);
+    if (snetd->data.net.gw_plc_cntr != NULL)
+        SNetPlaceFree(snetd->data.net.gw_plc_cntr);
+
+#ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+    if (snetd->data.net.out_buf_cond_plc_cntr != NULL)
+        SNetPlaceFree(snetd->data.net.out_buf_cond_plc_cntr);
+#endif 
 }
 
 /*----------------------------------------------------------------------------*/
@@ -728,8 +747,8 @@ place SNetDomainGetGWPlace(const snet_domain_t *snetd)
 
     switch (snetd->type) {
         case DOMAIN_TYPE_NET:
-            if (snetd->data.net.gw_plc_contr != NULL)
-                return SNetPlaceGetFromContract(snetd->data.net.gw_plc_contr);
+            if (snetd->data.net.gw_plc_cntr != NULL)
+                return SNetPlaceGetFromContract(snetd->data.net.gw_plc_cntr);
 
             break;
         
@@ -753,14 +772,46 @@ place SNetDomainGetGWPlace(const snet_domain_t *snetd)
 }
 
 /*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-place SNetDomainGetOutBufferCondPlace(const snet_domain_t *snetd)
+#ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+
+void SNetDomainWakeupOutBufferWaitFamily(snet_domain_t *snetd)
 {
     assert(snetd != NULL); 
     assert(snetd->type == DOMAIN_TYPE_NET);
 
-    return SNetGetMyPlace();
+    if (!snetd->data.net.out_buf_wait_fam_exists) {
+        return;
+    }
+
+    while (!snetd->data.net.out_buf_wait_fid_valid);
+    kill (snetd->data.net.out_buf_wait_fid);
+    
+    snetd->data.net.out_buf_wait_fam_exists = false;
+    snetd->data.net.out_buf_wait_fid_valid  = false;
 }
+
+void SNetDomainSetOutBufferWaitFID(snet_domain_t *snetd, family fid)
+{
+    assert(snetd != NULL); 
+    assert(snetd->type == DOMAIN_TYPE_NET);
+
+    snetd->data.net.out_buf_wait_fid       = fid;
+    snetd->data.net.out_buf_wait_fid_valid = true;
+}
+
+place SNetDomainGetOutBufferCondPlace(snet_domain_t *snetd)
+{
+    assert(snetd != NULL); 
+    assert(snetd->type == DOMAIN_TYPE_NET);
+
+    snetd->data.net.out_buf_wait_fam_exists = true;
+
+    return SNetPlaceGetFromContract(snetd->data.net.out_buf_cond_plc_cntr);
+}
+
+#endif // SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
 
 /*------------------------------END OF FILE ----------------------------------*/
 /*----------------------------------------------------------------------------*/

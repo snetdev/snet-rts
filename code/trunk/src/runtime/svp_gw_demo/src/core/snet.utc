@@ -12,7 +12,7 @@
 
     File Name      : snet.utc
 
-    File Type      : Header File
+    File Type      : Code File
 
     ---------------------------------------
 
@@ -144,22 +144,43 @@ void SNetPushIn(snet_domain_t *snetd, snet_record_t *rec)
  * records of a network.
  */
 
-static thread void read_net_out_buffer(
-    snet_buffer_t *buf, place *cond_plc, shared snet_record_t *out_rec)
+#ifndef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+static thread void 
+read_net_out_buffer(
+    snet_buffer_t *buf, shared snet_record_t *out_rec)
+#else
+static thread void 
+read_net_out_buffer(
+    snet_buffer_t *buf, 
+    shared place cond_plc, shared snet_record_t *out_rec)
+#endif
 {
-    snet_record_t *r = (snet_record_t *) SNetBufPop(buf);
+    out_rec = (snet_record_t *) SNetBufPop(buf);
 
-    if (cond_plc == NULL) {
-        out_rec = r;
-        return;
-    }
-
-    if (r == NULL) {
-        /**
-         * !!TODO!!: Suspend ???
-         */
-    }
+#ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+    cond_plc = SNetDomainGetOutBufferCondPlace(
+        SNetBaseTypeGetDomain(SNetBufToBaseConst(buf)));
+#endif
 }
+
+/*----------------------------------------------------------------------------*/
+
+#ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+static thread void
+suspend_out_buffer_read_family(snet_domain_t *snetd, place buf_cond_plc)
+{
+    family fid;
+
+    create (fid; buf_cond_plc; 0; 0; 1; 1;;)
+        suspend_out_buffer_read_family(
+            (snet_domain_t *) NULL, buf_cond_plc);
+
+    if (snetd != NULL)
+        SNetDomainSetOutBufferWaitFID(snetd, fid);
+
+    sync(fid);
+}
+#endif
 
 /*----------------------------------------------------------------------------*/
 
@@ -175,18 +196,34 @@ snet_record_t* SNetPopOut(snet_domain_t *snetd, bool block)
     place buf_mutex_plc =
         SNetBaseTypeGetMutexPlace(SNetBufToBase(out_buf));
 
-    place buf_cond_plc  =
-        SNetDomainGetOutBufferCondPlace(snetd);
-
-    place *buf_cond_plc_ptr = (block ? &buf_cond_plc : NULL);
-
     family fid;
 
+#ifndef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
     create (fid; buf_mutex_plc; 0; 0; 1; 1;;)
-        read_net_out_buffer(out_buf, buf_cond_plc_ptr, rec);
+        read_net_out_buffer(out_buf, rec);
 
     sync(fid);
-    return(rec);
+
+#else
+    while (rec == NULL) {
+        place buf_cond_plc;
+
+        create (fid; buf_mutex_plc; 0; 0; 1; 1;;)
+            read_net_out_buffer(out_buf, buf_cond_plc, rec);
+
+        sync(fid);
+
+        if (rec == NULL) {
+            create (fid; buf_cond_plc; 0; 0; 1; 1;;)
+                suspend_out_buffer_read_family(snetd, buf_cond_plc);
+
+            sync(fid);
+        }
+    }
+
+#endif // SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+
+    return rec;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -202,8 +239,7 @@ set_handle_out_record(snet_handle_t *hnd, shared snet_record_t *rec)
 {
     snet_record_t *hnd_out_rec = SNetHndGetOutRecord(hnd);
 
-    if (hnd_out_rec == NULL)
-        SNetHndSetOutRecord(hnd, rec);
+    SNetHndSetOutRecord(hnd, rec);
     
     rec = hnd_out_rec;
 }
@@ -234,7 +270,7 @@ void SNetOut(snet_handle_t *hnd, snet_record_t *rec)
     place gw_plc = SNetDomainGetGWPlace(
         SNetBaseTypeGetDomain(SNetHndToBase(hnd))); 
 
-    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec);
+    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec_local);
     sync(fid);
 }
 

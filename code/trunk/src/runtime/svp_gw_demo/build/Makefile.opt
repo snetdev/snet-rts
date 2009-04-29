@@ -1,3 +1,7 @@
+SLN_NAME     := sln
+
+#---
+
 MAKE         := make
 SCRIPTS_DIR  := ../scripts
 

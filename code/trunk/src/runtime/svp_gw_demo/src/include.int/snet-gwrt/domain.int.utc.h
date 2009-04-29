@@ -97,12 +97,22 @@ SNetDomainGetOutBuffer(const snet_domain_t *snetd);
 /*---*/
 
 extern place SNetDomainGetGWPlace(const snet_domain_t *snetd);
-extern place SNetDomainGetOutBufferCondPlace(const snet_domain_t *snetd);
 
 /*----------------------------------------------------------------------------*/
 
-extern void SNetDomainRegisterGW(const snet_domain_gw_info_t *gw);
+#ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
 
+extern void
+SNetDomainWakeupOutBufferWaitFamily(snet_domain_t *snetd);
+
+extern void
+SNetDomainSetOutBufferWaitFID(snet_domain_t *snetd, family fid);
+
+/*---*/
+
+extern place SNetDomainGetOutBufferCondPlace(snet_domain_t *snetd);
+
+#endif // SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
 #endif // __SVPSNETGWRT_DOMAIN_INT_H
 
 /*------------------------------- END OF FILE --------------------------------*/

@@ -38,7 +38,7 @@ endif
 
 define set_obj_files_var
 OBJ_FILES_$(1) := $$(subst .utc,.o,\
-	$$(shell $$(SCRIPTS_DIR)/cat-xargs -comment '\#' $$(SRCFILES_LST_$(1))))
+	$$(shell $$(SCRIPTS_DIR)/cat-xargs -comment '\#' $$(SRC_FILES_LST_$(1))))
  
 OBJ_FILES_$(1) := $$(subst $$(SOURCE_DIR),,$$(OBJ_FILES_$(1)))
 OBJ_FILES_$(1) := $$(patsubst /%,%,$$(OBJ_FILES_$(1)))
@@ -152,7 +152,7 @@ endef
 #Configurations' build rules
 
 all: $(CONFIGS) \
-     $(foreach cfg,$(CONFIGS),$(cfg)_so)
+    $(foreach cfg,$(CONFIGS),$(cfg))
 
 #---
 
@@ -172,8 +172,6 @@ clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))
 	if  [ -d $(INTERM_DIR) ] && \
 		[ "$(INTERM_DIR)" != "." ]; then rm -rf $(INTERM_DIR); fi
 	
-	rm -f  $(SRCFILES_LST)~
-	
 	if  [ -d $(TARGET_DIR) ] &&          \
 		[ "$(TARGET_DIR)" != "." ]; then \
 		$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $(TARGET_DIR); fi
@@ -182,7 +180,7 @@ clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))
 
 update-src-list:
 	$(SCRIPTS_DIR)/autoupdate-srclst \
-		-b -ext utc -ex-ext exclude -o $(SRCFILES_LST) $(SOURCE_DIR)/
+		-ext utc -ex-ext exclude -o $(SRC_FILES_LST) $(SOURCE_DIR)/
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

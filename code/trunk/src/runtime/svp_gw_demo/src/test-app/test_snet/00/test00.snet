@@ -3,7 +3,7 @@ net test00 {
     box B((b) -> (c) | (d));
     box C((c) -> (b) | (b, <T>) | (b, e, <T>));
     box D((d) -> (b) | (b, <T>) | (b, e, <T>));
-    box E((e) -> (f));
+    box E((e) -> (e) | (f));
 
 } connect A .. (B .. (C || D))*{e, <T>} if <T < 5> .. E!<T>;
 

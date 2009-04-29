@@ -97,6 +97,9 @@ SNetConsLstNodeGetList(const snet_conslst_node_t *n);
 extern snet_conslst_node_t*
 SNetConsLstNodeGetNext(const snet_conslst_node_t *n);
 
+extern snet_conslst_node_t*
+SNetConsLstNodeGetPrevious(const snet_conslst_node_t *n);
+
 /*---*/
 
 extern snet_conslst_node_state_t
@@ -114,6 +117,9 @@ extern snet_gnode_t*
 SNetConsLstNodeGetGraphNode(const snet_conslst_node_t *n);
 
 /*----------------------------------------------------------------------------*/
+
+extern snet_ginx_t*
+SNetConsLstNodeGetOrdGInx(snet_conslst_node_t *n);
 
 extern snet_ginx_t*
 SNetConsLstNodeGetDynGInx(snet_conslst_node_t *n);
@@ -191,8 +197,7 @@ SNetConsLstPush(
     snet_conslst_t *lst, snet_conslst_node_t *n);
 
 extern void
-SNetConsLstInsertAfter(
-    snet_conslst_node_t *n1, snet_conslst_node_t *n2);
+SNetConsLstInsertBefore(snet_conslst_node_t *n1, snet_conslst_node_t *n2);
 
 /*---*/
 

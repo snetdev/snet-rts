@@ -9,7 +9,7 @@
 include Makefile.opt
 
 #Build specific
--include $(BUILD_SPEC_OPT_DIR)/Makefile.solution.opt
+-include $(BUILD_SPEC_OPT_DIR)/Makefile.$(SLN_NAME).opt
 
 #---
 
@@ -18,7 +18,7 @@ $(foreach cfg,$(CONFIGS),\
 
 #Build specific
 $(foreach cfg,$(CONFIGS),\
-	$(eval -include $(BUILD_SPEC_OPT_DIR)/Makefile.solution.opt.$(cfg)))
+	$(eval -include $(BUILD_SPEC_OPT_DIR)/Makefile.$(SLN_NAME).opt.$(cfg)))
 
 #-------------------------------------------------------------------------------
 PROJ_NAMES :=

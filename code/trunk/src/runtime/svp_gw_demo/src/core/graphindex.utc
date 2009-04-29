@@ -12,7 +12,7 @@
 
     File Name      : graphindex.utc
 
-    File Type      : Header File
+    File Type      : Code File
 
     ---------------------------------------
 
@@ -842,15 +842,15 @@ SNetGInxToString(const snet_ginx_t *inx, char *str)
             item_len = snprintf(
                 c,
                 SVPSNETGWRT_GRAPH_INDEX_ITEM_MAX_DEC_DIGITS, 
-                "%ld", 
-                (long) inx->data->items[i]);
+                "%lld", 
+                (long long) inx->data->items[i]);
 
         } else {
             item_len = snprintf(
                 c, 
                 SVPSNETGWRT_GRAPH_INDEX_ITEM_MAX_DEC_DIGITS,
-                "%ld.", 
-                (long) inx->data->items[i]);
+                "%lld.", 
+                (long long) inx->data->items[i]);
         }
 
         if (item_len < 0) {

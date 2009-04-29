@@ -45,10 +45,10 @@ typedef struct {
 /*---*/
 
 typedef struct {
-    snet_ginx_t *inx;
-
-    snet_list_t *min_inxs;
-    snet_list_t *rec_buffers;
+    unsigned int    id;
+    snet_ginx_t    *inx;
+    unsigned int    mpcnt;
+    snet_handle_t **mhnds;
 
 } snet_synccell_state_t;
 
@@ -90,6 +90,7 @@ typedef struct {
     snet_expr_list_t    *guards;
 
     snet_list_t         *states;
+    snet_list_t         *ident_states_inxs;
 
 } snet_synccell_gnode_t;
 
@@ -202,8 +203,7 @@ typedef struct normal_graph_node {
 struct graph_node {
     snet_base_t       base;
     snet_gnode_type_t type;
-
-    /*---*/
+    bool              synccells_ahead;
 
     union {
         snet_nop_gnode_t    *nop;
@@ -212,6 +212,22 @@ struct graph_node {
     } data;
 
 }; // struct graph_node
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Functions related to state management of synchro-cell nodes
+ * that are used only by the GW.
+ */
+
+extern snet_synccell_state_t*
+SNetSyncCellGNodeAddState(
+    snet_gnode_t *gnode, const snet_ginx_t *ginx);
+
+extern void 
+SNetSyncCellGNodeRemoveState(
+    snet_gnode_t *gnode, unsigned int state_id, bool set_as_ident);
 
 #endif // __SVPSNETGWRT_GRAPHSTRUCTS_INT_H
 

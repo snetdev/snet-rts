@@ -42,7 +42,7 @@ static void print_match(
 
 /*----------------------------------------------------------------------------*/
 
-void typeencode_test(const snet_domain_t *snetd)
+void typeencode_test()
 {
     const char *labels[] = {
         "<nil>",
@@ -87,10 +87,6 @@ void typeencode_test(const snet_domain_t *snetd)
     snet_variantencoding_t *venc = 
         SNetTencVariantEncode(
             SNetTencVectorCreate(1, F_b), NULL, NULL);
-
-    SNetTencTypeDestroy(tenc);
-    SNetTencVariantDestroy(venc);
-    return;
 
     /*---*/
 

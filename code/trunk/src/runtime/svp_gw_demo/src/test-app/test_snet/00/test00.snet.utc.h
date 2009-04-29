@@ -24,8 +24,9 @@
 #define F__test00__e 5
 #define F__test00__f 6
 #define T__test00__T 7
+#define T__test00__I 8
 
-#define SNET__test00__NUMBER_OF_LABELS 8
+#define SNET__test00__NUMBER_OF_LABELS 7
 
 
 

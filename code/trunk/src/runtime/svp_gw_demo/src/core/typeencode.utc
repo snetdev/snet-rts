@@ -12,7 +12,7 @@
 
     File Name      : typeencode.utc
 
-    File Type      : Header File
+    File Type      : Code File
 
     ---------------------------------------
 
@@ -692,7 +692,7 @@ int SNetTencVariantsMatch(
         // Thus it is either a subtype, not related at all
         // or venc2 is the identity.
 
-        if (venc2_items_total_cnt >= venc1_items_total_cnt) {
+        if (match_cnt != venc2_items_total_cnt) {
             match_cnt = 0;
         }
 

@@ -57,15 +57,18 @@ extern void SNetHndDestroy(snet_handle_t *hnd);
 /*----------------------------------------------------------------------------*/
 
 extern snet_conslst_node_t*
-SNetHndGetConsNode(snet_handle_t *hnd);
-
-/*---*/
+SNetHndGetConsNode(const snet_handle_t *hnd);
 
 extern snet_record_t*
-SNetHndGetOutRecord(snet_handle_t *hnd);
+SNetHndGetOutRecord(const snet_handle_t *hnd);
 
 extern snet_record_t* 
-SNetHndGetConsNodeRecord(snet_handle_t *hnd);
+SNetHndGetConsNodeRecord(const snet_handle_t *hnd);
+
+extern unsigned int
+SNetHndGetOutRecordsCount(const snet_handle_t *hnd);
+
+/*---*/
 
 extern snet_variantencoding_t*
 SNetHndCreateVEncForOutRecord(
@@ -75,6 +78,9 @@ SNetHndCreateVEncForOutRecord(
 
 extern void 
 SNetHndSetOutRecord(snet_handle_t *hnd, snet_record_t *rec);
+
+extern void
+SNetHndSetConsNode(snet_handle_t *hnd, snet_conslst_node_t *cnode);
 
 /*----------------------------------------------------------------------------*/
 

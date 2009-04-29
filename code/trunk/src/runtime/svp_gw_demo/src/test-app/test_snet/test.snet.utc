@@ -291,7 +291,11 @@ SNet__test___SR(snet_gnode_t *in)
     snet_box_sign_t     *out_sign = NULL;
 
     out_type = SNetTencTypeEncode(
-        1, 
+        2, 
+        SNetTencVariantEncode(
+            SNetTencVectorCreate(1, F__test__e), 
+            SNetTencVectorCreate(0), 
+            SNetTencVectorCreate(0)),
         SNetTencVariantEncode(
             SNetTencVectorCreate(1, F__test__f), 
             SNetTencVectorCreate(0), 
@@ -299,6 +303,7 @@ SNet__test___SR(snet_gnode_t *in)
 
     out_sign = SNetTencBoxSignEncode(
         out_type, 
+        SNetTencVectorCreate(1, VARIANT_ITEM_TYPE_FIELD), 
         SNetTencVectorCreate(1, VARIANT_ITEM_TYPE_FIELD));
 
     return SNetBox(in, &SNet__test__E, out_sign);

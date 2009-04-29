@@ -32,7 +32,7 @@ static void* copy_record_field(void *f)
 
 /*----------------------------------------------------------------------------*/
 
-void record_test(const snet_domain_t *snetd)
+void record_test()
 {
     const char *labels[] = {
         "<nil>",

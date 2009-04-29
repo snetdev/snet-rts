@@ -68,6 +68,23 @@
 
 /*----------------------------------------------------------------------------*/
 /**
+ * Since there is no direct support in SVP for suspend/signal pattern
+ * of communication (like condition variables in POSIX) between families
+ * of threads the SNetPopOut() does not suspend when the global output buffer
+ * is empty but returns "NULL". Thus the process that reads the output of
+ * a network needs to continuusly "poll" the buffer by calling SNetPopOut()
+ * continuusly.
+ *
+ * When the following is defined a "hack" that involves the "kill" SVP action
+ * is used to emulate the suspend/signal pattern thus allowing a process/thread
+ * to suspend on an empty buffer. This solution alsos makes the assumption
+ * that mutual exclusive places are not recursive in SVP which so far it
+ * appears to hold for the uTC-PTL.
+ */
+// #define SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+
+/*----------------------------------------------------------------------------*/
+/**
  * If defined sets the level of debugging code the 
  * library will have.
  */

@@ -17,7 +17,7 @@ INTERM_DIR     := intermediate
 
 #---
 
-SRCFILES_LST   := SrcFiles.lst
+SRC_FILES_LST  := SrcFiles.lst
 
 #---
 

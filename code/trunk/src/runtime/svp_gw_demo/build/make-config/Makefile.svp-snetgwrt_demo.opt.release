@@ -1,19 +1,18 @@
-LIB_NAME_release     := lib$(LIB_NAME).a
+LIB_NAME_release      := lib$(LIB_NAME).a
 
 #---
 
-SRCFILES_LST_release := SrcFiles.lst
+SRC_FILES_LST_release := $(SRC_FILES_LST)
 
 #---
 
-TARGET_DIR_release :=
-INTERM_DIR_release :=
+TARGET_DIR_release    := lib
+INTERM_DIR_release    :=
 
 #---
 
 MAKEDEP_FLAGS_release              := 
 MAKEDEP_INCL_DIRS_FLAGS_release    :=
-MAKEDEP_INCL_DIRS_FLAGS_release_so :=
 
 #---
 

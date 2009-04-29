@@ -2,11 +2,11 @@ BIN_NAME_release      := $(BIN_NAME)
 
 #---
 
-SRCFILES_LST_release  := SrcFiles.lst
+SRC_FILES_LST_release := $(SRC_FILES_LST)
 
 #---
 
-TARGET_DIR_release    :=
+TARGET_DIR_release    := bin
 INTERM_DIR_release    :=
 
 #---
@@ -16,7 +16,7 @@ MAKEDEP_INCL_DIRS_FLAGS_release :=
 
 #---
 
-UTC2CPP_FLAGS_release           :=
+UTC2CPP_FLAGS_release           := --cpp:-DNDEBUG
 UTC2CPP_INCL_DIRS_FLAGS_release :=
 
 #---
@@ -27,7 +27,7 @@ CXX_INCL_DIRS_FLAGS_release :=
 #-------------------------------------------------------------------------------
 
 LD_FLAGS_release      := 
-LIB_DIRS_release      := $(TARGET_DIR)/release
+LIB_DIRS_release      := $(TARGET_DIR)/lib
 LD_LIBS_FLAGS_release := -lsvp-snetgwrt_demo -lutcptl -lpthread
 
 #---

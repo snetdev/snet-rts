@@ -307,7 +307,11 @@ static snet_tl_stream_t *SNet__test00___SR___IS(snet_tl_stream_t *in_buf)
   snet_typeencoding_t *out_type = NULL;
   snet_box_sign_t *out_sign = NULL;
 
-  out_type = SNetTencTypeEncode(1, 
+  out_type = SNetTencTypeEncode(2, 
+              SNetTencVariantEncode(
+                SNetTencCreateVector(1, F__test00__e), 
+                SNetTencCreateVector(0), 
+                SNetTencCreateVector(0)), 
               SNetTencVariantEncode(
                 SNetTencCreateVector(1, F__test00__f), 
                 SNetTencCreateVector(0), 
@@ -315,6 +319,7 @@ static snet_tl_stream_t *SNet__test00___SR___IS(snet_tl_stream_t *in_buf)
 
 
   out_sign = SNetTencBoxSignEncode( out_type, 
+              SNetTencCreateVector(1, field), 
               SNetTencCreateVector(1, field));
 
 

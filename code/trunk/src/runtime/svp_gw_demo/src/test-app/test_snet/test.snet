@@ -3,7 +3,7 @@ net test {
     box B((b) -> (c) | (d));
     box C((c) -> (b) | (b, <T>) | (e, <T>));
     box D((d) -> (b) | (b, <T>) | (e, <T>));
-    box E((e) -> (f));
+    box E((e) -> (e) | (f));
 
 } connect A .. (B .. (C || D)) .. E;
 

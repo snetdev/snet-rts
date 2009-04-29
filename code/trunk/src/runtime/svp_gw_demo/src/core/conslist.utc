@@ -12,7 +12,7 @@
 
     File Name      : conslist.utc
 
-    File Type      : Header File
+    File Type      : Code File
 
     ---------------------------------------
 
@@ -39,14 +39,17 @@ struct cons_list_node {
 
     snet_conslst_t *lst;
     snet_record_t  *rec;
+    snet_ginx_t    *ord_inx;
     snet_ginx_t    *dyn_inx;
     snet_ginx_t    *min_inx;
     snet_gnode_t   *gnode;
 
+    unsigned int    mult_cnt;
     unsigned int    dyn_inx_cnt;
     unsigned int    flags;
 
     struct cons_list_node *next;
+    struct cons_list_node *prev;
 
 }; // struct cons_list_node
 
@@ -79,12 +82,15 @@ void SNetConsLstNodeInit(snet_conslst_node_t *n, const snet_domain_t *domain)
     n->state       = CONS_NODE_STATE_INIT;
     n->lst         = NULL;
     n->rec         = NULL;
+    n->ord_inx     = NULL;
     n->dyn_inx     = NULL;
     n->min_inx     = SNetGInxCreate();
     n->gnode       = NULL;
     n->next        = NULL;
-    n->flags       = 0;
+    n->prev        = NULL;
+    n->mult_cnt    = 0;
     n->dyn_inx_cnt = 0;
+    n->flags       = 0;
 }
 
 snet_conslst_node_t* SNetConsLstNodeCreate(const snet_domain_t *domain)
@@ -106,6 +112,9 @@ void SNetConsLstNodeDestroy(snet_conslst_node_t *n)
     assert(n != NULL);
     assert(n->lst == NULL);
     assert(n->next == NULL);
+
+    if (n->ord_inx != NULL)
+        SNetGInxDestroy(n->ord_inx);
 
     if (n->dyn_inx != NULL)
         SNetGInxDestroy(n->dyn_inx);
@@ -164,6 +173,12 @@ SNetConsLstNodeGetNext(const snet_conslst_node_t *n)
     assert(n != NULL); return n->next;
 }
 
+snet_conslst_node_t*
+SNetConsLstNodeGetPrevious(const snet_conslst_node_t *n)
+{
+    assert(n != NULL); return n->prev;
+}
+
 /*----------------------------------------------------------------------------*/
 
 snet_conslst_node_state_t
@@ -192,6 +207,12 @@ SNetConsLstNodeGetGraphNode(const snet_conslst_node_t *n)
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
+
+snet_ginx_t*
+SNetConsLstNodeGetOrdGInx(snet_conslst_node_t *n)
+{
+    assert(n != NULL); return n->ord_inx;
+}
 
 snet_ginx_t*
 SNetConsLstNodeGetDynGInx(snet_conslst_node_t *n)
@@ -369,23 +390,33 @@ void SNetConsLstPush(snet_conslst_t *lst, snet_conslst_node_t *n)
     assert(n != NULL);
     assert(n->lst == NULL);
     assert(n->next == NULL);
+    assert(n->prev == NULL);
+    assert(n->ord_inx == NULL);
 
     assert(SNetBaseTypeSameDomain(&lst->base, &n->base));
 
-    if (lst->tail != NULL)
+    snet_ginx_item_t ord_inx_val = 1;
+
+    if (lst->tail != NULL) {
         lst->tail->next = n;
 
-    lst->tail = n;
+        ord_inx_val = SNetGInxGetItemValue(lst->tail->ord_inx, 0);
+        ord_inx_val++;
+    }
+
+    n->lst     = lst;
+    n->next    = NULL;
+    n->prev    = lst->tail;
+    n->ord_inx = SNetGInxCreateFromArray(&ord_inx_val, 1);
+    lst->tail  = n;
 
     if (lst->head == NULL) {
         lst->head = n;
     }
-
-    n->lst  = lst;
-    n->next = NULL;
 }
 
-void SNetConsLstInsertAfter(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
+void SNetConsLstInsertBefore(
+    snet_conslst_node_t *n1, snet_conslst_node_t *n2)
 {
     assert(n1 != NULL);
     assert(n2 != NULL);
@@ -393,15 +424,37 @@ void SNetConsLstInsertAfter(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
     assert(n1->lst == NULL);
     assert(n2->lst != NULL);
     assert(n1->next == NULL);
+    assert(n1->prev == NULL);
+    assert(n1->ord_inx == NULL);
+    assert(n2->ord_inx != NULL);
 
     assert(SNetBaseTypeSameDomain(&n1->base, &n2->base));
 
-    n1->lst  = n2->lst;
-    n1->next = n2->next;
-    n2->next = n1;
+    n1->lst     = n2->lst;
+    n1->next    = n2;
+    n1->prev    = n2->prev;
+    n2->prev    = n1;
+    n1->ord_inx = SNetGInxCreateCopy(n2->ord_inx, true);
 
-    if (n2->lst->tail == n2) {
-        n2->lst->tail = n1;
+    if (n2->mult_cnt == 0) {
+        SNetGInxConcatStr(n1->ord_inx, "1");
+        SNetGInxConcatStr(n2->ord_inx, "2");
+
+    } else {
+        assert(SNetGInxGetLen(n2->ord_inx) > 0);
+
+        SNetGInxIncrItemValue(
+            n2->ord_inx,
+            SNetGInxGetLen(n2->ord_inx) - 1, 1);
+    }
+
+    n2->mult_cnt++;
+
+    if (n1->prev != NULL)
+        n1->prev->next = n1;
+    
+    if (n1->lst->head == n2) {
+        n1->lst->head = n1;
     }
 }
 
@@ -417,17 +470,24 @@ snet_conslst_node_t* SNetConsLstPop(snet_conslst_t *lst)
 
     snet_conslst_node_t *head = lst->head;
 
-    if (lst->head != lst->tail) {
-        lst->head = lst->head->next;
+    if (head->next != NULL)
+        head->next->prev = NULL;
 
-    } else {
-        lst->head = NULL;
+    lst->head = lst->head->next;
+
+    if (lst->tail == head) {
+        assert(head->next == NULL);
         lst->tail = NULL;
-
     }
 
-    head->lst  = NULL;
-    head->next = NULL;
+    if (head->ord_inx != NULL)
+        SNetGInxDestroy(head->ord_inx);
+
+    head->lst      = NULL;
+    head->next     = NULL;
+    head->prev     = NULL;
+    head->ord_inx  = NULL;
+    head->mult_cnt = 0;
 
     return head;
 }

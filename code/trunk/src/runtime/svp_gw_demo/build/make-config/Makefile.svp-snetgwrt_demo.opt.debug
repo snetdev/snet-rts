@@ -1,13 +1,13 @@
-LIB_NAME_debug     := lib$(LIB_NAME)_dbg.a
+LIB_NAME_debug      := lib$(LIB_NAME)_dbg.a
 
 #---
 
-SRCFILES_LST_debug := SrcFiles.lst
+SRC_FILES_LST_debug := $(SRC_FILES_LST)
 
 #---
 
-TARGET_DIR_debug :=
-INTERM_DIR_debug :=
+TARGET_DIR_debug    := lib
+INTERM_DIR_debug    :=
 
 #---
 

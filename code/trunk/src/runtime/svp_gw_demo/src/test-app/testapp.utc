@@ -11,17 +11,18 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+extern void softmutex_test();
 extern void contcreate_test();
 extern void ginx_test();
+extern void record_test();
+extern void typeencode_test();
 
 /*---*/
 
 extern void list_test(const snet_domain_t *snetd);
 extern void graph_test(const snet_domain_t *snetd);
 extern void buffer_test(const snet_domain_t *snetd);
-extern void record_test(const snet_domain_t *snetd);
 extern void conslst_test(const snet_domain_t *snetd);
-extern void typeencode_test(const snet_domain_t *snetd);
 
 /*---*/
 
@@ -45,13 +46,22 @@ extern bool
 SNet__test00___setup(snet_domain_t *snetd);
 
 /*----------------------------------------------------------------------------*/
+
+extern int
+SNetMain__test01(int argc, char* argv[]);
+
+extern bool
+SNet__test01___setup(snet_domain_t *snetd);
+
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 const char *ARG_ERRS_TXT[] = {
     "Invalid use of \"--help\" argument",
     "Argument \"-n\" or \"-net\" has already been specified",
-    "Missing network id for \"-net\" argument"
+    "Missing network id for \"-net\" argument",
+    "Argument \"-n\" or \"-net\" must be specified when using \"--net-args\""
 };
 
 /*----------------------------------------------------------------------------*/
@@ -74,6 +84,10 @@ static void help()
     printf("                 <netid> (generated from the source code in\n");
     printf("                 the directory src/test-app/test_snet/<netid>)\n");
     printf("                 will also be run.\n\n");
+    printf("    --net-args   Specifies that all arguments after this one will\n");
+    printf("                 be forwarded to the network to be run (it requires\n");
+    printf("                 '-n' or '-net' arguments to have been specified.\n\n");
+
 
 #ifdef SVPSNETGWRT_MONITOR_MALLOC    
     printf("    --show-mem   Prints info about the memory usage at exit (used to detect memory leaks).\n\n");
@@ -83,26 +97,30 @@ static void help()
 
     printf("List of tests:\n");
     printf("    test_id    description\n");
-    printf("    --------------------------------------------------------------------------------------\n");
+    printf("    ------------------------------------------------------------------------------------------------------------\n");
     printf("       0       Test of mutual exclussion uTC \"places\".\n");
-    printf("       1       Test of \"continuation creates\".\n");
-    printf("       2       Test of graph indexes.\n");
-    printf("       3       Test of \"buffer\" data structure.\n");
-    printf("       4       Test of network input and output of records.\n");
-    printf("       5       Test of \"cons-list\" structure.\n");
-    printf("       6       Test of \"list\" data structure.\n");
-    printf("       7       Test of type encoding.\n");
-    printf("       8       Test of \"record\" data structure.\n\n");
+    printf("       1       Test of software mutexes.\n");
+    printf("       2       Test of \"continuation creates\".\n");
+    printf("       3       Test of graph indexes.\n");
+    printf("       4       Test of \"buffer\" data structure.\n");
+    printf("       5       Test of network input and output of records.\n");
+    printf("       6       Test of \"cons-list\" structure.\n");
+    printf("       7       Test of \"list\" data structure.\n");
+    printf("       8       Test of type encoding.\n");
+    printf("       9       Test of \"record\" data structure.\n\n");
     printf("      50       Test of \"graph\" structure for network \"test\" build\n");
     printf("               from sources in src/test-app/test_snet\n");
     printf("     100       Test of \"graph\" structure for network \"test00\"\n");
-    printf("               build from sources in src/test-app/test_snet/00\n\n");
+    printf("               build from sources in src/test-app/test_snet/00\n");
+    printf("     101       Test of \"graph\" structure for network \"test01\"\n");
+    printf("               build from sources in src/test-app/test_snet/01\n\n");
 
     printf("List of networks:\n");
-    printf("    netid   name     description                                source directory\n");
-    printf("    --------------------------------------------------------------------------------------\n");
-    printf("     -1     test     A..(B..(C || D))..E                        src/test-app/test_snet    \n");
-    printf("      0     test00   A..(B..(C || D))*{e, <T>} if <T < 5> ..E!  src/test-app/test_snet/00 \n");
+    printf("    netid   name     description                                                  source directory\n");
+    printf("    ------------------------------------------------------------------------------------------------------------\n");
+    printf("     -1     test     A..(B..(C || D))..E                                          src/test-app/test_snet    \n");
+    printf("      0     test00   A..(B..(C || D))*{e, <T>} if <T < 5>..E!<T>                  src/test-app/test_snet/00 \n");
+    printf("      1     test01   A..(B..(C || D))*{e, <T>} if <T < 5>..E!<T>..[|{e}, {f}|]    src/test-app/test_snet/01 \n");
 
     printf("\n\n");
 }
@@ -130,13 +148,23 @@ static thread void bar()
     printf("BAR: %d\n", ii);
 }
 
+static thread void zoo(place p)
+{
+    family fid;
+
+    printf("Creating foo()...\n\n");
+    
+    create(fid; p; 0; 100; 1; 1;;) foo();
+    sync(fid);
+}
+
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 static void mutexplc_test()
 {
-    family fid_foo;
     family fid_bar;
+    family fid_zoo;
 
     snet_place_specs_t plc_specs = {
         false,
@@ -154,13 +182,10 @@ static void mutexplc_test()
 
     place plc = SNetPlaceGetFromContract(plc_contract);
 
-    // create(fid_foo; ; 0; 100; 1; 1;;) foo();
-    // create(fid_bar; ; 0; 100; 1; 1;;) bar();
-
-    create(fid_foo; plc; 0; 100; 1; 1;;) foo();
+    create(fid_zoo; plc; 0; 0; 1; 1;;)   zoo(plc);
     create(fid_bar; plc; 0; 100; 1; 1;;) bar();
 
-    sync(fid_foo);
+    sync(fid_zoo);
     sync(fid_bar);
 
     SNetPlaceFree(plc_contract);
@@ -187,43 +212,48 @@ static void Runtime_tests(unsigned int tid)
             break;
         
         case 1:
+            printf("Software Mutexes Test!!\n\n");
+            softmutex_test();
+            break;
+
+        case 2:
             printf("Continuation Creates Test!!\n\n");
             contcreate_test();
             break;
 
-        case 2:
+        case 3:
             printf("Graph Index Test!!\n\n");
             ginx_test();
             break;
 
-        case 3:
+        case 4:
             printf("Buffer Test!!\n\n");
             buffer_test(snetd);
             break;
 
-        case 4:
+        case 5:
             printf("Network Record Input/Output Test!!\n\n");
             net_ioproc_test(snetd);
             break;
 
-        case 5:
+        case 6:
             printf("Cons-List Test!!\n\n");
             conslst_test((snet_domain_t *) SNetUnmaskPointer(snetd));
             break;
 
-        case 6:
+        case 7:
             printf("List Test!!\n\n");
             list_test(snetd);
             break;
 
-        case 7:
+        case 8:
             printf("Type Encoding Test!!\n\n");
-            typeencode_test(snetd);
+            typeencode_test();
             break;
 
-        case 8:
+        case 9:
             printf("Record Test!!\n\n");
-            record_test(snetd);
+            record_test();
             break;
 
         /*---*/
@@ -240,6 +270,14 @@ static void Runtime_tests(unsigned int tid)
             printf("Graph Test (net = \"test00\")!!\n\n");
 
             SNet__test00___setup(snetd);
+
+            graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            break;
+
+        case 101:
+            printf("Graph Test (net = \"test01\")!!\n\n");
+
+            SNet__test01___setup(snetd);
 
             graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
             break;
@@ -270,8 +308,9 @@ thread void main(int argc, const char **argv)
     const char *arg_err  = NULL;
     const char *inv_arg  = NULL;
 
-    int rt_test    = -1;
-    int run_net_id = -1;
+    int rt_test        = -1;
+    int run_net_id     = -1;
+    int net_args_start =  0;
 
 #ifdef SVPSNETGWRT_MONITOR_MALLOC    
     bool show_mem_use_at_exit = false;
@@ -329,6 +368,14 @@ thread void main(int argc, const char **argv)
             }
                 
             run_net = true;
+        } else if (strcmp(arg, "--net-args") == 0) {
+            if (!run_net) {
+                arg_err = ARG_ERRS_TXT[3];
+                break;
+            }
+
+            net_args_start = i;
+            break;
 
         } else {
             if (rt_test != -1 ) {
@@ -376,17 +423,33 @@ thread void main(int argc, const char **argv)
     /*---*/
 
     if (run_net) {
+        int          net_argc = 1;
+        const char **net_argv = argv + (argc - 1);
+
+        if (net_args_start > 0) {
+            net_argc = argc - net_args_start;
+            net_argv = argv + net_args_start;
+        }
+
+        (*net_argv) = NULL;
+        
         switch (run_net_id) {
             case -1:
                 printf("Running network \"test\"...\n\n");
 
-                SNetMain__test(0, NULL);
+                SNetMain__test(net_argc, (char **) net_argv);
                 break;
 
             case  0:
                 printf("Running network \"test00\"...\n\n");
 
-                SNetMain__test00(0, NULL);
+                SNetMain__test00(net_argc, (char **) net_argv);
+                break;
+
+            case  1:
+                printf("Running network \"test01\"...\n\n");
+
+                SNetMain__test01(net_argc, (char **) net_argv);
                 break;
 
             default:

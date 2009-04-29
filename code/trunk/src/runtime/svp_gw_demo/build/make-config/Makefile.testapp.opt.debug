@@ -1,12 +1,12 @@
-BIN_NAME_debug      := $(BIN_NAME)
+BIN_NAME_debug      := $(BIN_NAME).dbg
 
 #---
 
-SRCFILES_LST_debug  := SrcFiles.lst
+SRC_FILES_LST_debug := $(SRC_FILES_LST)
 
 #---
 
-TARGET_DIR_debug    :=
+TARGET_DIR_debug    := bin
 INTERM_DIR_debug    :=
 
 #---
@@ -16,7 +16,7 @@ MAKEDEP_INCL_DIRS_FLAGS_debug :=
 
 #---
 
-UTC2CPP_FLAGS_debug           :=
+UTC2CPP_FLAGS_debug           := --cpp:-DDEBUG
 UTC2CPP_INCL_DIRS_FLAGS_debug :=
 
 #---
@@ -27,7 +27,7 @@ CXX_INCL_DIRS_FLAGS_debug :=
 #-------------------------------------------------------------------------------
 
 LD_FLAGS_debug      := 
-LIB_DIRS_debug      := $(TARGET_DIR)/debug
+LIB_DIRS_debug      := $(TARGET_DIR)/lib
 LD_LIBS_FLAGS_debug := -lsvp-snetgwrt_demo_dbg -lutcptl_dbg -lpthread
 
 #---

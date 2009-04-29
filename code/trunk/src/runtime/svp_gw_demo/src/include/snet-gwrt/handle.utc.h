@@ -50,7 +50,8 @@ typedef struct record snet_record_t;
  * a box was called.
  */
 
-extern snet_record_t* SNetHndGetRecord(snet_handle_t *hnd);
+extern snet_record_t*
+SNetHndGetRecord(const snet_handle_t *hnd);
 
 #endif // __SVPSNETGWRT_HANDLE_H
 

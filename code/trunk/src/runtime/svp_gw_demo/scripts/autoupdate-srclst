@@ -113,7 +113,7 @@ then
     then
         if [ -e $out_file ]
         then
-            cp $out_file $out_file~
+            cp $out_file $out_file.old
         fi
     fi
 fi
@@ -146,7 +146,7 @@ if [ ! -e $out_file~   ]; then diff_with_old=0; fi
 
 if [ $diff_with_old -eq 1 ]
 then
-    diff -b -B $out_file $out_file~ > $out_file.diff
+    diff -b -B $out_file $out_file.old > $out_file.diff
 fi
 
 #------------------------------------------------------------------------------
