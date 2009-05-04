@@ -5,6 +5,6 @@
 
 void *split( void *hnd, 
 	     c4snet_data_t *entries, 
-	     int entry);
+	     int num_entries);
 
 #endif /* SPLIT_H_ */

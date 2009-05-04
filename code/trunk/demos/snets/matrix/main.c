@@ -11,6 +11,12 @@
 
 #include "matrix.h"
 
+#define A_W 0
+#define A_H 1
+#define B_W 2
+#define B_H 3
+#define DIMENSIONS 4
+
 #define PRINT_RECORD( NAME) __PRINT_RECORD( NAME, false)
 
 #define __PRINT_RECORD( NAME, FREE)\
@@ -38,11 +44,6 @@ void initialise() {
   C4SNetInit( 0); 
 }
 
-#define A_W 1024
-#define A_H 256
-#define B_W 512
-#define B_H A_W
-
 void *InputThread(void *ptr) 
 {
   snet_record_t *rec;
@@ -56,6 +57,8 @@ void *InputThread(void *ptr)
 
   int nodes;
 
+  int *dimensions = (int *)ptr;
+
   start_stream = DistributionWaitForInput(); 
 
   if(start_stream != NULL) {
@@ -68,33 +71,33 @@ void *InputThread(void *ptr)
     
 
 
-    A = (int *)SNetMemAlloc(sizeof(int) * A_W * A_H);
-    B = (int *)SNetMemAlloc(sizeof(int) * B_W * B_H);
+    A = (int *)SNetMemAlloc(sizeof(int) * dimensions[A_W] * dimensions[A_H]);
+    B = (int *)SNetMemAlloc(sizeof(int) * dimensions[B_W]* dimensions[B_H]);
 
-    for(i = 0; i < A_H; i++) {
-      for(j = 0; j < A_W; j++) {
-	(A + A_W * i)[j] = j + 1;
+    for(i = 0; i < dimensions[A_H]; i++) {
+      for(j = 0; j < dimensions[A_W]; j++) {
+	(A + dimensions[A_W] * i)[j] = j + 1;
       }
     }
 
-    for(i = 0; i < B_H; i++) {
-      for(j = 0; j < B_W; j++) {
-	(B + B_W * i)[j] = i + 1;
+    for(i = 0; i < dimensions[B_H]; i++) {
+      for(j = 0; j < dimensions[B_W]; j++) {
+	(B + dimensions[B_W] * i)[j] = i + 1;
       }
     }
     
     MPI_Comm_size(MPI_COMM_WORLD, &nodes);
 
-    field_A = C4SNetDataCreateArray(CTYPE_int, A_W*A_H, A);
-    field_B = C4SNetDataCreateArray(CTYPE_int, B_W*B_H, B);
+    field_A = C4SNetDataCreateArray(CTYPE_int, dimensions[A_W]*dimensions[A_H], A);
+    field_B = C4SNetDataCreateArray(CTYPE_int, dimensions[B_W]*dimensions[B_H], B);
    
     SNetRecSetInterfaceId(rec, 0);
     SNetRecSetField(rec, F__matrix__A, (void*)field_A);
     SNetRecSetField(rec, F__matrix__B, (void*)field_B);
-    SNetRecSetTag(rec, T__matrix__A_width, A_W);
-    SNetRecSetTag(rec, T__matrix__A_height, A_H);
-    SNetRecSetTag(rec, T__matrix__B_width, B_W);
-    SNetRecSetTag(rec, T__matrix__B_height, B_H);
+    SNetRecSetTag(rec, T__matrix__A_width, dimensions[A_W]);
+    SNetRecSetTag(rec, T__matrix__A_height, dimensions[A_H]);
+    SNetRecSetTag(rec, T__matrix__B_width, dimensions[B_W]);
+    SNetRecSetTag(rec, T__matrix__B_height, dimensions[B_H]);
     SNetRecSetTag(rec, T__matrix__nodes, nodes);
 
     printf("\nPut record to Buffer:");
@@ -126,7 +129,9 @@ void *OutputThread(void *ptr)
 
   FILE *fp;
 
-  if((fp = fopen("result.txt", "w")) == 0) {
+  const char *file = (const char *)ptr;
+
+  if((fp = fopen(file, "w")) == 0) {
     exit(1);
   }
 
@@ -172,6 +177,17 @@ int main(int argc, char *argv[])
 {
   pthread_t ithread;
   int node;
+  int dimensions[DIMENSIONS];
+
+  if(argc != 5) {
+    printf("USAGE: matrix <width a> <height a> <width b> <output file>\n");
+    return 1;
+  }
+
+  dimensions[A_W] = atoi(argv[A_W + 1]);
+  dimensions[A_H] = atoi(argv[A_H + 1]);
+  dimensions[B_W] = atoi(argv[B_W + 1]);
+  dimensions[B_H] = dimensions[A_W];
 
   initialise();
 
@@ -186,10 +202,10 @@ int main(int argc, char *argv[])
     DistributionStart(SNet__matrix___matrix);
   }
    
-  pthread_create(&ithread, NULL, InputThread, NULL);
+  pthread_create(&ithread, NULL, InputThread, (void *)&dimensions);
   pthread_detach(ithread);
 
-  OutputThread(NULL);
+  OutputThread((void *)argv[4]);
 
   if(node == 0) {
     DistributionStop();

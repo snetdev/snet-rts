@@ -27,33 +27,11 @@ net matrix({A, B, <A_width>, <A_height>, <B_width>, <B_height>, <nodes>}
     box split((A, <A_width>, <A_height>, <nodes>)
                -> (a, <A_width>, <A_height>, <node>, <first>, <last>));
 
-
-    /* Copy B, <T> is 1 if there is only one node, this information is later 
-     * used to bypass the merging process. 
-     *
-     */
-
-    net copy({B, <n>, <B_width>, <B_height>, <nodes>}
-              -> {B, <B_width>, <B_height>, <T>})
-    {
-
-    } connect [{B, <n>, <B_width>, <B_height>, <nodes>} ->
-                if <nodes == 1> then
-                  {B,<T=1> ,<B_width>, <B_height>} 
-                else if <n > 1> then
-                  {B, <n=n - 1>, <B_width>, <B_height>, <nodes>}; 
-                  {B, <T=0>, <B_width>, <B_height>}
-                else
-                  {B, <T=0>, <B_width>, <B_height>}
-              ]*{<T>};
-   
-
-  } connect [{A, B, <A_width>, <A_height>, <B_width>, <B_height>, <nodes>} ->
-              {A, <A_width>, <A_height>, <nodes>};
-              {B, <n=A_height>, <B_width>, <B_height>, <nodes>}]
-            .. (split|copy)
-            .. [|{a, <first>, <last>, <A_width>, <A_height>, <node>},{B, <B_width>, <B_height>, <T>}|]*{a, B}
-            .. [{<T>} -> if <T == 0> then {} else {<T>}]; 
+  } connect [{<nodes>} -> 
+              if <nodes==1> then 
+                {<nodes>,<T>} 
+              else {<nodes>}] 
+             .. split; 
 
 
   /* Merge the calculated rows of C into one matrix.

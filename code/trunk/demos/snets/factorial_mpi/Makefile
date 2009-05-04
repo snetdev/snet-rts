@@ -5,7 +5,7 @@ SNETCFLAGS= -b7 -distributed
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C -L$(MPIROOT)/lib
-LIBS      = -lpthread -lC4SNet -lC4SNetc -lmpich -lsnet -lsnetutil -lcrypt 
+LIBS      = -lpthread -lC4SNet -lC4SNetc -lmpich -lsnetmpi -lsnetutil -lcrypt 
 
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = factorial
