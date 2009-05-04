@@ -18,6 +18,7 @@ typedef struct {
   int dictionary_size;
   int dictionary_word_count;
   int nodes;
+  int branches;
 #ifndef DISTRIBUTED_SNET
   snet_tl_stream_t *stream;
 #endif /* DISTRIBUTED_SNET */
@@ -30,7 +31,7 @@ static info_t *init(info_t *info, int argc, char *argv[])
   int i;
   char c;
 
-  if(argc != 4) {
+  if(argc != 5) {
     return NULL;
   }
 
@@ -89,8 +90,12 @@ static info_t *init(info_t *info, int argc, char *argv[])
   
   fclose(fp);
  
-  /* 5 Number of nodes: */
+  /* 4 Number of nodes: */
   info->nodes = atoi(argv[3]);
+
+
+  /* 5 Number of branches per node: */
+  info->branches = atoi(argv[4]);
 
   return info; 
 }
@@ -118,7 +123,7 @@ static void *InputThread(void *ptr)
     rec = SNetRecCreate( REC_data,
 	     SNetTencVariantEncode( 
 	      SNetTencCreateVector( 2, F__crypto__dictionary, F__crypto__entries),
-	      SNetTencCreateVector( 3, T__crypto__dictionary_size, T__crypto__num_entries, T__crypto__num_nodes), 
+	      SNetTencCreateVector( 4, T__crypto__dictionary_size, T__crypto__num_entries, T__crypto__num_nodes, T__crypto__num_branches), 
               SNetTencCreateVector( 0)));
     
 
@@ -132,6 +137,7 @@ static void *InputThread(void *ptr)
     SNetRecSetTag( rec, T__crypto__dictionary_size, info->dictionary_word_count);
     SNetRecSetTag( rec, T__crypto__num_entries, info->entry_count);
     SNetRecSetTag( rec, T__crypto__num_nodes, info->nodes);
+    SNetRecSetTag( rec, T__crypto__num_branches, info->branches);
 
     SNetTlWrite(start_stream, rec);
 
@@ -150,6 +156,8 @@ static void *OutputThread(void *ptr)
   bool terminate;
   char *password;
   int entry;
+  int node;
+  int branch;
 
 #ifdef DISTRIBUTED_SNET
   res_stream = DistributionWaitForOutput();
@@ -164,11 +172,13 @@ static void *OutputThread(void *ptr)
       resrec = SNetTlRead(res_stream);
       if( SNetRecGetDescriptor(resrec) == REC_data) {
 	entry = SNetRecGetTag(resrec, T__crypto__entry);
+	node = SNetRecGetTag(resrec, T__crypto__node);
+	branch = SNetRecGetTag(resrec, T__crypto__branch);
 	if(SNetRecHasTag(resrec, T__crypto__false)) {
-	  printf("Entry %d could not be cracked\n", entry);
+	  printf("Entry %d could not be cracked (%d:%d)\n", entry, node, branch);
 	} else {
 	  password = C4SNetDataGetData(SNetRecGetField(resrec, F__crypto__word));
-	  printf("Entry %d was cracked. Matching word is \"%s\"\n", entry, password);
+	  printf("Entry %d was cracked. Matching word is \"%s\" (%d:%d)\n", entry, password, node, branch);
 	}
       }
       else {
@@ -186,7 +196,7 @@ static void *OutputThread(void *ptr)
 
 static void printUsage() 
 {
-  printf("USAGE: crypto <path to dictionary> <path to password file> <number of nodes>\n\n");  
+  printf("USAGE: crypto <path to dictionary> <path to password file> <number of nodes> <number of branches>\n\n");  
 }
 
 int main(int argc, char *argv[]) 

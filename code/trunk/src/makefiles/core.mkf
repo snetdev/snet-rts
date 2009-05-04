@@ -47,7 +47,7 @@ LIB  := -L$(PROJECT_ROOT)/src/lib -lcommon
 INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
 RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS) -lsnet
-RUNTIMEINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) $(GTKFLAGS)
+RUNTIMEINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) $(GTKFLAGS) $(MPIFLAGS)
 
 UTILLIB  := -L$(PROJECT_ROOT)/lib -lsnetutil
 UTILINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
@@ -165,6 +165,23 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
+$(PROJECT_ROOT)/lib/libsnetmpi.a: $(TARGETDIRS_DEVEL) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetmpi.a (developer version)"
+	$(HIDE) $(AR) $@ $^
+	$(HIDE) $(RANLIB) $@
+	@$(RM) .make_track
+	@$(TOUCH) .done
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+$(PROJECT_ROOT)/lib/libsnetmpi.prod.a:  $(TARGETDIRS_PROD) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetmpi.prod.a (product version)"
+	$(HIDE) $(AR) $@ $^
+	$(HIDE) $(RANLIB) $@
+	@$(RM) .make_track
+	@$(TOUCH) .done
+	@$(CLOCK_SKEW_ELIMINATION)
 
 $(PROJECT_ROOT)/lib/libsnet.a: $(TARGETDIRS_DEVEL) 
 	@$(ECHO) ""
