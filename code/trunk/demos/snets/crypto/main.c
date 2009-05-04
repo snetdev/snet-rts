@@ -156,8 +156,6 @@ static void *OutputThread(void *ptr)
   bool terminate;
   char *password;
   int entry;
-  int node;
-  int branch;
 
 #ifdef DISTRIBUTED_SNET
   res_stream = DistributionWaitForOutput();
@@ -172,13 +170,11 @@ static void *OutputThread(void *ptr)
       resrec = SNetTlRead(res_stream);
       if( SNetRecGetDescriptor(resrec) == REC_data) {
 	entry = SNetRecGetTag(resrec, T__crypto__entry);
-	node = SNetRecGetTag(resrec, T__crypto__node);
-	branch = SNetRecGetTag(resrec, T__crypto__branch);
 	if(SNetRecHasTag(resrec, T__crypto__false)) {
-	  printf("Entry %d could not be cracked (%d:%d)\n", entry, node, branch);
+	  printf("Entry %d could not be cracked\n", entry);
 	} else {
 	  password = C4SNetDataGetData(SNetRecGetField(resrec, F__crypto__word));
-	  printf("Entry %d was cracked. Matching word is \"%s\" (%d:%d)\n", entry, password, node, branch);
+	  printf("Entry %d was cracked. Matching word is \"%s\"\n", entry, password);
 	}
       }
       else {
