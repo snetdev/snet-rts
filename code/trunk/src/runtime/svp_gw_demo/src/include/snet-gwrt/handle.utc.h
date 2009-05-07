@@ -2,11 +2,11 @@
 /*
       -------------------------------------------------------------------
 
-           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
 
-                   Computer Systems Architecture (CSA) Group
-                             Informatics Institute
-                         University Of Amsterdam  2008
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
                          
       -------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-PROJ_NAME := svp-snetgwrt_demo
+PROJ_NAME := svp-snetgwrt
 LIB_NAME  := $(PROJ_NAME)
 
 #---
@@ -8,7 +8,7 @@ CONFIGS   := debug release
 #---
 
 SOURCE_DIR     := ../../src/core
-SCRIPTS_DIR    := ../../scripts
+SCRIPTS_DIR    := ../../build-tools
 
 #---
 

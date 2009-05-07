@@ -1,4 +1,4 @@
-PROJ_NAME := svp-snetgwrt_demo
+PROJ_NAME := svp-snetgwrt
 LIB_NAME  := $(PROJ_NAME)
 
 #---

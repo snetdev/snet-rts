@@ -396,7 +396,7 @@ thread void main(int argc, const char **argv)
 
     /*---*/
 
-    printf("!! S-Net GW Runtime (demo) for SVP - Testing Application !!\n");
+    printf("!! S-Net GW Runtime for SVP - Testing Application !!\n");
 
     if (arg_err != NULL) {
         printf("\nERROR: %s.\n", arg_err);

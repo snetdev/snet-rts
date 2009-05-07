@@ -7,7 +7,7 @@ CONFIGS   := debug release
 #---
 
 SOURCE_DIR    := ../../src/test-app
-SCRIPTS_DIR   := ../../scripts
+SCRIPTS_DIR   := ../../build-tools
 
 #---
 

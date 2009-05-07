@@ -4,7 +4,7 @@ CONFIGS  := debug release
 #---
 
 MAKE         := make
-SCRIPTS_DIR  := ../scripts
+SCRIPTS_DIR  := ../build-tools
 
 #---
 

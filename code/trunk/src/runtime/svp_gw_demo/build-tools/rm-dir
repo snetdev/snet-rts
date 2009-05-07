@@ -67,7 +67,7 @@ then
     rmdir $args $dirs
     exit $?
 else
-    rmdir $args $dirs
+    rmdir $args $dirs 2> /dev/null
     exit 0
 fi
 

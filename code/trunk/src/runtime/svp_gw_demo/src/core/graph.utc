@@ -2,11 +2,11 @@
 /*
       -------------------------------------------------------------------
 
-           * * * * ! SVP S-Net Graph Walker Runtime (demo) ! * * * *
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
 
-                   Computer Systems Architecture (CSA) Group
-                             Informatics Institute
-                         University Of Amsterdam  2008
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
                          
       -------------------------------------------------------------------
 
@@ -153,7 +153,7 @@ static void init_comb_star_node(snet_gnode_t *n)
 
     n->data.normal->entity.star->type   = NULL;
     n->data.normal->entity.star->guards = NULL;
-    n->data.normal->entity.star->groot    = NULL;
+    n->data.normal->entity.star->groot  = NULL;
 }
 
 static void init_comb_split_node(snet_gnode_t *n)
