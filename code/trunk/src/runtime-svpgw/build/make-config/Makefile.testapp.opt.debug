@@ -28,7 +28,7 @@ CXX_INCL_DIRS_FLAGS_debug :=
 
 LD_FLAGS_debug      := 
 LIB_DIRS_debug      := $(TARGET_DIR)/lib
-LD_LIBS_FLAGS_debug := -lsvp-snetgwrt_demo_dbg -lutcptl_dbg -lpthread
+LD_LIBS_FLAGS_debug := -lsvp-snetgwrt_dbg -lutcptl_dbg -lpthread
 
 #---
 

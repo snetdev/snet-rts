@@ -28,7 +28,7 @@ CXX_INCL_DIRS_FLAGS_release :=
 
 LD_FLAGS_release      := 
 LIB_DIRS_release      := $(TARGET_DIR)/lib
-LD_LIBS_FLAGS_release := -lsvp-snetgwrt_demo -lutcptl -lpthread
+LD_LIBS_FLAGS_release := -lsvp-snetgwrt -lutcptl -lpthread
 
 #---
 
