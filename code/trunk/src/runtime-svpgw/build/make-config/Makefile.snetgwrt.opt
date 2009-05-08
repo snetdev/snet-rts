@@ -1,5 +1,5 @@
-PROJ_NAME := testapp
-BIN_NAME  := $(PROJ_NAME)
+PROJ_NAME := snetgwrt
+LIB_NAME  := svp-$(PROJ_NAME)
 
 #---
 
@@ -7,7 +7,7 @@ CONFIGS   := debug release
 
 #---
 
-SOURCE_DIR  := ../../src/test-app
+SOURCE_DIR  := ../../src/core
 SCRIPTS_DIR := ../../build-tools
 
 #---
@@ -17,7 +17,7 @@ TARGET_DIR  := ..
 
 #---
 
-SRC_FILES_LST  := SrcFiles.lst
+SRC_FILES_LST := SrcFiles.lst
 
 #---
 
@@ -34,29 +34,13 @@ include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
-# Include directories
 
-INCLUDE_DIRS :=                        \
-	$(SOURCE_DIR)                      \
-	$(SOURCE_DIR)/test_snet            \
-	$(SOURCE_DIR)/test_snet/00         \
-	$(SOURCE_DIR)/test_snet/01         \
-	                                   \
-	$(SOURCE_DIR)/../include           \
-    $(SOURCE_DIR)/../include/snet-gwrt \
-	                                   \
-	$(SOURCE_DIR)/../include.int       \
-	$(SOURCE_DIR)/../include.snetc     \
-                                       \
+INCLUDE_DIRS :=              		       \
+	$(SOURCE_DIR)/../include/snet-gwrt     \
+	$(SOURCE_DIR)/../include.int/snet-gwrt \
+                                           \
 	$(call NONSTD_LIB,UTCPTL,INCLUDE)
 
-#-------------------------------------------------------------------------------
-# Library directories
-
-LIB_DIRS :=           \
-	$(TARGET_DIR)/lib \
-	$(call NONSTD_LIB,UTCPTL,LIB)
-	
 #-------------------------------------------------------------------------------
 # Build Toolsets!
 #

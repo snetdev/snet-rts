@@ -451,7 +451,7 @@ synccell_output(
     family fid;
 
     snet_conslst_node_t *last_cnode = SNetHndGetConsNode(last_matched_hnd);
-    snet_record_t       *last_rec   = SNetConsLstNodeGetRecord(last_cnode);
+    //snet_record_t       *last_rec   = SNetConsLstNodeGetRecord(last_cnode);
 
     // Merge the records into the last one matched!
     // At the same time destroy the other records, handles

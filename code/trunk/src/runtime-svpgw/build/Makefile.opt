@@ -1,13 +1,4 @@
-SLN_NAME     := sln
-
-#---
-
-MAKE         := make
-SCRIPTS_DIR  := ../scripts
-
-#---
-
-PROJECTS_LST := Projects.lst
+SLN_NAME := sln
 
 #---
 

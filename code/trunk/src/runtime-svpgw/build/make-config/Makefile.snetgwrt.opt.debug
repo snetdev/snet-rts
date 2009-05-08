@@ -6,10 +6,15 @@ SRC_FILES_LST_debug := $(SRC_FILES_LST)
 
 #---
 
-TARGET_DIR_debug    := lib
 INTERM_DIR_debug    :=
+TARGET_DIR_debug    := lib
 
 #---
+
+PREREQUISITES_debug :=
+BUILD_TOOLSET_debug :=
+
+#-------------------------------------------------------------------------------
 
 MAKEDEP_FLAGS_debug           :=
 MAKEDEP_INCL_DIRS_FLAGS_debug :=
@@ -21,7 +26,7 @@ UTC2CPP_INCL_DIRS_FLAGS_debug :=
 
 #---
 
-CXX_FLAGS_debug           := -DDEBUG -O0
+CXX_FLAGS_debug           := -gdwarf-2 -DDEBUG -O0
 CXX_INCL_DIRS_FLAGS_debug :=
 
 #---

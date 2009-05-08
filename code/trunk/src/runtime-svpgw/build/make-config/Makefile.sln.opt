@@ -16,13 +16,13 @@ BUILD_SPEC_OPT_DIR := make-config
 
 #-------------------------------------------------------------------------------
 
-PROJ_DEP_SVPSNetGWRT     :=
-PROJ_DEP_TestApplication := SVPSNetGWRT
+PROJ_DEP_SNetGWRT        :=
+PROJ_DEP_TestApplication := SNetGWRT
 
 #-------------------------------------------------------------------------------
 
-PROJ_CFG_SVPSNetGWRT_debug       := debug
-PROJ_CFG_SVPSNetGWRT_release     := release
+PROJ_CFG_SNetGWRT_debug          := debug
+PROJ_CFG_SNetGWRT_release        := release
 
 #---
 

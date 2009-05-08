@@ -6,13 +6,18 @@ SRC_FILES_LST_release := $(SRC_FILES_LST)
 
 #---
 
-TARGET_DIR_release    := lib
 INTERM_DIR_release    :=
+TARGET_DIR_release    := lib
 
 #---
 
-MAKEDEP_FLAGS_release              := 
-MAKEDEP_INCL_DIRS_FLAGS_release    :=
+PREREQUISITES_release :=
+BUILD_TOOLSET_release :=
+
+#-------------------------------------------------------------------------------
+
+MAKEDEP_FLAGS_release           := 
+MAKEDEP_INCL_DIRS_FLAGS_release :=
 
 #---
 
@@ -21,7 +26,7 @@ UTC2CPP_INCL_DIRS_FLAGS_release :=
 
 #---
 
-CXX_FLAGS_release           := -DNDEBUG -O1
+CXX_FLAGS_release           := -DNDEBUG -O2
 CXX_INCL_DIRS_FLAGS_release :=
 
 #---

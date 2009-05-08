@@ -1,7 +1,17 @@
+export SHELL=/bin/bash
+
+#---
+
 .SUFFIXES:
 .DEFAULT : all
 .IGNORE  : clean 
 .PHONY   : update-src-list 
+
+#---
+
+ifneq ($(strip $(NO_SILENT)),true)
+.SILENT:
+endif
 
 #-------------------------------------------------------------------------------
 # Inclusion of options makefiles
@@ -34,9 +44,35 @@ ifeq ($(strip $(TARGET_DIR)),)
 endif
 
 #-------------------------------------------------------------------------------
+# Script that deals with stupid compilers and other tools that
+# insist on printing crap other than errors / warnings to stdout or stderr.
+#
+EXEC_SILENT := $(SCRIPTS_DIR)/exec-silent
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Print function
+# 
+# NOTE that $1 is arguments to "echo" and $2 is the text
+# to be printed! Thus to call it with no arguments to "echo"
+# the following must be used (note the double commas).
+#
+# $(call print,,message)
+#
+
+ifneq ($(strip $(NO_PRINT)),true)
+define print
+@echo $1 "$(subst x, ,$(PRINT_INDENT))$2"
+endef
+else
+define print
+endef
+endif
+
+#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
-define set_obj_files_var
+define set_files_vars
 OBJ_FILES_$(1) := $$(subst .utc,.o,\
 	$$(shell $$(SCRIPTS_DIR)/cat-xargs -comment '\#' $$(SRC_FILES_LST_$(1))))
  
@@ -60,15 +96,18 @@ endef
 
 define obj_file_gen_rule_tmpl
 
-$$(INTERM_DIR_$(1))/%.o: $$(INTERM_DIR_$(1))/%.cpp 
+$$(INTERM_DIR_$(1))/%.o : $$(INTERM_DIR_$(1))/%.cpp
+	$$(call print,,"Compiling: $$<")
+	
 	mkdir -p $$(dir $$@)
 	
-	$$(CXX)                     \
-		$$(CXX_FLAGS)           \
-		$$(CXX_FLAGS_$(1))      \
-	   	$$(CXX_OUTF_FLAG) $$@   \
-		$$(CXX_INCL_DIRS_FLAGS) \
+	$$(CXX$(2))                     \
+		$$(CXX_FLAGS$(2))           \
+		$$(CXX_FLAGS_$(1))          \
+	   	$$(CXX_OUTF_FLAG$(2)) $$@   \
+		$$(CXX_INCL_DIRS_FLAGS$(2)) \
 		$$(CXX_INCL_DIRS_FLAGS_$(1)) $$<
+
 endef
 	 
 #---
@@ -76,28 +115,30 @@ endef
 define cpp_file_gen_rule_tmpl
 
 $$(INTERM_DIR_$(1))/%.cpp: $$(SOURCE_DIR)/%.utc
+	$$(call print,,"Translating: $$<")
+	
 	mkdir -p $$(dir $$@)
 	
-	$$(MAKEDEP)                          \
-		$$(MAKEDEP_FLAGS)                \
+	$$(MAKEDEP$(2))                      \
+		$$(MAKEDEP_FLAGS$(2))            \
 		$$(MAKEDEP_FLAGS_$(1))           \
-		$$(MAKEDEP_TARGET_FLAG) $$@      \
-		$$(MAKEDEP_INCL_DIRS_FLAGS)      \
+		$$(MAKEDEP_TARGET_FLAG$(2)) $$@  \
+		$$(MAKEDEP_INCL_DIRS_FLAGS$(2))  \
 		$$(MAKEDEP_INCL_DIRS_FLAGS_$(1)) \
-		$$(MAKEDEP_OUTF_FLAG) $$(@:.cpp=.d) $$<
+		$$(MAKEDEP_OUTF_FLAG$(2)) $$(@:.cpp=.d) $$<
 	
-	$$(UTC2CPP)                     \
-		$$(UTC2CPP_FLAGS)           \
-		$$(UTC2CPP_FLAGS_$(1))      \
-		$$(UTC2CPP_OUTF_FLAG) $$@   \
-		$$(UTC2CPP_INCL_DIRS_FLAGS) \
+	$$(UTC2CPP$(2))                     \
+		$$(UTC2CPP_FLAGS$(2))           \
+		$$(UTC2CPP_FLAGS_$(1))          \
+		$$(UTC2CPP_OUTF_FLAG$(2)) $$@   \
+		$$(UTC2CPP_INCL_DIRS_FLAGS$(2)) \
 		$$(UTC2CPP_INCL_DIRS_FLAGS_$(1)) $$< 
 endef
 
 #-------------------------------------------------------------------------------
 
 define build_cfg_tmpl
-$$(eval $$(call set_obj_files_var,$(1)))
+$$(eval $$(call set_files_vars,$(1)))
 
 $$(eval $$(call set_cfg_out_dir_var,INTERM_DIR,$(1)))
 $$(eval $$(call set_cfg_out_dir_var,TARGET_DIR,$(1)))
@@ -105,22 +146,34 @@ $$(eval $$(call set_cfg_out_dir_var,TARGET_DIR,$(1)))
 .PRECIOUS: $$(INTERM_DIR_$(1))/%.d
 .PRECIOUS: $$(INTERM_DIR_$(1))/%.cpp
 
-$(1): $$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))
+.PHONY:    $$(PREREQUISITES_$(1))
+
+$(1): $$(PREREQUISITES_$(1)) \
+      $$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))
+
+$$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1)): \
+      $$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))
+	
+	$$(call print,,"Creating archive: $$(LIB_NAME_$(1))")
+	
 	mkdir -p $$(TARGET_DIR_$(1))
 	
-	$$(AR)                                    \
-		$$(AR_FLAGS)                          \
-		$$(AR_FLAGS_$(1))                     \
-		$$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1)) \
-		$$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))
+	$$(EXEC_SILENT)                                               \
+		$$(AR$(2))                                                \
+			$$(AR_FLAGS$(2))                                      \
+			$$(AR_FLAGS_$(1))                                     \
+			$$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))                 \
+			$$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1))) \
+			$$(addprefix $$(INTERM_DIR_$(1))/,$$(XDR_OBJ_FILES_$(1)))
+	
+	$$(EXEC_SILENT)              \
+		$$(ARINX$(2))            \
+			$$(ARINX_FLAGS$(2))  \
+			$$(ARINX_FLAGS_$(1)) \
+			$$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))
 
-	$$(ARINX)                \
-		$$(ARINX_FLAGS)      \
-		$$(ARINX_FLAGS_$(1)) \
-		$$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))
-
-$$(eval $$(call cpp_file_gen_rule_tmpl,$(1)))
-$$(eval $$(call obj_file_gen_rule_tmpl,$(1)))
+$$(eval $$(call cpp_file_gen_rule_tmpl,$(1),$(2)))
+$$(eval $$(call obj_file_gen_rule_tmpl,$(1),$(2)))
 
 -include $$(wildcard $$(INTERM_DIR_$(1))/*.d)
 endef
@@ -139,7 +192,7 @@ clean-$(1):
 		[ "$$(INTERM_DIR)" != "." ]; then \
 		$$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $$(INTERM_DIR); fi
 	
-	rm -f  $$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))
+	rm -f  $$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))*
 	
 	if  [ -d $$(TARGET_DIR_$(1)) ] &&          \
 		[ "$$(TARGET_DIR_$(1))" != "." ]; then \
@@ -148,16 +201,22 @@ clean-$(1):
 endef
 
 #-------------------------------------------------------------------------------
+
+define make_config_build_toolset_var
+$(if $(BUILD_TOOLSET_$(1)),_$(BUILD_TOOLSET_$(1)),)
+endef
+
+#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 #Configurations' build rules
 
-all: $(CONFIGS) \
-    $(foreach cfg,$(CONFIGS),$(cfg))
+all: $(CONFIGS) ;
 
 #---
 
 $(foreach cfg,$(CONFIGS),\
-	$(eval $(call build_cfg_tmpl,$(cfg))))
+	$(eval $(call build_cfg_tmpl,$(cfg),$(call \
+		make_config_build_toolset_var,$(cfg)))))
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -181,7 +240,7 @@ clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))
 update-src-list:
 	$(SCRIPTS_DIR)/autoupdate-srclst \
 		-ext utc -ex-ext exclude -o $(SRC_FILES_LST) $(SOURCE_DIR)/
-
+	
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 

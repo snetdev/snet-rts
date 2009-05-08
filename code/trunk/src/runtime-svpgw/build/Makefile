@@ -1,5 +1,15 @@
+export SHELL=/bin/bash
+
+#---
+
 .SUFFIXES:
 .DEFAULT : all
+
+#---
+
+ifneq ($(strip $(NO_SILENT)),true)
+.SILENT:
+endif
 
 #-------------------------------------------------------------------------------
 # Inclusion of options makefiles
@@ -21,6 +31,27 @@ $(foreach cfg,$(CONFIGS),\
 	$(eval -include $(BUILD_SPEC_OPT_DIR)/Makefile.$(SLN_NAME).opt.$(cfg)))
 
 #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Print function
+# 
+# NOTE that $1 is arguments to "echo" and $2 is the text
+# to be printed! Thus to call it with no arguments to "echo"
+# the following must be used (note the double commas).
+#
+# $(call print,,message)
+#
+
+ifneq ($(strip $(NO_PRINT)),true)
+define print
+@echo $1 "$(subst x, ,$(PRINT_INDENT))$2"
+endef
+else
+define print
+endef
+endif
+
+#-------------------------------------------------------------------------------
+
 PROJ_NAMES :=
 
 define store_proj_data
@@ -45,19 +76,36 @@ $(foreach p,$(PROJECTS),\
 define cfg_prj_tmpl
 .PHONY: clean-$(1)_$(2)
 
+ifneq ($$(strip $$(PROJ_CFG_$(2)_$(1))),)
 $(1)_$(2): $$(foreach p,$$(PROJ_DEP_$(2)),$(1)_$$(p))
-	$$(MAKE) -C $$(PROJ_DIR_$(2)) $$(PROJ_CFG_$(2)_$(1))
+	$$(call print,,"Building $(2) \($(1)\)...")
+	
+	$$(MAKE) -C           \
+		$$(PROJ_DIR_$(2)) \
+		$$(PROJ_CFG_$(2)_$(1)) PRINT_INDENT=$$(PRINT_INDENT)xxxx
 
 clean-$(1)_$(2):
-	$$(MAKE) -C $$(PROJ_DIR_$(2)) clean-$$(PROJ_CFG_$(2)_$(1))
+	$$(call print,,"Cleaning $(2) \($(1)\)")
+	
+	$$(MAKE) -C           \
+		$$(PROJ_DIR_$(2)) \
+		clean-$$(PROJ_CFG_$(2)_$(1)) PRINT_INDENT=$$(PRINT_INDENT)xxxx
 
+else
+$(1)_$(2):
+clean-$(1)_$(2):
+
+endif
 endef
 
 #---
 
 define cfg_tmpl
-$(1)      : $$(foreach p,$$(PROJ_NAMES),$(1)_$$(p))
+$(1): $$(foreach p,$$(PROJ_NAMES),$(1)_$$(p))
+	$$(call print)
+	
 clean-$(1): $$(foreach p,$$(PROJ_NAMES),clean-$(1)_$$(p))
+	$$(call print)
 
 $$(foreach p,$$(PROJ_NAMES),\
 	$$(eval $$(call cfg_prj_tmpl,$(1),$$(p))))
@@ -66,7 +114,7 @@ endef
 
 #-------------------------------------------------------------------------------
 
-all: $(foreach cfg,$(CONFIGS),$(cfg))
+all: $(CONFIGS) ;
 
 $(foreach p,$(PROJ_NAMES),\
 	$(eval all_$(p): $(foreach cfg,$(CONFIGS),$(cfg)_$(p))))
@@ -84,6 +132,13 @@ $(foreach cfg,$(CONFIGS),\
 #---
 
 clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))
+	$(call print)
+	rm -f *.log
+
+#---
+
+# Additional rules defined in the options file!
+$(eval $(call ADDITIONAL_RULES))
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

@@ -1,33 +1,12 @@
-PROJ_NAME := svp-snetgwrt
-LIB_NAME  := $(PROJ_NAME)
-
-#---
-
-CONFIGS   := debug release
-
-#---
-
-SOURCE_DIR     := ../../src/core
-SCRIPTS_DIR    := ../../build-tools
-
-#---
-
-TARGET_DIR     := ..
-INTERM_DIR     := intermediate
-
-#---
-
-SRC_FILES_LST  := SrcFiles.lst
-
-#---
-
-BUILD_SPEC_OPT_DIR := ../make-config
-
 #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Build toolsets!!
+#-------------------------------------------------------------------------------
+# Default
 
 MAKE    := make
 MAKEDEP := cpp
-UTC2CPP := utc2cpp
+UTC2CPP := $(call NONSTD_LIB,UTCPTL,BIN,utc2cpp)
 CXX     := g++
 AR      := ar
 ARINX   := ranlib
@@ -35,14 +14,9 @@ LD      := g++
 
 #-------------------------------------------------------------------------------
 
-INCLUDE_DIRS :=                 \
-    ../../src/include/snet-gwrt \
-    ../../src/include.int/snet-gwrt
-
-#-------------------------------------------------------------------------------
-
 MAKEDEP_FLAGS           := -MM -MP
 MAKEDEP_OUTF_FLAG       := -MF
+MAKEDEP_INCLD_FLAG      := -I
 MAKEDEP_TARGET_FLAG     := -MT
 MAKEDEP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),-I$(d))
 
@@ -50,12 +24,20 @@ UTC2CPP_FLAGS           := --dollar-directives
 UTC2CPP_OUTF_FLAG       := -o
 UTC2CPP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),--cpp:-I$(d))
 
-CXX_FLAGS               := -c -Wall -fno-exceptions -gdwarf-2
+CXX_FLAGS               := -c -Wall -fno-exceptions 
 CXX_OUTF_FLAG           := -o
+CXX_INCLD_FLAG          := -I
 CXX_INCL_DIRS_FLAGS     := $(foreach d,$(INCLUDE_DIRS),-I$(d))
 
 AR_FLAGS                := ru
 ARINX_FLAGS             :=
+
+#-------------------------------------------------------------------------------
+
+LD_FLAGS                := -shared-libgcc
+LD_OUTF_FLAG            := -o
+LD_LIB_DIRS_FLAGS       := $(foreach d,$(LIB_DIRS),-L$(d))
+LD_LIBS_FLAGS           :=
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

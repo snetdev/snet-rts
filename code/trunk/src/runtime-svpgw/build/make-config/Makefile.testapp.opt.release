@@ -6,12 +6,18 @@ SRC_FILES_LST_release := $(SRC_FILES_LST)
 
 #---
 
-TARGET_DIR_release    := bin
 INTERM_DIR_release    :=
+TARGET_DIR_release    := bin
 
 #---
 
-MAKEDEP_FLAGS_release           :=
+PREREQUISITES_release :=
+BUILD_TOOLSET_release :=
+
+#-------------------------------------------------------------------------------
+
+
+MAKEDEP_FLAGS_release           := 
 MAKEDEP_INCL_DIRS_FLAGS_release :=
 
 #---
@@ -21,13 +27,13 @@ UTC2CPP_INCL_DIRS_FLAGS_release :=
 
 #---
 
-CXX_FLAGS_release           := -DNDEBUG -O1
+CXX_FLAGS_release           := -DNDEBUG -O2
 CXX_INCL_DIRS_FLAGS_release :=
 
 #-------------------------------------------------------------------------------
 
 LD_FLAGS_release      := 
-LIB_DIRS_release      := $(TARGET_DIR)/lib
+LIB_DIRS_release      :=
 LD_LIBS_FLAGS_release := -lsvp-snetgwrt -lutcptl -lpthread
 
 #---
