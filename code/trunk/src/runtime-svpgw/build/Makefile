@@ -129,6 +129,9 @@ $(foreach p,$(PROJ_NAMES),\
 $(foreach cfg,$(CONFIGS),\
 	$(eval $(call cfg_tmpl,$(cfg))))
 
+$(foreach cfg,$(CONFIGS_EXT),\
+	$(eval $(call cfg_tmpl,$(cfg))))
+
 #---
 
 clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))

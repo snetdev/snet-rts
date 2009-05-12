@@ -1,5 +1,9 @@
 SLN_NAME := sln
-CONFIGS  := debug release
+
+#---
+
+CONFIGS      := debug release
+CONFIGS_EXT  :=
 
 #---
 
