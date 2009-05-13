@@ -1,5 +1,5 @@
 CC        = mpicc
-CCFLAGS  = -Wall -g -DFILTER_VERSION_2 -DDISTRIBUTED_SNET
+CCFLAGS  = -Wall -g -DFILTER_VERSION_2 -DDISTRIBUTED_SNET -DSNET_DEBUG_COUNTERS
 SNETC     = snetc
 SNETCFLAGS= -b7 -distributed
 AR        = ar

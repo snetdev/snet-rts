@@ -1,6 +1,8 @@
 #include "debug.h"
 #include "pthread.h"
 #include "record.h"
+#include "memfun.h"
+#include <string.h>
 
 #ifdef DISTRIBUTED_SNET
 #include <mpi.h>
@@ -57,42 +59,90 @@ extern char* SNetUtilDebugDumpRecord(snet_record_t *source, char* storage) {
   return storage;
 }
 
+#define MAX_SIZE 256
+
 extern void SNetUtilDebugFatal(char* m, ...) {
   va_list p;
+  char *temp;
+  int num;
+  int ret;
+
+  /* NOTICE: the text is first printed into buffer to prevent it from
+   * breaking in to multiple pieces when printing to stderr! 
+   */
+
+  temp = SNetMemAlloc(sizeof(char) * (strlen(m) + MAX_SIZE));
+  memset(temp, 0, strlen(m) + MAX_SIZE);
+
+  va_start(p, m);
 #ifdef DISTRIBUTED_SNET
   int my_rank;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-  va_start(p, m);
-  fprintf(stderr, "(SNET FATAL (NODE %d THREAD %lu) ", my_rank, pthread_self());
+  num = sprintf(temp, "(SNET FATAL (NODE %d THREAD %lu) ", my_rank, pthread_self());
 #else
-  va_start(p, m);
-  fprintf(stderr, "(SNET FATAL (THREAD %lu) ", pthread_self());
+  num = sprintf(temp, "(SNET FATAL (THREAD %lu) ", pthread_self());
 #endif /* DISTRIBUTED_SNET */
+  ret = vsprintf(temp + num, m, p);
+  
+  if(ret < 0) {
+    SNetUtilDebugFatal("Debug message too long!");
+  }
 
-  vfprintf(stderr, m, p);
-  fputs(")\n\n", stderr);
+  num += ret;
+
+  ret = sprintf(temp + num, ")\n");
+  
+  if(ret < 0) {
+    SNetUtilDebugFatal("Debug message too long!");
+  }
+
+  fputs(temp, stderr);
+  fflush(stderr);
   va_end(p);
+
   abort();
 }
 
 extern void SNetUtilDebugNotice(char *m, ...) {
   va_list p;
+  char *temp;
+  int num;
+  int ret;
 
+  /* NOTICE: the text is first printed into buffer to prevent it from
+   * breaking in to multiple pieces when printing to stderr! 
+   */
+
+  temp = SNetMemAlloc(sizeof(char) * (strlen(m) + MAX_SIZE));
+  memset(temp, 0, strlen(m) + MAX_SIZE);
+
+  va_start(p, m);
 #ifdef DISTRIBUTED_SNET
   int my_rank;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-  va_start(p, m);
-  fprintf(stderr, "(SNET NOTICE (NODE %d THREAD %lu) ", my_rank, pthread_self());
+  num = sprintf(temp, "(SNET NOTICE (NODE %d THREAD %lu) ", my_rank, pthread_self());
 #else
-  va_start(p, m);
-  fprintf(stderr, "(SNET NOTICE (THREAD %lu) ", pthread_self());
+  num = sprintf(temp, "(SNET NOTICE (THREAD %lu) ", pthread_self());
 #endif /* DISTRIBUTED_SNET */
-  vfprintf(stderr, m, p);
-  fputs(")\n", stderr);
+  ret = vsprintf(temp + num, m, p);
+  
+  if(ret < 0) {
+    SNetUtilDebugFatal("Debug message too long!");
+  }
+
+  num += ret;
+
+  ret = sprintf(temp + num, ")\n");
+  
+  if(ret < 0) {
+    SNetUtilDebugFatal("Debug message too long!");
+  }
+
+  fputs(temp, stderr);
   fflush(stderr);
   va_end(p);
 }

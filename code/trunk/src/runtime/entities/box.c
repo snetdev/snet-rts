@@ -9,9 +9,10 @@
 #include "routing.h"
 #endif
 
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
 #include "debugtime.h"
-#endif /* SNET_TIME_COUNTERS  */
+#include "debugcounters.h"
+#endif /* SNET_DEBUG_COUNTERS  */
 
 //#define BOX_DEBUG
 /* ------------------------------------------------------------------------- */
@@ -24,11 +25,11 @@ static void *BoxThread( void *hndl) {
   struct timeval tv_in;
   struct timeval tv_out;
 #endif 
-#ifdef SNET_TIME_COUNTERS 
+#ifdef SNET_DEBUG_COUNTERS 
   snet_time_t time_in;
   snet_time_t time_out;
   long mseconds;
-#endif /* SNET_TIME_COUNTERS */
+#endif /* SNET_DEBUG_COUNTERS */
 
   snet_handle_t *hnd;
   snet_record_t *rec;
@@ -53,9 +54,9 @@ static void *BoxThread( void *hndl) {
         SNetUtilDebugNotice("[DBG::RT::TimeTrace SnetBox Calls %p at %lf\n",
                         boxfun, tv_in.tv_sec + tv_in.tv_usec / 1000000.0);
 #endif
-#ifdef SNET_TIME_COUNTERS 
+#ifdef SNET_DEBUG_COUNTERS 
 	SNetDebugTimeGetTime(&time_in);
-#endif /* SNET_TIME_COUNTERS */
+#endif /* SNET_DEBUG_COUNTERS */
 
         (*boxfun)( hnd);
 
@@ -65,13 +66,13 @@ static void *BoxThread( void *hndl) {
                     "$lf\n\n", boxfun, (tv_out.tv_sec - tv_in.tv_sec) +
                         (tv_out.tv_usec - tv_in.tv_usec) / 1000000.0);
 #endif
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
 	SNetDebugTimeGetTime(&time_out);
 
 	mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
 
-	SNetDebugTimeIncreaseTimeCounter(mseconds, SNET_TIME_COUNTER_BOX);
-#endif /* SNET_TIME_COUNTERS */
+	SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
+#endif /* SNET_DEBUG_COUNTERS */
         SNetRecDestroy( rec);
         break;
       case REC_sync:

@@ -10,6 +10,10 @@
 #include "bool.h"
 #include "distribution.h"
 #include "fun.h"
+#include "debug.h"
+#include "debugtime.h"
+#include "debugcounters.h"
+
 
 typedef struct {
   char *entries;
@@ -200,7 +204,13 @@ int main(int argc, char *argv[])
 #ifdef DISTRIBUTED_SNET
   int node;
 #else
+#ifdef SNET_DEBUG_COUNTERS
   snet_tl_stream_t **start_stream;
+  snet_time_t execution_start_time;
+  snet_time_t execution_end_time;
+  long mseconds;
+  long mseconds_in_box;
+#endif /* SNET_DEBUG_COUNTERS  */
 #endif /* DISTRIBUTED_SNET */
 
   snet_tl_stream_t *res_stream;
@@ -249,6 +259,10 @@ int main(int argc, char *argv[])
 #else
  
   if(init(&info, argc, argv) != NULL) {
+#ifdef SNET_TIME_COUNTERS
+    SNetDebugTimeGetTime(&execution_start_time);
+#endif /* SNET_TIME_COUNTERS  */
+
     start_stream = SNetTlCreateStream(10);
     
     res_stream = SNet__crypto___crypto(start_stream);
@@ -257,6 +271,20 @@ int main(int argc, char *argv[])
     pthread_detach(ithread);
     
     OutputThread(res_stream);
+
+#ifdef SNET_TIME_COUNTERS
+  SNetDebugTimeGetTime(&execution_end_time);
+
+  mseconds = SNetDebugTimeDifferenceInMilliseconds(&execution_start_time, 
+						   &execution_end_time);
+
+  mseconds_in_box = SNetDebugCountersGetCounter(SNET_COUNTER_TIME_BOX);
+
+  SNetUtilDebugNotice("\nExecution time %ld milliseconds.\nTime spent in boxes: %ld milliseconds (%0.2lf%%)\n.",
+                      mseconds,
+                      mseconds_in_box, ((double)mseconds_in_box * 100.0) / mseconds);
+#endif /* SNET_TIME_COUNTERS  */
+
   } else {
     printUsage();
 

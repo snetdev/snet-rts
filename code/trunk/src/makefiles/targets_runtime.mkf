@@ -65,7 +65,7 @@ entities        = filter.o syncro.o out.o box.o alias.o\
                   serial.o collectors.o parallel.o star.o split.o
 
 utility		= list.o debug.o stack.o tree.o bitmap.o hashtable.o queue.o \
-                  debugtime.o
+                  debugtime.o debugcounters.o
 
 threading       = threading.o extended_semaphore.o stream_layer.o buffer.o\
                   ubuffer.o

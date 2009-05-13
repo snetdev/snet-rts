@@ -28,9 +28,10 @@
 #include "message.h"
 #include "id.h"
 
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
 #include "debugtime.h"
-#endif /* SNET_TIME_COUNTERS  */
+#include "debugcounters.h"
+#endif /* SNET_DEBUG_COUNTERS  */
 
 /** <!--********************************************************************-->
  *
@@ -64,9 +65,9 @@
  *
  ******************************************************************************/
 
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
 static snet_time_t execution_start_time;
-#endif /* SNET_TIME_COUNTERS */
+#endif /* SNET_DEBUG_COUNTERS */
 
 
 int DistributionInit(int argc, char *argv[])
@@ -77,9 +78,9 @@ int DistributionInit(int argc, char *argv[])
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level); 
 
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
   SNetDebugTimeGetTime(&execution_start_time);
-#endif /* SNET_TIME_COUNTERS  */
+#endif /* SNET_DEBUG_COUNTERS  */
 
 
   if(level != MPI_THREAD_MULTIPLE) {
@@ -186,12 +187,15 @@ void DistributionStop()
  ******************************************************************************/
 void DistributionDestroy()
 {
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
   snet_time_t execution_end_time;
   long mseconds; 
   long mseconds_in_box;
   long mseconds_in_transfers;
-#endif /* SNET_TIME_COUNTERS  */
+  long num_operations;
+  long num_fetches;
+  long payload_data;
+#endif /* SNET_DEBUG_COUNTERS  */
 
   SNetDataStorageDestroy();
 
@@ -203,21 +207,28 @@ void DistributionDestroy()
 
   SNetMessageTypesDestroy();
 
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
   SNetDebugTimeGetTime(&execution_end_time);
 
   mseconds = SNetDebugTimeDifferenceInMilliseconds(&execution_start_time, 
 						   &execution_end_time);
 
-  mseconds_in_box = SNetDebugTimeGetTimeCounter(SNET_TIME_COUNTER_BOX);
-  mseconds_in_transfers = SNetDebugTimeGetTimeCounter(SNET_TIME_COUNTER_DATA_TRANSFER);
+  mseconds_in_box = SNetDebugCountersGetCounter(SNET_COUNTER_TIME_BOX);
+  mseconds_in_transfers = SNetDebugCountersGetCounter(SNET_COUNTER_TIME_DATA_TRANSFERS);
+
+  num_operations = SNetDebugCountersGetCounter(SNET_COUNTER_NUM_DATA_OPERATIONS);
+  num_fetches = SNetDebugCountersGetCounter(SNET_COUNTER_NUM_DATA_FETCHES);
+  payload_data = SNetDebugCountersGetCounter(SNET_COUNTER_PAYLOAD_DATA_FETCHES);
 
 
-  SNetUtilDebugNotice("\nExecution time %ld milliseconds.\nTime spent in boxes: %ld milliseconds (%0.2lf%%)\nTime spent in data fetches: %ld milliseconds (%0.2lf%%).", 
+  SNetUtilDebugNotice("\nExecution time %ld milliseconds.\nTime spent in boxes: %ld milliseconds (%0.2lf%%)\nTime spent in data fetches: %ld milliseconds (%0.2lf%%).\nNumber of data fetches: %ld (total remote operations: %ld).\nPayload data in fetches: %ld bytes).", 
 		      mseconds, 
 		      mseconds_in_box, ((double)mseconds_in_box * 100.0) / mseconds, 
-		      mseconds_in_transfers, ((double)mseconds_in_transfers * 100.0)/ mseconds);
-#endif /* SNET_TIME_COUNTERS  */
+		      mseconds_in_transfers, ((double)mseconds_in_transfers * 100.0)/ mseconds,
+		      num_fetches,
+		      num_operations,
+		      payload_data);
+#endif /* SNET_DEBUG_COUNTERS  */
 
   MPI_Finalize();
 }

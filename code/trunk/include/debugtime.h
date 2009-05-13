@@ -15,18 +15,4 @@ void SNetDebugTimeGetTime(snet_time_t *time);
 long SNetDebugTimeGetMilliseconds(snet_time_t *time);
 long SNetDebugTimeDifferenceInMilliseconds(snet_time_t *time_a, snet_time_t *time_b);
 
-
-/* These can be used to store time used in certain task,
- * like box execution or data transfers (distributed S-Net) 
- * for instance.
- *
- */
-
-#define SNET_TIME_COUNTER_BOX 0
-#define SNET_TIME_COUNTER_DATA_TRANSFER 1
-#define SNET_NUM_TIME_COUNTERS 2
-
-void SNetDebugTimeIncreaseTimeCounter(long time, int counter);
-long SNetDebugTimeGetTimeCounter(int counter);
-
 #endif /* _SNET_DEBUG_TIME_H_ */

@@ -24,9 +24,10 @@
 #include "interface_functions.h"
 #include "debug.h"
 
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
 #include "debugtime.h"
-#endif /* SNET_TIME_COUNTERS  */
+#include "debugcounters.h"
+#endif /* SNET_DEBUG_COUNTERS  */
 
 /** <!--********************************************************************-->
  *
@@ -834,15 +835,16 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   int count = 0;
   void *opt = NULL;
 
-#ifdef SNET_TIME_COUNTERS 
+#ifdef SNET_DEBUG_COUNTERS 
   snet_time_t time_in;
   snet_time_t time_out;
   long mseconds;
-#endif /* SNET_TIME_COUNTERS */
+  long payload;
+#endif /* SNET_DEBUG_COUNTERS */
 
-#ifdef SNET_TIME_COUNTERS 
+#ifdef SNET_DEBUG_COUNTERS 
   SNetDebugTimeGetTime(&time_in);
-#endif /* SNET_TIME_COUNTERS */
+#endif /* SNET_DEBUG_COUNTERS */
 
   /* Acquire operation id: */
   pthread_mutex_lock(&storage.id_mutex);
@@ -887,20 +889,30 @@ void *SNetDataStorageRemoteFetch(snet_id_t id, int interface, unsigned int locat
   result = MPI_Type_get_true_extent(type, &true_lb, &true_extent);
   
   
-  buf = SNetMemAlloc(true_extent * count);  
+  buf = SNetMemAlloc(true_extent * count);
+
+#ifdef SNET_DEBUG_COUNTERS 
+  payload = true_extent * count;
+#endif /* SNET_DEBUG_COUNTERS */
+
 
   result = MPI_Recv(buf, count, type, location, 
 		    msg.op_id, storage.comm, &status);
 
   data = SNetGetUnpackFun(interface)(storage.comm, buf, type, count, opt);
 
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
   SNetDebugTimeGetTime(&time_out);
 
   mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
 
-  SNetDebugTimeIncreaseTimeCounter(mseconds, SNET_TIME_COUNTER_DATA_TRANSFER);
-#endif /* SNET_TIME_COUNTERS */
+  SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_DATA_TRANSFERS);
+
+  SNetDebugCountersIncreaseCounter(payload, SNET_COUNTER_PAYLOAD_DATA_FETCHES);
+
+  SNetDebugCountersIncreaseCounter(1, SNET_COUNTER_NUM_DATA_FETCHES);
+  SNetDebugCountersIncreaseCounter(1, SNET_COUNTER_NUM_DATA_OPERATIONS);
+#endif /* SNET_DEBUG_COUNTERS */
 
   return data;
 }
@@ -947,6 +959,9 @@ void SNetDataStorageRemoteCopy(snet_id_t id, unsigned int location)
 
   MPI_Recv(&msg, 0, MPI_INT, location, msg.op_id, storage.comm, &status);
 
+#ifdef SNET_DEBUG_COUNTERS
+  SNetDebugCountersIncreaseCounter(1, SNET_COUNTER_NUM_DATA_OPERATIONS);
+#endif /* SNET_DEBUG_COUNTERS */
 }
 
 
@@ -979,6 +994,10 @@ void SNetDataStorageRemoteDelete(snet_id_t id, unsigned int location)
   pthread_mutex_unlock(&storage.id_mutex);
   
   MPI_Send(&msg, 1, storage.op_type, location, TAG_DATA_OP, storage.comm);
+
+#ifdef SNET_DEBUG_COUNTERS
+  SNetDebugCountersIncreaseCounter(1, SNET_COUNTER_NUM_DATA_OPERATIONS);
+#endif /* SNET_DEBUG_COUNTERS */
 }
 
 /*@}*/
