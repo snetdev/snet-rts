@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
   int node;
 #else
 #ifdef SNET_DEBUG_COUNTERS
-  snet_tl_stream_t **start_stream;
+  snet_tl_stream_t *start_stream;
   snet_time_t execution_start_time;
   snet_time_t execution_end_time;
   long mseconds;
@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
 #else
  
   if(init(&info, argc, argv) != NULL) {
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
     SNetDebugTimeGetTime(&execution_start_time);
 #endif /* SNET_TIME_COUNTERS  */
 
@@ -272,7 +272,7 @@ int main(int argc, char *argv[])
     
     OutputThread(res_stream);
 
-#ifdef SNET_TIME_COUNTERS
+#ifdef SNET_DEBUG_COUNTERS
   SNetDebugTimeGetTime(&execution_end_time);
 
   mseconds = SNetDebugTimeDifferenceInMilliseconds(&execution_start_time, 
