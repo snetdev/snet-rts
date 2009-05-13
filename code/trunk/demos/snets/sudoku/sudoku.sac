@@ -8,6 +8,9 @@ use StdIO: all;
 
 export all;
 
+
+#define SIZE 3
+
 /*******************************************************************************
  * 
  * Sudkou solver in SaC.
@@ -33,13 +36,13 @@ int[*], bool[*] addNumber( int i, int j, int k, int[*] set, bool[*] opts)
 {
   set[i,j] = k;
   k = k-1;
-  i_q = (i/3)*3;
-  j_q = (j/3)*3;
+  i_q = (i/SIZE)*SIZE;
+  j_q = (j/SIZE)*SIZE;
   opts = with {
-          ([i,j,0] <= iv <= [i,j,8]) : false;
-          ([i,0,k] <= iv <= [i,8,k]) : false;
-          ([0,j,k] <= iv <= [8,j,k]) : false;
-          ([i_q,j_q,k] <= iv <= [i_q+2,j_q+2,k]) : false;
+          ([i,j,0] <= iv <= [i,j,SIZE*SIZE-1]) : false;
+          ([i,0,k] <= iv <= [i,SIZE*SIZE-1,k]) : false;
+          ([0,j,k] <= iv <= [SIZE*SIZE-1,j,k]) : false;
+          ([i_q,j_q,k] <= iv <= [i_q+SIZE-1,j_q+SIZE-1,k]) : false;
   } : modarray( opts);
 
   return( set, opts);
@@ -61,12 +64,12 @@ int findTrue( bool[.] b)
 
 int, int findMinTrues( bool[*] opts)
 {
-  minCount = 9;
+  minCount = SIZE*SIZE;
   min_i = 0;
   min_j = 0;
 
-  for( i=0; i<9; i++) {
-    for( j=0; j<9; j++) {
+  for( i=0; i<SIZE*SIZE; i++) {
+    for( j=0; j<SIZE*SIZE; j++) {
       if( (countTrues( opts[i,j]) < minCount)
           && (0 < countTrues( opts[i,j]))) {
         minCount = countTrues( opts[i,j]);
@@ -176,7 +179,7 @@ void solveOneLevel( SNet::SNet &hnd, int[*] board, bool[*] opts)
     i,j = findMinTrues( opts);
     mem_board = board;
     mem_opts = opts;
-    for( k=1; (k<=9) && !isCompleted(board); k++) {
+    for( k=1; (k<=SIZE*SIZE) && !isCompleted(board); k++) {
       if( mem_opts[i,j,k-1] ) {
         board, opts = addNumber( i, j, k, mem_board, mem_opts);
         SNet::out( hnd, 1, 
@@ -217,12 +220,12 @@ int[*], bool[*] solveOneLevel( int[*] board, bool[*] opts)
 
 void computeOpts( SNet::SNet &hnd, int[*] board)
 { 
-  set = genarray( [9,9], 0);
-  opts = genarray( [9,9,9], true);
+  set = genarray( [SIZE*SIZE,SIZE*SIZE], 0);
+  opts = genarray( [SIZE*SIZE,SIZE*SIZE,SIZE*SIZE], true);
 
 
-  for( i=0; i<9; i++) {
-    for( j=0; j<9; j++) {
+  for( i=0; i<SIZE*SIZE; i++) {
+    for( j=0; j<SIZE*SIZE; j++) {
       if( board[i,j] > 0 ) {
         set, opts = addNumber( i,j, board[i,j],set,opts);
       }

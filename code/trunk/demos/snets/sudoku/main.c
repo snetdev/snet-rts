@@ -20,7 +20,7 @@ int ITERATIONS;
 
 typedef struct {
  snet_record_t **in_recs;
- snet_buffer_t *inbuf;
+ snet_tl_stream_t *inbuf;
 } thread_arg_t;
 
 void *Feed( void *ptr) {
@@ -28,7 +28,7 @@ void *Feed( void *ptr) {
   int i;
 
   for( i=0; i<ITERATIONS; i++) {
-    SNetBufPut( inf->inbuf, inf->in_recs[i]);
+    SNetTlWrite( inf->inbuf, inf->in_recs[i]);
   }
   return( NULL);
 }
@@ -43,7 +43,7 @@ void *Read( void *ptr)
   bool terminate = false;
 
   while( !terminate) {
-    resrec = SNetBufGet( outbuf);
+    resrec = SNetTlRead( outbuf);
     output = SNetRecTakeField( resrec,  F__sudoku__board);
     resarray1 = SACARGconvertToIntArray( output);
     printf("\nResult %d/%d\n", k+1, ITERATIONS);
@@ -70,7 +70,8 @@ int main( int argc, char **argv)
   thread_arg_t *inf;
   pthread_t t, t1;
 
-  snet_buffer_t *inbuf, *outbuf;
+  
+  snet_tl_stream_t *inbuf, *outbuf;
   snet_record_t *rec1, **in_records;
   snet_variantencoding_t *type1;
   SACarg *input;
@@ -160,7 +161,7 @@ int main( int argc, char **argv)
 
 
   /* Create input buffer */
-  inbuf = SNetBufCreate( BUFFER_SIZE);
+  inbuf = SNetTlCreateStream( BUFFER_SIZE);
   
   /* Start 'feeding' thread */
   inf->inbuf = inbuf;
@@ -179,8 +180,8 @@ int main( int argc, char **argv)
   pthread_join( t1, NULL);
 
   printf("\nSending Control Record...\n");
-  SNetBufPut( inbuf, SNetRecCreate( REC_terminate)); 
-  SNetBufGet( outbuf);
+  SNetTlWrite( inbuf, SNetRecCreate( REC_terminate)); 
+  SNetTlRead( outbuf);
   printf("\nEnd.\n\n"); 
 
   return( 0);
