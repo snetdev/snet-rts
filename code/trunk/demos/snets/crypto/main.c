@@ -205,7 +205,6 @@ int main(int argc, char *argv[])
   int node;
 #else
 #ifdef SNET_DEBUG_COUNTERS
-  snet_tl_stream_t *start_stream;
   snet_time_t execution_start_time;
   snet_time_t execution_end_time;
   long mseconds;
@@ -262,16 +261,14 @@ int main(int argc, char *argv[])
 #ifdef SNET_DEBUG_COUNTERS
     SNetDebugTimeGetTime(&execution_start_time);
 #endif /* SNET_TIME_COUNTERS  */
-
-    start_stream = SNetTlCreateStream(10);
+    info.stream = SNetTlCreateStream(10);
     
-    res_stream = SNet__crypto___crypto(start_stream);
-    
-    pthread_create(&ithread, NULL, InputThread, start_stream);
+    res_stream = SNet__crypto___crypto(info.stream);
+ 
+    pthread_create(&ithread, NULL, InputThread, &info);
     pthread_detach(ithread);
     
     OutputThread(res_stream);
-
 #ifdef SNET_DEBUG_COUNTERS
   SNetDebugTimeGetTime(&execution_end_time);
 
