@@ -35,4 +35,12 @@ PROJ_CFG_TestApplication_release := release
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
+# Command line defined variables that can be cached
+
+CMDLINE_CACHED_VARS := UTCPTL_INCLUDE_DIR
+CMDLINE_CACHED_VARS += UTCPTL_BIN_DIR
+CMDLINE_CACHED_VARS += UTCPTL_LIB_DIR
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 

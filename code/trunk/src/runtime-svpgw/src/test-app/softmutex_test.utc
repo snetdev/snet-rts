@@ -125,18 +125,18 @@ void SNetMutexUnlock(snet_mutex_t *mutex)
 static thread void foo(
     unsigned int tid, snet_mutex_t *mutex, unsigned int test_sz)
 {
-    unsigned int ltid = tid;
+    //unsigned int ltid = tid;
 
-    for (unsigned int j=0; j < test_sz; j++) {
+    //for (unsigned int j=0; j < test_sz; j++) {
         //SNetMutexLock(mutex);
-        pthread_mutex_lock(&mutex->plc->exclusion_mutex);
+        //pthread_mutex_lock(&mutex->plc->exclusion_mutex);
 
-        printf("FOO(%u): %u", ltid, j);
-        printf("\n");
+        //printf("FOO(%u): %u", ltid, j);
+        //printf("\n");
 
         //SNetMutexUnlock(mutex);
-        pthread_mutex_unlock(&mutex->plc->exclusion_mutex);
-    }
+        //pthread_mutex_unlock(&mutex->plc->exclusion_mutex);
+    //}
 }
 
 /*----------------------------------------------------------------------------*/

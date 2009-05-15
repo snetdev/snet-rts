@@ -129,13 +129,9 @@ SNetTryPlaceAlloc(const snet_place_specs_t *specs)
     }
 
     // !!NOTE: uTC-PTL specific!!
-    // This code will be replaced when the SEP API
-    // is defined and an implementation of SEP exists.
+    contract->plc = uTC::generate_local_place(specs->mutex);
 
-    uTC::PlaceInfo *plc_info = 
-        (uTC::PlaceInfo *) SNetTryMemAlloc(sizeof(uTC::PlaceInfo));
-
-    if (plc_info == NULL) {
+    if (contract->plc == NULL) {
         if (contract->plc_specs != NULL) {
             if (contract->plc_specs->type_spec_data != NULL)
                 SNetMemFree(contract->plc_specs->type_spec_data);
@@ -147,28 +143,6 @@ SNetTryPlaceAlloc(const snet_place_specs_t *specs)
 
         return NULL;
     }
-
-    contract->plc = (place) plc_info;
-
-    uTC::PlaceInfo default_plc_info = {
-        1,
-        false,
-        PTHREAD_MUTEX_INITIALIZER,
-        false,
-        PTHREAD_COND_INITIALIZER,
-        NULL
-    };
-
-    SNetMemCopy(
-        &default_plc_info, 
-        plc_info, 
-        sizeof(uTC::PlaceInfo));
-    
-    plc_info->exclusive_flag = specs->mutex;
-
-    if (specs->type == PLACE_TYPE_CONDVAR) {
-        // ??????
-    };
 
     // !!END OF uTC-PTL specific!!
 
@@ -182,16 +156,8 @@ void SNetPlaceFree(snet_place_contract_t *contract)
     assert(contract != NULL);
 
     // !!NOTE: uTC-PTL specific!!
-    // This code will be replaced when the SEP API
-    // is defined and an implementation of SEP exists.
-
-    uTC::PlaceInfo *plc_info = (uTC::PlaceInfo *)(contract->plc);
-
-    pthread_mutex_destroy(&plc_info->exclusion_mutex);
-    pthread_cond_destroy(&plc_info->exclusion_cond);
-
-    if (plc_info != NULL)
-        SNetMemFree(plc_info);
+    if (contract->plc != NULL)
+        uTC::destroy_local_place(contract->plc);
     
     // !!END OF uTC-PTL specific!!
 

@@ -78,6 +78,15 @@ OBJ_FILES_$(1) := $$(subst .utc,.o,\
  
 OBJ_FILES_$(1) := $$(subst $$(SOURCE_DIR),,$$(OBJ_FILES_$(1)))
 OBJ_FILES_$(1) := $$(patsubst /%,%,$$(OBJ_FILES_$(1)))
+
+#---
+
+XDR_FILES_$(1)   := \
+	$$(shell $$(SCRIPTS_DIR)/cat-xargs -comment '\#' $$(XDR_FILES_LST_$(1)))
+
+XDR_OBJ_FILES_$(1) := $$(addsuffix .o,$$(XDR_FILES_$(1)))
+XDR_OBJ_FILES_$(1) := $$(subst $$(SOURCE_DIR),,$$(XDR_OBJ_FILES_$(1)))
+XDR_OBJ_FILES_$(1) := $$(patsubst /%,%,$$(XDR_OBJ_FILES_$(1)))
 endef
 
 #-------------------------------------------------------------------------------
@@ -114,6 +123,26 @@ endef
 
 define cpp_file_gen_rule_tmpl
 
+$$(INTERM_DIR_$(1))/%.x.cpp: $$(INTERM_DIR_$(1))/%.x.utc
+	$$(call print,,"Translating: $$<")
+	
+	mkdir -p $$(dir $$@)
+	
+	$$(MAKEDEP$(2))                      \
+		$$(MAKEDEP_FLAGS$(2))            \
+		$$(MAKEDEP_FLAGS_$(1))           \
+		$$(MAKEDEP_TARGET_FLAG$(2)) $$@  \
+		$$(MAKEDEP_INCL_DIRS_FLAGS$(2))  \
+		$$(MAKEDEP_INCL_DIRS_FLAGS_$(1)) \
+		$$(MAKEDEP_OUTF_FLAG$(2)) $$(@:.cpp=.d) $$<
+	
+	$$(UTC2CPP$(2))                     \
+		$$(UTC2CPP_FLAGS$(2))           \
+		$$(UTC2CPP_FLAGS_$(1))          \
+		$$(UTC2CPP_OUTF_FLAG$(2)) $$@   \
+		$$(UTC2CPP_INCL_DIRS_FLAGS$(2)) \
+		$$(UTC2CPP_INCL_DIRS_FLAGS_$(1)) $$< 
+	
 $$(INTERM_DIR_$(1))/%.cpp: $$(SOURCE_DIR)/%.utc
 	$$(call print,,"Translating: $$<")
 	
@@ -135,6 +164,41 @@ $$(INTERM_DIR_$(1))/%.cpp: $$(SOURCE_DIR)/%.utc
 		$$(UTC2CPP_INCL_DIRS_FLAGS_$(1)) $$< 
 endef
 
+#---
+
+define xdr_files_gen_rule_tmpl
+
+$$(INTERM_DIR_$(1))/%.x.utc:      \
+	$$(SOURCE_DIR)/%.x            \
+	$$(INTERM_DIR_$(1))/%.x.utc.h \
+	$$(TARGET_INCL_DIR_$(1))/%.utc.h
+	
+	$$(call print,,"Generating: $$@ from '$$<'")
+	
+	mkdir -p $$(dir $$@)
+	
+	$$(XDRCC$(2))                                              \
+		$$(XDRCC_FLAGS$(2))                                    \
+		$$(XDRCC_FLAGS_$(1))                                   \
+		$$(XDRCC_HDR_FLAG$(2)) $$(addsuffix .h,$$(notdir $$@)) \
+		$$(XDRCC_OUTF_FLAG$(2)) $$@ $$<
+
+$$(TARGET_INCL_DIR_$(1))/%.utc.h: $$(INTERM_DIR_$(1))/%.x.utc.h
+	mkdir -p $$(dir $$@)
+	cp $$< $$@
+
+$$(INTERM_DIR_$(1))/%.x.utc.h: $$(SOURCE_DIR)/%.x
+	$$(call print,,"Generating: $$@ from '$$<'")
+	
+	mkdir -p $$(dir $$@)
+	
+	$$(XDRHC$(2))            \
+		$$(XDRHC_FLAGS$(2))  \
+		$$(XDRHC_FLAGS_$(1)) \
+		$$(XDRHC_OUTF_FLAG$(2)) $$@ $$<
+
+endef
+
 #-------------------------------------------------------------------------------
 
 define build_cfg_tmpl
@@ -142,32 +206,42 @@ $$(eval $$(call set_files_vars,$(1)))
 
 $$(eval $$(call set_cfg_out_dir_var,INTERM_DIR,$(1)))
 $$(eval $$(call set_cfg_out_dir_var,TARGET_DIR,$(1)))
+$$(eval $$(call set_cfg_out_dir_var,TARGET_INCL_DIR,$(1)))
 
 .PRECIOUS: $$(INTERM_DIR_$(1))/%.d
 .PRECIOUS: $$(INTERM_DIR_$(1))/%.cpp
+.PRECIOUS: $$(INTERM_DIR_$(1))/%.x.utc
+.PRECIOUS: $$(INTERM_DIR_$(1))/%.x.utc.h
+.PRECIOUS: $$(TARGET_INCL_DIR_$(1))/%.utc.h
 
 .PHONY:    $$(PREREQUISITES_$(1))
 
 $(1): $$(PREREQUISITES_$(1)) \
-      $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1))
+      $$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))
 
-$$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1)): \
+$$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1)): 							\
+	  $$(addprefix $$(INTERM_DIR_$(1))/,$$(XDR_OBJ_FILES_$(1))) \
       $$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))
 	
-	$$(call print,,"Linking: $$(BIN_NAME_$(1))")
+	$$(call print,,"Creating archive: $$(LIB_NAME_$(1))")
 	
 	mkdir -p $$(TARGET_DIR_$(1))
 	
-	$$(LD$(2))                                                     \
-		$$(LD_FLAGS$(2))                                           \
-		$$(LD_FLAGS_$(1))                                          \
-		$$(LD_OUTF_FLAG$(2)) $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1)) \
-		$$(LD_LIB_DIRS_FLAGS$(2))                                  \
-		$$(LD_LIB_DIRS_FLAGS_$(1))                                 \
-		$$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))      \
-		$$(LD_LIBS_FLAGS$(2))                                      \
-		$$(LD_LIBS_FLAGS_$(1))
+	$$(EXEC_SILENT)                                               \
+		$$(AR$(2))                                                \
+			$$(AR_FLAGS$(2))                                      \
+			$$(AR_FLAGS_$(1))                                     \
+			$$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))                 \
+			$$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1))) \
+			$$(addprefix $$(INTERM_DIR_$(1))/,$$(XDR_OBJ_FILES_$(1)))
+	
+	$$(EXEC_SILENT)              \
+		$$(ARINX$(2))            \
+			$$(ARINX_FLAGS$(2))  \
+			$$(ARINX_FLAGS_$(1)) \
+			$$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))
 
+$$(eval $$(call xdr_files_gen_rule_tmpl,$(1),$(2)))
 $$(eval $$(call cpp_file_gen_rule_tmpl,$(1),$(2)))
 $$(eval $$(call obj_file_gen_rule_tmpl,$(1),$(2)))
 
@@ -188,7 +262,12 @@ clean-$(1):
 		[ "$$(INTERM_DIR)" != "." ]; then \
 		$$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $$(INTERM_DIR); fi
 	
-	rm -f  $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1))*
+	rm -f  $$(TARGET_DIR_$(1))/$$(LIB_NAME_$(1))*
+	
+	$$(foreach xfile,$$(XDR_FILES_$(1)),\
+		rm -f $$(subst \
+			$$(SOURCE_DIR),$$(TARGET_INCL_DIR_$(1)),\
+				$$(addsuffix .utc.h,$$(basename $$(xfile)))))
 	
 	if  [ -d $$(TARGET_DIR_$(1)) ] &&          \
 		[ "$$(TARGET_DIR_$(1))" != "." ]; then \
@@ -236,6 +315,9 @@ clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))
 update-src-list:
 	$(SCRIPTS_DIR)/autoupdate-srclst \
 		-ext utc -ex-ext exclude -o $(SRC_FILES_LST) $(SOURCE_DIR)/
+	
+	$(SCRIPTS_DIR)/autoupdate-srclst \
+		-ext x   -ex-ext exclude -o $(XDR_FILES_LST) $(SOURCE_DIR)/
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

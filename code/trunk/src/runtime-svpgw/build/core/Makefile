@@ -1,7 +1,3 @@
-export SHELL=/bin/bash
-
-#---
-
 .SUFFIXES:
 .DEFAULT : all
 .IGNORE  : clean 
@@ -11,6 +7,13 @@ export SHELL=/bin/bash
 
 ifneq ($(strip $(NO_SILENT)),true)
 .SILENT:
+endif
+
+#---
+
+ifeq ($(MAKELEVEL),0)
+export SHELL                  := /bin/bash
+export TOP_LEVEL_MAKEFILE_DIR := $(shell pwd)
 endif
 
 #-------------------------------------------------------------------------------
@@ -63,9 +66,6 @@ EXEC_SILENT := $(SCRIPTS_DIR)/exec-silent
 ifneq ($(strip $(NO_PRINT)),true)
 define print
 @echo $1 "$(subst x, ,$(PRINT_INDENT))$2"
-endef
-else
-define print
 endef
 endif
 
