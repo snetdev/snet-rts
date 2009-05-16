@@ -113,6 +113,10 @@ AC_SUBST(CB, $CB)
 
 dnl search for bison, byacc or yacc
 AC_PROG_YACC()
+AC_CHECK_PROG(HAVE_YACC, $YACC, yes, no)
+if [[ "$HAVE_YACC" = "no" ]]; then
+       AC_MSG_ERROR(cannot find bison/yacc)
+fi
 
 
 dnl
@@ -122,7 +126,7 @@ dnl
 if [ test "$YACC" != "yacc" ]; then
   AC_MSG_CHECKING([whether $YACC works])
   mkdir .ac_yacc_test
-  cd .ac_yacc_test
+  cd .ac_yacc_test  
   cp ../src/compiler/parse/snet.y .
   if [ $YACC snet.y >/dev/null 2>/dev/null ]; then
     AC_MSG_RESULT(ok)
@@ -140,6 +144,13 @@ if [ test "$YACC" != "yacc" ]; then
 fi
 dnl search for flex or lex
 AC_PROG_LEX()
+AC_CHECK_PROGS(LEX, flex lex, no)
+if [[ "$LEX" == "no" ]]; then
+       AC_MSG_ERROR(cannot find flex/lex)
+fi
+
+
+
 dnl search for xlst engine
 AC_CHECK_PROGS(XSLT, [xsltproc sabcmd], [!fail])
 
