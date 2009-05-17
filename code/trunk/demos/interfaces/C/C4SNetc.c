@@ -69,19 +69,21 @@ char *C4SNetGenBoxWrapper( char *box_name,
 
   STRAPPEND( wrapper_code, c_fqn);
   STRAPPEND( wrapper_code, "( void *hnd");
-  for( i=0; i<t->num; i++) {
-    switch( t->type[i]) {
-      case field:
-        STRAPPEND( wrapper_code, ", void *arg_");
-        break;
-      case tag:
-      case btag:
-        STRAPPEND( wrapper_code, ", int arg_");
-        break;
-      }
-      tmp_str = itoa( i);
-      STRAPPEND( wrapper_code, tmp_str);
-      free( tmp_str);
+  if( t != NULL) {
+    for( i=0; i<t->num; i++) {
+      switch( t->type[i]) {
+        case field:
+          STRAPPEND( wrapper_code, ", void *arg_");
+          break;
+        case tag:
+        case btag:
+          STRAPPEND( wrapper_code, ", int arg_");
+          break;
+        }
+        tmp_str = itoa( i);
+        STRAPPEND( wrapper_code, tmp_str);
+        free( tmp_str);
+    }
   }
   STRAPPEND( wrapper_code, ");\n\n");
 
@@ -89,20 +91,22 @@ char *C4SNetGenBoxWrapper( char *box_name,
   STRAPPEND( wrapper_code, "void *SNetCall__");
   STRAPPEND( wrapper_code, box_name);
   STRAPPEND( wrapper_code, "( void *handle");
-  for( i=0; i<t->num; i++) {
-    switch( t->type[i]) {
-      case field:
-        STRAPPEND( wrapper_code, ", void *");
-        break;
-      case tag:
-      case btag:
-        STRAPPEND( wrapper_code, ", int ");
-        break;
+  if( t != NULL) {
+    for( i=0; i<t->num; i++) {
+      switch( t->type[i]) {
+        case field:
+          STRAPPEND( wrapper_code, ", void *");
+          break;
+        case tag:
+        case btag:
+          STRAPPEND( wrapper_code, ", int ");
+          break;
+      }
+      STRAPPEND( wrapper_code, "arg_");
+      tmp_str = itoa( i);
+      STRAPPEND( wrapper_code, tmp_str);
+      free( tmp_str);
     }
-    STRAPPEND( wrapper_code, "arg_");
-    tmp_str = itoa( i);
-    STRAPPEND( wrapper_code, tmp_str);
-    free( tmp_str);
   }
   STRAPPEND( wrapper_code, ")\n{\n");
 
@@ -110,11 +114,13 @@ char *C4SNetGenBoxWrapper( char *box_name,
   STRAPPEND( wrapper_code, "  return( ");
   STRAPPEND( wrapper_code, c_fqn);
   STRAPPEND( wrapper_code, "( handle");
-  for( i=0; i<t->num; i++) {
-    STRAPPEND( wrapper_code, ", arg_");
-    tmp_str = itoa( i);
-    STRAPPEND( wrapper_code, tmp_str);
-    free( tmp_str);
+  if( t != NULL) {
+    for( i=0; i<t->num; i++) {
+      STRAPPEND( wrapper_code, ", arg_");
+      tmp_str = itoa( i);
+      STRAPPEND( wrapper_code, tmp_str);
+      free( tmp_str);
+    }
   }
   
   STRAPPEND( wrapper_code, "));\n}");
