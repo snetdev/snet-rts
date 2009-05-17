@@ -54,6 +54,11 @@ extern char* SNetUtilDebugDumpRecord(snet_record_t *source, char* storage) {
         sprintf(storage, "(RECORD %p PROBE)",
               source);
       break;
+      
+      case REC_trigger_initialiser:
+        sprintf(storage, "(RECORD %p TRIGGER_INITIALISER)",
+              source);
+      break;
     }
   }
   return storage;

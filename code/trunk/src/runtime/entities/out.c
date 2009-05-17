@@ -11,6 +11,11 @@
 
 //#define BOX_DEBUG
 
+
+/* This is used if an initialiser outputs a record */
+#define DEFAULT_MODE MODE_textual
+
+
 // used in SNetOut (depends on local variables!)
 #define ENTRYSUM( RECNUM, TENCNUM)\
                         RECNUM( HNDgetRecord( hnd)) +\
@@ -112,32 +117,37 @@ extern snet_handle_t
   // flow inherit
 
   old_rec = SNetHndGetRecord( hnd);
-
-  names = SNetRecGetUnconsumedFieldNames( old_rec);
-  for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
-    if( SNetRecAddField( out_rec, names[i])) {
-
-      SNetRecCopyFieldToRec(old_rec, names[i],
-			    out_rec, names[i]);
+  if( SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
+    names = SNetRecGetUnconsumedFieldNames( old_rec);
+    for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
+      if( SNetRecAddField( out_rec, names[i])) {
+  
+        SNetRecCopyFieldToRec(old_rec, names[i],
+  			    out_rec, names[i]);
+      }
     }
-  }
-  SNetMemFree( names);
-
-  names = SNetRecGetUnconsumedTagNames( old_rec);
-  for( i=0; i<SNetRecGetNumTags( old_rec); i++) {
-    if( SNetRecAddTag( out_rec, names[i])) {
-      SNetRecSetTag( out_rec, names[i], SNetRecGetTag( old_rec, names[i]));
+    SNetMemFree( names);
+  
+    names = SNetRecGetUnconsumedTagNames( old_rec);
+    for( i=0; i<SNetRecGetNumTags( old_rec); i++) {
+      if( SNetRecAddTag( out_rec, names[i])) {
+        SNetRecSetTag( out_rec, names[i], SNetRecGetTag( old_rec, names[i]));
+      }
     }
+    SNetMemFree( names);
   }
-  SNetMemFree( names);
-
 
   // output record
 #ifdef BOX_DEBUG
     SNetUtilDebugNotice("BOX %x: outputting %x",
       (unsigned int) SNetHndGetOutput(hnd), (unsigned int) out_rec);
 #endif
-  SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
+  if( SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
+    SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
+  }
+  else {
+    SNetRecSetDataMode( out_rec, DEFAULT_MODE);
+  }
   SNetTlWrite( SNetHndGetOutput( hnd), out_rec);
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
@@ -215,30 +225,36 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
   // flow inherit
 
   old_rec = SNetHndGetRecord( hnd);
-
-  names = SNetRecGetUnconsumedFieldNames( old_rec);
-  for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
-    if( SNetRecAddField( out_rec, names[i])) {
-
-      SNetRecCopyFieldToRec(old_rec, names[i],
-			    out_rec, names[i]);
+  
+  if( SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) { 
+    names = SNetRecGetUnconsumedFieldNames( old_rec);
+    for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
+      if( SNetRecAddField( out_rec, names[i])) {
+  
+        SNetRecCopyFieldToRec(old_rec, names[i],
+  			    out_rec, names[i]);
+      }
     }
-  }
-  SNetMemFree( names);
-
-  names = SNetRecGetUnconsumedTagNames( old_rec);
-  for( i=0; i<SNetRecGetNumTags( old_rec); i++) {
-    if( SNetRecAddTag( out_rec, names[i])) {
-      SNetRecSetTag( out_rec, names[i], SNetRecGetTag( old_rec, names[i]));
+    SNetMemFree( names);
+  
+    names = SNetRecGetUnconsumedTagNames( old_rec);
+    for( i=0; i<SNetRecGetNumTags( old_rec); i++) {
+      if( SNetRecAddTag( out_rec, names[i])) {
+        SNetRecSetTag( out_rec, names[i], SNetRecGetTag( old_rec, names[i]));
+      }
     }
+    SNetMemFree( names);
   }
-  SNetMemFree( names);
-
   if(out_rec != old_rec) {
     SNetRecCopyIterations(old_rec, out_rec);
   }
   // output record
-  SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
+  if( SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
+    SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
+  }
+  else {
+    SNetRecSetDataMode( out_rec, DEFAULT_MODE);
+  }
   SNetTlWrite( SNetHndGetOutput( hnd), out_rec);
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);

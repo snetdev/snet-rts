@@ -169,8 +169,10 @@ static void *ParallelBoxThread( void *hndl) {
 
   bool is_det = SNetHndIsDet( hnd);
   
+  int num_init_branches = 0;
   bool terminate = false;
   int counter = 1;
+
 
 #ifdef PARALLEL_DEBUG
   SNetUtilDebugNotice("(CREATION PARALLEL)");
@@ -180,6 +182,49 @@ static void *ParallelBoxThread( void *hndl) {
 
   types = SNetHndGetTypeList( hnd);
   num = SNetTencGetNumTypes( types);
+
+  /* Handle initialiser branches */
+  for( i=0; i<num; i++) {
+    if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( types, i)) == 0) {
+
+      PutToBuffers( streams, 
+                    num, 
+                    i, 
+                    SNetRecCreate( REC_trigger_initialiser), 
+                    counter, 
+                    is_det);
+      PutToBuffers( streams, 
+                    num, 
+                    i, 
+                    SNetRecCreate( REC_terminate), 
+                    counter, 
+                    is_det);
+      
+      num_init_branches += 1; 
+    }
+  }
+
+  switch( num - num_init_branches) {
+    case 1: /* remove dispatcher from network ... */
+      for( i=0; i<num; i++) { 
+        if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( types, i)) > 0) {
+          PutToBuffers( streams, 
+                        num, 
+                        i, 
+                        SNetRecCreate( REC_sync, SNetHndGetInput( hnd)), 
+                        counter, 
+                        is_det);
+        }
+      }    
+    case 0: /* and terminate */
+      terminate = true;
+    break;
+
+    default: /* or resume operation as normal */
+    break;
+  }
+
+
 
   matchcounter = SNetMemAlloc( num * sizeof( match_count_t*));
 

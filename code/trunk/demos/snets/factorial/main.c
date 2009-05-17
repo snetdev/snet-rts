@@ -147,15 +147,15 @@ int main()
   //SET_BUFFER_NAME( start_buf, "initialBuffer");
 
 
-  SNetTlWrite( start_stream, rec1);
   printf("\nPut record to Buffer:");
   PRINT_RECORD( rec1);
   printf("\n");
+  SNetTlWrite( start_stream, rec1);
 
-  SNetTlWrite( start_stream, rec2);
   printf("\nPut record to Buffer:");
   PRINT_RECORD( rec2);
   printf("\n");
+  SNetTlWrite( start_stream, rec2);
 
 /*
   SNetTlWrite( start_stream, rec2);

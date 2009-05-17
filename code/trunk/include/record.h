@@ -34,7 +34,8 @@ typedef enum {
 	REC_sort_begin,
 	REC_sort_end,
 	REC_terminate,
-	REC_probe
+	REC_probe,
+  REC_trigger_initialiser
 } snet_record_descr_t;
 
 typedef enum {

@@ -258,6 +258,9 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       DATA_REC( rec, interface_id) = 0;
 #endif /* DISTRIBUTED_SNET */
       break;
+    case REC_trigger_initialiser:
+      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+      break;
     case REC_sync:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
       RECORD( rec, sync_rec) = SNetMemAlloc( sizeof( sync_rec_t));
@@ -365,6 +368,9 @@ extern void SNetRecDestroy( snet_record_t *rec)
       break;
     
     case REC_terminate:
+      break;
+
+    case REC_trigger_initialiser:
       break;
 
     default:

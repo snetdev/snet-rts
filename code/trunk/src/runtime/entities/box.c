@@ -46,6 +46,7 @@ static void *BoxThread( void *hndl) {
     rec = SNetTlRead(SNetHndGetInput(hnd));
 
     switch( SNetRecGetDescriptor(rec)) {
+      case REC_trigger_initialiser:
       case REC_data:
         SNetHndSetRecord( hnd, rec);
 
