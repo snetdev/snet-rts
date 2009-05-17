@@ -87,10 +87,14 @@ char *SAC4SNetGenBoxWrapper( char *box_name,
                              snet_meta_data_enc_t *meta_data) 
 {
   int i;
+  int arg_num;
   char *wrapper_code, *tmp_str, *sac_fqn;
 
+  arg_num = (t == NULL) ? 0 : t->num;
+
   /* construct full SAC function name */
-  constructSACfqn( &sac_fqn, box_name, t->num, meta_data);
+  constructSACfqn( &sac_fqn, box_name, arg_num, meta_data);
+
 
   /* generate prototype of SAC function */
   wrapper_code = 
@@ -99,7 +103,7 @@ char *SAC4SNetGenBoxWrapper( char *box_name,
 
   STRAPPEND( wrapper_code, sac_fqn);
   STRAPPEND( wrapper_code, "( SACarg **hnd_return, SACarg *hnd");
-  for( i=0; i<t->num; i++) {
+  for( i=0; i<arg_num; i++) {
     STRAPPEND( wrapper_code, ", SACarg *arg_");
     tmp_str = itoa( i);
     STRAPPEND( wrapper_code, tmp_str);
@@ -111,7 +115,7 @@ char *SAC4SNetGenBoxWrapper( char *box_name,
   STRAPPEND( wrapper_code, "static void *SNetCall__");
   STRAPPEND( wrapper_code, box_name);
   STRAPPEND( wrapper_code, "( void *handle");
-  for( i=0; i<t->num; i++) {
+  for( i=0; i<arg_num; i++) {
     switch( t->type[i]) {
       case field:
         STRAPPEND( wrapper_code, ", SACarg *");
@@ -135,7 +139,7 @@ char *SAC4SNetGenBoxWrapper( char *box_name,
   STRAPPEND( wrapper_code, "  ");
   STRAPPEND( wrapper_code, sac_fqn);
   STRAPPEND( wrapper_code, "( &hnd_return, hnd");
-  for( i=0; i<t->num; i++) {
+  for( i=0; i<arg_num; i++) {
       switch( t->type[i]) {
       case field:
         STRAPPEND( wrapper_code, ", arg_");
