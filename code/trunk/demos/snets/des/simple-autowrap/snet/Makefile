@@ -44,5 +44,5 @@ lib%.a: %.o $(foreach FILE,$(WRAPFILES),$(FILE).o)
 	$(CC) $(CCFLAGS) $(INCDIRS) $(BOXINCS) -c $<
 
 clean:
-	rm -f $(TARGET).o lib$(TARGET).a $(TARGET).c $(TARGET).h 
+	rm -f $(TARGET).o lib$(TARGET).a  $(TARGET).h 
 	rm -f $(foreach FILE,$(WRAPFILES),$(FILE).o)

@@ -107,13 +107,13 @@ void *Feeder( void *buf)
 void *Reader( void *buf)
 {
   bool terminate;
-  int i, shape, *cbit_array;
+  int i, j, shape, *cbit_array;
   SACarg *output;
   snet_tl_stream_t *outbuf = (snet_tl_stream_t*)buf;
   snet_record_t *resrec;
 
 
-  terminate = false;
+  terminate = false; j = 0;
   while( !terminate) {
     resrec = SNetTlRead( outbuf);
     if( SNetRecGetDescriptor( resrec) == REC_terminate) {
@@ -124,7 +124,7 @@ void *Reader( void *buf)
   
       shape = SACARGgetShape( output, 0);
       cbit_array = SACARGconvertToIntArray( SACARGnewReference( output));
-      fprintf(stderr, "Enciphered Bits:\n");
+      fprintf(stderr, "Enciphered Bits (Block %d):\n", j++);
       for( i=0; i<shape; i++) {
         fprintf(stderr, "%d ", cbit_array[i]);
       }
@@ -159,9 +159,8 @@ int main(int argc, char **argv)
   pthread_create( &feeder, NULL, Feeder, inbuf);
   pthread_create( &reader, NULL, Reader, outbuf);
 
-
-  pthread_join( feeder, NULL);
   pthread_join( reader, NULL);
+  pthread_join( feeder, NULL);
 
   SNetTlMarkObsolete( inbuf);
   
