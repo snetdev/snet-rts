@@ -15,7 +15,6 @@
 extern void SACARGfree( void*);
 extern void *SACARGcopy( void*);
 
-
 int my_interface_id;
 
 struct container {
@@ -28,6 +27,14 @@ struct container {
   int *btags;
 };
 
+
+/*
+ * Serialisation & Deserialisation functions 
+ */
+static int SAC4SNetDataSerialise( FILE *file, void *ptr);
+static void *SAC4SNetDataDeserialise(FILE *file);
+static int SAC4SNetDataEncode( FILE *file, void *ptr);
+static void *SAC4SNetDataDecode(FILE *file);
 
 /******************************************************************************/
 
@@ -88,11 +95,24 @@ void SAC4SNetInit( int id)
   SNetGlobalRegisterInterface( id, 
                                &SACARGfree, 
                                &SACARGcopy, 
-                               NULL, 
+                               &SAC4SNetDataSerialise, 
                                NULL,
                                NULL,
                                NULL);  
 }
+
+/******************************************************************************/
+
+
+static int SAC4SNetDataSerialise( FILE *file, void *ptr)
+{
+  SACarg *arg = (SACarg*)ptr;
+  
+  fprintf( file, "%d", SACARGgetBasetype( arg));
+
+  return( 0);
+}
+
 
 /******************************************************************************/
 

@@ -25,7 +25,7 @@ REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
 # general setup:
 #
 
-CC           := @CC@
+CC           := @CC@ 
 CCPROD       := @CC@
 
 ifeq ($(DISTRIBUTED),yes)
@@ -40,6 +40,7 @@ DEBUG_FLAGS  :=
 CFLAGS       := -DSHOW_MALLOC -DCLEANMEM -DFILTER_VERSION_2 $(DEBUG_FLAGS)
 CPROD_FLAGS  := -DDBUG_OFF -DPRODUCTION  -DFILTER_VERSION_2
 SOFLAGS      := @SOFLAGS@
+LD_DYNAMIC    := @LD_DYNAMIC@
 LIBTOOL      := # $(PROJECT_ROOT)/libtool --silent --mode=link 
 #GTKFLAGS     := @GTKFLAGS@
 XSLTENGINE   := @XSLT@
@@ -56,7 +57,7 @@ MAKE_NORM    := $(MAKE) CC="$(CC)" CCFLAGS="$(CCFLAGS)" CFLAGS="$(CFLAGS)"
 MAKE_PROD    := $(MAKE) CC="$(CCPROD)" CCFLAGS="$(CCPROD_FLAGS)" CFLAGS="$(CPROD_FLAGS)"
 MAKE_CLEAN   := $(MAKE) TARGET="clean" clean
 MAKEFLAGS    += --no-print-directory
-LDDYNFLAG    := # -export-dynamic
+LDDYNFLAG    := 
 
 TAR          := tar
 AR           := ar rc

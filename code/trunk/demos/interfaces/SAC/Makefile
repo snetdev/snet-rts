@@ -1,6 +1,4 @@
-CC        = gcc
-CCFLAGS   = -Wall -g -fPIC
-SOFLAGS   = -shared -dy -Wl -allow-shlib-undefined 
+include $(SNETBASE)/src/makefiles/config.mkf
 INCDIRS   = -I. \
 	    -I$(SNETBASE)/include \
             -I$(SNETBASE)/src/util/metadata \
@@ -22,8 +20,8 @@ TARGETDIR   = $(SNETBASE)/lib
 all:
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
 	$(SAC2C) $(SACFLAGS) SNet.sac
-	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
-	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
+	$(CC) $(LD_DYNAMIC) -o $(TARGET) $(OBJECTS) 
+	$(CC) $(LD_DYNAMIC) -o $(WRAPTARGET) $(WRAPOBJECTS) 
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
 
 clean:
