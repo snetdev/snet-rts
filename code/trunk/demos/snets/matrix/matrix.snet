@@ -89,4 +89,4 @@ net matrix({A, B, <A_width>, <A_height>, <B_width>, <B_height>, <nodes>}
          )*{<R>} .. [{<R>} -> {}]
       );
 
-} connect pre .. multiply!<node> .. merge;
+} connect pre .. multiply!@<node> .. merge;
