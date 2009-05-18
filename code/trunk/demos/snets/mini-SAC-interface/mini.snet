@@ -11,8 +11,13 @@ net mini {
         <SACmodule>mini</SACmodule>
         <SACboxfun>A</SACboxfun>
       </box>
+      <box name="B" >
+        <SACmodule>mini</SACmodule>
+        <SACboxfun>B</SACboxfun>
+      </box>
     </metadata>
 
   box boxA( (A) -> (A));
+  box B( -> (A));
 
-} connect boxA;
+} connect (B|[]) .. boxA;

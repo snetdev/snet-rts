@@ -9,7 +9,7 @@ LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/SAC\
 	    -L./lib
 LIBS      = -lpthread -lsnet -lSAC4SNet -lsnetutil
 
-SACNAMES  = -DSACTYPE_SNet_SNet=20
+SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__mini=main
 
 SNETC      = snetc
 SNETCFLAGS = -b7
@@ -32,12 +32,16 @@ TARGET    = mini
 
 
 
-all: 
-	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $(SACTARGET).sac
-	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $(SACTARGET)
-	$(SNETC) $(SNETCFLAGS) $(TARGET).snet
+all: lib$(SACTARGET)Mod.so $(TARGET).c
 	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c *.c
 	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(LIBS) $(S4CLIBS) $(LIBS)
 
+lib$(SACTARGET)Mod.so: $(SACTARGET).sac
+	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $(SACTARGET).sac
+	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $(SACTARGET)
+
+$(TARGET).c: $(TARGET).snet
+	$(SNETC) $(SNETCFLAGS) $(TARGET).snet
+
 clean:
-	rm -f *.o *.so *.a  lib/*.so lib/*.a  include/cwrapper.h $(TARGET)
+	rm -f *.o *.so *.a  lib/*.so lib/*.a  include/cwrapper.h $(TARGET) cwrapper.sac2c $(TARGET).?

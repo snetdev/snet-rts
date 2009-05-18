@@ -1,0 +1,41 @@
+module SAC4SNetFibreIO;
+
+use Structures: all;
+use StdIO: all;
+
+export {PrintIntArray, PrintFloatArray, PrintDoubleArray,
+        ScanIntArray, ScanFloatArray, ScanDoubleArray};
+
+/** Printing ********************************************************/
+void PrintIntArray( File &f, int[+] A)
+{
+   FibrePrint( f, A);
+}
+
+void PrintDoubleArray( File &f, double[+] A)
+{
+   FibrePrint( f, A);
+}
+
+void PrintFloatArray( File &f, float[+] A)
+{
+   FibrePrint( f, A);
+}
+
+
+
+/** Scanning *********************************************************/
+int[+] ScanIntArray( File &f, int[+] shp)
+{
+  return( FibreScanIntArray( f, shp));
+}
+
+float[+] ScanFloatArray( File &f, int[+] shp)
+{
+  return( FibreScanFloatArray( f, shp));
+}
+
+double[+] ScanDoubleArray( File &f, int[+] shp)
+{
+  return( FibreScanDoubleArray( f, shp));
+}

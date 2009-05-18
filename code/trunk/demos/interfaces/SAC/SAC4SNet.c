@@ -1,8 +1,42 @@
+/** <!--********************************************************************-->
+ *
+ * $Id$
+ *
+ * file SAC4SNet.c
+ *
+ * SAC4SNet is a the SAC language interface for S-Net. 
+ *
+ * Serialisation of data is done using the FibreIO module of SAC's stdlib. 
+ * The wrappers for required functions are implemented in SAC4SNetFibreIO.sac. 
+ * We use these functions here to conveniently create SACargs from input data
+ * and to serialise SAC arrays to fibre format. As SAC's fibre functions 
+ * require dimensionality and shape information, serialised data is prefixed
+ * with a header. Data that is read in for deserialisation is expected to be
+ * prefixed with this header as well.
+ *
+ * The header is defined as 
+ *
+ * FIBREHEADER = IDSTRINGPRE BTYPE DIM SHP IDSTRINGSUF
+ * BTYPE       = int
+ * DIM         = int
+ * SHP         = int [SHP]*
+ *
+ * where BTYPE is the base type (as reported by SACARGgetBasetype()), DIM
+ * is the dimensionality (SACARGgetDim()) and SHP is a list of 
+ * DIM integers (SACARGgetShape(arg, 0) ... SACARGgetShape( arg, DIM-1)).
+ * IDSTRINGPRE and IDSTRINGSUF are defined below.
+ *
+ *
+ * Note 1: De-/Serialisation currently only works for int, float, double
+ *         ,i.e. for those base types for which FibreIO functions exist.
+ * Note 2: MPI related functions are not yet implemented. 
+ *****************************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "SAC4SNet.h"
+#include "sac_include/SAC4SNetFibreIO.h"
 #include "snetentities.h"
 #include "memfun.h"
 #include "typeencode.h"
@@ -11,6 +45,13 @@
 #define F_COUNT( c) c->counter[0]
 #define T_COUNT( c) c->counter[1]
 #define B_COUNT( c) c->counter[2]
+
+#define IDSTRINGPRE ":::SACFIBRE:"
+#define IDSTRINGSUF ":::"
+
+
+typedef enum { SACint=1, SACflt=7, SACdbl=8} SACbasetype_t; 
+
 
 extern void SACARGfree( void*);
 extern void *SACARGcopy( void*);
@@ -96,7 +137,7 @@ void SAC4SNetInit( int id)
                                &SACARGfree, 
                                &SACARGcopy, 
                                &SAC4SNetDataSerialise, 
-                               NULL,
+                               &SAC4SNetDataDeserialise,
                                NULL,
                                NULL);  
 }
@@ -106,13 +147,105 @@ void SAC4SNetInit( int id)
 
 static int SAC4SNetDataSerialise( FILE *file, void *ptr)
 {
-  SACarg *arg = (SACarg*)ptr;
-  
-  fprintf( file, "%d", SACARGgetBasetype( arg));
+  int i, dim;
+  SACarg *ret, *arg = (SACarg*)ptr;
+
+  if( arg != NULL) { 
+
+    dim = SACARGgetDim( arg);
+    fprintf( file, "\n%s %d "
+                   "%d ", IDSTRINGPRE, SACARGgetBasetype( arg), dim);
+    for( i=0; i<dim; i++) {
+      fprintf( file, "%d ",SACARGgetShape( arg, i));
+    }
+    fprintf(file, " %s\n", IDSTRINGSUF);
+
+    switch( SACARGgetBasetype( arg)) {
+      case SACint: 
+        SAC4SNetFibreIO__PrintIntArray2( 
+            &ret,
+            SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
+            SACARGnewReference( arg));
+      break;
+      case SACflt: 
+        SAC4SNetFibreIO__PrintFloatArray2( 
+            &ret,
+            SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
+            SACARGnewReference( arg));
+      break;
+      case SACdbl: 
+        SAC4SNetFibreIO__PrintDoubleArray2( 
+            &ret,
+            SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
+            SACARGnewReference( arg));
+      break;
+      default:
+        fprintf( file, "##UNSUPPORTED BASETYPE##");
+      break;
+    }
+
+  }
 
   return( 0);
 }
 
+static void *SAC4SNetDataDeserialise( FILE *file)
+{
+  int i, res;
+  char buf[128];
+  int basetype, dim, *shape;
+  SACarg *scanres, *sac_shp, *dummy;
+
+  fscanf( file, "%s", buf); 
+
+  res = strcmp( IDSTRINGPRE, buf);
+  if( res == 0) {
+    fscanf( file, "%d%d", &basetype, &dim);
+    shape = SNetMemAlloc( dim * sizeof( int));
+    for( i=0; i<dim; i++) {
+      fscanf( file, "%d", &shape[i]);
+    }
+    fscanf( file, "%s", buf);
+    res = strcmp( IDSTRINGSUF, buf);
+    if( res == 0) {
+      sac_shp = SACARGconvertFromIntPointerVect( shape, 1, &dim);
+      switch( basetype) {
+        case SACint:
+          SAC4SNetFibreIO__ScanIntArray2( 
+              &dummy, 
+              &scanres, 
+              SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
+              sac_shp);
+          break;
+        case SACdbl:
+          SAC4SNetFibreIO__ScanDoubleArray2( 
+              &dummy, 
+              &scanres, 
+              SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
+              sac_shp);
+          break;
+        case SACflt:
+          SAC4SNetFibreIO__ScanFloatArray2( 
+              &dummy, 
+              &scanres, 
+              SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
+              sac_shp);
+          break;
+        default: /* unsupported base type */
+            scanres = NULL;
+          break;
+      }
+    }
+    else { /* Illegal Header Suffix */
+      scanres = NULL;
+    }
+  } 
+  else { /* Illegal Header Prefix*/
+    scanres = NULL;
+  }
+
+  return( (void*)scanres);
+}
 
 /******************************************************************************/
 
@@ -168,6 +301,7 @@ sac4snet_container_t *SAC4SNet_containerSetBTag( sac4snet_container_t *c, int va
 
   return( c);
 }
+
 
 
 
