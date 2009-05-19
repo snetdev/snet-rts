@@ -24,22 +24,10 @@ typedef enum {
 } snet_handledescriptor_t;
 
 typedef enum {
-#ifdef FILTER_VERSION_2
 	snet_tag,
 	snet_btag,
 	snet_field,
 	create_record
-#else
-	FLT_strip_tag,
-	FLT_strip_field,
-	FLT_add_tag,		
-	FLT_set_tag,	
-	FLT_rename_tag,
-	FLT_rename_field,
-	FLT_copy_field,
-	FLT_use_tag,
-	FLT_use_field
-#endif
 } snet_filter_opcode_t;
 
 
@@ -111,16 +99,12 @@ extern snet_typeencoding_list_t *SNetHndGetTypeList( snet_handle_t *hnd);
 
 extern snet_filter_instruction_set_t **SNetHndGetFilterInstructions( snet_handle_t *hndl);
 
-#ifdef FILTER_VERSION_2
 extern snet_filter_instruction_set_list_t
 **SNetHndGetFilterInstructionSetLists( snet_handle_t *hnd);	
 
 extern snet_typeencoding_list_t
 *SNetHndGetOutTypeList( snet_handle_t *hnd);
 
-#else
-extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd);
-#endif
 
 extern snet_expr_list_t 
 *SNetHndGetGuardList( snet_handle_t *hnd);

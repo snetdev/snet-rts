@@ -13,7 +13,6 @@ extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList( i
 
 extern void SNetDestroyFilterInstructionSetList( snet_filter_instruction_set_list_t *list);
 
-#ifdef FILTER_VERSION_2
 extern snet_tl_stream_t *SNetFilter( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
 				     snet_info_t *info, 
@@ -30,17 +29,6 @@ extern snet_tl_stream_t *SNetTranslate( snet_tl_stream_t *inbuf,
 #endif /* DISTRIBUTED_SNET */
 					snet_typeencoding_t *in_type,
 					snet_expr_list_t *guards, ... );
-#else
-
-extern snet_tl_stream_t *SNetFilter( snet_tl_stream_t *inbuf,
-				     snet_typeencoding_t *in_type,
-				     snet_typeencoding_list_t *out_types,
-				     snet_expr_list_t *guards,  ...);
-
-extern snet_tl_stream_t *SNetTranslate( snet_tl_stream_t *inbuf,
-					snet_typeencoding_t *in_type,
-					snet_typeencoding_t *out_type, ...);
-#endif
 
 extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET

@@ -1,7 +1,7 @@
 include $(SNETBASE)/src/makefiles/config.mkf
 
 CC        = gcc
-CCFLAGS  = -Wall -g -DFILTER_VERSION_2
+CCFLAGS  = -Wall -g 
 SNETC     = snetc
 SNETCFLAGS= -b7
 AR        = ar

@@ -7,12 +7,12 @@
 #define SNETENTITIES_H
 
 
-#include <buffer.h>
-#include <handle.h>
-#include <typeencode.h>
-#include <constants.h>
-#include <expression.h>
-#include <stdio.h>
+#include "buffer.h"
+#include "handle.h"
+#include "typeencode.h"
+#include "constants.h"
+#include "expression.h"
+#include "stdio.h"
 
 #include "alias.h"
 #include "filter.h"

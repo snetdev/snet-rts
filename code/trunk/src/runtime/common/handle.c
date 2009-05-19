@@ -94,7 +94,6 @@ typedef struct {
 } split_handle_t;
 
 
-#ifdef FILTER_VERSION_2
 typedef struct {
   snet_tl_stream_t *input;
   snet_tl_stream_t *output_a;
@@ -103,17 +102,6 @@ typedef struct {
   snet_expr_list_t *guard_list;
   snet_filter_instruction_set_list_t **instr_lists;
 } filter_handle_t;
-#else
-typedef struct {
-  snet_tl_stream_t *input;
-  snet_tl_stream_t *output_a;
-  snet_typeencoding_t *in_type;
-  snet_typeencoding_t *out_type;
-  snet_filter_instruction_set_t **instr_set;
-  snet_expr_list_t *guard_list;
-
-} filter_handle_t;
-#endif
 
 typedef union {
   box_handle_t *box_hnd;
@@ -237,7 +225,6 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
             break;
     }
 
-#ifdef FILTER_VERSION_2
     case HND_filter:
       HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
       FILTER_HND( input) = va_arg( args, snet_tl_stream_t*);
@@ -247,18 +234,6 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
       FILTER_HND( guard_list) = va_arg( args, snet_expr_list_t*);
       FILTER_HND( instr_lists) = va_arg( args, snet_filter_instruction_set_list_t**);
       break;
-    #else
-    case HND_filter: {
-
-      HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
-      FILTER_HND( input) = va_arg( args, snet_tl_stream_t*);
-      FILTER_HND( output_a) = va_arg( args, snet_tl_stream_t*);
-      FILTER_HND( in_type) = va_arg( args, snet_typeencoding_t*);
-      FILTER_HND( out_type) = va_arg( args, snet_typeencoding_t*);
-      FILTER_HND( instr_set) = va_arg( args, snet_filter_instruction_set_t**);
-      break;
-    }
-    #endif
     default: {
       SNetUtilDebugFatal("Cannot create requested handle type");
     }
@@ -338,7 +313,6 @@ extern void SNetHndDestroy( snet_handle_t *hnd) {
     break;
     case HND_filter: 
       SNetDestroyTypeEncoding( FILTER_HND( in_type));
-#ifdef FILTER_VERSION_2
       if(FILTER_HND( out_types) != NULL) {
 	SNetTencDestroyTypeEncodingList( FILTER_HND( out_types));
       }
@@ -350,7 +324,6 @@ extern void SNetHndDestroy( snet_handle_t *hnd) {
 	
 	SNetMemFree( FILTER_HND(instr_lists));
       }
-#endif
       SNetEdestroyList( FILTER_HND(guard_list));
       SNetMemFree( HANDLE( filter_hnd)); 
     break;
@@ -589,7 +562,6 @@ extern int SNetHndGetTagB( snet_handle_t *hnd) {
 }
 
 
-#ifdef FILTER_VERSION_2
 extern snet_filter_instruction_set_list_t
 **SNetHndGetFilterInstructionSetLists( snet_handle_t *hnd)
 {
@@ -619,35 +591,6 @@ extern snet_typeencoding_list_t *SNetHndGetOutTypeList( snet_handle_t *hnd)
   return( types);
 }
 
-#else
-extern snet_filter_instruction_set_t**
-SNetHndGetFilterInstructions( snet_handle_t *hnd)
-{
-
-  snet_filter_instruction_set_t **instr;
-
-  switch( hnd->descr) {
-    case HND_filter:
-      instr = FILTER_HND( instr_set);
-      break;
-    default: WrongHandleType();
-  }
-
-  return( instr);
-}
-extern snet_typeencoding_t *SNetHndGetOutType( snet_handle_t *hnd) {
-  snet_typeencoding_t *type;
-
-  switch( hnd->descr) {
-    case HND_filter:
-      type = FILTER_HND( out_type);
-      break;
-   default: WrongHandleType();
-  }
-
-  return( type);
-}
-#endif
 
 extern snet_expr_list_t *SNetHndGetGuardList( snet_handle_t *hnd)
 {

@@ -58,7 +58,7 @@ static void SNet__init(snet_handle_t *hnd)
   SNetCall__init(hnd);
 }
 
-static snet_tl_stream_t *SNet__minic___P1_dec(snet_tl_stream_t *in_buf)
+static snet_tl_stream_t *SNet__minic___SL___P1_dec(snet_tl_stream_t *in_buf)
 {
   snet_tl_stream_t *out_buf = NULL;
   snet_typeencoding_t *out_type = NULL;
@@ -82,7 +82,7 @@ static snet_tl_stream_t *SNet__minic___P1_dec(snet_tl_stream_t *in_buf)
   return (out_buf);
 }
 
-static snet_tl_stream_t *SNet__minic___P2_init(snet_tl_stream_t *in_buf)
+static snet_tl_stream_t *SNet__minic___SL___P2_init(snet_tl_stream_t *in_buf)
 {
   snet_tl_stream_t *out_buf = NULL;
   snet_typeencoding_t *out_type = NULL;
@@ -106,7 +106,7 @@ static snet_tl_stream_t *SNet__minic___P2_init(snet_tl_stream_t *in_buf)
   return (out_buf);
 }
 
-snet_tl_stream_t *SNet__minic___minic(snet_tl_stream_t *in_buf)
+static snet_tl_stream_t *SNet__minic___SL(snet_tl_stream_t *in_buf)
 {
   snet_tl_stream_t *out_buf = NULL;
 
@@ -118,8 +118,43 @@ snet_tl_stream_t *SNet__minic___minic(snet_tl_stream_t *in_buf)
                     SNetTencCreateVector(0), 
                     SNetTencCreateVector(0))), 
                 SNetTencTypeEncode(0)), 
-              &SNet__minic___P1_dec, 
-              &SNet__minic___P2_init);
+              &SNet__minic___SL___P1_dec, 
+              &SNet__minic___SL___P2_init);
+
+  return (out_buf);
+}
+
+static snet_tl_stream_t *SNet__minic___SR(snet_tl_stream_t *in_buf)
+{
+  snet_tl_stream_t *out_buf = NULL;
+
+  out_buf = SNetSync(in_buf, 
+              SNetTencTypeEncode(1, 
+                SNetTencVariantEncode(
+                  SNetTencCreateVector(2, F__minic__A, F__minic__X), 
+                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(0))), 
+              SNetTencTypeEncode(2, 
+                SNetTencVariantEncode(
+                  SNetTencCreateVector(1, F__minic__A), 
+                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(0)), 
+                SNetTencVariantEncode(
+                  SNetTencCreateVector(1, F__minic__X), 
+                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(0))), 
+              NULL);
+
+  return (out_buf);
+}
+
+snet_tl_stream_t *SNet__minic___minic(snet_tl_stream_t *in_buf)
+{
+  snet_tl_stream_t *out_buf = NULL;
+
+  out_buf = SNetSerial(in_buf, 
+              &SNet__minic___SL, 
+              &SNet__minic___SR);
 
   return (out_buf);
 }
