@@ -18,7 +18,6 @@
 char *snet_minic_labels[] = {
 	"E__minic__None",
 	"A",
-	"B",
 	"X"};
 
 char *snet_minic_interfaces[] = {
@@ -67,7 +66,7 @@ static snet_tl_stream_t *SNet__minic___P1_dec(snet_tl_stream_t *in_buf)
 
   out_type = SNetTencTypeEncode(1, 
               SNetTencVariantEncode(
-                SNetTencCreateVector(1, F__minic__B), 
+                SNetTencCreateVector(1, F__minic__A), 
                 SNetTencCreateVector(0), 
                 SNetTencCreateVector(0)));
 

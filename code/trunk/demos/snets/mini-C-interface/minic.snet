@@ -10,7 +10,7 @@
 
 net minic 
 {
-  box dec((A) -> (B));
+  box dec((A) -> (A));
   box init(-> (X));
-} connect dec | init;
+} connect (dec | init);
 

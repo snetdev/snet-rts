@@ -18,10 +18,9 @@
 
 #define E__minic__NONE 0
 #define F__minic__A 1
-#define F__minic__B 2
-#define F__minic__X 3
+#define F__minic__X 2
 
-#define SNET__minic__NUMBER_OF_LABELS 4
+#define SNET__minic__NUMBER_OF_LABELS 3
 
 
 #define I__minic__C4SNet 0
