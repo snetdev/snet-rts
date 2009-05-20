@@ -42,8 +42,6 @@ struct handle {
     snet_record_t       *out_rec;
     snet_conslst_node_t *cons_node;
 
-    unsigned int         out_recs_cnt;
-
 }; // struct handle
 
 //struct worker_handle {
@@ -70,9 +68,8 @@ void SNetHndInit(
 
     SNetBaseTypeSetPlaces(&hnd->base, &owner_plc, NULL, NULL);
 
-    hnd->out_rec      = NULL;
-    hnd->cons_node    = cons_node;
-    hnd->out_recs_cnt = 0;
+    hnd->out_rec   = NULL;
+    hnd->cons_node = cons_node;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -105,10 +102,13 @@ SNetHndGetRecord(const snet_handle_t *hnd)
 {
     assert(hnd != NULL); 
 
-    hnd = (snet_handle_t *) SNetUnmaskPointer(hnd);
+    snet_handle_t *hnd_tmp = 
+        (snet_handle_t *) SNetUnmaskPointer(hnd);
 
-    return SNetConsLstNodeGetRecord(hnd->cons_node);
+    return SNetConsLstNodeGetRecord(hnd_tmp->cons_node);
 }
+
+/*----------------------------------------------------------------------------*/
 
 snet_conslst_node_t*
 SNetHndGetConsNode(const snet_handle_t *hnd)
@@ -127,12 +127,6 @@ SNetHndGetConsNodeRecord(const snet_handle_t *hnd)
 {
     assert(hnd != NULL); 
     return SNetConsLstNodeGetRecord(hnd->cons_node);
-}
-
-unsigned int
-SNetHndGetOutRecordsCount(const snet_handle_t *hnd)
-{
-    assert(hnd != NULL); return hnd->out_recs_cnt;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -180,9 +174,7 @@ SNetHndCreateVEncForOutRecord(
 void SNetHndSetOutRecord(snet_handle_t *hnd, snet_record_t *rec)
 {
     assert(hnd != NULL);
-
-    hnd->out_rec      = rec;
-    hnd->out_recs_cnt = (rec == NULL ? 0 : hnd->out_recs_cnt + 1);
+    hnd->out_rec = rec;
 }
 
 void SNetHndSetConsNode(snet_handle_t *hnd, snet_conslst_node_t *cnode)

@@ -91,8 +91,7 @@ output_waitting_records(
 
 static void
 prepare_handle_for_moving(
-    snet_handle_t *hnd,
-    bool new_handle, snet_record_t *fli_rec);
+    snet_handle_t *hnd, snet_handle_t *in_rec_hnd);
 
 static thread void advance_handle(snet_handle_t *hnd);
 
@@ -260,7 +259,9 @@ static bool gnode_hnd_box(snet_gnode_t *gnode, snet_handle_t *hnd)
 
         // Because no fields are forwarded anywhere the 
         // record's dispose mode must be set to ALL in order
-        // to cleanup everything.
+        // to cleanup everything (unless it has been specified
+        // that the runtime should not interfere with the
+        // record's cleanup).
         if (SNetRecGetDataDisposeMode(rec) != REC_DATA_DISPOSE_MODE_NONE) {
             SNetRecSetDataDisposeMode(rec, REC_DATA_DISPOSE_MODE_ALL);
         }
@@ -279,10 +280,7 @@ static bool gnode_hnd_box(snet_gnode_t *gnode, snet_handle_t *hnd)
     // will keep running and handling the last emitted
     // record. For the others (if any) new GW instances have
     // already been created by "SNetOut()".    
-    if (SNetHndGetOutRecordsCount(hnd) > 1)
-        prepare_handle_for_moving(hnd, false, NULL);
-    else
-        prepare_handle_for_moving(hnd, false, SNetHndGetConsNodeRecord(hnd));
+    prepare_handle_for_moving(hnd, hnd);
 
     return true;
 }
@@ -576,8 +574,6 @@ try_synccell_output(
         return false;
     }
 
-    //printf("SYNC-OUT CHECK!!!\n");
-
     if (hnd != NULL) {
         snet_ginx_t *infimum = 
             SNetConsLstNodeGetMinGInx(SNetHndGetConsNode(hnd));
@@ -606,8 +602,6 @@ try_synccell_output(
         const char *infimum_str = SNetGInxToString(infimum, NULL);
         const char *state_inx_str = SNetGInxToString(state->inx, NULL);
 
-        //printf("BBBBBBBBBBB::%u => %s  :: %s\n", i, infimum_str, state_inx_str);
-
         if (state->mhnds[i] == hnd) {
             continue;
         }
@@ -632,10 +626,8 @@ try_synccell_output(
         }
     }
 
-    if (can_output) {
-        //printf("SYNC-CELL OUT!!!!\n");
+    if (can_output)
         synccell_output(gnode, state, hnd, ccnode);
-    }
 
     return can_output;
 }
@@ -1499,7 +1491,7 @@ conslst_push_back_th(snet_conslst_t *lst, snet_conslst_node_t *n)
 }
 
 static thread void 
-conslst_insert_before_th0(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
+conslst_insert_before0(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
 {
     snet_conslst_node_t *n2_prev = SNetConsLstNodeGetPrevious(n2);
 
@@ -1510,7 +1502,7 @@ conslst_insert_before_th0(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
 }
 
 static thread void 
-conslst_insert_before_th(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
+conslst_insert_before1(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
 {
     snet_conslst_node_t *n2_prev = SNetConsLstNodeGetPrevious(n2);
 
@@ -1534,7 +1526,7 @@ conslst_insert_before_th(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
     create (
         fid;
         n2_prev_mutex_plc;
-        0; 0; 1; 1;;) conslst_insert_before_th0(n1, n2);
+        0; 0; 1; 1;;) conslst_insert_before0(n1, n2);
 
     sync (fid);
 }
@@ -1585,7 +1577,7 @@ conslst_insert_before(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
     create (
         fid;
         n2_mutex_plc;
-        0; 0; 1; 1;;) conslst_insert_before_th(n1, n2);
+        0; 0; 1; 1;;) conslst_insert_before1(n1, n2);
 
     sync (fid);
 }
@@ -1772,13 +1764,6 @@ static thread void conslst_pop_ex(snet_conslst_t *lst)
 static thread void conslst_pop(
     snet_conslst_t *lst, shared snet_conslst_node_t *n)
 {
-    //const char *ginx_str = 
-    //    SNetGInxToString(
-    //        SNetConsLstNodeGetOrdGInx(n), NULL);
-
-    //printf("Popped CONS-NODE(%s)\n", ginx_str);
-    //SNetMemFree((void *) ginx_str);
-
     family fid;
 
     place  n_mutex_plc = 
@@ -1866,10 +1851,8 @@ output_waitting_records(
 
         sync(fid);
 
-        if (prop_infimum) {
-            //printf("PROPAGATING INFIMUM!!!!\n");
+        if (prop_infimum)
             propagate_infimum(0, n, synccell_gnode);
-        }
 
         // Remove the node from the list if
         // nessesary.
@@ -1920,30 +1903,41 @@ output_waitting_records(
 /*----------------------------------------------------------------------------*/
 
 static void
-prepare_handle_for_moving(
-    snet_handle_t *hnd, bool new_handle, snet_record_t *fli_rec)
+prepare_handle_for_moving(snet_handle_t *hnd, snet_handle_t *in_rec_hnd)
 {
-    assert(SNetHndGetOutRecord(hnd) != NULL);
+    snet_record_t *out_rec = SNetHndGetOutRecord(hnd);
 
-    if (fli_rec != NULL) {
-        // We need to handle flow inheritance. That means merge uncosumed
-        // fields and tags from the input record to the output.
-        // 
+    snet_record_t *in_rec = (
+        in_rec_hnd == NULL ? 
+        NULL : SNetHndGetConsNodeRecord(in_rec_hnd));
+   
+    assert(out_rec != NULL);
+
+    // We need to handle flow inheritance. That means merge uncosumed
+    // fields and tags from the input record to the output. There are
+    // however 2 exceptions. These are:
+    //      1.There is no input record (handles for new records in
+    //        the input of the network point to cons-nodes that are not
+    //        associated with any record yet; thus SNetHndGetConsNodeRecord()
+    //        will return NULL).
+    //
+    //      2. The outtput record is a "control" record in which case 
+    //         flow inheritance does not apply.
+    if (in_rec != NULL && 
+        SNetRecGetDescription(in_rec) != REC_DESCR_CTRL) {
+
         // The SNetRecCopyItems() function does everything :)!!!.
-        assert(SNetRecGetDescription(fli_rec) != REC_DESCR_CTRL);
-
-        SNetRecCopyItems(
-            fli_rec, 
-            SNetHndGetOutRecord(hnd), 
-            REC_ITEMS_COPY_UNCONSUMED | REC_ITEMS_COPY_MOVE, NULL);
+        //SNetRecCopyItems(
+        //    in_rec, 
+        //    out_rec,
+        //    REC_ITEMS_COPY_UNCONSUMED | REC_ITEMS_COPY_MOVE, NULL);
     }
 
-    snet_conslst_node_t *cnode = SNetHndGetConsNode(hnd);
-
-    if (!new_handle) {
-        // If it is not a new handle then the function is called
-        // after a box emited its last record (or its only record
-        // if its multiplicity is 1) in which case the input to
+    if (hnd == in_rec_hnd && in_rec != NULL) {
+        // If the currently processed handle is the same as the
+        // one that provides the input record then the function 
+        // is called after a box emited its last record (or its only
+        // record if its multiplicity is 1) in which case the input to
         // record must be destroyed.
         //
         // The handling of flow-inheritance above has made sure that
@@ -1955,13 +1949,13 @@ prepare_handle_for_moving(
         // wants to do it explicitly; thus we do not interfere; see
         // the copy and destroy functions for records in the file
         // "record.utc" for more details).
-        SNetRecDestroy(SNetConsLstNodeGetRecord(cnode));
+        SNetRecDestroy(in_rec);
     }
 
     // The handle's out record must now become the
     // cons-node's current record and the handle to be
     // reset (to have a NULL out record).
-    SNetConsLstNodeSetRecord(cnode, SNetHndGetOutRecord(hnd));
+    SNetConsLstNodeSetRecord(SNetHndGetConsNode(hnd), out_rec);
     SNetHndSetOutRecord(hnd, NULL);
 }
 
@@ -2063,7 +2057,7 @@ thread void SNetGW(snet_handle_t *hnd, snet_record_t *rec)
     //
     // 2. hnd != NULL && rec != NULL
     //    New record due to box having multiplicity greater than 1. New
-    //    cons-node required to be inserted after the node pointed by
+    //    cons-node required to be inserted before the node pointed by
     //    "hnd".
     assert(hnd != NULL);
     assert(SNetHndGetConsNodeRecord(hnd) != NULL);
@@ -2077,16 +2071,7 @@ thread void SNetGW(snet_handle_t *hnd, snet_record_t *rec)
         rec == NULL ?
         hnd : conslst_insert_node(snetd, hnd, rec));
 
-    if (SNetHndGetOutRecordsCount(hnd) == 2) {
-        prepare_handle_for_moving(
-            hnd_local,
-            (hnd != hnd_local),
-            SNetHndGetConsNodeRecord(hnd));
-
-    } else { 
-        prepare_handle_for_moving(
-            hnd_local, (hnd != hnd_local), NULL);
-    }
+    prepare_handle_for_moving(hnd_local, hnd);
 
     create<nosync> (fid;; 0; 0; 1; 1;;) advance_handle(hnd_local);
 }
@@ -2101,7 +2086,7 @@ thread void SNetGWInitial(snet_domain_t *snetd, snet_record_t *rec)
     snet_handle_t *hnd = 
         conslst_insert_node(snetd, NULL, rec);
 
-    prepare_handle_for_moving(hnd, true, NULL);
+    prepare_handle_for_moving(hnd, NULL);
 
     create<nosync> (fid;; 0; 0; 1; 1;;) advance_handle(hnd);
 }

@@ -947,7 +947,7 @@ SNetTencBoxSignEncode(snet_typeencoding_t *tenc, ...)
 
     snet_box_sign_t *sign = 
         (snet_box_sign_t *) 
-            SNetMemAlloc(sizeof(snet_box_sign_t *));
+            SNetMemAlloc(sizeof(snet_box_sign_t));
 
     SNetTencBoxSignInit(sign, tenc);
 
@@ -975,7 +975,7 @@ SNetTencBoxSignCreateCopy(snet_box_sign_t *src_sign)
 
     snet_box_sign_t *sign = 
         (snet_box_sign_t *) 
-            SNetMemAlloc(sizeof(snet_box_sign_t *));
+            SNetMemAlloc(sizeof(snet_box_sign_t));
 
     SNetTencBoxSignInitCopy(sign, src_sign);
 

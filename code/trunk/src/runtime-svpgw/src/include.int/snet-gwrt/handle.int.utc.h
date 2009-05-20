@@ -65,9 +65,6 @@ SNetHndGetOutRecord(const snet_handle_t *hnd);
 extern snet_record_t* 
 SNetHndGetConsNodeRecord(const snet_handle_t *hnd);
 
-extern unsigned int
-SNetHndGetOutRecordsCount(const snet_handle_t *hnd);
-
 /*---*/
 
 extern snet_variantencoding_t*
