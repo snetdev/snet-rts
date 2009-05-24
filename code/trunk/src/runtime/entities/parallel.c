@@ -13,14 +13,14 @@
  * though: A trigger record (REC_trigger_initialiser) followed by a termination
  * record is sent to each initialiser box. The trigger record activates the 
  * initialiser box once, the termination record removes the initialiser from 
- * the network. The implementation ensures that a * dispatcher removes itself
+ * the network. The implementation ensures that a dispatcher removes itself
  * from the network if none or only one branch remain  after serving 
  * initialisation purposes:
- * If all branches of the dispatcher are initialiser boxes, the dispatcher
- * exits after sending the trigger records. If there is one ordinary branch 
- * left, the dispatcher sends on the inbound stream of the branch (REC_sync) 
- * and exits afterwards. If more than one ordinary boxes are left, the 
- * dispatcher starts its main event loop as usual.
+ * If all branches of the dispatcher are initialiser boxes, the dispatcher 
+ * exits after sending the trigger  and termination records. If there is one
+ * ordinary branch  left, the dispatcher sends on its own inbound stream to
+ * this branch  (REC_sync)  and exits afterwards. If more than one ordinary
+ * boxes are left,  the dispatcher starts its main event loop as usual.
  * 
  *****************************************************************************/
 

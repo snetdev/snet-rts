@@ -1,3 +1,31 @@
+/** <!--********************************************************************-->
+ *
+ * $Id$
+ *
+ * file syncro.c
+ * 
+ * This implemets the synchrocell component [...] TODO: write this...
+ *
+ * Flow inheritance at a synchrocell is (currently) defined in such a way
+ * that only the record that matches the first pattern flow-inherits all
+ * its constituents. The order of arrival is irrelevant. Previously, the
+ * record that arrived last, i.e. the record that matched the last remaining
+ * unmatched record, was to keep all its fields and tags. 
+ *
+ * The necessary changes to implement the 'new' behaviour is minimal, as
+ * construction of the resulting outbound record is implemented in a separate
+ * merge function (see above ;)).
+ * Where previously the last record was passed as argument to the merge 
+ * function, now the record which is stored at first position in the record
+ * storage is passed to the merge function. As excess fields and tags, i.e.
+ * all those labels that are not present in the synchro pattern, are not 
+ * stripped from records before they go into storage, the above is sufficient 
+ * to implement the desired behaviour.
+ * 
+ *****************************************************************************/
+
+
+
 #include "syncro.h"
 
 #include "bool.h"
@@ -71,8 +99,10 @@ struct sync_state {
 
 #ifdef SYNC_FI_VARIANT_2
 // Destroys storage including all records
-static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patterns, 
-						            snet_typeencoding_t *outtype, snet_record_t *rec) {
+static snet_record_t *Merge( snet_record_t **storage, 
+                             snet_typeencoding_t *patterns, 
+						                 snet_typeencoding_t *outtype,
+                             snet_record_t *rec) {
 
   int i,j, name, *names;
   snet_variantencoding_t *variant;
@@ -83,7 +113,7 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
     for( j=0; j<SNetTencGetNumFields( variant); j++) {
       name = names[j];
       if( SNetRecAddField( rec, name)) {
-	SNetRecMoveFieldToRec(storage[i], name, rec, name);
+      	SNetRecMoveFieldToRec(storage[i], name, rec, name);
       }
     }
     names = SNetTencGetTagNames( variant);
@@ -105,8 +135,9 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
 }
 #endif
 #ifdef SYNC_FI_VARIANT_1
-static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patterns, 
-                        snet_typeencoding_t *outtype) {
+static snet_record_t *Merge( snet_record_t **storage, 
+                             snet_typeencoding_t *patterns, 
+                             snet_typeencoding_t *outtype) {
 
   int i,j;
   snet_record_t *outrec;
@@ -122,12 +153,16 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
       // set value in outrec of field (referenced by its new name) to the
       // according value of the original record (old name)
       if( storage[i] != NULL) {
-	SNetRecMoveFieldToRec(storage[i], SNetTencGetFieldNames( pat)[j],
-			      outrec, SNetTencGetFieldNames( pat)[j]);
+        SNetRecMoveFieldToRec( storage[i], 
+                               SNetTencGetFieldNames( pat)[j],
+                               outrec, 
+                               SNetTencGetFieldNames( pat)[j]);
       }
       for( j=0; j<SNetTencGetNumTags( pat); j++) {
-        SNetRecSetTag( outrec, SNetTencGetTagNames( pat)[j], 
-		       SNetRecTakeTag( storage[i], SNetTencGetTagNames( pat)[j]));
+        SNetRecSetTag( outrec, 
+                       SNetTencGetTagNames( pat)[j], 
+                       SNetRecTakeTag( storage[i], 
+                         SNetTencGetTagNames( pat)[j]));
       }
     }
   }
@@ -154,7 +189,7 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
       num = SNetRecGetNumFields( storage[i]);
       for( j=0; j<num; j++) {
         if( SNetRecAddField( outrec, names[j])) {
-	  SNetRecMoveFieldToRec(storage[i], name[j], outrec, names[j]);
+          SNetRecMoveFieldToRec(storage[i], name[j], outrec, names[j]);
         }
       }
       SNetMemFree( names);
@@ -168,7 +203,7 @@ static snet_record_t *Merge( snet_record_t **storage, snet_typeencoding_t *patte
 
 static bool
 MatchPattern( snet_record_t *rec,
-              snet_variantencoding_t *pat,
+              snet_ variantencoding_t *pat,
               snet_expr_t *guard) {
 
   int i,j, *names;
@@ -195,10 +230,9 @@ MatchPattern( snet_record_t *rec,
 
 static void *SyncBoxThread( void *hndl) {
   
-  int i;
+  int i; 
   int match_cnt=0, new_matches=0;
   int num_patterns;
-  bool was_match;
   bool terminate = false;
   snet_handle_t *hnd = (snet_handle_t*) hndl;
   snet_tl_stream_t *output;
@@ -230,17 +264,7 @@ static void *SyncBoxThread( void *hndl) {
   match_cnt = 0;
   
   while( !( terminate)) {
-#ifdef SYNCRO_DEBUG
-    SNetUtilDebugNotice("SYNCRO %p: reading %p",
-                        output,
-                        SNetHndGetInput(hnd));
-#endif
     rec = SNetTlRead( SNetHndGetInput( hnd));
-#ifdef SYNCRO_DEBUG
-    SNetUtilDebugNotice("SYNCRO %p: got record %p", 
-			output,
-			rec);
-#endif
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
         new_matches = 0;
@@ -250,59 +274,37 @@ static void *SyncBoxThread( void *hndl) {
               (MatchPattern(rec, SNetTencGetVariant(patterns, i+1),
                         SNetEgetExpr( guards, i)))) {
             storage[i] = rec;
-            was_match = true;
             new_matches += 1;
           }
         }
  
-#ifdef SYNCRO_DEBUG
-        SNetUtilDebugNotice("SYNCRO %p: record %p matched %d patterns", 
-                            output,
-                            rec,
-                            new_matches);
-#endif
-
         if( new_matches == 0) {
-#ifdef SYNCRO_DEBUG
-            SNetUtilDebugNotice("SYNCRO %p: Record didnt match anything,"
-                                " fowarding it", output);
-#endif
           SNetTlWrite(output, rec);
         }
         else {
-#ifdef SYNCRO_DEBUG
-          SNetUtilDebugNotice("SYNCRO %p: storing record", 
-                              output);
-#endif
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
 #ifdef SYNC_FI_VARIANT_1
             temp_record = Merge( storage, patterns, outtype);
-	    SNetRecSetInterfaceId( temp_record, SNetRecGetInterfaceId( rec));
-	    SNetRecSetDataMode( temp_record, SNetRecGetDataMode( rec));
+            SNetRecSetInterfaceId( temp_record, SNetRecGetInterfaceId( rec));
+            SNetRecSetDataMode( temp_record, SNetRecGetDataMode( rec));
 #endif
 #ifdef SYNC_FI_VARIANT_2
-	    temp_record =  Merge( storage, patterns, outtype, rec);
+            temp_record =  Merge( storage, 
+                                  patterns, 
+                                  outtype, 
+                                  storage[0]);
 #endif
 
-#ifdef SYNCRO_DEBUG
-	    SNetUtilDebugNotice("SYNCRO %p: synccell synched => %p",
-				output,
-                                  temp_record);
-#endif
             SNetTlWrite(output, temp_record);
             /* current_state->terminated = true; */
             SNetTlWrite(output, SNetRecCreate(REC_sync, 
                                               SNetHndGetInput(hnd)));
 
-	    SNetTlMarkObsolete(output);
+	          SNetTlMarkObsolete(output);
 
             terminate = true;
           }
-#ifdef SYNCRO_DEBUG
-          SNetUtilDebugNotice("SYNCRO %p: record processed", 
-                              output);
-#endif
         }
       break;
     case REC_sync:
@@ -311,10 +313,6 @@ static void *SyncBoxThread( void *hndl) {
 
       break;
       case REC_collect:
-#ifdef SYNCRO_DEBUG
-        SNetUtilDebugNotice("SYNCRO %p: Unhandled control record, destroying"
-                            " it\n\n", output);
-#endif
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
@@ -325,10 +323,6 @@ static void *SyncBoxThread( void *hndl) {
         break;
     case REC_terminate:
         /* SNetUtilTreeDestroy(states);*/
-#ifdef SYNCRO_DEBUG
-      SNetUtilDebugNotice("SYNCRO %p: got terminate record", 
-                          output);
-#endif
         /* check if all storages are empty */
         /*
         current_storage = SNetUtilListFirst(to_free);
@@ -347,7 +341,7 @@ static void *SyncBoxThread( void *hndl) {
 
         terminate = true;
         SNetTlWrite( output, rec);
-	SNetTlMarkObsolete(output);
+      	SNetTlMarkObsolete(output);
       break;
 
       case REC_probe:
@@ -370,7 +364,7 @@ static void *SyncBoxThread( void *hndl) {
 
 extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
-				   snet_info_t *info, 
+				   sne t_info_t *info, 
 				   int location,
 #endif /* DISTRIBUTED_SNET */
 				   snet_typeencoding_t *outtype,
