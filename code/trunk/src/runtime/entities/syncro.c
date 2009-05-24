@@ -203,7 +203,7 @@ static snet_record_t *Merge( snet_record_t **storage,
 
 static bool
 MatchPattern( snet_record_t *rec,
-              snet_ variantencoding_t *pat,
+              snet_variantencoding_t *pat,
               snet_expr_t *guard) {
 
   int i,j, *names;
