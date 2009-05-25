@@ -25,6 +25,8 @@
 #include "label.h"
 #include "interface.h"
 #include "stream_layer.h"
+#include "bool.h"
+#include "debug.h"
 
 /* Thread to do the output */
 static pthread_t thread; 
@@ -86,7 +88,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 
 	  SNetMemFree(label);
 	}else{
-	  /* Error: unknown label! */
+	  SNetUtilDebugFatal("Unknown field %d at output!", i);
 	}
 	
       }
@@ -98,7 +100,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
 	  fprintf(hnd->file, "<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
 	}else{
-	  /* Error: unknown label! */
+	  SNetUtilDebugFatal("Unknown tag %d at output!", i);
 	}
 	
 	SNetMemFree(label);
@@ -111,21 +113,28 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
 	  fprintf(hnd->file, "<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
 	}else{
-	  /* Error: unknown label! */
+	  SNetUtilDebugFatal("Unknown binding tag %d at output!", i);
 	}
 	
 	SNetMemFree(label);
       }
       fprintf(hnd->file, "</record>");
       break;
-    case REC_sync: /* TODO: What additional data is needed? */
-      fprintf(hnd->file, "<record type=\"sync\" />");
-    case REC_collect: /* TODO: What additional data is needed? */
-      fprintf(hnd->file, "<record type=\"collect\" />");
-    case REC_sort_begin: /* TODO: What additional data is needed? */
-      fprintf(hnd->file, "<record type=\"sort_begin\" />");
-    case REC_sort_end: /* TODO: What additional data is needed? */
-      fprintf(hnd->file, "<record type=\"sort_end\" />");
+    case REC_sync: 
+      SNetUtilDebugFatal("REC_synch in output! This should not happen.");
+    case REC_collect: 
+      SNetUtilDebugFatal("Output of REC_collect not yet implemented!");
+      //fprintf(hnd->file, "<record type=\"collect\" />");
+    case REC_sort_begin: 
+      SNetUtilDebugFatal("Output of REC_sort_begin not yet implemented!");
+      //fprintf(hnd->file, "<record type=\"sort_begin\" />");
+    case REC_sort_end:
+      SNetUtilDebugFatal("Output of REC_sort_end not yet implemented!");
+      //fprintf(hnd->file, "<record type=\"sort_end\" />");
+    case REC_trigger_initialiser:
+      SNetUtilDebugFatal("Output of REC_trigger_initializer not yet implemented!");
+      //fprintf(hnd->file, "<record type=\"trigger_initialiser\" />");
+      break;
     case REC_terminate:
       fprintf(hnd->file, "<record type=\"terminate\" />");
       break;
@@ -140,18 +149,34 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 /* This is output function for the output thread */
 static void *doOutput(void* data)
 {
+  bool terminate = false;
   handle_t *hnd = (handle_t *)data;
-
   snet_record_t *rec = NULL;
+
   if(hnd->buffer != NULL){
-    while(1){
+    while(!terminate){
       rec = SNetTlRead(hnd->buffer);
       if(rec != NULL) {
-      	printRec(rec, hnd);
-	if(SNetRecGetDescriptor(rec) == REC_terminate){
-	  SNetRecDestroy(rec);
+	switch(SNetRecGetDescriptor(rec)) {
+	case REC_sync:
+	  hnd->buffer = SNetRecGetStream(rec);
+	  break;
+	case REC_data:
+	case REC_collect:
+	case REC_sort_begin:
+	case REC_sort_end:
+	case REC_probe:
+	case REC_trigger_initialiser:
+	  printRec(rec, hnd);
+	  break;
+	case REC_terminate:
+	  printRec(rec, hnd);
+	  terminate = true;
+	  break;
+	default:
 	  break;
 	}
+	
 	SNetRecDestroy(rec);
       }
     }

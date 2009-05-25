@@ -364,7 +364,7 @@ static void *SyncBoxThread( void *hndl) {
 
 extern snet_tl_stream_t *SNetSync( snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
-				   sne t_info_t *info, 
+				   snet_info_t *info, 
 				   int location,
 #endif /* DISTRIBUTED_SNET */
 				   snet_typeencoding_t *outtype,

@@ -28,14 +28,15 @@
 #include "snetentities.h"
 #include "stream_layer.h"
 #include "constants.h"
+#include "debug.h"
 
 /* SNet record types */
 #define SNET_REC_DATA       "data" 
-#define SNET_REC_SYNC       "sync"
 #define SNET_REC_COLLECT    "collect"
 #define SNET_REC_SORT_BEGIN "sort_begin"
 #define SNET_REC_SORT_END   "sort_end"
 #define SNET_REC_TERMINATE  "terminate"
+#define SNET_REC_TRIGGER    "trigger_initializer"
 
 #define LABEL     "label"
 #define INTERFACE "interface"
@@ -267,20 +268,18 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 			SNetRecSetDataMode(current.record, MODE_textual);
 		      }
 		    }
-
-		  }else if(strcmp(attr->value, SNET_REC_SYNC) == 0){
-		    // TODO: What additional data is needed?
-		    current.record = SNetRecCreate(REC_sync);
 		  }else if(strcmp(attr->value, SNET_REC_COLLECT) == 0){
-		    // TODO: What additional data is needed?
-		    current.record = SNetRecCreate(REC_collect);
+		    SNetUtilDebugFatal("Input of REC_collect not yet implemented!");
+		    //current.record = SNetRecCreate(REC_collect);
 		  }else if(strcmp(attr->value, SNET_REC_SORT_BEGIN) == 0){
-		    // TODO: What additional data is needed?
-		    current.record = SNetRecCreate(REC_sort_begin);
+		    SNetUtilDebugFatal("Input of REC_sort_begin not yet implemented!");
+		    //current.record = SNetRecCreate(REC_sort_begin);
 		  }else if(strcmp(attr->value, SNET_REC_SORT_END) == 0){
-		    // TODO: What additional data is needed?
-		    current.record = SNetRecCreate(REC_sort_end);
-		  
+		    SNetUtilDebugFatal("Input of REC_sort_end not yet implemented!");
+		    //current.record = SNetRecCreate(REC_sort_end);
+		  }else if(strcmp(attr->value, SNET_REC_TRIGGER) == 0){
+		    SNetUtilDebugFatal("Input of REC_trigger_initializer not yet implemented!");
+		    //current.record = SNetRecCreate(REC_trigger_initializer);
 		  }else if(strcmp(attr->value, SNET_REC_TERMINATE) == 0){
 		   
 		    current.record = SNetRecCreate(REC_terminate);
@@ -358,18 +357,18 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      SNetRecSetInterfaceId(current.record, INTERFACE_UNKNOWN);
 		    }
 
-		  }else if(strcmp(attr->value, SNET_REC_SYNC) == 0){
-		    // TODO: What additional data is needed?
-		    current.record = SNetRecCreate(REC_sync);
 		  }else if(strcmp(attr->value, SNET_REC_COLLECT) == 0){
-		    // TODO: What additional data is needed?
-		    current.record = SNetRecCreate(REC_collect);
+		    SNetUtilDebugFatal("Input of REC_collect not yet implemented!");
+		    //current.record = SNetRecCreate(REC_collect);
 		  }else if(strcmp(attr->value, SNET_REC_SORT_BEGIN) == 0){
-		    // TODO: What additional data is needed?
-		    current.record = SNetRecCreate(REC_sort_begin);
+		    SNetUtilDebugFatal("Input of REC_sort_begin not yet implemented!");
+		    //current.record = SNetRecCreate(REC_sort_begin);
 		  }else if(strcmp(attr->value, SNET_REC_SORT_END) == 0){
-		    // TODO: What additional data is needed?
-		    current.record = SNetRecCreate(REC_sort_end);
+		    SNetUtilDebugFatal("Input of REC_sort_end not yet implemented!");
+		    //current.record = SNetRecCreate(REC_sort_end);
+		  }else if(strcmp(attr->value, SNET_REC_TRIGGER) == 0){
+		    SNetUtilDebugFatal("Input of REC_trigger_initializer not yet implemented!");
+		    //current.record = SNetRecCreate(REC_trigger_initializer);
 		  }else if(strcmp(attr->value, SNET_REC_TERMINATE) == 0){
 		    /* New control record: terminate */
 		    current.record = SNetRecCreate(REC_terminate);
@@ -436,10 +435,8 @@ Entitys:  Field Entitys
 
 Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
           {
-	    /* Field without any data. 
-	     * TODO: This is an error! */
-	    yyerror("Field without data encountered!");
-	    deleteAttributes($2);
+	    /* Field without any data. */ 
+	    SNetUtilDebugFatal("Input: Field without data encountered!");
 	  }
         | FIELD_BEGIN Attributes TAG_END
           { /* MID-RULE: */
@@ -517,7 +514,8 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 
 	      while(getc(yyin) != '<');		  
 	      if(ungetc('<', yyin) == EOF){
-		/* TODO: This is an error. First char of the next tag is already consumed! */
+		/* This is an error. First char of the next tag is already consumed! */
+		SNetUtilDebugFatal("Input: Reading error.");
 	      }
 	    
 	      yyrestart(yyin);
@@ -526,7 +524,8 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	     
 	      while(getc(yyin) != '<');
 	      if(ungetc('<', yyin) == EOF){
-		/* TODO: This is an error. First char of the next tag is already consumed! */
+		/* This is an error. First char of the next tag is already consumed! */
+		SNetUtilDebugFatal("Input: Reading error.");
 	      }
 	    }
           }
@@ -539,9 +538,8 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 
 Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
           {
-	    /* Tag with no value. TODO: This is an error? Or short for 0? */
-	    yyerror("Tag without data encountered!");
-	    deleteAttributes($2);
+	    /* Tag with no value. */
+	    SNetUtilDebugFatal("Input: Tag without data encountered.");
 	  }
         | TAG_BEGIN Attributes TAG_END CHARDATA TAG_END_BEGIN TAG_END
           {
@@ -569,9 +567,8 @@ Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
 
 Btag:     BTAG_BEGIN Attributes STARTTAG_SHORTEND
           {
-	    /* Btag with no value. TODO: This should be an error? or short for 0?*/
-	    yyerror("Btag without data encountered!");
-	    deleteAttributes($2);
+	    /* Btag with no value. */
+	    SNetUtilDebugFatal("Input: Binding tag without a value encountered.");
 	  }
         | BTAG_BEGIN Attributes TAG_END CHARDATA BTAG_END_BEGIN TAG_END
           {
@@ -602,8 +599,8 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
 		/* Default namespace */
 		if(strcmp($1, "xmlns") == 0){
 		  if(strcmp($4, SNET_NAMESPACE) != 0) {
-		    // TODO: Wrong name space! Do we even want to check this?
-		    yyerror("Data in wrong namespace!");
+		    // Do we even want to check this?
+		    SNetUtilDebugFatal("Input: Reading error: Incorrect namespace.");
 		  }
 		  SNetMemFree($4);
 		  SNetMemFree($1);
@@ -621,8 +618,8 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
 		/* Default namespace */
 		if(strcmp($1, "xmlns") == 0){
 		  if(strcmp($4, SNET_NAMESPACE) != 0) {
-		    // TODO: Wrong name space! Do we even want to check this?
-		    yyerror("Data in wrong namespace!");
+		    // Do we even want to check this?
+		    SNetUtilDebugFatal("Input: Reading error: Incorrect namespace.");
 		  }
 		  SNetMemFree($4);
 		  SNetMemFree($1);
