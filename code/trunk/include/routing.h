@@ -9,7 +9,7 @@
 
 typedef struct snet_routing_context snet_routing_context_t;
 
-void SNetRoutingInit(snet_tl_stream_t *omngr);
+void SNetRoutingInit();
 
 void SNetRoutingDestroy();
 

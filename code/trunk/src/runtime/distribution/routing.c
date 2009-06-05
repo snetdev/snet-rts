@@ -22,7 +22,6 @@ typedef struct {
   pthread_mutex_t mutex;
   int self;
   int max_nodes;
-  snet_tl_stream_t *omngr;
   bool terminate;
   snet_tl_stream_t *global_in;
   snet_tl_stream_t *global_out;
@@ -45,7 +44,7 @@ static global_routing_info_t *r_info = NULL;
 
 /****************************** Global routing info ******************************/
 
-void SNetRoutingInit(snet_tl_stream_t *omngr)
+void SNetRoutingInit()
 {
   r_info = SNetMemAlloc(sizeof(global_routing_info_t));
 
@@ -56,8 +55,6 @@ void SNetRoutingInit(snet_tl_stream_t *omngr)
 
   MPI_Comm_rank( MPI_COMM_WORLD, &(r_info->self));
   MPI_Comm_size( MPI_COMM_WORLD, &(r_info->max_nodes));
-
-  r_info->omngr = omngr;
 
   r_info->global_out = NULL;
   r_info->global_in = NULL;

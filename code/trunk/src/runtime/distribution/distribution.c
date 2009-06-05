@@ -75,7 +75,6 @@ int DistributionInit(int argc, char *argv[])
 {
   int my_rank;
   int level;
-  snet_tl_stream_t *stream;
   int result;
 
   result = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level); 
@@ -100,7 +99,7 @@ int DistributionInit(int argc, char *argv[])
 
     return INIT_ERROR;
   }
- 
+
 #ifdef SNET_DEBUG_COUNTERS
   SNetDebugTimeGetTime(&execution_start_time);
 #endif /* SNET_DEBUG_COUNTERS  */
@@ -112,7 +111,7 @@ int DistributionInit(int argc, char *argv[])
 
   SNetMessageTypesInit();
 
-  SNetRoutingInit(stream);
+  SNetRoutingInit();
 
   SNetDataStorageInit();
 

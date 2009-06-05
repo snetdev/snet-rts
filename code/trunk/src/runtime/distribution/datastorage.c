@@ -240,9 +240,8 @@ static void *DataManagerThread(void *ptr)
 	} else {
 
 	  /* TODO: this could be non-blocking too */
-	  result = MPI_Send(&msg, 0, MPI_INT, status.MPI_SOURCE, 
+	  result = MPI_Send(msg, 0, MPI_INT, status.MPI_SOURCE, 
 			    msg->op_id, storage.comm);
-
 	}
 
 	break;	
@@ -284,9 +283,9 @@ static void *DataManagerThread(void *ptr)
 	      
 	      count = SNetGetPackFun(ops[bit].interface)(storage.comm,
 							 SNetRefGetData(ops[bit].ref), 
-							 &ops[bit].type, 
+							 &(ops[bit].type), 
 							 &data,
-							 &ops[bit].opt);
+							 &(ops[bit].opt));
 	      
 	      result = MPI_Isend(data, count, ops[bit].type, ops[bit].dest, 
 				 ops[bit].id, storage.comm, &requests[bit]);
@@ -350,9 +349,9 @@ static void *DataManagerThread(void *ptr)
 
 	count = SNetGetPackFun(ops[bit].interface)(storage.comm,
 						   SNetRefGetData(ops[bit].ref), 
-						   &ops[bit].type, 
+						   &(ops[bit].type), 
 						   &data,
-						   &ops[bit].opt);
+						   &(ops[bit].opt));
 
 	result = MPI_Isend(data, count, ops[bit].type, ops[bit].dest, 
 			   ops[bit].id, storage.comm, &requests[bit]);
@@ -595,12 +594,11 @@ static void DataManagerDestroy()
 
 void SNetDataStorageInit() 
 {
-  int block_lengths[2];
-  MPI_Aint displacements[2];
-  MPI_Datatype types[2];
+  int block_lengths[3];
+  MPI_Aint displacements[3];
+  MPI_Datatype types[3];
   MPI_Aint base;
   snet_msg_data_op_t msg;
-  int i;
   int result;
 
   result = MPI_Comm_dup(MPI_COMM_WORLD, &storage.comm);
@@ -627,25 +625,25 @@ void SNetDataStorageInit()
   /* MPI_Datatype for TAG_DATA_OP */
 
   types[0] = MPI_INT;
-  types[1] = SNET_ID_MPI_TYPE;
+  types[1] = MPI_INT;
+  types[2] = SNET_ID_MPI_TYPE;
  
-  block_lengths[0] = 2;
+  block_lengths[0] = 1;
   block_lengths[1] = 1;
+  block_lengths[2] = 1;
    
   MPI_Address(&msg.op, displacements);
-  MPI_Address(&msg.id, displacements + 1);
+  MPI_Address(&msg.op_id, displacements + 1);
+  MPI_Address(&msg.id, displacements + 2);
   
-  base = displacements[0];
-  
-  for(i = 0; i < 2; i++) {
-    displacements[i] -= base;
-  }
+  displacements[2] -= displacements[0];
+  displacements[1] -= displacements[0];
+  displacements[0] = 0;
 
-  MPI_Type_create_struct(2, block_lengths, displacements,
+  MPI_Type_create_struct(3, block_lengths, displacements,
 			 types, &storage.op_type);
 
   MPI_Type_commit(&storage.op_type);
-
 
 
   DataManagerInit();

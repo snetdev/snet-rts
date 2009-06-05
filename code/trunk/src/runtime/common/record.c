@@ -1071,8 +1071,13 @@ extern int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, i
 
   switch(REC_DESCR(rec)) {
   case REC_data:
-    /* Pack interface id and mode */
-    if((result = MPI_Pack(&DATA_REC(rec, interface_id), 2, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
+    /* Pack interface id */
+    if((result = MPI_Pack(&DATA_REC(rec, interface_id), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
+      return result; 
+    }
+
+    /* Pack mode */
+    if((result = MPI_Pack(&DATA_REC(rec, mode), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
       return result; 
     }
 
@@ -1095,8 +1100,6 @@ extern int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, i
       if((result = SNetRefPack(DATA_REC( rec, fields[offset]), comm, pos, buf, buf_size)) != MPI_SUCCESS) {
 	return result; 
       }
-
-      //DATA_REC( rec, fields[offset]) = NULL;
 
       SNetTencRenameField( GetVEnc( rec), names[i], CONSUMED);
     }
@@ -1157,11 +1160,19 @@ extern int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, i
     break;
   case REC_sort_begin:
     /* Pack num and level. */ 
-    return MPI_Pack(&SORT_B_REC( rec, num), 2, MPI_INT, buf, buf_size, pos, comm);
+    if((result = MPI_Pack(&SORT_B_REC( rec, num), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
+      return result; 
+    }
+
+    return MPI_Pack(&SORT_B_REC( rec, level), 1, MPI_INT, buf, buf_size, pos, comm);
     break;
   case REC_sort_end:
     /* Pack num and level. */ 
-    return MPI_Pack(&SORT_E_REC( rec, num), 2, MPI_INT, buf, buf_size, pos, comm);
+    if((result = MPI_Pack(&SORT_E_REC( rec, num), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
+      return result; 
+    }
+
+    return MPI_Pack(&SORT_E_REC( rec, level), 1, MPI_INT, buf, buf_size, pos, comm);
     break;
   case REC_probe:
     break;
@@ -1204,6 +1215,7 @@ extern snet_record_t *SNetRecUnpack(MPI_Comm comm, int *pos, void *buf, int buf_
 	SNetRecDestroy(rec);
 	return NULL;
       }
+
       if(MPI_Unpack(buf, buf_size, pos, &DATA_REC(rec, mode), 1, MPI_INT, comm) != MPI_SUCCESS) {
 	SNetRecDestroy(rec);
 	return NULL;
