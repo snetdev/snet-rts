@@ -590,6 +590,9 @@ static void DataManagerDestroy()
  *          Initializes data storage and starts the data manager.
  *
  ******************************************************************************/
+
+#define INIT_ERROR 1
+
 void SNetDataStorageInit() 
 {
   int block_lengths[2];
@@ -601,6 +604,14 @@ void SNetDataStorageInit()
   int result;
 
   result = MPI_Comm_dup(MPI_COMM_WORLD, &storage.comm);
+
+  if(result != MPI_SUCCESS) {
+    SNetUtilDebugNotice("Could not create an MPI communicator for data managers (%d)", result);
+    
+    MPI_Abort(MPI_COMM_WORLD, INIT_ERROR);
+
+    MPI_Finalize();
+  }
 
   result = MPI_Comm_rank(storage.comm, &storage.rank);
 
@@ -989,10 +1000,6 @@ void SNetDataStorageRemoteDelete(snet_id_t id, unsigned int location)
   msg.op_id = 0;
   msg.id = id;
 
-  pthread_mutex_lock(&storage.id_mutex);
-    
-  pthread_mutex_unlock(&storage.id_mutex);
-  
   MPI_Send(&msg, 1, storage.op_type, location, TAG_DATA_OP, storage.comm);
 
 #ifdef SNET_DEBUG_COUNTERS

@@ -69,28 +69,42 @@
 static snet_time_t execution_start_time;
 #endif /* SNET_DEBUG_COUNTERS */
 
+#define INIT_ERROR 1
 
 int DistributionInit(int argc, char *argv[])
 {
   int my_rank;
   int level;
   snet_tl_stream_t *stream;
+  int result;
 
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level); 
+  result = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level); 
 
+  if(level != MPI_THREAD_MULTIPLE) {
+
+    SNetUtilDebugNotice("MPI thread support level \"MPI_THREAD_MULTIPLE\" required.");
+
+    MPI_Abort(MPI_COMM_WORLD, INIT_ERROR);
+
+    MPI_Finalize();
+
+    return INIT_ERROR;
+
+  } else if(result != MPI_SUCCESS) {
+
+    SNetUtilDebugNotice("MPI initialization routine failed with error code: %d", result);
+
+    MPI_Abort(MPI_COMM_WORLD, INIT_ERROR);
+
+    MPI_Finalize();
+
+    return INIT_ERROR;
+  }
+ 
 #ifdef SNET_DEBUG_COUNTERS
   SNetDebugTimeGetTime(&execution_start_time);
 #endif /* SNET_DEBUG_COUNTERS  */
 
-
-  if(level != MPI_THREAD_MULTIPLE) {
-
-    MPI_Finalize();
-
-    SNetUtilDebugFatal("MPI thread support level \"MPI_THREAD_MULTIPLE\" required.");
-    return -1;
-  } 
- 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
 
