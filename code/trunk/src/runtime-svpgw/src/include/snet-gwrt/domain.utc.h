@@ -64,7 +64,7 @@ SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *groot);
 
 // extern void
 // SNetDomainReplaceGraphNode(
-//     snet_domain_t *snetd, const snet_ginx_t *inx, const snet_gnode_t *n);
+//     snet_domain_t *snetd, const snet_idxvec_t *idx, const snet_gnode_t *n);
 
 #endif // __SVPSNETGWRT_DOMAIN_H
 

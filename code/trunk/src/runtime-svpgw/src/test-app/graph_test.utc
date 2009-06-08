@@ -63,15 +63,15 @@ static void print_graph(const snet_gnode_t *n, unsigned int indent)
             n->type == GRAPH_NODE_TYPE_NOP ?
             &n->data.nop->lnk : &n->data.normal->lnk);
 
-        const char *inx_null     = "<>";
-        const char *inx_infinite = "<inf>";
+        const char *idx_null     = "<>";
+        const char *idx_infinite = "<inf>";
 
-        const char *inx = (
+        const char *idx = (
             n->type == GRAPH_NODE_TYPE_NOP ?
-            inx_null : SNetGInxToString(n->data.normal->inx, NULL));
+            idx_null : SNetIdxVecToString(n->data.normal->idx, NULL));
 
-        if (inx == NULL) 
-            inx = inx_infinite;
+        if (idx == NULL) 
+            idx = idx_infinite;
 
         print_indent(indent);
         
@@ -80,14 +80,14 @@ static void print_graph(const snet_gnode_t *n, unsigned int indent)
 
             printf(
                 "N(%p: %s, %s, merging_to(%p))\n",
-                n, inx, GNODE_TYPE_LBLS[n->type], lnk->node);
+                n, idx, GNODE_TYPE_LBLS[n->type], lnk->node);
 
         } else {
-            printf("N(%p: %s, %s)\n", n, inx, GNODE_TYPE_LBLS[n->type]);
+            printf("N(%p: %s, %s)\n", n, idx, GNODE_TYPE_LBLS[n->type]);
         }
 
-        if (inx != NULL && inx != inx_null && inx != inx_infinite) {
-            SNetMemFree((void *) inx);
+        if (idx != NULL && idx != idx_null && idx != idx_infinite) {
+            SNetMemFree((void *) idx);
         }
        
         switch (n->type) {

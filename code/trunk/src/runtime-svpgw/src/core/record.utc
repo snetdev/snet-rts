@@ -154,11 +154,11 @@ drecord_resize_dvec(
 static snet_record_data_item_t*
 drecord_pack_dvec(
     snet_record_data_item_t *dvec,
-    unsigned int dvec_sz, unsigned int start_item_inx)
+    unsigned int dvec_sz, unsigned int start_item_idx)
 {
     unsigned int i;
 
-    for (i = start_item_inx; i < dvec_sz; i++) {
+    for (i = start_item_idx; i < dvec_sz; i++) {
         if (dvec[i].flags & DREC_DATA_ITEM_DELETED_FLAG) {
             break;
         }
@@ -280,7 +280,7 @@ static inline bool
 drecord_is_item_consumed(
     const snet_record_t *rec, 
     int name, 
-    unsigned int dvec_inx,
+    unsigned int dvec_idx,
 
     bool (*venc_search_fun)(
         const snet_variantencoding_t*, int, unsigned int*))
@@ -288,14 +288,14 @@ drecord_is_item_consumed(
     assert(rec != NULL);
     assert(rec->descr == REC_DESCR_DATA);
 
-    unsigned int inx;
+    unsigned int idx;
 
-    if (!(*venc_search_fun)(rec->spec.data.venc, name, &inx)) {
+    if (!(*venc_search_fun)(rec->spec.data.venc, name, &idx)) {
         return false;
     }
 
     return ((DREC_DATA_ITEM_CONSUMED_FLAG &
-        rec->spec.data.dvecs[dvec_inx][inx].flags) > 0);
+        rec->spec.data.dvecs[dvec_idx][idx].flags) > 0);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -304,7 +304,7 @@ static inline void
 drecord_reset_consumed_item(
     snet_record_t *rec, 
     int name,
-    unsigned int dvec_inx,
+    unsigned int dvec_idx,
 
     bool (*venc_search_fun)(
         const snet_variantencoding_t*, int, unsigned int*))
@@ -312,13 +312,13 @@ drecord_reset_consumed_item(
     assert(rec != NULL);
     assert(rec->descr == REC_DESCR_DATA);
 
-    unsigned int inx;
+    unsigned int idx;
 
-    if (!(*venc_search_fun)(rec->spec.data.venc, name, &inx)) {
+    if (!(*venc_search_fun)(rec->spec.data.venc, name, &idx)) {
         return;
     }
 
-    rec->spec.data.dvecs[dvec_inx][inx].flags &= ~DREC_DATA_ITEM_CONSUMED_FLAG;
+    rec->spec.data.dvecs[dvec_idx][idx].flags &= ~DREC_DATA_ITEM_CONSUMED_FLAG;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -327,7 +327,7 @@ static inline const snet_record_data_item_t*
 drecord_get_item(
     const snet_record_t *rec,
     int name, 
-    unsigned int dvec_inx,
+    unsigned int dvec_idx,
 
     bool (*venc_search_fun)(
         const snet_variantencoding_t*, int, unsigned int*))
@@ -335,27 +335,27 @@ drecord_get_item(
     assert(rec != NULL);
     assert(rec->descr == REC_DESCR_DATA);
 
-    unsigned int inx;
+    unsigned int idx;
 
-    if (!(*venc_search_fun)(rec->spec.data.venc, name, &inx)) {
+    if (!(*venc_search_fun)(rec->spec.data.venc, name, &idx)) {
         return NULL;
     }
 
-    return rec->spec.data.dvecs[dvec_inx] + inx;
+    return rec->spec.data.dvecs[dvec_idx] + idx;
 }
 
 static inline const snet_record_data_item_t*
 drecord_take_item(
     const snet_record_t *rec,
     int name, 
-    unsigned int dvec_inx,
+    unsigned int dvec_idx,
 
     bool (*venc_search_fun)(
         const snet_variantencoding_t*, int, unsigned int*))
 {
     snet_record_data_item_t *rdi =
         (snet_record_data_item_t *)
-            drecord_get_item(rec, name, dvec_inx, venc_search_fun);
+            drecord_get_item(rec, name, dvec_idx, venc_search_fun);
 
     if (rdi != NULL)
         rdi->flags |= DREC_DATA_ITEM_CONSUMED_FLAG;
@@ -371,7 +371,7 @@ drecord_set_item_val(
     int name, 
     int *tval,
     void **fval,
-    unsigned int dvec_inx,
+    unsigned int dvec_idx,
 
     bool (*venc_search_fun)(
         const snet_variantencoding_t*, int, unsigned int*))
@@ -380,7 +380,7 @@ drecord_set_item_val(
 
     snet_record_data_item_t *rdi =
         (snet_record_data_item_t *)
-            drecord_get_item(rec, name, dvec_inx, venc_search_fun);
+            drecord_get_item(rec, name, dvec_idx, venc_search_fun);
 
     if (rdi == NULL) {
         return;
@@ -402,7 +402,7 @@ drecord_add_items(
     snet_record_t *rec,
     int *names,
     unsigned int count,
-    unsigned int dvec_inx,
+    unsigned int dvec_idx,
 
     bool (*venc_add_fun)(snet_variantencoding_t *, int),
     
@@ -423,9 +423,9 @@ drecord_add_items(
     unsigned int items_cnt =
         (*venc_items_cnt_fun)(rec->spec.data.venc);
 
-    rec->spec.data.dvecs[dvec_inx] = 
+    rec->spec.data.dvecs[dvec_idx] = 
         drecord_resize_dvec(
-            rec->spec.data.dvecs[dvec_inx], items_cnt - added_cnt, items_cnt);
+            rec->spec.data.dvecs[dvec_idx], items_cnt - added_cnt, items_cnt);
 
     return added_cnt;
 }
@@ -437,7 +437,7 @@ drecord_remove_items(
     snet_record_t *rec,
     int *names,
     unsigned int count,
-    unsigned int dvec_inx,
+    unsigned int dvec_idx,
 
     bool (*venc_remove_fun)(
         snet_variantencoding_t *, int, unsigned int *, bool),
@@ -451,23 +451,23 @@ drecord_remove_items(
     unsigned int first       = items_cnt;
 
     snet_bli_freefptr_t free_fun = (
-        dvec_inx == DREC_FIELDS_VEC ?
+        dvec_idx == DREC_FIELDS_VEC ?
             SNetGetFreeFun(rec->spec.data.blid) : NULL);
 
     for (unsigned int i=0; i < count; i++) {
-        unsigned int inx;
+        unsigned int idx;
 
-        if (!(*venc_remove_fun)(rec->spec.data.venc, names[i], &inx, true)) {
+        if (!(*venc_remove_fun)(rec->spec.data.venc, names[i], &idx, true)) {
             continue;
         }
 
-        if (inx < first) {
-            first = inx;
+        if (idx < first) {
+            first = idx;
         }
 
-        if (dvec_inx == DREC_FIELDS_VEC) {
+        if (dvec_idx == DREC_FIELDS_VEC) {
             snet_record_data_item_t *rdi = 
-                rec->spec.data.dvecs[dvec_inx] + inx;
+                rec->spec.data.dvecs[dvec_idx] + idx;
 
             switch (rec->spec.data.dispose_mode) {
                 case REC_DATA_DISPOSE_MODE_CONSUMED: {
@@ -496,16 +496,16 @@ drecord_remove_items(
             }
         }
 
-        rec->spec.data.dvecs[dvec_inx]
-            [inx].flags |= DREC_DATA_ITEM_DELETED_FLAG;
+        rec->spec.data.dvecs[dvec_idx]
+            [idx].flags |= DREC_DATA_ITEM_DELETED_FLAG;
 
         removed_cnt++;
     }
 
     (*venc_remove_marked_fun)(rec->spec.data.venc);
     
-    rec->spec.data.dvecs[dvec_inx] =
-        drecord_pack_dvec(rec->spec.data.dvecs[dvec_inx], items_cnt, first);
+    rec->spec.data.dvecs[dvec_idx] =
+        drecord_pack_dvec(rec->spec.data.dvecs[dvec_idx], items_cnt, first);
 
     return removed_cnt;
 }
@@ -521,7 +521,7 @@ drecord_copy_items(
     int *names,
     int *new_names,
     unsigned int count,
-    unsigned int dvec_inx,
+    unsigned int dvec_idx,
 
     int  (*venc_get_fun)(
         const snet_variantencoding_t *, unsigned int),
@@ -561,21 +561,21 @@ drecord_copy_items(
     }
 
     snet_bli_copyfptr_t copy_fun = (
-        dvec_inx == DREC_FIELDS_VEC ? 
+        dvec_idx == DREC_FIELDS_VEC ? 
         SNetGetCopyFun(rec1->spec.data.blid) : NULL);
 
-    rec2->spec.data.dvecs[dvec_inx] = 
+    rec2->spec.data.dvecs[dvec_idx] = 
         drecord_resize_dvec(
-            rec2->spec.data.dvecs[dvec_inx], 
+            rec2->spec.data.dvecs[dvec_idx], 
             r2_items_cnt, r2_items_cnt + copy_loop_cnt);
        
     do {
         signed   int cpi_name;
-        unsigned int cpi_inx;
+        unsigned int cpi_idx;
 
         if (names != NULL) {
             if (!(*venc_search_fun)(
-                rec1->spec.data.venc, names[i], &cpi_inx)) {
+                rec1->spec.data.venc, names[i], &cpi_idx)) {
 
                 i++;
                 continue;
@@ -585,13 +585,13 @@ drecord_copy_items(
 
         } else {
             cpi_name = (*venc_get_fun)(rec1->spec.data.venc, i);
-            cpi_inx  = i;
+            cpi_idx  = i;
 
         }
 
         if (unconsumed &&
             ((DREC_DATA_ITEM_CONSUMED_FLAG & 
-              rec1->spec.data.dvecs[dvec_inx][cpi_inx].flags) > 0)) {
+              rec1->spec.data.dvecs[dvec_idx][cpi_idx].flags) > 0)) {
 
             i++;
             continue;
@@ -602,7 +602,7 @@ drecord_copy_items(
                 == REC_DATA_DISPOSE_MODE_CONSUMED) {
 
                 rec1->spec.data.dvecs
-                    [dvec_inx][cpi_inx].flags |= DREC_DATA_ITEM_CONSUMED_FLAG;
+                    [dvec_idx][cpi_idx].flags |= DREC_DATA_ITEM_CONSUMED_FLAG;
             }
 
             i++;
@@ -611,20 +611,20 @@ drecord_copy_items(
 
         snet_record_data_item_t tmp_item;
 
-        if (dvec_inx != DREC_FIELDS_VEC) {
+        if (dvec_idx != DREC_FIELDS_VEC) {
             tmp_item.value.tag =
-                rec1->spec.data.dvecs[dvec_inx][cpi_inx].value.tag;
+                rec1->spec.data.dvecs[dvec_idx][cpi_idx].value.tag;
 
         } else {
             void *field_val =
-                rec1->spec.data.dvecs[dvec_inx][cpi_inx].value.field;
+                rec1->spec.data.dvecs[dvec_idx][cpi_idx].value.field;
 
             switch (rec1->spec.data.dispose_mode) {
                 case REC_DATA_DISPOSE_MODE_CONSUMED: {
                     // !!NOTE!!:
                     // Conditional fall through!!
                     if (!(DREC_DATA_ITEM_CONSUMED_FLAG & 
-                          rec1->spec.data.dvecs[dvec_inx][cpi_inx].flags)) {
+                          rec1->spec.data.dvecs[dvec_idx][cpi_idx].flags)) {
 
                         break;
                     }
@@ -650,16 +650,16 @@ drecord_copy_items(
             tmp_item.value.field = field_val;
         }
 
-        rec2->spec.data.dvecs[dvec_inx]
+        rec2->spec.data.dvecs[dvec_idx]
             [r2_items_cnt + copied_items_cnt].value = tmp_item.value;
 
         if (venc_remove_fun != NULL) {
-            if (cpi_inx < first) {
-                first = cpi_inx;
+            if (cpi_idx < first) {
+                first = cpi_idx;
             }
 
             rec1->spec.data.dvecs
-                [dvec_inx][cpi_inx].flags |= DREC_DATA_ITEM_DELETED_FLAG;
+                [dvec_idx][cpi_idx].flags |= DREC_DATA_ITEM_DELETED_FLAG;
 
             (*venc_remove_fun)(rec1->spec.data.venc, cpi_name, NULL, true);
         }
@@ -669,17 +669,17 @@ drecord_copy_items(
 
     } while (i < copy_loop_cnt);
 
-    rec2->spec.data.dvecs[dvec_inx] = 
+    rec2->spec.data.dvecs[dvec_idx] = 
         drecord_resize_dvec(
-            rec2->spec.data.dvecs[dvec_inx], 
+            rec2->spec.data.dvecs[dvec_idx], 
             r2_items_cnt + copy_loop_cnt, r2_items_cnt + copied_items_cnt);
 
     if (venc_remove_marked_fun != NULL) {
         (*venc_remove_marked_fun)(rec1->spec.data.venc);
     
-        rec1->spec.data.dvecs[dvec_inx] =
+        rec1->spec.data.dvecs[dvec_idx] =
             drecord_pack_dvec(
-                rec1->spec.data.dvecs[dvec_inx], r1_items_cnt, first);
+                rec1->spec.data.dvecs[dvec_idx], r1_items_cnt, first);
     }
 
     return copied_items_cnt;

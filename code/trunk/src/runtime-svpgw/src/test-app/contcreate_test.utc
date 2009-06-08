@@ -11,16 +11,16 @@
 /*----------------------------------------------------------------------------*/
 
 static thread void cont_created_fam(
-    unsigned int inx, unsigned int delay)
+    unsigned int idx, unsigned int delay)
 {
-    unsigned int inx_local = inx;
+    unsigned int idx_local = idx;
 
     usleep(delay);
-    printf("Family %u\n", inx_local);
+    printf("Family %u\n", idx_local);
 }
 
 static thread void cont_created_fam0(
-    unsigned int inx, unsigned int delay)
+    unsigned int idx, unsigned int delay)
 {
     family fid;
 
@@ -29,8 +29,8 @@ static thread void cont_created_fam0(
 
     usleep(delay);
 
-    for (i=0; i < inx + 1; i++) {
-        famid = 10000 * inx + i;
+    for (i=0; i < idx + 1; i++) {
+        famid = 10000 * idx + i;
 
         create<nosync> 
             (fid; ; 0; 0; 1; 1;;) 

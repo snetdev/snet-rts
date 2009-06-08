@@ -35,7 +35,7 @@
 #include "snet-gwrt/buffer.int.utc.h"
 #include "snet-gwrt/conslist.int.utc.h"
 #include "snet-gwrt/domain.int.utc.h"
-#include "snet-gwrt/graphindex.int.utc.h"
+#include "snet-gwrt/idxvec.int.utc.h"
 #include "snet-gwrt/graph.int.utc.h"
 #include "snet-gwrt/gw.int.utc.h"
 #include "snet-gwrt/handle.int.utc.h"

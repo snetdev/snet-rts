@@ -69,7 +69,7 @@ SNetHndGetConsNodeRecord(const snet_handle_t *hnd);
 
 extern snet_variantencoding_t*
 SNetHndCreateVEncForOutRecord(
-    const snet_handle_t *hnd, unsigned int variant_inx);
+    const snet_handle_t *hnd, unsigned int variant_idx);
 
 /*---*/
 

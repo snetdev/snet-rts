@@ -45,7 +45,7 @@ typedef struct list_node {
     struct list_node *next;
     struct list_node *prev;
 
-    unsigned int      binx;
+    unsigned int      bidx;
 
 } snet_list_node_t;
 
@@ -108,8 +108,8 @@ struct list {
 static inline unsigned int
 calc_node_id(const snet_list_t *lst, const snet_list_node_t *n)
 {
-    return 1 + (n->binx * lst->bucket_sz) +
-        (unsigned int)(n - lst->buckets[n->binx].nodes);
+    return 1 + (n->bidx * lst->bucket_sz) +
+        (unsigned int)(n - lst->buckets[n->bidx].nodes);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -158,21 +158,21 @@ static void destroy_bucket(snet_list_bucket_t *b)
 /*----------------------------------------------------------------------------*/
 
 static snet_list_bucket_t*
-pop_free_bucket(snet_list_t *lst, unsigned int blst_inx)
+pop_free_bucket(snet_list_t *lst, unsigned int blst_idx)
 {
-    if (lst->free_buckets_lst[blst_inx].sz == 0) {
+    if (lst->free_buckets_lst[blst_idx].sz == 0) {
         return NULL;
     }
 
     snet_list_bucket_t *bucket =
-        lst->buckets + lst->free_buckets_lst[blst_inx].tail;
+        lst->buckets + lst->free_buckets_lst[blst_idx].tail;
 
     if (bucket->free_nodes_lst.sz > 1) {
         return bucket;
     }
 
-    lst->free_buckets_lst[blst_inx].tail = bucket->blst_next;
-    lst->free_buckets_lst[blst_inx].sz--;
+    lst->free_buckets_lst[blst_idx].tail = bucket->blst_next;
+    lst->free_buckets_lst[blst_idx].sz--;
 
     bucket->blst_id = 0;
 
@@ -189,17 +189,17 @@ remove_free_bucket(snet_list_t *lst, snet_list_bucket_t *bucket)
     bool has_next = true;
     bool has_prev = true;
 
-    unsigned int blst_inx = bucket->blst_id - 1;
-    unsigned int binx     = (unsigned int)(bucket - lst->buckets);
+    unsigned int blst_idx = bucket->blst_id - 1;
+    unsigned int bidx     = (unsigned int)(bucket - lst->buckets);
 
-    if (binx == lst->free_buckets_lst[blst_inx].head) {
+    if (bidx == lst->free_buckets_lst[blst_idx].head) {
         has_next = false;
-        lst->free_buckets_lst[blst_inx].head = bucket->blst_prev;
+        lst->free_buckets_lst[blst_idx].head = bucket->blst_prev;
     }
 
-    if (binx == lst->free_buckets_lst[blst_inx].tail) {
+    if (bidx == lst->free_buckets_lst[blst_idx].tail) {
         has_prev = false;
-        lst->free_buckets_lst[blst_inx].tail = bucket->blst_next;
+        lst->free_buckets_lst[blst_idx].tail = bucket->blst_next;
     }
 
     if (has_next)
@@ -208,7 +208,7 @@ remove_free_bucket(snet_list_t *lst, snet_list_bucket_t *bucket)
     if (has_prev)
         lst->buckets[bucket->blst_prev].blst_next = bucket->blst_next;
 
-    lst->free_buckets_lst[blst_inx].sz--;
+    lst->free_buckets_lst[blst_idx].sz--;
 
     bucket->blst_id = 0;
 }
@@ -216,24 +216,24 @@ remove_free_bucket(snet_list_t *lst, snet_list_bucket_t *bucket)
 static void
 push_free_bucket(
     snet_list_t *lst,
-    snet_list_bucket_t *bucket, unsigned int blst_inx)
+    snet_list_bucket_t *bucket, unsigned int blst_idx)
 {
     if (bucket->blst_id != 0) {
         return;
     }
 
-    bucket->blst_id   = blst_inx + 1;
-    bucket->blst_prev = lst->free_buckets_lst[blst_inx].head;
+    bucket->blst_id   = blst_idx + 1;
+    bucket->blst_prev = lst->free_buckets_lst[blst_idx].head;
 
-    unsigned int binx = (unsigned int)(bucket - lst->buckets);
+    unsigned int bidx = (unsigned int)(bucket - lst->buckets);
 
-    if (lst->free_buckets_lst[blst_inx].sz == 0)
-        lst->free_buckets_lst[blst_inx].tail = binx;
+    if (lst->free_buckets_lst[blst_idx].sz == 0)
+        lst->free_buckets_lst[blst_idx].tail = bidx;
     else
-        lst->buckets[lst->free_buckets_lst[blst_inx].head].blst_next = binx;
+        lst->buckets[lst->free_buckets_lst[blst_idx].head].blst_next = bidx;
 
-    lst->free_buckets_lst[blst_inx].head = binx;
-    lst->free_buckets_lst[blst_inx].sz++;
+    lst->free_buckets_lst[blst_idx].head = bidx;
+    lst->free_buckets_lst[blst_idx].sz++;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -365,7 +365,7 @@ get_free_node(snet_list_t *lst, snet_list_bucket_t *pref_bucket)
     }
 
     node->notfree = true;
-    node->binx    = (unsigned int)(bucket - lst->buckets);
+    node->bidx    = (unsigned int)(bucket - lst->buckets);
 
     return node;
 }
@@ -374,7 +374,7 @@ get_free_node(snet_list_t *lst, snet_list_bucket_t *pref_bucket)
 
 static void free_node(snet_list_t *lst, snet_list_node_t *n)
 {
-    snet_list_bucket_t *bucket = lst->buckets + n->binx;
+    snet_list_bucket_t *bucket = lst->buckets + n->bidx;
     
     n->notfree = false;
     n->next    = NULL;
@@ -434,18 +434,18 @@ get_node_by_id(const snet_list_t *lst, unsigned int item_id)
 
     item_id--;
 
-    unsigned int binx = item_id / lst->bucket_sz;
+    unsigned int bidx = item_id / lst->bucket_sz;
 
-    if (binx >= lst->buckets_vec_sz) {
+    if (bidx >= lst->buckets_vec_sz) {
         return NULL;
     }
 
-    if (lst->buckets[binx].nodes == NULL) {
+    if (lst->buckets[bidx].nodes == NULL) {
         return NULL;
     }
 
     snet_list_node_t *node = 
-        lst->buckets[binx].nodes + (item_id % lst->bucket_sz);
+        lst->buckets[bidx].nodes + (item_id % lst->bucket_sz);
 
     if (node->notfree) {
         return node;
@@ -720,7 +720,7 @@ SNetListInsertAfter(
     }
 
     snet_list_node_t *n = 
-        get_free_node(lst, lst->buckets + ln->binx);
+        get_free_node(lst, lst->buckets + ln->bidx);
 
     if (item_val != NULL)
         SNetMemCopy(item_val, n->value, lst->item_sz);
@@ -756,7 +756,7 @@ SNetListInsertBefore(
     }
 
     snet_list_node_t *n =
-        get_free_node(lst, lst->buckets + ln->binx);
+        get_free_node(lst, lst->buckets + ln->bidx);
 
     if (item_val != NULL)
         SNetMemCopy(item_val, n->value, lst->item_sz);

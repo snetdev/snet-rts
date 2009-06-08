@@ -82,6 +82,11 @@ void SNetGlobalInitialize()
     SNetPlcMngSubSystemInit();
     SNetDomainSubSystemInit();
     SNetBLISubSystemInit();
+
+    // Call this again to "fully" initialize
+    // the memory management sub-system (see file
+    // 'src/core/memmng.utc' for more details).
+    SNetMemMngSubSystemInit();
 }
 
 void SNetGlobalDestroy()
@@ -278,7 +283,7 @@ void SNetOut(snet_handle_t *hnd, snet_record_t *rec)
 
 void SNetOutRaw(
     snet_handle_t *hnd, 
-    snet_bli_id_t  blid, int variant_inx, ...)
+    snet_bli_id_t  blid, int variant_idx, ...)
 {
     assert(hnd != NULL);
     
@@ -288,7 +293,7 @@ void SNetOutRaw(
     // First we need a variant encoding for the record.
     snet_variantencoding_t *venc = 
         SNetHndCreateVEncForOutRecord(
-            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_inx);
+            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_idx);
 
     if (venc == NULL) {
         // For this to happen possible causes are:
@@ -311,7 +316,7 @@ void SNetOutRaw(
     }
 
     va_list  vargs;
-    va_start(vargs, variant_inx);
+    va_start(vargs, variant_idx);
 
     snet_record_t *rec = SNetDataRecVCreate(venc, vargs);
 
@@ -326,7 +331,7 @@ void SNetOutRaw(
 void SNetOutRawArray(
     snet_handle_t *hnd, 
     snet_bli_id_t  blid,
-    int variant_inx, void **fields, int *tags, int *btags)
+    int variant_idx, void **fields, int *tags, int *btags)
 {
     assert(hnd != NULL);
     
@@ -336,7 +341,7 @@ void SNetOutRawArray(
     // First we need a variant encoding for the record.
     snet_variantencoding_t *venc = 
         SNetHndCreateVEncForOutRecord(
-            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_inx);
+            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_idx);
 
     if (venc == NULL) {
         // See related comment in the 

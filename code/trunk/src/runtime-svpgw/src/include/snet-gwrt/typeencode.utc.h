@@ -104,29 +104,29 @@ SNetTencVariantGetBTagsCount(
 
 extern int
 SNetTencVariantGetField(
-    const snet_variantencoding_t *venc, unsigned int inx);
+    const snet_variantencoding_t *venc, unsigned int idx);
 
 extern int
 SNetTencVariantGetTag(
-    const snet_variantencoding_t *venc, unsigned int inx);
+    const snet_variantencoding_t *venc, unsigned int idx);
 
 extern int
 SNetTencVariantGetBTag(
-    const snet_variantencoding_t *venc, unsigned int inx);
+    const snet_variantencoding_t *venc, unsigned int idx);
 
 /*---*/
 
 extern bool
 SNetTencVariantContainsField(
-    const snet_variantencoding_t *venc, int name, unsigned int *inx);
+    const snet_variantencoding_t *venc, int name, unsigned int *idx);
 
 extern bool
 SNetTencVariantContainsTag(
-    const snet_variantencoding_t *venc, int name, unsigned int *inx);
+    const snet_variantencoding_t *venc, int name, unsigned int *idx);
 
 extern bool
 SNetTencVariantContainsBTag(
-    const snet_variantencoding_t *venc, int name, unsigned int *inx);
+    const snet_variantencoding_t *venc, int name, unsigned int *idx);
 
 /*---*/
 
@@ -175,17 +175,17 @@ SNetTencVariantRemoveBTag(
 extern bool 
 SNetTencVariantRemoveFieldEx(
     snet_variantencoding_t *venc,
-    int name, unsigned int *inx, bool mark_only);
+    int name, unsigned int *idx, bool mark_only);
 
 extern bool 
 SNetTencVariantRemoveTagEx(
     snet_variantencoding_t *venc,
-    int name, unsigned *inx, bool mark_only);
+    int name, unsigned *idx, bool mark_only);
 
 extern bool
 SNetTencVariantRemoveBTagEx(
     snet_variantencoding_t *venc,
-    int name, unsigned int *inx, bool mark_only);
+    int name, unsigned int *idx, bool mark_only);
 
 /*---*/
 
@@ -221,7 +221,7 @@ extern unsigned int
 SNetTencTypeGetVariantsCount(const snet_typeencoding_t *tenc);
 
 extern snet_variantencoding_t*
-SNetTencTypeGetVariant(const snet_typeencoding_t *tenc, unsigned int inx);
+SNetTencTypeGetVariant(const snet_typeencoding_t *tenc, unsigned int idx);
 
 /*---*/
 

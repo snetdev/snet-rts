@@ -58,10 +58,10 @@ SNetTencVectorCreateCopy(const snet_vector_t *vec);
 /*---*/
 
 extern int 
-SNetTencVectorGetEntry(const snet_vector_t *vec, unsigned int inx); 
+SNetTencVectorGetEntry(const snet_vector_t *vec, unsigned int idx); 
 
 extern void
-SNetTencVectorSetEntry(snet_vector_t *vec, unsigned int inx, int val);
+SNetTencVectorSetEntry(snet_vector_t *vec, unsigned int idx, int val);
 
 /*---*/
 
@@ -80,7 +80,7 @@ SNetTencVectorResize(snet_vector_t *vec, unsigned int sz);
 
 extern bool 
 SNetTencVectorContainsItem(
-    const snet_vector_t *vec, int item_val, unsigned int *item_inx);
+    const snet_vector_t *vec, int item_val, unsigned int *item_idx);
 
 extern unsigned int
 SNetTencVectorCompare(const snet_vector_t *vec1, const snet_vector_t *vec2);
@@ -119,7 +119,7 @@ extern int
 SNetTencVariantMatchesType(
     const snet_variantencoding_t *venc, 
     const snet_typeencoding_t    *tenc,
-    unsigned int *matched_venc_inx, bool *matched_ident);
+    unsigned int *matched_venc_idx, bool *matched_ident);
 
 /*----------------------------------------------------------------------------*/
 /* Type encoding functions */
@@ -152,7 +152,7 @@ extern snet_typeencoding_t*
 SNetTencBoxSignGetType(const snet_box_sign_t *sign);
 
 extern snet_vector_t*
-SNetTencBoxSignGetMapping(const snet_box_sign_t *sign, unsigned int inx);
+SNetTencBoxSignGetMapping(const snet_box_sign_t *sign, unsigned int idx);
 
 #endif // __SVPSNETGWRT_TYPEENCODE_INT_H
 

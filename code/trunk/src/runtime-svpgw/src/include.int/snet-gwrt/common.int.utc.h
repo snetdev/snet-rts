@@ -81,11 +81,12 @@ $include <string.h>
 
 #define SNET_ERR_NONE               0x0000
 #define SNET_ERR_UNEXPECTED         0x0001
-#define SNET_ERR_MEMORY             0x0002
-#define SNET_ERR_IO                 0x0003
-#define SNET_ERR_TYPE_ERROR         0x0004
-#define SNET_ERR_PLACE              0x0005
-#define SNET_ERR_BOX                0x0006
+#define SNET_ERR_INIT               0x0002
+#define SNET_ERR_MEMORY             0x0003
+#define SNET_ERR_IO                 0x0004
+#define SNET_ERR_TYPE_ERROR         0x0005
+#define SNET_ERR_PLACE              0x0006
+#define SNET_ERR_BOX                0x0007
 
 // Warnings!!
 
@@ -93,6 +94,14 @@ $include <string.h>
 #define SNET_WRN_UNSUPPORTED        0x0001
 #define SNET_WRN_IGNORED            0x0002
 #define SNET_WRN_IGNORED_ENTITY     0x0003
+
+/*----------------------------------------------------------------------------*/
+/* Helper macros for commonly used error messages. */
+
+// Sub-system initialization
+#define SNET_ERR_SUBSYS_INIT_MSG(subsys, cause) \
+    "an error during the "                      \
+    "initialization of the " subsys "sub-system (" cause ")"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/

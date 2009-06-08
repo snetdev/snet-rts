@@ -77,7 +77,7 @@ SNetTryPlaceAlloc(const snet_place_specs_t *specs)
 {
     snet_place_contract_t *contract = 
         (snet_place_contract_t *)
-            SNetTryMemAlloc(sizeof(snet_place_contract_t));
+            SNetMemTryAlloc(sizeof(snet_place_contract_t));
 
     if (contract == NULL) {
         return NULL;
@@ -93,7 +93,7 @@ SNetTryPlaceAlloc(const snet_place_specs_t *specs)
 
         contract->plc_specs =
             (snet_place_specs_t *)
-                SNetTryMemAlloc(sizeof(snet_place_specs_t));
+                SNetMemTryAlloc(sizeof(snet_place_specs_t));
 
         if (contract->plc_specs == NULL) {
             SNetMemFree(contract);
@@ -110,7 +110,7 @@ SNetTryPlaceAlloc(const snet_place_specs_t *specs)
             && specs->type_spec_data_sz > 0) {
 
             contract->plc_specs->type_spec_data = 
-                SNetTryMemAlloc(specs->type_spec_data_sz);
+                SNetMemTryAlloc(specs->type_spec_data_sz);
 
             if (contract->plc_specs->type_spec_data == NULL) {
                 SNetMemFree(contract->plc_specs);

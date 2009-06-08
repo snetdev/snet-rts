@@ -54,19 +54,22 @@ static const char* ERR_MSGS[] = {
     // 0x0001: SNET_ERR_UNEXPECTED
     "An unexpected runtime error occured (%s)",
 
-    // 0x0002: SNET_ERR_MEMORY
+    // 0x0002: SNET_ERR_INIT
+    "Initialization of the runtime failed due to %s",
+
+    // 0x0003: SNET_ERR_MEMORY
     "An error occured during a memory management operation (%s)",
 
-    // 0x0003: SNET_ERR_IO
+    // 0x0004: SNET_ERR_IO
     "An error occured during an i/o operation (%s)",
 
-    // 0x0004: SNET_ERR_TYPE_ERROR
+    // 0x0005: SNET_ERR_TYPE_ERROR
     "A type error occured in %s at index %s",
 
-    // 0x0005: SNET_ERR_PLACE
+    // 0x0006: SNET_ERR_PLACE
     "An error occured during a 'place' management operation (%s)",
 
-    // 0x0006: SNET_ERR_BOX
+    // 0x0007: SNET_ERR_BOX
     "An error occured in the execution of box at index '%s'"
 
 }; // ERR_MSGS[]

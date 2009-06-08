@@ -230,9 +230,9 @@ static void init_net_domain(snet_domain_t *snetd)
     snetd->data.net.gw_plc_cntr = NULL;
 
 #ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
-    snetd->data.net.out_buf_wait_fam_exists  = false;
-    snetd->data.net.out_buf_wait_fid_valid   = false;
-    snetd->data.net.out_buf_cond_plc_cntr = SNetPlaceAlloc(&mutex_plc_specs);
+    snetd->data.net.out_buf_wait_fam_exists = false;
+    snetd->data.net.out_buf_wait_fid_valid  = false;
+    snetd->data.net.out_buf_cond_plc_cntr   = SNetPlaceAlloc(&mutex_plc_specs);
 #endif
 
     // Add domain to system domains list. We do a "create" because
@@ -617,7 +617,7 @@ void SNetDomainSetGraph(snet_domain_t *snetd, snet_gnode_t *groot)
 /*----------------------------------------------------------------------------*/
 
 // void SNetDomainReplaceGraphNode(
-//     snet_domain_t *snetd, const snet_ginx_t *inx, const snet_gnode_t *n)
+//     snet_domain_t *snetd, const snet_idxvec_t *idx, const snet_gnode_t *n)
 // {
 //     /**
 //      * Not implemented yet

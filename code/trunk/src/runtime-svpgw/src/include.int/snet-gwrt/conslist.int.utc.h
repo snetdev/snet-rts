@@ -30,9 +30,10 @@
 
 #include "common.int.utc.h"
 #include "basetype.int.utc.h"
-#include "record.int.utc.h"
+
 #include "graph.int.utc.h"
-#include "graphindex.int.utc.h"
+#include "idxvec.int.utc.h"
+#include "record.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -118,26 +119,26 @@ SNetConsLstNodeGetGraphNode(const snet_conslst_node_t *n);
 
 /*----------------------------------------------------------------------------*/
 
-extern snet_ginx_t*
-SNetConsLstNodeGetOrdGInx(snet_conslst_node_t *n);
+extern snet_idxvec_t*
+SNetConsLstNodeGetOrdGIdx(snet_conslst_node_t *n);
 
-extern snet_ginx_t*
-SNetConsLstNodeGetDynGInx(snet_conslst_node_t *n);
+extern snet_idxvec_t*
+SNetConsLstNodeGetDynGIdx(snet_conslst_node_t *n);
 
-extern snet_ginx_t*
-SNetConsLstNodeGetMinGInx(snet_conslst_node_t *n);
+extern snet_idxvec_t*
+SNetConsLstNodeGetMinGIdx(snet_conslst_node_t *n);
 
 /*---*/
 
 extern void 
-SNetConsLstNodeAddDynGInx(
-    snet_conslst_node_t *n, const snet_ginx_t *ginx);
+SNetConsLstNodeAddDynGIdx(
+    snet_conslst_node_t *n, const snet_idxvec_t *idx);
 
 extern void
-SNetConsLstNodeAddSameDynGInxAs(
+SNetConsLstNodeAddSameDynGIdxAs(
     snet_conslst_node_t *n1, const snet_conslst_node_t *n2);
 
-extern void SNetConsLstNodeRemoveDynGInx(snet_conslst_node_t *n);
+extern void SNetConsLstNodeRemoveDynGIdx(snet_conslst_node_t *n);
 
 /*----------------------------------------------------------------------------*/
 
@@ -156,7 +157,7 @@ SNetConsLstNodeIsAttached(const snet_conslst_node_t *n);
 /*---*/
 
 extern bool
-SNetConsLstNodeIsDynGInxNew(const snet_conslst_node_t *n);
+SNetConsLstNodeIsDynGIdxNew(const snet_conslst_node_t *n);
 
 /*----------------------------------------------------------------------------*/
 

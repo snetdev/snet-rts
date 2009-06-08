@@ -528,12 +528,12 @@ SNetEListGetSize(const snet_expr_list_t *lst)
 }
 
 const snet_expr_t*
-SNetEListGetExpr(const snet_expr_list_t *lst, unsigned int inx)
+SNetEListGetExpr(const snet_expr_list_t *lst, unsigned int idx)
 {
     assert(lst != NULL);
-    assert(inx < lst->sz);
+    assert(idx < lst->sz);
 
-    return lst->exprs[inx];
+    return lst->exprs[idx];
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

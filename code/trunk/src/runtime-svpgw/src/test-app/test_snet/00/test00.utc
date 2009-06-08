@@ -11,7 +11,7 @@
 
 /*---*/
 
-#define PRINT_RECS
+// #define PRINT_RECS
 // #define PRINT_ON_COPY_FREE_FIELD
 
 /*----------------------------------------------------------------------------*/

@@ -55,7 +55,7 @@ static void init_normal_node(snet_gnode_t *n)
             SNetMemAlloc(sizeof(snet_normal_gnode_t));
 
     n->data.normal->parent = NULL;
-    n->data.normal->inx    = SNetGInxCreate();
+    n->data.normal->idx    = SNetIdxVecCreate();
 
     n->data.normal->lnk.merge       = false;
     n->data.normal->lnk.node        = NULL;
@@ -108,9 +108,9 @@ static void init_sync_node(snet_gnode_t *n)
             16,
             SNetBaseTypeGetDomain(SNetGNodeToBase(n)));
 
-    n->data.normal->entity.synccell->ident_states_inxs =
+    n->data.normal->entity.synccell->ident_states_idxs =
         SNetListCreate(
-            sizeof(snet_ginx_t *),
+            sizeof(snet_idxvec_t *),
             32,
             SNetBaseTypeGetDomain(SNetGNodeToBase(n)));
             
@@ -244,8 +244,8 @@ static void destroy_normal_node(snet_gnode_t *n, bool deep)
             SNetGNodeDestroy(n->data.normal->lnk.node, deep);
     }
 
-    if (n->data.normal->inx != NULL)
-        SNetGInxDestroy(n->data.normal->inx);
+    if (n->data.normal->idx != NULL)
+        SNetIdxVecDestroy(n->data.normal->idx);
 
     SNetMemFree(n->data.normal);
 }
@@ -286,8 +286,8 @@ static void destroy_synccell_state(
     // SNetSyncCellGNodeRemoveState() (or any other that will need similar
     // functionality should) set the index of the state to NULL to indicate
     // to this one that the index must not be destroyed.
-    if (s->inx != NULL)
-        SNetGInxDestroy(s->inx);
+    if (s->idx != NULL)
+        SNetIdxVecDestroy(s->idx);
 
     SNetMemFree(s->mhnds);
 }
@@ -306,8 +306,8 @@ static void destroy_sync_node(snet_gnode_t *n)
     snet_list_t *states_lst =
         n->data.normal->entity.synccell->states;
 
-    snet_list_t *ident_states_inxs_lst =
-        n->data.normal->entity.synccell->ident_states_inxs;
+    snet_list_t *ident_states_idxs_lst =
+        n->data.normal->entity.synccell->ident_states_idxs;
 
     for (unsigned int it = SNetListBegin(states_lst);
          it != 0; it = SNetListItemGetNext(states_lst, it)) {
@@ -318,15 +318,15 @@ static void destroy_sync_node(snet_gnode_t *n)
                 SNetListItemGetValueByRef(states_lst, it));
     }
 
-    for (unsigned int it = SNetListBegin(ident_states_inxs_lst);
-         it != 0; it = SNetListItemGetNext(ident_states_inxs_lst, it)) {
+    for (unsigned int it = SNetListBegin(ident_states_idxs_lst);
+         it != 0; it = SNetListItemGetNext(ident_states_idxs_lst, it)) {
 
-        //SNetGInxDestroy((snet_ginx_t *)
-        //    SNetListItemGetValueByRef(ident_states_inxs_lst, it));
+        //SNetIdxVecDestroy((snet_idxvec_t *)
+        //    SNetListItemGetValueByRef(ident_states_idxs_lst, it));
     }
 
     SNetListDestroy(states_lst);
-    SNetListDestroy(ident_states_inxs_lst);
+    SNetListDestroy(ident_states_idxs_lst);
 
     SNetMemFree(n->data.normal->entity.synccell);
 }
@@ -405,13 +405,13 @@ static void destroy_extern_conn_node(snet_gnode_t *n, bool deep)
 /*----------------------------------------------------------------------------*/
 
 static void 
-enumerate_graph_segment(snet_gnode_t *start_node, snet_ginx_t *start_inx)
+enumerate_graph_segment(snet_gnode_t *start_node, snet_idxvec_t *start_idx)
 {
     assert(start_node != NULL);
-    assert(start_inx != NULL);
+    assert(start_idx != NULL);
 
-    snet_gnode_t *n   = start_node;
-    snet_ginx_t  *inx = SNetGInxCreateCopy(start_inx, true);
+    snet_gnode_t  *n   = start_node;
+    snet_idxvec_t *idx = SNetIdxVecCreateCopy(start_idx, true);
 
     while (n != NULL) {
         snet_gnode_contlink_t *lnk = (
@@ -423,38 +423,34 @@ enumerate_graph_segment(snet_gnode_t *start_node, snet_ginx_t *start_inx)
             continue;
         }
 
-        SNetGInxIncrItemValue(
-            inx, SNetGInxGetLen(inx) - 1, 1);
+        SNetIdxVecIncrItemValue(
+            idx, SNetIdxVecGetLen(idx) - 1, 1);
 
         switch (n->type) {
             case GRAPH_NODE_TYPE_COMB_STAR :    {
-                SNetGInxSetValue(
-                    n->data.normal->inx, inx, true);
-                
-                SNetGInxConcatStr(inx, "0.0");
+                SNetIdxVecSetValue(n->data.normal->idx, idx);               
+                SNetIdxVecPushStr(idx, "0.0");
 
                 enumerate_graph_segment(
-                    n->data.normal->entity.star->groot, inx);
+                    n->data.normal->entity.star->groot, idx);
 
-                SNetGInxChopRight(inx, 2);
+                SNetIdxVecPopRight(idx, 2);
                 break;
             }
 
             case GRAPH_NODE_TYPE_COMB_SPLIT:    {
-                SNetGInxSetValue(
-                    n->data.normal->inx, inx, true);
-                
-                SNetGInxConcatStr(inx, "0.0");
+                SNetIdxVecSetValue(n->data.normal->idx, idx);                
+                SNetIdxVecPushStr(idx, "0.0");
 
                 enumerate_graph_segment(
-                    n->data.normal->entity.split->groot, inx);
+                    n->data.normal->entity.split->groot, idx);
 
-                SNetGInxChopRight(inx, 2);
+                SNetIdxVecPopRight(idx, 2);
                 break;
             }
 
             case GRAPH_NODE_TYPE_COMB_PARALLEL: {
-                SNetGInxSetValue(n->data.normal->inx, inx, true);
+                SNetIdxVecSetValue(n->data.normal->idx, idx);
 
                 snet_par_comb_branch_t *branch = 
                     n->data.normal->entity.parallel->branches;
@@ -463,21 +459,21 @@ enumerate_graph_segment(snet_gnode_t *start_node, snet_ginx_t *start_inx)
                     n->data.normal->entity.parallel->branches_cnt;
 
                 for (unsigned int i=0; i < branches_cnt; i++, branch++) {
-                    snet_ginx_item_t brid = -((snet_ginx_item_t)(i + 1));
+                    snet_idxvec_item_t brid = -((snet_idxvec_item_t)(i + 1));
                         
-                    SNetGInxConcatArray(inx, &brid, 1);
-                    SNetGInxConcatStr(inx, "0");
+                    SNetIdxVecPushArray(idx, &brid, 1);
+                    SNetIdxVecPushStr(idx, "0");
 
-                    enumerate_graph_segment(branch->groot, inx);
+                    enumerate_graph_segment(branch->groot, idx);
                     
-                    SNetGInxChopRight(inx, 2);
+                    SNetIdxVecPopRight(idx, 2);
                 }
 
                 break;
             }
 
             default: {
-                SNetGInxSetValue(n->data.normal->inx, inx, true);
+                SNetIdxVecSetValue(n->data.normal->idx, idx);
                 break;
             }
         }
@@ -485,7 +481,7 @@ enumerate_graph_segment(snet_gnode_t *start_node, snet_ginx_t *start_inx)
         n = (lnk->merge ? NULL : lnk->node);
     }
 
-    SNetGInxDestroy(inx);
+    SNetIdxVecDestroy(idx);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -688,14 +684,14 @@ void SNetGNodeConnect(snet_gnode_t *n1, snet_gnode_t* n2, bool merge_lnk)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void SNetGNodeSetupNormal(snet_gnode_t *n, const snet_ginx_t *inx)
+void SNetGNodeSetupNormal(snet_gnode_t *n, const snet_idxvec_t *idx)
 {
     assert(n != NULL);
-    assert(inx != NULL);
+    assert(idx != NULL);
     
     assert(n->type != GRAPH_NODE_TYPE_NOP);
 
-    SNetGInxSetValue(n->data.normal->inx, inx, true);
+    SNetIdxVecSetValue(n->data.normal->idx, idx);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -829,12 +825,12 @@ void SNetGNodeSetupParallel(
 
 void SNetGNodeParallelSetupBranch(
     snet_gnode_t *n, 
-    unsigned int inx, 
+    unsigned int idx, 
     snet_gnode_t *groot, snet_typeencoding_t *type)
 {
     assert(n != NULL);
     assert(n->type == GRAPH_NODE_TYPE_COMB_PARALLEL);
-    assert(inx < n->data.normal->entity.parallel->branches_cnt);
+    assert(idx < n->data.normal->entity.parallel->branches_cnt);
 
     if (groot == NULL) {
         return;
@@ -848,7 +844,7 @@ void SNetGNodeParallelSetupBranch(
         groot->data.normal->parent = n;
    
     snet_par_comb_branch_t *branch = 
-        n->data.normal->entity.parallel->branches + inx;
+        n->data.normal->entity.parallel->branches + idx;
 
     branch->taken_cnt = 0;
     branch->groot     = groot;
@@ -906,12 +902,12 @@ void SNetGraphEnumerate(snet_gnode_t *start_node)
         return;
     }
 
-    snet_ginx_t *inx = NULL;
+    snet_idxvec_t *idx = NULL;
 
-    snet_gnode_t *parent        = start_node;
-    snet_gnode_t *pbranch_groot = NULL;
+    snet_gnode_t  *parent        = start_node;
+    snet_gnode_t  *pbranch_groot = NULL;
 
-    while (inx == NULL) {
+    while (idx == NULL) {
         pbranch_groot = parent;
 
         parent = (parent->type == GRAPH_NODE_TYPE_NOP ?
@@ -926,24 +922,24 @@ void SNetGraphEnumerate(snet_gnode_t *start_node)
                 break;
 
             default:
-                inx = SNetGInxCreateCopy(parent->data.normal->inx, true); 
+                idx = SNetIdxVecCreateCopy(parent->data.normal->idx, true); 
                 break;
         }
     }
 
-    if (inx == NULL) {
-        inx = SNetGInxCreateFromStr("0");
+    if (idx == NULL) {
+        idx = SNetIdxVecCreateFromStr("0");
 
-        enumerate_graph_segment(start_node, inx);
+        enumerate_graph_segment(start_node, idx);
 
-        SNetGInxDestroy(inx);
+        SNetIdxVecDestroy(idx);
         return;
     }
     
     switch (parent->type) {
         case GRAPH_NODE_TYPE_COMB_STAR :    
         case GRAPH_NODE_TYPE_COMB_SPLIT:    {
-            SNetGInxConcatStr(inx, "0.0");
+            SNetIdxVecPushStr(idx, "0.0");
             break;
         }
 
@@ -956,10 +952,10 @@ void SNetGraphEnumerate(snet_gnode_t *start_node)
 
             for (unsigned int i=0; i < branches_cnt; i++, branch++) {
                 if (branch->groot == pbranch_groot) {
-                    snet_ginx_item_t brid = -((snet_ginx_item_t)(i + 1));
+                    snet_idxvec_item_t brid = -((snet_idxvec_item_t)(i + 1));
                     
-                    SNetGInxConcatArray(inx, &brid, 1);
-                    SNetGInxConcatStr(inx, "0");
+                    SNetIdxVecPushArray(idx, &brid, 1);
+                    SNetIdxVecPushStr(idx, "0");
 
                     break;
                 }
@@ -971,9 +967,9 @@ void SNetGraphEnumerate(snet_gnode_t *start_node)
         default: break;
     }
 
-    enumerate_graph_segment(start_node, inx);
+    enumerate_graph_segment(start_node, idx);
 
-    SNetGInxDestroy(inx);
+    SNetIdxVecDestroy(idx);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -981,7 +977,7 @@ void SNetGraphEnumerate(snet_gnode_t *start_node)
 /*----------------------------------------------------------------------------*/
 
 snet_synccell_state_t*
-SNetSyncCellGNodeAddState(snet_gnode_t *gnode, const snet_ginx_t *ginx)
+SNetSyncCellGNodeAddState(snet_gnode_t *gnode, const snet_idxvec_t *idx)
 {
     assert(gnode->type == GRAPH_NODE_TYPE_SYNC);
 
@@ -992,7 +988,7 @@ SNetSyncCellGNodeAddState(snet_gnode_t *gnode, const snet_ginx_t *ginx)
     snet_synccell_state_t new_state = {
         0,
 
-        SNetGInxCreateCopy(ginx, true), 
+        SNetIdxVecCreateCopy(idx, true), 
 
         0,
 
@@ -1033,16 +1029,16 @@ void SNetSyncCellGNodeRemoveState(
     SNetListRemove(gnode->data.normal->entity.synccell->states, state_id);
 
     if (set_as_ident) {
-        snet_list_t *ident_states_inx_lst =
-            gnode->data.normal->entity.synccell->ident_states_inxs;
+        snet_list_t *ident_states_idx_lst =
+            gnode->data.normal->entity.synccell->ident_states_idxs;
 
-        SNetListPushBack(ident_states_inx_lst, &state.inx);
+        SNetListPushBack(ident_states_idx_lst, &state.idx);
 
         // Now that we pushed the state's index into the list of indexes for
         // identity synchrocells we will set it to NULL so that it will not 
         // be destroyed by the function destroy_synccell_state() (see related 
         // comment in that function).
-        state.inx = NULL;
+        state.idx = NULL;
     }
 
     destroy_synccell_state(gnode->data.normal->entity.synccell, &state);

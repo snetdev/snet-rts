@@ -134,7 +134,7 @@ SNetHndGetConsNodeRecord(const snet_handle_t *hnd)
 
 snet_variantencoding_t*
 SNetHndCreateVEncForOutRecord(
-    const snet_handle_t *hnd, unsigned int variant_inx)
+    const snet_handle_t *hnd, unsigned int variant_idx)
 {
     assert(hnd != NULL);
 
@@ -161,12 +161,12 @@ SNetHndCreateVEncForOutRecord(
 
     assert(tenc != NULL);
 
-    if (variant_inx >= SNetTencTypeGetVariantsCount(tenc)) {
+    if (variant_idx >= SNetTencTypeGetVariantsCount(tenc)) {
         return NULL;
     }
 
     return SNetTencVariantCreateCopy(
-        SNetTencTypeGetVariant(tenc, variant_inx));
+        SNetTencTypeGetVariant(tenc, variant_idx));
 }
 
 /*----------------------------------------------------------------------------*/

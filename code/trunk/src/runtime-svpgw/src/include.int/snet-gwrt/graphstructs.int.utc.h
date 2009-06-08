@@ -46,7 +46,7 @@ typedef struct {
 
 typedef struct {
     unsigned int    id;
-    snet_ginx_t    *inx;
+    snet_idxvec_t  *idx;
     unsigned int    mpcnt;
     snet_handle_t **mhnds;
 
@@ -90,7 +90,7 @@ typedef struct {
     snet_expr_list_t    *guards;
 
     snet_list_t         *states;
-    snet_list_t         *ident_states_inxs;
+    snet_list_t         *ident_states_idxs;
 
 } snet_synccell_gnode_t;
 
@@ -166,8 +166,8 @@ typedef struct nop_graph_node {
 /*----------------------------------------------------------------------------*/
 
 typedef struct normal_graph_node {
-    snet_gnode_t *parent;
-    snet_ginx_t  *inx;
+    snet_gnode_t  *parent;
+    snet_idxvec_t *idx;
 
     /*---*/
 
@@ -223,7 +223,7 @@ struct graph_node {
 
 extern snet_synccell_state_t*
 SNetSyncCellGNodeAddState(
-    snet_gnode_t *gnode, const snet_ginx_t *ginx);
+    snet_gnode_t *gnode, const snet_idxvec_t *idx);
 
 extern void 
 SNetSyncCellGNodeRemoveState(

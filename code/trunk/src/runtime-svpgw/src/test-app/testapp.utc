@@ -13,9 +13,10 @@
 
 extern void softmutex_test();
 extern void contcreate_test();
-extern void ginx_test();
+extern void idxvec_test();
 extern void record_test();
 extern void typeencode_test();
+extern void references_test();
 
 /*---*/
 
@@ -101,13 +102,14 @@ static void help()
     printf("       0       Test of mutual exclussion uTC \"places\".\n");
     printf("       1       Test of software mutexes.\n");
     printf("       2       Test of \"continuation creates\".\n");
-    printf("       3       Test of graph indexes.\n");
+    printf("       3       Test of index vector.\n");
     printf("       4       Test of \"buffer\" data structure.\n");
     printf("       5       Test of network input and output of records.\n");
     printf("       6       Test of \"cons-list\" structure.\n");
     printf("       7       Test of \"list\" data structure.\n");
     printf("       8       Test of type encoding.\n");
     printf("       9       Test of \"record\" data structure.\n\n");
+    printf("      10       Test of \"references\" management.\n\n");
     printf("      50       Test of \"graph\" structure for network \"test\" build\n");
     printf("               from sources in src/test-app/test_snet\n");
     printf("     100       Test of \"graph\" structure for network \"test00\"\n");
@@ -222,8 +224,8 @@ static void Runtime_tests(unsigned int tid)
             break;
 
         case 3:
-            printf("Graph Index Test!!\n\n");
-            ginx_test();
+            printf("Index Vector Test!!\n\n");
+            idxvec_test();
             break;
 
         case 4:
@@ -254,6 +256,11 @@ static void Runtime_tests(unsigned int tid)
         case 9:
             printf("Record Test!!\n\n");
             record_test();
+            break;
+
+        case 10:
+            printf("References Management Test!!\n\n");
+            references_test();
             break;
 
         /*---*/
@@ -463,8 +470,8 @@ thread void main(int argc, const char **argv)
 #ifdef SVPSNETGWRT_MONITOR_MALLOC    
     if (show_mem_use_at_exit) {
         printf("Memory usage at exit:\n");
-        printf("  Number of allocations      = %lu\n", SNetGetMemAllocCount());
-        printf("  Amount of allocated memory = %lu\n", SNetGetMemAllocSize());
+        printf("  Number of allocations      = %lu\n", SNetMemGetAllocCount());
+        printf("  Amount of allocated memory = %zu\n", SNetMemGetAllocSize());
     }
 #endif
 

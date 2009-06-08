@@ -10,11 +10,11 @@ static void print_match(
     snet_typeencoding_t *tenc, const char *labels[])
 {
     bool matched_ident = false;
-    unsigned int match_venc_inx = 0;
+    unsigned int match_venc_idx = 0;
 
     unsigned int match_res = 
         SNetTencVariantMatchesType(
-            venc, tenc, &match_venc_inx, &matched_ident);
+            venc, tenc, &match_venc_idx, &matched_ident);
 
     print_variant(venc, labels);
 
@@ -23,7 +23,7 @@ static void print_match(
 
     } else {
         printf("\n  :: %3d, %3u,  %u\n\n", 
-            match_res, match_venc_inx, (unsigned int) matched_ident);
+            match_res, match_venc_idx, (unsigned int) matched_ident);
     }
 }
 

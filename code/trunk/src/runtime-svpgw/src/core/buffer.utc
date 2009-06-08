@@ -40,7 +40,7 @@ typedef struct buffer_bucket {
 } snet_buf_bucket_t;
 
 typedef struct buffer_iterator {
-    unsigned int       inx;
+    unsigned int       idx;
     snet_buf_bucket_t *bucket;
 
 } snet_buf_iterator_t;
@@ -127,10 +127,10 @@ void SNetBufInit(
     buf->empty_buckets_head = NULL;
     buf->empty_buckets_tail = NULL;
     
-    buf->head.inx    = 0;
+    buf->head.idx    = 0;
     buf->head.bucket = &buf->init_bucket;
 
-    buf->tail.inx    = 0;
+    buf->tail.idx    = 0;
     buf->tail.bucket = &buf->init_bucket;
 }
 
@@ -156,10 +156,10 @@ void SNetBufInitCopy(
     for (unsigned int i=0; i < src_buf->sz; i++) {
         assert(it.bucket != NULL);
 
-        it.inx++;
+        it.idx++;
 
-        if (it.inx == src_buf->bucket_sz) {
-            it.inx    = 0;
+        if (it.idx == src_buf->bucket_sz) {
+            it.idx    = 0;
             it.bucket = it.bucket->next;
         }
     }
@@ -268,18 +268,18 @@ void* SNetBufPop(snet_buffer_t *buf)
 
     assert(buf->tail.bucket != NULL);
 
-    void *elem = buf->tail.bucket->store[buf->tail.inx];
+    void *elem = buf->tail.bucket->store[buf->tail.idx];
 
-    buf->tail.inx++;
+    buf->tail.idx++;
     buf->sz--;
 
     snet_buf_bucket_t *empty_bucket = NULL;
 
-    if (buf->tail.inx == buf->bucket_sz) {
+    if (buf->tail.idx == buf->bucket_sz) {
         if (buf->dynamic)
             empty_bucket = buf->tail.bucket;
 
-        buf->tail.inx    = 0;
+        buf->tail.idx    = 0;
         buf->tail.bucket = buf->tail.bucket->next;
         
         assert(buf->dynamic || buf->tail.bucket != NULL);
@@ -331,7 +331,7 @@ void* SNetBufGet(const snet_buffer_t *buf)
         return NULL;
     }
 
-    return buf->tail.bucket->store[buf->tail.inx];
+    return buf->tail.bucket->store[buf->tail.idx];
 }
 
 /*----------------------------------------------------------------------------*/
@@ -373,13 +373,13 @@ bool SNetBufPush(snet_buffer_t *buf, const void *elem)
             buf->tail.bucket = new_bucket;
     }
 
-    buf->head.bucket->store[buf->head.inx] = (void *) elem;
+    buf->head.bucket->store[buf->head.idx] = (void *) elem;
 
-    buf->head.inx++;
+    buf->head.idx++;
     buf->sz++;
 
-    if (buf->head.inx == buf->bucket_sz) {
-        buf->head.inx    = 0;
+    if (buf->head.idx == buf->bucket_sz) {
+        buf->head.idx    = 0;
         buf->head.bucket = buf->head.bucket->next;
     }
 

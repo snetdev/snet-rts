@@ -149,20 +149,20 @@ void SNetTencVectorDestroy(snet_vector_t *vec)
 
 /*----------------------------------------------------------------------------*/
 
-int SNetTencVectorGetEntry(const snet_vector_t *vec, unsigned int inx)
+int SNetTencVectorGetEntry(const snet_vector_t *vec, unsigned int idx)
 {
     assert(vec != NULL);
-    assert(inx < vec->sz);
+    assert(idx < vec->sz);
 
-    return vec->items[inx];
+    return vec->items[idx];
 }
 
-void SNetTencVectorSetEntry(snet_vector_t *vec, unsigned int inx, int val)
+void SNetTencVectorSetEntry(snet_vector_t *vec, unsigned int idx, int val)
 {
     assert(vec != NULL);
-    assert(inx < vec->sz);
+    assert(idx < vec->sz);
 
-    vec->items[inx] = val;
+    vec->items[idx] = val;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -179,18 +179,18 @@ void SNetTencVectorRemoveUnsetEntries(snet_vector_t *vec)
 {
     assert(vec != NULL);
 
-    unsigned int cur_inx = 0;
+    unsigned int cur_idx = 0;
 
     for (unsigned int i=0; i < vec->sz; i++) {
         if (vec->items[i] != TENC_VEC_UNSET_ITEM_VAL) {
-            if (i != cur_inx)
-                vec->items[cur_inx] = vec->items[i];
+            if (i != cur_idx)
+                vec->items[cur_idx] = vec->items[i];
 
-            cur_inx++;
+            cur_idx++;
         }
     }
     
-    SNetTencVectorResize(vec, cur_inx);
+    SNetTencVectorResize(vec, cur_idx);
 }
 
 void SNetTencVectorResize(snet_vector_t *vec, unsigned int sz)
@@ -222,14 +222,14 @@ void SNetTencVectorResize(snet_vector_t *vec, unsigned int sz)
 /*----------------------------------------------------------------------------*/
 
 bool SNetTencVectorContainsItem(
-    const snet_vector_t *vec, int item_val, unsigned int *item_inx)
+    const snet_vector_t *vec, int item_val, unsigned int *item_idx)
 {
     assert(vec != NULL);
 
     for (unsigned int i=0; i < vec->sz; i++) {
         if (vec->items[i] == item_val) {
-            if (item_inx != NULL) {
-                (*item_inx) = i;
+            if (item_idx != NULL) {
+                (*item_idx) = i;
             }
 
             return true;
@@ -276,10 +276,10 @@ static void variant_rename_item(
         return;
     }
 
-    unsigned int inx;
+    unsigned int idx;
 
-    if (SNetTencVectorContainsItem(items_vec, name, &inx)) {
-        SNetTencVectorSetEntry(items_vec, inx, new_name);
+    if (SNetTencVectorContainsItem(items_vec, name, &idx)) {
+        SNetTencVectorSetEntry(items_vec, idx, new_name);
     }
 }
 
@@ -305,26 +305,26 @@ static bool variant_add_item(snet_vector_t **items_vec, int name)
 
 static bool variant_remove_item(
     snet_vector_t *items_vec,
-    int name, unsigned int *inx_out, bool mark_only)
+    int name, unsigned int *idx_out, bool mark_only)
 {
     if (items_vec == NULL) {
         return false;
     }
 
-    unsigned int inx;
+    unsigned int idx;
 
-    if (!SNetTencVectorContainsItem(items_vec, name, &inx)) {
+    if (!SNetTencVectorContainsItem(items_vec, name, &idx)) {
         return false;
     }
 
     SNetTencVectorSetEntry(
-        items_vec, inx, TENC_VEC_UNSET_ITEM_VAL);
+        items_vec, idx, TENC_VEC_UNSET_ITEM_VAL);
 
     if (!mark_only)
         SNetTencVectorRemoveUnsetEntries(items_vec);
 
-    if (inx_out != NULL) {
-        (*inx_out) = inx;
+    if (idx_out != NULL) {
+        (*idx_out) = idx;
     }
 
     return true;
@@ -453,56 +453,56 @@ unsigned int SNetTencVariantGetBTagsCount(const snet_variantencoding_t *venc)
 /*----------------------------------------------------------------------------*/
 
 int SNetTencVariantGetField(
-    const snet_variantencoding_t *venc, unsigned int inx)
+    const snet_variantencoding_t *venc, unsigned int idx)
 {
     assert(venc != NULL);
     assert(venc->fields != NULL);
-    assert(inx < SNetTencVectorGetSize(venc->fields));
+    assert(idx < SNetTencVectorGetSize(venc->fields));
 
-    return SNetTencVectorGetEntry(venc->fields, inx);
+    return SNetTencVectorGetEntry(venc->fields, idx);
 }
 
 int SNetTencVariantGetTag(
-    const snet_variantencoding_t *venc, unsigned int inx)
+    const snet_variantencoding_t *venc, unsigned int idx)
 {
     assert(venc != NULL);
     assert(venc->tags != NULL);
-    assert(inx < SNetTencVectorGetSize(venc->tags));
+    assert(idx < SNetTencVectorGetSize(venc->tags));
 
-    return SNetTencVectorGetEntry(venc->tags, inx);
+    return SNetTencVectorGetEntry(venc->tags, idx);
 }
 
 int SNetTencVariantGetBTag(
-    const snet_variantencoding_t *venc, unsigned int inx)
+    const snet_variantencoding_t *venc, unsigned int idx)
 {
     assert(venc != NULL);
     assert(venc->btags != NULL);
-    assert(inx < SNetTencVectorGetSize(venc->btags));
+    assert(idx < SNetTencVectorGetSize(venc->btags));
 
-    return SNetTencVectorGetEntry(venc->btags, inx);
+    return SNetTencVectorGetEntry(venc->btags, idx);
 }
 
 /*----------------------------------------------------------------------------*/
 
 bool SNetTencVariantContainsField(
-    const snet_variantencoding_t *venc, int name, unsigned int *inx)
+    const snet_variantencoding_t *venc, int name, unsigned int *idx)
 {
     assert(venc != NULL); 
-    return SNetTencVectorContainsItem(venc->fields, name, inx);
+    return SNetTencVectorContainsItem(venc->fields, name, idx);
 }
 
 bool SNetTencVariantContainsTag(
-    const snet_variantencoding_t *venc, int name, unsigned int *inx)
+    const snet_variantencoding_t *venc, int name, unsigned int *idx)
 {
     assert(venc != NULL); 
-    return SNetTencVectorContainsItem(venc->tags, name, inx);
+    return SNetTencVectorContainsItem(venc->tags, name, idx);
 }
 
 bool SNetTencVariantContainsBTag(
-    const snet_variantencoding_t *venc, int name, unsigned int *inx)
+    const snet_variantencoding_t *venc, int name, unsigned int *idx)
 {
     assert(venc != NULL); 
-    return SNetTencVectorContainsItem(venc->btags, name, inx);
+    return SNetTencVectorContainsItem(venc->btags, name, idx);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -573,32 +573,32 @@ void SNetTencVariantRemoveBTag(
 
 bool SNetTencVariantRemoveFieldEx(
     snet_variantencoding_t *venc,
-    int name, unsigned int *inx, bool mark_only)
+    int name, unsigned int *idx, bool mark_only)
 {
     assert(venc != NULL);
 
     return variant_remove_item(
-        venc->fields, name, inx, mark_only);
+        venc->fields, name, idx, mark_only);
 }
 
 bool SNetTencVariantRemoveTagEx(
     snet_variantencoding_t *venc,
-    int name, unsigned *inx, bool mark_only)
+    int name, unsigned *idx, bool mark_only)
 {
     assert(venc != NULL);
 
     return variant_remove_item(
-        venc->tags, name, inx, mark_only);
+        venc->tags, name, idx, mark_only);
 }
 
 bool SNetTencVariantRemoveBTagEx(
     snet_variantencoding_t *venc,
-    int name, unsigned int *inx, bool mark_only)
+    int name, unsigned int *idx, bool mark_only)
 {
     assert(venc != NULL);
 
     return variant_remove_item(
-        venc->btags, name, inx, mark_only);
+        venc->btags, name, idx, mark_only);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -728,7 +728,7 @@ int SNetTencVariantsMatch(
 int SNetTencVariantMatchesType(
     const snet_variantencoding_t *venc, 
     const snet_typeencoding_t    *tenc,
-    unsigned int *matched_venc_inx, bool *matched_ident)
+    unsigned int *matched_venc_idx, bool *matched_ident)
 {
     assert(venc != NULL);
     assert(tenc != NULL);
@@ -750,8 +750,8 @@ int SNetTencVariantMatchesType(
         }
     }
 
-    if (matched_venc_inx != NULL && match_cnt != 0) {
-        (*matched_venc_inx) = matched_variant;
+    if (matched_venc_idx != NULL && match_cnt != 0) {
+        (*matched_venc_idx) = matched_variant;
     }
 
     return match_cnt;
@@ -855,12 +855,12 @@ SNetTencTypeGetVariantsCount(const snet_typeencoding_t *tenc)
 }
 
 snet_variantencoding_t*
-SNetTencTypeGetVariant(const snet_typeencoding_t *tenc, unsigned int inx)
+SNetTencTypeGetVariant(const snet_typeencoding_t *tenc, unsigned int idx)
 {
     assert(tenc != NULL);
-    assert(inx < tenc->variants_cnt);
+    assert(idx < tenc->variants_cnt);
 
-    return tenc->variants[inx];
+    return tenc->variants[idx];
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1013,13 +1013,13 @@ SNetTencBoxSignGetType(const snet_box_sign_t *sign)
 }
 
 snet_vector_t*
-SNetTencBoxSignGetMapping(const snet_box_sign_t *sign, unsigned int inx)
+SNetTencBoxSignGetMapping(const snet_box_sign_t *sign, unsigned int idx)
 {
     assert(sign != NULL);
     
     snet_vector_t *vec = NULL;
     
-    SNetListItemGetValue(sign->mappings, inx + 1, &vec);
+    SNetListItemGetValue(sign->mappings, idx + 1, &vec);
     return vec;
 }
 

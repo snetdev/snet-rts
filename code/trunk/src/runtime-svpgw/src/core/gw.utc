@@ -241,11 +241,11 @@ static bool gnode_hnd_box(snet_gnode_t *gnode, snet_handle_t *hnd)
     }
 
     if ((*box_gnode->func)((snet_handle_t *) SNetMaskPointer(hnd)) != 0) {
-        const char *ginx_str =
-            SNetGInxToString(gnode->data.normal->inx, NULL);
+        const char *gidx_str =
+            SNetIdxVecToString(gnode->data.normal->idx, NULL);
 
-        SNetReportError(SNET_ERR_BOX, ginx_str);
-        SNetMemFree((void *) ginx_str);
+        SNetReportError(SNET_ERR_BOX, gidx_str);
+        SNetMemFree((void *) gidx_str);
         SNetOnError();
     }
 
@@ -297,11 +297,11 @@ get_synccell_state(
 
     // First search the synccell's list of states to find which one to
     // use or whether there is a need for a new one.
-    snet_ginx_t *cnode_dyn_inx = SNetConsLstNodeGetDynGInx(cnode);
+    snet_idxvec_t *cnode_dyn_idx = SNetConsLstNodeGetDynGIdx(cnode);
 
-    snet_ginx_t *cnode_inx = (
-        cnode_dyn_inx != NULL ? 
-        cnode_dyn_inx : gnode->data.normal->inx);
+    snet_idxvec_t *cnode_idx = (
+        cnode_dyn_idx != NULL ? 
+        cnode_dyn_idx : gnode->data.normal->idx);
 
     snet_synccell_state_t *state = NULL;
 
@@ -312,8 +312,8 @@ get_synccell_state(
             (snet_synccell_state_t *) 
                 SNetListItemGetValueByRef(sync_gnode->states, it);
 
-        if (SNetGInxCompare(
-            ith_state->inx, cnode_inx) == GRAPH_INX_CMP_RES_EQUAL) {
+        if (SNetIdxVecCompare(ith_state->idx, cnode_idx) ==
+            IDXVEC_CMP_RES_EQUAL) {
 
             state = ith_state;
             break;
@@ -329,22 +329,22 @@ get_synccell_state(
     // the case of an identity synccell thus we return NULL so that 
     // the record moves on. If not then a new synccell state must be
     // created as this would be the case for a "fresh" synccell.
-    for (unsigned int it = SNetListBegin(sync_gnode->ident_states_inxs); 
+    for (unsigned int it = SNetListBegin(sync_gnode->ident_states_idxs); 
          it != 0;
-         it  = SNetListItemGetNext(sync_gnode->ident_states_inxs, it)) {
+         it  = SNetListItemGetNext(sync_gnode->ident_states_idxs, it)) {
         
-        snet_ginx_t *ith_ginx =
-            (snet_ginx_t *) 
-                SNetListItemGetValueByRef(sync_gnode->ident_states_inxs, it);
+        snet_idxvec_t *ith_gidx =
+            (snet_idxvec_t *) 
+                SNetListItemGetValueByRef(sync_gnode->ident_states_idxs, it);
 
-        if (SNetGInxCompare(ith_ginx, cnode_inx) == GRAPH_INX_CMP_RES_EQUAL) {
+        if (SNetIdxVecCompare(ith_gidx, cnode_idx) == IDXVEC_CMP_RES_EQUAL) {
             return NULL;
         }
     }
 
     // It is not an identity synccell but a "fresh" one!! 
     // A new state must be created.
-    return SNetSyncCellGNodeAddState(gnode, cnode_inx);
+    return SNetSyncCellGNodeAddState(gnode, cnode_idx);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -359,19 +359,19 @@ suspend_handle_in_synccell(
     snet_handle_t *mhnd = state->mhnds[matched_pattern];
 
     if (mhnd != NULL) {
-        switch (SNetGInxCompare(
-            SNetConsLstNodeGetOrdGInx(SNetHndGetConsNode(hnd)),
-            SNetConsLstNodeGetOrdGInx(SNetHndGetConsNode(mhnd)))) {
+        switch (SNetIdxVecCompare(
+            SNetConsLstNodeGetOrdGIdx(SNetHndGetConsNode(hnd)),
+            SNetConsLstNodeGetOrdGIdx(SNetHndGetConsNode(mhnd)))) {
 
-            case GRAPH_INX_CMP_RES_LESS:
+            case IDXVEC_CMP_RES_LESS:
                 break;
                 
-            case GRAPH_INX_CMP_RES_GREATER:
+            case IDXVEC_CMP_RES_GREATER:
                 suspend_hnd = false;
                 break;
 
-            case GRAPH_INX_CMP_RES_EQUAL:
-            case GRAPH_INX_CMP_RES_UNDEFINED:
+            case IDXVEC_CMP_RES_EQUAL:
+            case IDXVEC_CMP_RES_UNDEFINED:
                 //!!NOTE!!: This should never happen. If it does
                 // then there are bugs in the indexing of cons-nodes
                 // as they enter the cons-list.
@@ -418,19 +418,19 @@ synccell_output(
     snet_handle_t *last_matched_hnd = state->mhnds[0];
 
     for (unsigned int i=1; i < patterns_cnt; i++) {
-        switch (SNetGInxCompare(
-            SNetConsLstNodeGetOrdGInx(SNetHndGetConsNode(last_matched_hnd)),
-            SNetConsLstNodeGetOrdGInx(SNetHndGetConsNode(state->mhnds[i])))) {
+        switch (SNetIdxVecCompare(
+            SNetConsLstNodeGetOrdGIdx(SNetHndGetConsNode(last_matched_hnd)),
+            SNetConsLstNodeGetOrdGIdx(SNetHndGetConsNode(state->mhnds[i])))) {
 
-            case GRAPH_INX_CMP_RES_LESS:
+            case IDXVEC_CMP_RES_LESS:
                 break;
                 
-            case GRAPH_INX_CMP_RES_GREATER:
+            case IDXVEC_CMP_RES_GREATER:
                 last_matched_hnd = state->mhnds[i];
                 break;
 
-            case GRAPH_INX_CMP_RES_EQUAL:
-            case GRAPH_INX_CMP_RES_UNDEFINED:
+            case IDXVEC_CMP_RES_EQUAL:
+            case IDXVEC_CMP_RES_UNDEFINED:
                 //!!NOTE!!: This should never happen. If it does
                 // then there are bugs in the indexing of cons-nodes
                 // as they enter the cons-list.
@@ -575,19 +575,19 @@ try_synccell_output(
     }
 
     if (hnd != NULL) {
-        snet_ginx_t *infimum = 
-            SNetConsLstNodeGetMinGInx(SNetHndGetConsNode(hnd));
+        snet_idxvec_t *infimum = 
+            SNetConsLstNodeGetMinGIdx(SNetHndGetConsNode(hnd));
 
-        switch(SNetGInxCompareEx(infimum, state->inx)) {
-            case GRAPH_INX_CMP_RES_LESS:
+        switch(SNetIdxVecCompareEx(infimum, state->idx)) {
+            case IDXVEC_CMP_RES_LESS:
                 return false;
                 
-            case GRAPH_INX_CMP_RES_GREATER:
+            case IDXVEC_CMP_RES_GREATER:
                 can_output = true;
                 break;
 
-            case GRAPH_INX_CMP_RES_UNDEFINED:
-            case GRAPH_INX_CMP_RES_EQUAL:
+            case IDXVEC_CMP_RES_UNDEFINED:
+            case IDXVEC_CMP_RES_EQUAL:
                 break;
         }
     }
@@ -595,33 +595,24 @@ try_synccell_output(
     for (unsigned int i=0; i < patterns_cnt; i++) {
         assert(state->mhnds[i] != NULL);
 
-        snet_ginx_t *infimum = 
-            SNetConsLstNodeGetMinGInx(
+        snet_idxvec_t *infimum = 
+            SNetConsLstNodeGetMinGIdx(
                 SNetHndGetConsNode(state->mhnds[i]));
-
-        const char *infimum_str = SNetGInxToString(infimum, NULL);
-        const char *state_inx_str = SNetGInxToString(state->inx, NULL);
 
         if (state->mhnds[i] == hnd) {
             continue;
         }
 
-        if (infimum_str != NULL)
-            SNetMemFree((void *) infimum_str);
-
-        if (state_inx_str != NULL)
-            SNetMemFree((void *) state_inx_str);
-
-        switch (SNetGInxCompareEx(infimum, state->inx)) {
-            case GRAPH_INX_CMP_RES_LESS:
+        switch (SNetIdxVecCompareEx(infimum, state->idx)) {
+            case IDXVEC_CMP_RES_LESS:
                 return false;
                 
-            case GRAPH_INX_CMP_RES_GREATER:
+            case IDXVEC_CMP_RES_GREATER:
                 can_output = true;
                 break;
 
-            case GRAPH_INX_CMP_RES_UNDEFINED:
-            case GRAPH_INX_CMP_RES_EQUAL:
+            case IDXVEC_CMP_RES_UNDEFINED:
+            case IDXVEC_CMP_RES_EQUAL:
                 break;
         }
     }
@@ -763,13 +754,13 @@ static bool gnode_hnd_filter(snet_gnode_t *gnode, snet_handle_t *hnd)
 {
     assert(gnode->type == GRAPH_NODE_TYPE_FILTER);
 
-    const char *ginx_str = SNetGInxToString(gnode->data.normal->inx, NULL);
+    const char *gidx_str = SNetIdxVecToString(gnode->data.normal->idx, NULL);
 
     SNetReportWarning(
         SNET_WRN_IGNORED_ENTITY,
-        "filter box", ginx_str, "not supported yet");
+        "filter box", gidx_str, "not supported yet");
 
-    SNetMemFree((void *) ginx_str);
+    SNetMemFree((void *) gidx_str);
     SNetOnWarning();
 
     return true;
@@ -834,14 +825,14 @@ gnode_walk_hnd_parallel(snet_gnode_t *gnode, snet_handle_t *hnd)
     }
 
     if (sel_branch == NULL) { 
-        const char *ginx_str = 
-            SNetGInxToString(gnode->data.normal->inx, NULL);
+        const char *gidx_str = 
+            SNetIdxVecToString(gnode->data.normal->idx, NULL);
 
         SNetReportError(
             SNET_ERR_TYPE_ERROR,
-            "parallel combinator", ginx_str);
+            "parallel combinator", gidx_str);
 
-        SNetMemFree((void *) ginx_str);
+        SNetMemFree((void *) gidx_str);
         SNetOnError();
     }
 
@@ -865,13 +856,13 @@ static bool test_star_exit_cond(
         // (i.e. infinite star).
 
 #if SVPSNETGWRT_DEBUG > 2
-        const char *ginx_str =
-            SNetGInxToString(gnode->data.normal->inx, NULL);
+        const char *gidx_str =
+            SNetIdxVecToString(gnode->data.normal->idx, NULL);
         
         SNetReportWarningCustom(
-            "Infinite 'star' found at index %s", ginx_str);
+            "Infinite 'star' found at index %s", gidx_str);
 
-        SNetMemFree((void *) ginx_str);
+        SNetMemFree((void *) gidx_str);
         SNetOnWarning();
 #endif
 
@@ -929,20 +920,20 @@ gnode_walk_hnd_star(snet_gnode_t *gnode, snet_handle_t *hnd)
     }
 
     // Add dynamic index to the cons-node
-    SNetConsLstNodeAddDynGInx(cnode, gnode->data.normal->inx);
+    SNetConsLstNodeAddDynGIdx(cnode, gnode->data.normal->idx);
    
     // Fix the dynamic index
-    snet_ginx_t      *dyn_ginx      = SNetConsLstNodeGetDynGInx(cnode);
-    snet_ginx_item_t  ginx_item_val = 1;
+    snet_idxvec_t      *dyn_gidx      = SNetConsLstNodeGetDynGIdx(cnode);
+    snet_idxvec_item_t  gidx_item_val = 1;
 
-    if (!SNetConsLstNodeIsDynGInxNew(cnode)) {
-        SNetGInxConcat(
-            dyn_ginx, 
-            gnode->data.normal->inx, 
-            SNetGInxGetLen(dyn_ginx));
+    if (!SNetConsLstNodeIsDynGIdxNew(cnode)) {
+        SNetIdxVecPush(
+            dyn_gidx, 
+            gnode->data.normal->idx, 
+            SNetIdxVecGetLen(dyn_gidx));
     }
 
-    SNetGInxConcatArray(dyn_ginx, &ginx_item_val, 1); 
+    SNetIdxVecPushArray(dyn_gidx, &gidx_item_val, 1); 
 
     return gnode->data.normal->entity.star->groot;
 }
@@ -965,30 +956,30 @@ gnode_walk_hnd_star_merge(snet_gnode_t *gnode, snet_handle_t *hnd)
     assert(gnode->data.normal->entity.star->groot != NULL);
 
     if (test_star_exit_cond(gnode, SNetConsLstNodeGetRecord(cnode))) {
-        SNetConsLstNodeRemoveDynGInx(cnode);
+        SNetConsLstNodeRemoveDynGIdx(cnode);
         return NULL;
     }
     
     // It is going in the 'star' again. Because this is a "merge"
     // the only thing we have to do is to chop the index and increase
     // the value of the last item.
-    unsigned int dyn_inx_new_len = 
-        SNetGInxGetLen(gnode->data.normal->inx) + 1;
+    unsigned int dyn_idx_new_len = 
+        SNetIdxVecGetLen(gnode->data.normal->idx) + 1;
 
-    snet_ginx_t *dyn_inx = SNetConsLstNodeGetDynGInx(cnode);
+    snet_idxvec_t *dyn_idx = SNetConsLstNodeGetDynGIdx(cnode);
 
     // When returning back to a 'star' node
     // the node MUST ALWAYS have a dynamic index
     // and its length MUST be greater than the graph node's (+1)!!!
-    assert(dyn_inx != NULL);
-    assert(SNetGInxGetLen(dyn_inx) > dyn_inx_new_len);
+    assert(dyn_idx != NULL);
+    assert(SNetIdxVecGetLen(dyn_idx) > dyn_idx_new_len);
 
     // Fix the dynamic index!
-    SNetGInxChopRight(
-        dyn_inx,
-        SNetGInxGetLen(dyn_inx) - dyn_inx_new_len);
+    SNetIdxVecPopRight(
+        dyn_idx,
+        SNetIdxVecGetLen(dyn_idx) - dyn_idx_new_len);
 
-    SNetGInxIncrItemValue(dyn_inx, dyn_inx_new_len - 1, 1);
+    SNetIdxVecIncrItemValue(dyn_idx, dyn_idx_new_len - 1, 1);
 
     return gnode->data.normal->entity.star->groot;
 }
@@ -1009,27 +1000,27 @@ gnode_walk_hnd_split(snet_gnode_t *gnode, snet_handle_t *hnd)
     snet_record_t       *rec   = SNetConsLstNodeGetRecord(cnode);
     
     if (!SNetRecHasTag(rec, gnode->data.normal->entity.split->tag)) {
-        const char *ginx_str =
-            SNetGInxToString(gnode->data.normal->inx, NULL);
+        const char *gidx_str =
+            SNetIdxVecToString(gnode->data.normal->idx, NULL);
 
         SNetReportError(
             SNET_ERR_TYPE_ERROR,
             "index-split combinator "
-            "(record does not have required tag)", ginx_str);
+            "(record does not have required tag)", gidx_str);
 
-        SNetMemFree((void *) ginx_str);
+        SNetMemFree((void *) gidx_str);
         SNetOnError();
     }
 
     // Add dynamic index to the cons-node
-    SNetConsLstNodeAddDynGInx(cnode, gnode->data.normal->inx);
+    SNetConsLstNodeAddDynGIdx(cnode, gnode->data.normal->idx);
 
     // !!PORTABILITY NOTE!!
     // The following code will not work as expected on systems
     // that use ILP64 and SILP64 data models if the data type
-    // 'snet_ginx_item_t' is typedefed to 'long long' as it
-    // currently is (see file graphindex.int.utc.h).     
-    assert(sizeof(snet_ginx_item_t) == 2 * sizeof(unsigned int));
+    // 'snet_idxvec_item_t' is typedefed to 'long long' as it
+    // currently is (see file idxvec.int.utc.h).     
+    assert(sizeof(snet_idxvec_item_t) == 2 * sizeof(unsigned int));
 
     unsigned int tag_val = 
         (unsigned int) SNetRecGetTag(
@@ -1038,21 +1029,21 @@ gnode_walk_hnd_split(snet_gnode_t *gnode, snet_handle_t *hnd)
     // Here the additional index item that will be added will take the
     // value of the tag (with negative sign being a P label) instead of
     // the value of 1 as it happens in the 'star' combinator.
-    snet_ginx_item_t ginx_item_val = -(((snet_ginx_item_t) tag_val) + 1);
+    snet_idxvec_item_t gidx_item_val = -(((snet_idxvec_item_t) tag_val) + 1);
 
     // !!END OF PORTABILITY NOTE!!
 
     // Fix the dynamic index.
-    snet_ginx_t *dyn_ginx = SNetConsLstNodeGetDynGInx(cnode);    
+    snet_idxvec_t *dyn_gidx = SNetConsLstNodeGetDynGIdx(cnode);    
 
-    if (!SNetConsLstNodeIsDynGInxNew(cnode)) {
-        SNetGInxConcat(
-            dyn_ginx, 
-            gnode->data.normal->inx, 
-            SNetGInxGetLen(dyn_ginx));
+    if (!SNetConsLstNodeIsDynGIdxNew(cnode)) {
+        SNetIdxVecPush(
+            dyn_gidx, 
+            gnode->data.normal->idx, 
+            SNetIdxVecGetLen(dyn_gidx));
     }
 
-    SNetGInxConcatArray(dyn_ginx, &ginx_item_val, 1); 
+    SNetIdxVecPushArray(dyn_gidx, &gidx_item_val, 1); 
 
     return gnode->data.normal->entity.split->groot;
 }
@@ -1063,7 +1054,7 @@ gnode_walk_hnd_split_merge(snet_gnode_t *gnode, snet_handle_t *hnd)
     // Unlike the 'star' above here we only need to
     // remove the dynamic index before exiting the
     // index split.
-    SNetConsLstNodeRemoveDynGInx(SNetHndGetConsNode(hnd));
+    SNetConsLstNodeRemoveDynGIdx(SNetHndGetConsNode(hnd));
 
     // The network within the index split is executed
     // only once thus here we always return NULL to 
@@ -1078,13 +1069,13 @@ static bool gnode_hnd_extern_conn(snet_gnode_t *gnode, snet_handle_t *hnd)
 {
     assert(gnode->type == GRAPH_NODE_TYPE_EXTERN_CONNECTION);
 
-    const char *ginx_str = SNetGInxToString(gnode->data.normal->inx, NULL);
+    const char *gidx_str = SNetIdxVecToString(gnode->data.normal->idx, NULL);
 
     SNetReportWarning(
         SNET_WRN_IGNORED_ENTITY,
-        "external connextion", ginx_str, "not supported yet");
+        "external connextion", gidx_str, "not supported yet");
 
-    SNetMemFree((void *) ginx_str);
+    SNetMemFree((void *) gidx_str);
     SNetOnWarning();
 
     return true;
@@ -1112,21 +1103,21 @@ gnode_walk_hnd_extern_conn_merge(snet_gnode_t *gnode, snet_handle_t *hnd)
 /* Infimum update and propagation related functions */
     
 static thread void update_infimum(
-    snet_gnode_t        *synccell_gnode,
-    snet_conslst_node_t *cnode,
-    shared snet_ginx_t  *infimum,
+    snet_gnode_t         *synccell_gnode,
+    snet_conslst_node_t  *cnode,
+    shared snet_idxvec_t *infimum,
     shared snet_conslst_node_t *next_cnode)
 {
-    snet_ginx_t  *new_infimum   = NULL;
-    snet_ginx_t  *cnode_dyn_inx = SNetConsLstNodeGetDynGInx(cnode);
-    snet_gnode_t *gnode         = SNetConsLstNodeGetGraphNode(cnode);
+    snet_idxvec_t *new_infimum   = NULL;
+    snet_idxvec_t *cnode_dyn_idx = SNetConsLstNodeGetDynGIdx(cnode);
+    snet_gnode_t  *gnode         = SNetConsLstNodeGetGraphNode(cnode);
 
-    snet_ginx_t *cnode_inx = NULL;
+    snet_idxvec_t *cnode_idx = NULL;
 
     if (gnode != NULL && gnode->type != GRAPH_NODE_TYPE_NOP) {
-        cnode_inx = (
-            cnode_dyn_inx != NULL ?
-            cnode_dyn_inx : gnode->data.normal->inx);
+        cnode_idx = (
+            cnode_dyn_idx != NULL ?
+            cnode_dyn_idx : gnode->data.normal->idx);
     }
 
     if (infimum == NULL) {
@@ -1143,18 +1134,17 @@ static thread void update_infimum(
 
         conslst_node_reset_flag(cnode, CNODE_FLAG_INFIMUM_CHANGED);
 
-        if (cnode_inx == NULL) {
-            new_infimum = SNetGInxCreateCopy(
-                SNetConsLstNodeGetMinGInx(cnode), true);
+        if (cnode_idx == NULL) {
+            new_infimum = SNetIdxVecCreateCopy(
+                SNetConsLstNodeGetMinGIdx(cnode), true);
 
         } else {
-            new_infimum = SNetGInxCalcInfimumEx(
-                cnode_inx, SNetConsLstNodeGetMinGInx(cnode));
+            new_infimum = SNetIdxVecCalcInfimumEx(
+                cnode_idx, SNetConsLstNodeGetMinGIdx(cnode));
         }
 
     } else {
-        SNetGInxSetValue(
-            SNetConsLstNodeGetMinGInx(cnode), infimum, true);
+        SNetIdxVecSetValue(SNetConsLstNodeGetMinGIdx(cnode), infimum);
 
         conslst_node_set_flag(cnode, CNODE_FLAG_INFIMUM_CHANGED);
 
@@ -1164,7 +1154,7 @@ static thread void update_infimum(
                 CNODE_FLAG_ON_STATE_CHANGE_PROP_INFIMUM, 
                 CNODE_SET_FLAGS_IF_COND_TRUE)) {
 
-            SNetGInxDestroy(infimum);
+            SNetIdxVecDestroy(infimum);
 
             infimum    = NULL;
             next_cnode = NULL;
@@ -1173,11 +1163,11 @@ static thread void update_infimum(
         } 
 
         new_infimum = (
-            cnode_inx == NULL ? 
-            infimum : SNetGInxCalcInfimumEx(cnode_inx, infimum));
+            cnode_idx == NULL ? 
+            infimum : SNetIdxVecCalcInfimumEx(cnode_idx, infimum));
 
         if (infimum != new_infimum) {
-            SNetGInxDestroy(infimum);
+            SNetIdxVecDestroy(infimum);
         }
     }
 
@@ -1212,7 +1202,7 @@ static void propagate_infimum(
     unsigned int create_local,
     snet_conslst_node_t *cnode, snet_gnode_t *synccell_gnode) 
 {
-    snet_ginx_t         *infimum    = NULL;
+    snet_idxvec_t       *infimum    = NULL;
     snet_conslst_node_t *next_cnode = NULL;
 
     do {
@@ -1243,7 +1233,7 @@ static void propagate_infimum(
     } while (cnode != NULL);
 
     if (infimum != NULL)
-        SNetGInxDestroy(infimum);
+        SNetIdxVecDestroy(infimum);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1259,8 +1249,8 @@ move_cons_node_to_gnode(snet_conslst_node_t *cnode, snet_gnode_t *gnode)
 
     if (gnode == NULL) {
         // Remove its dynamic index if any!
-        while (SNetConsLstNodeGetDynGInx(cnode) != NULL) {
-            SNetConsLstNodeRemoveDynGInx(cnode);
+        while (SNetConsLstNodeGetDynGIdx(cnode) != NULL) {
+            SNetConsLstNodeRemoveDynGIdx(cnode);
         }
 
         return;
@@ -1268,23 +1258,23 @@ move_cons_node_to_gnode(snet_conslst_node_t *cnode, snet_gnode_t *gnode)
 
     // If its not being moved at the end of the
     // graph the dynamic index needs "fixing"!!
-    snet_ginx_t *dyn_inx = SNetConsLstNodeGetDynGInx(cnode);
+    snet_idxvec_t *dyn_idx = SNetConsLstNodeGetDynGIdx(cnode);
 
-    if (dyn_inx == NULL) {
+    if (dyn_idx == NULL) {
         return;
     }
 
-    unsigned int dyn_inx_len   = SNetGInxGetLen(dyn_inx);
-    unsigned int gnode_inx_len = SNetGInxGetLen(gnode->data.normal->inx);
+    unsigned int dyn_idx_len   = SNetIdxVecGetLen(dyn_idx);
+    unsigned int gnode_idx_len = SNetIdxVecGetLen(gnode->data.normal->idx);
 
-    if (gnode_inx_len == dyn_inx_len) {
+    if (gnode_idx_len == dyn_idx_len) {
         return;
     }
 
-    if (gnode_inx_len < dyn_inx_len)
-        SNetGInxChopRight(dyn_inx, dyn_inx_len - gnode_inx_len);
+    if (gnode_idx_len < dyn_idx_len)
+        SNetIdxVecPopRight(dyn_idx, dyn_idx_len - gnode_idx_len);
     else
-        SNetGInxConcat(dyn_inx, gnode->data.normal->inx, dyn_inx_len);
+        SNetIdxVecPush(dyn_idx, gnode->data.normal->idx, dyn_idx_len);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1638,7 +1628,7 @@ conslst_insert_node(
         // for this to deal also with the ref-count the cons-node
         // has for its dynamic index (see file conslist.utc for
         // more details).
-        SNetConsLstNodeAddSameDynGInxAs(cnode, pcnode);
+        SNetConsLstNodeAddSameDynGIdxAs(cnode, pcnode);
     }
 
     // Finally the node's state must be set

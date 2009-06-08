@@ -1,7 +1,7 @@
 #include "test.snet.utc.h"
 
 #define T 0
-#define PRINT_STDOUT  
+// #define PRINT_STDOUT  
 
 #define LOAD_THRESSHOLD 1
 // #define LOAD_THRESSHOLD 10000000
@@ -40,7 +40,7 @@ int SNetCall__A(snet_handle_t *hnd, void *field_a)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box A "
-        "(a=%d ==> venc_inx=0, b=%d)\n",
+        "(a=%d ==> venc_idx=0, b=%d)\n",
         *((int *) field_a), *res);
 #endif
 
@@ -50,7 +50,7 @@ int SNetCall__A(snet_handle_t *hnd, void *field_a)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box A "
-        "(a=%d ==> venc_inx=1, b=%d, <T>=0)\n",
+        "(a=%d ==> venc_idx=1, b=%d, <T>=0)\n",
         *((int *) field_a), *res);
 #endif
 
@@ -95,7 +95,7 @@ int SNetCall__B(snet_handle_t *hnd, void *field_b)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box B "
-        "(b=%d ==> venc_inx=0, c=%d)\n",
+        "(b=%d ==> venc_idx=0, c=%d)\n",
         *((int *) field_b), *res);
 #endif
 
@@ -107,7 +107,7 @@ int SNetCall__B(snet_handle_t *hnd, void *field_b)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box B "
-        "(b=%d ==> venc_inx=1, d=%d)\n",
+        "(b=%d ==> venc_idx=1, d=%d)\n",
         *((int *) field_b), *res);
 #endif
 
@@ -152,7 +152,7 @@ int SNetCall__C(snet_handle_t *hnd, void *field_c)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box C "
-        "(c=%d ==> venc_inx=0, b=%d)\n",
+        "(c=%d ==> venc_idx=0, b=%d)\n",
         *((int *) field_c), *res);
 #endif
 
@@ -164,7 +164,7 @@ int SNetCall__C(snet_handle_t *hnd, void *field_c)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box C "
-        "(c=%d ==> venc_inx=1, b=%d, <T>=10)\n",
+        "(c=%d ==> venc_idx=1, b=%d, <T>=10)\n",
         *((int *) field_c), *res);
 #endif
 
@@ -180,7 +180,7 @@ int SNetCall__C(snet_handle_t *hnd, void *field_c)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box C "
-        "(d=%d ==> venc_inx=2, b=%d, e=%d, <T>=%d)\n",
+        "(d=%d ==> venc_idx=2, b=%d, e=%d, <T>=%d)\n",
         *((int *) field_c), *res, *res1, t_tag);
 #endif
 
@@ -226,7 +226,7 @@ int SNetCall__D(snet_handle_t *hnd, void *field_d)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box D "
-        "(d=%d ==> venc_inx=0, b=%d)\n",
+        "(d=%d ==> venc_idx=0, b=%d)\n",
         *((int *) field_d), *res);
 #endif
 
@@ -237,7 +237,7 @@ int SNetCall__D(snet_handle_t *hnd, void *field_d)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box D "
-        "(d=%d ==> venc_inx=1, b(1)=%d, ",
+        "(d=%d ==> venc_idx=1, b(1)=%d, ",
         *((int *) field_d), *res);
 #endif
       
@@ -280,7 +280,7 @@ int SNetCall__D(snet_handle_t *hnd, void *field_d)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box D "
-        "(d=%d ==> venc_inx=2, b=%d, e=%d, <T>=%d)\n",
+        "(d=%d ==> venc_idx=2, b=%d, e=%d, <T>=%d)\n",
         *((int *) field_d), *res, *res1, t_tag);
 #endif
 
@@ -327,7 +327,7 @@ int SNetCall__E(snet_handle_t *hnd, void *field_e)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box E "
-        "(e=%d ==> venc_inx=0, e=%d)\n",
+        "(e=%d ==> venc_idx=0, e=%d)\n",
         *((int *) field_e), *res);
 #endif
 
@@ -339,7 +339,7 @@ int SNetCall__E(snet_handle_t *hnd, void *field_e)
 #ifdef PRINT_STDOUT  
       printf(
         "Executing box E "
-        "(e=%d ==> venc_inx=1, f=%d)\n",
+        "(e=%d ==> venc_idx=1, f=%d)\n",
         *((int *) field_e), *res);
 #endif
 

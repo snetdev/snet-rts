@@ -159,12 +159,12 @@ extern void SNetOut(
 
 extern void SNetOutRaw(
     snet_handle_t *hnd, 
-    snet_bli_id_t blid, int variant_inx, ...);
+    snet_bli_id_t blid, int variant_idx, ...);
 
 extern void SNetOutRawArray(
     snet_handle_t *hnd, 
     snet_bli_id_t blid,
-    int variant_inx, void **fields, int *tags, int *btags);
+    int variant_idx, void **fields, int *tags, int *btags);
 
 #endif // __SVPSNETGWRT_SNET_H
 

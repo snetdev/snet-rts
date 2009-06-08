@@ -38,29 +38,33 @@
 /**
  * Platform
  */
-#define SVPSNETGWRT_PLATFORM_PTL
-// #define SVPSNETGWRT_PLATFORM_PTL_PLUS
-// #define SVPSNETGWRT_PLATFORM_MGRID
-// #define SVPSNETGWRT_PLATFORM_UNKNOWN
-
-/**
- * The target platform can be a mix of all the above
- * in which case more than one of the above symbols should
- * be defined. In that case the following should also be defined.
- */
-// #define SVPSNETGWRT_PLATFORM_MIXED
+#define SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+// #define SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+// #define SVPSNETGWRT_SVP_PLATFORM_MGRID
+// #define SVPSNETGWRT_SVP_PLATFORM_UNKNOWN
 
 /*----------------------------------------------------------------------------*/
 /**
- * Library type
+ * If defined the runtime assumes that it runs on a system with distributed
+ * memory. If not then a shared memory system is assumed (which can speedup
+ * things since unecessary checks / operations do not take place).
+ *
+ * NOTE!: By default this symbol is always defined when 
+ * SVPSNETGWRT_SVP_PLATFORM_DUTCPTL is defined.
+ */
+// #define SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
+
+/*----------------------------------------------------------------------------*/
+/**
+ * Library type (default = SVPSNETGWRT_LIB_TYPE_SOFT_STATIC)
  */
 // #define SVPSNETGWRT_LIB_TYPE_HARD
-#define SVPSNETGWRT_LIB_TYPE_SOFT_STATIC
+// #define SVPSNETGWRT_LIB_TYPE_SOFT_STATIC
 // #define SVPSNETGWRT_LIB_TYPE_SOFT_DYNAMIC
 
 /*----------------------------------------------------------------------------*/
 /**
- * If defined some harmless warnings are being
+ * If defined some "harmless" warnings are being
  * disabled at the appropriate places (if the compiler
  * supports it).
  */
@@ -68,27 +72,11 @@
 
 /*----------------------------------------------------------------------------*/
 /**
- * Since there is no direct support in SVP for suspend/signal pattern
- * of communication (like condition variables in POSIX) between families
- * of threads the SNetPopOut() does not suspend when the global output buffer
- * is empty but returns "NULL". Thus the process that reads the output of
- * a network needs to continuusly "poll" the buffer by calling SNetPopOut()
- * continuusly.
- *
- * When the following is defined a "hack" that involves the "kill" SVP action
- * is used to emulate the suspend/signal pattern thus allowing a process/thread
- * to suspend on an empty buffer. This solution alsos makes the assumption
- * that mutual exclusive places are not recursive in SVP which so far it
- * appears to hold for the uTC-PTL.
- */
-// #define SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
-
-/*----------------------------------------------------------------------------*/
-/**
  * If defined sets the level of debugging code the 
- * library will have.
+ * library will have (if not defined a default value is 
+ * used in "debug" builds).
  */
-// #define SVPSNETGWRT_DEBUG 5
+#define SVPSNETGWRT_DEBUG_LEVEL 5
 
 #endif // __SVPSNETGWRT_CONFIG_H
 

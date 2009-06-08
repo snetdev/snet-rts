@@ -177,7 +177,7 @@ extern unsigned int
 SNetEListGetSize(const snet_expr_list_t *lst);
 
 extern const snet_expr_t*
-SNetEListGetExpr(const snet_expr_list_t *lst, unsigned int inx);
+SNetEListGetExpr(const snet_expr_list_t *lst, unsigned int idx);
 
 #endif // __SVPSNETGWRT_EXPRESSION_H
 

@@ -39,13 +39,13 @@ struct cons_list_node {
 
     snet_conslst_t *lst;
     snet_record_t  *rec;
-    snet_ginx_t    *ord_inx;
-    snet_ginx_t    *dyn_inx;
-    snet_ginx_t    *min_inx;
+    snet_idxvec_t  *ord_idx;
+    snet_idxvec_t  *dyn_idx;
+    snet_idxvec_t  *min_idx;
     snet_gnode_t   *gnode;
 
     unsigned int    mult_cnt;
-    unsigned int    dyn_inx_cnt;
+    unsigned int    dyn_idx_cnt;
     unsigned int    flags;
 
     struct cons_list_node *next;
@@ -82,14 +82,14 @@ void SNetConsLstNodeInit(snet_conslst_node_t *n, const snet_domain_t *domain)
     n->state       = CONS_NODE_STATE_INIT;
     n->lst         = NULL;
     n->rec         = NULL;
-    n->ord_inx     = NULL;
-    n->dyn_inx     = NULL;
-    n->min_inx     = SNetGInxCreate();
+    n->ord_idx     = NULL;
+    n->dyn_idx     = NULL;
+    n->min_idx     = SNetIdxVecCreate();
     n->gnode       = NULL;
     n->next        = NULL;
     n->prev        = NULL;
     n->mult_cnt    = 0;
-    n->dyn_inx_cnt = 0;
+    n->dyn_idx_cnt = 0;
     n->flags       = 0;
 }
 
@@ -113,14 +113,14 @@ void SNetConsLstNodeDestroy(snet_conslst_node_t *n)
     assert(n->lst == NULL);
     assert(n->next == NULL);
 
-    if (n->ord_inx != NULL)
-        SNetGInxDestroy(n->ord_inx);
+    if (n->ord_idx != NULL)
+        SNetIdxVecDestroy(n->ord_idx);
 
-    if (n->dyn_inx != NULL)
-        SNetGInxDestroy(n->dyn_inx);
+    if (n->dyn_idx != NULL)
+        SNetIdxVecDestroy(n->dyn_idx);
 
-    if (n->min_inx != NULL)
-        SNetGInxDestroy(n->min_inx);
+    if (n->min_idx != NULL)
+        SNetIdxVecDestroy(n->min_idx);
 
     SNetBaseTypeDestroy(&n->base);
     SNetMemFree(n);
@@ -208,67 +208,67 @@ SNetConsLstNodeGetGraphNode(const snet_conslst_node_t *n)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-snet_ginx_t*
-SNetConsLstNodeGetOrdGInx(snet_conslst_node_t *n)
+snet_idxvec_t*
+SNetConsLstNodeGetOrdGIdx(snet_conslst_node_t *n)
 {
-    assert(n != NULL); return n->ord_inx;
+    assert(n != NULL); return n->ord_idx;
 }
 
-snet_ginx_t*
-SNetConsLstNodeGetDynGInx(snet_conslst_node_t *n)
+snet_idxvec_t*
+SNetConsLstNodeGetDynGIdx(snet_conslst_node_t *n)
 {
-    assert(n != NULL); return n->dyn_inx;
+    assert(n != NULL); return n->dyn_idx;
 }
 
-snet_ginx_t*
-SNetConsLstNodeGetMinGInx(snet_conslst_node_t *n)
+snet_idxvec_t*
+SNetConsLstNodeGetMinGIdx(snet_conslst_node_t *n)
 {
-    assert(n != NULL); return n->min_inx;
+    assert(n != NULL); return n->min_idx;
 }
 
 /*----------------------------------------------------------------------------*/
 
-void SNetConsLstNodeAddDynGInx(
-    snet_conslst_node_t *n, const snet_ginx_t *ginx)
+void SNetConsLstNodeAddDynGIdx(
+    snet_conslst_node_t *n, const snet_idxvec_t *idx)
 {
     assert(n != NULL);
 
-    if (n->dyn_inx != NULL) {
-        n->dyn_inx_cnt++;
+    if (n->dyn_idx != NULL) {
+        n->dyn_idx_cnt++;
         return;
     }
 
-    n->dyn_inx = SNetGInxCreateCopy(ginx, true);
+    n->dyn_idx = SNetIdxVecCreateCopy(idx, true);
 }
 
-void SNetConsLstNodeAddSameDynGInxAs(
+void SNetConsLstNodeAddSameDynGIdxAs(
     snet_conslst_node_t *n1, const snet_conslst_node_t *n2)
 {
     assert(n1 != NULL);
     assert(n2 != NULL);
-    assert(n1->dyn_inx == NULL);
-    assert(n2->dyn_inx != NULL);
+    assert(n1->dyn_idx == NULL);
+    assert(n2->dyn_idx != NULL);
 
-    n1->dyn_inx     = SNetGInxCreateCopy(n2->dyn_inx, true);
-    n1->dyn_inx_cnt = n2->dyn_inx_cnt;
+    n1->dyn_idx     = SNetIdxVecCreateCopy(n2->dyn_idx, true);
+    n1->dyn_idx_cnt = n2->dyn_idx_cnt;
 }
 
-void SNetConsLstNodeRemoveDynGInx(snet_conslst_node_t *n)
+void SNetConsLstNodeRemoveDynGIdx(snet_conslst_node_t *n)
 {
     assert(n != NULL);
     
-    if (n->dyn_inx == NULL) {
+    if (n->dyn_idx == NULL) {
         return;
     }
 
-    if (n->dyn_inx_cnt > 0) {
-        n->dyn_inx_cnt--;
+    if (n->dyn_idx_cnt > 0) {
+        n->dyn_idx_cnt--;
         return;
     }
 
-    SNetGInxDestroy(n->dyn_inx);
+    SNetIdxVecDestroy(n->dyn_idx);
 
-    n->dyn_inx = NULL;
+    n->dyn_idx = NULL;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -308,9 +308,9 @@ bool SNetConsLstNodeIsAttached(const snet_conslst_node_t *n)
 
 /*----------------------------------------------------------------------------*/
 
-bool SNetConsLstNodeIsDynGInxNew(const snet_conslst_node_t *n)
+bool SNetConsLstNodeIsDynGIdxNew(const snet_conslst_node_t *n)
 {
-    assert(n != NULL); return (n->dyn_inx_cnt == 0);
+    assert(n != NULL); return (n->dyn_idx_cnt == 0);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -391,23 +391,23 @@ void SNetConsLstPush(snet_conslst_t *lst, snet_conslst_node_t *n)
     assert(n->lst == NULL);
     assert(n->next == NULL);
     assert(n->prev == NULL);
-    assert(n->ord_inx == NULL);
+    assert(n->ord_idx == NULL);
 
     assert(SNetBaseTypeSameDomain(&lst->base, &n->base));
 
-    snet_ginx_item_t ord_inx_val = 1;
+    snet_idxvec_item_t ord_idx_val = 1;
 
     if (lst->tail != NULL) {
         lst->tail->next = n;
 
-        ord_inx_val = SNetGInxGetItemValue(lst->tail->ord_inx, 0);
-        ord_inx_val++;
+        ord_idx_val = SNetIdxVecGetItemValue(lst->tail->ord_idx, 0);
+        ord_idx_val++;
     }
 
     n->lst     = lst;
     n->next    = NULL;
     n->prev    = lst->tail;
-    n->ord_inx = SNetGInxCreateFromArray(&ord_inx_val, 1);
+    n->ord_idx = SNetIdxVecCreateFromArray(&ord_idx_val, 1);
     lst->tail  = n;
 
     if (lst->head == NULL) {
@@ -425,8 +425,8 @@ void SNetConsLstInsertBefore(
     assert(n2->lst != NULL);
     assert(n1->next == NULL);
     assert(n1->prev == NULL);
-    assert(n1->ord_inx == NULL);
-    assert(n2->ord_inx != NULL);
+    assert(n1->ord_idx == NULL);
+    assert(n2->ord_idx != NULL);
 
     assert(SNetBaseTypeSameDomain(&n1->base, &n2->base));
 
@@ -434,18 +434,18 @@ void SNetConsLstInsertBefore(
     n1->next    = n2;
     n1->prev    = n2->prev;
     n2->prev    = n1;
-    n1->ord_inx = SNetGInxCreateCopy(n2->ord_inx, true);
+    n1->ord_idx = SNetIdxVecCreateCopy(n2->ord_idx, true);
 
     if (n2->mult_cnt == 0) {
-        SNetGInxConcatStr(n1->ord_inx, "1");
-        SNetGInxConcatStr(n2->ord_inx, "2");
+        SNetIdxVecPushStr(n1->ord_idx, "1");
+        SNetIdxVecPushStr(n2->ord_idx, "2");
 
     } else {
-        assert(SNetGInxGetLen(n2->ord_inx) > 0);
+        assert(SNetIdxVecGetLen(n2->ord_idx) > 0);
 
-        SNetGInxIncrItemValue(
-            n2->ord_inx,
-            SNetGInxGetLen(n2->ord_inx) - 1, 1);
+        SNetIdxVecIncrItemValue(
+            n2->ord_idx,
+            SNetIdxVecGetLen(n2->ord_idx) - 1, 1);
     }
 
     n2->mult_cnt++;
@@ -480,13 +480,13 @@ snet_conslst_node_t* SNetConsLstPop(snet_conslst_t *lst)
         lst->tail = NULL;
     }
 
-    if (head->ord_inx != NULL)
-        SNetGInxDestroy(head->ord_inx);
+    if (head->ord_idx != NULL)
+        SNetIdxVecDestroy(head->ord_idx);
 
     head->lst      = NULL;
     head->next     = NULL;
     head->prev     = NULL;
-    head->ord_inx  = NULL;
+    head->ord_idx  = NULL;
     head->mult_cnt = 0;
 
     return head;

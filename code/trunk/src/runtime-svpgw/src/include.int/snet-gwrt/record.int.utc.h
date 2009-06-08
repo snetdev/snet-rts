@@ -48,6 +48,14 @@
 /*----------------------------------------------------------------------------*/
 
 typedef struct {
+    place  p;
+    void  *data;
+
+} snet_record_field_t;
+
+/*---*/
+
+typedef struct {
     int *names;
     int *new_names;
 

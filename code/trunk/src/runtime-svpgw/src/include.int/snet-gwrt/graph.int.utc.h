@@ -34,7 +34,8 @@
 
 #include "common.int.utc.h"
 #include "basetype.int.utc.h"
-#include "graphindex.int.utc.h"
+
+#include "idxvec.int.utc.h"
 #include "typeencode.int.utc.h"
 #include "expression.int.utc.h"
 #include "filteriset.int.utc.h"
@@ -71,7 +72,7 @@ SNetGNodeConnect(snet_gnode_t *n1, snet_gnode_t* n2, bool merge_lnk);
 /*----------------------------------------------------------------------------*/
 
 extern void
-SNetGNodeSetupNormal(snet_gnode_t *n, const snet_ginx_t *inx); 
+SNetGNodeSetupNormal(snet_gnode_t *n, const snet_idxvec_t *idx); 
 
 /*----------------------------------------------------------------------------*/
 
@@ -119,7 +120,7 @@ SNetGNodeSetupParallel(
 extern void
 SNetGNodeParallelSetupBranch(
     snet_gnode_t *n,
-    unsigned int inx,
+    unsigned int idx,
     snet_gnode_t *groot, snet_typeencoding_t *type);
 
 /*----------------------------------------------------------------------------*/
