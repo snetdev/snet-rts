@@ -95,7 +95,7 @@ static void *OManagerThread(void *ptr)
   return NULL;
 }
 
-void OManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int index)
+void SNetOManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int index)
 {
   pthread_t thread;
   omanager_data_t *data;
@@ -119,13 +119,6 @@ void OManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int index)
   
   return;
 }
-
-void OManagerCreate(snet_tl_stream_t *imanager)
-{
-  return;
-}
-
-
 
 #ifdef DUMMY
 /* NOTICE:

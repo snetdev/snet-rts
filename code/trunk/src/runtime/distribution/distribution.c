@@ -115,8 +115,7 @@ int DistributionInit(int argc, char *argv[])
 
   SNetDataStorageInit();
 
-  OManagerCreate();
-  IManagerCreate();
+  SNetIManagerCreate();
 
   return my_rank;
 }
@@ -210,6 +209,8 @@ void DistributionDestroy()
   long payload_data;
 #endif /* SNET_DEBUG_COUNTERS  */
 
+  SNetIManagerDestroy();
+
   SNetDataStorageDestroy();
 
   SNetIDServiceDestroy();
@@ -218,6 +219,7 @@ void DistributionDestroy()
 
   SNetRoutingDestroy();
 
+  /* This must be called after the datamanager and the input manager have been destroyed!*/
   SNetMessageTypesDestroy();
 
 #ifdef SNET_DEBUG_COUNTERS

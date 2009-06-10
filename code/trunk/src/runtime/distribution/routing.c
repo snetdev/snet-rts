@@ -256,7 +256,7 @@ static void UpdateOTable(int id, int node, int index, snet_tl_stream_t *stream)
   msg.node = SNetRoutingGetSelf();
   msg.index = index;
 
-  OManagerUpdateRoutingTable(stream, node, index);
+  SNetOManagerUpdateRoutingTable(stream, node, index);
 
   type = SNetMessageGetMPIType(SNET_msg_route_index);
 

@@ -597,7 +597,6 @@ void SNetDataStorageInit()
   int block_lengths[3];
   MPI_Aint displacements[3];
   MPI_Datatype types[3];
-  MPI_Aint base;
   snet_msg_data_op_t msg;
   int result;
 

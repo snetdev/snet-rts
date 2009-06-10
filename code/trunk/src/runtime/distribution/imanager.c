@@ -43,6 +43,17 @@ typedef struct {
   int index;
 } imanager_data_t;
 
+
+/* Handle to the master thread.
+ *
+ * This is needed to make a pthread_join when
+ * the system is shut down. Without the join
+ * operation MPI_Finalize might be called too early
+ * (This is a problem al least with OpenMPI) 
+ */
+
+static pthread_t master_thread;
+
 static void *IManagerInputThread( void *ptr) 
 {
   bool terminate = false;
@@ -290,11 +301,13 @@ static void *IManagerMasterThread( void *ptr)
   tags[TYPE_TERMINATE] = SNET_msg_terminate;
 
   for(index = 0; index < NUM_MESSAGE_TYPES; index++) {
+    requests[index] = MPI_REQUEST_NULL;
+
     types[index] = SNetMessageGetMPIType(tags[index]);
 
     MPI_Type_get_true_extent(types[index], &true_lb, &true_extent);
     
-    bufs[index] = SNetMemAlloc(true_extent);
+    bufs[index] = SNetMemAlloc(true_extent * 2);
     
     MPI_Irecv(bufs[index], 2, types[index], MPI_ANY_SOURCE, tags[index], MPI_COMM_WORLD, &requests[index]);
   }
@@ -374,8 +387,11 @@ static void *IManagerMasterThread( void *ptr)
   } 
 
   for(index = 0; index < NUM_MESSAGE_TYPES; index++) {
-    MPI_Cancel(&requests[index]);
-    MPI_Request_free(&requests[index]);
+    if(requests[index] != MPI_REQUEST_NULL) {
+      MPI_Cancel(&requests[index]);
+      MPI_Request_free(&requests[index]);
+    }
+
     SNetMemFree(bufs[index]);
   }
 
@@ -385,17 +401,19 @@ static void *IManagerMasterThread( void *ptr)
   return NULL;
 }
 
-void IManagerCreate()
+void SNetIManagerCreate()
 {
-  pthread_t thread;
-
-  pthread_create(&thread, NULL, IManagerMasterThread, NULL);
-  pthread_detach(thread);
+  pthread_create(&master_thread, NULL, IManagerMasterThread, NULL);
 
   return;
 }
 
+void SNetIManagerDestroy()
+{
+  pthread_join(master_thread, NULL);
 
+  return;
+}
 
 
 
