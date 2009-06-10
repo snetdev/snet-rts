@@ -135,6 +135,9 @@ static void IManagerCreateInput(snet_tl_stream_t *stream, int node, int index)
   pthread_t thread;
   imanager_data_t *data;
 
+  int my_rank;
+  MPI_Comm_rank( MPI_COMM_WORLD, &my_rank );
+
   data = SNetMemAlloc(sizeof(imanager_data_t));
 
   data->stream = stream;
@@ -170,7 +173,9 @@ static void *IManagerCreateNetwork(void *op)
 
   stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), stream);
   
-  stream = SNetTlMarkObsolete(stream);
+  if(stream != NULL) {
+    stream = SNetTlMarkObsolete(stream);
+  }
 
   SNetInfoDestroy(info);
 
