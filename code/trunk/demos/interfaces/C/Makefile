@@ -1,13 +1,13 @@
 include $(SNETBASE)/src/makefiles/config.mkf
 
-CC        = gcc
-MPICC     = mpicc
-CCFLAGS   = -Wall -g -fPIC
-AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include
-SOFLAGS   = -shared -dy -Wl -allow-shlib-undefined 
-COPY      = cp
-DISTFLAGS = -DDISTRIBUTED_SNET
+CC         = gcc
+CCFLAGS    = -Wall -g -fPIC
+AR         = ar
+INCDIRS    = -I. -I$(SNETBASE)/include
+MPIINCDIRS = -I. -I$(SNETBASE)/include -I$(MPIROOT)/include
+SOFLAGS    = -shared -dy -Wl -allow-shlib-undefined 
+COPY       = cp
+DISTFLAGS  = -DDISTRIBUTED_SNET
 
 # = = = = = = = = = = = = = = = = = = = =
 OBJECTS     = C4SNet.o base64.o 
@@ -26,9 +26,9 @@ all:
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
 
 mpi:
-	$(MPICC) $(MPIFLAGS) $(DISTFLAGS) $(CCFLAGS) $(INCDIRS) -c *.c
-	$(MPICC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
-	$(MPICC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
+	$(CC) $(DISTFLAGS) $(CCFLAGS) $(MPIINCDIRS) -c *.c
+	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
+	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
 
 clean:
