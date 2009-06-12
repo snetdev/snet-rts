@@ -1,5 +1,5 @@
 PROJ_NAME := testapp
-BIN_NAME  := $(PROJ_NAME)
+BIN_NAME  := runtest
 
 #---
 
@@ -7,7 +7,7 @@ CONFIGS   := debug release debug_mb release_mb
 
 #---
 
-SOURCE_DIR  := ../../src/test-app
+SOURCE_DIR  := ../../src/testing
 SCRIPTS_DIR := ../../build-tools
 
 #---
@@ -40,9 +40,12 @@ include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
 
 INCLUDE_DIRS :=                        \
 	$(SOURCE_DIR)                      \
-	$(SOURCE_DIR)/test_snet            \
-	$(SOURCE_DIR)/test_snet/00         \
-	$(SOURCE_DIR)/test_snet/01         \
+	$(SOURCE_DIR)/units                \
+	$(SOURCE_DIR)/snets                \
+	$(SOURCE_DIR)/sane                 \
+	$(SOURCE_DIR)/snets/ts00           \
+	$(SOURCE_DIR)/snets/ts01           \
+	$(SOURCE_DIR)/snets/ts02           \
 	                                   \
 	$(SOURCE_DIR)/../include           \
     $(SOURCE_DIR)/../include/snet-gwrt \

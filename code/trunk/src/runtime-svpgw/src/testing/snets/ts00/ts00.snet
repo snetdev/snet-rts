@@ -1,4 +1,4 @@
-net test {
+net ts00 {
     box A((a) -> (b) | (b, <T>));
     box B((b) -> (c) | (d));
     box C((c) -> (b) | (b, <T>) | (e, <T>));

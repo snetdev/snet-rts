@@ -1,12 +1,5 @@
-#include "test.snet.utc.h"
+#include "tsboxes.utc.h"
 
-#define T 0
-// #define PRINT_STDOUT  
-
-#define LOAD_THRESSHOLD 1
-// #define LOAD_THRESSHOLD 10000000
-
-/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 int SNetCall__A(snet_handle_t *hnd, void *field_a)
