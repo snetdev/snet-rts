@@ -1,0 +1,42 @@
+# This file contains functions to deal with libraries / frameworks
+# used that are not normally installed on a system.
+#
+#-------------------------------------------------------------------------------
+# This can be used to allow for a library to be used either by assuming that it
+# is installed on the system or by assumming that information about its location
+# is explicitly provided.
+#
+# For example if we want to use the "utc2cpp" translator from the "uTC-PTL"
+# library we can use this function as follows:
+#
+# 	$(call NONSTD_LIB,UTCPTL,BIN,utc2cpp)
+#
+# Now if the variable "UTCPTL_BIN_DIR" has been defined the function will
+# return "UTCPTL_BIN_DIR/utc2cpp" thus the translator in the explicitly given
+# location will be used. If that variable is not defined the function will 
+# return just "utc2cpp" which means that the location of the translator should
+# be in the PATH thus the library is installed on the system.
+#
+# It can also be used just for directories by calling with 2 arguments only;
+# e.g:
+# 	$(call NONSTD_LIB,UTCPTL,INCLUDE)
+#
+# 	in which case if the variable "UTCPTL_INCLUDE_DIR" variable is defined
+# 	it will return its value (note that the '/' is added only when called
+# 	with 3 non-empty arguements as in the 1st case above) otherwise it will
+# 	return nothing (because it is assumed the library is installed thus its
+# 	headers are in one of the "default" include folders of the system; e.g. 
+# 	"/usr/include" or "/usr/local/include" on most UNIX systems).
+#
+# Finally if the variable "TOP_LEVEL_MAKEFILE_DIR" is defined then its value
+# will be prefixed to the returned value of the function (this allows for
+# relative paths to a "top-level" makefile to be specified).
+#
+define NONSTD_LIB
+$(if $($(1)_$(2)_DIR),\
+$(if $(TOP_LEVEL_MAKEFILE_DIR),\
+$(TOP_LEVEL_MAKEFILE_DIR)/,)$($(1)_$(2)_DIR)$(if $(3),/,)$(3),$(3))
+endef
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------

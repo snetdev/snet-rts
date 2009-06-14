@@ -9,7 +9,7 @@ CONFIGS_EXT  :=
 #---
 
 MAKE         := make
-SCRIPTS_DIR  := ../build-tools
+SCRIPTS_DIR  := ../../build-tools
 
 #---
 
@@ -21,22 +21,40 @@ BUILD_SPEC_OPT_DIR := make-config
 
 #-------------------------------------------------------------------------------
 
-PROJ_DEP_SNetGWRT    :=
-PROJ_DEP_TestingPack := SNetGWRT
+PROJ_DEP_CommonLib    :=
+PROJ_DEP_UnitTestsLib := CommonLib
+PROJ_DEP_SNetsLib     := CommonLib
+PROJ_DEP_Runner       := UnitTestsLib SNetsLib
+PROJ_DEP_Sane         := UnitTestsLib SNetsLib
 
 #-------------------------------------------------------------------------------
 
-PROJ_CFG_SNetGWRT_debug         := debug
-PROJ_CFG_SNetGWRT_release       := release
-PROJ_CFG_SNetGWRT_debug_mb      := debug_mb
-PROJ_CFG_SNetGWRT_release_mb    := release_mb
+PROJ_CFG_CommonLib_debug         := debug
+PROJ_CFG_CommonLib_release       := release
+PROJ_CFG_CommonLib_debug_mb      := debug_mb
+PROJ_CFG_CommonLib_release_mb    := release_mb
+
+PROJ_CFG_UnitTestsLib_debug      := debug
+PROJ_CFG_UnitTestsLib_release    := release
+PROJ_CFG_UnitTestsLib_debug_mb   := debug_mb
+PROJ_CFG_UnitTestsLib_release_mb := release_mb
+
+PROJ_CFG_SNetsLib_debug          := debug
+PROJ_CFG_SNetsLib_release        := release
+PROJ_CFG_SNetsLib_debug_mb       := debug_mb
+PROJ_CFG_SNetsLib_release_mb     := release_mb
 
 #---
 
-PROJ_CFG_TestingPack_debug      := debug
-PROJ_CFG_TestingPack_release    := release
-PROJ_CFG_TestingPack_debug_mb   := debug_mb
-PROJ_CFG_TestingPack_release_mb := release_mb
+PROJ_CFG_Runner_debug            := debug
+PROJ_CFG_Runner_release          := release
+PROJ_CFG_Runner_debug_mb         := debug_mb
+PROJ_CFG_Runner_release_mb       := release_mb
+
+PROJ_CFG_Sane_debug              := debug
+PROJ_CFG_Sane_release            := release
+PROJ_CFG_Sane_debug_mb           := debug_mb
+PROJ_CFG_Sane_release_mb         := release_mb
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -59,10 +77,9 @@ endef
 #-------------------------------------------------------------------------------
 # Command line defined variables that can be cached
 
-CMDLINE_CACHED_VARS := UTCPTL_INCLUDE_DIR
-CMDLINE_CACHED_VARS += UTCPTL_BIN_DIR
-CMDLINE_CACHED_VARS += UTCPTL_LIB_DIR
+# CMDLINE_CACHED_VARS := UTCPTL_INCLUDE_DIR
+# CMDLINE_CACHED_VARS += UTCPTL_BIN_DIR
+# CMDLINE_CACHED_VARS += UTCPTL_LIB_DIR
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
-

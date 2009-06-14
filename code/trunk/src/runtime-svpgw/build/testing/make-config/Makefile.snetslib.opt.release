@@ -1,0 +1,39 @@
+LIB_NAME_release      := lib$(LIB_NAME).a
+
+#---
+
+SRC_FILES_LST_release := $(SRC_FILES_LST)
+
+#---
+
+INTERM_DIR_release    :=
+TARGET_DIR_release    := lib
+
+#---
+
+PREREQUISITES_release :=
+BUILD_TOOLSET_release :=
+
+#-------------------------------------------------------------------------------
+
+MAKEDEP_FLAGS_release           := 
+MAKEDEP_INCL_DIRS_FLAGS_release :=
+
+#---
+
+UTC2CPP_FLAGS_release           := --cpp:-DNDEBUG
+UTC2CPP_INCL_DIRS_FLAGS_release :=
+
+#---
+
+CXX_FLAGS_release           := -DNDEBUG -O2
+CXX_INCL_DIRS_FLAGS_release :=
+
+#---
+
+AR_FLAGS_release    :=
+ARINX_FLAGS_release :=
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

@@ -1,7 +1,5 @@
 .SUFFIXES:
 .DEFAULT : all
-.IGNORE  : clean 
-.PHONY   : update-src-list 
 
 #---
 
@@ -24,7 +22,7 @@ endif
 include Makefile.opt
 
 #Build specific
--include $(BUILD_SPEC_OPT_DIR)/Makefile.$(PROJ_NAME).opt
+-include $(BUILD_SPEC_OPT_DIR)/Makefile.$(SLN_NAME).opt
 
 #---
 
@@ -33,24 +31,31 @@ $(foreach cfg,$(CONFIGS),\
 
 #Build specific
 $(foreach cfg,$(CONFIGS),\
-	$(eval -include $(BUILD_SPEC_OPT_DIR)/Makefile.$(PROJ_NAME).opt.$(cfg)))
+	$(eval -include $(BUILD_SPEC_OPT_DIR)/Makefile.$(SLN_NAME).opt.$(cfg)))
 
 #-------------------------------------------------------------------------------
-# Default values for output / intermediate  directories
-
-ifeq ($(strip $(INTERM_DIR)),)
-	INTERM_DIR := intermediate
-endif
-
-ifeq ($(strip $(TARGET_DIR)),)
-	TARGET_DIR := .
-endif
-
 #-------------------------------------------------------------------------------
-# Script that deals with stupid compilers and other tools that
-# insist on printing crap other than errors / warnings to stdout or stderr.
+# Command line defined variables' value caching
 #
-EXEC_SILENT := $(SCRIPTS_DIR)/exec-silent
+-include Makefile.cache
+
+ifeq ($(strip $(CMDLINE_VAR_CACHE)),true)
+define clean_cache
+rm -f Makefile.cache
+endef
+
+define cache_cmdline_var
+ifeq ($$(origin $(1)),command line)
+$$(shell echo "export $(1) := $($(1))" >> Makefile.cache)
+endif
+endef
+
+#---
+
+$(foreach var,$(CMDLINE_CACHED_VARS),\
+	$(eval $(call cache_cmdline_var,$(var))))
+								
+endif
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -70,172 +75,99 @@ endef
 endif
 
 #-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
 
-define set_files_vars
-OBJ_FILES_$(1) := $$(subst .utc,.o,\
-	$$(shell $$(SCRIPTS_DIR)/cat-xargs -comment '\#' $$(SRC_FILES_LST_$(1))))
- 
-OBJ_FILES_$(1) := $$(subst $$(SOURCE_DIR),,$$(OBJ_FILES_$(1)))
-OBJ_FILES_$(1) := $$(patsubst /%,%,$$(OBJ_FILES_$(1)))
+PROJ_NAMES :=
+
+define store_proj_data
+PROJ_NAMES += $$(strip $(1))
+PROJ_DIR_$$(strip $(1)) := $$(strip $(2))
 endef
 
-#-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
-# Functions for setting up the output / intermediate directories.
+#---
 
-define set_cfg_out_dir_var
-ifeq ($$(strip $$($(1)_$(2))),)
-	$(1)_$(2) := $$($(1))/$(2)
+PROJECTS := $(shell \
+    $(SCRIPTS_DIR)/cat-xargs -comment '\#' $(PROJECTS_LST))
+
+#---
+
+$(foreach p,$(PROJECTS),\
+	$(eval $(call store_proj_data,\
+		$(strip $(shell echo $(p) | sed -e "s/:.*$$//")),\
+		$(strip $(shell echo $(p) | sed -e "s/^.*://")))))
+
+#-------------------------------------------------------------------------------
+
+define cfg_prj_tmpl
+.PHONY: clean-$(1)_$(2)
+
+ifneq ($$(strip $$(PROJ_CFG_$(2)_$(1))),)
+$(1)_$(2): $$(foreach p,$$(PROJ_DEP_$(2)),$(1)_$$(p))
+	$$(call print,,"Building $(2) \($(1)\)...")
+	
+	$$(MAKE) -C           \
+		$$(PROJ_DIR_$(2)) \
+		$$(PROJ_CFG_$(2)_$(1)) PRINT_INDENT=$$(PRINT_INDENT)xxxx
+
+clean-$(1)_$(2):
+	$$(call print,,"Cleaning $(2) \($(1)\)")
+	
+	$$(MAKE) -C           \
+		$$(PROJ_DIR_$(2)) \
+		clean-$$(PROJ_CFG_$(2)_$(1)) PRINT_INDENT=$$(PRINT_INDENT)xxxx
+
 else
-	$(1)_$(2) := $$($(1))/$$($(1)_$(2))
+$(1)_$(2):
+clean-$(1)_$(2):
+
 endif
 endef
 
-#-------------------------------------------------------------------------------
-
-define obj_file_gen_rule_tmpl
-
-$$(INTERM_DIR_$(1))/%.o : $$(INTERM_DIR_$(1))/%.cpp
-	$$(call print,,"Compiling: $$<")
-	
-	mkdir -p $$(dir $$@)
-	
-	$$(CXX$(2))                     \
-		$$(CXX_FLAGS$(2))           \
-		$$(CXX_FLAGS_$(1))          \
-	   	$$(CXX_OUTF_FLAG$(2)) $$@   \
-		$$(CXX_INCL_DIRS_FLAGS$(2)) \
-		$$(CXX_INCL_DIRS_FLAGS_$(1)) $$<
-
-endef
-	 
 #---
 
-define cpp_file_gen_rule_tmpl
-
-$$(INTERM_DIR_$(1))/%.cpp: $$(SOURCE_DIR)/%.utc
-	$$(call print,,"Translating: $$<")
+define cfg_tmpl
+$(1): $$(foreach p,$$(PROJ_NAMES),$(1)_$$(p))
+	$$(call print)
 	
-	mkdir -p $$(dir $$@)
-	
-	$$(MAKEDEP$(2))                      \
-		$$(MAKEDEP_FLAGS$(2))            \
-		$$(MAKEDEP_FLAGS_$(1))           \
-		$$(MAKEDEP_TARGET_FLAG$(2)) $$@  \
-		$$(MAKEDEP_INCL_DIRS_FLAGS$(2))  \
-		$$(MAKEDEP_INCL_DIRS_FLAGS_$(1)) \
-		$$(MAKEDEP_OUTF_FLAG$(2)) $$(@:.cpp=.d) $$<
-	
-	$$(UTC2CPP$(2))                     \
-		$$(UTC2CPP_FLAGS$(2))           \
-		$$(UTC2CPP_FLAGS_$(1))          \
-		$$(UTC2CPP_OUTF_FLAG$(2)) $$@   \
-		$$(UTC2CPP_INCL_DIRS_FLAGS$(2)) \
-		$$(UTC2CPP_INCL_DIRS_FLAGS_$(1)) $$< 
-endef
+clean-$(1): $$(foreach p,$$(PROJ_NAMES),clean-$(1)_$$(p))
+	$$(call print)
 
-#-------------------------------------------------------------------------------
-
-define build_cfg_tmpl
-$$(eval $$(call set_files_vars,$(1)))
-
-$$(eval $$(call set_cfg_out_dir_var,INTERM_DIR,$(1)))
-$$(eval $$(call set_cfg_out_dir_var,TARGET_DIR,$(1)))
-
-.PRECIOUS: $$(INTERM_DIR_$(1))/%.d
-.PRECIOUS: $$(INTERM_DIR_$(1))/%.cpp
-
-.PHONY:    $$(PREREQUISITES_$(1))
-
-$(1): $$(PREREQUISITES_$(1)) \
-      $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1))
-
-$$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1)): \
-      $$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))
-	
-	$$(call print,,"Linking: $$(BIN_NAME_$(1))")
-	
-	mkdir -p $$(TARGET_DIR_$(1))
-	
-	$$(LD$(2))                                                     \
-		$$(LD_FLAGS$(2))                                           \
-		$$(LD_FLAGS_$(1))                                          \
-		$$(LD_OUTF_FLAG$(2)) $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1)) \
-		$$(LD_LIB_DIRS_FLAGS$(2))                                  \
-		$$(LD_LIB_DIRS_FLAGS_$(1))                                 \
-		$$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))      \
-		$$(LD_LIBS_FLAGS$(2))                                      \
-		$$(LD_LIBS_FLAGS_$(1))
-
-$$(eval $$(call cpp_file_gen_rule_tmpl,$(1),$(2)))
-$$(eval $$(call obj_file_gen_rule_tmpl,$(1),$(2)))
-
--include $$(wildcard $$(INTERM_DIR_$(1))/*.d)
-endef
-
-#-------------------------------------------------------------------------------
-
-define clean_cfg_tmpl
-.PHONY : clean-$(1)
-.IGNORE: clean-$(1)
-
-clean-$(1):
-	if  [ -d $$(INTERM_DIR_$(1)) ] && \
-		[ "$$(INTERM_DIR_$(1))" != "." ]; then rm -rf $$(INTERM_DIR_$(1)); fi
-	
-	if  [ -d $$(INTERM_DIR) ] &&          \
-		[ "$$(INTERM_DIR)" != "." ]; then \
-		$$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $$(INTERM_DIR); fi
-	
-	rm -f  $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1))*
-	
-	if  [ -d $$(TARGET_DIR_$(1)) ] &&          \
-		[ "$$(TARGET_DIR_$(1))" != "." ]; then \
-		$$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $$(TARGET_DIR_$(1)); fi 
+$$(foreach p,$$(PROJ_NAMES),\
+	$$(eval $$(call cfg_prj_tmpl,$(1),$$(p))))
 
 endef
 
 #-------------------------------------------------------------------------------
-
-define make_config_build_toolset_var
-$(if $(BUILD_TOOLSET_$(1)),_$(BUILD_TOOLSET_$(1)),)
-endef
-
-#-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
-#Configurations' build rules
 
 all: $(CONFIGS) ;
 
-#---
-
-$(foreach cfg,$(CONFIGS),\
-	$(eval $(call build_cfg_tmpl,$(cfg),$(call \
-		make_config_build_toolset_var,$(cfg)))))
-
-#-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
-#Other rules
-
-$(foreach cfg,$(CONFIGS),\
-	$(eval $(call clean_cfg_tmpl,$(cfg))))
+$(foreach p,$(PROJ_NAMES),\
+	$(eval all_$(p): $(foreach cfg,$(CONFIGS),$(cfg)_$(p))))
 
 #---
 
-clean: $(foreach cfg,$(CONFIGS),clean-$(cfg)) 
-	if  [ -d $(INTERM_DIR) ] && \
-		[ "$(INTERM_DIR)" != "." ]; then rm -rf $(INTERM_DIR); fi
+$(foreach p,$(PROJ_NAMES),\
+	$(eval clean_$(p): $(foreach cfg,$(CONFIGS),clean-$(cfg)_$(p))))
+
+#---
+
+$(foreach cfg,$(CONFIGS),\
+	$(eval $(call cfg_tmpl,$(cfg))))
+
+$(foreach cfg,$(CONFIGS_EXT),\
+	$(eval $(call cfg_tmpl,$(cfg))))
+
+#---
+
+clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))
+	$(call print)
+	$(call clean_cache)
 	
-	if  [ -d $(TARGET_DIR) ] &&          \
-		[ "$(TARGET_DIR)" != "." ]; then \
-		$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $(TARGET_DIR); fi
+	rm -f *.log
 
 #---
 
-update-src-list:
-	$(SCRIPTS_DIR)/autoupdate-srclst \
-		-ext utc -ex-ext exclude -o $(SRC_FILES_LST) $(SOURCE_DIR)/
+# Additional rules defined in the options file!
+$(eval $(call ADDITIONAL_RULES))
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

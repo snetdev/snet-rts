@@ -20,18 +20,18 @@ BUILD_SPEC_OPT_DIR := make-config
 
 #-------------------------------------------------------------------------------
 
-PROJ_DEP_SNetGWRT   :=
-PROJ_DEP_TestingApp := SNetGWRT
+PROJ_DEP_SNetGWRT    :=
+PROJ_DEP_TestingPack := SNetGWRT
 
 #-------------------------------------------------------------------------------
 
-PROJ_CFG_SNetGWRT_debug     := debug
-PROJ_CFG_SNetGWRT_release   := release
+PROJ_CFG_SNetGWRT_debug      := debug
+PROJ_CFG_SNetGWRT_release    := release
 
 #---
 
-PROJ_CFG_TestingApp_debug   := debug
-PROJ_CFG_TestingApp_release := release
+PROJ_CFG_TestingPack_debug   := debug
+PROJ_CFG_TestingPack_release := release
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

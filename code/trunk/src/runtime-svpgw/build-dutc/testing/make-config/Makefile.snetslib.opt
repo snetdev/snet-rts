@@ -1,0 +1,62 @@
+PROJ_NAME := snetslib
+LIB_NAME  := snets
+
+#---
+
+CONFIGS   := debug release debug_mb release_mb
+
+#---
+
+SOURCE_DIR  := ../../../src/testing/snets
+SCRIPTS_DIR := ../../../build-tools
+
+#---
+
+INTERM_DIR      := intermediate
+TARGET_DIR      := ..
+TARGET_INCL_DIR := $(SOURCE_DIR)
+
+#---
+
+SRC_FILES_LST   := SrcFiles.lst
+XDR_FILES_LST   := XdrFiles.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := ../make-config
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# The following file that is being included contains functions that allow 
+# to deal with libraries / frameworks that are not usually found installed
+# on a system (e.g. uTC-PTL library) and from this point on that functionality 
+# will be required.
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+INCLUDE_DIRS :=              	          \
+	$(SOURCE_DIR)                         \
+	$(SOURCE_DIR)/ts00                    \
+	$(SOURCE_DIR)/ts01                    \
+	$(SOURCE_DIR)/ts02                    \
+	$(SOURCE_DIR)/../common               \
+	                                      \
+	$(SOURCE_DIR)/../../include           \
+	$(SOURCE_DIR)/../../include/snet-gwrt \
+	                                      \
+	$(SOURCE_DIR)/../../include.int       \
+	$(SOURCE_DIR)/../../include.snetc     \
+                                          \
+	$(call NONSTD_LIB,UTCPTL,INCLUDE)
+
+#-------------------------------------------------------------------------------
+# Build Toolsets!
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.toolsets
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

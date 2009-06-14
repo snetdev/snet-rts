@@ -28,7 +28,9 @@
 #ifndef __SVPSNETGWRT_MEMMNG_INT_H
 #define __SVPSNETGWRT_MEMMNG_INT_H
 
+$ifndef __STDC_FORMAT_MACROS
 $define __STDC_FORMAT_MACROS
+$endif
 
 /*---*/
 

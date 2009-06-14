@@ -1,0 +1,44 @@
+SLN_NAME := sln
+
+#---
+
+CONFIGS      := debug release
+CONFIGS_EXT  :=
+
+#---
+
+MAKE         := make
+SCRIPTS_DIR  := ../../build-tools
+
+#---
+
+PROJECTS_LST := Projects.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := make-config
+
+#-------------------------------------------------------------------------------
+
+PROJ_DEP_CommonLib    :=
+PROJ_DEP_UnitTestsLib := CommonLib
+PROJ_DEP_SNetsLib     := CommonLib
+PROJ_DEP_Runner       := UnitTestsLib SNetsLib
+
+#-------------------------------------------------------------------------------
+
+PROJ_CFG_CommonLib_debug      := debug
+PROJ_CFG_CommonLib_release    := release
+PROJ_CFG_UnitTestsLib_debug   := debug
+PROJ_CFG_UnitTestsLib_release := release
+PROJ_CFG_SNetsLib_debug       := debug
+PROJ_CFG_SNetsLib_release     := release
+
+#---
+
+PROJ_CFG_Runner_debug         := debug
+PROJ_CFG_Runner_release       := release
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
