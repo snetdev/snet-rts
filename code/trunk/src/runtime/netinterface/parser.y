@@ -539,7 +539,23 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
           {
 	    /* Tag with no value. */
-	    SNetUtilDebugFatal("Input: Tag without data encountered.");
+            attrib_t *attr = NULL;
+	    int label;
+	    
+	    attr = searchAttribute($2, LABEL);
+	    if(attr != NULL) {
+	      label = SNetInLabelToId(parser.labels, attr->value);
+	    
+	      SNetRecAddTag(current.record, label);
+
+	      SNetRecSetTag(current.record, label, 0);
+
+	    } else{
+	      yyerror("Tag without label found!");
+	    }
+
+
+	    deleteAttributes($2);
 	  }
         | TAG_BEGIN Attributes TAG_END CHARDATA TAG_END_BEGIN TAG_END
           {
@@ -563,12 +579,47 @@ Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
 
 	    deleteAttributes($2);
           }
+        | TAG_BEGIN Attributes TAG_END TAG_END_BEGIN TAG_END
+          {
+	    attrib_t *attr = NULL;
+	    int label;
+	    
+	    attr = searchAttribute($2, LABEL);
+	    if(attr != NULL) {
+	      label = SNetInLabelToId(parser.labels, attr->value);
+	    
+	      SNetRecAddTag(current.record, label);
+
+	      SNetRecSetTag(current.record, label, 0);
+	    } else{
+	      yyerror("Tag without label found!");
+	    }
+
+
+	    deleteAttributes($2);
+          }
         ;
 
 Btag:     BTAG_BEGIN Attributes STARTTAG_SHORTEND
           {
 	    /* Btag with no value. */
-	    SNetUtilDebugFatal("Input: Binding tag without a value encountered.");
+
+	    attrib_t *attr = NULL;
+	    int label;
+	    
+	    attr = searchAttribute($2, LABEL);
+	    if(attr != NULL) {
+	      label = SNetInLabelToId(parser.labels, attr->value);
+	    
+	      SNetRecAddBTag(current.record, label);
+	      
+	      SNetRecSetBTag(current.record, label, 0);
+	      
+	    } else{
+	      yyerror("Btag without label found!");
+	    }
+	    
+	    deleteAttributes($2);
 	  }
         | BTAG_BEGIN Attributes TAG_END CHARDATA BTAG_END_BEGIN TAG_END
           {
@@ -585,6 +636,25 @@ Btag:     BTAG_BEGIN Attributes STARTTAG_SHORTEND
 	      SNetRecSetBTag(current.record, label, atoi($4));
 
 	      SNetMemFree($4);
+	    } else{
+	      yyerror("Btag without label found!");
+	    }
+
+	    deleteAttributes($2);
+          }
+        | BTAG_BEGIN Attributes TAG_END BTAG_END_BEGIN TAG_END
+          {
+	    attrib_t *attr = NULL;
+	    int label;
+	    
+	    attr = searchAttribute($2, LABEL);
+	    if(attr != NULL) {
+	      label = SNetInLabelToId(parser.labels, attr->value);
+	    
+	      SNetRecAddBTag(current.record, label);
+
+	      SNetRecSetBTag(current.record, label, 0);
+
 	    } else{
 	      yyerror("Btag without label found!");
 	    }
