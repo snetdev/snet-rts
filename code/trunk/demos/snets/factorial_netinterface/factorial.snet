@@ -1,4 +1,4 @@
-net factorial({x} -> {x,<stop>})
+net factorial
 {
         box leq1( (x) -> (x,p));
         box condif( (p) -> (<T>) | (<F>));

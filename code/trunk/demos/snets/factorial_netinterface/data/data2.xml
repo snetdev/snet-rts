@@ -2,6 +2,9 @@
 <record xmlns="snet-home.org" type="data" mode="textual" >
   <field label="x" interface="C4SNet" >(int)5</field>
   <field label="r" interface="C4SNet" >(int)2</field>
+  <tag label="test_tag_1" >1</tag>
+  <tag label="test_tag_2" ></tag>
+  <tag label="test_tag_3" />
 </record>
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <record xmlns="snet-home.org" type="terminate" />
