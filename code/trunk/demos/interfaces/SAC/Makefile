@@ -1,8 +1,8 @@
 include $(SNETBASE)/src/makefiles/config.mkf
-INCDIRS   = -I. \
-	    -I$(SNETBASE)/include \
-            -I$(SNETBASE)/src/util/metadata \
-	    -I$(SAC2CBASE)/include
+INCDIRS   = -I.  -I$(SNETBASE)/include \
+		 -I$(SNETBASE)/src/util/metadata \
+		 -I$(SAC2CBASE)/include \
+		 -I$(SAC2CBASE)/src/include
 
 LIBDIR	= sac_lib
 LIB		  = SAC4SNetFibreIO

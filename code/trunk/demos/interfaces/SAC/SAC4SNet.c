@@ -2,8 +2,6 @@
  *
  * $Id$
  *
- * file SAC4SNet.c
- *
  * SAC4SNet is a the SAC language interface for S-Net. 
  *
  * Serialisation of data is done using the FibreIO module of SAC's stdlib. 
@@ -18,13 +16,16 @@
  *
  * FIBREHEADER = IDSTRINGPRE BTYPE DIM SHP IDSTRINGSUF
  * BTYPE       = int
- * DIM         = int
- * SHP         = int [SHP]*
+ *             | double
+ *             | float
+ * DIM         = num
+ * SHP         = num [SHP]*
  *
- * where BTYPE is the base type (as reported by SACARGgetBasetype()), DIM
- * is the dimensionality (SACARGgetDim()) and SHP is a list of 
- * DIM integers (SACARGgetShape(arg, 0) ... SACARGgetShape( arg, DIM-1)).
- * IDSTRINGPRE and IDSTRINGSUF are defined below.
+ * where BTYPE is any of above shown  strings (it is converted to the number
+ * that is reported by SACARGgetBasetype()), DIM is the dimensionality
+ * (SACARGgetDim()) and SHP is a list of DIM integers (SACARGgetShape(arg, 0)
+ * ... SACARGgetShape( arg, DIM-1)).  IDSTRINGPRE and IDSTRINGSUF are defined
+ * below.
  *
  *
  * Note 1: De-/Serialisation currently only works for int, float, double
@@ -49,6 +50,12 @@
 #define IDSTRINGPRE ":::SACFIBRE:"
 #define IDSTRINGSUF ":::"
 
+const char *t_descr[] = {
+#define TYP_IFdb_str( n) n
+#include "type_info.mac" 
+#undef TYP_IFdb_str
+};
+
 
 typedef enum { SACint=1, SACflt=7, SACdbl=8} SACbasetype_t; 
 
@@ -68,14 +75,31 @@ struct container {
   int *btags;
 };
 
+/*
+ * Abort execution on error
+ */
+static void Error( char *msg)
+{
+  printf("\n\n** SAC4SNet Fatal Error ** (abort) : %s\n\n", msg);
+  exit( -1);
+}
+
 
 /*
  * Serialisation & Deserialisation functions 
  */
 static int SAC4SNetDataSerialise( FILE *file, void *ptr);
 static void *SAC4SNetDataDeserialise(FILE *file);
-static int SAC4SNetDataEncode( FILE *file, void *ptr);
-static void *SAC4SNetDataDecode(FILE *file);
+static int SAC4SNetDataEncode( FILE *file, void *ptr)
+{
+  Error( "DataEncoding not implemented.");
+  return( 0);
+}
+static void *SAC4SNetDataDecode(FILE *file)
+{
+  Error( "DataDecoding not implemented.");
+  return( 0);
+}
 
 /******************************************************************************/
 
@@ -138,8 +162,9 @@ void SAC4SNetInit( int id)
                                &SACARGcopy, 
                                &SAC4SNetDataSerialise, 
                                &SAC4SNetDataDeserialise,
-                               NULL,
-                               NULL);  
+                               &SAC4SNetDataEncode,
+                               &SAC4SNetDataDecode
+                               );  
 }
 
 /******************************************************************************/
@@ -153,8 +178,9 @@ static int SAC4SNetDataSerialise( FILE *file, void *ptr)
   if( arg != NULL) { 
 
     dim = SACARGgetDim( arg);
-    fprintf( file, "\n%s %d "
-                   "%d ", IDSTRINGPRE, SACARGgetBasetype( arg), dim);
+    fprintf( file, "\n%s %s %d ", IDSTRINGPRE, 
+                                  t_descr[SACARGgetBasetype( arg)], 
+                                  dim);
     for( i=0; i<dim; i++) {
       fprintf( file, "%d ",SACARGgetShape( arg, i));
     }
@@ -189,10 +215,24 @@ static int SAC4SNetDataSerialise( FILE *file, void *ptr)
   return( 0);
 }
 
+static int TstrToNum( char *s)
+{
+  int i = 0;
+  
+  /* T_nothing is the last entry of the types table */
+  while( strcmp( t_descr[i], s) != 0) {
+    if( strcmp( t_descr[i], "nothing") == 0) {
+      Error( "Invalid Basetype");
+    } 
+    i += 1;
+  }
+  return( i);
+}
+
 static void *SAC4SNetDataDeserialise( FILE *file)
 {
   int i, res;
-  char buf[128];
+  char buf[128], tstr[128];
   int basetype, dim, *shape;
   SACarg *scanres, *sac_shp, *dummy;
 
@@ -200,7 +240,8 @@ static void *SAC4SNetDataDeserialise( FILE *file)
 
   res = strcmp( IDSTRINGPRE, buf);
   if( res == 0) {
-    fscanf( file, "%d%d", &basetype, &dim);
+    fscanf( file, "%s%d", tstr, &dim);
+    basetype = TstrToNum ( tstr);
     shape = SNetMemAlloc( dim * sizeof( int));
     for( i=0; i<dim; i++) {
       fscanf( file, "%d", &shape[i]);
