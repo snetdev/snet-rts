@@ -1,6 +1,11 @@
 #ifndef _C4SNET_H_
 #define _C4SNET_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif 
+
+
 /** <!--********************************************************************-->
  *
  * @file C4SNet.h
@@ -71,6 +76,7 @@ typedef enum{
     CTYPE_float,   /*!< float */
     CTYPE_double,  /*!< double */
     CTYPE_ldouble, /*!< long double */
+    CTYPE_string   /* Experimental type for supporting strings */
 }c4snet_type_t;
 
 /** <!--********************************************************************-->
@@ -362,5 +368,9 @@ c4snet_container_t *C4SNetContainerSetBTag( c4snet_container_t *c, int value);
 void C4SNetContainerOut( c4snet_container_t *c);
 
 /*@}*/
+
+#ifdef __cplusplus
+}
+#endif 
 
 #endif /* _C4SNET_H_ */

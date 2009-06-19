@@ -15,7 +15,7 @@ static char *itoa( int val)
   char *result;
   char *str;
 
-  result = malloc( (MAX_ARGS + 1) * sizeof( char));
+  result = (char *)malloc( (MAX_ARGS + 1) * sizeof( char));
   result[MAX_ARGS] = '\0';
 
   offset=(int)'0';
@@ -29,7 +29,7 @@ static char *itoa( int val)
       break;
     }
    }
-  str = malloc( (len + 1) * sizeof( char));
+  str = (char *)malloc( (len + 1) * sizeof( char));
   strcpy(str,&result[MAX_ARGS-len]);
   free( result);
 
@@ -43,7 +43,7 @@ static char *strappend( char *dest, const char *src)
   int newlen;
 
   newlen = (strlen( dest) + strlen( src) + 1);
-  res = malloc( newlen * sizeof( char));
+  res = (char *)malloc( newlen * sizeof( char));
   strcpy( res, dest);
   strcat( res, src);
   
@@ -64,7 +64,7 @@ char *C4SNetGenBoxWrapper( char *box_name,
   
   /* generate prototype of SAC function */
   wrapper_code = 
-    malloc( ( strlen( "extern void *") + 1) * sizeof( char)); 
+    (char *)malloc( ( strlen( "extern void *") + 1) * sizeof( char)); 
   strcpy( wrapper_code, "extern void *");
 
   STRAPPEND( wrapper_code, c_fqn);

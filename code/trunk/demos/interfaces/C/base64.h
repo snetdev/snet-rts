@@ -22,6 +22,9 @@
  * using base64 encoding. 
  *
  */
+#ifdef __cplusplus
+extern "C" {
+#endif 
 
 int Base64encode(FILE *dst, void *src, int size);
 
@@ -43,5 +46,9 @@ int Base64encodeDataType(FILE *dst, int type);
 /* Decode data type ID from file 'src' to memory location 'type'. */
 
 int Base64decodeDataType(FILE *src, int *type);
+
+#ifdef __cplusplus
+}
+#endif 
 
 #endif /* _BASE64_H_ */
