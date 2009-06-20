@@ -1,6 +1,6 @@
 include $(SNETBASE)/src/makefiles/config.mkf
 
-CC         = gcc
+CC         = g++
 CCFLAGS    = -Wall -g -fPIC
 AR         = ar
 INCDIRS    = -I. -I$(SNETBASE)/include
