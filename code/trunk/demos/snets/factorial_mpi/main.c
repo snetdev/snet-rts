@@ -31,12 +31,6 @@
     
 char **names;
 
-void initialise() {
-
-  SNetGlobalInitialise();
-  C4SNetInit( 0); 
-}
-
 void *InputThread(void *ptr) 
 {
   snet_record_t *rec1, *rec2;
@@ -142,7 +136,7 @@ int main(int argc, char *argv[])
   pthread_t ithread;
   int node;
 
-  initialise();
+  SNetGlobalInitialise();
 
   SNetDistFunRegisterLibrary("factorial", 
 			     SNetFun2ID_factorial,
@@ -150,6 +144,8 @@ int main(int argc, char *argv[])
 
 
   node = DistributionInit(argc, argv);
+
+  C4SNetInit( 0); 
 
   if(node == 0) {
     DistributionStart(SNet__factorial___factorial);

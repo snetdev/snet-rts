@@ -158,6 +158,7 @@ void SAC4SNetInit( int id)
 {
   my_interface_id = id;
   SNetGlobalRegisterInterface( id, 
+			       SNET_interface_basic,
                                &SACARGfree, 
                                &SACARGcopy, 
                                &SAC4SNetDataSerialise, 

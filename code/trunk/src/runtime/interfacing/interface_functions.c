@@ -2,8 +2,13 @@
 #include "debug.h"
 #include "memfun.h"
 
-/* hkr: TODO: consider if this can be removed *somehow*? */
-snet_global_info_structure_t *snet_global = NULL;
+static snet_global_info_structure_t *snet_global = NULL;
+
+static void SNetGlobalSetInterfaceSupportLevel( snet_global_interface_functions_t *f,
+						snet_interface_support_level_t level)
+{
+  f->level = level;
+}
 
 void SNetGlobalSetFreeFun( snet_global_interface_functions_t *f,
 			   snet_free_fun_t freefun)
@@ -170,7 +175,8 @@ void SNetGlobalDestroy()
 }
 
 bool 
-SNetGlobalRegisterInterface( int id, 
+SNetGlobalRegisterInterface( int id,
+                             snet_interface_support_level_t support_level,
 			     snet_free_fun_t freefun,
 			     snet_copy_fun_t copyfun,
 			     snet_serialise_fun_t serialisefun,
@@ -193,6 +199,20 @@ SNetGlobalRegisterInterface( int id,
   
   SNetGlobalRuntimeInitialised();
   num = snet_global->num;
+
+#ifdef DISTRIBUTED_SNET
+  if(support_level != SNET_interface_MPI) {
+    SNetUtilDebugFatal("Language interface (%d) support inadequate (%d). Support level SNET_interface_MPI required.",
+                       id, support_level);
+  }
+#else /* DISTRIBUTED_SNET */
+  if(support_level != SNET_interface_basic
+     && support_level != SNET_interface_MPI) {
+     SNetUtilDebugFatal("Language interface (%d) support inadequate (%d). Support level SNET_interface_basic required.",
+                       id, support_level);
+  }
+#endif /* DISTRIBUTED_SNET */ 
+
   if( num == ( INITIAL_INTERFACE_TABLE_SIZE -1)) {
     /* TODO replace this with proper code!!!! */
     SNetUtilDebugFatal("[Global] Lookup table is full!\n\n");
@@ -200,6 +220,7 @@ SNetGlobalRegisterInterface( int id,
   else {
     new_if = SNetMemAlloc( sizeof( snet_global_interface_functions_t));  
     SNetGlobalSetId( new_if, id);
+    SNetGlobalSetInterfaceSupportLevel(new_if, support_level);
     SNetGlobalSetFreeFun( new_if, freefun);
     SNetGlobalSetCopyFun( new_if, copyfun);  
     SNetGlobalSetSerializationFun( new_if, serialisefun);
@@ -287,6 +308,22 @@ snet_decode_fun_t SNetGetDecodingFunFromRec( snet_record_t *rec)
 snet_decode_fun_t SNetGetDecodingFun( int id) 
 {
   return( SNetGlobalGetDecodingFun( SNetGlobalGetInterface( id)));
+}
+
+snet_interface_support_level_t SNetGlobalGetInterfaceSupportLevel( snet_global_interface_functions_t *f)
+{
+  return( f->level);
+}
+
+snet_interface_support_level_t SNetGetInterfaceSupportLevelFromRec( snet_record_t *rec) 
+{
+  return( SNetGlobalGetInterfaceSupportLevel( SNetGlobalGetInterface( 
+		SNetRecGetInterfaceId( rec))));
+}
+
+snet_interface_support_level_t SNetGetInterfaceSupportLevel(int id)
+{
+  return( SNetGlobalGetInterfaceSupportLevel( SNetGlobalGetInterface( id)));
 }
 
 #ifdef DISTRIBUTED_SNET

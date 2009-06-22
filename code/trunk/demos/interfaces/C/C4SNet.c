@@ -152,6 +152,11 @@ void C4SNetInit( int id)
 {
   interface_id = id;
   SNetGlobalRegisterInterface( id, 
+#ifdef DISTRIBUTED_SNET
+                               SNET_interface_MPI,
+#else
+                               SNET_interface_basic,
+#endif /* DISTRIBUTED_SNET */
 			       &C4SNetDataFree, 
 			       &C4SNetDataShallowCopy,
 			       &C4SNetDataSerialize, 

@@ -218,14 +218,14 @@ int main(int argc, char *argv[])
 
   SNetGlobalInitialise();
 
-  C4SNetInit( 0); 
-
 #ifdef DISTRIBUTED_SNET
   SNetDistFunRegisterLibrary("crypto", 
 			     SNetFun2ID_crypto,
 			     SNetID2Fun_crypto);
  
   node = DistributionInit(argc, argv);
+
+  C4SNetInit( 0); 
 
   if(node == 0) {    
     if(init(&info, argc, argv) == NULL) {
@@ -256,7 +256,8 @@ int main(int argc, char *argv[])
   DistributionDestroy();
 
 #else
- 
+  C4SNetInit( 0); 
+
   if(init(&info, argc, argv) != NULL) {
 #ifdef SNET_DEBUG_COUNTERS
     SNetDebugTimeGetTime(&execution_start_time);

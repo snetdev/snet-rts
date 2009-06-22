@@ -11,6 +11,12 @@
 #include <mpi.h>
 #endif /* DISTRIBUTED_SNET */
 
+typedef enum {
+  SNET_interface_unknown,
+  SNET_interface_basic,   /* Free, copy, serialize, deserialize, encode, decode */
+  SNET_interface_MPI      /* Basic + MPI functions */
+} snet_interface_support_level_t;
+
 typedef void (*snet_free_fun_t)( void*);
 typedef void* (*snet_copy_fun_t)( void*);
 typedef int (*snet_serialise_fun_t)( FILE *, void*);
@@ -91,6 +97,7 @@ typedef void* (*snet_mpi_unpack_fun_t)(MPI_Comm, void*, MPI_Datatype, int, void*
 
 typedef struct {
   int id;
+  snet_interface_support_level_t level;
   snet_free_fun_t freefun;
   snet_copy_fun_t copyfun;
   snet_serialise_fun_t serialisefun;
@@ -111,9 +118,6 @@ typedef struct {
   snet_global_interface_functions_t **interface;
 } snet_global_info_structure_t;
 
-/* hkr: TODO: consider if this can be removed *somehow*? */
-extern snet_global_info_structure_t *snet_global;
-
 #ifdef DBG_RT_TRACE_THREAD_CREATE
   int tcount = 0;
   pthread_mutex_t *t_count_mtx;
@@ -124,7 +128,8 @@ extern snet_global_info_structure_t *snet_global;
   void SNetGlobalUnlockThreadMutex();
 #endif
 
-bool SNetGlobalRegisterInterface( int id, 
+bool SNetGlobalRegisterInterface( int id,
+                                  snet_interface_support_level_t level, 
 				  snet_free_fun_t freefun,
 				  snet_copy_fun_t copyfun,
 				  snet_serialise_fun_t serialisefun,
@@ -192,6 +197,10 @@ snet_serialise_fun_t SNetGetSerializationFun(int id);
 snet_deserialise_fun_t SNetGetDeserializationFun(int id);
 snet_encode_fun_t SNetGetEncodingFun(int id);
 snet_decode_fun_t SNetGetDecodingFun(int id);
+
+snet_interface_support_level_t SNetGlobalGetInterfaceSupportLevel(snet_global_interface_functions_t *f);
+snet_interface_support_level_t SNetGetInterfaceSupportLevelFromRec(snet_record_t *rec);
+snet_interface_support_level_t SNetGetInterfaceSupportLevel(int id);
 
 #ifdef DISTRIBUTED_SNET
 
