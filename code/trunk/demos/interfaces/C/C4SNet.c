@@ -1193,7 +1193,7 @@ static int C4SNetDeserializeType(MPI_Comm comm, void *buf, int size, MPI_Datatyp
   int count;
   c4snet_data_t *c = NULL;
   
-  if((c = SNetMemAlloc( sizeof( c4snet_data_t))) == NULL) {
+  if((c = ( c4snet_data_t *)SNetMemAlloc( sizeof( c4snet_data_t))) == NULL) {
     return SNET_INTERFACE_ERR;
   }
  

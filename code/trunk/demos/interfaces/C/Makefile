@@ -7,7 +7,7 @@ INCDIRS    = -I. -I$(SNETBASE)/include
 MPIINCDIRS = -I. -I$(SNETBASE)/include -I$(MPIROOT)/include
 SOFLAGS    = -shared -dy -Wl -allow-shlib-undefined 
 COPY       = cp
-DISTFLAGS  = -DDISTRIBUTED_SNET
+DISTFLAGS  = -DDISTRIBUTED_SNET -DMPICH_SKIP_MPICXX
 
 # = = = = = = = = = = = = = = = = = = = =
 OBJECTS     = C4SNet.o base64.o 
