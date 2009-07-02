@@ -61,6 +61,17 @@ int[*] binPlus( int[*] a, int[*] b)
   return( res);
 }
 
+int[32] binPlus( int[32] a, int[32] b)
+{
+  res = { iv -> binPlus( a[iv], b[iv]) };
+  return( res);
+}
+
+int[48] binPlus( int[48] a, int[48] b)
+{
+  res = { iv -> binPlus( a[iv], b[iv]) };
+  return( res);
+}
 int binPlus( int a, int b)
 {
   return( (a+b) %2);
