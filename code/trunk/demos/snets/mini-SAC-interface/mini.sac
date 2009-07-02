@@ -42,7 +42,7 @@ void B( SNet::SNet &hnd)
   res = genarray( [2], tof(17)); 
   SNet::out( hnd, 1, sacprelude::wrap( res));
   
-  res = genarray( [2], toi(17)); 
+  res = genarray( [4,1,1], toi(17)); 
   SNet::out( hnd, 1, sacprelude::wrap( res));
   
   res = genarray( [2], tod(17)); 
