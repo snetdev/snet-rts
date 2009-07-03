@@ -29,7 +29,7 @@ int SNetRoutingContextGetParent(snet_routing_context_t *context);
 
 bool SNetRoutingContextIsMaster(snet_routing_context_t *context);
 
-const snet_fun_id_t *SNetRoutingContextGetFunID(snet_routing_context_t *context);
+snet_fun_id_t *SNetRoutingContextGetFunID(snet_routing_context_t *context);
 
 void SNetRoutingContextSetNodeVisited(snet_routing_context_t *context, int node);
 bool SNetRoutingContextIsNodeVisited(snet_routing_context_t *context, int node);

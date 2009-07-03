@@ -329,7 +329,7 @@ bool SNetRoutingContextIsMaster(snet_routing_context_t *context)
   return context->is_master;
 }
 
-const snet_fun_id_t *SNetRoutingContextGetFunID(snet_routing_context_t *context)
+snet_fun_id_t *SNetRoutingContextGetFunID(snet_routing_context_t *context)
 {
   return &context->fun_id;
 }
