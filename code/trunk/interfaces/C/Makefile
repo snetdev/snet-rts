@@ -1,35 +1,41 @@
 include $(SNETBASE)/src/makefiles/config.mkf
 
+NAME       = C4SNet
+
 CC         = gcc
 CCFLAGS    = -Wall -g -fPIC
 AR         = ar
 INCDIRS    = -I. -I$(SNETBASE)/include
 MPIINCDIRS = -I. -I$(SNETBASE)/include -I$(MPIROOT)/include
-SOFLAGS    = -shared -dy -Wl -allow-shlib-undefined 
 COPY       = cp
 DISTFLAGS  = -DDISTRIBUTED_SNET -DMPICH_SKIP_MPICXX
 
 # = = = = = = = = = = = = = = = = = = = =
-OBJECTS     = C4SNet.o base64.o 
-TARGET      = libC4SNet.so 
-WRAPOBJECTS = C4SNetc.o
-WRAPTARGET  = libC4SNetc.so
+OBJECTS     = $(NAME).o base64.o 
+TARGET      = lib$(NAME).so 
+WRAPOBJECTS = $(NAME)c.o
+WRAPTARGET  = lib$(NAME)c.so
 # = = = = = = = = = = = = = = = = = = = =
-TARGETDIR   = $(SNETBASE)/lib
+TARGETLIBDIR   = $(SNETBASE)/lib
+TARGETINCDIR   = $(SNETBASE)/include
 # = = = = = = = = = = = = = = = = = = = =
 
 
 all:
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
-	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
-	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
-	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
+	$(CC) $(subst %libname%,$(notdir $(TARGET)),$(LD_DYNAMIC))\
+  -o $(TARGET) $(OBJECTS) -L$(TARGETLIBDIR) -lsnet
+	$(CC) $(subst %libname%,$(notdir $(WRAPTARGET)),$(LD_DYNAMIC))\
+  -o $(WRAPTARGET) $(WRAPOBJECTS) 
+	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETLIBDIR)
+	$(COPY) $(NAME).h $(TARGETINCDIR)
 
 mpi:
 	$(CC) $(DISTFLAGS) $(CCFLAGS) $(MPIINCDIRS) -c *.c
 	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
 	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
-	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETDIR)
+	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETLIBDIR)
 
 clean:
-	rm -f *.o *.a *.so $(TARGETDIR)/$(TARGET) $(TARGETDIR)/$(WRAPTARGET)
+	rm -f *.o *.a *.so $(TARGETLIBDIR)/$(TARGET)\
+  $(TARGETLIBDIR)/$(WRAPTARGET) $(TARGETINCDIR)/$(NAME).h

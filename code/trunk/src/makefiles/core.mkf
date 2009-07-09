@@ -102,7 +102,7 @@ $(PROJECT_ROOT)/bin/snetc: global/build.o
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/snetc (developer version)"
 	$(HIDE) $(CC)  -o $@ $(TARGETDIRS_DEVEL) $< \
-                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAG) $(RPATH) $(UTILLIB)
+                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAGS) $(RPATH) $(UTILLIB)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -111,7 +111,7 @@ $(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/snetc.prod (product version)"
 	$(HIDE) $(CCPROD) -o $@ $(TARGETDIRS_PROD) $< \
-                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAG) $(RPATH) $(UTILLIB)
+                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAGS) $(RPATH) $(UTILLIB)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -120,7 +120,7 @@ $(PROJECT_ROOT)/bin/snetc.efence: global/build.o
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/snetc.efence (efence version)"
 	$(HIDE) $(CC) -o $@ $(TARGETDIRS_DEVEL) $< \
-                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAG) $(EFLIBS) $(RPATH) $(UTILLIB)
+                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAGS) $(EFLIBS) $(RPATH) $(UTILLIB)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -204,7 +204,7 @@ $(PROJECT_ROOT)/lib/libsnet.prod.a:  $(TARGETDIRS_PROD)
 $(PROJECT_ROOT)/lib/libsnetutil.so: $(TARGETDIRS_DEVEL) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetutil.so (developer version)"
-	$(HIDE) $(CC) $(SOFLAGS) -o $@ $^
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -212,7 +212,7 @@ $(PROJECT_ROOT)/lib/libsnetutil.so: $(TARGETDIRS_DEVEL)
 $(PROJECT_ROOT)/lib/libsnetutil.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetutil.prod.so (product version)"
-	$(HIDE) $(CC) $(SOFLAGS) $@ $^
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
