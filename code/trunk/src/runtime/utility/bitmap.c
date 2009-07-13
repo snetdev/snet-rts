@@ -178,7 +178,7 @@ int SNetUtilBitmapSet(snet_util_bitmap_t *map, int bit)
 {
   int old;
 
-  if(index < 0 && bit >= map->size) {
+  if(bit >= map->size) {
     return SNET_BITMAP_ERR;
   }
   
