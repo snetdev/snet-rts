@@ -17,11 +17,10 @@ AR        = ar
 # --- S-Net Runtime / Interface Paths and Libraries
 
 include $(SNETBASE)/src/makefiles/config.mkf
-INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/SAC\
-	    -I./include -I$(SACBASE)/sac2c/include -I../boxes/include\
-	    -I../snet
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/SAC\
-	    -L../boxes/lib 
+INCDIRS   = -I. -I$(SNETBASE)/include -I./include \
+            -I$(SACBASE)/sac2c/include -I../boxes/include\
+	          -I../snet
+LIBDIRS   = -L. -L$(SNETBASE)/lib -L../boxes/lib 
 LIBS      = -lpthread  -lSAC4SNet -lsimpleDes -lsnet -lm -lsnetutil
 
 

@@ -3,8 +3,8 @@ CCFLAGS  = -Wall -g -DFILTER_VERSION_2 -DDISTRIBUTED_SNET
 SNETC     = snetc
 SNETCFLAGS= -b7 -distributed
 AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C -L$(MPIROOT)/lib
+INCDIRS   = -I. -I$(SNETBASE)/include 
+LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(MPIROOT)/lib
 LIBS      = -lpthread -lC4SNet -lC4SNetc -lmpi -lsnetmpi -lsnetutil
 
 # = = = = = = = = = = = = = = = = = = = =

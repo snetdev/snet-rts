@@ -1,10 +1,8 @@
 CC        = gcc
 CCFLAGS   = -Wall -g -DFILTER_VERSION_2
 AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/SAC\
-	    -I./include 
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/SAC\
-	    -L./lib
+INCDIRS   = -I. -I$(SNETBASE)/include -I./include 
+LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib
 LIBS      = -lpthread -lsnet -lSAC2SNet
 
 # SAC SimpleFibre library

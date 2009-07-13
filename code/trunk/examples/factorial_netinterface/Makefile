@@ -10,8 +10,8 @@ METADATA   = -mfactorial.md -mleq1.md
 CCFLAGS    = -DFILTER_VERSION_2
 VALGRIND   = valgrind
 VFLAGS     = --leak-check=full --show-reachable=yes
-INCDIRS    = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
-LIBDIRS    = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
+INCDIRS    = -I. -I$(SNETBASE)/include
+LIBDIRS    = -L. -L$(SNETBASE)/lib
 LIBS       = -lC4SNet -lpthread -lsnet -lsnetutil
 
 all:

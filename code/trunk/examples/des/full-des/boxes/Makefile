@@ -10,7 +10,7 @@
 # 
 MAINLIB := desboxes
 EXCLUDE := Boxes
-S2SLIB  := $(SNETBASE)/demos/interfaces/SAC
+S2SLIB  := $(SNETBASE)/lib
 
 # usually there is no need to change anything below this line
 #

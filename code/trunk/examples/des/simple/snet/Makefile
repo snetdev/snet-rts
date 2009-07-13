@@ -15,10 +15,9 @@ SCFLAGS   = -b7 -v0
 AR        = ar
 
 # --- S-Net Runtime / Interface Paths and Libraries
-INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/SAC\
+INCDIRS   = -I. -I$(SNETBASE)/include \
 	    -I./include -I$(SACBASE)/sac2c/include
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/SAC\
-	    -L./lib
+LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib
 LIBS      = -lpthread -lsnet -lSAC2SNet
 
 

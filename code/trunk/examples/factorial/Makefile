@@ -5,8 +5,8 @@ CCFLAGS  = -Wall -g
 SNETC     = snetc
 SNETCFLAGS= -b7
 AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/demos/interfaces/C
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(SNETBASE)/demos/interfaces/C
+INCDIRS   = -I. -I$(SNETBASE)/include 
+LIBDIRS   = -L. -L$(SNETBASE)/lib 
 LIBS      = -lpthread -lC4SNet -lC4SNetc -lsnet -lsnetutil
 
 # = = = = = = = = = = = = = = = = = = = =
