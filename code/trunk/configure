@@ -5325,7 +5325,7 @@ if  test "$GCC" = yes ; then
 
   MKCCFLAGS="-Wall -g -std=c99"
 
-  PDCCFLAGS="-Wall -g -O3 -std=c99"
+  PDCCFLAGS="-Wall -O3 -std=c99"
 
   GENPIC="-fPIC -DPIC"
 
@@ -5356,7 +5356,7 @@ elif  test "$SUNC" = yes ; then
 
   MKCCFLAGS="-erroff=E_CAST_DOESNT_YIELD_LVALUE -g -xc99=all"
 
-  PDCCFLAGS="-erroff=E_CAST_DOESNT_YIELD_LVALUE -g -xO4 -xc99=all -KPIC"
+  PDCCFLAGS="-erroff=E_CAST_DOESNT_YIELD_LVALUE -xO4 -xc99=all -KPIC"
 
   GENPIC="-KPIC"
 

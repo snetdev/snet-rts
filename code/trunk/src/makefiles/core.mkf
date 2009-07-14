@@ -43,13 +43,19 @@ TARGETDIRS_PROD  := $(patsubst %.o,%.prod.o,$(TARGETDIRS_DEVEL))
 TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
 
 
-LIB  := -L$(PROJECT_ROOT)/src/lib -lcommon 
+LIB  := -L$(PROJECT_ROOT)/src/lib 
 INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
-RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS) -lsnet
+COMMONLIBDEV   := $(patsubst lib%.a,%,$(targets_commonlib_devel))
+COMMONLIBPROD  := $(patsubst lib%.a,%,$(targets_commonlib_prod))
+
+UTILDEV := $(patsubst lib%.so,%,$(targets_util_devel))
+UTILPROD  := $(patsubst lib%.so,%,$(targets_util_prod))
+
+RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS)
 RUNTIMEINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) $(GTKFLAGS) $(MPIFLAGS)
 
-UTILLIB  := -L$(PROJECT_ROOT)/lib -lsnetutil
+UTILLIB  := -L$(PROJECT_ROOT)/lib
 UTILINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
 XML_DIR     = $(PROJECT_ROOT)/src/compiler/xml
@@ -102,7 +108,8 @@ $(PROJECT_ROOT)/bin/snetc: global/build.o
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/snetc (developer version)"
 	$(HIDE) $(CC)  -o $@ $(TARGETDIRS_DEVEL) $< \
-                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAGS) $(RPATH) $(UTILLIB)
+                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAGS) $(RPATH) $(UTILLIB)\
+                -l$(COMMONLIBDEV) -l$(UTILDEV)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -111,7 +118,8 @@ $(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/snetc.prod (product version)"
 	$(HIDE) $(CCPROD) -o $@ $(TARGETDIRS_PROD) $< \
-                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAGS) $(RPATH) $(UTILLIB)
+                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAGS) $(RPATH) $(UTILLIB) \
+                -l$(COMMONLIBPROD) -l$(UTILPROD)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -120,7 +128,8 @@ $(PROJECT_ROOT)/bin/snetc.efence: global/build.o
 	@$(ECHO) ""
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/snetc.efence (efence version)"
 	$(HIDE) $(CC) -o $@ $(TARGETDIRS_DEVEL) $< \
-                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAGS) $(EFLIBS) $(RPATH) $(UTILLIB)
+                $(LIB) $(LIBS) $(LIBS_LEX) $(LDDYNFLAGS) $(EFLIBS) $(RPATH) $(UTILLIB) \
+                -l$(COMMONLIBDEV) -l$(UTILDEV)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -150,7 +159,8 @@ $(PROJECT_ROOT)/src/bin/%.devel: $(TARGETDIRS_DEVEL)
 	@$(ECHO) "Linking $(PREFIX_ROOT)src/bin/$*.devel (developer version)"
 	$(HIDE) $(CC) -o $@ \
                 $(filter $*/%,$^) \
-                $(LIB) $(LIBS)
+                $(LIB) $(LIBS) -l$(COMMONLIBDEV)
+	$(HIDE) mv $@ $(patsubst %.devel,%,$@)							
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -160,7 +170,7 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
 	@$(ECHO) "Linking $(PREFIX_ROOT)src/bin/$* (product version)"
 	$(HIDE) $(CCPROD) -o $@ \
                 $(filter $*/%,$^) \
-                $(LIB) $(LIBS)
+                $(LIB) $(LIBS) -l$(COMMONLIBPROD)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -212,7 +222,7 @@ $(PROJECT_ROOT)/lib/libsnetutil.so: $(TARGETDIRS_DEVEL)
 $(PROJECT_ROOT)/lib/libsnetutil.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetutil.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) $@ $^
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -222,7 +232,8 @@ $(PROJECT_ROOT)/bin/%.devel: $(TARGETDIRS_DEVEL)
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/$*.devel (developer version)"
 	$(HIDE) $(CC) -o $@ \
                 $(filter $*/%,$^) \
-                $(UTILLIB) $(RUNTIMELIB) $(GTKLIBS)
+                $(UTILLIB) $(RUNTIMELIB) $(GTKLIBS) \
+                -l$(COMMONLIBDEV) -l$(UTILDEV)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -232,7 +243,8 @@ $(PROJECT_ROOT)/bin/%: $(TARGETDIRS_PROD)
 	@$(ECHO) "Linking $(PREFIX_ROOT)bin/$* (product version)"
 	$(HIDE) $(CCPROD) -o $@ \
                 $(filter $*/%,$^) \
-                $(UTILLIB) $(RUNTIMELIB) $(GTKLIBS)
+                $(UTILLIB) $(RUNTIMELIB) $(GTKLIBS) \
+                -l$(COMMONLIBPROD) -l$(UTILPROD)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION) 
