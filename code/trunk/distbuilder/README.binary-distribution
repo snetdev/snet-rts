@@ -32,7 +32,8 @@ Directory structure:
       |
       +- (several subdirs, see README there)
    +- sudoku
-   +- factorial
+   +- factorial (hand-written deployer)
+   +- factorial_netinterface (generated deployer)
 
 
 
