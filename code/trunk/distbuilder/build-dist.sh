@@ -20,6 +20,15 @@ VERSION=`svn info $SNETBASE | grep Revision | awk '{print $2}'`
 OS=`uname -s`
 ARCH=`uname -p`
 
+GMCHECK=`which gmake`
+if [ $? -ne 0 ];
+then
+MAKE=make
+else
+MAKE=gmake
+fi
+
+
 if [ -d $DESTDIR ]; then
   echo "Directory $DESTDIR exists, please delete.";
 else
@@ -34,7 +43,7 @@ else
   echo "Building Compiler & Runtime (ignore svn warnings)...";
   cd $DESTDIR;
   SNETBASE=$DESTDIR ./configure > /dev/null
-  SNETBASE=$DESTDIR make prod > /dev/null
+  SNETBASE=$DESTDIR $MAKE prod > /dev/null
   echo "done"
   echo
   echo "Renaming/copying executables/libraries..."
@@ -45,12 +54,12 @@ else
   echo
   echo "Building C & SAC interfaces";
   cd $DESTDIR/interfaces/C 
-  SNETBASE=$DESTDIR make > /dev/null
+  SNETBASE=$DESTDIR $MAKE > /dev/null
   echo "SKIPPING SAC4C INTERFACE"
   echo "done"
   echo
 #  cd $DISTDIR/interfaces/SAC;
-#  SNETBASE=$DESTDIR make
+#  SNETBASE=$DESTDIR $MAKE
   echo "Saving config.mkf"
   cp $DESTDIR/src/makefiles/config.mkf $DESTDIR/save.config.mkf
   echo "done"
@@ -77,7 +86,8 @@ else
   echo
   echo "Building archive..."
   cd /tmp;
-  tar cvfz $SNETBASE/snet-v$VERSION-$OS-$ARCH.tar.gz -C $TMPDIR $DIST > /dev/null
+  tar cvf $SNETBASE/snet-v$VERSION-$OS-$ARCH.tar -C $TMPDIR $DIST > /dev/null
+  gzip $SNETBASE/snet-v$VERSION-$OS-$ARCH.tar
   echo
   echo "Done."
   echo "Archive saved to: $SNETBASE/snet-v$VERSION-$OS-$ARCH.tar.gz"
