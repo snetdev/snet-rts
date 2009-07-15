@@ -11,7 +11,6 @@ void *init( void *hnd)
 {
   int i;
   int* int_x;
-  c4snet_container_t *c;
   c4snet_data_t *result;
    
   int_x = SNetMemAlloc( X * Y * sizeof( int));
@@ -21,10 +20,7 @@ void *init( void *hnd)
     
   result = C4SNetDataCreateArray( CTYPE_int, X*Y, int_x);
 
-  c = C4SNetContainerCreate( hnd, 1);
-  C4SNetContainerSetField( c, result);
-
-  C4SNetContainerOut( c);
+  C4SNetOut( hnd, 1, result);
   return( hnd);
 }
 

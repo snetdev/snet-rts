@@ -6,7 +6,6 @@
 void *dec( void *hnd, c4snet_data_t *x)
 {
   int int_x;
-  c4snet_container_t *c;
   c4snet_data_t *result;
 
   int_x= *(int *)C4SNetDataGetData( x);
@@ -14,12 +13,9 @@ void *dec( void *hnd, c4snet_data_t *x)
 
   result = C4SNetDataCreate( CTYPE_int, &int_x);
 
-  c = C4SNetContainerCreate( hnd, 1);
-  C4SNetContainerSetField( c, result);
-
   C4SNetDataFree(x);
 
-  C4SNetContainerOut( c);
+  C4SNetOut( hnd, 1, result);
   return( hnd);
 }
 
