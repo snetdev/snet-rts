@@ -21,7 +21,7 @@ INCDIRS   = -I. -I$(SNETBASE)/include -I./include \
             -I$(SACBASE)/sac2c/include -I../boxes/include\
 	          -I../snet
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L../boxes/lib 
-LIBS      = -lpthread  -lSAC4SNet -lsimpleDes -lsnet -lm -lsnetutil
+LIBS      = -lpthread  -lSAC4SNet -lsimpleDes -lsnet -lm -lsnetutil $(SOCKETLIBS)
 
 
 # --- Directory for S-Net 

@@ -7,7 +7,7 @@ SNETCFLAGS= -b7
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib 
-LIBS      = -lpthread -lC4SNet -lC4SNetc -lsnet -lsnetutil
+LIBS      = -lpthread -lC4SNet -lC4SNetc -lsnet -lsnetutil $(SOCKETLIBS)
 
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = factorial

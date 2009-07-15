@@ -12,12 +12,12 @@ VALGRIND   = valgrind
 VFLAGS     = --leak-check=full --show-reachable=yes
 INCDIRS    = -I. -I$(SNETBASE)/include
 LIBDIRS    = -L. -L$(SNETBASE)/lib
-LIBS       = -lC4SNet -lpthread -lsnet -lsnetutil
+LIBS       = -lC4SNet -lpthread -lsnet -lsnetutil $(SOCKETLIBS)
 
 all:
 	$(HIDE) rm -f *.o $(TARGET) $(TARGET).h $(TARGET).c
 	$(CC) $(INCDIRS) -c *.c
-	$(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) -o $(TARGET) $(METADATA) $(TARGET).snet
+	$(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) $(LIBS) -o $(TARGET) $(METADATA) $(TARGET).snet
 	rm -f *.o
 
 gcc:    
