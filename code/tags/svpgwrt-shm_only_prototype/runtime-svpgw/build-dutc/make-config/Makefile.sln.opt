@@ -1,0 +1,68 @@
+SLN_NAME := sln
+
+#---
+
+CONFIGS      := debug release
+CONFIGS      += debug_mb release_mb
+CONFIGS_EXT  :=
+
+#---
+
+MAKE         := make
+SCRIPTS_DIR  := ../build-tools
+
+#---
+
+PROJECTS_LST := Projects.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := make-config
+
+#-------------------------------------------------------------------------------
+
+PROJ_DEP_SNetGWRT    :=
+PROJ_DEP_TestingPack := SNetGWRT
+
+#-------------------------------------------------------------------------------
+
+PROJ_CFG_SNetGWRT_debug         := debug
+PROJ_CFG_SNetGWRT_release       := release
+PROJ_CFG_SNetGWRT_debug_mb      := debug_mb
+PROJ_CFG_SNetGWRT_release_mb    := release_mb
+
+#---
+
+PROJ_CFG_TestingPack_debug      := debug
+PROJ_CFG_TestingPack_release    := release
+PROJ_CFG_TestingPack_debug_mb   := debug_mb
+PROJ_CFG_TestingPack_release_mb := release_mb
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Additional rules not provided by default from the Makefile
+# NOTE!! They are defined as the value of the ADDITIONAL_RULES variable
+# so that the Makefile adds them AFTER the ones it automatically defines (e.g.
+# "all"). Otherwise becuase this file is included at the begining of the
+# Makefile the first of the rules defined here will become the "default" and
+# we do not want that!
+
+define ADDITIONAL_RULES
+all_pc:   debug release ;
+all_mb:   debug_mb release_mb ;
+
+clean_pc: clean-debug clean-release ;
+clean_mb: clean-debug_mb clean-release_mb ;
+endef
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Command line defined variables that can be cached
+
+CMDLINE_CACHED_VARS := UTCPTL_INCLUDE_DIR
+CMDLINE_CACHED_VARS += UTCPTL_BIN_DIR
+CMDLINE_CACHED_VARS += UTCPTL_LIB_DIR
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

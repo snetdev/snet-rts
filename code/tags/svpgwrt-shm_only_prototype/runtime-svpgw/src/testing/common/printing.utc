@@ -1,0 +1,224 @@
+#include "printing.utc.h"
+#include "snet-gwrt.int.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Type Encoding */
+
+static void print_vector_raw(
+    const snet_vector_t *vec, unsigned int tag_type)
+{
+    unsigned int vsz = SNetTencVectorGetSize(vec);
+
+    for (unsigned int i=0; i < vsz; i++) {
+        switch (tag_type) {
+            case 0:
+                printf("F%d", SNetTencVectorGetEntry(vec, i));
+                break;
+
+            case 1:
+                printf("<%d>", SNetTencVectorGetEntry(vec, i));
+                break;
+
+            case 2:
+                printf("<#%d>", SNetTencVectorGetEntry(vec, i));
+                break;
+        }
+
+        if (i < vsz -1) printf(", ");
+    }
+}
+
+static void print_vector_formated(
+    const snet_vector_t *vec, const char *labels[], unsigned int tag_type)
+{
+    unsigned int vsz = SNetTencVectorGetSize(vec);
+
+    for (unsigned int i=0; i < vsz; i++) {
+        switch (tag_type) {
+            case 0:
+                printf("%s", labels[SNetTencVectorGetEntry(vec, i)]);
+                break;
+
+            case 1:
+                printf("<%s>", labels[SNetTencVectorGetEntry(vec, i)]);
+                break;
+
+            case 2:
+                printf("<#%s>", labels[SNetTencVectorGetEntry(vec, i)]);
+                break;
+        }
+
+        if (i < vsz -1) printf(", ");
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void print_vector(
+    const snet_vector_t *vec, 
+    const char *labels[], unsigned int tag_type)
+{
+    if (vec == NULL) {
+        return;
+    }
+
+    if (labels == NULL)
+        print_vector_raw(vec, tag_type);
+    else
+        print_vector_formated(vec, labels, tag_type);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void print_variant(const snet_variantencoding_t *venc, const char *labels[])
+{
+    printf("{");
+    print_vector(SNetTencVariantGetBTags(venc), labels, 2);
+
+    if (SNetTencVariantGetBTags(venc) != NULL &&
+        SNetTencVectorGetSize(SNetTencVariantGetBTags(venc)) > 0) {
+        
+        printf(", ");
+    }
+
+    print_vector(SNetTencVariantGetTags(venc), labels, 1);
+    
+    if (SNetTencVariantGetTags(venc) != NULL &&
+        SNetTencVectorGetSize(SNetTencVariantGetTags(venc)) > 0) {
+        
+        printf(", ");
+    }
+
+    print_vector(SNetTencVariantGetFields(venc), labels, 0);
+
+    printf("}");
+}
+
+/*----------------------------------------------------------------------------*/
+
+void print_type(const snet_typeencoding_t *tenc, const char *labels[])
+{
+    printf("{");
+
+    unsigned int venc_cnt = SNetTencTypeGetVariantsCount(tenc);
+
+    for (unsigned int i=0; i < venc_cnt; i++) {
+        snet_variantencoding_t *venc = SNetTencTypeGetVariant(tenc, i);
+
+        print_variant(venc, labels);
+
+        if (i < venc_cnt - 1) {
+            printf(" | ");
+        }
+    }
+
+    printf("}");
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Record */
+
+static void print_record_item(
+    const snet_record_t *rec, 
+    int name, unsigned int tag_type, const char *labels[])
+{
+    if (labels == NULL) {
+        switch (tag_type) {
+            case 0:
+                printf("F%d=%p", name, SNetRecGetField(rec, name));
+                break;
+
+            case 1:
+                printf("<%d>=%d", name, SNetRecGetTag(rec, name));
+                break;
+
+            case 2:
+                printf("<#%d>=%d", name, SNetRecGetBTag(rec, name));
+                break;
+        }
+
+    } else {
+        switch (tag_type) {
+            case 0:
+                printf("%s=%p", labels[name], SNetRecGetField(rec, name));
+                break;
+
+            case 1:
+                printf("<%s>=%d", labels[name], SNetRecGetTag(rec, name));
+                break;
+
+            case 2:
+                printf("<#%s>=%d", labels[name], SNetRecGetBTag(rec, name));
+                break;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void print_record(const snet_record_t *rec, const char *labels[])
+{
+    snet_variantencoding_t *venc = SNetRecGetVariantEncoding(rec);
+
+    printf("{");
+
+    unsigned int cnt =
+        SNetTencVariantGetBTagsCount(venc);
+
+    unsigned int old_cnt = 0;
+
+    for (unsigned int i=0; i < cnt; i++) {
+        print_record_item(
+            rec, 
+            SNetTencVariantGetBTag(venc, i), 2, labels);
+
+        if (i < cnt -1) printf(", ");
+    }
+    
+    old_cnt = cnt;
+    cnt     = SNetTencVariantGetTagsCount(venc);
+
+    if (cnt > 0 && old_cnt > 0) {
+        printf(", ");
+    }
+
+    for (unsigned int i=0; i < cnt; i++) {
+        print_record_item(
+            rec, 
+            SNetTencVariantGetTag(venc, i), 1, labels);
+
+        if (i < cnt -1) printf(", ");
+    }
+   
+    old_cnt = cnt;
+    cnt     = SNetTencVariantGetFieldsCount(venc);
+
+    if (cnt > 0 && old_cnt > 0) {
+        printf(", ");
+    }
+
+    for (unsigned int i=0; i < cnt; i++) {
+        print_record_item(
+            rec, 
+            SNetTencVariantGetField(venc, i), 0, labels);
+
+        if (i < cnt -1) printf(", ");
+    }
+
+    printf("}");
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+

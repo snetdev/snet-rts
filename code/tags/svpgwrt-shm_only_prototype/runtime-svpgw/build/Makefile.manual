@@ -1,0 +1,12 @@
+make all
+make all_<project>
+
+make <config>
+make <config>_<project>
+
+make clean
+make clean_<project>
+
+make clean-<config>
+make clean-<config>_<project>
+

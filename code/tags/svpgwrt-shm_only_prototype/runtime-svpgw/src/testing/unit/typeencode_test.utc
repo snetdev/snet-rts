@@ -1,0 +1,139 @@
+#include "snet-gwrt.utc.h"
+#include "snet-gwrt.int.utc.h"
+#include "printing.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void print_match(
+    const snet_variantencoding_t *venc, 
+    snet_typeencoding_t *tenc, const char *labels[])
+{
+    bool matched_ident = false;
+    unsigned int match_venc_idx = 0;
+
+    unsigned int match_res = 
+        SNetTencVariantMatchesType(
+            venc, tenc, &match_venc_idx, &matched_ident);
+
+    print_variant(venc, labels);
+
+    if (match_res == 0 && !matched_ident) {
+        printf("\n  :: %3d, n/a\n\n", match_res);
+
+    } else {
+        printf("\n  :: %3d, %3u,  %u\n\n", 
+            match_res, match_venc_idx, (unsigned int) matched_ident);
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+#define F_a         1
+#define F_b         2
+#define F_c         3
+#define F_d         4
+#define F_e         5
+#define F_f         6
+#define T_T         7
+#define T_BT        8
+#define T_BT1       9
+
+/*----------------------------------------------------------------------------*/
+
+void typeencode_test()
+{
+    const char *labels[] = {
+        "<nil>",
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "T",
+        "BT",
+        "BT1"
+    };
+
+    /*---*/
+
+    snet_typeencoding_t *tenc = SNetTencTypeEncode(
+        4, 
+        SNetTencVariantEncode(
+            SNetTencVectorCreate(2, F_a, F_b), 
+            SNetTencVectorCreate(0), 
+            SNetTencVectorCreate(0)), 
+        SNetTencVariantEncode(
+            SNetTencVectorCreate(3, F_a, F_b, F_c), 
+            SNetTencVectorCreate(1, T_T), 
+            SNetTencVectorCreate(0)), 
+        SNetTencVariantEncode(
+            SNetTencVectorCreate(3, F_a, F_b, F_d), 
+            SNetTencVectorCreate(1, T_T), 
+            SNetTencVectorCreate(1, T_BT)),
+        SNetTencVariantEncode(
+            SNetTencVectorCreate(4, F_a, F_b, F_d, F_e), 
+            SNetTencVectorCreate(1, T_T), 
+            SNetTencVectorCreate(1, T_BT)));
+
+    //snet_variantencoding_t *venc = 
+    //    SNetTencVariantEncode(
+    //        SNetTencVectorCreate(1, F_b), 
+    //        SNetTencVectorCreate(0),
+    //        SNetTencVectorCreate(0));
+
+    snet_variantencoding_t *venc = 
+        SNetTencVariantEncode(
+            SNetTencVectorCreate(1, F_b), NULL, NULL);
+
+    /*---*/
+
+    print_type(tenc, labels);
+    printf("\n\n---\n");    
+    print_match(venc, tenc, labels);
+
+    /*---*/
+
+    SNetTencVariantAddTag(venc, T_T);
+    print_match(venc, tenc, labels);
+
+    SNetTencVariantAddBTag(venc, T_BT);
+    print_match(venc, tenc, labels);
+
+    SNetTencVariantRemoveField(venc, F_b);
+    print_match(venc, tenc, labels);
+
+    SNetTencVariantAddField(venc, F_e);
+    print_match(venc, tenc, labels);
+
+    SNetTencVariantAddField(venc, F_a);
+    SNetTencVariantAddField(venc, F_b);
+    SNetTencVariantAddField(venc, F_d);
+    print_match(venc, tenc, labels);
+
+    SNetTencVariantRemoveField(venc, F_e);
+    print_match(venc, tenc, labels);
+
+    SNetTencVariantRenameBTag(venc, T_BT, T_BT1);
+    print_match(venc, tenc, labels);
+
+    SNetTencVariantRemoveBTag(venc, T_BT1);
+    print_match(venc, tenc, labels);
+
+    SNetTencVariantRenameField(venc, F_d, F_c);
+    print_match(venc, tenc, labels);
+
+    SNetTencVariantRemoveTag(venc, T_T);
+    print_match(venc, tenc, labels);
+
+    /*---*/
+
+    SNetTencTypeDestroy(tenc);
+    SNetTencVariantDestroy(venc);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+

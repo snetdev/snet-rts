@@ -1,0 +1,204 @@
+#include "snet-gwrt.utc.h"
+#include "snet-gwrt.int.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void print_idxv(const snet_idxvec_t *idxv)
+{
+    if (SNetIdxVecIsInfinite(idxv)) {
+        printf("<infinite>");
+    }
+
+    unsigned int idxv_len = SNetIdxVecGetLen(idxv);
+
+    for (unsigned int i=0; i < idxv_len; i++) {
+        printf("%" PRISNETIDXVECITEM, SNetIdxVecGetItemValue(idxv, i));
+
+        if (i < idxv_len - 1) {
+            printf(".");
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void idxvec_test()
+{
+    snet_idxvec_item_t idxv_init[] = { 100000, 20, 30, 40, 50 };
+
+    snet_idxvec_t *idxv0 = SNetIdxVecCreateFromStr("0.0.0.0");
+    snet_idxvec_t *idxv1 = SNetIdxVecCreateFromStr("1.-2.3.-4");
+    snet_idxvec_t *idxv2 = SNetIdxVecCreateFromArray(idxv_init, 5);
+    snet_idxvec_t *idxv3 = SNetIdxVecCreateFromStr(NULL);
+
+    printf("%u: ", SNetIdxVecGetLen(idxv0)); print_idxv(idxv0); printf("\n");
+    printf("%u: ", SNetIdxVecGetLen(idxv1)); print_idxv(idxv1); printf("\n");
+    printf("%u: ", SNetIdxVecGetLen(idxv2)); print_idxv(idxv2); printf("\n");
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n");
+
+    printf("\n/*---*/\n\n");
+
+    SNetIdxVecSetValue(idxv0, idxv1);
+    SNetIdxVecDestroy(idxv1);
+    printf("%u: ", SNetIdxVecGetLen(idxv0)); print_idxv(idxv0); printf("\n\n");
+
+    SNetIdxVecSetValueFromStr(idxv0, "3.1.1.1.1.1.1.1");
+    printf("%u: ", SNetIdxVecGetLen(idxv0)); print_idxv(idxv0); printf("\n\n");
+
+    SNetIdxVecSetValueFromStr(idxv0, "");
+    printf("%u: ", SNetIdxVecGetLen(idxv0)); print_idxv(idxv0); printf("\n\n");
+
+    SNetIdxVecSetValueFromArray(idxv3, idxv_init, 5);
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+
+    printf("\n/*---*/\n\n");
+
+    SNetIdxVecIncrItemValue(idxv2, 0, 10);
+    printf("%u: ", SNetIdxVecGetLen(idxv2)); print_idxv(idxv2); printf("\n\n");
+
+    SNetIdxVecDecrItemValue(idxv2, 0, 2);
+    printf("%u: ", SNetIdxVecGetLen(idxv2)); print_idxv(idxv2); printf("\n\n");
+
+    printf("\n/*---*/\n\n");
+
+    printf(
+        "Is idxv0 infinite : %u\n", 
+        (unsigned int) SNetIdxVecIsInfinite(idxv0));
+
+    SNetIdxVecSetToInfinite(idxv0);
+
+    printf(
+        "Is idxv0 infinite : %u\n", 
+        (unsigned int) SNetIdxVecIsInfinite(idxv0));
+
+    printf("\n/*---*/\n\n");
+
+    SNetIdxVecPush(idxv0, idxv3, 0);
+    printf("%u: ", SNetIdxVecGetLen(idxv0)); print_idxv(idxv0); printf("\n\n");
+
+    SNetIdxVecPush(idxv0, idxv0, 0);
+    printf("%u: ", SNetIdxVecGetLen(idxv0)); print_idxv(idxv0); printf("\n\n");
+
+    SNetIdxVecPush(idxv0, idxv0, 0);
+    printf("%u: ", SNetIdxVecGetLen(idxv0)); print_idxv(idxv0); printf("\n\n");
+    
+    SNetIdxVecPush(idxv0, idxv3, 0);
+    printf("%u: ", SNetIdxVecGetLen(idxv0)); print_idxv(idxv0); printf("\n\n");
+
+    SNetIdxVecPushStr(idxv3, "3.3.3.3.3");
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+
+    SNetIdxVecPushStr(idxv3, "-4.-4.-4.-4.-4");
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+
+    SNetIdxVecPushStr(idxv3, NULL);
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+
+    SNetIdxVecPushStr(idxv3, "");
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+    SNetIdxVecPushArray(idxv3, idxv_init, 5);
+
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+    printf("\n/*---*/\n\n");
+
+    char s_buf[256];   
+
+    const char *s_dyn = SNetIdxVecToString(idxv3, NULL);
+    const char *s_stat = SNetIdxVecToString(idxv3, s_buf);
+
+    printf("%p:%u:%u: %s\n\n",
+        s_dyn, SNetIdxVecGetLen(idxv3), strlen(s_dyn), s_dyn);
+
+    printf("%p:%p:%u:%u: %s\n\n",
+        s_stat, s_buf, SNetIdxVecGetLen(idxv3), strlen(s_stat), s_stat);
+
+    SNetMemFree((void *) s_dyn);
+
+    printf("\n/*---*/\n\n");
+
+    SNetIdxVecPopLeft(idxv3, 10);
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+
+    SNetIdxVecPopRight(idxv3, 10);
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+    
+    snet_idxvec_t *idxv4 = SNetIdxVecCreateCopy(idxv3, false);
+
+    SNetIdxVecPopLeft(idxv3, 10);
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+
+    snet_idxvec_t *idxv5 = SNetIdxVecCreateCopy(idxv3, false);
+
+    SNetIdxVecPopRight(idxv3, 10);
+    printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
+
+    SNetIdxVecPopRight(idxv4, SNetIdxVecGetLen(idxv4));
+    printf("%u: ", SNetIdxVecGetLen(idxv4)); print_idxv(idxv4); printf("\n\n");
+
+    SNetIdxVecPopRight(idxv5, SNetIdxVecGetLen(idxv5));
+    printf("%u: ", SNetIdxVecGetLen(idxv5)); print_idxv(idxv5); printf("\n\n");
+
+    /*---*/
+
+    SNetIdxVecDestroy(idxv0);
+    SNetIdxVecDestroy(idxv2);
+    SNetIdxVecDestroy(idxv3);
+    SNetIdxVecDestroy(idxv4);
+    SNetIdxVecDestroy(idxv5);
+    
+    /*---*/
+
+    printf("\n/*---*/\n");
+    printf("\n/*---*/\n\n");
+
+    idxv0 = SNetIdxVecCreateFromStr("1.0.4.1");
+    idxv1 = SNetIdxVecCreateFromStr("1.-2.3");
+
+    snet_idxvec_t *infimum     = SNetIdxVecCalcInfimum(idxv0, idxv1);
+    snet_idxvec_t *infimum_ext = SNetIdxVecCalcInfimumEx(idxv0, idxv1);
+
+    printf("%u: ", SNetIdxVecGetLen(idxv0)); print_idxv(idxv0); printf("\n");
+    printf("%u: ", SNetIdxVecGetLen(idxv1)); print_idxv(idxv1); printf("\n\n");
+    
+    printf("CMPRES       = %u\n", SNetIdxVecCompare(idxv0, idxv1));
+    printf("CMPRES(ext)  = %u\n", SNetIdxVecCompareEx(idxv0, idxv1));
+
+    printf("INFIMUM      = %u: ", SNetIdxVecGetLen(infimum));
+    print_idxv(infimum);
+    printf("\n");
+
+    printf("INFIMUM(ext) = %u: ", SNetIdxVecGetLen(infimum_ext));
+    print_idxv(infimum_ext);
+    printf("\n\n");
+
+    /*---*/
+
+    SNetIdxVecDestroy(idxv0);
+    SNetIdxVecDestroy(idxv1);
+
+    SNetIdxVecDestroy(infimum);
+    SNetIdxVecDestroy(infimum_ext);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+

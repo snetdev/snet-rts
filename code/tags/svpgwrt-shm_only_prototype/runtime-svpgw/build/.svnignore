@@ -1,0 +1,13 @@
+*~
+.*~
+.*.swp
+
+*.cpp
+*.d
+*.o
+*.a
+
+intermediate
+debug
+release
+

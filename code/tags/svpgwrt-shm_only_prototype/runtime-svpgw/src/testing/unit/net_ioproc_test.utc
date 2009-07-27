@@ -1,0 +1,106 @@
+#include "snet-gwrt.utc.h"
+#include "printing.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <unistd.h>
+
+/*---*/
+
+#define PRINT_RECS
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static thread void record_feeder(snet_domain_t *snetd, int max_recs_cnt)
+{
+    for (int i=0; i < max_recs_cnt; i++) {
+        snet_variantencoding_t *venc = 
+            SNetTencVariantEncode(
+                NULL, SNetTencVectorCreate(1, 1), NULL);
+
+        snet_record_t *rec = SNetDataRecCreate(venc, i);
+
+#ifdef PRINT_RECS
+        printf("Pushing record %p: ", rec);
+        print_record(rec, NULL);
+        printf("...");
+#endif
+
+        SNetPushIn(snetd, rec);
+
+#ifdef PRINT_RECS
+        printf("done (%p)\n", rec);
+#endif
+
+        //usleep(1000);
+    }
+
+    printf("Exiting input process!!!\n");
+}
+
+static thread void 
+write_record_to_stdout(snet_domain_t *snetd, int max_recs_cnt)
+{
+    snet_record_t *rec;
+
+    do {
+        rec = SNetPopOut(snetd, false);
+
+        if (rec != NULL) {
+#ifdef PRINT_RECS
+            printf("Popped record %p: ", rec);
+            print_record(rec, NULL);
+            printf("\n");
+#endif
+
+            if (SNetRecGetTag(rec, 1) == max_recs_cnt - 1) {
+                printf("Popped last!!!\n");
+                break;
+            }
+
+            SNetRecSetDataDisposeMode(rec, REC_DATA_DISPOSE_MODE_ALL);
+            SNetRecDestroy(rec);
+        }
+
+    } while (true);
+
+    printf("Exiting output process!!!\n");
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void net_ioproc_test(snet_domain_t *snetd)
+{
+    int test_sz = 10000;
+
+    int    exit_code;
+    family in_proc_fid;
+    family out_proc_fid;
+
+    create<root>
+        (in_proc_fid; ; 0; 0; 1; 1;;) 
+            record_feeder(snetd, test_sz);
+    
+    create<root>
+        (out_proc_fid; ; 0; 0; 1; 1;;) 
+            write_record_to_stdout(snetd, test_sz);
+
+    //usleep(20000);
+    //kill(in_proc_fid);
+    //kill(out_proc_fid);
+
+    exit_code = sync(in_proc_fid);
+    printf("Record input process finished (exit_code = %d)!!!\n", exit_code);
+
+    exit_code = sync(out_proc_fid);
+    printf("Record output process finished (exit_code = %d)!!!\n", exit_code);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+

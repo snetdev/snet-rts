@@ -1,0 +1,69 @@
+PROJ_NAME := sane
+BIN_NAME  := $(PROJ_NAME)
+
+#---
+
+CONFIGS   := debug release debug_mb release_mb
+
+#---
+
+SOURCE_DIR  := ../../../src/testing/sane
+SCRIPTS_DIR := ../../../build-tools
+
+#---
+
+INTERM_DIR      := intermediate
+TARGET_DIR      := ..
+TARGET_INCL_DIR := $(SOURCE_DIR)
+
+#---
+
+SRC_FILES_LST   := SrcFiles.lst
+XDR_FILES_LST   := XdrFiles.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := ../make-config
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# The following file that is being included contains functions that allow 
+# to deal with libraries / frameworks that are not usually found installed
+# on a system (e.g. uTC-PTL library) and from this point on that functionality 
+# will be required.
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Include directories
+
+INCLUDE_DIRS :=                           \
+	$(SOURCE_DIR)                         \
+	$(SOURCE_DIR)/../units                \
+	$(SOURCE_DIR)/../snets                \
+	                                      \
+	$(SOURCE_DIR)/../../include           \
+    $(SOURCE_DIR)/../../include/snet-gwrt \
+	                                      \
+	$(SOURCE_DIR)/../../include.int       \
+	$(SOURCE_DIR)/../../include.snetc     \
+                                          \
+	$(call NONSTD_LIB,UTCPTL,INCLUDE)
+
+#-------------------------------------------------------------------------------
+# Library directories
+
+LIB_DIRS :=              \
+	$(TARGET_DIR)/lib    \
+	$(TARGET_DIR)/../lib \
+	$(call NONSTD_LIB,UTCPTL,LIB)
+	
+#-------------------------------------------------------------------------------
+# Build Toolsets!
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.toolsets
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

@@ -1,0 +1,365 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : snet.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    : This file contains functions that implement the primary 
+                     services of the runtime.
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "snet.utc.h"
+
+/*---*/
+
+#include "common.int.utc.h"
+#include "memmng.int.utc.h"
+#include "handle.int.utc.h"
+#include "domain.int.utc.h"
+
+#include "gw.int.utc.h"
+#include "conslist.int.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdarg.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Because the BLI "public" functions are declared within the "snet.utc.h" and
+ * so far there is no need for an "internal" version of it and the 2
+ * functions below are the only ones that are "internal" used only within
+ * this file we declare them here (If this situation changes and a 
+ * "snet.int.utc.h" is created in the future the 2 declarations below
+ * can/should be moved there).
+ */
+extern void SNetBLISubSystemInit();
+extern void SNetBLISubSystemDestroy();
+
+/**
+ * Same as the above 2 functions but for
+ * the error reporting sub-system. However there for
+ * error reporting there are "internal" functions but still
+ * there is no need for a "internal" header because those
+ * are declared in "common.int.utc.h" because we want them
+ * to be available almost everywhere.
+ */
+extern void SNetErrorSubSystemInit();
+extern void SNetErrorSubSystemDestroy();
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Global initialization and termination and box lanugage interface related
+ * routines for the runtime.
+ */
+
+void SNetGlobalInitialize()
+{
+    SNetErrorSubSystemInit();
+    SNetMemMngSubSystemInit();
+    SNetPlcMngSubSystemInit();
+    SNetDomainSubSystemInit();
+    SNetBLISubSystemInit();
+
+    // Call this again to "fully" initialize
+    // the memory management sub-system (see file
+    // 'src/core/memmng.utc' for more details).
+    SNetMemMngSubSystemInit();
+}
+
+void SNetGlobalDestroy()
+{
+    SNetBLISubSystemDestroy();
+    SNetDomainSubSystemDestroy();
+    SNetPlcMngSubSystemDestroy();
+    SNetMemMngSubSystemDestroy();
+    SNetErrorSubSystemDestroy();
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Network execution management functions
+ */
+
+void SNetKill(snet_domain_t *snetd)
+{
+    /**
+     * Not implemented yet
+     */
+}
+
+void SNetSqueeze(snet_domain_t *snetd)
+{
+    /**
+     * Not implemented yet
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * SNetPushIn() function used to insert
+ * records to the network.
+ */
+
+void SNetPushIn(snet_domain_t *snetd, snet_record_t *rec)
+{
+    assert(snetd != NULL);
+    assert(rec != NULL);
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+
+    family fid;
+    place  gw_plc = SNetDomainGetGWPlace(snetd); 
+
+    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGWInitial(snetd, rec);
+    sync(fid);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * SNetPopOut() function used to get output
+ * records of a network.
+ */
+
+#ifndef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+static thread void 
+read_net_out_buffer(
+    snet_buffer_t *buf, shared snet_record_t *out_rec)
+#else
+static thread void 
+read_net_out_buffer(
+    snet_buffer_t *buf, 
+    shared place cond_plc, shared snet_record_t *out_rec)
+#endif
+{
+    out_rec = (snet_record_t *) SNetBufPop(buf);
+
+#ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+    cond_plc = SNetDomainGetOutBufferCondPlace(
+        SNetBaseTypeGetDomain(SNetBufToBaseConst(buf)));
+#endif
+}
+
+/*----------------------------------------------------------------------------*/
+
+#ifdef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+static thread void
+suspend_out_buffer_read_family(snet_domain_t *snetd, place buf_cond_plc)
+{
+    family fid;
+
+    create (fid; buf_cond_plc; 0; 0; 1; 1;;)
+        suspend_out_buffer_read_family(
+            (snet_domain_t *) NULL, buf_cond_plc);
+
+    if (snetd != NULL)
+        SNetDomainSetOutBufferWaitFID(snetd, fid);
+
+    sync(fid);
+}
+#endif
+
+/*----------------------------------------------------------------------------*/
+
+snet_record_t* SNetPopOut(snet_domain_t *snetd, bool block)
+{
+    assert(snetd != NULL);
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+   
+    snet_record_t *rec     = NULL;
+    snet_buffer_t *out_buf = SNetDomainGetOutBuffer(snetd);
+
+    place buf_mutex_plc =
+        SNetBaseTypeGetMutexPlace(SNetBufToBase(out_buf));
+
+    family fid;
+
+#ifndef SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+    create (fid; buf_mutex_plc; 0; 0; 1; 1;;)
+        read_net_out_buffer(out_buf, rec);
+
+    sync(fid);
+
+#else
+    while (rec == NULL) {
+        place buf_cond_plc;
+
+        create (fid; buf_mutex_plc; 0; 0; 1; 1;;)
+            read_net_out_buffer(out_buf, buf_cond_plc, rec);
+
+        sync(fid);
+
+        if (rec == NULL) {
+            create (fid; buf_cond_plc; 0; 0; 1; 1;;)
+                suspend_out_buffer_read_family(snetd, buf_cond_plc);
+
+            sync(fid);
+        }
+    }
+
+#endif // SVPSNETGWRT_USE_KILL_HACK_FOR_OUT_BUFFER_SUSPEND
+
+    return rec;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * SNetOutxxx() functions that are called from boxes to emmit
+ * output records.
+ */
+
+static thread void
+set_handle_out_record(snet_handle_t *hnd, shared snet_record_t *rec)
+{
+    snet_record_t *hnd_out_rec = SNetHndGetOutRecord(hnd);
+
+    SNetHndSetOutRecord(hnd, rec);
+    
+    rec = hnd_out_rec;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetOut(snet_handle_t *hnd, snet_record_t *rec)
+{
+    assert(hnd != NULL);
+    assert(rec != NULL);
+
+    hnd = (snet_handle_t *) SNetUnmaskPointer(hnd);
+
+    family fid;
+    place  hnd_mutex = SNetBaseTypeGetMutexPlace(SNetHndToBase(hnd));
+
+    snet_record_t *rec_local = rec;
+
+    create (fid; hnd_mutex; 0; 0; 1; 1;;)
+        set_handle_out_record(hnd, rec_local);
+
+    sync(fid);
+
+    if (rec_local == NULL) {
+        return;
+    }
+
+    place gw_plc = SNetDomainGetGWPlace(
+        SNetBaseTypeGetDomain(SNetHndToBase(hnd))); 
+
+    create (fid; gw_plc; 0; 0; 1; 1;;) SNetGW(hnd, rec_local);
+    sync(fid);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetOutRaw(
+    snet_handle_t *hnd, 
+    snet_bli_id_t  blid, int variant_idx, ...)
+{
+    assert(hnd != NULL);
+    
+    // Create a new record structure
+    // with the data given as arguments.
+
+    // First we need a variant encoding for the record.
+    snet_variantencoding_t *venc = 
+        SNetHndCreateVEncForOutRecord(
+            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_idx);
+
+    if (venc == NULL) {
+        // For this to happen possible causes are:
+        //
+        // 1. This function was not called from with in 
+        // "box" code or generally not properly.
+        // 
+        // 2. Something is seriously wrong within the runtime.
+        // For this to happen it means that either the cons-node
+        // associated with the handle is not on a "box" node
+        // which probably means a bug in the GW algorithms
+        // or that the "box" node is not initialized properly
+        // meaning a bug in the graph related code or in the
+        // code within "entities.utc".
+        SNetReportError(
+            SNET_ERR_UNEXPECTED,
+            "invalid call to SNetOutRaw()");
+
+        SNetOnError();
+    }
+
+    va_list  vargs;
+    va_start(vargs, variant_idx);
+
+    snet_record_t *rec = SNetDataRecVCreate(venc, vargs);
+
+    va_end(vargs);
+
+    SNetRecSetInterfaceId(rec, blid);
+    SNetOut(hnd, rec);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetOutRawArray(
+    snet_handle_t *hnd, 
+    snet_bli_id_t  blid,
+    int variant_idx, void **fields, int *tags, int *btags)
+{
+    assert(hnd != NULL);
+    
+    // Create a new record structure
+    // with the data given as arguments.
+
+    // First we need a variant encoding for the record.
+    snet_variantencoding_t *venc = 
+        SNetHndCreateVEncForOutRecord(
+            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_idx);
+
+    if (venc == NULL) {
+        // See related comment in the 
+        // function SNetOutRaw().
+        SNetReportError(
+            SNET_ERR_UNEXPECTED,
+            "invalid call to SNetOutRawArray()");
+
+        SNetOnError();
+    }
+
+    snet_record_t *rec = 
+        SNetDataRecCreateFromArrays(venc, fields, tags, btags);
+
+    SNetRecSetInterfaceId(rec, blid);
+    SNetOut(hnd, rec);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

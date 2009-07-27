@@ -1,0 +1,225 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : errwrn.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "common.int.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdarg.h>
+
+/*---*/
+
+#define SNET_RUNTIME_TITLE "!!S-Net (Graph Walker) Runtime!!"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Stream were errors and warnings are
+ * being ouput.
+ */
+static FILE *ERR_STREAM = NULL;
+
+/*----------------------------------------------------------------------------*/
+/* Errors */
+
+static const char* ERR_MSGS[] = {
+    // 0x0000: SNET_ERR_NONE
+    "No errors occured!!!",
+
+    // 0x0001: SNET_ERR_UNEXPECTED
+    "An unexpected runtime error occured (%s)",
+
+    // 0x0002: SNET_ERR_INIT
+    "Initialization of the runtime failed due to %s",
+
+    // 0x0003: SNET_ERR_MEMORY
+    "An error occured during a memory management operation (%s)",
+
+    // 0x0004: SNET_ERR_IO
+    "An error occured during an i/o operation (%s)",
+
+    // 0x0005: SNET_ERR_TYPE_ERROR
+    "A type error occured in %s at index %s",
+
+    // 0x0006: SNET_ERR_PLACE
+    "An error occured during a 'place' management operation (%s)",
+
+    // 0x0007: SNET_ERR_BOX
+    "An error occured in the execution of box at index '%s'"
+
+}; // ERR_MSGS[]
+
+/*----------------------------------------------------------------------------*/
+
+static const char* WRN_MSGS[] = {
+    // 0x0000: SNET_WRN_NONE
+    "No warnings issued!!!",
+
+    // 0x0001: SNET_WRN_UNSUPPORTED
+    "%s not supported (%s)",
+
+    // 0x0002: SNET_WRN_IGNORED
+    "Ignored %s (%s)",
+
+    // 0x0003: SNET_WRN_IGNORED_ENTITY
+    "Ignored %s at index %s (%s)"
+
+}; // WRN_MSGS[]
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetErrorSubSystemInit()
+{
+    ERR_STREAM = stderr;
+}
+
+void SNetErrorSubSystemDestroy()
+{
+    ERR_STREAM = NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGlobalSetErrorStream(FILE *stream)
+{
+    ERR_STREAM = stream;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetReportError(unsigned int code, ...)
+{
+    assert(code < sizeof(ERR_MSGS) / sizeof(const char *));
+
+    if (ERR_STREAM == NULL) {
+        return;
+    }
+
+    if (code == 0) {
+        return;
+    }
+
+    va_list  vargs;
+    va_start(vargs, code);
+
+    fprintf(
+        ERR_STREAM, 
+        SNET_RUNTIME_TITLE ": ERROR: ");
+
+    vfprintf(ERR_STREAM, ERR_MSGS[code], vargs);
+    fprintf(ERR_STREAM, "\n");
+
+    va_end(vargs);
+}
+
+void SNetReportWarning(unsigned int code, ...)
+{
+    assert(code < sizeof(WRN_MSGS) / sizeof(const char *));
+
+    if (ERR_STREAM == NULL) {
+        return;
+    }
+
+    if (code == 0) {
+        return;
+    }
+
+    va_list  vargs;
+    va_start(vargs, code);
+
+    fprintf(
+        ERR_STREAM, 
+        SNET_RUNTIME_TITLE ": WARNING: ");
+
+    vfprintf(ERR_STREAM, WRN_MSGS[code], vargs);
+    fprintf(ERR_STREAM, "\n");
+
+    va_end(vargs);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetReportErrorCustom(const char *fmt, ...)
+{
+    if (ERR_STREAM == NULL) {
+        return;
+    }
+
+    va_list  vargs;
+    va_start(vargs, fmt);
+
+    fprintf(
+        ERR_STREAM, 
+        SNET_RUNTIME_TITLE ": ERROR: ");
+
+    vfprintf(ERR_STREAM, fmt, vargs);
+    fprintf(ERR_STREAM, "\n");
+
+    va_end(vargs);
+}
+
+void SNetReportWarningCustom(const char *fmt, ...)
+{
+    if (ERR_STREAM == NULL) {
+        return;
+    }
+
+    va_list  vargs;
+    va_start(vargs, fmt);
+
+    fprintf(
+        ERR_STREAM, 
+        SNET_RUNTIME_TITLE ": WARNING: ");
+
+    vfprintf(ERR_STREAM, fmt, vargs);
+    fprintf(ERR_STREAM, "\n");
+
+    va_end(vargs);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetOnError()
+{
+    abort();
+}
+
+void SNetOnWarning()
+{
+    /**
+     * Empty
+     */
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

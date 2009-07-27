@@ -1,0 +1,203 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : handle.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "handle.int.utc.h"
+#include "typeencode.int.utc.h"
+
+#include "memmng.int.utc.h"
+#include "plcmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+struct handle {
+    snet_base_t base;
+    
+    /*---*/
+
+    snet_record_t       *out_rec;
+    snet_conslst_node_t *cons_node;
+
+}; // struct handle
+
+//struct worker_handle {
+//    unsigned int             snetd_id;
+//    snet_conslst_node_t     *cons_node;
+//    snet_remote_mem_block_t  rec;
+//
+//};
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetHndInit(
+    snet_handle_t *hnd, snet_conslst_node_t *cons_node)
+{
+    assert(hnd != NULL);
+    assert(cons_node != NULL);
+
+    place owner_plc = SNetGetMyPlace();
+
+    SNetBaseTypeInit(&hnd->base,
+        SNetBaseTypeGetDomain(SNetConsLstNodeToBase(cons_node)));
+
+    SNetBaseTypeSetPlaces(&hnd->base, &owner_plc, NULL, NULL);
+
+    hnd->out_rec   = NULL;
+    hnd->cons_node = cons_node;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_handle_t* SNetHndCreate(snet_conslst_node_t *cons_node)
+{
+    snet_handle_t *hnd = 
+        (snet_handle_t *) SNetMemAlloc(sizeof(snet_handle_t));
+
+    SNetHndInit(hnd, cons_node);
+
+    return hnd;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetHndDestroy(snet_handle_t *hnd)
+{
+    assert(hnd != NULL);
+    
+    SNetBaseTypeDestroy(&hnd->base);
+    SNetMemFree(hnd);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_record_t*
+SNetHndGetRecord(const snet_handle_t *hnd)
+{
+    assert(hnd != NULL); 
+
+    snet_handle_t *hnd_tmp = 
+        (snet_handle_t *) SNetUnmaskPointer(hnd);
+
+    return SNetConsLstNodeGetRecord(hnd_tmp->cons_node);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_conslst_node_t*
+SNetHndGetConsNode(const snet_handle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->cons_node;
+}
+
+snet_record_t*
+SNetHndGetOutRecord(const snet_handle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->out_rec;
+}
+
+snet_record_t*
+SNetHndGetConsNodeRecord(const snet_handle_t *hnd)
+{
+    assert(hnd != NULL); 
+    return SNetConsLstNodeGetRecord(hnd->cons_node);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_variantencoding_t*
+SNetHndCreateVEncForOutRecord(
+    const snet_handle_t *hnd, unsigned int variant_idx)
+{
+    assert(hnd != NULL);
+
+    const snet_gnode_t *gnode = 
+        SNetConsLstNodeGetGraphNode(hnd->cons_node);
+
+    if (gnode == NULL) {
+        return NULL;
+    }
+
+    if (SNetGNodeGetType(gnode) != GRAPH_NODE_TYPE_BOX) {
+        return NULL;
+    }
+
+    const snet_box_sign_t *tsign =
+        SNetGNodeGetBoxTypeSignature(gnode);
+
+    if (tsign == NULL) {
+        return NULL;
+    }
+
+    snet_typeencoding_t *tenc =
+        SNetTencBoxSignGetType(tsign);
+
+    assert(tenc != NULL);
+
+    if (variant_idx >= SNetTencTypeGetVariantsCount(tenc)) {
+        return NULL;
+    }
+
+    return SNetTencVariantCreateCopy(
+        SNetTencTypeGetVariant(tenc, variant_idx));
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetHndSetOutRecord(snet_handle_t *hnd, snet_record_t *rec)
+{
+    assert(hnd != NULL);
+    hnd->out_rec = rec;
+}
+
+void SNetHndSetConsNode(snet_handle_t *hnd, snet_conslst_node_t *cnode)
+{
+    assert(hnd != NULL);
+    assert(cnode != NULL);
+
+    hnd->cons_node = cnode;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_base_t* SNetHndToBase(snet_handle_t *hnd)
+{
+    assert(hnd != NULL); return &hnd->base;
+}
+
+const snet_base_t* SNetHndToBaseConst(const snet_handle_t *hnd)
+{
+    assert(hnd != NULL); return &hnd->base;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+
