@@ -33,9 +33,9 @@
 # relative paths to a "top-level" makefile to be specified).
 #
 define NONSTD_LIB
-$(if $($(1)_$(2)_DIR),\
+$(strip $(if $($(1)_$(2)_DIR),\
 $(if $(TOP_LEVEL_MAKEFILE_DIR),\
-$(TOP_LEVEL_MAKEFILE_DIR)/,)$($(1)_$(2)_DIR)$(if $(3),/,)$(3),$(3))
+$(TOP_LEVEL_MAKEFILE_DIR)/,)$($(1)_$(2)_DIR)$(if $(3),/,)$(3),$(3)))
 endef
 
 #-------------------------------------------------------------------------------
