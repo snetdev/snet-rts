@@ -28,6 +28,10 @@
 #include "bool.h"
 #include "debug.h"
 
+#ifdef DISTRIBUTED_SNET
+#include "distribution.h"
+#endif /* DISTRIBUTED_SNET */
+
 /* Thread to do the output */
 static pthread_t thread; 
 
@@ -153,6 +157,10 @@ static void *doOutput(void* data)
   handle_t *hnd = (handle_t *)data;
   snet_record_t *rec = NULL;
 
+#ifdef DISTRIBUTED_SNET
+  hnd->buffer = DistributionWaitForOutput();
+#endif /* DISTRIBUTED_SNET */
+
   if(hnd->buffer != NULL){
     while(!terminate){
       rec = SNetTlRead(hnd->buffer);
@@ -172,6 +180,9 @@ static void *doOutput(void* data)
 	case REC_terminate:
 	  printRec(rec, hnd);
 	  terminate = true;
+#ifdef DISTRIBUTED_SNET
+	  DistributionStop();
+#endif /* DISTRIBUTED_SNET */
 	  break;
 	default:
 	  break;
@@ -191,17 +202,25 @@ static void *doOutput(void* data)
 
 int SNetInOutputInit(FILE *file,
 		     snetin_label_t *labels, 
-		     snetin_interface_t *interfaces, 
+#ifdef DISTRIBUTED_SNET
+		     snetin_interface_t *interfaces)
+#else /* DISTRIBUTED_SNET */
+		     snetin_interface_t *interfaces,
 		     snet_tl_stream_t *in_buf)
+#endif /* DISTRIBUTED_SNET */
 {
   handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
 
   hnd->file = file;
   hnd->labels = labels;
   hnd->interfaces = interfaces;
+#ifdef DISTRIBUTED_SNET
+  hnd->buffer = NULL;
+#else /* DISTRIBUTED_SNET */
   hnd->buffer = in_buf;
+#endif /* DISTRIBUTED_SNET */
 
-  if(in_buf == NULL || pthread_create(&thread, NULL, (void *)doOutput, (void *)hnd) == 0){
+  if(pthread_create(&thread, NULL, (void *)doOutput, (void *)hnd) == 0){
     return 0;
   }
   

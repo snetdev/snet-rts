@@ -29,6 +29,10 @@
 #include "observers.h"
 #include "networkinterface.h"
 
+#ifdef DISTRIBUTED_SNET
+#include "distribution.h"
+#endif /* DISTRIBUTED_SNET */
+
 #define SNET_DEFAULT_BUFSIZE 10
 
 static FILE *SNetInOpenFile(const char *file, const char *args)
@@ -165,14 +169,19 @@ int SNetInRun(int argc, char *argv[],
   FILE *output = stdout;
   int bufsize = SNET_DEFAULT_BUFSIZE;
   int i = 0;
-  snet_tl_stream_t *in_buf = SNetTlCreateStream(bufsize);
-  snet_tl_stream_t *out_buf = NULL;
+  snet_tl_stream_t *in_buf = NULL;
   snetin_label_t *labels = NULL;
   snetin_interface_t *interfaces = NULL;
   char *brk;
   char addr[256];
   int len;
   int port;
+#ifdef DISTRIBUTED_SNET
+  int rank;
+#else /* DISTRIBUTED_SNET */
+  snet_tl_stream_t *out_buf = NULL;
+#endif /* DISTRIBUTED_SNET */
+
 
   /* Parse argv: */
   for(i = 1; i < argc; i++) {
@@ -270,13 +279,41 @@ int SNetInRun(int argc, char *argv[],
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
   
   SNetObserverInit(labels, interfaces);
-  
+
 #ifdef DISTRIBUTED_SNET
-  /* TODO:*/
-  out_buf = fun(in_buf, NULL, 0);
+
+  rank = DistributionInit(argc, argv);
+
+  if(rank == 0) {    
+    DistributionStart(fun);
+  }
+
+  if(SNetInOutputInit(output, labels, interfaces) != 0){
+    /* TODO: free resources! */
+    printf("Abort: Could not initialize output component!\n");
+    return 4;
+  }
+
+  in_buf = DistributionWaitForInput();
+
+  if(in_buf != NULL) {
+
+    SNetInParserInit(input, labels, interfaces, in_buf);
+
+    i = SNET_PARSE_CONTINUE;
+    while(i != SNET_PARSE_TERMINATE){
+      i = SNetInParserParse();
+    }
+  }
+
+  if(SNetInOutputDestroy() != 0){
+    //return 1;
+  }
+
 #else
+  in_buf = SNetTlCreateStream(bufsize);
+
   out_buf = fun(in_buf);
-#endif /* DISTRIBUTED_SNET */  
 
   if(SNetInOutputInit(output, labels, interfaces, out_buf) != 0){
     /* TODO: free resources! */
@@ -301,6 +338,9 @@ int SNetInRun(int argc, char *argv[],
   
   SNetInParserDestroy();
   
+
+#endif /* DISTRIBUTED_SNET */ 
+
   SNetObserverDestroy();
   
   SNetInLabelDestroy(labels);
@@ -313,6 +353,10 @@ int SNetInRun(int argc, char *argv[],
   if(output != stdout) {
     SNetInClose(output);
   }
+
+#ifdef DISTRIBUTED_SNET  
+  DistributionDestroy();
+#endif /* DISTRIBUTED_SNET */ 
 
   return 0;
 }
