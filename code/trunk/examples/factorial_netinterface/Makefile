@@ -6,7 +6,7 @@ TARGET     = factorial
 
 CC         = gcc
 SNETC      = $(SNETBASE)/bin/snetc
-METADATA   = -mfactorial.md -mleq1.md
+METADATA   = -m$(TARGET).md 
 CCFLAGS    = -DFILTER_VERSION_2
 VALGRIND   = valgrind
 VFLAGS     = --leak-check=full --show-reachable=yes

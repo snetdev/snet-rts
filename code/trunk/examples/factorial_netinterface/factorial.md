@@ -1,6 +1,6 @@
 <metadata>
   <boxdefault>
-    <interface value="C4SNet"/>
+    <interface value="C4SNet" />
   </boxdefault>
 
   <net name="factorial" >
