@@ -44,7 +44,7 @@ clean_compiler_prod       := ../src/compiler/global/build_prod.c
 #
 
 compiler        = tree global lstk support parse preproc flat typeinf opt \
-                  postproc codegen invokecc print
+                  postproc codegen invokecc print md
 
 
 ###############################################################################
@@ -66,8 +66,10 @@ tree            = check.o check_attribs.o check_lib.o check_mem.o \
                   node_basic.o traverse.o traverse_helper.o traverse_tables.o \
                   tree_basic.o tree_compound.o copy.o copy_attribs.o copy_node.o
 
-parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o mdinterp.o \
-                  mdcol.o mdns.o mdaux.o sploc.o
+parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o sploc.o \
+
+md              = mpreproc.o mredist.o munpack.o mprogdef.o mremdup.o \
+                  mcollect.o mutil.o
 
 preproc         = dcr.o tcheck.o boxex.o boxexfile.o mod.o tres.o
 

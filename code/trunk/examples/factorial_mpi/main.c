@@ -138,14 +138,14 @@ int main(int argc, char *argv[])
 
   SNetGlobalInitialise();
 
+  C4SNetInit( 0);
+
   SNetDistFunRegisterLibrary("factorial", 
 			     SNetFun2ID_factorial,
 			     SNetID2Fun_factorial);
 
 
-  node = DistributionInit(argc, argv);
-
-  C4SNetInit( 0); 
+  node = DistributionInit(argc, argv); 
 
   if(node == 0) {
     DistributionStart(SNet__factorial___factorial);

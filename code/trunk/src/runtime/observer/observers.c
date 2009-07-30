@@ -739,7 +739,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
 
       i = SNetRecGetFieldNames( rec)[k];
       if((label = SNetInIdToLabel(labels, i)) != NULL){
-	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_FULL 
+	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_ALLVALUES 
 	   && (interface = SNetInIdToInterface(interfaces, id)) != NULL){
 	  fprintf(file,"<field label=\"%s\" interface=\"%s\" >", label, interface);
 
@@ -763,7 +763,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
       i = SNetRecGetTagNames( rec)[k];
       
       if((label = SNetInIdToLabel(labels, i)) != NULL){
-	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_NONE) {
+	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_LABELS) {
 	  fprintf(file,"<tag label=\"%s\" />", label);
 	}else {
 	  fprintf(file,"<tag label=\"%s\" >%d</tag>", label, SNetRecGetTag(rec, i));	   
@@ -778,7 +778,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
       i = SNetRecGetBTagNames( rec)[k];
       
       if((label = SNetInIdToLabel(labels, i)) != NULL){
-	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_NONE) {
+	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_LABELS) {
 	  fprintf(file,"<btag label=\"%s\" />", label); 
 	}else {
 	  fprintf(file,"<btag label=\"%s\" >%d</btag>", label, SNetRecGetBTag(rec, i));
@@ -930,7 +930,7 @@ static void *ObserverBoxThread( void *hndl)
  *   @param isInteractive True if this observer is interactive, false otherwise.
  *   @param position      String describing the position of this observer (Net/box name).
  *   @param type          Type of the observer SNET_OBSERVERS_TYPE_BEFORE or SNET_OBSERVERS_TYPE_AFTER
- *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_NONE or SNET_OBSERVERS_DATA_LEVEL_TAGS or SNET_OBSERVERS_DATA_LEVEL_FULL
+ *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_LABELS or SNET_OBSERVERS_DATA_LEVEL_TAGVALUES or SNET_OBSERVERS_DATA_LEVEL_ALLVALUES
  *   @param code          User specified code sent by the observer.
  *
  *   @return              Stream for outcoming records.
@@ -1002,7 +1002,7 @@ snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *inbuf,
  *   @param filename      Name of the file to be used.
  *   @param position      String describing the position of this observer (Net/box name).
  *   @param type          Type of the observer SNET_OBSERVERS_TYPE_BEFORE or SNET_OBSERVERS_TYPE_AFTER
- *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_NONE or SNET_OBSERVERS_DATA_LEVEL_TAGS or SNET_OBSERVERS_DATA_LEVEL_FULL
+ *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_LABELS or SNET_OBSERVERS_DATA_LEVEL_TAGVALUES or SNET_OBSERVERS_DATA_LEVEL_ALLVALUES
  *   @param code          User specified code sent by the observer.
  *
  *   @return              Stream for outcoming records.
