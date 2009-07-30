@@ -54,7 +54,7 @@ compiler        = tree global lstk support parse preproc flat typeinf opt \
 # Note that the variable names must coincide with the directory names above.
 #
 
-lstk            = lstk.o lstkpush.o
+lstk            = lstkpush.o
 
 global          = main.o config_file.o init.o usage.o memory.o lookup_table.o \
                   globals.o options.o ctinfo.o phase.o phase_drivers.o set.o
