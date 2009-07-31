@@ -18,6 +18,7 @@
  *
  *******************************************************************************/
 
+#include "snettypes.h"
 #include "stream_layer.h"
 #include "bool.h"
 #include "label.h"
@@ -33,15 +34,23 @@
 #define SNET_OBSERVERS_TYPE_AFTER 1
 
 snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *inbuf, 
-				     const char *addr,
-				     int port, 
-				     bool interactive, 
-				     const char *position, 
-				     char type, 
-				     char data_level, 
-				     const char *code);
+#ifdef DISTRIBUTED_SNET
+					snet_info_t *info, 
+					int location,
+#endif /* DISTRIBUTED_SNET */ 
+					const char *addr,
+					int port, 
+					bool interactive, 
+					const char *position, 
+					char type, 
+					char data_level, 
+					const char *code);
 
 snet_tl_stream_t *SNetObserverFileBox(snet_tl_stream_t *inbuf, 
+#ifdef DISTRIBUTED_SNET
+					snet_info_t *info, 
+					int location,
+#endif /* DISTRIBUTED_SNET */ 
 				   const char *filename, 
 				   const char *position, 
 				   char type, 

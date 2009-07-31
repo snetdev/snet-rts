@@ -29,6 +29,8 @@
 #include "observers.h"
 #include "networkinterface.h"
 
+#include "debug.h"
+
 #ifdef DISTRIBUTED_SNET
 #include "distribution.h"
 #endif /* DISTRIBUTED_SNET */
@@ -40,7 +42,7 @@ static FILE *SNetInOpenFile(const char *file, const char *args)
   FILE *fileptr = fopen(file, args);
 
   if(fileptr == NULL) {
-    printf("Abort: Could not open file \"%s\" with mode \"%s\"!\n", file, args);
+    SNetUtilDebugFatal("Could not open file \"%s\" with mode \"%s\"!\n", file, args);
   }
 
   return fileptr;
@@ -57,13 +59,11 @@ static FILE *SNetInOpenInputSocket(int port)
   int in_fdesc;
 
   if ((fdesc = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-    printf("Abort: Could not create socket for input!\n");
-    return NULL;
+    SNetUtilDebugFatal("Could not create socket for input!\n");
   }
     
   if(setsockopt(fdesc, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-    printf("Abort: Could not obtain socket for input!\n");
-    return NULL;
+    SNetUtilDebugFatal("Could not obtain socket for input!\n");
   } 
 
   addr.sin_family = AF_INET;
@@ -72,8 +72,7 @@ static FILE *SNetInOpenInputSocket(int port)
   memset(addr.sin_zero, '\0', sizeof addr.sin_zero);
 
   if(bind(fdesc, (struct sockaddr *)&addr, sizeof addr) == -1) {
-    printf("Abort: Could not bind to input port (%d)!\n", addr.sin_port);
-    return NULL;
+    SNetUtilDebugFatal("Could not bind to input port (%d)!\n", addr.sin_port);
   }
 
   
@@ -95,8 +94,7 @@ static FILE *SNetInOpenInputSocket(int port)
   file = fdopen(in_fdesc, "r");
   
   if(file == NULL) {
-    printf("Abort: Socket error!\n");
-    return NULL;
+    SNetUtilDebugFatal("Socket error!\n");
   }
   
   return file;
@@ -110,23 +108,20 @@ static FILE *SNetInOpenOutputSocket(const char *address, int port)
   FILE *file;
 
   if(inet_aton(address, &addr.sin_addr)) {
-    printf("Abort: Could not parse output address (%s)!\n", address);
-    return NULL;
+    SNetUtilDebugFatal("Could not parse output address (%s)!\n", address);
   }
 
   host = gethostbyname(address);
     
   if(!host) {
-    printf("Abort: Unknown host for output (%s)!\n", address);
-    return NULL;
+    SNetUtilDebugFatal("Unknown host for output (%s)!\n", address);
   }
 
   addr.sin_addr = *(struct in_addr*)host->h_addr;
   fdesc = socket(PF_INET, SOCK_STREAM, 0);
   
   if(fdesc == -1){
-    printf("Abort: Could not create socket for output!\n");
-    return NULL;
+    SNetUtilDebugFatal("Could not create socket for output!\n");
   }
 	
   addr.sin_port = htons(port);
@@ -135,9 +130,7 @@ static FILE *SNetInOpenOutputSocket(const char *address, int port)
   if(connect(fdesc, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
 	
     close(fdesc);
-    printf("Abort: Could not connect to host (%s:%d)!\n", address, port);
-
-    return NULL;
+    SNetUtilDebugFatal("Could not connect to host (%s:%d)!\n", address, port);
   }
   
   file = fdopen(fdesc, "w");
@@ -145,9 +138,7 @@ static FILE *SNetInOpenOutputSocket(const char *address, int port)
   if(file == NULL) {
 	
     close(fdesc);
-    printf("Abort: Socket error!\n");
-
-    return NULL;
+    SNetUtilDebugFatal("Socket error!\n");
   }
 
   return file;
@@ -231,8 +222,7 @@ int SNetInRun(int argc, char *argv[],
       if(brk == NULL) {
 	output = NULL;
 
-	printf("Abort: Could not parse URL!\n");
-	break;
+	SNetUtilDebugFatal("Could not parse URL!\n");
       }
 
       len = brk - argv[i];
@@ -249,7 +239,8 @@ int SNetInRun(int argc, char *argv[],
     if(output != stdout && output != NULL) {
       SNetInClose(output);
     }  
-    return 1;
+
+    SNetUtilDebugFatal("");
   }
 
   if(output == NULL) {
@@ -257,7 +248,8 @@ int SNetInRun(int argc, char *argv[],
     if(input != stdin && input != NULL) {
       SNetInClose(input);
     }
-    return 2;
+
+    SNetUtilDebugFatal("");
   }
 
   if(bufsize <= 0) {
@@ -268,8 +260,8 @@ int SNetInRun(int argc, char *argv[],
     if(output != stdout) {
       SNetInClose(output);
     }
-    printf("Abort: negative or zero buffer size!\n");
-    return 3;
+
+    SNetUtilDebugFatal("Negative or zero buffer size");
   }
   
 
@@ -290,8 +282,7 @@ int SNetInRun(int argc, char *argv[],
 
   if(SNetInOutputInit(output, labels, interfaces) != 0){
     /* TODO: free resources! */
-    printf("Abort: Could not initialize output component!\n");
-    return 4;
+    SNetUtilDebugFatal("Could not initialize output component");
   }
 
   in_buf = DistributionWaitForInput();
@@ -304,12 +295,15 @@ int SNetInRun(int argc, char *argv[],
     while(i != SNET_PARSE_TERMINATE){
       i = SNetInParserParse();
     }
+
+    SNetInParserDestroy();
   }
 
   if(SNetInOutputDestroy() != 0){
     //return 1;
   }
 
+  DistributionDestroy();
 #else
   in_buf = SNetTlCreateStream(bufsize);
 
@@ -317,8 +311,7 @@ int SNetInRun(int argc, char *argv[],
 
   if(SNetInOutputInit(output, labels, interfaces, out_buf) != 0){
     /* TODO: free resources! */
-    printf("Abort: Could not initialize output component!\n");
-    return 4;
+    SNetUtilDebugFatal("Could not initialize output component");
   }
   
   SNetInParserInit(input, labels, interfaces, in_buf);
@@ -353,10 +346,6 @@ int SNetInRun(int argc, char *argv[],
   if(output != stdout) {
     SNetInClose(output);
   }
-
-#ifdef DISTRIBUTED_SNET  
-  DistributionDestroy();
-#endif /* DISTRIBUTED_SNET */ 
 
   return 0;
 }

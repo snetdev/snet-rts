@@ -38,8 +38,13 @@
  */
 int SNetInOutputInit(FILE *file,
 		     snetin_label_t *labels, 
-		     snetin_interface_t *interfaces,
-		     snet_tl_stream_t *in_buf);
+#ifdef DISTRIBUTED_SNET
+		     snetin_interface_t *interfaces);
+#else /* DISTRIBUTED_SNET */
+                     snetin_interface_t *interfaces,
+                     snet_tl_stream_t *in_buf);
+#endif/* DISTRIBUTED_SNET */
+           
 
 
 /* Wait until the end of output.

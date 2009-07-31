@@ -191,10 +191,11 @@ static void *doOutput(void* data)
 	SNetRecDestroy(rec);
       }
     }
+
+    fflush(hnd->file);
+    fprintf(hnd->file, "\n");
   }
 
-  fflush(hnd->file);
-  fprintf(hnd->file, "\n");
   SNetMemFree(hnd);
 
   return NULL;
