@@ -7,7 +7,8 @@
 <metadata>
   <net name="factorial" >
      <observer value="true" />
-     <observer_interactive value="true" />
+     <observer_type value="before" />  
+     <observer_interactive value="false" />
   </net>
 
   <box name="factorial/condif" >
@@ -18,23 +19,8 @@
 
   <net name="factorial/compute" >
      <observer value="true" />
-     <observer_interactive value="true" />
+     <observer_type value="before" />  
+     <observer_interactive value="false" />
   </net>   
 </metadata>
-
-// Uncomment this for file observers
-/*
-<metadata>
-  <net name="factorial" >
-     <observer value="true" />
-     <observer_file value="factorial.obs" />
-  </net>
-
-
-  <net name="factorial/compute" >
-     <observer value="true" />
-     <observer_file value="compute.obs" />
-  </net>   
-</metadata>
-*/
 

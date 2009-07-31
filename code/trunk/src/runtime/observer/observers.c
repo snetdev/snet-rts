@@ -361,14 +361,17 @@ static void *ObserverDispatch(void *arg)
       temp = temp->next;
     }
 
-    pthread_mutex_unlock(&connection_mutex);
-
     if(ndfs > 0){
 
-      if((ret = select(ndfs, &fdr_set,  NULL, NULL, NULL)) == -1){
+      pthread_mutex_unlock(&connection_mutex);
+
+      ret = select(ndfs, &fdr_set,  NULL, NULL, NULL);
+
+      pthread_mutex_lock(&connection_mutex);
+
+      if(ret == -1){
 
 	/* Error. */
-	pthread_mutex_lock(&connection_mutex);
       }
       else if(FD_ISSET(notification_pipe[0], &fdr_set)){
 	char buffer[NOTIFICATION_BUFFER_SIZE];
@@ -376,12 +379,10 @@ static void *ObserverDispatch(void *arg)
 	/* Something changed. What is written to the ontification pipe is meaningles. */
 
 	read(notification_pipe[0], buffer, NOTIFICATION_BUFFER_SIZE);
-	pthread_mutex_lock(&connection_mutex);
       }
       else{
 	/* Incoming message(s). Go through all the changed files and parse messages */
 
-	pthread_mutex_lock(&connection_mutex);
 	temp = open_sockets;
 
 	while(temp != NULL){
@@ -437,10 +438,9 @@ static void *ObserverDispatch(void *arg)
 	  temp = temp->next;
 	}
       }
-    }else{
-      pthread_mutex_lock(&connection_mutex);
-    }
+    } 
   }
+
   pthread_mutex_unlock(&connection_mutex);
 
   return NULL;
@@ -461,7 +461,7 @@ static void *ObserverDispatch(void *arg)
 
 static int ObserverRegisterSocket(obs_handle_t *self,  const char *addr, int port)
 {
-  obs_socket_t *temp = open_sockets;
+  obs_socket_t *temp = NULL;
   struct hostent *host;
 
   pthread_mutex_lock(&connection_mutex);
@@ -473,6 +473,8 @@ static int ObserverRegisterSocket(obs_handle_t *self,  const char *addr, int por
     return -1;
   }
   */
+
+  temp = open_sockets;
 
   /* Test if the connection has already been opened */
   host = gethostbyname(addr);
@@ -488,6 +490,7 @@ static int ObserverRegisterSocket(obs_handle_t *self,  const char *addr, int por
       self->desc = (void *)temp;
 
       pthread_mutex_unlock(&connection_mutex);
+
       return 0;
     }
     temp = temp->next;
@@ -497,6 +500,7 @@ static int ObserverRegisterSocket(obs_handle_t *self,  const char *addr, int por
 
   if((temp = ObserverInitSocket(addr, port)) == NULL) {
     pthread_mutex_unlock(&connection_mutex);
+
     return -1;
   }
   
@@ -507,6 +511,7 @@ static int ObserverRegisterSocket(obs_handle_t *self,  const char *addr, int por
   self->desc = (void *)temp;
 
   pthread_mutex_unlock(&connection_mutex);
+
   return 0;
 }
 
@@ -524,7 +529,7 @@ static int ObserverRegisterSocket(obs_handle_t *self,  const char *addr, int por
 
 static int ObserverRegisterFile(obs_handle_t *self, const char *filename)
 {
-  obs_file_t *temp = open_files;
+  obs_file_t *temp;
   FILE *file = NULL;
   
   pthread_mutex_lock(&connection_mutex);
@@ -536,6 +541,7 @@ static int ObserverRegisterFile(obs_handle_t *self, const char *filename)
     return -1;
   }
   */
+  temp = open_files;
 
   while(temp != NULL){
     if(strcmp(temp->filename, filename) == 0) {
@@ -813,7 +819,7 @@ static int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
     fflush(socket->file);
 
     
-    if(hnd->isInteractive == true && ret == 0){    
+    if(hnd->isInteractive == true){    
       ObserverWait(hnd);    
     }
     

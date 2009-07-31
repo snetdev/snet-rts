@@ -173,6 +173,9 @@ int SNetInRun(int argc, char *argv[],
   snet_tl_stream_t *out_buf = NULL;
 #endif /* DISTRIBUTED_SNET */
 
+#ifdef DISTRIBUTED_SNET
+  rank = DistributionInit(argc, argv);
+#endif /* DISTRIBUTED_SNET */
 
   /* Parse argv: */
   for(i = 1; i < argc; i++) {
@@ -274,8 +277,6 @@ int SNetInRun(int argc, char *argv[],
 
 #ifdef DISTRIBUTED_SNET
 
-  rank = DistributionInit(argc, argv);
-
   if(rank == 0) {    
     DistributionStart(fun);
   }
@@ -303,7 +304,6 @@ int SNetInRun(int argc, char *argv[],
     //return 1;
   }
 
-  DistributionDestroy();
 #else
   in_buf = SNetTlCreateStream(bufsize);
 
@@ -347,7 +347,9 @@ int SNetInRun(int argc, char *argv[],
     SNetInClose(output);
   }
 
+#ifdef DISTRIBUTED_SNET
+  DistributionDestroy();
+#endif /* DISTRIBUTED_SNET */ 
+
   return 0;
 }
-
-#undef SNET_DEFAULT_BUFSIZE
