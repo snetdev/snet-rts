@@ -43,7 +43,7 @@ clean_compiler_prod       := ../src/compiler/global/build_prod.c
 # Collection of source directories
 #
 
-compiler        = tree global lstk support parse preproc flat typeinf opt \
+compiler        = tree global support parse preproc flat typeinf opt \
                   postproc codegen invokecc print md
 
 
@@ -53,8 +53,6 @@ compiler        = tree global lstk support parse preproc flat typeinf opt \
 #
 # Note that the variable names must coincide with the directory names above.
 #
-
-lstk            = lstkpush.o
 
 global          = main.o config_file.o init.o usage.o memory.o lookup_table.o \
                   globals.o options.o ctinfo.o phase.o phase_drivers.o set.o
@@ -73,7 +71,7 @@ md              = mpreproc.o mredist.o munpack.o mprogdef.o mremdup.o \
 
 preproc         = dcr.o tcheck.o boxex.o boxexfile.o mod.o tres.o
 
-flat            = netxpnd.o flat.o
+flat            = flat.o
 
 typeinf         = typing.o siginfprim.o getsig.o getvrec.o getnrec.o \
                   routeinf.o typechk.o
