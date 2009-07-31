@@ -37,7 +37,13 @@ valgrind:
 	$(VALGRIND) $(VFLAGS) $(SNETC) $(CCFLAGS) $(INCDIRS) $(LIBDIRS) -o $(TARGET) $(METADATA) $(TARGET).snet
 	rm -f *.o
 
-mpi:    
+mpi:
+	$(HIDE) rm -f *.o $(TARGET) $(TARGET).h $(TARGET).c
+	$(CC) $(INCDIRS) -c *.c
+	$(SNETC) $(CCFLAGS) $(DISTFLAGS) $(INCDIRS) $(LIBDIRS) $(MPILIBS) -o $(TARGET) $(METADATA) $(TARGET).snet
+	rm -f *.o
+
+mpigcc:    
 	$(HIDE) rm -f *.o $(TARGET) $(TARGET).h $(TARGET).c
 	$(CC) $(INCDIRS) -c *.c
 	$(SNETC) -b7 $(METADATA) $(DISTFLAGS) $(TARGET).snet

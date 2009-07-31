@@ -192,7 +192,7 @@ static obs_socket_t *ObserverInitSocket(const char *addr, int port)
   
   if(connect(new->fdesc, (struct sockaddr*)&new->addr, sizeof(new->addr)) == -1) {
     SNetMemFree(new);
-    SNetUtilDebugNotice("Observer: socket connect error");
+    // Could not connect to the socket -> Ignore this observer
     return NULL;
   }
 
