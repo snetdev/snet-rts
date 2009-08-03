@@ -55,7 +55,7 @@ compiler        = tree global support parse preproc flat typeinf opt \
 #
 
 global          = main.o config_file.o init.o usage.o memory.o lookup_table.o \
-                  globals.o options.o ctinfo.o phase.o phase_drivers.o set.o
+                  globals.o options.o ctinfo.o phase.o phase_drivers.o set.o \
 
 support         = buffer.o str.o system.o maths.o
 
@@ -67,7 +67,7 @@ tree            = check.o check_attribs.o check_lib.o check_mem.o \
 parse           = snet.tab.o snet.lex.o scanparse.o cpreproc.o sploc.o \
 
 md              = mpreproc.o mredist.o munpack.o mprogdef.o mremdup.o \
-                  mcollect.o mutil.o
+                  mcollect.o mutil.o merrcode.o
 
 preproc         = dcr.o tcheck.o boxex.o boxexfile.o mod.o tres.o
 
