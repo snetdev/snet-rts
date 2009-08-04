@@ -60,7 +60,7 @@ typedef enum {OBSfile, OBSsocket} obstype_t;
 /* A handle for observer data. */
 typedef struct obs_handle {
   obstype_t obstype;     // type of the observer
-  void *desc;            // Observer desctiptor, depends on the type of the observer (obs_socket_t / obs_file_T)
+  void *desc;            // Observer descriptor, depends on the type of the observer (obs_socket_t / obs_file_T)
   bool isInteractive;    // Is this observer interactive
   snet_tl_stream_t *inbuf;  // Stream for incoming records
   snet_tl_stream_t *outbuf; // Stream for outgoing records
@@ -74,6 +74,7 @@ typedef struct obs_handle {
 
 /* Wait queue for observers waiting for reply messages */
 typedef struct obs_wait_queue {
+  bool hasBeenWoken;
   obs_handle_t *hnd;           // Observer
   pthread_cond_t cond;         // Wait condition
   struct obs_wait_queue *next;
@@ -249,7 +250,12 @@ static void ObserverWait(obs_handle_t *self)
     if(temp->hnd == NULL) {
       temp->hnd = self;
 
-      pthread_cond_wait(&temp->cond, &connection_mutex);
+      temp->hasBeenWoken = false;
+
+      while(temp->hasBeenWoken == false) {
+	pthread_cond_wait(&temp->cond, &connection_mutex);
+      }
+
       temp->hnd = NULL;
 
       return;
@@ -271,7 +277,13 @@ static void ObserverWait(obs_handle_t *self)
   temp->next = socket->wait_queue;
   socket->wait_queue = temp;
 
-  pthread_cond_wait(&temp->cond, &connection_mutex);
+
+  temp->hasBeenWoken = false;
+
+  while(temp->hasBeenWoken == false) {
+    pthread_cond_wait(&temp->cond, &connection_mutex);
+  }
+
   temp->hnd = NULL;
 
   return;
@@ -340,7 +352,6 @@ static void *ObserverDispatch(void *arg)
   obs_socket_t *temp = NULL;
   int len = 0;
   int i = 0;
-
   pthread_mutex_lock(&connection_mutex);
 
   /* Loop until the observer system is terminated */
@@ -358,6 +369,7 @@ static void *ObserverDispatch(void *arg)
     while(temp != NULL){
       FD_SET(temp->fdesc, &fdr_set);
       ndfs = (temp->fdesc + 1 > ndfs) ? temp->fdesc + 1 : ndfs;
+
       temp = temp->next;
     }
 
@@ -427,6 +439,7 @@ static void *ObserverDispatch(void *arg)
 		obs_wait_queue_t *queue = temp->wait_queue;
 		while(queue != NULL){
 		  if(queue->hnd != NULL && queue->hnd->id == oid) {
+		    queue->hasBeenWoken = true;
 		    pthread_cond_signal(&queue->cond);
 		    break;
 		  }
@@ -767,6 +780,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
     break;
   }
   fprintf(file,"</observer>");
+  fflush(file);
  
   return 0;
 }
@@ -804,9 +818,12 @@ static int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
 
     ret = ObserverPrintRecordToFile(file->file, hnd, rec);
     
+
+    err = ferror(file->file);
+
     pthread_mutex_unlock(&connection_mutex);
 
-    if((err = ferror(file->file))) {
+    if(err) {
       SNetUtilDebugNotice("Observer %d: file write error (%d)", hnd->id, err);
     }
 
@@ -823,11 +840,11 @@ static int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
       ObserverWait(hnd);    
     }
     
-    pthread_mutex_unlock(&connection_mutex);
-
     err = ferror(socket->file);
 
-    if((err = ferror(socket->file))) {
+    pthread_mutex_unlock(&connection_mutex);
+
+    if(err) {
       SNetUtilDebugNotice("Observer %d: socket send error (%d)", hnd->id, err);
     }
 
