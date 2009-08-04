@@ -1,6 +1,6 @@
 <metadata>
   <boxdefault>
-    <interface value="C4SNet" />
+    <interface>C4SNet</interface>
   </boxdefault>
 </metadata>
 
