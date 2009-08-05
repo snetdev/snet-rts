@@ -4,6 +4,7 @@
 #include "bool.h"
 #include "stream_layer.h"
 #include "fun.h"
+#include "id.h"
 
 #define SNET_LOCATION_NONE -1
 
@@ -13,28 +14,19 @@ void SNetRoutingInit();
 
 void SNetRoutingDestroy();
 
-int SNetRoutingGetNewID();
+snet_id_t SNetRoutingGetNewID();
 
-snet_routing_context_t *SNetRoutingContextInit(int id, bool is_master, int parent, snet_fun_id_t *fun_id, int tag);
+snet_routing_context_t *SNetRoutingContextInit(snet_id_t id, bool is_master, int parent, snet_fun_id_t *fun_id, int tag);
+
+snet_routing_context_t *SNetRoutingContextCopy(snet_routing_context_t *original);
 
 void SNetRoutingContextDestroy(snet_routing_context_t *context);
-
-int SNetRoutingContextGetID(snet_routing_context_t *context);
 
 void SNetRoutingContextSetLocation(snet_routing_context_t *context, int location);
 int SNetRoutingContextGetLocation(snet_routing_context_t *context);
 
 void SNetRoutingContextSetParent(snet_routing_context_t *context, int parent);
 int SNetRoutingContextGetParent(snet_routing_context_t *context);
-
-bool SNetRoutingContextIsMaster(snet_routing_context_t *context);
-
-snet_fun_id_t *SNetRoutingContextGetFunID(snet_routing_context_t *context);
-
-void SNetRoutingContextSetNodeVisited(snet_routing_context_t *context, int node);
-bool SNetRoutingContextIsNodeVisited(snet_routing_context_t *context, int node);
-
-int SNetRoutingContextGetTag(snet_routing_context_t *context);
 
 snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet_tl_stream_t* stream, int location);
 

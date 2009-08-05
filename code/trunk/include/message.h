@@ -38,7 +38,7 @@ typedef enum {
  */
 
 typedef struct snet_msg_route_update {
-  int op_id;
+  snet_id_t op_id;
   int node;
   snet_tl_stream_t *stream;
 } snet_msg_route_update_t;
@@ -48,7 +48,7 @@ typedef struct snet_msg_route_update {
  */
 
 typedef struct snet_msg_route_index {
-  int op_id;
+  snet_id_t op_id;
   int node;
   int index;
 } snet_msg_route_index_t;
@@ -58,7 +58,7 @@ typedef struct snet_msg_route_index {
  */
 
 typedef struct snet_msg_create_network {
-  int op_id;
+  snet_id_t op_id;
   int parent;
   int tag;
   snet_fun_id_t fun_id;

@@ -26,13 +26,13 @@
 #define INVALID_INDEX -1
 
 typedef struct snet_ru_entry {
-  int op_id;
+  snet_id_t op_id;
   int node;
   snet_tl_stream_t *stream;
 } snet_ru_entry_t;
 
 typedef struct snet_ri_entry {
-  int op_id;
+  snet_id_t op_id;
   int node;
   int index;
 } snet_ri_entry_t;
@@ -164,6 +164,10 @@ static void *IManagerCreateNetwork(void *op)
 
   info = SNetInfoInit();
 
+#ifdef DISTRIBUTED_DEBUG
+    SNetUtilDebugNotice("%lld: Create Network", msg->op_id);
+#endif /* DISTRIBUTED_DEBUG */
+
   SNetInfoSetRoutingContext(info, SNetRoutingContextInit(msg->op_id, false, msg->parent, &msg->fun_id, msg->tag));
   
   stream = fun(stream, info, msg->tag);
@@ -180,7 +184,7 @@ static void *IManagerCreateNetwork(void *op)
   
   return NULL;
 }
-static int IManagerMatchUpdateToIndex(snet_queue_t *queue, int op, int node)
+static int IManagerMatchUpdateToIndex(snet_queue_t *queue, snet_id_t op, int node)
 { 
   snet_ri_entry_t *ri;
   snet_queue_iterator_t q_iter;
@@ -203,7 +207,7 @@ static int IManagerMatchUpdateToIndex(snet_queue_t *queue, int op, int node)
   return index;
 }
 
-static void IOManagerPutIndexToBuffer(snet_queue_t *queue, int op, int node, int index)
+static void IOManagerPutIndexToBuffer(snet_queue_t *queue, snet_id_t op, int node, int index)
 {
   snet_ri_entry_t *ri;
 
@@ -216,7 +220,7 @@ static void IOManagerPutIndexToBuffer(snet_queue_t *queue, int op, int node, int
   SNetQueuePut(queue, ri);
 }
 
-static snet_tl_stream_t *IManagerMatchIndexToUpdate(snet_queue_t *queue, int op, int node)
+static snet_tl_stream_t *IManagerMatchIndexToUpdate(snet_queue_t *queue, snet_id_t op, int node)
 {
   
   snet_ru_entry_t *ru;
@@ -241,7 +245,7 @@ static snet_tl_stream_t *IManagerMatchIndexToUpdate(snet_queue_t *queue, int op,
   return stream;
 }
 
-static void IOManagerPutUpdateToBuffer(snet_queue_t *queue, int op, int node, snet_tl_stream_t *stream)
+static void IOManagerPutUpdateToBuffer(snet_queue_t *queue, snet_id_t op, int node, snet_tl_stream_t *stream)
 {
   snet_ru_entry_t *ru;
 

@@ -392,13 +392,10 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
     fun = funs[0];
     
 #ifdef DISTRIBUTED_SNET
-    new_context = SNetRoutingContextInit(
-					 SNetRoutingContextGetID(context), 
-					 SNetRoutingContextIsMaster(context), 
-					 location,
-					 SNetRoutingContextGetFunID(context), 
-					 SNetRoutingContextGetTag(context));
-  
+    new_context =  SNetRoutingContextCopy(context);
+    SNetRoutingContextSetLocation(new_context, location);
+    SNetRoutingContextSetParent(new_context, location);
+
     SNetInfoSetRoutingContext(info, new_context);
 
     outstreams[0] = (*fun)(transits[0], info, location);
@@ -422,12 +419,9 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
       fun = funs[i];
       
 #ifdef DISTRIBUTED_SNET
-      new_context = SNetRoutingContextInit(
-					 SNetRoutingContextGetID(context), 
-					 SNetRoutingContextIsMaster(context), 
-					 location,
-					 SNetRoutingContextGetFunID(context), 
-					 SNetRoutingContextGetTag(context));
+      new_context = SNetRoutingContextCopy(context);
+      SNetRoutingContextSetLocation(new_context, location);
+      SNetRoutingContextSetParent(new_context, location);
 
       SNetInfoSetRoutingContext(info, new_context);
     
@@ -474,12 +468,9 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
     for(i = 0; i < num; i++) { 
       fun = funs[i];
 
-      new_context = SNetRoutingContextInit(
-					 SNetRoutingContextGetID(context), 
-					 SNetRoutingContextIsMaster(context), 
-					 location,
-					 SNetRoutingContextGetFunID(context), 
-					 SNetRoutingContextGetTag(context));
+      new_context =  SNetRoutingContextCopy(context);
+      SNetRoutingContextSetLocation(new_context, location);
+      SNetRoutingContextSetParent(new_context, location);
 
       SNetInfoSetRoutingContext(info, new_context);
     

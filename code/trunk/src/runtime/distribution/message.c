@@ -30,7 +30,7 @@ void SNetMessageTypesInit()
 
   /* SNET_msg_route_update */
 
-  types[0] = MPI_INT;  
+  types[0] = SNET_ID_MPI_TYPE;  
   types[1] = MPI_INT;  
   types[2] = MPI_BYTE;
   
@@ -41,7 +41,7 @@ void SNetMessageTypesInit()
   MPI_Address(&route_update.op_id, displacements);
   MPI_Address(&route_update.node, displacements + 1);
   MPI_Address(&route_update.stream, displacements + 2);
-  
+
   displacements[2] -= displacements[0];
   displacements[1] -= displacements[0];
   displacements[0] = 0;
@@ -53,7 +53,7 @@ void SNetMessageTypesInit()
 
   /* SNET_msg_route_index */
 
-  types[0] = MPI_INT;
+  types[0] = SNET_ID_MPI_TYPE;
   types[1] = MPI_INT;
   types[2] = MPI_INT;
   
@@ -77,7 +77,7 @@ void SNetMessageTypesInit()
 
   /* SNET_msg_create_network */
   
-  types[0] = MPI_INT; 
+  types[0] = SNET_ID_MPI_TYPE; 
   types[1] = MPI_INT;
   types[2] = MPI_INT;
   types[3] = MPI_INT;

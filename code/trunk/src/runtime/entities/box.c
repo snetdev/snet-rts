@@ -114,7 +114,7 @@ extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
 				  snet_info_t *info, 
 				  int location,
 #endif /* DISTRIBUTED_SNET */ 
-          const char *boxname,
+                                  const char *boxname,
 				  snet_box_fun_t boxfun,
 				  snet_box_sign_t *out_signs) 
 {
@@ -127,7 +127,7 @@ extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
   if(location == SNetIDServiceGetNodeID()) {
 
 #ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Box created");
+    SNetUtilDebugNotice("Box \"%s\" created", boxname);
 #endif /* DISTRIBUTED_DEBUG */
 
 #endif /* DISTRIBUTED_SNET */
