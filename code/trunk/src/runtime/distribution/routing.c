@@ -1,4 +1,18 @@
 #ifdef DISTRIBUTED_SNET
+/** <!--********************************************************************-->
+ * $Id$
+ *
+ * @file routing.c
+ *
+ * @brief Functions used to construct the network in distributed S-Net.
+ *
+ *
+ * @author Jukka Julku, VTT Technical Research Centre of Finland
+ *
+ * @date 13.1.2009
+ *
+ *****************************************************************************/
+
 #include <pthread.h>
 #include <mpi.h>
 #include <string.h>
@@ -18,35 +32,46 @@
 
 #define COUNTER_START SNET_MESSAGE_NUM_CONTROL_MESSAGES
 
+/** @struct global_routing_info_
+ *
+ *   @brief Global routing data.
+ *
+ */
 typedef struct {
-  int next_id;
-  int next_index;
-  pthread_mutex_t mutex;
-  int self;
-  int max_nodes;
-  bool terminate;
-  snet_tl_stream_t *global_in;
-  snet_tl_stream_t *global_out;
-  pthread_cond_t input_cond;
-  pthread_cond_t output_cond;
+  int next_id;                   /**< Next unused task ID. */
+  int next_index;                /**< Next unused stream index. */
+  pthread_mutex_t mutex;         /**< Mutex to guard this structure. */
+  int self;                      /**< Node's own rank. */
+  int max_nodes;                 /**< Number of nodes. */
+  bool terminate;                /**< True if SNetDistributionStop has been called. */
+  snet_tl_stream_t *global_in;   /**< Global input stream if in this node. */
+  snet_tl_stream_t *global_out;  /**< Global output stream if in this node. */
+  pthread_cond_t input_cond;     /**< Signalled if global input is in this node. */
+  pthread_cond_t output_cond;    /**< Signalled if global output is in this node. */
 } global_routing_info_t;
 
+/** @struct snet_routing_context
+ *
+ *   @brief Information about the network creation task.
+ *
+ */
 struct snet_routing_context{
-  snet_id_t id;
-  int current_location;
-  bool *nodes;
-  int parent;
-  bool is_master;
-  snet_fun_id_t fun_id;
-  int tag;
+  snet_id_t id;          /**< Id of the creation task. */
+  int current_location;  /**< Current location. */
+  bool *nodes;           /**< List of visited nodes. */
+  int parent;            /**< Parent node of the creation task. */
+  bool is_master;        /**< Is this node the master node?. */
+  snet_fun_id_t fun_id;  /**< Function id for the start-point. */
+  int tag;               /**< Tag in case the parent is a location split node. */
 };
  
+/* Global routing data. */
 static global_routing_info_t *r_info = NULL;
 
-static snet_id_t SNetRoutingContextGetID(snet_routing_context_t *context);
-static bool SNetRoutingContextIsMaster(snet_routing_context_t *context);
-static snet_fun_id_t *SNetRoutingContextGetFunID(snet_routing_context_t *context);
-static int SNetRoutingContextGetTag(snet_routing_context_t *context);
+static snet_id_t RoutingContextGetID(snet_routing_context_t *context);
+static bool RoutingContextIsMaster(snet_routing_context_t *context);
+static snet_fun_id_t *RoutingContextGetFunID(snet_routing_context_t *context);
+static int RoutingContextGetTag(snet_routing_context_t *context);
 
 
 /****************************** Global routing info ******************************/
@@ -80,7 +105,7 @@ void SNetRoutingDestroy()
   SNetMemFree(r_info);
 }
 
-static int SNetRoutingGetNewIndex()
+static int RoutingGetNewIndex()
 {
   int ret;
   
@@ -93,17 +118,17 @@ static int SNetRoutingGetNewIndex()
   return ret;
 }
 
-static int SNetRoutingGetSelf() 
+static int RoutingGetSelf() 
 {
   return r_info->self;
 }
 
-static int SNetRoutingGetNumNodes() 
+static int RoutingGetNumNodes() 
 {
   return r_info->max_nodes;
 }
 
-static void SNetRoutingSetGlobalInput(snet_tl_stream_t *stream) 
+static void RoutingSetGlobalInput(snet_tl_stream_t *stream) 
 {
   pthread_mutex_lock(&r_info->mutex);
 
@@ -114,7 +139,7 @@ static void SNetRoutingSetGlobalInput(snet_tl_stream_t *stream)
   pthread_mutex_unlock(&r_info->mutex);
 }
 
-static void SNetRoutingSetGlobalOutput(snet_tl_stream_t *stream) 
+static void RoutingSetGlobalOutput(snet_tl_stream_t *stream) 
 {
   pthread_mutex_lock(&r_info->mutex);
 
@@ -212,7 +237,7 @@ snet_id_t SNetRoutingGetNewID()
   
   pthread_mutex_unlock(&r_info->mutex);
 
-  return SNET_ID_CREATE(SNetRoutingGetSelf(), ret);
+  return SNET_ID_CREATE(RoutingGetSelf(), ret);
 }
 
 
@@ -224,11 +249,11 @@ static void CreateNetwork(snet_routing_context_t *info, int node)
   MPI_Datatype type;
   const snet_fun_id_t *fun_id;
 
-  msg.op_id = SNetRoutingContextGetID(info);
+  msg.op_id = RoutingContextGetID(info);
   msg.parent = SNetRoutingContextGetParent(info);
-  msg.tag = SNetRoutingContextGetTag(info);
+  msg.tag = RoutingContextGetTag(info);
 
-  fun_id = SNetRoutingContextGetFunID(info);
+  fun_id = RoutingContextGetFunID(info);
   msg.fun_id.id = fun_id->id;
 
   memset(msg.fun_id.lib, 0, sizeof(char) * 32);
@@ -251,10 +276,10 @@ static void UpdateITable(snet_id_t id, int node, snet_tl_stream_t *stream)
   type = SNetMessageGetMPIType(SNET_msg_route_update);
 
 #ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("%lld: Update Input Manager: %d->%d", id, node, SNetRoutingGetSelf());
+    SNetUtilDebugNotice("%lld: Update Input Manager: %d->%d", id, node, RoutingGetSelf());
 #endif /* DISTRIBUTED_DEBUG */
 
-  MPI_Send(&msg, 1, type, SNetRoutingGetSelf(), SNET_msg_route_update, MPI_COMM_WORLD);
+  MPI_Send(&msg, 1, type, RoutingGetSelf(), SNET_msg_route_update, MPI_COMM_WORLD);
 
 }
 
@@ -264,7 +289,7 @@ static void UpdateOTable(snet_id_t id, int node, int index, snet_tl_stream_t *st
   MPI_Datatype type;
 
   msg.op_id = id;
-  msg.node = SNetRoutingGetSelf();
+  msg.node = RoutingGetSelf();
   msg.index = index;
 
   SNetOManagerUpdateRoutingTable(stream, node, index);
@@ -272,7 +297,7 @@ static void UpdateOTable(snet_id_t id, int node, int index, snet_tl_stream_t *st
   type = SNetMessageGetMPIType(SNET_msg_route_index);
 
 #ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("%lld: Update Output Manager: %d:%d->%d", id, SNetRoutingGetSelf(), index, node);
+    SNetUtilDebugNotice("%lld: Update Output Manager: %d:%d->%d", id, RoutingGetSelf(), index, node);
 #endif /* DISTRIBUTED_DEBUG */
 
   MPI_Send(&msg, 1, type, node, SNET_msg_route_index, MPI_COMM_WORLD);
@@ -289,9 +314,9 @@ snet_routing_context_t *SNetRoutingContextInit(snet_id_t id, bool is_master, int
 
   new->id = id;
 
-  new->nodes = SNetMemAlloc(sizeof(bool) * SNetRoutingGetNumNodes());
+  new->nodes = SNetMemAlloc(sizeof(bool) * RoutingGetNumNodes());
   
-  memset(new->nodes, false, sizeof(bool) * SNetRoutingGetNumNodes());
+  memset(new->nodes, false, sizeof(bool) * RoutingGetNumNodes());
 
   new->current_location = parent;
 
@@ -316,9 +341,9 @@ snet_routing_context_t * SNetRoutingContextCopy(snet_routing_context_t *original
 
   new->id = original->id;
 
-  new->nodes = SNetMemAlloc(sizeof(bool) * SNetRoutingGetNumNodes());
+  new->nodes = SNetMemAlloc(sizeof(bool) * RoutingGetNumNodes());
   
-  memcpy(new->nodes, original->nodes, sizeof(bool) * SNetRoutingGetNumNodes());
+  memcpy(new->nodes, original->nodes, sizeof(bool) * RoutingGetNumNodes());
 
   new->current_location = original->parent;
 
@@ -341,7 +366,7 @@ void SNetRoutingContextDestroy(snet_routing_context_t *context)
   SNetMemFree(context);
 }
 
-static snet_id_t SNetRoutingContextGetID(snet_routing_context_t *context)
+static snet_id_t RoutingContextGetID(snet_routing_context_t *context)
 {
   return context->id;
 }
@@ -366,30 +391,47 @@ int SNetRoutingContextGetParent(snet_routing_context_t *context)
   return context->parent;
 }
 
-static bool SNetRoutingContextIsMaster(snet_routing_context_t *context)
+static bool RoutingContextIsMaster(snet_routing_context_t *context)
 {
   return context->is_master;
 }
 
-static snet_fun_id_t *SNetRoutingContextGetFunID(snet_routing_context_t *context)
+static snet_fun_id_t *RoutingContextGetFunID(snet_routing_context_t *context)
 {
   return &context->fun_id;
 }
 
-static int SNetRoutingContextGetTag(snet_routing_context_t *context)
+static int RoutingContextGetTag(snet_routing_context_t *context)
 {
   return context->tag;
 }
 
-static void SNetRoutingContextSetNodeVisited(snet_routing_context_t *context, int node)
+static void RoutingContextSetNodeVisited(snet_routing_context_t *context, int node)
 {
   context->nodes[node] = true;
 }
 
-static bool SNetRoutingContextIsNodeVisited(snet_routing_context_t *context, int node)
+static bool RoutingContextIsNodeVisited(snet_routing_context_t *context, int node)
 {
   return context->nodes[node];
 }
+
+/** <!--********************************************************************-->
+ *
+ * @fn  snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet_tl_stream_t* stream, int location)
+ *
+ *   @brief  Update routing context when a new component is to be built
+ *
+ *           Checks for transitions between the locations and adjust the routing context
+ *           accordingly. Creates connections between nodes.
+ *
+ *   @param context  Routing context
+ *   @param stream   The input stream
+ *   @param index    Location where the component is built
+ *
+ *   @return The input stream of to be given to the component.
+ *
+ ******************************************************************************/
 
 snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet_tl_stream_t* stream, int location)
 {
@@ -399,25 +441,25 @@ snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet
 
   if(previous != location) {
 
-    if(previous == SNetRoutingGetSelf()) {
+    if(previous == RoutingGetSelf()) {
   
-      index = SNetRoutingGetNewIndex();
+      index = RoutingGetNewIndex();
      
-      UpdateOTable(SNetRoutingContextGetID(context), location, index, stream);
+      UpdateOTable(RoutingContextGetID(context), location, index, stream);
 
       stream = SNetTlCreateStream(BUFFER_SIZE);
 
-    } else if(location == SNetRoutingGetSelf()) {
+    } else if(location == RoutingGetSelf()) {
 
       if(previous == SNET_LOCATION_NONE) {
 
-	SNetRoutingSetGlobalInput(stream);
+	RoutingSetGlobalInput(stream);
 
       } else {
 
 	SNetTlSetFlag(stream, true);
 
-	UpdateITable(SNetRoutingContextGetID(context), previous, stream);
+	UpdateITable(RoutingContextGetID(context), previous, stream);
       }
     } 
 
@@ -425,11 +467,11 @@ snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet
     SNetRoutingContextSetLocation(context, location);
   }
 
-  if(SNetRoutingContextIsNodeVisited(context, location) == false 
-     && location !=  SNetRoutingGetSelf()
-     && SNetRoutingContextIsMaster(context)) {
+  if(RoutingContextIsNodeVisited(context, location) == false 
+     && location !=  RoutingGetSelf()
+     && RoutingContextIsMaster(context)) {
 
-    SNetRoutingContextSetNodeVisited(context, location);
+    RoutingContextSetNodeVisited(context, location);
     
 #ifdef DISTRIBUTED_DEBUG
     SNetUtilDebugNotice("%ld: Call Create Network (%d)", context->id, location);
@@ -441,6 +483,23 @@ snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet
   return stream;
 }
 
+/** <!--********************************************************************-->
+ *
+ * @fn  snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl_stream_t* stream)
+ *
+ *   @brief  Update routing context at the end of the network creation.
+ *
+ *           Checks for transitions between the locations and adjust the routing context
+ *           accordingly. Creates connections between nodes.
+ *
+ *   @param context  Routing context
+ *   @param stream   The input stream
+ *   @param index    Location where the component is built
+ *
+ *   @return The input stream of to be given to the component or NULL if no such a stream
+ *
+ ******************************************************************************/
+
 snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl_stream_t* stream)
 {
   int previous = SNetRoutingContextGetLocation(context);
@@ -448,23 +507,23 @@ snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl
   int index;
 
   if(location != previous) {
-    if(location == SNetRoutingGetSelf()) {
+    if(location == RoutingGetSelf()) {
 
       SNetTlSetFlag(stream, true);
 
-      UpdateITable(SNetRoutingContextGetID(context), previous, stream);
+      UpdateITable(RoutingContextGetID(context), previous, stream);
 
-    } else if(previous == SNetRoutingGetSelf()) {
+    } else if(previous == RoutingGetSelf()) {
 
       if(location == SNET_LOCATION_NONE) {
 
-	SNetRoutingSetGlobalOutput(stream);
+	RoutingSetGlobalOutput(stream);
 
 	stream = NULL;
       } else {
-	index = SNetRoutingGetNewIndex();
+	index = RoutingGetNewIndex();
 
-	UpdateOTable(SNetRoutingContextGetID(context), location, index, stream);
+	UpdateOTable(RoutingContextGetID(context), location, index, stream);
 
 	stream = SNetTlCreateStream(BUFFER_SIZE);
       }
