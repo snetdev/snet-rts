@@ -8,7 +8,7 @@ AR         = ar
 INCDIRS    = -I. -I$(SNETBASE)/include
 MPIINCDIRS = -I. -I$(SNETBASE)/include -I$(MPIROOT)/include
 COPY       = cp
-DISTFLAGS  = -DDISTRIBUTED_SNET -DMPICH_SKIP_MPICXX
+DISTFLAGS  = -DDISTRIBUTED_SNET 
 
 # = = = = = = = = = = = = = = = = = = = =
 OBJECTS     = $(NAME).o base64.o 
@@ -22,6 +22,7 @@ TARGETINCDIR   = $(SNETBASE)/include
 
 
 all:
+	make clean
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
 	$(CC) $(subst %libname%,$(notdir $(TARGET)),$(LD_DYNAMIC))\
   -o $(TARGET) $(OBJECTS) -L$(TARGETLIBDIR) -lsnet
@@ -31,10 +32,12 @@ all:
 	$(COPY) $(NAME).h $(TARGETINCDIR)
 
 mpi:
+	make clean
 	$(CC) $(DISTFLAGS) $(CCFLAGS) $(MPIINCDIRS) -c *.c
 	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
 	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETLIBDIR)
+	$(COPY) $(NAME).h $(TARGETINCDIR)
 
 clean:
 	rm -f *.o *.a *.so $(TARGETLIBDIR)/$(TARGET)\

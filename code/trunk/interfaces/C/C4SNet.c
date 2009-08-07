@@ -8,10 +8,6 @@
  *
  * 
  *****************************************************************************/
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -178,30 +174,7 @@ void C4SNetInit( int id)
 void C4SNetOut( void *hnd, int variant, ...)
 {
   va_list args;
-  /*
-  int i;
-  void **fields;
-  int *tags, *btags;
-  snet_variantencoding_t *v;
-
-
-  v = SNetTencGetVariant( SNetHndGetType( hnd), variant);
-  fields = SNetMemAlloc( SNetTencGetNumFields( v) * sizeof( void*));
-  tags = SNetMemAlloc( SNetTencGetNumTags( v) * sizeof( int));
-  btags = SNetMemAlloc( SNetTencGetNumBTags( v) * sizeof( int));
-
-  va_start( args, variant);
-  for( i=0; i<SNetTencGetNumFields( v); i++) {
-    fields[i] =  va_arg( args, void*);
-  }
-  for( i=0; i<SNetTencGetNumTags( v); i++) {
-    tags[i] =  va_arg( args, int);
-  }
-  for( i=0; i<SNetTencGetNumBTags( v); i++) {
-    btags[i] =  va_arg( args, int);
-  }
-  va_end( args);
-*/
+ 
   va_start( args, variant);
   SNetOutRawV( (snet_handle_t *)hnd, interface_id, variant, args);
   va_end( args);
@@ -608,6 +581,7 @@ static int C4SNetDataDeserializeTypePart(const char *buf, int size, c4snet_vtype
 }
 
 #if 0
+/*****************NOT IN USE************************/
 static int C4SNetDataDeserializeDataPart( FILE *file, c4snet_type_t type, void *data*)
 {
   int ret;
@@ -714,7 +688,7 @@ static int C4SNetDataDeserializeDataPart( FILE *file, c4snet_type_t type, void *
   
   case CTYPE_string:
   {
-#   define SIZE 3
+#define SIZE 3
     char * buffer=NULL;
     int size=0, cur=0;
     char symbol;
@@ -1308,9 +1282,3 @@ void C4SNetContainerOut(c4snet_container_t *c)
   SNetMemFree(c->counter);
   SNetMemFree(c);
 }
-
-#ifdef __cplusplus
-}
-#endif
-
-

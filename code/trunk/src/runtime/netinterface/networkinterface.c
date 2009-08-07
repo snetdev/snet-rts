@@ -300,9 +300,7 @@ int SNetInRun(int argc, char *argv[],
     SNetInParserDestroy();
   }
 
-  if(SNetInOutputDestroy() != 0){
-    //return 1;
-  }
+  SNetInOutputDestroy();
 
 #else
   in_buf = SNetTlCreateStream(bufsize);
@@ -321,9 +319,7 @@ int SNetInRun(int argc, char *argv[],
     i = SNetInParserParse();
   }
 
-  if(SNetInOutputDestroy() != 0){
-    //return 1;
-  }
+  SNetInOutputDestroy();
   
   if(in_buf != NULL){
     SNetTlMarkObsolete(in_buf);

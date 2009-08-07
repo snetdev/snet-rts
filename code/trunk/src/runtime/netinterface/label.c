@@ -113,7 +113,7 @@ int SNetInLabelToId(snetin_label_t *labels, const char *label){
   new_label->next = labels->temp_labels;
   labels->temp_labels = new_label;
 
-  //new_label->ref_count = 1;
+  new_label->ref_count = 1;
 
   index = new_label->index;
   
@@ -144,19 +144,8 @@ char *SNetInIdToLabel(snetin_label_t *labels, int i){
        t = SNetMemAlloc(sizeof(char) * (strlen(templabel->label) + 1));
       t = strcpy(t, templabel->label);
       /* remove label if the reference count goes to zero */
-      /*
-      if(--templabel->ref_count == 0){
-	if(templabel == labels->temp_labels){
-	  labels->temp_labels = templabel->next;
-	}
-	else{
-	  last->next = templabel->next;
-	}
-	SNetMemFree(templabel->label);
-	SNetMemFree(templabel);
-	templabel = NULL;
-      }
-      */
+
+      /* TODO */
       
       break;
     }

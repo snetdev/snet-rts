@@ -269,17 +269,13 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      }
 		    }
 		  }else if(strcmp(attr->value, SNET_REC_COLLECT) == 0){
-		    SNetUtilDebugFatal("Input of REC_collect not yet implemented!");
-		    //current.record = SNetRecCreate(REC_collect);
+		    SNetUtilDebugFatal("Input of REC_collect not implemented!");
 		  }else if(strcmp(attr->value, SNET_REC_SORT_BEGIN) == 0){
-		    SNetUtilDebugFatal("Input of REC_sort_begin not yet implemented!");
-		    //current.record = SNetRecCreate(REC_sort_begin);
+		    SNetUtilDebugFatal("Input of REC_sort_begin not implemented!");
 		  }else if(strcmp(attr->value, SNET_REC_SORT_END) == 0){
-		    SNetUtilDebugFatal("Input of REC_sort_end not yet implemented!");
-		    //current.record = SNetRecCreate(REC_sort_end);
+		    SNetUtilDebugFatal("Input of REC_sort_end not implemented!");
 		  }else if(strcmp(attr->value, SNET_REC_TRIGGER) == 0){
-		    SNetUtilDebugFatal("Input of REC_trigger_initializer not yet implemented!");
-		    //current.record = SNetRecCreate(REC_trigger_initializer);
+		    SNetUtilDebugFatal("Input of REC_trigger_initializer not implemented!");
 		  }else if(strcmp(attr->value, SNET_REC_TERMINATE) == 0){
 		   
 		    current.record = SNetRecCreate(REC_terminate);
@@ -358,17 +354,13 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		    }
 
 		  }else if(strcmp(attr->value, SNET_REC_COLLECT) == 0){
-		    SNetUtilDebugFatal("Input of REC_collect not yet implemented!");
-		    //current.record = SNetRecCreate(REC_collect);
+		    SNetUtilDebugFatal("Input of REC_collect not implemented!");
 		  }else if(strcmp(attr->value, SNET_REC_SORT_BEGIN) == 0){
-		    SNetUtilDebugFatal("Input of REC_sort_begin not yet implemented!");
-		    //current.record = SNetRecCreate(REC_sort_begin);
+		    SNetUtilDebugFatal("Input of REC_sort_begin not implemented!");
 		  }else if(strcmp(attr->value, SNET_REC_SORT_END) == 0){
-		    SNetUtilDebugFatal("Input of REC_sort_end not yet implemented!");
-		    //current.record = SNetRecCreate(REC_sort_end);
+		    SNetUtilDebugFatal("Input of REC_sort_end not implemented!");
 		  }else if(strcmp(attr->value, SNET_REC_TRIGGER) == 0){
-		    SNetUtilDebugFatal("Input of REC_trigger_initializer not yet implemented!");
-		    //current.record = SNetRecCreate(REC_trigger_initializer);
+		    SNetUtilDebugFatal("Input of REC_trigger_initializer not implemented!");
 		  }else if(strcmp(attr->value, SNET_REC_TERMINATE) == 0){
 		    /* New control record: terminate */
 		    current.record = SNetRecCreate(REC_terminate);

@@ -44,14 +44,12 @@ extern snetin_interface_t *SNetInInterfaceInit(char **static_interfaces, int len
 extern void SNetInInterfaceDestroy(snetin_interface_t *interfaces);
 
 /* Search for index by given interface from the structure.
- * If the given interface is not found, a new interface with 
- * the next possible index is added to the structure.
  *
  * @param interfaces Interface structure to be searched.
  * @param interface The name to search for.
  *
  * @return Index of the given interface.
- * @return SNET_INTERFACE_ERROR, if the interface parameter given was NULL.
+ * @return SNET_INTERFACE_ERROR, if the interface was not found.
  *
  */
 
