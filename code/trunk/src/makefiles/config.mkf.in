@@ -28,10 +28,14 @@ REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
 CC           := @CC@ 
 CCPROD       := @CC@
 
+MAKEDISTR := @MAKEDISTR@
+
 ifeq ($(DISTRIBUTED),yes)
 CCFLAGS      := @MKCCFLAGS@ @OSFLAGS@ -DFILTER_VERSION_2 -DDISTRIBUTED_SNET
+MPIFLAGS    := -I$(MPIROOT)/include
 else
 CCFLAGS      := @MKCCFLAGS@ @OSFLAGS@ -DFILTER_VERSION_2
+MPIFLAGS    :=
 endif
 
 CCDEPS_FLAGS := @DEPSFLAG@ $(CCFLAGS)
@@ -45,13 +49,6 @@ LIBTOOL      := # $(PROJECT_ROOT)/libtool --silent --mode=link
 #GTKFLAGS     := @GTKFLAGS@
 XSLTENGINE   := @XSLT@
 #M4PROC       := @M4@
-
-ifneq ($(MPIROOT),)
-MPIFLAGS    := -I$(MPIROOT)/include
-BUILDDISTRIBUTED=yes
-else
-MPIFLAGS    :=
-endif
 
 MAKE_NORM    := $(MAKE) CC="$(CC)" CCFLAGS="$(CCFLAGS)" CFLAGS="$(CFLAGS)"
 MAKE_PROD    := $(MAKE) CC="$(CCPROD)" CCFLAGS="$(CCPROD_FLAGS)" CFLAGS="$(CPROD_FLAGS)"

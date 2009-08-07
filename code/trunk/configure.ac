@@ -428,6 +428,15 @@ else
   AC_MSG_RESULT([yes])
 fi
 
+dnl check if $MPIROOT is set
+AC_MSG_CHECKING([if MPIROOT is set])
+if test "`echo $MPIROOT`" = ""; then
+  AC_MSG_RESULT([no])
+  AC_SUBST(MAKEDISTR, ["no"])
+else
+  AC_MSG_RESULT([yes])
+  AC_SUBST(MAKEDISTR, ["yes"])
+fi
 
 dnl generate configure dependent files
 

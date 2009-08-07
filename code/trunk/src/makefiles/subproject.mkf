@@ -122,6 +122,14 @@ clean:
 	@$(MAKE) HIDE="$(HIDE)" clean_dirs
 	@$(ECHO) ""
 
+clean_no_targetdir: 
+	@$(ECHO) ""
+	@$(ECHO) "************************************************************"
+	@$(ECHO) "* Cleaning S-Net $(SUBPROJECT)"
+	@$(ECHO) "************************************************************"
+	@$(MAKE) HIDE="$(HIDE)" clean_dirs
+	@$(ECHO) ""
+
 clean_dirs: $(addsuffix .clean,$(SUBPROJECT_DIRS))
 
 %.clean:

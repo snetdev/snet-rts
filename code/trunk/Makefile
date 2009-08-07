@@ -81,8 +81,8 @@ default devel prod: checks
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
-ifeq ($(BUILDDISTRIBUTED),yes)
-	$(HIDE) $(MAKE) -C src/runtime clean
+ifeq ($(MAKEDISTR),yes)
+	$(HIDE) $(MAKE) -C src/runtime clean_no_targetdir
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
 			PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" DISTRIBUTED=yes
 endif
