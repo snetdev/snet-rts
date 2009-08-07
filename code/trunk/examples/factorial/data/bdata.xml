@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" interface="C4SNet">
+  <field label="x" >GBQAAAA==</field><!-- x=5 -->
+  <field label="r" >GAgAAAA==</field><!-- r=2 -->
+  <tag label="r1" >0</tag>
+  <!-- result r=240="G8AAAAA==" x=1="GAQAAAA==" -->
+</record>
+<record xmlns="snet-home.org" type="data" interface="C4SNet" >
+  <field label="x" >GAgAAAA==</field><!-- x=2 -->
+  <field label="r" >GAgAAAA==</field><!-- r=2 -->
+  <tag label="r2" >0</tag>
+  <!-- result r=4="GBAAAAA"== x=1="GAQAAAA==" -->
+</record>
+<record xmlns="snet-home.org" type="terminate" />

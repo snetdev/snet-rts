@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="x" >(int)5</field>
+  <field label="r" >(int)2</field>
+  <tag   label="rec"  >1</tag>
+</record>
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet" >
+  <field label="x" >(int)3</field>
+  <field label="r" >(int)2</field>
+  <tag   label="rec"  >2</tag>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet" >
+  <field label="x" >(int)4</field>
+  <field label="r" >(int)2</field>
+  <tag   label="rec"  >3</tag>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet" >
+  <field label="x" >(int)2</field>
+  <field label="r" >(int)2</field>
+  <tag   label="rec"  >4</tag>
+</record>
+<record xmlns="snet-home.org" type="terminate" />
