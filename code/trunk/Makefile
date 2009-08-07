@@ -111,7 +111,7 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
-ifeq ($(BUILDDISTRIBUTED),yes)
+ifeq ($(MAKEDISTR),yes)
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@ DISTRIBUTED=yes
 endif
