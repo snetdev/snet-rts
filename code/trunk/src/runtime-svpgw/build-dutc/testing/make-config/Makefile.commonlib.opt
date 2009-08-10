@@ -1,9 +1,10 @@
 PROJ_NAME := commonlib
-LIB_NAME  := common
+LIB_NAME  := libcommon
 
 #---
 
-CONFIGS   := debug release debug_mb release_mb
+CONFIGS   := debug release
+CONFIGS   += debug_mb release_mb
 
 #---
 
@@ -14,12 +15,10 @@ SCRIPTS_DIR := ../../../build-tools
 
 INTERM_DIR      := intermediate
 TARGET_DIR      := ..
-TARGET_INCL_DIR := $(SOURCE_DIR)
 
 #---
 
 SRC_FILES_LST   := SrcFiles.lst
-XDR_FILES_LST   := XdrFiles.lst
 
 #---
 
@@ -40,10 +39,11 @@ include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
 INCLUDE_DIRS :=                               \
 	$(SOURCE_DIR)                             \
 	$(SOURCE_DIR)/../../include               \
-	$(SOURCE_DIR)/../../include/snet-gwrt     \
-                                              \
 	$(SOURCE_DIR)/../../include.int           \
 	$(SOURCE_DIR)/../../include.snetc         \
+                                              \
+	$(SOURCE_DIR)/../../include/snetgwrt      \
+	$(SOURCE_DIR)/../../include.int/snetgwrt  \
                                               \
 	$(call NONSTD_LIB,UTCPTL,INCLUDE)
 

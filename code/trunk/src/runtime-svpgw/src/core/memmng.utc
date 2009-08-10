@@ -26,13 +26,14 @@
 /*----------------------------------------------------------------------------*/
 
 #include "memmng.int.utc.h"
-#include "domain.int.utc.h"
 #include "list.int.utc.h"
+#include "atomicops.int.utc.h"
 
 /*---*/
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 /*---*/
 
@@ -51,8 +52,11 @@
  * Header of a "malloced" block.
  */
 typedef struct {
-    snet_ref_t ref;
-    size_t     sz;
+    snet_ref_t    ref;
+    size_t        sz;
+
+    volatile 
+    unsigned long refcnt;
     
 } snet_datablk_header_t;
 
@@ -71,10 +75,17 @@ typedef struct {
 /**
  * For shared memory systems the only extra info
  * we hold is the size of the block (for monitoring
- * reasons only) because in this case references are
- * just pointers.
+ * reasons only) and its ref counter (because in this
+ * case references are just pointers so there is no need
+ * for extra item to hold the reference).
  */
-typedef size_t snet_datablk_header_t;
+typedef struct {
+    size_t        sz;
+
+    volatile 
+    unsigned long refcnt;
+
+} snet_datablk_header_t;
 
 #endif // SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
 
@@ -155,20 +166,9 @@ static unsigned long MALLOC_COUNT = 0;
 
 /*----------------------------------------------------------------------------*/
 /**
- * Because during the sub-system's initialization 
- * structures must be initialized and doing so uses
- * functions from the sub-system itself and also because
- * full initialization of the sub-system requires others to
- * have been initialized first (e.g. the domains sub-system)
- * the initialization is done in steps and the functions 
- * "SNetMemMngSubSystemInit()" is called multiple times (see 
- * function "SNetGlobalInitialize()" in file 'src/core/snet.utc').
- *
- * This "counter" keeps track at which initialization phase we
- * are at any moment with the value of 0 to mean uninitialized
- * and the value of INIT_PHASES_NUMBER meaning "fully" initialized.
+ * Initialization flag
  */
-static unsigned int INIT_PHASE = 0;
+static bool IS_INITIALIZED = false;
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -199,7 +199,7 @@ static void init1()
 #ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
     REF_LOOKUP = SNetListCreate(
         sizeof(snet_reflookup_entry_t),
-        SVPSNETGWRT_MEMMNG_REF_LOOKUP_TBL_GROW_STEP, SNetDomainGetSystem());
+        SVPSNETGWRT_MEMMNG_REF_LOOKUP_TBL_GROW_STEP);
 
 #ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
     REF_LOOKUP_LOCK = new uTC::RWLock();
@@ -270,6 +270,14 @@ static inline void unlock_reflookup(bool is_shared)
 #endif 
 }
 
+#endif // SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Reference lookup table "search" and other utility functions */
+
+#ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
+
 static inline snet_ref_t uint2ref(unsigned int i)
 {
     return (snet_ref_t)(i);
@@ -280,8 +288,29 @@ static inline unsigned int ref2uint(snet_ref_t r)
     return (unsigned int)(r);
 }
 
+/*----------------------------------------------------------------------------*/
+
+static snet_reflookup_entry_t*
+find_reflookup_tbl_entry(snet_ref_t ref)
+{
+    if (ref == NULL_REF) {
+        return NULL;
+    }
+
+    lock_reflookup(true);
+
+    snet_reflookup_entry_t *e =
+        (snet_reflookup_entry_t *) 
+            SNetListItemGetValueByRef(REF_LOOKUP, ref2uint(ref));
+
+    unlock_reflookup(true);
+
+    return e;
+}
+
 #endif // SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
 
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /* Monitoring */
 
@@ -318,16 +347,19 @@ update_monitor_info(size_t old_sz, size_t new_sz, int malloc_cnt_incr)
 }
 
 /*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 /* Data block header manipulation functions */
 
 static inline void 
 set_block_size(snet_datablk_header_t *hdr, size_t sz)
 {
-#ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
     hdr->sz = sz;
-#else
-    (*hdr) = sz;
-#endif
+}
+
+static inline void
+set_block_refcnt(snet_datablk_header_t *hdr, unsigned long val)
+{
+    hdr->refcnt = val;
 }
 
 static inline 
@@ -349,40 +381,28 @@ get_block_dataptr_from_hdr(const snet_datablk_header_t *hdr)
 
 void SNetMemMngSubSystemInit()
 {
-    if (INIT_PHASE == INIT_PHASES_NUMBER) {
+    if (IS_INITIALIZED) {
         return;
     }
 
-    switch (INIT_PHASE) {
-        case 0:
-            init0();
-            break;
+    init0();
+    init1();
 
-        case 1:
-            init1();
-            break;
-    }
-
-    INIT_PHASE++;
+    IS_INITIALIZED = true;
 }
 
 /*----------------------------------------------------------------------------*/
 
 void SNetMemMngSubSystemDestroy()
 {
-    while (INIT_PHASE > 0) {
-        switch (INIT_PHASE) {
-            case 1:
-                destroy1();
-                break;
-
-            case 2:
-                destroy2();
-                break;
-        }
-
-        INIT_PHASE--;
+    if (!IS_INITIALIZED) {
+        return;
     }
+
+    destroy1();
+    destroy2();
+
+    IS_INITIALIZED = false;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -394,11 +414,13 @@ void* SNetMaskPointer(const void *ptr)
     return (void *) ptr;
 
 #else
+    if (ptr == NULL) {
+        return NULL;
+    }
+
     void *mask = get_ptr_mask();
-
-    assert(ptr != NULL);
+    
     assert(ptr != mask);
-
     return (void *)((uintptr_t)(ptr) ^ (uintptr_t)(mask));
 #endif
 }
@@ -423,11 +445,7 @@ size_t SNetMemGetBlockSize(const void *p)
 
     const snet_datablk_header_t *hdr = get_block_header(p);
 
-#ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
     return hdr->sz;
-#else
-    return (*hdr);
-#endif
 }
 
 /*----------------------------------------------------------------------------*/
@@ -483,7 +501,10 @@ void* SNetMemTryAlloc(size_t sz)
 #ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
         hdr->ref = NULL_REF;
 #endif
+
         set_block_size(hdr, sz);
+        set_block_refcnt(hdr, 0);
+
         update_monitor_info(0, sz, 1);
 
         return get_block_dataptr_from_hdr(hdr); 
@@ -574,28 +595,45 @@ snet_ref_t SNetMemCreateRef(void *p, int type)
 
 /*----------------------------------------------------------------------------*/
 
+#ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
 void* SNetMemGetPtr(const snet_ref_t ref)
 {
-#ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
-    if (ref == NULL_REF) {
+    snet_reflookup_entry_t *ltbl_entry = find_reflookup_tbl_entry(ref);
+
+    if (ltbl_entry == NULL) {
         return NULL;
     }
 
-    lock_reflookup(true);
+    return ltbl_entry->data;
+}
 
-    snet_reflookup_entry_t *lookup_entry =
-        (snet_reflookup_entry_t *) 
-            SNetListItemGetValueByRef(REF_LOOKUP, ref2uint(ref));
+void* SNetMemGetPtrWithType(const snet_ref_t ref, int type)
+{
+    snet_reflookup_entry_t *ltbl_entry = find_reflookup_tbl_entry(ref);
 
-    unlock_reflookup(true);
+    if (ltbl_entry == NULL) {
+        return NULL;
+    }
+    
+    if (ltbl_entry->type != type) {
+        return NULL;
+    }
 
-    return (lookup_entry == NULL ? NULL : lookup_entry->data);
+    return ltbl_entry->data;
+}
 
 #else
+void* SNetMemGetPtr(const snet_ref_t ref)
+{
     return (void *)((uintptr_t)(ref));
-
-#endif
 }
+
+void* SNetMemGetPtrWithType(const snet_ref_t ref, int type)
+{
+    return (void *)((uintptr_t)(ref));
+}
+
+#endif // SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
 
 /*----------------------------------------------------------------------------*/
 
@@ -663,6 +701,8 @@ void SNetMemFree(void *p)
     assert(hdr->ref == NULL_REF);
 #endif
 
+    assert(hdr->refcnt == 0);
+
     update_monitor_info(get_block_size_for_monitor(p), 0, -1);
     free(hdr);
 }
@@ -697,6 +737,36 @@ void SNetMemDestroyRef(const snet_ref_t ref)
 
     unlock_reflookup(true);
 #endif
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Reference Counting */
+
+unsigned long
+SNetMemIncreaseRefCount(void *p)
+{
+    assert(p != NULL);
+
+    snet_datablk_header_t *hdr = get_block_header(p);
+    unsigned long          old = SNetAtomicAddULong(&hdr->refcnt, 1);
+
+    assert(old < ULONG_MAX);
+
+    return old;
+}
+
+unsigned long
+SNetMemDecreaseRefCount(void *p)
+{
+    assert(p != NULL);
+
+    snet_datablk_header_t *hdr = get_block_header(p);
+    unsigned long          old = SNetAtomicSubULong(&hdr->refcnt, 1);
+
+    assert(old > 0);
+
+    return old;
 }
 
 /*----------------------------------------------------------------------------*/

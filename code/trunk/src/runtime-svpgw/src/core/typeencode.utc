@@ -26,7 +26,6 @@
 /*----------------------------------------------------------------------------*/
 
 #include "typeencode.int.utc.h"
-#include "domain.int.utc.h"
 #include "memmng.int.utc.h"
 
 /*---*/
@@ -95,7 +94,8 @@ void SNetTencVectorInitCopy(snet_vector_t *vec, const snet_vector_t *src_vec)
 
 /*----------------------------------------------------------------------------*/
 
-snet_vector_t* SNetTencVectorCreate(unsigned int sz, ...)
+snet_vector_t*
+SNetTencVectorCreate(unsigned int sz, ...)
 {
     snet_vector_t *vec = 
         (snet_vector_t *) SNetMemAlloc(sizeof(snet_vector_t));
@@ -113,7 +113,8 @@ snet_vector_t* SNetTencVectorCreate(unsigned int sz, ...)
     return vec;
 }
 
-snet_vector_t* SNetTencVectorCreateEmpty(unsigned int sz)
+snet_vector_t*
+SNetTencVectorCreateEmpty(unsigned int sz)
 {
     snet_vector_t *vec = 
         (snet_vector_t *) SNetMemAlloc(sizeof(snet_vector_t));
@@ -123,7 +124,8 @@ snet_vector_t* SNetTencVectorCreateEmpty(unsigned int sz)
     return vec;
 }
 
-snet_vector_t* SNetTencVectorCreateCopy(const snet_vector_t *vec)
+snet_vector_t*
+SNetTencVectorCreateCopy(const snet_vector_t *vec)
 {
     assert(vec != NULL);
 
@@ -871,10 +873,7 @@ SNetTencTypeGetVariant(const snet_typeencoding_t *tenc, unsigned int idx)
 snet_typeencoding_list_t*
 SNetTencCreateTypeEncodingList(unsigned int sz, ...)
 {
-    snet_list_t *lst = SNetListCreate(
-       sizeof(snet_typeencoding_t *),
-       sz + 4,
-       SNetDomainGetSystem());
+    snet_list_t *lst = SNetListCreate(sizeof(snet_typeencoding_t *), sz + 4);
 
     va_list  vargs;
     va_start(vargs, sz);
@@ -911,8 +910,7 @@ void SNetTencBoxSignInit(snet_box_sign_t *sign, snet_typeencoding_t *tenc)
     sign->mappings =
         SNetListCreate(
             sizeof(snet_vector_t *),
-            SNetTencTypeGetVariantsCount(tenc) + 2,
-            SNetDomainGetSystem());
+            SNetTencTypeGetVariantsCount(tenc) + 2);
 }
 
 void SNetTencBoxSignInitCopy(

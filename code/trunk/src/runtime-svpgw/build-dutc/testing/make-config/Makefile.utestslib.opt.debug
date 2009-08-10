@@ -1,15 +1,13 @@
-LIB_NAME_debug      := lib$(LIB_NAME)_dbg.a
+LIB_NAME_debug      := $(LIB_NAME)_dbg.a
 
 #---
 
 SRC_FILES_LST_debug := $(SRC_FILES_LST)
-XDR_FILES_LST_debug := $(XDR_FILES_LST)
 
 #---
 
 INTERM_DIR_debug      :=
 TARGET_DIR_debug      := lib
-TARGET_INCL_DIR_debug := .
 
 #---
 
@@ -35,11 +33,6 @@ CXX_INCL_DIRS_FLAGS_debug :=
 
 AR_FLAGS_debug    :=
 ARINX_FLAGS_debug :=
-
-#---
-
-XDRHC_FLAGS_debug :=
-XDRCC_FLAGS_debug :=
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

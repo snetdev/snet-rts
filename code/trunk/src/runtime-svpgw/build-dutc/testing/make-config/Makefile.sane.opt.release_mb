@@ -1,4 +1,5 @@
 BIN_NAME_release_mb      := $(BIN_NAME)-mb
+IMPLIB_NAME_release_mb   := lib$(IMPLIB_NAME)-mb.imp.a
 
 #---
 
@@ -7,14 +8,15 @@ XDR_FILES_LST_release_mb := $(XDR_FILES_LST)
 
 #---
 
-INTERM_DIR_release_mb      :=
-TARGET_DIR_release_mb      := bin
-TARGET_INCL_DIR_release_mb := .
+INTERM_DIR_release_mb        :=
+TARGET_DIR_release_mb        := bin
+TARGET_INCL_DIR_release_mb   := .
+IMPLIB_TARGET_DIR_release_mb := lib
 
 #---
 
-PREREQUISITES_release_mb   := test_petalinux_env
-BUILD_TOOLSET_release_mb   := mb
+PREREQUISITES_release_mb     := test_petalinux_env
+BUILD_TOOLSET_release_mb     := mb
 
 #-------------------------------------------------------------------------------
 
@@ -37,6 +39,11 @@ CXX_INCL_DIRS_FLAGS_release_mb :=
 XDRHC_FLAGS_release_mb :=
 XDRCC_FLAGS_release_mb :=
 
+#---
+
+AR_FLAGS_release_mb    :=
+ARINX_FLAGS_release_mb :=
+
 #-------------------------------------------------------------------------------
 
 LD_FLAGS_release_mb      := 
@@ -44,10 +51,9 @@ LIB_DIRS_release_mb      :=
 
 #---
 
-LD_LIBS_FLAGS_release_mb := -lsnets-mb -lutests-mb
-LD_LIBS_FLAGS_release_mb += -lcommon-mb
-
-LD_LIBS_FLAGS_release_mb += -lsvp-snetgwrt-mb
+LD_LIBS_FLAGS_release_mb := -lsnets-mb -lcommon-mb
+LD_LIBS_FLAGS_release_mb += -lsvp-snetgwsane-mb
+LD_LIBS_FLAGS_release_mb += -lsvp-snetgwcore-mb
 LD_LIBS_FLAGS_release_mb += -Wl,--whole-archive
 LD_LIBS_FLAGS_release_mb += -lsep_common-mb
 LD_LIBS_FLAGS_release_mb += -Wl,--no-whole-archive

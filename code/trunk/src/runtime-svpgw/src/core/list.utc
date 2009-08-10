@@ -26,9 +26,7 @@
 /*----------------------------------------------------------------------------*/
 
 #include "list.int.utc.h"
-
 #include "memmng.int.utc.h"
-#include "plcmng.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
 
@@ -517,21 +515,15 @@ static void remove(snet_list_t *lst, snet_list_node_t *n)
 void SNetListInit(
     snet_list_t *lst,
     unsigned int item_sz, 
-    unsigned int bucket_sz, 
-    const snet_domain_t *snetd)
+    unsigned int bucket_sz)
 {
     assert(lst != NULL);
-    assert(snetd != NULL);
 
     if (bucket_sz == 0)
         bucket_sz = SVPSNETGWRT_LIST_DEFAULT_BUCKET_SZ;
 
-    snetd = (const snet_domain_t *) SNetUnmaskPointer(snetd);
-
-    place owner_plc = SNetGetMyPlace();
-
-    SNetBaseTypeInit(&lst->base, snetd);
-    SNetBaseTypeSetPlaces(&lst->base, &owner_plc, NULL, NULL);
+    SNetBaseTypeInit(&lst->base);
+    SNetBaseTypeSetPlacesDefault(&lst->base);
 
     lst->item_sz        = item_sz;
     lst->bucket_sz      = bucket_sz;
@@ -564,8 +556,7 @@ void SNetListInitCopy(snet_list_t *lst, const snet_list_t *src_lst)
     SNetListInit(
         lst,
         src_lst->item_sz,
-        src_lst->bucket_sz, 
-        SNetBaseTypeGetDomain(&src_lst->base));
+        src_lst->bucket_sz); 
 
     for (unsigned int it = SNetListBegin(src_lst);
          it != 0; it = SNetListItemGetNext(src_lst, it)) {
@@ -582,14 +573,13 @@ void SNetListInitCopy(snet_list_t *lst, const snet_list_t *src_lst)
 snet_list_t*
 SNetListCreate(
     unsigned int item_sz,
-    unsigned int bucket_sz,
-    const snet_domain_t *snetd)
+    unsigned int bucket_sz)
 {
-    assert(snetd != NULL);
+    snet_list_t *lst =
+        (snet_list_t *)
+            SNetMemAlloc(sizeof(snet_list_t));
 
-    snet_list_t *lst = (snet_list_t *) SNetMemAlloc(sizeof(snet_list_t));
-
-    SNetListInit(lst, item_sz, bucket_sz, snetd);
+    SNetListInit(lst, item_sz, bucket_sz);
     return lst;
 }
 
@@ -599,7 +589,8 @@ SNetListCreateCopy(const snet_list_t *src_lst)
     assert(src_lst != NULL);
 
     snet_list_t *lst = 
-        (snet_list_t *) SNetMemAlloc(sizeof(snet_list_t));
+        (snet_list_t *)
+            SNetMemAlloc(sizeof(snet_list_t));
 
     SNetListInitCopy(lst, src_lst);
     return lst;
@@ -616,7 +607,7 @@ void SNetListDestroy(snet_list_t *lst)
     }
 
     SNetMemFree(lst->buckets);
-    SNetBaseTypeDestroy(&lst->base);
+    SNetBaseTypeDispose(&lst->base);
 
     SNetMemFree(lst);
 }

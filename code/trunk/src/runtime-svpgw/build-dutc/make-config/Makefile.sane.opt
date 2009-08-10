@@ -1,0 +1,67 @@
+ifeq ($(strip $(WITH_NO_SEP)),true)
+$(info You should not be building \
+the SNet-SANE library with no full \
+SEP support from the underlying SVP platform)
+endif
+
+#---
+
+PROJ_NAME   := sane
+LIB_NAME    := libsvp-snetgw$(PROJ_NAME)
+IMPLIB_NAME := $(LIB_NAME)
+
+#---
+
+CONFIGS     := debug release
+CONFIGS     += debug_mb release_mb
+
+#---
+
+SOURCE_DIR  := ../../src/sane
+SCRIPTS_DIR := ../../build-tools
+
+#---
+
+INTERM_DIR        := intermediate
+TARGET_DIR        := ..
+IMPLIB_TARGET_DIR := ..
+
+#---
+
+SRC_FILES_LST     := SrcFiles.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := ../make-config
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# The following file that is being included contains functions that allow 
+# to deal with libraries / frameworks that are not usually found installed
+# on a system (e.g. uTC-PTL library) and from this point on that functionality 
+# will be required.
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+INCLUDE_DIRS :=              		           \
+	$(SOURCE_DIR)                              \
+                                               \
+	$(SOURCE_DIR)/../include                   \
+	$(SOURCE_DIR)/../include/snetgwrt          \
+                                               \
+	$(SOURCE_DIR)/../include.int/snetgwrt      \
+	$(SOURCE_DIR)/../include.int/snetgwrt/sane \
+                                               \
+	$(call NONSTD_LIB,UTCPTL,INCLUDE)
+
+#-------------------------------------------------------------------------------
+# Build Toolsets!
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.toolsets
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

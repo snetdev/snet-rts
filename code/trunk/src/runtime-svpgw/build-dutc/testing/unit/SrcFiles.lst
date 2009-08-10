@@ -4,7 +4,7 @@
 ../../../src/testing/unit/conslst_test.utc
 ../../../src/testing/unit/idxvec_test.utc
 ../../../src/testing/unit/refs_test.utc
-../../../src/testing/unit/net_ioproc_test.utc
+../../../src/testing/unit/rcreate_test.sep.utc
 ../../../src/testing/unit/list_test.utc
 ../../../src/testing/unit/record_test.utc
 ../../../src/testing/unit/buffer_test.utc

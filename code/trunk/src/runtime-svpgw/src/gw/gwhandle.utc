@@ -1,0 +1,170 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : gwhandle.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "gwhandle.int.utc.h"
+#include "graph.int.utc.h"
+
+/*---*/
+ 
+#include "core/handle.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+struct gwhandle {
+    snet_handle_t        base;
+    snet_domain_t       *domain;
+    snet_conslst_node_t *cons_node;
+
+}; // struct gwhandle
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* "VTBL" functions */
+
+static void*
+vtbl_cast_fun(const snet_handle_t *hnd)
+{
+    return (void *)(hnd);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_record_t*
+vtbl_recget_fun(const void *hnd)
+{
+    return SNetConsLstNodeGetRecord(
+        ((snet_gwhandle_t *)(hnd))->cons_node);
+}
+
+static const snet_box_sign_t*
+vtbl_boxsignget_fun(const void *hnd)
+{
+    const snet_gnode_t *gnode =
+        SNetConsLstNodeGetGraphNode(((snet_gwhandle_t *)(hnd))->cons_node);
+
+    if (gnode == NULL) {
+        return NULL;
+    }
+
+    if (SNetGNodeGetType(gnode) != GRAPH_NODE_TYPE_BOX) {
+        return NULL;
+    }
+
+    return SNetGNodeGetBoxTypeSignature(gnode);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_place_t 
+vtbl_snetdhostplcget_fun(const void *hnd)
+{
+    return SNetDomainGetHostPlace(((snet_gwhandle_t *)(hnd))->domain);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetGwHndInit(
+    snet_gwhandle_t     *hnd,
+    snet_domain_t       *snetd,
+    snet_conslst_node_t *cons_node)
+{
+    assert(hnd != NULL);
+    assert(snetd != NULL);
+    assert(cons_node != NULL);
+
+    SNetHndInit(
+        &hnd->base,
+        &vtbl_cast_fun,
+        &vtbl_recget_fun,
+        &vtbl_boxsignget_fun,
+        &vtbl_snetdhostplcget_fun);
+ 
+    hnd->domain    = snetd;
+    hnd->cons_node = cons_node;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gwhandle_t*
+SNetGwHndCreate(
+    snet_domain_t  *snetd,
+    snet_conslst_node_t *cons_node)
+{
+    snet_gwhandle_t *hnd =
+        (snet_gwhandle_t *)
+            SNetMemAlloc(sizeof(snet_gwhandle_t));
+
+    SNetGwHndInit(hnd, snetd, cons_node);
+
+    return hnd;
+}
+
+void
+SNeGwHndDestroy(snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL);
+
+    SNetHndDispose(&hnd->base);
+    SNetMemFree(hnd);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_conslst_node_t*
+SNetGwHndGetConsNode(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->cons_node;
+}
+
+snet_record_t*
+SNetGwHndGetConsNodeRecord(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL);
+    return SNetConsLstNodeGetRecord(hnd->cons_node);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetGwHndSetConsNode(snet_gwhandle_t *hnd, snet_conslst_node_t *cnode)
+{
+    assert(hnd != NULL);
+    assert(cnode != NULL);
+
+    hnd->cons_node = cnode;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

@@ -1,0 +1,73 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : gw.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "gw.int.utc.h"
+#include "gwhandle.int.utc.h"
+#include "graphstructs.int.utc.h"
+
+#include "resmng.int.utc.h"
+#include "metadata.int.utc.h"
+
+/*---*/
+
+#include "core/snet.int.utc.h"
+#include "core/list.int.utc.h"
+#include "core/buffer.int.utc.h"
+#include "core/memmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's "public" functions */
+
+void SNetGWSetupNormalGNodeHndFuncs(snet_gnode_t *n)
+{
+    assert(n != NULL);
+    assert(n->type != GRAPH_NODE_TYPE_NOP);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* SNetGWxxx() thread functions */
+
+thread void
+SNetGW(snet_handle_t *hnd, snet_record_t *rec)
+{
+    assert(hnd != NULL);
+}
+
+thread void
+SNetGWInitial(snet_domain_t *snetd, snet_record_t *rec)
+{
+    assert(snetd != NULL);
+    assert(rec != NULL);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

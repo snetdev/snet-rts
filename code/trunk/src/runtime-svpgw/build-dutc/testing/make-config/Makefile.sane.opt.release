@@ -1,4 +1,5 @@
 BIN_NAME_release      := $(BIN_NAME)
+IMPLIB_NAME_release   := lib$(IMPLIB_NAME).imp.a
 
 #---
 
@@ -7,14 +8,15 @@ XDR_FILES_LST_release := $(XDR_FILES_LST)
 
 #---
 
-INTERM_DIR_release      :=
-TARGET_DIR_release      := bin
-TARGET_INCL_DIR_release := .
+INTERM_DIR_release        :=
+TARGET_DIR_release        := bin
+TARGET_INCL_DIR_release   := .
+IMPLIB_TARGET_DIR_release := lib
 
 #---
 
-PREREQUISITES_release   :=
-BUILD_TOOLSET_release   :=
+PREREQUISITES_release     :=
+BUILD_TOOLSET_release     :=
 
 #-------------------------------------------------------------------------------
 
@@ -37,6 +39,11 @@ CXX_INCL_DIRS_FLAGS_release :=
 XDRHC_FLAGS_release :=
 XDRCC_FLAGS_release :=
 
+#---
+
+AR_FLAGS_release    :=
+ARINX_FLAGS_release :=
+
 #-------------------------------------------------------------------------------
 
 LD_FLAGS_release      := 
@@ -44,10 +51,9 @@ LIB_DIRS_release      :=
 
 #---
 
-LD_LIBS_FLAGS_release := -lsnets -lutests
-LD_LIBS_FLAGS_release += -lcommon
-
-LD_LIBS_FLAGS_release += -lsvp-snetgwrt
+LD_LIBS_FLAGS_release := -lsnets -lcommon
+LD_LIBS_FLAGS_release += -lsvp-snetgwsane
+LD_LIBS_FLAGS_release += -lsvp-snetgwcore
 LD_LIBS_FLAGS_release += -Wl,--whole-archive
 LD_LIBS_FLAGS_release += -lsep_common
 LD_LIBS_FLAGS_release += -Wl,--no-whole-archive

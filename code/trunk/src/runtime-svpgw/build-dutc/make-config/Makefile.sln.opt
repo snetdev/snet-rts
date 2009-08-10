@@ -4,7 +4,9 @@ SLN_NAME := sln
 
 CONFIGS      := debug release
 CONFIGS      += debug_mb release_mb
-CONFIGS_EXT  :=
+
+CONFIGS_EXT  := debug_libs release_libs
+CONFIGS_EXT  += debug_libs_mb release_libs_mb
 
 #---
 
@@ -21,22 +23,84 @@ BUILD_SPEC_OPT_DIR := make-config
 
 #-------------------------------------------------------------------------------
 
-PROJ_DEP_SNetGWRT    :=
-PROJ_DEP_TestingPack := SNetGWRT
-
-#-------------------------------------------------------------------------------
-
-PROJ_CFG_SNetGWRT_debug         := debug
-PROJ_CFG_SNetGWRT_release       := release
-PROJ_CFG_SNetGWRT_debug_mb      := debug_mb
-PROJ_CFG_SNetGWRT_release_mb    := release_mb
+PROJ_DEP_core    :=
+PROJ_DEP_gw      := core
+PROJ_DEP_sane    := core
 
 #---
 
-PROJ_CFG_TestingPack_debug      := debug
-PROJ_CFG_TestingPack_release    := release
-PROJ_CFG_TestingPack_debug_mb   := debug_mb
-PROJ_CFG_TestingPack_release_mb := release_mb
+ifneq ($(strip $(WITH_NO_SEP)),true)
+PROJ_DEP_testing := sane
+else
+PROJ_DEP_testing := gw
+endif
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+PROJ_CFG_core_debug         := debug
+PROJ_CFG_core_release       := release
+PROJ_CFG_core_debug_mb      := debug_mb
+PROJ_CFG_core_release_mb    := release_mb
+
+PROJ_CFG_gw_debug           := debug
+PROJ_CFG_gw_release         := release
+PROJ_CFG_gw_debug_mb        := debug_mb
+PROJ_CFG_gw_release_mb      := release_mb
+
+#---
+
+ifneq ($(strip $(WITH_NO_SEP)),true)
+PROJ_CFG_sane_debug         := debug
+PROJ_CFG_sane_release       := release
+PROJ_CFG_sane_debug_mb      := debug_mb
+PROJ_CFG_sane_release_mb    := release_mb
+else
+PROJ_CFG_sane_debug         :=
+PROJ_CFG_sane_release       :=
+PROJ_CFG_sane_debug_mb      :=
+PROJ_CFG_sane_release_mb    :=
+endif
+
+#---
+
+PROJ_CFG_testing_debug      := debug
+PROJ_CFG_testing_release    := release
+PROJ_CFG_testing_debug_mb   := debug_mb
+PROJ_CFG_testing_release_mb := release_mb
+
+#-------------------------------------------------------------------------------
+
+PROJ_CFG_core_debug_libs         := debug
+PROJ_CFG_core_release_libs       := release
+PROJ_CFG_core_debug_libs_mb      := debug_mb
+PROJ_CFG_core_release_libs_mb    := release_mb
+
+PROJ_CFG_gw_debug_libs           := debug
+PROJ_CFG_gw_release_libs         := release
+PROJ_CFG_gw_debug_libs_mb        := debug_mb
+PROJ_CFG_gw_release_libs_mb      := release_mb
+
+#---
+
+ifneq ($(strip $(WITH_NO_SEP)),true)
+PROJ_CFG_sane_debug_libs         := debug
+PROJ_CFG_sane_release_libs       := release
+PROJ_CFG_sane_debug_libs_mb      := debug_mb
+PROJ_CFG_sane_release_libs_mb    := release_mb
+else
+PROJ_CFG_sane_debug_libs         :=
+PROJ_CFG_sane_release_libs       :=
+PROJ_CFG_sane_debug_libs_mb      :=
+PROJ_CFG_sane_release_libs_mb    :=
+endif
+
+#---
+
+PROJ_CFG_testing_debug_libs      :=
+PROJ_CFG_testing_release_libs    :=
+PROJ_CFG_testing_debug_libs_mb   :=
+PROJ_CFG_testing_release_libs_mb :=
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -48,11 +112,17 @@ PROJ_CFG_TestingPack_release_mb := release_mb
 # we do not want that!
 
 define ADDITIONAL_RULES
-all_pc:   debug release ;
-all_mb:   debug_mb release_mb ;
+all_libs:    all_libs_pc all_libs_mb ;
+all_pc:      debug release ;
+all_mb:      debug_mb release_mb ;
+all_libs_pc: debug_libs release_libs ;
+all_libs_mb: debug_libs_mb release_libs_mb ;
 
-clean_pc: clean-debug clean-release ;
-clean_mb: clean-debug_mb clean-release_mb ;
+clean_libs:    clean_libs_pc clean_libs_mb ;
+clean_pc:      clean-debug clean-release ;
+clean_mb:      clean-debug_mb clean-release_mb ;
+clean_libs_pc: clean-debug_libs clean-release_libs ;
+clean_libs_mb: clean-debug_libs_mb clean-release_libs_mb ;
 endef
 
 #-------------------------------------------------------------------------------
@@ -62,6 +132,7 @@ endef
 CMDLINE_CACHED_VARS := UTCPTL_INCLUDE_DIR
 CMDLINE_CACHED_VARS += UTCPTL_BIN_DIR
 CMDLINE_CACHED_VARS += UTCPTL_LIB_DIR
+CMDLINE_CACHED_VARS += WITH_NO_SEP
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

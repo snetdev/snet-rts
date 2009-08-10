@@ -1,5 +1,5 @@
 /**
- * @file ts02.snet.h
+ * @file ts02.h
  *
  * Header definitions of compiled snet-file for runtime.
  *

@@ -1,0 +1,139 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : errwrn.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "common.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+
+/**
+ * IDs for the message arrays. These are taken
+ * by registering the arrays below as error
+ * and warning message sources.
+ */
+static unsigned int ERRMSG_SRC_ID = 0;
+static unsigned int WRNMSG_SRC_ID = 0;
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Errors */
+
+static const char* ERR_MSGS[] = {
+    // The prefix for errors specific
+    // to the GW library.
+    "GW",
+
+    // 0x0001: SNET_GWERR_TYPE_ERROR
+    "A type error occured in %s at index %s",
+
+    // 0x0002: SNET_GWERR_BOX
+    "An error occured in the execution of box at index '%s'",
+
+    // 0x0003:  SNET_GWERR_GCTOR_INV_RETVAL
+    "Failed to create a domain becuase the given "
+    "graph constructor function returned an invalid (NULL) value"
+
+}; // ERR_MSGS[]
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static const char* WRN_MSGS[] = {
+    // The prefix for warnings specific
+    // to the GW library.
+    "GW",
+
+    // 0x0001: SNET_GWWRN_IGNORED_ENTITY
+    "Ignored %s at index %s (%s)",
+
+    // 0x0002: SNET_GWWRN_NULL_NETOUT_TFUN
+    "No network output handling thread function was specified "
+    "for a network without an \"external connection\" as its last node",
+
+    // 0x0003: SNET_GWWRN_NULL_NETOUT_BUFF_POP
+    "POP operation on an network "
+    "domain with no output buffer (returning NULL)"
+
+}; // WRN_MSGS[]
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetGwErrorSubSystemInit()
+{
+    if (ERRMSG_SRC_ID == 0)
+        ERRMSG_SRC_ID = SNetRegisterErrorSource(ERR_MSGS);
+
+    if (WRNMSG_SRC_ID == 0)
+        WRNMSG_SRC_ID = SNetRegisterWarningSource(WRN_MSGS);
+}
+
+void
+SNetGwErrorSubSystemDestroy()
+{
+    ERRMSG_SRC_ID = 0;
+    WRNMSG_SRC_ID = 0;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetReportGwError(unsigned int code, ...)
+{
+    if (ERRMSG_SRC_ID == 0) {
+        return;
+    }
+
+    va_list  vargs;
+    va_start(vargs, code);
+
+    SNetReportNonCoreErrorV(ERRMSG_SRC_ID, code, vargs);
+
+    va_end(vargs);
+}
+
+void
+SNetReportGwWarning(unsigned int code, ...)
+{
+    if (WRNMSG_SRC_ID == 0) {
+        return;
+    }
+
+    va_list  vargs;
+    va_start(vargs, code);
+
+    SNetReportNonCoreWarningV(WRNMSG_SRC_ID, code, vargs);
+
+    va_end(vargs);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

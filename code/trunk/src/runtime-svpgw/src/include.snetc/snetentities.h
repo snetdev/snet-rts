@@ -30,7 +30,7 @@
 #ifndef __SVPSNETGWRT_SNET_GWRT_SNETC_SNETENTITIES_H
 #define __SVPSNETGWRT_SNET_GWRT_SNETC_SNETENTITIES_H
 
-#include "snet-gwrt.utc.h"
+#include "snetgw.utc.h"
 
 /*----------------------------------------------------------------------------*/
 
@@ -40,18 +40,18 @@
 
 /*---*/
 
-#define REC_data      REC_DESCR_DATA
-#define REC_terminate REC_DESCR_CTRL
+#define REC_data      SNET_REC_DESCR_DATA
+#define REC_terminate SNET_REC_DESCR_CTRL
 
-#define MODE_textual  REC_DATA_MODE_TXT
-#define MODE_binary   REC_DATA_MODE_BIN
+#define MODE_textual  SNET_REC_DATA_MODE_TXT
+#define MODE_binary   SNET_REC_DATA_MODE_BIN
 
 /*---*/
 
-#define snet_tag      FILTER_OP_TAG
-#define snet_btag     FILTER_OP_BTAG
-#define snet_field    FILTER_OP_FIELD,
-#define create_record FILTER_OP_CREATE_REC
+#define snet_tag      SNET_FILTER_OP_TAG
+#define snet_btag     SNET_FILTER_OP_BTAG
+#define snet_field    SNET_FILTER_OP_FIELD,
+#define create_record SNET_FILTER_OP_CREATE_REC
 
 /*---*/
 

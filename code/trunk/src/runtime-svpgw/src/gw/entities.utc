@@ -1,0 +1,380 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+
+      -------------------------------------------------------------------
+
+    File Name      : entities.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "gw/entities.utc.h"
+
+/*---*/
+
+#include "graph.int.utc.h"
+
+/*---*/
+
+#include "core/basetype.int.utc.h"
+#include "core/memmng.int.utc.h"
+
+/*---*/
+
+#include <stdarg.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static functions */
+
+static snet_gnode_t* create_parallel_gnode(
+    snet_gnode_t *in, 
+    bool is_det, snet_typeencoding_list_t *types, va_list vargs)
+{
+    assert(in != NULL);
+    assert(types != NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out =
+        SNetGNodeCreate(GRAPH_NODE_TYPE_COMB_PARALLEL);
+
+    unsigned int branches_cnt = 
+         (unsigned int) SNetListGetSize(types);
+
+    SNetGNodeSetupParallel(out, is_det, branches_cnt); 
+
+    for (unsigned int i=0; i < branches_cnt; i++) {
+        snet_comb_op_fptr_t branch_fun = va_arg(vargs, snet_comb_op_fptr_t);
+
+        snet_gnode_t *branch_root =
+            SNetGNodeCreate(GRAPH_NODE_TYPE_NOP);
+
+        snet_gnode_t *branch_out  = 
+            (snet_gnode_t *) SNetUnmaskPointer(
+                (*branch_fun)((snet_gnode_t *) SNetMaskPointer(branch_root)));
+
+        snet_typeencoding_t *branch_type = NULL;
+        
+        SNetListItemGetValue(types, i + 1, &branch_type);
+        SNetGNodeParallelSetupBranch(out, i, branch_root, branch_type);
+
+        SNetGNodeConnect(branch_out, out, true);
+    }
+
+    SNetGNodeConnect(in, out, false);
+    SNetListDestroy(types);
+    
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_gnode_t* create_star_gnode(
+    snet_gnode_t *in, 
+    bool is_det,
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    assert(in != NULL);
+
+#if SVPSNETGWRT_DEBUG > 0
+    if (op_b != NULL) {
+        SNetReportWarning(
+            SNET_WRN_IGNORED,
+            "incarnation generation function in star combinator",
+            "not required by this implementation");
+
+        SNetOnWarning();
+    }
+#endif
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out       = SNetGNodeCreate(GRAPH_NODE_TYPE_COMB_STAR);
+    snet_gnode_t *star_root = SNetGNodeCreate(GRAPH_NODE_TYPE_NOP);
+
+    snet_gnode_t *star_out  = 
+        (snet_gnode_t *) SNetUnmaskPointer(
+            (*op_a)((snet_gnode_t *) SNetMaskPointer(star_root)));
+
+    SNetGNodeSetupStar(out, is_det, type, guards, star_root);
+
+    SNetGNodeConnect(star_out, out, true);
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_gnode_t* create_split_gnode(
+    snet_gnode_t *in, 
+    bool is_det, snet_comb_op_fptr_t op, int ltag, int utag)
+{
+    assert(in != NULL);
+
+    // The feature of broadcasting a record to multiple "incarnations" 
+    // of a network in an index split has been abandoned. However the
+    // compiler still emits code that provides both lower and upper
+    // bound tags. Here we use only the lower bound one as the single
+    // tag and ignore the upper bound one. We give a warning until
+    // the compiler is fixed!
+#if SVPSNETGWRT_DEBUG > 0
+    if (utag != ltag) {
+        SNetReportWarning(
+            SNET_WRN_IGNORED,
+            "upper bound tag in index split combinator",
+            "feature removed");
+
+        SNetOnWarning();
+    }
+#endif
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out        = SNetGNodeCreate(GRAPH_NODE_TYPE_COMB_SPLIT);
+    snet_gnode_t *split_root = SNetGNodeCreate(GRAPH_NODE_TYPE_NOP);
+
+    snet_gnode_t *split_out  =
+        (snet_gnode_t *) SNetUnmaskPointer(
+            (*op)((snet_gnode_t *) SNetMaskPointer(split_root)));
+
+    SNetGNodeSetupSplit(out, is_det, split_root, ltag);
+
+    SNetGNodeConnect(split_out, out, true);
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetBox(
+    snet_gnode_t *in,
+    snet_box_name_t name,
+    snet_box_fptr_t func, snet_box_sign_t *sign)
+{
+    assert(in != NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out =
+        SNetGNodeCreate(GRAPH_NODE_TYPE_BOX);
+
+    snet_metadata_t *meta =
+        SNetMetaDataLoad(
+            SNET_METADATA_TYPE_BOX, 
+            SNetMetaDataBoxNameToString(name));
+
+    if (meta != NULL)
+        meta = (snet_metadata_t *)(SNetUnmaskPointer(meta));
+
+    SNetGNodeSetupBox(out, name, func, sign, meta); 
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetSync(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *out_type,
+    snet_typeencoding_t *patterns, snet_expr_list_t *guards)
+{
+    assert(in != NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out = 
+        SNetGNodeCreate(GRAPH_NODE_TYPE_SYNC);
+
+    SNetGNodeSetupSyncCell(out, out_type, patterns, guards);
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetSerial(
+    snet_gnode_t *in,
+    snet_comb_op_fptr_t left, snet_comb_op_fptr_t right)
+{
+    return (*right)((*left)(in));
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetParallel(snet_gnode_t *in, snet_typeencoding_list_t *types, ...)
+{
+    va_list vargs;
+
+    va_start(vargs, types);
+
+    snet_gnode_t *out =
+        create_parallel_gnode(in, false, types, vargs);
+
+    va_end(vargs);
+
+    return out;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetParallelDet(snet_gnode_t *in, snet_typeencoding_list_t *types, ...)
+{
+    va_list vargs;
+
+    va_start(vargs, types);
+
+    snet_gnode_t *out =
+        create_parallel_gnode(in, true, types, vargs);
+
+    va_end(vargs);
+
+    return out;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetStar(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    return create_star_gnode(in, false, type, guards, op_a, op_b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* 
+SNetStarIncarnate(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    return SNetStar(in, type, guards, op_a, op_b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* 
+SNetStarDet(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    return create_star_gnode(in, true, type, guards, op_a, op_b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetStarDetIncarnate(
+    snet_gnode_t *in, 
+    snet_typeencoding_t *type,
+	snet_expr_list_t *guards,
+    snet_comb_op_fptr_t op_a, snet_comb_op_fptr_t op_b)
+{
+    return SNetStarDet(in, type, guards, op_a, op_b);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetSplit(snet_gnode_t *in, snet_comb_op_fptr_t op, int ltag, int utag)
+{
+    return create_split_gnode(in, false, op, ltag, utag);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t* 
+SNetSplitDet(snet_gnode_t *in, snet_comb_op_fptr_t op, int ltag, int utag)
+{
+    return create_split_gnode(in, true, op, ltag, utag);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetFilter(
+    snet_gnode_t *in,
+    snet_typeencoding_t *in_type, snet_expr_list_t *guards, ...)
+{
+    /**
+     * Not implemented yet.
+     */
+    return in;
+}
+
+snet_gnode_t*
+SNetNameShift(
+    snet_gnode_t *in, int offset, snet_variantencoding_t *untouched)
+{
+    /**
+     * Not implemented yet.
+     */
+    return in;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_gnode_t*
+SNetExternConnection(snet_gnode_t *in, snet_domain_t *snetd)
+{
+    assert(in != NULL);
+    assert(snetd != NULL);
+
+    in = (snet_gnode_t *) SNetUnmaskPointer(in);
+
+    snet_gnode_t *out = 
+        SNetGNodeCreate(GRAPH_NODE_TYPE_EXTERN_CONNECTION);
+
+    SNetGNodeSetupExternConn(out, snetd);
+    SNetGNodeConnect(in, out, false);
+
+    return (snet_gnode_t *) SNetMaskPointer(out);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

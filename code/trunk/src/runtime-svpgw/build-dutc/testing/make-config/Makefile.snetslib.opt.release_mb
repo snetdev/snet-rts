@@ -1,15 +1,13 @@
-LIB_NAME_release_mb      := lib$(LIB_NAME)-mb.a
+LIB_NAME_release_mb      := $(LIB_NAME)-mb.a
 
 #---
 
 SRC_FILES_LST_release_mb := $(SRC_FILES_LST)
-XDR_FILES_LST_release_mb := $(XDR_FILES_LST)
 
 #---
 
 INTERM_DIR_release_mb      :=
 TARGET_DIR_release_mb      := lib
-TARGET_INCL_DIR_release_mb := .
 
 #---
 
@@ -35,11 +33,6 @@ CXX_INCL_DIRS_FLAGS_release_mb :=
 
 AR_FLAGS_release_mb    :=
 ARINX_FLAGS_release_mb :=
-
-#---
-
-XDRHC_FLAGS_release_mb :=
-XDRCC_FLAGS_release_mb :=
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 /**
- * @file ts00.snet.c
+ * @file ts00.c
  *
  * Source code of compiled snet-file for runtime.
  *
@@ -113,7 +113,7 @@ static snet_tl_stream_t *SNet__ts00___SL___SL(snet_tl_stream_t *in_buf)
               SNetTencCreateVector(2, field, tag));
 
 
-  out_buf = SNetBox(in_buf, 
+  out_buf = SNetBox(in_buf, "A", 
               &SNet__ts00__A, 
               out_sign);
 
@@ -142,14 +142,14 @@ static snet_tl_stream_t *SNet__ts00___SL___SR___SL(snet_tl_stream_t *in_buf)
               SNetTencCreateVector(1, field));
 
 
-  out_buf = SNetBox(in_buf, 
+  out_buf = SNetBox(in_buf, "B", 
               &SNet__ts00__B, 
               out_sign);
 
   return (out_buf);
 }
 
-static snet_tl_stream_t *SNet__ts00___SL___SR___SR___PL(snet_tl_stream_t *in_buf)
+static snet_tl_stream_t *SNet__ts00___SL___SR___SR___P1(snet_tl_stream_t *in_buf)
 {
   snet_tl_stream_t *out_buf = NULL;
   snet_typeencoding_t *out_type = NULL;
@@ -176,14 +176,14 @@ static snet_tl_stream_t *SNet__ts00___SL___SR___SR___PL(snet_tl_stream_t *in_buf
               SNetTencCreateVector(2, field, tag));
 
 
-  out_buf = SNetBox(in_buf, 
+  out_buf = SNetBox(in_buf, "C", 
               &SNet__ts00__C, 
               out_sign);
 
   return (out_buf);
 }
 
-static snet_tl_stream_t *SNet__ts00___SL___SR___SR___PR(snet_tl_stream_t *in_buf)
+static snet_tl_stream_t *SNet__ts00___SL___SR___SR___P2(snet_tl_stream_t *in_buf)
 {
   snet_tl_stream_t *out_buf = NULL;
   snet_typeencoding_t *out_type = NULL;
@@ -210,7 +210,7 @@ static snet_tl_stream_t *SNet__ts00___SL___SR___SR___PR(snet_tl_stream_t *in_buf
               SNetTencCreateVector(2, field, tag));
 
 
-  out_buf = SNetBox(in_buf, 
+  out_buf = SNetBox(in_buf, "D", 
               &SNet__ts00__D, 
               out_sign);
 
@@ -233,8 +233,8 @@ static snet_tl_stream_t *SNet__ts00___SL___SR___SR(snet_tl_stream_t *in_buf)
                     SNetTencCreateVector(1, F__ts00__d), 
                     SNetTencCreateVector(0), 
                     SNetTencCreateVector(0)))), 
-              &SNet__ts00___SL___SR___SR___PL, 
-              &SNet__ts00___SL___SR___SR___PR);
+              &SNet__ts00___SL___SR___SR___P1, 
+              &SNet__ts00___SL___SR___SR___P2);
 
   return (out_buf);
 }
@@ -283,7 +283,7 @@ static snet_tl_stream_t *SNet__ts00___SR(snet_tl_stream_t *in_buf)
               SNetTencCreateVector(1, field));
 
 
-  out_buf = SNetBox(in_buf, 
+  out_buf = SNetBox(in_buf, "E", 
               &SNet__ts00__E, 
               out_sign);
 

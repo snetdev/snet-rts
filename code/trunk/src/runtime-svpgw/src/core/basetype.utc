@@ -26,50 +26,26 @@
 /*----------------------------------------------------------------------------*/
 
 #include "basetype.int.utc.h"
-#include "domain.int.utc.h"
-
-/*---*/
-
-#define OWNER_PLC_FLAG         0x01
-#define OWNER_PLC_TYPE_FLAG    0x02
-#define MUTEX_PLC_FLAG         0x04
-#define MUTEX_PLC_TYPE_FLAG    0x08
-#define SPEC_MOD_PLC_FLAG      0x10
-#define SPEC_MOD_PLC_TYPE_FLAG 0x20
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void SNetBaseTypeInit(snet_base_t *var, const snet_domain_t *domain)
+void SNetBaseTypeInit(snet_base_t *var)
 {
     assert(var != NULL);
-    assert(domain != NULL);
 
-    var->domain    = (snet_domain_t *) domain;
-    var->plc_flags = 0;
+    var->places.owner    = SNetPlaceGetNull();
+    var->places.mutex    = SNetPlaceGetNull();
+    var->places.ddefault = SNetPlaceGetNull();
 }
 
-void SNetBaseTypeDestroy(snet_base_t *var)
+void SNetBaseTypeDispose(snet_base_t *var)
 {
     assert(var != NULL);
 
-    if ((var->plc_flags & OWNER_PLC_FLAG) &&
-        (var->plc_flags & OWNER_PLC_TYPE_FLAG)) {
-
-        SNetPlaceFree(var->places.owner.contr);
-    }
-
-    if ((var->plc_flags & MUTEX_PLC_FLAG) &&
-        (var->plc_flags & MUTEX_PLC_TYPE_FLAG)) {
-
-        SNetPlaceFree(var->places.mutex.contr);
-    }
-
-    if ((var->plc_flags & SPEC_MOD_PLC_FLAG) && 
-        (var->plc_flags & SPEC_MOD_PLC_TYPE_FLAG)) {
-
-        SNetPlaceFree(var->places.owner.contr);
-    }
+    SNetPlaceFree(var->places.owner);
+    SNetPlaceFree(var->places.mutex);
+    SNetPlaceFree(var->places.ddefault);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -77,92 +53,20 @@ void SNetBaseTypeDestroy(snet_base_t *var)
 
 void SNetBaseTypeSetPlaces(
     snet_base_t *var,
-    const place *owner, const place *mutex, const place *spec_mod)
+    const snet_place_t owner, 
+    const snet_place_t mutex, 
+    const snet_place_t ddefault)
 {
     assert(var != NULL);
 
-    if (owner != NULL) {
-        var->plc_flags |=  OWNER_PLC_FLAG;
-        var->plc_flags &= ~OWNER_PLC_TYPE_FLAG;
+    if (!SNetPlaceIsNull(owner))
+        var->places.owner = SNetPlaceCopy(owner);
 
-        var->places.owner.val = *owner;
-    }
+    if (!SNetPlaceIsNull(mutex))
+        var->places.mutex = SNetPlaceCopy(mutex);
 
-    if (mutex != NULL) {
-        var->plc_flags |=  MUTEX_PLC_FLAG;
-        var->plc_flags &= ~MUTEX_PLC_TYPE_FLAG;
-
-        var->places.mutex.val = *mutex;
-    }
-
-    if (spec_mod != NULL) {
-        var->plc_flags |=  SPEC_MOD_PLC_FLAG;
-        var->plc_flags &= ~SPEC_MOD_PLC_TYPE_FLAG;
-
-        var->places.spec_mod.val = *spec_mod;
-    }
-}
-
-/*----------------------------------------------------------------------------*/
-
-void SNetBaseTypeSetPlacesContracts(
-    snet_base_t *var,
-    snet_place_contract_t *owner,
-    snet_place_contract_t *mutex,
-    snet_place_contract_t *spec_mod)
-{
-    assert(var != NULL);
-
-    if (owner != NULL) {
-        var->plc_flags |= OWNER_PLC_FLAG;
-        var->plc_flags |= OWNER_PLC_TYPE_FLAG;
-
-        var->places.owner.contr = owner;
-    }
-
-    if (mutex != NULL) {
-        var->plc_flags |= MUTEX_PLC_FLAG;
-        var->plc_flags |= MUTEX_PLC_TYPE_FLAG;
-
-        var->places.mutex.contr = mutex;
-    }
-
-    if (spec_mod != NULL) {
-        var->plc_flags |= SPEC_MOD_PLC_FLAG;
-        var->plc_flags |= SPEC_MOD_PLC_TYPE_FLAG;
-
-        var->places.spec_mod.contr = spec_mod;
-    }
-}
-
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-
-bool SNetBaseTypeSameDomain(const snet_base_t *var1, const snet_base_t *var2)
-{
-    return (var1 == NULL || var2 == NULL ?
-        true : SNetDomainIsSame(var1->domain, var2->domain));
-}
-
-/*----------------------------------------------------------------------------*/
-
-bool SNetBaseTypeHasOwnerPlace(const snet_base_t *var)
-{
-    assert(var != NULL);
-    return (var->plc_flags & OWNER_PLC_FLAG);
-}
-
-bool SNetBaseTypeHasMutexPlace(const snet_base_t *var)
-{
-    assert(var != NULL);
-    return (var->plc_flags & MUTEX_PLC_FLAG);
-}
-
-
-bool SNetBaseTypeHasSpecModPlace(const snet_base_t *var)
-{
-    assert(var != NULL);
-    return (var->plc_flags & SPEC_MOD_PLC_FLAG);
+    if (!SNetPlaceIsNull(ddefault))
+        var->places.ddefault = SNetPlaceCopy(ddefault);
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

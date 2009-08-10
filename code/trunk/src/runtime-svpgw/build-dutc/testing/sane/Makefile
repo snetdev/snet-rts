@@ -79,6 +79,9 @@ OBJ_FILES_$(1) := $$(subst .utc,.o,\
 OBJ_FILES_$(1) := $$(subst $$(SOURCE_DIR),,$$(OBJ_FILES_$(1)))
 OBJ_FILES_$(1) := $$(patsubst /%,%,$$(OBJ_FILES_$(1)))
 
+IMPLIB_OBJ_FILES_$(1) := $$(filter %.imp.o,$$(OBJ_FILES_$(1)))
+OBJ_FILES_$(1)        := $$(filter-out %.imp.o,$$(OBJ_FILES_$(1)))
+
 #---
 
 XDR_FILES_$(1)   := \
@@ -207,6 +210,7 @@ $$(eval $$(call set_files_vars,$(1)))
 $$(eval $$(call set_cfg_out_dir_var,INTERM_DIR,$(1)))
 $$(eval $$(call set_cfg_out_dir_var,TARGET_DIR,$(1)))
 $$(eval $$(call set_cfg_out_dir_var,TARGET_INCL_DIR,$(1)))
+$$(eval $$(call set_cfg_out_dir_var,IMPLIB_TARGET_DIR,$(1)))
 
 .PRECIOUS: $$(INTERM_DIR_$(1))/%.d
 .PRECIOUS: $$(INTERM_DIR_$(1))/%.cpp
@@ -216,27 +220,52 @@ $$(eval $$(call set_cfg_out_dir_var,TARGET_INCL_DIR,$(1)))
 
 .PHONY:    $$(PREREQUISITES_$(1))
 
-$(1): $$(PREREQUISITES_$(1)) \
-      $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1))
+$(1): $$(PREREQUISITES_$(1))                \
+      $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1)) \
+	  $$(IMPLIB_TARGET_DIR_$(1))/$$(IMPLIB_NAME_$(1))
 
-$$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1)): 							\
+$$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1)): 						    \
 	  $$(addprefix $$(INTERM_DIR_$(1))/,$$(XDR_OBJ_FILES_$(1))) \
-      $$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))
+      $$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))     \
+      $$(addprefix $$(INTERM_DIR_$(1))/,$$(IMPLIB_OBJ_FILES_$(1)))
 	
 	$$(call print,,"Linking: $$(BIN_NAME_$(1))")
 	
 	mkdir -p $$(TARGET_DIR_$(1))
 	
-	$$(LD$(2))                                                     \
-		$$(LD_FLAGS$(2))                                           \
-		$$(LD_FLAGS_$(1))                                          \
-		$$(LD_OUTF_FLAG$(2)) $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1)) \
-		$$(LD_LIB_DIRS_FLAGS$(2))                                  \
-		$$(LD_LIB_DIRS_FLAGS_$(1))                                 \
-		$$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))      \
-		$$(addprefix $$(INTERM_DIR_$(1))/,$$(XDR_OBJ_FILES_$(1)))  \
-		$$(LD_LIBS_FLAGS$(2))                                      \
+	$$(LD$(2))                                                       \
+		$$(LD_FLAGS$(2))                                             \
+		$$(LD_FLAGS_$(1))                                            \
+		$$(LD_OUTF_FLAG$(2)) $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1))   \
+		$$(LD_LIB_DIRS_FLAGS$(2))                                    \
+		$$(LD_LIB_DIRS_FLAGS_$(1))                                   \
+		$$(addprefix $$(INTERM_DIR_$(1))/,$$(OBJ_FILES_$(1)))        \
+        $$(addprefix $$(INTERM_DIR_$(1))/,$$(IMPLIB_OBJ_FILES_$(1))) \
+		$$(addprefix $$(INTERM_DIR_$(1))/,$$(XDR_OBJ_FILES_$(1)))    \
+		$$(LD_LIBS_FLAGS$(2))                                        \
 		$$(LD_LIBS_FLAGS_$(1))
+
+$$(IMPLIB_TARGET_DIR_$(1))/$$(IMPLIB_NAME_$(1)):				\
+	  $$(addprefix $$(INTERM_DIR_$(1))/,$$(XDR_OBJ_FILES_$(1))) \
+      $$(addprefix $$(INTERM_DIR_$(1))/,$$(IMPLIB_OBJ_FILES_$(1)))
+	  
+	$$(call print,,"Creating import library: $$(IMPLIB_NAME_$(1))")
+	
+	mkdir -p $$(IMPLIB_TARGET_DIR_$(1))
+	
+	$$(EXEC_SILENT)                                                     \
+		$$(AR$(2))                                                      \
+			$$(AR_FLAGS$(2))                                            \
+			$$(AR_FLAGS_$(1))                                           \
+			$$(IMPLIB_TARGET_DIR_$(1))/$$(IMPLIB_NAME_$(1))             \
+			$$(addprefix $$(INTERM_DIR_$(1))/,$$(XDR_OBJ_FILES_$(1)))   \
+			$$(addprefix $$(INTERM_DIR_$(1))/,$$(IMPLIB_OBJ_FILES_$(1)))
+	
+	$$(EXEC_SILENT)              \
+		$$(ARINX$(2))            \
+			$$(ARINX_FLAGS$(2))  \
+			$$(ARINX_FLAGS_$(1)) \
+			$$(IMPLIB_TARGET_DIR_$(1))/$$(IMPLIB_NAME_$(1))
 
 $$(eval $$(call xdr_files_gen_rule_tmpl,$(1),$(2)))
 $$(eval $$(call cpp_file_gen_rule_tmpl,$(1),$(2)))
@@ -260,6 +289,7 @@ clean-$(1):
 		$$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $$(INTERM_DIR); fi
 	
 	rm -f  $$(TARGET_DIR_$(1))/$$(BIN_NAME_$(1))*
+	rm -f  $$(IMPLIB_TARGET_DIR_$(1))/$$(IMPLIB_NAME_$(1))*
 	
 	$$(foreach xfile,$$(XDR_FILES_$(1)),\
 		rm -f $$(subst \
@@ -269,7 +299,10 @@ clean-$(1):
 	if  [ -d $$(TARGET_DIR_$(1)) ] &&          \
 		[ "$$(TARGET_DIR_$(1))" != "." ]; then \
 		$$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $$(TARGET_DIR_$(1)); fi 
-
+	
+	if  [ -d $$(IMPLIB_TARGET_DIR_$(1)) ] &&          \
+		[ "$$(IMPLIB_TARGET_DIR_$(1))" != "." ]; then \
+		$$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $$(IMPLIB_TARGET_DIR_$(1)); fi 
 endef
 
 #-------------------------------------------------------------------------------
@@ -306,6 +339,10 @@ clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))
 	if  [ -d $(TARGET_DIR) ] &&          \
 		[ "$(TARGET_DIR)" != "." ]; then \
 		$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $(TARGET_DIR); fi
+	
+	if  [ -d $(IMPLIB_TARGET_DIR) ] &&          \
+		[ "$(IMPLIB_TARGET_DIR)" != "." ]; then \
+		$(SCRIPTS_DIR)/rm-dir --ignore-fail-on-non-empty $(IMPLIB_TARGET_DIR); fi
 
 #---
 

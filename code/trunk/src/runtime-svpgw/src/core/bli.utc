@@ -27,14 +27,9 @@
 */
 /*----------------------------------------------------------------------------*/
 
-#include "snet.utc.h"
-
-/*---*/
-
-#include "common.int.utc.h"
-#include "domain.int.utc.h"
-#include "record.int.utc.h"
+#include "snet.int.utc.h"
 #include "list.int.utc.h"
+// #include "record.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -90,10 +85,7 @@ void SNetBLISubSystemInit()
         return;
     }
 
-    BLI_REGISTRY = SNetListCreate(
-        sizeof(snet_bli_t),
-        4,
-        SNetDomainGetSystem());
+    BLI_REGISTRY = SNetListCreate(sizeof(snet_bli_t), 4);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -206,34 +198,6 @@ SNetGetDeserializationFun(snet_bli_id_t id)
         SNetListItemGetValueByRef(BLI_REGISTRY, bli_regid);
 
     return bli->deserfun;
-}
-
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-/* Functions to retrieve box language interface functions from records */
-
-snet_bli_freefptr_t 
-SNetGetFreeFunFromRec(snet_record_t *rec)
-{
-    return SNetGetFreeFun(SNetRecGetInterfaceId(rec));
-}
-
-snet_bli_copyfptr_t
-SNetGetCopyFunFromRec(snet_record_t *rec)
-{
-    return SNetGetCopyFun(SNetRecGetInterfaceId(rec));
-}
-
-snet_bli_serfptr_t
-SNetGetSerializationFunFromRec(snet_record_t *rec)
-{
-    return SNetGetSerializationFun(SNetRecGetInterfaceId(rec));
-}
-
-snet_bli_deserfptr_t 
-SNetGetDeserializationFunFromRec(snet_record_t *rec)
-{
-    return SNetGetDeserializationFun(SNetRecGetInterfaceId(rec));
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

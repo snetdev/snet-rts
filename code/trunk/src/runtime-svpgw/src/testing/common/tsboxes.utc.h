@@ -1,4 +1,4 @@
-#include "snet-gwrt.utc.h"
+#include "snet.utc.h"
 
 #define T 0
 // #define PRINT_STDOUT  

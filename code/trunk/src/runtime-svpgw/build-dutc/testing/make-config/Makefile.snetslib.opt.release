@@ -1,15 +1,13 @@
-LIB_NAME_release      := lib$(LIB_NAME).a
+LIB_NAME_release      := $(LIB_NAME).a
 
 #---
 
 SRC_FILES_LST_release := $(SRC_FILES_LST)
-XDR_FILES_LST_release := $(XDR_FILES_LST)
 
 #---
 
 INTERM_DIR_release      :=
 TARGET_DIR_release      := lib
-TARGET_INCL_DIR_release := .
 
 #---
 
@@ -35,11 +33,6 @@ CXX_INCL_DIRS_FLAGS_release :=
 
 AR_FLAGS_release    :=
 ARINX_FLAGS_release :=
-
-#---
-
-XDRHC_FLAGS_release :=
-XDRCC_FLAGS_release :=
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

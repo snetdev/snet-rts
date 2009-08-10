@@ -1,5 +1,4 @@
 #include "printing.utc.h"
-#include "snet-gwrt.int.utc.h"
 
 /*---*/
 

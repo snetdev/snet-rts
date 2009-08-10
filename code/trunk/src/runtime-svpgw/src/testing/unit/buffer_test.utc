@@ -1,4 +1,4 @@
-#include "snet-gwrt.utc.h"
+#include "snetgwcore.utc.h"
 
 /*---*/
 
@@ -9,13 +9,13 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void buffer_test(const snet_domain_t *snetd)
+void buffer_test()
 {
     unsigned int i = 0;
     unsigned int test_sz = 100000;
     unsigned int int_buf_item = 111;
 
-    snet_buffer_t *buf = SNetBufCreate(true, 32, snetd);
+    snet_buffer_t *buf = SNetBufCreate(true, 32);
 
     for (i=0; i < test_sz; i++) {
         if (SNetBufPush(buf, &int_buf_item))

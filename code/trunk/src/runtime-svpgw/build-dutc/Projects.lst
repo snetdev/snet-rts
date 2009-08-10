@@ -1,5 +1,8 @@
 # Project list
 
-SNetGWRT:core
-TestingPack:testing
+core
+gw
+sane
+
+testing
 

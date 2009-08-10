@@ -1,4 +1,4 @@
-#include "snet-gwrt.utc.h"
+#include "snetgwcore.utc.h"
 
 /*---*/
 
@@ -9,7 +9,7 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void list_test(const snet_domain_t *snetd)
+void list_test()
 {
     unsigned int i;
     unsigned int id;
@@ -19,7 +19,7 @@ void list_test(const snet_domain_t *snetd)
     unsigned int int_lst_item0 = 111;
     unsigned int int_lst_item1 = 222;
 
-    snet_list_t *lst = SNetListCreate(sizeof(unsigned int), 4, snetd);
+    snet_list_t *lst = SNetListCreate(sizeof(unsigned int), 4);
 
     for (i=0; i < test_sz; i++) {
         id = SNetListPushBack(lst, &i);

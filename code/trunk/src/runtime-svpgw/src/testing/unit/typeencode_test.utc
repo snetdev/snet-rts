@@ -1,5 +1,4 @@
-#include "snet-gwrt.utc.h"
-#include "snet-gwrt.int.utc.h"
+#include "snetgwcore.int.utc.h"
 #include "printing.utc.h"
 
 /*----------------------------------------------------------------------------*/

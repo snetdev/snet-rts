@@ -1,5 +1,4 @@
-#include "snet-gwrt.utc.h"
-#include "snet-gwrt.int.utc.h"
+#include "snetgw.int.utc.h"
 
 /*---*/
 
@@ -13,7 +12,7 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void conslst_test(const snet_domain_t *snetd)
+void conslst_test()
 {
 }
 

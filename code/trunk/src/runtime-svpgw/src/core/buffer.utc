@@ -99,19 +99,12 @@ static void destroy_bucket(snet_buf_bucket_t *bucket, bool is_init)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void SNetBufInit(
-    snet_buffer_t *buf, 
-    bool dynamic, unsigned int sz,  const snet_domain_t *snetd)
+void SNetBufInit(snet_buffer_t *buf, bool dynamic, unsigned int sz)
 {
     assert(buf != NULL);
-    assert(snetd != NULL);
 
-    snetd = (const snet_domain_t *) SNetUnmaskPointer(snetd);
-
-    place owner_plc = SNetGetMyPlace();
-
-    SNetBaseTypeInit(&buf->base, snetd);
-    SNetBaseTypeSetPlaces(&buf->base, &owner_plc, NULL, NULL);
+    SNetBaseTypeInit(&buf->base);
+    SNetBaseTypeSetPlacesDefault(&buf->base);
 
     buf->dynamic     = dynamic;
     buf->sz          = 0;
@@ -143,9 +136,7 @@ void SNetBufInitCopy(
     SNetBufInit(
         buf,
         src_buf->dynamic,
-        src_buf->bucket_sz,
-        (snet_domain_t *) SNetMaskPointer(
-            SNetBaseTypeGetDomain(&src_buf->base)));
+        src_buf->bucket_sz);
 
     if (shalow) {
         return;
@@ -168,15 +159,12 @@ void SNetBufInitCopy(
 /*----------------------------------------------------------------------------*/
 
 snet_buffer_t* 
-SNetBufCreate(bool dynamic, unsigned int sz, const snet_domain_t *snetd)
+SNetBufCreate(bool dynamic, unsigned int sz)
 {
-    assert(snetd != NULL);
-
     snet_buffer_t *buf = 
         (snet_buffer_t *) SNetMemAlloc(sizeof(snet_buffer_t));
 
-    SNetBufInit(buf, dynamic, sz, snetd);
-
+    SNetBufInit(buf, dynamic, sz);
     return buf;
 }
 
@@ -188,7 +176,6 @@ snet_buffer_t* SNetBufCreateCopy(const snet_buffer_t *src_buf, bool shalow)
         (snet_buffer_t *) SNetMemAlloc(sizeof(snet_buffer_t));
 
     SNetBufInitCopy(buf, src_buf, shalow);
-
     return buf;
 }
 
@@ -225,7 +212,7 @@ void SNetBufDestroy(snet_buffer_t *buf)
         b = buf->empty_buckets_tail;
     }
 
-    SNetBaseTypeDestroy(&buf->base);
+    SNetBaseTypeDispose(&buf->base);
     SNetMemFree(buf);
 }
 

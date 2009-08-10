@@ -18,19 +18,16 @@ XDRCC   := $(call NONSTD_LIB,UTCPTL,BIN,xdr2utc)
 #-------------------------------------------------------------------------------
 
 MAKEDEP_FLAGS           := -MM -MP
-MAKEDEP_FLAGS           += -DUTC_CONFIG_DISTRIBUTABLE
 MAKEDEP_OUTF_FLAG       := -MF
 MAKEDEP_INCLD_FLAG      := -I
 MAKEDEP_TARGET_FLAG     := -MT
 MAKEDEP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),-I$(d))
 
 UTC2CPP_FLAGS           := --dollar-directives
-UTC2CPP_FLAGS           += --cpp:-DUTC_CONFIG_DISTRIBUTABLE
 UTC2CPP_OUTF_FLAG       := -o
 UTC2CPP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),--cpp:-I$(d))
 
 CXX_FLAGS               := -c -Wall -fno-exceptions 
-CXX_FLAGS               += -DUTC_CONFIG_DISTRIBUTABLE
 CXX_OUTF_FLAG           := -o
 CXX_INCLD_FLAG          := -I
 CXX_INCL_DIRS_FLAGS     := $(foreach d,$(INCLUDE_DIRS),-I$(d))
@@ -44,6 +41,14 @@ XDRCC_FLAGS             := -c --remove-unused-vars
 XDRCC_HDR_FLAG          := -ch
 XDRCC_OUTF_FLAG         := -o
 
+#---
+
+#ifneq ($(strip $(WITH_NO_SEP)),true)
+MAKEDEP_FLAGS           +=       -DUTC_CONFIG_DISTRIBUTABLE
+UTC2CPP_FLAGS           += --cpp:-DUTC_CONFIG_DISTRIBUTABLE
+CXX_FLAGS               +=       -DUTC_CONFIG_DISTRIBUTABLE
+#endif
+
 #-------------------------------------------------------------------------------
 
 LD_FLAGS                := -shared-libgcc
@@ -54,6 +59,7 @@ LD_LIBS_FLAGS           :=
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 # Microblaze (mb)
+#
 include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.petalinux
 
 MAKE_mb    := $(MAKE)

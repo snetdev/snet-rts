@@ -1,8 +1,9 @@
 # Project list
 
-CommonLib:common
-UnitTestsLib:unit
-SNetsLib:snets
-Runner:runner
-Sane:sane
+commonlib:common
+utestslib:unit
+snetslib:snets
+
+runner
+sane
 

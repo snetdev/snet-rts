@@ -3,13 +3,11 @@ BIN_NAME_release      := $(BIN_NAME)
 #---
 
 SRC_FILES_LST_release := $(SRC_FILES_LST)
-XDR_FILES_LST_release := $(XDR_FILES_LST)
 
 #---
 
 INTERM_DIR_release      :=
 TARGET_DIR_release      := bin
-TARGET_INCL_DIR_release := .
 
 #---
 
@@ -32,11 +30,6 @@ UTC2CPP_INCL_DIRS_FLAGS_release :=
 CXX_FLAGS_release           := -DNDEBUG -O2
 CXX_INCL_DIRS_FLAGS_release :=
 
-#---
-
-XDRHC_FLAGS_release :=
-XDRCC_FLAGS_release :=
-
 #-------------------------------------------------------------------------------
 
 LD_FLAGS_release      := 
@@ -45,13 +38,26 @@ LIB_DIRS_release      :=
 #---
 
 LD_LIBS_FLAGS_release := -lsnets -lutests
+
+ifneq ($(strip $(WITH_NO_SEP)),true)
+LD_LIBS_FLAGS_release += -Wl,--whole-archive
+LD_LIBS_FLAGS_release += -ltsane.imp
+LD_LIBS_FLAGS_release += -Wl,--no-whole-archive
+endif
+
 LD_LIBS_FLAGS_release += -lcommon
 
-LD_LIBS_FLAGS_release += -lsvp-snetgwrt
+LD_LIBS_FLAGS_release += -lsvp-snetgw
+LD_LIBS_FLAGS_release += -lsvp-snetgwcore
+
+ifneq ($(strip $(WITH_NO_SEP)),true)
 LD_LIBS_FLAGS_release += -Wl,--whole-archive
 LD_LIBS_FLAGS_release += -lsep_common
 LD_LIBS_FLAGS_release += -Wl,--no-whole-archive
-LD_LIBS_FLAGS_release += -lsep_client -lutcptl -lpthread
+LD_LIBS_FLAGS_release += -lsep_client
+endif
+
+LD_LIBS_FLAGS_release += -lutcptl -lpthread
 
 #---
 

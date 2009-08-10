@@ -102,7 +102,7 @@ define cfg_prj_tmpl
 
 ifneq ($$(strip $$(PROJ_CFG_$(2)_$(1))),)
 $(1)_$(2): $$(foreach p,$$(PROJ_DEP_$(2)),$(1)_$$(p))
-	$$(call print,,"Building $(2) \($(1)\)...")
+	$$(call print,,"Building $(2) \($$(PROJ_CFG_$(2)_$(1))\)...")
 	
 	$$(MAKE) -C           \
 		$$(PROJ_DIR_$(2)) \

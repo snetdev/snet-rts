@@ -1,9 +1,8 @@
-#include "snet-gwrt.utc.h"
-#include "snet-gwrt.int.utc.h"
+#include "snetgw.int.utc.h"
 
 /*---*/
 
-#include "snet-gwrt/graphstructs.int.utc.h"
+#include "gw/graphstructs.int.utc.h"
 
 /*---*/
 
@@ -35,6 +34,7 @@ const char *GNODE_TYPE_LBLS[] = {
     "BOX",
     "SYNC",
     "FILTER",
+    "NAMESHIFT",
 
     "COMB_STAR",
     "COMB_SPLIT",

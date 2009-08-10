@@ -1,0 +1,98 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : gwinit.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    : This file contains functions related to initialization
+                     and cleanup for the runtime.
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+
+/*---*/
+
+#include "gw.int.utc.h"
+#include "resmng.int.utc.h"
+
+/*---*/
+
+#include "core/snet.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+/**
+ * These are declared here because they are
+ * not being used anywhere else thus not included
+ * in any header (they are defined in the file "gwerrwrn.utc").
+ */
+extern void
+SNetGwErrorSubSystemInit();
+
+extern void
+SNetGwErrorSubSystemDestroy();
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Global initialization and termination
+ * routines for the runtime.
+ */
+
+void
+SNetGlobalInitialize()
+{
+    SNetGlobalInitializeCore();
+
+    SNetGwErrorSubSystemInit();
+    SNetResMngSubSystemInit();
+    SNetDomainSubSystemInit();
+}
+
+void
+SNetGlobalDestroy()
+{
+    SNetGlobalDestroyEx(false);
+}
+
+void
+SNetGlobalDestroyEx(bool force)
+{
+    if (!force) {
+        /**
+         * !!TODO!!: Check if all sub-systems
+         * are at a state that they can be destroyed
+         * and if they are not wait!!
+         */
+    }
+
+    SNetDomainSubSystemDestroy();
+    SNetResMngSubSystemDestroy();
+    SNetGwErrorSubSystemDestroy();
+
+    SNetGlobalDestroyCoreEx(force);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

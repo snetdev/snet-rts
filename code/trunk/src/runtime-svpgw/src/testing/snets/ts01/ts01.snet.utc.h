@@ -1,5 +1,5 @@
 /**
- * @file ts01.snet.utc.h
+ * @file ts01.h
  *
  * Header definitions of compiled snet-file for runtime.
  *
@@ -14,7 +14,6 @@
 #ifndef _TS01_H_
 #define _TS01_H_
 
-#include "tsboxes.utc.h"
 #include "snetentities.h"
 
 #define E__ts01__NONE 0
@@ -25,9 +24,8 @@
 #define F__ts01__e 5
 #define F__ts01__f 6
 #define T__ts01__T 7
-#define T__ts01__I 8
 
-#define SNET__ts01__NUMBER_OF_LABELS 9
+#define SNET__ts01__NUMBER_OF_LABELS 8
 
 
 

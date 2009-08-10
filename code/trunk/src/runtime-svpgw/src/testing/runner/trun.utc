@@ -23,7 +23,7 @@ const char *ARG_ERRS_TXT[] = {
 
 static void help()
 {
-    printf("\nUSAGE: runtest [options] ID\n\n");
+    printf("\nUSAGE: trun [options] ID\n\n");
 
     printf("where ID a number indicating the unit test to be run or the name\n");
     printf("of the S-Net network to run if '-net' is specified (see below).\n");
@@ -49,14 +49,20 @@ static void help()
     printf("List of unit tests:\n");
     printf("      id       description\n");
     printf("    ------------------------------------------------------------------------------------------------------------\n");
-    printf("       0       Test of index vector.\n");
-    printf("       1       Test of \"buffer\" data structure.\n");
-    printf("       2       Test of network input and output of records.\n");
+    printf("       0       Test of runtime initialization and cleanup.\n");
+    printf("       1       Test of index vector.\n");
+    printf("       2       Test of \"buffer\" data structure.\n");
     printf("       3       Test of \"cons-list\" structure.\n");
     printf("       4       Test of \"list\" data structure.\n");
     printf("       5       Test of type encoding.\n");
     printf("       6       Test of \"record\" data structure.\n");
-    printf("       7       Test of \"references\" management.\n\n");
+    printf("       7       Test of \"references\" management.\n");
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_HAS_SEP
+    printf("       8       Test of \"remote creates\".\n\n");
+#else
+    printf("\n");
+#endif
 
     printf("     100       Test of \"graph\" structure for network \"ts00\"\n");
     printf("               build from sources in src/testing/snets/ts00\n");
@@ -64,6 +70,8 @@ static void help()
     printf("               build from sources in src/testing/snets/ts01\n");
     printf("     102       Test of \"graph\" structure for network \"ts02\"\n");
     printf("               build from sources in src/testing/snets/ts02\n\n");
+    printf("     103       Test of \"graph\" structure for network \"ocrad\"\n");
+    printf("               build from sources in src/testing/snets/ocrad\n\n");
 
     printf("List of networks:\n");
     printf("     name     description                                                  source directory\n");
@@ -71,6 +79,7 @@ static void help()
     printf("     ts00     A..(B..(C || D))..E                                          src/testing/snets/ts00\n");
     printf("     ts01     A..(B..(C || D))*{e, <T>} if <T < 5>..E!<T>                  src/testing/snets/ts01\n");
     printf("     ts02     A..(B..(C || D))*{e, <T>} if <T < 5>..E!<T>..[|{e}, {f}|]    src/testing/snets/ts02\n");
+    printf("     ocrad    SNet version of the GNU/OCR application                      src/testing/snets/ocrad\n");
 
     printf("\n\n");
 }
@@ -85,36 +94,38 @@ static bool run_unit_test(unsigned int tid)
 
     SNetGlobalInitialize();
 
+    printf(
+        "Started at "
+        "place %" PRISNETREF "\n",
+        (snet_ref_t) SNetPlaceGetMine());
+
     printf("Running test %u...\n", tid);
 
     /*---*/
 
-    snet_domain_t *snetd = SNetDomainCreate();
-
     switch (tid) {
         case 0:
+            printf("Runtime Initialization and Cleanup Test!!\n\n");
+            break;
+
+        case 1:
             printf("Index Vector Test!!\n\n");
             idxvec_test();
             break;
 
-        case 1:
-            printf("Buffer Test!!\n\n");
-            buffer_test(snetd);
-            break;
-
         case 2:
-            printf("Network Record Input/Output Test!!\n\n");
-            net_ioproc_test(snetd);
+            printf("Buffer Test!!\n\n");
+            buffer_test();
             break;
 
         case 3:
             printf("Cons-List Test!!\n\n");
-            conslst_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            conslst_test();
             break;
 
         case 4:
             printf("List Test!!\n\n");
-            list_test(snetd);
+            list_test();
             break;
 
         case 5:
@@ -132,32 +143,55 @@ static bool run_unit_test(unsigned int tid)
             references_test();
             break;
 
+#ifdef SVPSNETGWRT_SVP_PLATFORM_HAS_SEP
+        case 8:
+            printf("Remote Creates Test!!\n\n");
+            remote_create_test();
+            break;
+#endif
+
         /*---*/
 
-        case 100:
+        case 100: {
             printf("Graph Test (net = \"ts00\")!!\n\n");
 
-            SNet__ts00___setup(snetd);
+            snet_domain_t *snetd = SNetSetup__ts00();
             graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            SNetDomainDestroy(snetd);
 
             break;
+        }
 
-        case 101:
+        case 101: {
             printf("Graph Test (net = \"ts01\")!!\n\n");
 
-            SNet__ts01___setup(snetd);
+            snet_domain_t *snetd = SNetSetup__ts01();
             graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            SNetDomainDestroy(snetd);
 
             break;
+        }
 
-        case 102:
+        case 102: {
             printf("Graph Test (net = \"ts02\")!!\n\n");
 
-            SNet__ts02___setup(snetd);
+            snet_domain_t *snetd = SNetSetup__ts02();
             graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            SNetDomainDestroy(snetd);
 
             break;
-        
+        }
+
+        case 103: {
+            printf("Graph Test (net = \"ocrad\")!!\n\n");
+
+            snet_domain_t *snetd = SNetSetup__ocrad();
+            graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            SNetDomainDestroy(snetd);
+
+            break;
+        }
+
         default:
             ret = false;
             break;
@@ -165,7 +199,6 @@ static bool run_unit_test(unsigned int tid)
     
     /*---*/
 
-    SNetDomainDestroy(snetd);
     SNetGlobalDestroy();
 
     return ret;
@@ -185,6 +218,8 @@ run_net(const char *name, int argc, const char **argv, bool *invalid_name)
         net_main_fptr = &SNetMain__ts01;
     else if (strcmp(name, "ts02") == 0)
         net_main_fptr = &SNetMain__ts02;
+    else if (strcmp(name, "ocrad") == 0)
+        net_main_fptr = &SNetMain__ocrad;
 
     if (net_main_fptr == NULL) {
         (*invalid_name) = true;
@@ -280,7 +315,6 @@ thread void main(int argc, const char **argv)
     /*---*/
 
     printf("!! S-Net GW Runtime for SVP - Testing !!\n");
-    printf("Started at place %" PRIuPTR "\n\n", (uintptr_t) SNetGetMyPlace());
 
     if (arg_err != NULL) {
         printf("\nERROR: %s.\n", arg_err);

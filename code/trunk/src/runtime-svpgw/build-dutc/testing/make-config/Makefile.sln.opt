@@ -4,6 +4,7 @@ SLN_NAME := sln
 
 CONFIGS      := debug release
 CONFIGS      += debug_mb release_mb
+
 CONFIGS_EXT  :=
 
 #---
@@ -21,40 +22,57 @@ BUILD_SPEC_OPT_DIR := make-config
 
 #-------------------------------------------------------------------------------
 
-PROJ_DEP_CommonLib    :=
-PROJ_DEP_UnitTestsLib := CommonLib
-PROJ_DEP_SNetsLib     := CommonLib
-PROJ_DEP_Runner       := UnitTestsLib SNetsLib
-PROJ_DEP_Sane         := UnitTestsLib SNetsLib
-
-#-------------------------------------------------------------------------------
-
-PROJ_CFG_CommonLib_debug         := debug
-PROJ_CFG_CommonLib_release       := release
-PROJ_CFG_CommonLib_debug_mb      := debug_mb
-PROJ_CFG_CommonLib_release_mb    := release_mb
-
-PROJ_CFG_UnitTestsLib_debug      := debug
-PROJ_CFG_UnitTestsLib_release    := release
-PROJ_CFG_UnitTestsLib_debug_mb   := debug_mb
-PROJ_CFG_UnitTestsLib_release_mb := release_mb
-
-PROJ_CFG_SNetsLib_debug          := debug
-PROJ_CFG_SNetsLib_release        := release
-PROJ_CFG_SNetsLib_debug_mb       := debug_mb
-PROJ_CFG_SNetsLib_release_mb     := release_mb
+PROJ_DEP_commonlib :=
+PROJ_DEP_sNetslib  := commonlib
+PROJ_DEP_sane      := snetslib
 
 #---
 
-PROJ_CFG_Runner_debug            := debug
-PROJ_CFG_Runner_release          := release
-PROJ_CFG_Runner_debug_mb         := debug_mb
-PROJ_CFG_Runner_release_mb       := release_mb
+ifneq ($(strip $(WITH_NO_SEP)),true)
+PROJ_DEP_utestslib := sane
+PROJ_DEP_runner    := utestslib
+else
+PROJ_DEP_utestslib := commonlib
+PROJ_DEP_runner    := utestslib snetslib
+endif
 
-PROJ_CFG_Sane_debug              := debug
-PROJ_CFG_Sane_release            := release
-PROJ_CFG_Sane_debug_mb           := debug_mb
-PROJ_CFG_Sane_release_mb         := release_mb
+#-------------------------------------------------------------------------------
+
+PROJ_CFG_commonlib_debug         := debug
+PROJ_CFG_commonlib_release       := release
+PROJ_CFG_commonlib_debug_mb      := debug_mb
+PROJ_CFG_commonlib_release_mb    := release_mb
+
+PROJ_CFG_utestslib_debug         := debug
+PROJ_CFG_utestslib_release       := release
+PROJ_CFG_utestslib_debug_mb      := debug_mb
+PROJ_CFG_utestslib_release_mb    := release_mb
+
+PROJ_CFG_snetslib_debug          := debug
+PROJ_CFG_snetslib_release        := release
+PROJ_CFG_snetslib_debug_mb       := debug_mb
+PROJ_CFG_snetslib_release_mb     := release_mb
+
+#---
+
+PROJ_CFG_runner_debug            := debug
+PROJ_CFG_runner_release          := release
+PROJ_CFG_runner_debug_mb         := debug_mb
+PROJ_CFG_runner_release_mb       := release_mb
+
+#---
+
+ifneq ($(strip $(WITH_NO_SEP)),true)
+PROJ_CFG_sane_debug              := debug
+PROJ_CFG_sane_release            := release
+PROJ_CFG_sane_debug_mb           := debug_mb
+PROJ_CFG_sane_release_mb         := release_mb
+else
+PROJ_CFG_sane_debug              :=
+PROJ_CFG_sane_release            :=
+PROJ_CFG_sane_debug_mb           :=
+PROJ_CFG_sane_release_mb         :=
+endif
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -80,6 +98,7 @@ endef
 # CMDLINE_CACHED_VARS := UTCPTL_INCLUDE_DIR
 # CMDLINE_CACHED_VARS += UTCPTL_BIN_DIR
 # CMDLINE_CACHED_VARS += UTCPTL_LIB_DIR
+# CMDLINE_CACHED_VARS += WITH_NO_SEP
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------

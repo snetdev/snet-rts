@@ -1,9 +1,19 @@
-PROJ_NAME := sane
-BIN_NAME  := $(PROJ_NAME)
+ifeq ($(strip $(WITH_NO_SEP)),true)
+$(info You should not be building \
+the Test SNet-SANE with no full SEP \
+support from the underlying SVP platform)
+endif
 
 #---
 
-CONFIGS   := debug release debug_mb release_mb
+PROJ_NAME   := sane
+BIN_NAME    := t$(PROJ_NAME)
+IMPLIB_NAME := t$(PROJ_NAME)
+
+#---
+
+CONFIGS     := debug release
+CONFIGS     += debug_mb release_mb
 
 #---
 
@@ -12,9 +22,10 @@ SCRIPTS_DIR := ../../../build-tools
 
 #---
 
-INTERM_DIR      := intermediate
-TARGET_DIR      := ..
-TARGET_INCL_DIR := $(SOURCE_DIR)
+INTERM_DIR        := intermediate
+TARGET_DIR        := ..
+TARGET_INCL_DIR   := $(SOURCE_DIR)
+IMPLIB_TARGET_DIR := ..
 
 #---
 
@@ -38,17 +49,18 @@ include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
 #-------------------------------------------------------------------------------
 # Include directories
 
-INCLUDE_DIRS :=                           \
-	$(SOURCE_DIR)                         \
-	$(SOURCE_DIR)/../units                \
-	$(SOURCE_DIR)/../snets                \
-	                                      \
-	$(SOURCE_DIR)/../../include           \
-    $(SOURCE_DIR)/../../include/snet-gwrt \
-	                                      \
-	$(SOURCE_DIR)/../../include.int       \
-	$(SOURCE_DIR)/../../include.snetc     \
-                                          \
+INCLUDE_DIRS :=                              \
+	$(SOURCE_DIR)                            \
+	$(SOURCE_DIR)/../units                   \
+	$(SOURCE_DIR)/../snets                   \
+	                                         \
+	$(SOURCE_DIR)/../../include              \
+	$(SOURCE_DIR)/../../include.int          \
+	$(SOURCE_DIR)/../../include.snetc        \
+                                             \
+	$(SOURCE_DIR)/../../include/snetgwrt     \
+	$(SOURCE_DIR)/../../include.int/snetgwrt \
+                                             \
 	$(call NONSTD_LIB,UTCPTL,INCLUDE)
 
 #-------------------------------------------------------------------------------
