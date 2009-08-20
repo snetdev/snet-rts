@@ -78,7 +78,8 @@ struct domain {
 /*----------------------------------------------------------------------------*/
 /* Module's static functions */
 
-static void destroy_net_domain(snet_domain_t *snetd)
+static void
+destroy_net_domain(snet_domain_t *snetd)
 {
     /**
      * !!TODO!!: Make sure that all activity regarding
@@ -97,7 +98,8 @@ static void destroy_net_domain(snet_domain_t *snetd)
 
 /*----------------------------------------------------------------------------*/
 
-static void destroy_alias_domain(snet_domain_t *snetd)
+static void
+destroy_alias_domain(snet_domain_t *snetd)
 {
     SNetPlaceFree(snetd->data.alias.plc);
 }
@@ -229,7 +231,7 @@ SNetDomainInitNet(
 
     // Init the Cons-List and allocate
     // a mutex place for it as well.
-    snetd->data.net.cons_list = SNetConsLstCreate();
+    snetd->data.net.cons_list = SNetConsLstCreate(snetd);
 
     SNetBaseTypeSetPlaces(
         SNetConsLstToBase(snetd->data.net.cons_list),

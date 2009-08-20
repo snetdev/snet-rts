@@ -60,13 +60,13 @@ void SNetBaseTypeSetPlaces(
     assert(var != NULL);
 
     if (!SNetPlaceIsNull(owner))
-        var->places.owner = SNetPlaceCopy(owner);
+        var->places.owner = SNetPlaceCopyAndFree(owner);
 
     if (!SNetPlaceIsNull(mutex))
-        var->places.mutex = SNetPlaceCopy(mutex);
+        var->places.mutex = SNetPlaceCopyAndFree(mutex);
 
     if (!SNetPlaceIsNull(ddefault))
-        var->places.ddefault = SNetPlaceCopy(ddefault);
+        var->places.ddefault = SNetPlaceCopyAndFree(ddefault);
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

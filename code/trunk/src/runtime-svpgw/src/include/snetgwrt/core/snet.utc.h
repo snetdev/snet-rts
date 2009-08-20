@@ -38,6 +38,34 @@ $include <stdio.h>
 $include <stdarg.h>
 
 /*----------------------------------------------------------------------------*/
+/**
+ * Serialization formats. This cannot be an enumration
+ * because it should be possible for users to add more
+ * formats. This is also why the format argument to the
+ * serialization and deserialization functions is of type
+ * "int" instead of an enumeration. Here we just reserve 
+ * the first 3 values for the formats the runtime has (will
+ * have) support for.
+ *
+ * These formats are the "compalsory" ones (i.e. any box 
+ * language interface is expected to / should support at 
+ * lesast these)!
+ */
+#define SNET_DATASER_FORMAT_BIN    0x000
+#define SNET_DATASER_FORMAT_TXT    0x001
+#define SNET_DATASER_FORMAT_XML    0x002
+
+/**
+ * The codes for any additional to the above serialization
+ * formats, a box language interface supports should start
+ * from the value specified below.
+ *
+ * e.g. #define SNET_DATASER_FORMAT_FOO SNET_DATASER_FORMAT_CUSTOM + 1
+ */
+#define SNET_DATASER_FORMAT_CUSTOM 0x400
+
+
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /**
  * Datatype for a record (forward declaration
@@ -62,8 +90,8 @@ typedef void* (*snet_bli_copyfptr_t)(void *);
 
 /*---*/
 
-typedef unsigned int (*snet_bli_serfptr_t)(void *, char **);
-typedef void*        (*snet_bli_deserfptr_t)(char *, unsigned int);
+typedef size_t (*snet_bli_serfptr_t)(unsigned int, void *, void **);
+typedef void*  (*snet_bli_deserfptr_t)(unsigned int, void *, size_t);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/

@@ -80,7 +80,8 @@ SNetIdxVecInit(snet_idxvec_t *idxv);
 
 extern void
 SNetIdxVecInitCopy(
-    snet_idxvec_t *idxv, bool clone);
+    snet_idxvec_t *idxv,
+    const snet_idxvec_t *srcv);
 
 extern void
 SNetIdxVecInitFromStr(
@@ -96,7 +97,7 @@ SNetIdxVecInitFromArray(
 extern snet_idxvec_t* SNetIdxVecCreate();
 
 extern snet_idxvec_t*
-SNetIdxVecCreateCopy(const snet_idxvec_t *val, bool clone);
+SNetIdxVecCreateCopy(const snet_idxvec_t *val);
 
 extern snet_idxvec_t*
 SNetIdxVecCreateFromStr(const char *str);

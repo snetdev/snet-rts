@@ -11,12 +11,12 @@
  *
 */
 
-#include "ts01.snet.utc.h"
-#include "tsboxes.utc.h"
-
+#include "ts01.h"
 #include "networkinterface.h"
 
-const char *snet_ts01_labels[] = {
+#include "tsboxes.utc.h"
+
+char *snet_ts01_labels[] = {
 	"E__ts01__None",
 	"a",
 	"b",
@@ -26,7 +26,7 @@ const char *snet_ts01_labels[] = {
 	"f",
 	"T"};
 
-const char *snet_ts01_interfaces[] = {};
+char *snet_ts01_interfaces[] = {};
 
 
 static void SNet__ts01__A(snet_handle_t *hnd)

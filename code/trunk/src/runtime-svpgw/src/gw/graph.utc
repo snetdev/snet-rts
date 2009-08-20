@@ -45,8 +45,11 @@
 /*----------------------------------------------------------------------------*/
 /* Module's static functions */
 
-static void init_nop_node(snet_gnode_t *n)
+static void 
+init_nop_node(snet_gnode_t *n)
 {
+    n->flags = 0;
+
     n->data.nop = 
         (snet_nop_gnode_t *) 
             SNetMemAlloc(sizeof(snet_nop_gnode_t));
@@ -58,8 +61,11 @@ static void init_nop_node(snet_gnode_t *n)
     n->data.nop->lnk.cached_node = NULL;
 }
 
-static void init_normal_node(snet_gnode_t *n)
+static void 
+init_normal_node(snet_gnode_t *n, snet_gnode_flags_t flags)
 {
+    n->flags = flags;
+
     n->data.normal =
         (snet_normal_gnode_t *) 
             SNetMemAlloc(sizeof(snet_normal_gnode_t));
@@ -76,9 +82,10 @@ static void init_normal_node(snet_gnode_t *n)
 
 /*----------------------------------------------------------------------------*/
 
-static void init_box_node(snet_gnode_t *n)
+static void 
+init_box_node(snet_gnode_t *n)
 {
-    init_normal_node(n);
+    init_normal_node(n, 0);
 
     n->data.normal->entity.box = 
         (snet_box_gnode_t *)
@@ -95,9 +102,10 @@ static void init_box_node(snet_gnode_t *n)
             SVPSNETGWRT_BOX_EXECPLC_CACHE_BUCKET_SZ);
 }
 
-static void init_sync_node(snet_gnode_t *n)
+static void 
+init_sync_node(snet_gnode_t *n)
 {
-    init_normal_node(n);
+    init_normal_node(n, 0);
 
     n->data.normal->entity.synccell = 
         (snet_synccell_gnode_t *)
@@ -128,9 +136,10 @@ static void init_sync_node(snet_gnode_t *n)
         SNetPlaceAlloc(&mutex_plc_specs), SNetPlaceGetNull());
 }
 
-static void init_filter_node(snet_gnode_t *n)
+static void
+init_filter_node(snet_gnode_t *n)
 {
-    init_normal_node(n);
+    init_normal_node(n, 0);
 
     n->data.normal->entity.filter = 
         (snet_filter_gnode_t *)
@@ -143,9 +152,10 @@ static void init_filter_node(snet_gnode_t *n)
      */
 }
 
-static void init_nameshift_node(snet_gnode_t *n)
+static void 
+init_nameshift_node(snet_gnode_t *n)
 {
-    init_normal_node(n);
+    init_normal_node(n, 0);
 
     n->data.normal->entity.nameshift = 
         (snet_nameshift_gnode_t *)
@@ -160,9 +170,10 @@ static void init_nameshift_node(snet_gnode_t *n)
 
 /*----------------------------------------------------------------------------*/
 
-static void init_comb_star_node(snet_gnode_t *n)
+static void 
+init_comb_star_node(snet_gnode_t *n)
 {
-    init_normal_node(n);
+    init_normal_node(n, 0);
 
     n->data.normal->entity.star = 
         (snet_star_gnode_t *)
@@ -173,9 +184,10 @@ static void init_comb_star_node(snet_gnode_t *n)
     n->data.normal->entity.star->groot  = NULL;
 }
 
-static void init_comb_split_node(snet_gnode_t *n)
+static void 
+init_comb_split_node(snet_gnode_t *n)
 {
-    init_normal_node(n);
+    init_normal_node(n, 0);
 
     n->data.normal->entity.split = 
         (snet_split_gnode_t *)
@@ -184,9 +196,10 @@ static void init_comb_split_node(snet_gnode_t *n)
     n->data.normal->entity.split->groot = NULL;
 }
 
-static void init_comb_par_node(snet_gnode_t *n)
+static void
+init_comb_par_node(snet_gnode_t *n)
 {
-    init_normal_node(n);
+    init_normal_node(n, 0);
 
     n->data.normal->entity.parallel = 
         (snet_parallel_gnode_t *)
@@ -199,9 +212,12 @@ static void init_comb_par_node(snet_gnode_t *n)
 
 /*----------------------------------------------------------------------------*/
 
-static void init_extern_conn_node(snet_gnode_t *n)
+static void
+init_extern_conn_node(snet_gnode_t *n)
 {
-    init_normal_node(n);
+    init_normal_node(
+        n,
+        GNODE_REORDER_POINT_FLAG);
 
     n->data.normal->entity.extern_conn = 
         (snet_extern_conn_gnode_t *) 
@@ -213,7 +229,8 @@ static void init_extern_conn_node(snet_gnode_t *n)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-static void destroy_nop_node(snet_gnode_t *n, bool deep)
+static void
+destroy_nop_node(snet_gnode_t *n, bool deep)
 {
     // If "deep" is "true" then we are destroying a whole graph (or part
     // of it). In this case the node pointed by the link is destroyed
@@ -243,7 +260,8 @@ static void destroy_nop_node(snet_gnode_t *n, bool deep)
 
 /*----------------------------------------------------------------------------*/
 
-static void destroy_normal_node(snet_gnode_t *n, bool deep)
+static void
+destroy_normal_node(snet_gnode_t *n, bool deep)
 {
     // See comments in the function 
     // "destroy_nop_node()".
@@ -270,7 +288,8 @@ static void destroy_normal_node(snet_gnode_t *n, bool deep)
 
 /*----------------------------------------------------------------------------*/
 
-static void destroy_box_node(snet_gnode_t *n)
+static void
+destroy_box_node(snet_gnode_t *n)
 {
     if (n->data.normal->entity.box->name != NULL)
         SNetMetaDataBoxNameDestroy(n->data.normal->entity.box->name);
@@ -298,12 +317,13 @@ static void destroy_box_node(snet_gnode_t *n)
 
 /*----------------------------------------------------------------------------*/
 
-static void destroy_synccell_state(
-    snet_synccell_gnode_t *gnode, snet_synccell_state_t *s)
+static void 
+destroy_synccell_state(snet_synccell_state_t *s)
 {
     // We have to check for NULL because this function is also
     // used by the SNetSyncCellGNodeRemoveState() function which
     // pushes the index to the list of indexes of identity synchro-cells.
+    //
     // In this case we do not want the index to be destroyed. The function
     // SNetSyncCellGNodeRemoveState() (or any other that will need similar
     // functionality should) set the index of the state to NULL to indicate
@@ -314,7 +334,8 @@ static void destroy_synccell_state(
     SNetMemFree(s->mhnds);
 }
 
-static void destroy_synccell_node(snet_gnode_t *n)
+static void
+destroy_synccell_node(snet_gnode_t *n)
 {
     if (n->data.normal->entity.synccell->out_type != NULL)
         SNetTencTypeDestroy(n->data.normal->entity.synccell->out_type);
@@ -335,7 +356,6 @@ static void destroy_synccell_node(snet_gnode_t *n)
          it != 0; it = SNetListItemGetNext(states_lst, it)) {
 
         destroy_synccell_state(
-            n->data.normal->entity.synccell,
             (snet_synccell_state_t *)
                 SNetListItemGetValueByRef(states_lst, it));
     }
@@ -343,9 +363,10 @@ static void destroy_synccell_node(snet_gnode_t *n)
     for (unsigned int it = SNetListBegin(ident_states_idxs_lst);
          it != 0; it = SNetListItemGetNext(ident_states_idxs_lst, it)) {
 
-        SNetIdxVecDestroy(
-            (snet_idxvec_t *)(
-                SNetListItemGetValueByRef(ident_states_idxs_lst, it)));
+        snet_idxvec_t *idx = NULL;
+
+        SNetListItemGetValue(ident_states_idxs_lst, it, &idx);
+        SNetIdxVecDestroy(idx);
     }
 
     SNetListDestroy(states_lst);
@@ -356,7 +377,8 @@ static void destroy_synccell_node(snet_gnode_t *n)
 
 /*----------------------------------------------------------------------------*/
 
-static void destroy_filter_node(snet_gnode_t *n)
+static void
+destroy_filter_node(snet_gnode_t *n)
 {
     /**
      * Not fully implemented because
@@ -366,7 +388,8 @@ static void destroy_filter_node(snet_gnode_t *n)
     SNetMemFree(n->data.normal->entity.filter);
 }
 
-static void destroy_nameshift_node(snet_gnode_t *n)
+static void
+destroy_nameshift_node(snet_gnode_t *n)
 {
     /**
      * Not fully implemented because
@@ -378,7 +401,8 @@ static void destroy_nameshift_node(snet_gnode_t *n)
 
 /*----------------------------------------------------------------------------*/
 
-static void destroy_comb_star_node(snet_gnode_t *n, bool deep)
+static void
+destroy_comb_star_node(snet_gnode_t *n, bool deep)
 {
     if (n->data.normal->entity.star->type != NULL)
         SNetTencTypeDestroy(n->data.normal->entity.star->type);
@@ -392,7 +416,8 @@ static void destroy_comb_star_node(snet_gnode_t *n, bool deep)
     SNetMemFree(n->data.normal->entity.star);
 }
 
-static void destroy_comb_split_node(snet_gnode_t *n, bool deep)
+static void
+destroy_comb_split_node(snet_gnode_t *n, bool deep)
 {
     if (deep && n->data.normal->entity.split->groot != NULL)
         SNetGNodeDestroy(n->data.normal->entity.split->groot, deep);
@@ -402,7 +427,8 @@ static void destroy_comb_split_node(snet_gnode_t *n, bool deep)
 
 /*----------------------------------------------------------------------------*/
 
-static void destroy_comb_par_node(snet_gnode_t *n, bool deep)
+static void
+destroy_comb_par_node(snet_gnode_t *n, bool deep)
 {
     snet_par_comb_branch_t *branch = 
         n->data.normal->entity.parallel->branches;
@@ -426,7 +452,8 @@ static void destroy_comb_par_node(snet_gnode_t *n, bool deep)
 
 /*----------------------------------------------------------------------------*/
 
-static void destroy_extern_conn_node(snet_gnode_t *n, bool deep)
+static void
+destroy_extern_conn_node(snet_gnode_t *n, bool deep)
 {
     if (deep && n->data.normal->entity.extern_conn->snetd != NULL)
         SNetDomainDestroy(n->data.normal->entity.extern_conn->snetd);
@@ -445,7 +472,7 @@ enumerate_graph_segment(snet_gnode_t *start_node, snet_idxvec_t *start_idx)
     assert(start_idx != NULL);
 
     snet_gnode_t  *n   = start_node;
-    snet_idxvec_t *idx = SNetIdxVecCreateCopy(start_idx, true);
+    snet_idxvec_t *idx = SNetIdxVecCreateCopy(start_idx);
 
     while (n != NULL) {
         snet_gnode_contlink_t *lnk = (
@@ -530,8 +557,7 @@ SNetGNodeInit(snet_gnode_t *n, snet_gnode_type_t type)
     SNetBaseTypeInit(&n->base);
     SNetBaseTypeSetPlacesDefault(&n->base);
 
-    n->type  = type;
-    n->flags = 0;
+    n->type = type;
 
     /**
      * !!TODO!!: Initializes "stats"
@@ -547,7 +573,7 @@ SNetGNodeInit(snet_gnode_t *n, snet_gnode_type_t type)
             init_box_node(n);
             break;
 
-        case GRAPH_NODE_TYPE_SYNC:
+        case GRAPH_NODE_TYPE_SYNCCELL:
             init_sync_node(n);                
             break;        
 
@@ -607,7 +633,7 @@ SNetGNodeDestroy(snet_gnode_t *n, bool deep)
             destroy_normal_node(n, deep);
             break;
 
-        case GRAPH_NODE_TYPE_SYNC:
+        case GRAPH_NODE_TYPE_SYNCCELL:
             destroy_synccell_node(n);
             destroy_normal_node(n, deep);
             break;
@@ -733,7 +759,7 @@ SNetGNodeSetupSyncCell(
     snet_typeencoding_t *patterns, snet_expr_list_t *guards)
 {
     assert(n != NULL);
-    assert(n->type == GRAPH_NODE_TYPE_SYNC);
+    assert(n->type == GRAPH_NODE_TYPE_SYNCCELL);
 
     n->data.normal->entity.synccell->out_type = out_type;
     n->data.normal->entity.synccell->patterns = patterns;
@@ -968,7 +994,7 @@ SNetGraphEnumerate(snet_gnode_t *start_node)
                 break;
 
             default:
-                idx = SNetIdxVecCreateCopy(parent->data.normal->idx, true); 
+                idx = SNetIdxVecCreateCopy(parent->data.normal->idx); 
                 break;
         }
     }
@@ -1026,7 +1052,7 @@ SNetGraphEnumerate(snet_gnode_t *start_node)
 snet_synccell_state_t*
 SNetSyncCellGNodeAddState(snet_gnode_t *gnode, const snet_idxvec_t *idx)
 {
-    assert(gnode->type == GRAPH_NODE_TYPE_SYNC);
+    assert(gnode->type == GRAPH_NODE_TYPE_SYNCCELL);
 
     unsigned int patterns_cnt = 
         SNetTencTypeGetVariantsCount(
@@ -1034,10 +1060,10 @@ SNetSyncCellGNodeAddState(snet_gnode_t *gnode, const snet_idxvec_t *idx)
 
     snet_synccell_state_t new_state = {
         0,
-        SNetIdxVecCreateCopy(idx, true), 
+        SNetIdxVecCreateCopy(idx), 
         0,
-        (snet_handle_t **) SNetMemAlloc(
-            patterns_cnt * sizeof(snet_handle_t *))
+        (snet_gwhandle_t **) SNetMemAlloc(
+            patterns_cnt * sizeof(snet_gwhandle_t *))
     };
 
     for (unsigned int i=0; i < patterns_cnt; i++) {
@@ -1054,6 +1080,7 @@ SNetSyncCellGNodeAddState(snet_gnode_t *gnode, const snet_idxvec_t *idx)
                 gnode->data.normal->entity.synccell->states, new_state_id);
 
     new_state_ref->id = new_state_id;
+
     return new_state_ref;
 }
 
@@ -1063,7 +1090,7 @@ void SNetSyncCellGNodeRemoveState(
     snet_gnode_t *gnode,
     unsigned int state_id, bool set_as_ident)
 {
-    assert(gnode->type == GRAPH_NODE_TYPE_SYNC);
+    assert(gnode->type == GRAPH_NODE_TYPE_SYNCCELL);
 
     snet_synccell_state_t state;
             
@@ -1085,7 +1112,7 @@ void SNetSyncCellGNodeRemoveState(
         state.idx = NULL;
     }
 
-    destroy_synccell_state(gnode->data.normal->entity.synccell, &state);
+    destroy_synccell_state(&state);
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

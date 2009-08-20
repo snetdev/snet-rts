@@ -39,7 +39,7 @@
  * Platform
  */
 #define SVPSNETGWRT_SVP_PLATFORM_UTCPTL
-// #define SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+#define SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
 // #define SVPSNETGWRT_SVP_PLATFORM_MGRID
 
 /**
@@ -83,7 +83,7 @@
  * library will have (if not defined a default value is 
  * used in "debug" builds).
  */
-#define SVPSNETGWRT_DEBUG_LEVEL 5
+#define SVPSNETGWRT_DEBUG_LEVEL 3
 
 #endif // __SVPSNETGWRT_CORE_CONFIG_H
 

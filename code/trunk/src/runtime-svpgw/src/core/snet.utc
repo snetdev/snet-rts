@@ -68,8 +68,8 @@ extern void SNetErrorSubSystemDestroy();
  * function). It is the only "upward" dependency the "core"
  * library has!
  */
- extern thread void
- SNetGW(snet_handle_t *hnd, snet_record_t *rec);
+extern thread void 
+SNetGWFork(snet_handle_t *hnd, snet_record_t *rec);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -170,7 +170,7 @@ void SNetOut(snet_handle_t *hnd, snet_record_t *rec)
             SNetHndGetNetDomainHostPlace(hnd));
 
     // Ok now we can invoke the GW!!
-    create (fid; snetdplc; 0; 0; 1; 1;;) SNetGW(hnd, rec_local);
+    create (fid; snetdplc; 0; 0; 1; 1;;) SNetGWFork(hnd, rec_local);
     sync (fid);
 }
 
@@ -208,11 +208,9 @@ void SNetOutRawV(
     // index of 0 we have to decrement the given by the user
     // code index (this why the "assert()" statement above exists
     // as well).
-    variant_idx--;
-
     snet_variantencoding_t *venc = 
         SNetHndCreateVEncForOutRecord(
-            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_idx);
+            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_idx - 1);
 
     if (venc == NULL) {
         // For this to happen possible causes are:
@@ -252,11 +250,9 @@ void SNetOutRawArray(
 
     // First we need a variant encoding for the record.
     // See comment in the function "SNetOutRawV()" above!!
-    variant_idx--;
-
     snet_variantencoding_t *venc = 
         SNetHndCreateVEncForOutRecord(
-            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_idx);
+            (snet_handle_t *) SNetUnmaskPointer(hnd), variant_idx - 1);
 
     if (venc == NULL) {
         // See related comment in the 

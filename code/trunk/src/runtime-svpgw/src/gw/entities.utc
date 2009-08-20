@@ -97,7 +97,7 @@ static snet_gnode_t* create_star_gnode(
 {
     assert(in != NULL);
 
-#if SVPSNETGWRT_DEBUG > 0
+#if SVPSNETGWRT_DEBUG > 2
     if (op_b != NULL) {
         SNetReportWarning(
             SNET_WRN_IGNORED,
@@ -211,7 +211,7 @@ SNetSync(
     in = (snet_gnode_t *) SNetUnmaskPointer(in);
 
     snet_gnode_t *out = 
-        SNetGNodeCreate(GRAPH_NODE_TYPE_SYNC);
+        SNetGNodeCreate(GRAPH_NODE_TYPE_SYNCCELL);
 
     SNetGNodeSetupSyncCell(out, out_type, patterns, guards);
     SNetGNodeConnect(in, out, false);
@@ -352,6 +352,7 @@ SNetNameShift(
     /**
      * Not implemented yet.
      */
+    SNetTencVariantDestroy(untouched);
     return in;
 }
 

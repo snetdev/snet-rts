@@ -30,8 +30,15 @@
 #define __SVPSNETGWRT_CORE_COMMON_H
 
 /**
- * Version
+ * Symbols that "identify" this implementation
+ * of the S-Net Runtime System and its version.
  */
+#define SNETRT          "svpgw"
+#define SNETRT_FULL     "SVP Graph Walker"
+
+/*---*/
+
+#define SVPSNETGWRT
 #define SVPSNETGWRT_VER 100
 
 /*----------------------------------------------------------------------------*/
@@ -137,7 +144,7 @@ $define SVPSNETGWRT_COMP_VER \
  */
 
 #ifndef SVPSNETGWRT_DEBUG_LEVEL
-#define SVPSNETGWRT_DEBUG_LEVEL 5
+#define SVPSNETGWRT_DEBUG_LEVEL 1
 #endif
 
 #ifndef SVPSNETGWRT_DEBUG

@@ -35,10 +35,6 @@
 #include <string.h>
 #include <limits.h>
 
-/*---*/
-
-#define INIT_PHASES_NUMBER 2
-
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /**
@@ -138,29 +134,11 @@ that have a distributed memory system are not supported yet!
 
 #ifdef SVPSNETGWRT_MONITOR_MALLOC
 /**
- * Mutex to protect the variables that
- * keep the statistics about memory usage.
- *
- * To make it a bit more efficient and since this
- * feature of memory usage monitoring is only for
- * debugging the runtime the mutex is implemented
- * in platform specific way and currently there is
- * support only for uTC-PTL platform.
- */
-#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
-static pthread_mutex_t MONITOR_MUTEX;
-#else
-#error \
-Memory usage monitoring cannot \
-be enabled for the selected SVP platform.
-#endif
-
-/**
  * Counters used for in memory
  * usage monitoring.
  */
-static size_t        MALLOC_SZ    = 0;
-static unsigned long MALLOC_COUNT = 0;
+static volatile unsigned long MALLOC_SZ    = 0;
+static volatile unsigned long MALLOC_COUNT = 0;
 
 #endif
 
@@ -180,69 +158,6 @@ static void* get_ptr_mask()
     return (void *)(&get_ptr_mask);
 }
 #endif
-
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-/* Sub-system initialization functions */
-
-static void init0()
-{
-#ifdef SVPSNETGWRT_MONITOR_MALLOC
-#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
-    pthread_mutex_init(&MONITOR_MUTEX, NULL);
-#endif
-#endif
-}
-
-static void init1()
-{
-#ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
-    REF_LOOKUP = SNetListCreate(
-        sizeof(snet_reflookup_entry_t),
-        SVPSNETGWRT_MEMMNG_REF_LOOKUP_TBL_GROW_STEP);
-
-#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
-    REF_LOOKUP_LOCK = new uTC::RWLock();
-
-    if (REF_LOOKUP_LOCK == NULL) {
-        SNetReportError(
-            SNET_ERR_INIT, 
-            SNET_ERR_SUBSYS_INIT_MSG(
-                "memory management",
-                "failed to create lock for reference lookup table"));
-
-        SNetOnError();
-    }
-#endif
-#endif
-}
-
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-/* Sub-system cleanup functions */
-
-static void destroy1()
-{
-#ifdef SVPSNETGWRT_MONITOR_MALLOC
-#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
-    pthread_mutex_destroy(&MONITOR_MUTEX);
-#endif
-#endif
-}
-
-static void destroy2()
-{
-#ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
-#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
-    if (REF_LOOKUP_LOCK != NULL) {
-        delete REF_LOOKUP_LOCK;
-    }
-#endif
-
-    if (REF_LOOKUP != NULL)
-        SNetListDestroy(REF_LOOKUP);
-#endif
-}
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -328,21 +243,19 @@ static inline void
 update_monitor_info(size_t old_sz, size_t new_sz, int malloc_cnt_incr)
 {
 #ifdef SVPSNETGWRT_MONITOR_MALLOC
-#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
-        pthread_mutex_lock(&MONITOR_MUTEX);
-#endif
+        SNetAtomicAddULong(&MALLOC_SZ, (unsigned long)(new_sz));
+        SNetAtomicSubULong(&MALLOC_SZ, (unsigned long)(old_sz));
 
-        MALLOC_SZ -= old_sz;        
-        MALLOC_SZ += new_sz;
+        if (malloc_cnt_incr >= 0) {
+            SNetAtomicAddULong(
+                &MALLOC_COUNT, 
+                (unsigned long)(malloc_cnt_incr));
 
-        if (malloc_cnt_incr >= 0)
-            MALLOC_COUNT += (unsigned long)(malloc_cnt_incr);
-        else
-            MALLOC_COUNT -= (unsigned long)(-malloc_cnt_incr);
-
-#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
-        pthread_mutex_unlock(&MONITOR_MUTEX);
-#endif
+        } else {
+            SNetAtomicSubULong(
+                &MALLOC_COUNT,
+                (unsigned long)(-malloc_cnt_incr));
+        }
 #endif
 }
 
@@ -385,8 +298,25 @@ void SNetMemMngSubSystemInit()
         return;
     }
 
-    init0();
-    init1();
+#ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
+    REF_LOOKUP = SNetListCreate(
+        sizeof(snet_reflookup_entry_t),
+        SVPSNETGWRT_MEMMNG_REF_LOOKUP_TBL_GROW_STEP);
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+    REF_LOOKUP_LOCK = new uTC::RWLock();
+
+    if (REF_LOOKUP_LOCK == NULL) {
+        SNetReportError(
+            SNET_ERR_INIT, 
+            SNET_ERR_SUBSYS_INIT_MSG(
+                "memory management",
+                "failed to create lock for reference lookup table"));
+
+        SNetOnError();
+    }
+#endif
+#endif
 
     IS_INITIALIZED = true;
 }
@@ -399,8 +329,16 @@ void SNetMemMngSubSystemDestroy()
         return;
     }
 
-    destroy1();
-    destroy2();
+#ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
+#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+    if (REF_LOOKUP_LOCK != NULL) {
+        delete REF_LOOKUP_LOCK;
+    }
+#endif
+
+    if (REF_LOOKUP != NULL)
+        SNetListDestroy(REF_LOOKUP);
+#endif
 
     IS_INITIALIZED = false;
 }
@@ -453,7 +391,7 @@ size_t SNetMemGetBlockSize(const void *p)
 #ifdef SVPSNETGWRT_MONITOR_MALLOC
 size_t SNetMemGetAllocSize()
 {
-    return MALLOC_SZ;    
+    return (size_t)(MALLOC_SZ);
 }
 
 unsigned long SNetMemGetAllocCount()

@@ -27,10 +27,20 @@
 */
 /*----------------------------------------------------------------------------*/
 
-#ifndef __SVPSNETGWRT_SNET_GWRT_SNETC_SNETENTITIES_H
-#define __SVPSNETGWRT_SNET_GWRT_SNETC_SNETENTITIES_H
+#ifndef __SVPSNETGWRT_SNETC_SNETENTITIES_H
+#define __SVPSNETGWRT_SNETC_SNETENTITIES_H
 
 #include "snetgw.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/**
+ * Workaround for the fact that the SNet compiler
+ * uses "char *" for string constants as opposed
+ * to "const char *" which depending on the compiler
+ * used for the selected SVP platform "annoying"
+ * warnings are issued for every single label!!!!
+ */
+#define char const char
 
 /*----------------------------------------------------------------------------*/
 
@@ -57,6 +67,7 @@
 
 #define SNetEcreateList      SNetEListCreate
 #define SNetTencCreateVector SNetTencVectorCreate
+#define SNetGlobalInitialise SNetGlobalInitialize
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -70,7 +81,7 @@
  */
 typedef snet_gnode_t snet_tl_stream_t;
 
-#endif // __SVPSNETGWRT_SNET_GWRT_SNETC_SNETENTITIES_H
+#endif // __SVPSNETGWRT_SNETC_SNETENTITIES_H
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

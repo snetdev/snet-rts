@@ -11,12 +11,12 @@
  *
 */
 
-#include "ts02.snet.utc.h"
-#include "tsboxes.utc.h"
-
+#include "ts02.h"
 #include "networkinterface.h"
 
-const char *snet_ts02_labels[] = {
+#include "tsboxes.utc.h"
+
+char *snet_ts02_labels[] = {
 	"E__ts02__None",
 	"a",
 	"b",
@@ -26,7 +26,7 @@ const char *snet_ts02_labels[] = {
 	"f",
 	"T"};
 
-const char *snet_ts02_interfaces[] = {};
+char *snet_ts02_interfaces[] = {};
 
 
 static void SNet__ts02__A(snet_handle_t *hnd)
@@ -353,7 +353,7 @@ static snet_tl_stream_t *SNet__ts02___SL(snet_tl_stream_t *in_buf)
   return (out_buf);
 }
 
-static snet_tl_stream_t *SNet__ts02___SR(snet_tl_stream_t *in_buf)
+static snet_tl_stream_t *SNet__ts02___SR___ST(snet_tl_stream_t *in_buf)
 {
   snet_tl_stream_t *out_buf = NULL;
 
@@ -373,6 +373,40 @@ static snet_tl_stream_t *SNet__ts02___SR(snet_tl_stream_t *in_buf)
                   SNetTencCreateVector(0), 
                   SNetTencCreateVector(0))), 
               NULL);
+
+  return (out_buf);
+}
+
+static snet_tl_stream_t *SNet____STAR_INCARNATE_ts02___SR(snet_tl_stream_t *in_buf)
+{
+  snet_tl_stream_t *out_buf = NULL;
+
+  out_buf = SNetStarIncarnate(in_buf, 
+              SNetTencTypeEncode(1, 
+                SNetTencVariantEncode(
+                  SNetTencCreateVector(2, F__ts02__e, F__ts02__f), 
+                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(0))), 
+              NULL, 
+              &SNet__ts02___SR___ST, 
+              &SNet____STAR_INCARNATE_ts02___SR);
+
+  return (out_buf);
+}
+
+static snet_tl_stream_t *SNet__ts02___SR(snet_tl_stream_t *in_buf)
+{
+  snet_tl_stream_t *out_buf = NULL;
+
+  out_buf = SNetStar(in_buf, 
+              SNetTencTypeEncode(1, 
+                SNetTencVariantEncode(
+                  SNetTencCreateVector(2, F__ts02__e, F__ts02__f), 
+                  SNetTencCreateVector(0), 
+                  SNetTencCreateVector(0))), 
+              NULL, 
+              &SNet__ts02___SR___ST, 
+              &SNet____STAR_INCARNATE_ts02___SR);
 
   return (out_buf);
 }

@@ -1,9 +1,9 @@
-net ts00 {
+net ts00({a} -> {b} | {b, <T>} | {e, <T>})  {
+
     box A((a) -> (b) | (b, <T>));
     box B((b) -> (c) | (d));
     box C((c) -> (b) | (b, <T>) | (e, <T>));
     box D((d) -> (b) | (b, <T>) | (e, <T>));
-    box E((e) -> (e) | (f));
 
-} connect A .. (B .. (C || D)) .. E;
+} connect A .. (B .. (C || D));
 

@@ -43,24 +43,6 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /**
- * __create_mutex() and __sync_mutex() macros.
- *
- * e.g.
- *      __create_mutex(p) {
- *          .
- *          .
- *          .
- *      } __sync_mutex(p);
- */
-
-#define __create_mutex(plc) \
-    pthread_mutex_lock(plc->exclussion_mutex); if (1)
-
-#define __sync_mutex(plc) pthread_mutex_unlock(plc->exclussion_mutex)
-
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-/**
  * Common includes
  */
 $include <assert.h>
@@ -85,8 +67,7 @@ $include <string.h>
 #define SNET_ERR_INIT                   0x0002
 #define SNET_ERR_MEMORY                 0x0003
 #define SNET_ERR_IO                     0x0004
-#define SNET_ERR_TYPE_ERROR             0x0005
-#define SNET_ERR_PLACE                  0x0006
+#define SNET_ERR_PLACE                  0x0005
 
 // Warnings!!
 
@@ -105,7 +86,6 @@ $include <string.h>
 #define SNET_ERR_SUBSYS_INIT_MSG(subsys, cause) \
     "an error during the "                      \
     "initialization of the " subsys "sub-system (" cause ")"
-
 
 /*----------------------------------------------------------------------------*/
 /* Helper macros for setting, resetting and checking flags. */

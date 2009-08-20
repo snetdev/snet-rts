@@ -3,6 +3,10 @@
 core
 gw
 sane
+#netif
+#svp4snetc
+
+#---
 
 testing
 

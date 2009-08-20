@@ -39,16 +39,21 @@ struct cons_list_node {
     snet_base_t               base;
     snet_conslst_node_state_t state;
 
-    snet_conslst_t *lst;
-    snet_record_t  *rec;
-    snet_idxvec_t  *ord_idx;
-    snet_idxvec_t  *dyn_idx;
-    snet_idxvec_t  *min_idx;
-    snet_gnode_t   *gnode;
+    snet_conslst_t  *lst;
+    snet_record_t   *rec;
+    snet_gwhandle_t *hnd;
+    snet_idxvec_t   *ord_idx;
+    snet_idxvec_t   *dyn_idx;
+    snet_idxvec_t   *min_idx;
+    snet_gnode_t    *gnode;
 
-    unsigned int    mult_cnt;
-    unsigned int    dyn_idx_cnt;
-    unsigned int    flags;
+    unsigned int     flags;
+
+    volatile
+    unsigned int     mult_cnt;
+
+    volatile
+    unsigned long    dyn_idx_cnt;
 
     struct cons_list_node *next;
     struct cons_list_node *prev;
@@ -58,7 +63,8 @@ struct cons_list_node {
 /*---*/
 
 struct cons_list {
-    snet_base_t base;
+    snet_base_t    base;
+    snet_domain_t *domain;
     
     /*---*/
 
@@ -72,35 +78,37 @@ struct cons_list {
 /*----------------------------------------------------------------------------*/
 
 void 
-SNetConsLstNodeInit(snet_conslst_node_t *n)
+SNetConsLstNodeInit(snet_conslst_node_t *n, snet_record_t *rec)
 {
     assert(n != NULL);
+    assert(rec != NULL);
 
     SNetBaseTypeInit(&n->base);
     SNetBaseTypeSetPlacesDefault(&n->base);
 
     n->state       = CONS_NODE_STATE_INIT;
     n->lst         = NULL;
-    n->rec         = NULL;
+    n->rec         = rec;
+    n->hnd         = NULL;
     n->ord_idx     = NULL;
     n->dyn_idx     = NULL;
-    n->min_idx     = SNetIdxVecCreate();
+    n->min_idx     = NULL;
     n->gnode       = NULL;
     n->next        = NULL;
     n->prev        = NULL;
-    n->mult_cnt    = 0;
-    n->dyn_idx_cnt = 0;
     n->flags       = 0;
+    n->dyn_idx_cnt = 0;
+    n->mult_cnt    = 0;
 }
 
 snet_conslst_node_t* 
-SNetConsLstNodeCreate()
+SNetConsLstNodeCreate(snet_record_t *rec)
 {
     snet_conslst_node_t *node = 
         (snet_conslst_node_t *)
             SNetMemAlloc(sizeof(snet_conslst_node_t));
 
-    SNetConsLstNodeInit(node);
+    SNetConsLstNodeInit(node, rec);
 
     return node;
 }
@@ -153,6 +161,15 @@ SNetConsLstNodeSetRecord(snet_conslst_node_t *n, snet_record_t *rec)
     n->rec = rec;
 }
 
+void
+SNetConsLstNodeSetHandle(snet_conslst_node_t *n, snet_gwhandle_t *hnd)
+{
+    assert(n != NULL);
+    assert(hnd != NULL);
+
+    n->hnd = hnd;
+}
+
 void 
 SNetConsLstNodeSetGraphNode(snet_conslst_node_t *n, snet_gnode_t *gnode)
 {
@@ -200,6 +217,12 @@ SNetConsLstNodeGetRecord(const snet_conslst_node_t *n)
     assert(n != NULL); return n->rec;
 }
 
+snet_gwhandle_t*
+SNetConsLstNodeGetHandle(const snet_conslst_node_t *n)
+{
+    assert(n != NULL); return n->hnd;
+}
+
 snet_gnode_t*
 SNetConsLstNodeGetGraphNode(const snet_conslst_node_t *n)
 {
@@ -210,7 +233,7 @@ SNetConsLstNodeGetGraphNode(const snet_conslst_node_t *n)
 /*----------------------------------------------------------------------------*/
 
 snet_idxvec_t*
-SNetConsLstNodeGetOrdGIdx(snet_conslst_node_t *n)
+SNetConsLstNodeGetOrdIdx(snet_conslst_node_t *n)
 {
     assert(n != NULL); return n->ord_idx;
 }
@@ -221,8 +244,8 @@ SNetConsLstNodeGetDynGIdx(snet_conslst_node_t *n)
     assert(n != NULL); return n->dyn_idx;
 }
 
-snet_idxvec_t*
-SNetConsLstNodeGetMinGIdx(snet_conslst_node_t *n)
+const snet_idxvec_t*
+SNetConsLstNodeGetMinGIdx(const snet_conslst_node_t *n)
 {
     assert(n != NULL); return n->min_idx;
 }
@@ -240,7 +263,7 @@ SNetConsLstNodeAddDynGIdx(
         return;
     }
 
-    n->dyn_idx = SNetIdxVecCreateCopy(idx, true);
+    n->dyn_idx = SNetIdxVecCreateCopy(idx);
 }
 
 void
@@ -250,10 +273,11 @@ SNetConsLstNodeAddSameDynGIdxAs(
     assert(n1 != NULL);
     assert(n2 != NULL);
     assert(n1->dyn_idx == NULL);
-    assert(n2->dyn_idx != NULL);
 
-    n1->dyn_idx     = SNetIdxVecCreateCopy(n2->dyn_idx, true);
-    n1->dyn_idx_cnt = n2->dyn_idx_cnt;
+    if (n2->dyn_idx != NULL) {
+        n1->dyn_idx     = SNetIdxVecCreateCopy(n2->dyn_idx);
+        n1->dyn_idx_cnt = n2->dyn_idx_cnt;
+    }
 }
 
 void
@@ -273,6 +297,39 @@ SNetConsLstNodeRemoveDynGIdx(snet_conslst_node_t *n)
     SNetIdxVecDestroy(n->dyn_idx);
 
     n->dyn_idx = NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetConsLstNodeSetMinGIdx(
+    snet_conslst_node_t *n, const snet_idxvec_t *idx)
+{
+    assert(n != NULL);
+
+    if (idx == NULL) {
+        if (n->min_idx != NULL)
+            SNetIdxVecDestroy(n->min_idx);
+
+        n->min_idx = NULL;
+
+    } else {
+        if (n->min_idx != NULL)
+            SNetIdxVecSetValue(n->min_idx, idx);
+        else
+            n->min_idx = SNetIdxVecCreateCopy(idx);
+    }
+}
+
+void
+SNetConsLstNodeSetMinGIdxToInfinite(snet_conslst_node_t *n)
+{
+    assert(n != NULL);
+
+    if (n->min_idx == NULL)
+        n->min_idx = SNetIdxVecCreate();
+    else
+        SNetIdxVecSetToInfinite(n->min_idx);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -342,25 +399,27 @@ SNetConsLstNodeToBaseConst(const snet_conslst_node_t *n)
 /*----------------------------------------------------------------------------*/
 
 void 
-SNetConsLstInit(snet_conslst_t *lst)
+SNetConsLstInit(snet_conslst_t *lst, snet_domain_t *snetd)
 {
     assert(lst != NULL);
+    assert(snetd != NULL);
 
     SNetBaseTypeInit(&lst->base);
     SNetBaseTypeSetPlacesDefault(&lst->base);
 
-    lst->head = NULL;
-    lst->tail = NULL;
+    lst->domain = snetd;
+    lst->head   = NULL;
+    lst->tail   = NULL;
 }
 
 snet_conslst_t* 
-SNetConsLstCreate()
+SNetConsLstCreate(snet_domain_t *snetd)
 {
     snet_conslst_t *lst = 
         (snet_conslst_t *)
             SNetMemAlloc(sizeof(snet_conslst_t));
 
-    SNetConsLstInit(lst);
+    SNetConsLstInit(lst, snetd);
 
     return lst;
 }
@@ -378,6 +437,12 @@ SNetConsLstDestroy(snet_conslst_t *lst)
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
+
+snet_domain_t*
+SNetConsLstGetDomain(const snet_conslst_t *lst)
+{
+    assert(lst != NULL); return lst->domain;
+}
 
 snet_conslst_node_t*
 SNetConsLstGetHead(const snet_conslst_t *lst)
@@ -441,7 +506,7 @@ SNetConsLstInsertBefore(snet_conslst_node_t *n1, snet_conslst_node_t *n2)
     n1->next    = n2;
     n1->prev    = n2->prev;
     n2->prev    = n1;
-    n1->ord_idx = SNetIdxVecCreateCopy(n2->ord_idx, true);
+    n1->ord_idx = SNetIdxVecCreateCopy(n2->ord_idx);
 
     if (n2->mult_cnt == 0) {
         SNetIdxVecPushStr(n1->ord_idx, "1");

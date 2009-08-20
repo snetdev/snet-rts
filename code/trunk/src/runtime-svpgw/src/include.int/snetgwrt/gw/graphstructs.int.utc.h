@@ -52,10 +52,10 @@ typedef struct {
 /*----------------------------------------------------------------------------*/
 
 typedef struct {
-    unsigned int    id;
-    snet_idxvec_t  *idx;
-    unsigned int    mpcnt;
-    snet_handle_t **mhnds;
+    unsigned int      id;
+    snet_idxvec_t    *idx;
+    unsigned int      mpcnt;
+    snet_gwhandle_t **mhnds;
 
 } snet_synccell_state_t;
 
@@ -166,10 +166,10 @@ typedef struct {
 /*---*/
 
 typedef bool (*snet_gnode_hnd_fptr_t)(
-    snet_gnode_t *gnode, snet_handle_t *hnd);
+    snet_gnode_t *gnode, snet_gwhandle_t *hnd);
 
 typedef snet_gnode_t* 
-    (*snet_gnode_walk_hnd_fptr_t)(snet_gnode_t *gnode, snet_handle_t *hnd);
+    (*snet_gnode_walk_hnd_fptr_t)(snet_gnode_t *gnode, snet_gwhandle_t *hnd);
 
 
 /*----------------------------------------------------------------------------*/

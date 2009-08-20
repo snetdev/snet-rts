@@ -19,13 +19,12 @@
 #define E__ts00__NONE 0
 #define F__ts00__a 1
 #define F__ts00__b 2
-#define F__ts00__c 3
-#define F__ts00__d 4
-#define F__ts00__e 5
-#define F__ts00__f 6
-#define T__ts00__T 7
+#define F__ts00__e 3
+#define F__ts00__c 4
+#define F__ts00__d 5
+#define T__ts00__T 6
 
-#define SNET__ts00__NUMBER_OF_LABELS 8
+#define SNET__ts00__NUMBER_OF_LABELS 7
 
 
 

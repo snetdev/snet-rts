@@ -109,7 +109,7 @@ typedef struct {
  */
 
 extern snet_metadata_t*
-SNetMetaDataLoad(snet_metadata_type_t, ...);
+SNetMetaDataLoad(snet_metadata_type_t type, ...);
  
 extern void
 SNetMetaDataDestroySpecialized(snet_metadata_t *meta);

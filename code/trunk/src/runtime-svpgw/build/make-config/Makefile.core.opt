@@ -4,7 +4,10 @@ LIB_NAME  := libsvp-snetgw$(PROJ_NAME)
 #---
 
 CONFIGS   := debug release
+
+ifneq ($(strip $(WITH_NO_SEP)),true)
 CONFIGS   += debug_mb release_mb
+endif
 
 #---
 

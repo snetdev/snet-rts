@@ -857,7 +857,7 @@ static
 unsigned int
 drecord_remove_items(
     snet_record_t            *rec,
-    int                      *names,
+    const int                *names,
     unsigned int              count,
     void                    **vec,
     venc_items_cnt_fptr       venc_items_cnt_fun,
@@ -971,8 +971,8 @@ static unsigned int
 drecord_copy_items(
     snet_record_t            *rec1,
     snet_record_t            *rec2,
-    int                      *names,
-    int                      *new_names,
+    const int                *names,
+    const int                *new_names,
     unsigned int              count,
     void                    **vec1,
     void                    **vec2,
@@ -991,7 +991,7 @@ drecord_copy_items(
 
         // If both of these flags are set then there is nothing
         // to copy (because there is not gonna be a case where
-        // an item neither consumed or unconsumed). 
+        // an item is neither consumed or unconsumed). 
         //
         // Should this be an "assertion"???
         return 0;
@@ -1066,18 +1066,17 @@ drecord_copy_items(
            
         // Check the item's flags and the copy "options" flags
         // to see whether this item should be copied or not.
-        if (!__chk_flag(flags, DREC_ITEMS_COPY_UNCONSUMED)) {
-            if (!__chk_flag((*cpi_flags), DREC_ITEM_CONSUMED_FLAG)) {
-                i++;
-                continue;
-            }
-        }
+        bool unconsumed_flag = (
+            __chk_flag(flags, DREC_ITEMS_COPY_UNCONSUMED) &&
+            !__chk_flag((*cpi_flags), DREC_ITEM_CONSUMED_FLAG));
 
-        if (!__chk_flag(flags, DREC_ITEMS_COPY_CONSUMED)) {
-            if (__chk_flag((*cpi_flags), DREC_ITEM_CONSUMED_FLAG)) {
-                i++;
-                continue;
-            }
+        bool consumed_flag = (
+            __chk_flag(flags, DREC_ITEMS_COPY_CONSUMED) &&
+            __chk_flag((*cpi_flags), DREC_ITEM_CONSUMED_FLAG));
+
+        if (!unconsumed_flag && !consumed_flag) {
+            i++;
+            continue;
         }
 
         // Try to add the new name to the variant encoding of the
@@ -1290,16 +1289,16 @@ SNetDataRecInit(
     unsigned int btags_cnt  = SNetTencVariantGetBTagsCount(venc);
     unsigned int fields_cnt = SNetTencVariantGetFieldsCount(venc);
 
+    for (unsigned int i=0; i < fields_cnt; i++) {
+        drecord_set_field_data(
+            rec->spec.data.fields + i, va_arg(vargs, void*), blid);
+    }
+
     for (unsigned int i=0; i < tags_cnt; i++)
         rec->spec.data.tags[i].value = int2rectagval(va_arg(vargs, int));
 
     for (unsigned int i=0; i < btags_cnt; i++)
         rec->spec.data.btags[i].value = int2rectagval(va_arg(vargs, int));
-
-    for (unsigned int i=0; i < fields_cnt; i++) {
-        drecord_set_field_data(
-            rec->spec.data.fields + i, va_arg(vargs, void*), blid);
-    }
 }
 
 void
@@ -2209,14 +2208,12 @@ SNetRecFieldGetData(void *field)
     if (dcptr == NULL_REF) {
         f->data_dcptr = NULL_REF;
         f->data_plc   = SNetPlaceGetNull();
-        f->flags      = 0;
 
         return NULL;
     }
 
     f->data_dcptr = dcptr;
     f->data_plc   = SNetPlaceGetMine();
-    f->flags      = 0;
     
     __set_flag(f->flags, DREC_FIELD_DATA_EXCL_FLAG);
     __set_flag(f->flags, DREC_FIELD_DATA_LOCAL_FLAG);

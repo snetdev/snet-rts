@@ -79,7 +79,7 @@ decrease_dcptr_refcnt(snet_rec_fdata_descriptor_t *dcptr)
 
     snet_bli_freefptr_t freefun = SNetGetFreeFun(dcptr->blid);
 
-    if (freefun == NULL) {
+    if (freefun == NULL && dcptr->dptr != NULL) {
         SNetReportWarning(
             SNET_WRN_NULL_BLI_FUNCTION,
             "free",
@@ -91,7 +91,8 @@ decrease_dcptr_refcnt(snet_rec_fdata_descriptor_t *dcptr)
         return;
     }
 
-    (*freefun)(dcptr->dptr);
+    if (dcptr->dptr != NULL)
+        (*freefun)(dcptr->dptr);
 
     SNetMemDestroyRef(SNetMemGetRef(dcptr));
     SNetMemFree(dcptr);
@@ -134,20 +135,14 @@ void*
 SNetRecFieldDataDescriptorGetDPtr(snet_ref_t rfdd)
 {
     assert(rfdd != NULL_REF);
-
-    snet_rec_fdata_descriptor_t *dcptr = ref2dcptr(rfdd);
-
-    return dcptr->dptr;
+    return ref2dcptr(rfdd)->dptr;
 }
 
 snet_bli_id_t
 SNetRecFieldDataDescriptorGetBlid(snet_ref_t rfdd)
 {
     assert(rfdd != NULL_REF);
-
-    snet_rec_fdata_descriptor_t *dcptr = ref2dcptr(rfdd);
-
-    return dcptr->blid;
+    return ref2dcptr(rfdd)->blid;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -203,8 +198,8 @@ SNetRecFieldDataCopy(
             return;
         }
 
-        uint8_t      *buf = NULL;
-        unsigned int  dsz = (*serfun)(dcptr->dptr, (char **)(&buf));
+        void   *buf = NULL;
+        size_t  dsz = (*serfun)(SNET_DATASER_FORMAT_BIN, dcptr->dptr, &buf);
 
         if (buf == NULL) {
             if (dsz != 0) {

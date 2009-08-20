@@ -15,6 +15,10 @@ export TOP_LEVEL_MAKEFILE_DIR := $(shell pwd)
 endif
 
 #-------------------------------------------------------------------------------
+# Cached variable must
+# be set first.
+-include Makefile.cache
+
 # Inclusion of options makefiles
 #
 # Option makefiles specific for the current build are also included (which can 
@@ -37,8 +41,6 @@ $(foreach cfg,$(CONFIGS),\
 #-------------------------------------------------------------------------------
 # Command line defined variables' value caching
 #
--include Makefile.cache
-
 ifeq ($(strip $(CMDLINE_VAR_CACHE)),true)
 define clean_cache
 rm -f Makefile.cache

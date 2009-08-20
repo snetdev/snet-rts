@@ -48,8 +48,8 @@
 /*----------------------------------------------------------------------------*/
 
 typedef struct {
-    int *names;
-    int *new_names;
+    const int *names;
+    const int *new_names;
 
     unsigned int fields_cnt;
     unsigned int tags_cnt;

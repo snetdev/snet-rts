@@ -32,11 +32,13 @@
 
 #include "gw.int.utc.h"
 #include "domain.int.utc.h"
+#include "gwhandle.int.utc.h"
 
 /*---*/
 
 #include "core/snet.int.utc.h"
 #include "core/handle.int.utc.h"
+#include "core/buffer.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -83,8 +85,10 @@ SNetPushIn(snet_domain_t *snetd, snet_record_t *rec)
 
     family fid;
 
-    create (fid; plc; 0; 0; 1; 1;;) SNetGWInitial(snetd, rec);
-    sync (fid);
+    create (fid; plc; 0; 0; 1; 1;;) 
+        SNetGWInit(SNetMemGetRef(snetd), (snet_handle_t *)(NULL), rec);
+
+    sync(fid);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -132,6 +136,42 @@ SNetPopOut(snet_domain_t *snetd)
 
     sync (fid);
     return (rec);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetGetOutputBufferSize(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+
+    const snet_buffer_t *buf = 
+        SNetDomainGetOutBuffer(snetd);
+
+    return (buf == NULL ? 0 : SNetBufGetSize(buf));
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+place
+SNetGetBoxSelectedResource(const snet_handle_t *hnd)
+{
+    hnd = (const snet_handle_t *) SNetUnmaskPointer(hnd);
+
+    snet_gwhandle_t *gwhnd = 
+        (snet_gwhandle_t *) 
+            SNetHndCastToDerivedHandle(hnd);
+
+    snet_place_t plc = SNetGwHndGetBoxSelectedPlace(gwhnd);
+
+    if (!SNetPlaceIsNull(plc))
+        return SNetPlaceToUTCPlace(plc);
+    else
+        return SNetPlaceToUTCPlace(SNetPlaceGetMine());
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

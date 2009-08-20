@@ -88,6 +88,16 @@
  */
 #define SVPSNETGWRT_BOX_XNAME_EXT "__snet"
 
+/*----------------------------------------------------------------------------*/
+/**
+ * Threshold value that controls the maximum number of
+ * records for each invokation of the user-defined 
+ * "network output handler" thread function.
+ *
+ * If this is 0 then there is no fixed limit.
+ */
+#define SVPSNETGWRT_NETOUT_TFUN_INVOKE_THRESHOLD 64
+
 #endif // __SVPSNETGWRT_GW_CONFIG_INT_H
 
 /*------------------------------- END OF FILE --------------------------------*/

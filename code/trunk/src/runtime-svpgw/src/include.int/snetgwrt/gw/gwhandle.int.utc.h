@@ -59,9 +59,12 @@ SNetGwHndCreate(
     snet_conslst_node_t *cons_node);
 
 extern void
-SNeGwHndDestroy(snet_gwhandle_t *hnd);
+SNetGwHndDestroy(snet_gwhandle_t *hnd);
 
 /*----------------------------------------------------------------------------*/
+
+extern snet_domain_t*
+SNetGwHndGetDomain(const snet_gwhandle_t *hnd);
 
 extern snet_conslst_node_t*
 SNetGwHndGetConsNode(const snet_gwhandle_t *hnd);
@@ -69,10 +72,31 @@ SNetGwHndGetConsNode(const snet_gwhandle_t *hnd);
 extern snet_record_t*
 SNetGwHndGetConsNodeRecord(const snet_gwhandle_t *hnd);
 
+extern void*
+SNetGwHndGetSyncCellState(const snet_gwhandle_t *hnd);
+
+extern snet_place_t
+SNetGwHndGetBoxSelectedPlace(const snet_gwhandle_t *hnd);
+
 /*---*/
 
 extern void
-SNetGwHndSetConsNode(snet_gwhandle_t *hnd, snet_conslst_node_t *cnode);
+SNetGwHndSetConsNode(
+    snet_gwhandle_t *hnd, snet_conslst_node_t *cnode);
+
+extern void
+SNetGwHndSetSyncCellState(snet_gwhandle_t *hnd, void *state);
+
+extern void
+SNetGwHndSetBoxSelectedPlace(snet_gwhandle_t *hnd, snet_place_t plc);
+
+/*----------------------------------------------------------------------------*/
+
+extern snet_handle_t*
+SNetGwHndToBaseHandle(snet_gwhandle_t *hnd);
+
+extern const snet_handle_t*
+SNetGwHndToBaseHandleConst(const snet_gwhandle_t *hnd);
 
 #endif // __SVPSNETGWRT_GWHANDLE_INT_H
 

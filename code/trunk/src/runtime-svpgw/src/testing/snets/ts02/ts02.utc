@@ -1,4 +1,6 @@
-#include "ts02.snet.utc.h"
+#include "ts02.h"
+#include "snetcgenhdr.h"
+
 #include "printing.utc.h"
 
 /*---*/
@@ -70,171 +72,115 @@ static void* copy_record_field(void *f)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-//static void* create_input_record_type_a_field()
-//{
-//    field_a_t *fa = (field_a_t *) malloc(sizeof(field_a_t));
-//
-//    if (fa == NULL) {
-//        fprintf(
-//            stderr, 
-//            "!!FATAL ERROR!!: "
-//            "Failed to allocate memory for field\n");
-//
-//        abort();
-//    }
-//
-//    (*fa) = (field_a_t) rand() % 1000;
-//
-//    return fa;
-//}
+static void* create_input_record_type_a_field()
+{
+    field_a_t *fa = (field_a_t *) malloc(sizeof(field_a_t));
+
+    if (fa == NULL) {
+        fprintf(
+            stderr, 
+            "!!FATAL ERROR!!: "
+            "Failed to allocate memory for field\n");
+
+        abort();
+    }
+
+    (*fa) = (field_a_t) rand() % 1000;
+
+    return fa;
+}
 
 /*----------------------------------------------------------------------------*/
 
-//static thread void record_feeder(snet_domain_t *snetd, int max_recs_cnt)
-//{
-//    for (int i=0; i < max_recs_cnt; i++) {
-//        snet_variantencoding_t *venc = 
-//            SNetTencVariantEncode(
-//                SNetTencVectorCreate(1, F__ts02__a),
-//                SNetTencVectorCreate(1, T__ts02__I),
-//                NULL);
-//
-//        void          *fa  = create_input_record_type_a_field();
-//        snet_record_t *rec = SNetDataRecCreate(venc, fa, i);
-//
-//#ifdef PRINT_RECS
-//        printf("Pushing record %p: ", rec);
-//        print_record(rec, snet_test01_labels);
-//        printf("...");
-//#endif
-//
-//        SNetPushIn(snetd, rec);
-//
-//#ifdef PRINT_RECS
-//        printf("done (%p)\n", rec);
-//#endif
-//
-//        usleep(1);
-//    }
-//
-//    printf("Pushing control record carrying termination code!!\n");
-//
-//    snet_record_t *term_ctrl_rec = 
-//        SNetCtrlRecCreate(SNET_REC_CTRL_MODE_APP, 1, NULL, 0);
-// 
-//    SNetPushIn(snetd, term_ctrl_rec);
-//
-//    printf("Exiting input process!!!\n");
-//}
+static thread void
+net_record_feeder(snet_domain_t *snetd, int max_recs_cnt)
+{
+    for (int i=0; i < max_recs_cnt; i++) {
+        snet_variantencoding_t *venc = 
+            SNetTencVariantEncode(
+                SNetTencVectorCreate(1, F__ts02__a),
+                NULL,
+                NULL);
+
+        void          *fa  = create_input_record_type_a_field();
+        snet_record_t *rec = SNetDataRecCreate(0, venc, fa);
+
+#ifdef PRINT_RECS
+        printf("Pushing record %p: ", rec);
+        print_record(rec, snet_ts02_labels);
+        printf("...");
+#endif
+
+        SNetPushIn(snetd, rec);
+
+#ifdef PRINT_RECS
+        printf("done (%p)\n", rec);
+#endif
+
+        //usleep(1);
+    }
+
+    printf("Exiting input process!!!\n");
+}
 
 /*----------------------------------------------------------------------------*/
 
-//static thread void 
-//write_record_to_stdout(snet_domain_t *snetd, int max_recs_cnt)
-//{
-//    snet_record_t *rec     = NULL;
-//    unsigned int   rec_cnt = 0;
-//
-//    do {
-//        rec = SNetPopOut(snetd, false);
-//
-//        if (rec != NULL) {
-//            if (SNetRecGetDescription(rec) == SNET_REC_DESCR_CTRL) {
-//                unsigned int opcode = SNetRecGetOpCode(rec);
-//
+static thread void
+SNet__ts02___out(snet_domain_t *snetd, unsigned int count)
+{
+    for (unsigned int i=0; i < count; i++) {
+        snet_record_t *rec = SNetPopOut(snetd);
+
+        assert(rec != NULL);
+        
+        if (SNetRecGetDescription(rec) == SNET_REC_DESCR_DATA) {
 //#ifdef PRINT_RECS
-//                printf("Popped ctrl record: opcode = %u\n", opcode);
+            printf("Popped record %p: ", rec);
+            print_record(rec, snet_ts02_labels);
+            printf("\n");
 //#endif
-//
-//                SNetRecDestroy(rec);
-//
-//                if (opcode == 1) {
-//                    printf("Output process received termination code!!!!\n");
-//                    break;
-//                }
-//
-//                continue;
-//
-//            } else if (SNetRecGetDescription(rec) == SNET_REC_DESCR_DATA) {
-//#ifdef PRINT_RECS
-//                printf("Popped record %p: ", rec);
-//                print_record(rec, snet_test01_labels);
-//               printf("\n");
-//#endif
-//
-//                SNetRecSetDataDisposeMode(rec, SNET_REC_DATA_DISPOSE_MODE_ALL);
-//                SNetRecDestroy(rec);
-//
-//                rec_cnt++;
-//
-//            } else {
-//                printf(
-//                    "Record of invalid type found (%u)\n", 
-//                    (unsigned int) SNetRecGetDescription(rec));
-//
-//                abort();
-//            }
-//        }
-//
-//    } while (true);
-//
-//    printf("Exiting output process (REC_CNT = %u)!!!\n", rec_cnt);
-//}
+
+        } else if (SNetRecGetDescription(rec) == SNET_REC_DESCR_CTRL) {
+#ifdef PRINT_RECS
+            printf("Popped ctrl record: opcode = %u\n", SNetRecGetOpCode(rec));
+#endif
+
+        } else {
+            printf(
+                "Record of invalid type found (%u)\n", 
+                (unsigned int) SNetRecGetDescription(rec));
+
+            abort();
+        }
+
+        SNetRecDestroy(rec);
+    }
+}
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 static int SNet__ts02___run(snet_domain_t *snetd, int test_sz)
 {
-//    int    exit_code;
-//    family in_proc_fid;
-//    family out_proc_fid;
-//
-//    create<root>
-//        (in_proc_fid; ; 0; 0; 1; 1;;) 
-//            record_feeder(snetd, test_sz);
-//    
-//    create<root>
-//        (out_proc_fid; ; 0; 0; 1; 1;;) 
-//            write_record_to_stdout(snetd, test_sz);
-//
-//    //usleep(20000);
-//    //kill(in_proc_fid);
-//    //kill(out_proc_fid);
-//
-//    exit_code = sync(in_proc_fid);
-//    printf("Record input process finished (exit_code = %d)!!!\n", exit_code);
-//
-//    exit_code = sync(out_proc_fid);
-//    printf("Record output process finished (exit_code = %d)!!!\n", exit_code);
-//
-    return 0;
+    family fid;
+
+    create<root> (fid; ; 0; 0; 1; 1;;) 
+        net_record_feeder(snetd, test_sz);
+
+    int exit_code = sync(fid);
+    printf("Record input process finished (exit_code = %d)!!!\n", exit_code);
+    
+    return exit_code;
 }
 
 /*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-
-bool SNet__ts02___setup(snet_domain_t *snetd)
-{
-//    snet_gnode_t *groot = SNetGraphCreate(snetd);
-//
-//    if (SNet__ts02___ts02(groot) == NULL) {
-//        return false;
-//    }
-//
-//    SNetDomainSetGraph(snetd, groot);
-
-    return true;
-}
-
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 snet_domain_t* 
 SNetSetup__ts02()
 {
-    return SNetDomainCreate(&SNet__ts02___ts02, NULL);
+    return SNetDomainCreate(&SNet__ts02___ts02, &SNet__ts02___out);
 }
 
 int SNetMain__ts02(int argc, char* argv[])

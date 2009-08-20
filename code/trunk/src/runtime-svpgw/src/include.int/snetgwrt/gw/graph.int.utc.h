@@ -45,13 +45,19 @@
 #include "core/typeencode.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
+/**
+ * Graph node flags
+ */
+#define GNODE_REORDER_POINT_FLAG 0x01
+
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 typedef enum {
     GRAPH_NODE_TYPE_NOP,
     
     GRAPH_NODE_TYPE_BOX,
-    GRAPH_NODE_TYPE_SYNC,
+    GRAPH_NODE_TYPE_SYNCCELL,
     GRAPH_NODE_TYPE_FILTER,
     GRAPH_NODE_TYPE_NAMESHIFT,
 

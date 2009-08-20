@@ -38,8 +38,10 @@
  * Datatypes for an index
  */
 typedef struct {
-    unsigned int ref_cnt;
+    volatile 
     unsigned int len;
+
+    volatile
     unsigned int buf_sz;
 
     /*---*/
@@ -69,22 +71,34 @@ static snet_idxvec_data_t* alloc_data_struct(int init_len)
 
     snet_idxvec_data_t *idxvd = (snet_idxvec_data_t *) buf;
 
-    idxvd->ref_cnt = 1;
     idxvd->len     = 0;
     idxvd->buf_sz  = init_len + SVPSNETGWRT_IDXVEC_INCR_STEP;
     idxvd->items   = (snet_idxvec_item_t *) (idxvd + 1);
+
+    SNetMemIncreaseRefCount(idxvd);
 
     return idxvd;
 }
 
 /*----------------------------------------------------------------------------*/
 
-static snet_idxvec_data_t* realloc_data_struct(
+static void realloc_data_struct(
     snet_idxvec_t *idxv, 
     unsigned int new_len,
     unsigned int copy_start, unsigned int copy_count)
 {
-    bool alloc_new = (idxv->data == NULL ? true : idxv->data->ref_cnt > 1);
+    bool alloc_new = false;
+
+    if (idxv->data == NULL) {
+        alloc_new = true;
+
+    } else {
+        if (SNetMemIncreaseRefCount(idxv->data) > 1) {
+            alloc_new = true;
+        }
+        
+        SNetMemDecreaseRefCount(idxv->data);
+    }
 
     if (alloc_new) {
         snet_idxvec_data_t *old_data = idxv->data;
@@ -92,18 +106,20 @@ static snet_idxvec_data_t* realloc_data_struct(
         idxv->data = alloc_data_struct(new_len);
 
         if (old_data != NULL) {
-            old_data->ref_cnt--;
-
             if(copy_count > 0) {
                 SNetMemCopy(
                     old_data->items + copy_start,
                     idxv->data->items, copy_count * sizeof(snet_idxvec_item_t));
             }
+
+            if (SNetMemDecreaseRefCount(old_data) == 1) {
+                SNetMemFree(old_data);
+            }
         }
 
         idxv->data->len = copy_count;
 
-        return old_data;
+        return;
     }
 
     if (copy_count > 0 && copy_start > 0) {
@@ -128,8 +144,6 @@ static snet_idxvec_data_t* realloc_data_struct(
         idxv->data->items  = (snet_idxvec_item_t *)(idxv->data + 1);
         idxv->data->buf_sz = new_len + SVPSNETGWRT_IDXVEC_INCR_STEP;
     }
-
-    return NULL;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -259,14 +273,18 @@ calc_infimum(const snet_idxvec_t *idxv1, const snet_idxvec_t *idxv2, bool ext)
     assert(idxv2 != NULL);
 
     if (SNetIdxVecIsInfinite(idxv1))
-        return SNetIdxVecCreateCopy(idxv2, true);
+        return SNetIdxVecCreateCopy(idxv2);
 
     if (SNetIdxVecIsInfinite(idxv2))
-        return SNetIdxVecCreateCopy(idxv1, true);
+        return SNetIdxVecCreateCopy(idxv1);
 
     snet_idxvec_t *infimum = SNetIdxVecCreate();
 
     unsigned int min_len = (
+        idxv1->data->len < idxv2->data->len ? 
+        idxv1->data->len : idxv2->data->len);
+
+    min_len = (
         idxv1->data->len < idxv2->data->len ? 
         idxv1->data->len : idxv2->data->len);
 
@@ -314,9 +332,7 @@ void SNetIdxVecInit(snet_idxvec_t *idxv)
     idxv->data = NULL;
 }
 
-void SNetIdxVecInitCopy(
-    snet_idxvec_t *idxv,
-    const snet_idxvec_t *srcv, bool clone)
+void SNetIdxVecInitCopy(snet_idxvec_t *idxv, const snet_idxvec_t *srcv)
 {
     assert(idxv != srcv);
 
@@ -332,15 +348,10 @@ void SNetIdxVecInitCopy(
         return;
     }
 
-    if (!clone) {
-        idxv->data = srcv->data;
-        idxv->data->ref_cnt++;
-
-        return;
-    }
-
-    idxv->data = alloc_data_struct(srcv->data->len); 
-
+    //idxv->data = srcv->data;
+    //SNetMemIncreaseRefCount(srcv->data);
+    idxv->data = alloc_data_struct(srcv->data->len);
+ 
     SNetMemCopy(
         srcv->data->items,
         idxv->data->items,
@@ -397,7 +408,7 @@ SNetIdxVecCreate()
 }
 
 snet_idxvec_t*
-SNetIdxVecCreateCopy(const snet_idxvec_t *src, bool clone)
+SNetIdxVecCreateCopy(const snet_idxvec_t *src)
 {
     assert(src != NULL);
 
@@ -405,7 +416,7 @@ SNetIdxVecCreateCopy(const snet_idxvec_t *src, bool clone)
         (snet_idxvec_t *)
             SNetMemAlloc(sizeof(snet_idxvec_t));
 
-    SNetIdxVecInitCopy(idxv, src, clone);
+    SNetIdxVecInitCopy(idxv, src);
 
     return idxv;
 }
@@ -443,7 +454,7 @@ void SNetIdxVecDestroy(snet_idxvec_t *idxv)
     assert(idxv != NULL);
 
     if (idxv->data != NULL) {
-        if (--idxv->data->ref_cnt == 0) {
+        if (SNetMemDecreaseRefCount(idxv->data) == 1) {
             SNetMemFree(idxv->data);
         }
     }
@@ -463,16 +474,16 @@ void SNetIdxVecSetToInfinite(snet_idxvec_t *idxv)
         return;
     }
 
-    if (idxv->data->ref_cnt > 1) {
-        idxv->data->ref_cnt--;
-        idxv->data = NULL;
+    if (SNetMemDecreaseRefCount(idxv->data) == 1) {
+        SNetMemIncreaseRefCount(idxv->data);
 
+        realloc_data_struct(idxv, 0, 0, 0);
+
+        idxv->data->len = 0;
         return;
     }
-   
-    realloc_data_struct(idxv, 0, 0, 0);
 
-    idxv->data->len = 0;
+    idxv->data = NULL;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -696,9 +707,8 @@ void SNetIdxVecPush(
     realloc_data_struct(idxv1, len1 + len2, 0, len1);
 
     SNetMemCopy(
-        idxv2->data->items + len2,
-        idxv1->data->items + len1,
-        len2 * sizeof(snet_idxvec_item_t));
+        idxv2->data->items + start_item_idx,
+        idxv1->data->items + len1, len2 * sizeof(snet_idxvec_item_t));
 
     idxv1->data->len = len1 + len2;
 }

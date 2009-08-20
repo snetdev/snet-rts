@@ -31,14 +31,16 @@
 /*---*/
  
 #include "core/handle.int.utc.h"
+#include "core/plcmng.int.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 struct gwhandle {
     snet_handle_t        base;
-    snet_domain_t       *domain;
     snet_conslst_node_t *cons_node;
+    snet_place_t         box_plc;
+    void                *synccell_state;
 
 }; // struct gwhandle
 
@@ -84,7 +86,8 @@ vtbl_boxsignget_fun(const void *hnd)
 static snet_place_t 
 vtbl_snetdhostplcget_fun(const void *hnd)
 {
-    return SNetDomainGetHostPlace(((snet_gwhandle_t *)(hnd))->domain);
+    return SNetDomainGetHostPlace(
+        SNetGwHndGetDomain((snet_gwhandle_t *)(hnd)));
 }
 
 /*----------------------------------------------------------------------------*/
@@ -108,8 +111,9 @@ SNetGwHndInit(
         &vtbl_boxsignget_fun,
         &vtbl_snetdhostplcget_fun);
  
-    hnd->domain    = snetd;
-    hnd->cons_node = cons_node;
+    hnd->cons_node      = cons_node;
+    hnd->box_plc        = SNetPlaceGetNull();
+    hnd->synccell_state = NULL;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -129,7 +133,7 @@ SNetGwHndCreate(
 }
 
 void
-SNeGwHndDestroy(snet_gwhandle_t *hnd)
+SNetGwHndDestroy(snet_gwhandle_t *hnd)
 {
     assert(hnd != NULL);
 
@@ -139,6 +143,15 @@ SNeGwHndDestroy(snet_gwhandle_t *hnd)
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
+
+snet_domain_t*
+SNetGwHndGetDomain(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); 
+    
+    return SNetConsLstGetDomain(
+        SNetConsLstNodeGetList(hnd->cons_node));
+}
 
 snet_conslst_node_t*
 SNetGwHndGetConsNode(const snet_gwhandle_t *hnd)
@@ -153,6 +166,18 @@ SNetGwHndGetConsNodeRecord(const snet_gwhandle_t *hnd)
     return SNetConsLstNodeGetRecord(hnd->cons_node);
 }
 
+void*
+SNetGwHndGetSyncCellState(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->synccell_state;
+}
+
+snet_place_t
+SNetGwHndGetBoxSelectedPlace(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->box_plc;
+}
+
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
@@ -163,6 +188,35 @@ SNetGwHndSetConsNode(snet_gwhandle_t *hnd, snet_conslst_node_t *cnode)
     assert(cnode != NULL);
 
     hnd->cons_node = cnode;
+}
+
+void
+SNetGwHndSetSyncCellState(snet_gwhandle_t *hnd, void *state)
+{
+    assert(hnd != NULL);
+    hnd->synccell_state = state;
+}
+
+void
+SNetGwHndSetBoxSelectedPlace(snet_gwhandle_t *hnd, snet_place_t plc)
+{
+    assert(hnd != NULL);
+    hnd->box_plc = plc;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_handle_t*
+SNetGwHndToBaseHandle(snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return &hnd->base;
+}
+
+const snet_handle_t*
+SNetGwHndToBaseHandleConst(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return &hnd->base;
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

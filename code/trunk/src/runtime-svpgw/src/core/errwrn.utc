@@ -94,10 +94,7 @@ static const char* ERR_MSGS[] = {
     // 0x0004: SNET_ERR_IO
     "An error occured during an i/o operation (%s)",
 
-    // 0x0005: SNET_ERR_TYPE_ERROR
-    "A type error occured in %s at index %s",
-
-    // 0x0006: SNET_ERR_PLACE
+    // 0x0005: SNET_ERR_PLACE
     "An error occured during a 'place' management operation (%s)"
 
 }; // ERR_MSGS[]
@@ -390,9 +387,9 @@ void SNetOnError()
 
 void SNetOnWarning()
 {
-    /**
-     * Empty
-     */
+#if SVPSNETGWRT_DEBUG > 4
+    abort();
+#endif
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

@@ -48,11 +48,18 @@ SNetGWSetupNormalGNodeHndFuncs(snet_gnode_t *n);
 
 /*---*/
 
+/**
+ * The library-level "public" interface thread functions
+ * for the Graph Walker.
+ */
+  
 extern thread void 
-SNetGW(snet_handle_t *hnd, snet_record_t *rec);
+SNetGWInit(
+    snet_ref_t snetd, 
+    snet_handle_t *hnd, snet_record_t *rec);
 
 extern thread void 
-SNetGWInitial(snet_domain_t *snetd, snet_record_t *rec);
+SNetGWFork(snet_handle_t *hnd, snet_record_t *rec);
 
 #endif // __SVPSNETGWRT_GW_GW_INT_H
 

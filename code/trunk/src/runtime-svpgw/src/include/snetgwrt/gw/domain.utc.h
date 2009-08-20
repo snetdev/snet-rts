@@ -66,7 +66,7 @@ typedef snet_gnode_t*
  * whenever there is something in the output buffer.
  */
 typedef thread void
-    (*snet_netout_tfptr_t)(snet_domain_t *, unsigned int count);
+    (*snet_netout_tfptr_t)(snet_domain_t *snetd, unsigned int count);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/

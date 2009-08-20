@@ -140,12 +140,12 @@ void idxvec_test()
     SNetIdxVecPopRight(idxv3, 10);
     printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
     
-    snet_idxvec_t *idxv4 = SNetIdxVecCreateCopy(idxv3, false);
+    snet_idxvec_t *idxv4 = SNetIdxVecCreateCopy(idxv3);
 
     SNetIdxVecPopLeft(idxv3, 10);
     printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");
 
-    snet_idxvec_t *idxv5 = SNetIdxVecCreateCopy(idxv3, false);
+    snet_idxvec_t *idxv5 = SNetIdxVecCreateCopy(idxv3);
 
     SNetIdxVecPopRight(idxv3, 10);
     printf("%u: ", SNetIdxVecGetLen(idxv3)); print_idxv(idxv3); printf("\n\n");

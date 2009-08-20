@@ -1,7 +1,7 @@
 #include "snet.utc.h"
 
 #define T 0
-// #define PRINT_STDOUT  
+#define PRINT_STDOUT  
 
 #define LOAD_THRESSHOLD 1
 // #define LOAD_THRESSHOLD 10000000

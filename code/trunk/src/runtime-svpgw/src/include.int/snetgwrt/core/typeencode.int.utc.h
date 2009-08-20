@@ -85,6 +85,11 @@ SNetTencVectorContainsItem(
 extern unsigned int
 SNetTencVectorCompare(const snet_vector_t *vec1, const snet_vector_t *vec2);
 
+/*---*/
+
+extern const int*
+SNetTencVectorToArray(const snet_vector_t *vec, bool alloc_new);
+
 /*----------------------------------------------------------------------------*/
 /* Variant encoding functions */
 

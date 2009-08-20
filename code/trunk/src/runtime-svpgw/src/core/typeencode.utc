@@ -241,7 +241,8 @@ bool SNetTencVectorContainsItem(
     return false;
 }
 
-unsigned int SNetTencVectorCompare(
+unsigned int
+SNetTencVectorCompare(
     const snet_vector_t *vec1, const snet_vector_t *vec2)
 {
     if (vec1 == NULL || vec2 == NULL) {
@@ -264,6 +265,24 @@ unsigned int SNetTencVectorCompare(
     }
 
     return matched_items;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const int* 
+SNetTencVectorToArray(const snet_vector_t *vec, bool alloc_new)
+{
+    assert(vec != NULL);
+
+    if (!alloc_new)
+        return vec->items;
+
+    int *v = (int *) 
+        SNetMemAlloc(vec->sz * sizeof(int));
+
+    SNetMemCopy(vec->items, v, vec->sz * sizeof(int));
+    return v;
 }
 
 /*----------------------------------------------------------------------------*/

@@ -3,10 +3,12 @@ SLN_NAME := sln
 #---
 
 CONFIGS      := debug release
-CONFIGS      += debug_mb release_mb
-
 CONFIGS_EXT  := debug_libs release_libs
+
+ifneq ($(strip $(WITH_NO_SEP)),true)
+CONFIGS      += debug_mb release_mb
 CONFIGS_EXT  += debug_libs_mb release_libs_mb
+endif
 
 #---
 
