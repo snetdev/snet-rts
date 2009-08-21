@@ -39,21 +39,21 @@ include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
-INCLUDE_DIRS :=              	             \
-	$(SOURCE_DIR)                            \
-	$(SOURCE_DIR)/ts00                       \
-	$(SOURCE_DIR)/ts01                       \
-	$(SOURCE_DIR)/ts02                       \
-	$(SOURCE_DIR)/ocrad                      \
-	$(SOURCE_DIR)/../common                  \
-	                                         \
-	$(SOURCE_DIR)/../../include              \
-	$(SOURCE_DIR)/../../include.int          \
-	$(SOURCE_DIR)/../../include.snetc        \
-                                             \
-	$(SOURCE_DIR)/../../include/snetgwrt     \
-	$(SOURCE_DIR)/../../include.int/snetgwrt \
-                                             \
+INCLUDE_DIRS :=              	                \
+	$(SOURCE_DIR)                               \
+	$(SOURCE_DIR)/ts00                          \
+	$(SOURCE_DIR)/ts01                          \
+	$(SOURCE_DIR)/ts02                          \
+	$(SOURCE_DIR)/ocrad                         \
+	$(SOURCE_DIR)/../common                     \
+	                                            \
+	$(SOURCE_DIR)/../../include/public          \
+	$(SOURCE_DIR)/../../include/intern          \
+	$(SOURCE_DIR)/../../include/snetc           \
+                                                \
+	$(SOURCE_DIR)/../../include/public/snetgwrt \
+	$(SOURCE_DIR)/../../include/intern/snetgwrt \
+                                                \
 	$(call NONSTD_LIB,UTCPTL,INCLUDE)
 
 #-------------------------------------------------------------------------------

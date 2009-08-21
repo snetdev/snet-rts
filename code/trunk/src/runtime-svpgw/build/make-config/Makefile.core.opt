@@ -39,12 +39,12 @@ include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
-INCLUDE_DIRS :=              		           \
-	$(SOURCE_DIR)                              \
-                                               \
-	$(SOURCE_DIR)/../include/snetgwrt/         \
-	$(SOURCE_DIR)/../include.int/snetgwrt/core \
-                                               \
+INCLUDE_DIRS :=              		              \
+	$(SOURCE_DIR)                                 \
+                                                  \
+	$(SOURCE_DIR)/../include/public/snetgwrt      \
+	$(SOURCE_DIR)/../include/intern/snetgwrt/core \
+                                                  \
 	$(call NONSTD_LIB,UTCPTL,INCLUDE)
 
 #-------------------------------------------------------------------------------

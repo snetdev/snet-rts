@@ -46,15 +46,15 @@ include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
-INCLUDE_DIRS :=              		           \
-	$(SOURCE_DIR)                              \
-                                               \
-	$(SOURCE_DIR)/../include                   \
-	$(SOURCE_DIR)/../include/snetgwrt          \
-                                               \
-	$(SOURCE_DIR)/../include.int/snetgwrt      \
-	$(SOURCE_DIR)/../include.int/snetgwrt/sane \
-                                               \
+INCLUDE_DIRS :=              		              \
+	$(SOURCE_DIR)                                 \
+                                                  \
+	$(SOURCE_DIR)/../include/intern               \
+	$(SOURCE_DIR)/../include/public               \
+	$(SOURCE_DIR)/../include/public/snetgwrt      \
+	$(SOURCE_DIR)/../include/intern/snetgwrt      \
+	$(SOURCE_DIR)/../include/intern/snetgwrt/sane \
+                                                  \
 	$(call NONSTD_LIB,UTCPTL,INCLUDE)
 
 #-------------------------------------------------------------------------------
