@@ -9,6 +9,7 @@ UCLINUX_BUILD_USER := 1
 
 #---
 
+CCold  := $(CC)
 CXXold := $(CXX)
 ARold  := $(AR)
 LDold  := $(LD)
@@ -35,6 +36,7 @@ LD_mb  := $(LD)
 #---
 
 ifdef PETALINUX
+CC  := $(CCold)
 CXX := $(CXXold)
 AR  := $(ARold)
 LD  := $(LDold)
