@@ -2,25 +2,103 @@ module SAC4SNetFibreIO;
 
 use Structures: all;
 use StdIO: { File};
-use FibreIO: all;
 
 export {PrintIntArray, PrintFloatArray, PrintDoubleArray,
         ScanIntArray, ScanFloatArray, ScanDoubleArray};
 
+
+/** SACimpl  ********************************************************/
+
+external  int    FibreScanInt( File &stream);
+  #pragma linksign[0,1]
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/ScanInt.o"
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/lex.FibreScan.o"
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/FibreScan.tab.o"
+
+external  float  FibreScanFloat( File &stream);
+  #pragma linksign[0,1]
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/ScanFlt.o"
+
+external  double FibreScanDouble( File &stream);
+  #pragma linksign[0,1]
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/ScanDbl.o"
+
+external  int[*]  FibreScanIntArray( File &stream);
+  #pragma refcounting [0]
+  #pragma linksign[1,2]
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/ScanIntArr.o"
+
+external  float[*]  FibreScanFloatArray( File &stream);
+  #pragma refcounting [0]
+  #pragma linksign[1,2]
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/ScanFltArr.o"
+
+external  double[*]  FibreScanDoubleArray( File &stream);
+  #pragma refcounting [0]
+  #pragma linksign[1,2]
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/ScanDblArr.o"
+
+
+external void FibrePrint( File &stream, int DIM, int[+] SHAPE, int[+] ARRAY);
+  #pragma linkname "FibrePrintIntArray"
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/FibrePrint.o"
+
+external void FibrePrint( File &stream, int DIM, int[+] SHAPE, float[+] ARRAY);
+  #pragma linkname "FibrePrintFloatArray"
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/FibrePrint.o"
+
+external void FibrePrint( File &stream, int DIM, int[+] SHAPE, double[+] ARRAY);
+  #pragma linkname "FibrePrintDoubleArray"
+  #pragma linkobj "$SACBASE/stdlib/world/stdio/src/FibreIO/FibrePrint.o"
+
+inline void FibrePrint(File &stream, int[+] arr)
+{
+  SAC4SNetFibreIO::FibrePrint(stream, dim(arr), shape(arr), arr);
+}
+
+inline void FibrePrint(File &stream, int arr)
+{
+  File::fprintf(stream, "%d\n", arr);
+}
+
+inline void FibrePrint(File &stream, float[+] arr)
+{
+  SAC4SNetFibreIO::FibrePrint(stream, dim(arr), shape(arr), arr);
+}
+
+inline void FibrePrint(File &stream, float arr)
+{
+  File::fprintf(stream, "%.16f\n", arr);
+}
+
+inline void FibrePrint(File &stream, double[+] arr)
+{
+  SAC4SNetFibreIO::FibrePrint(stream, dim(arr), shape(arr), arr);
+}
+
+inline void FibrePrint(File &stream, double arr)
+{
+  File::fprintf(stream, "%.16f\n", arr);
+}
+
+
+
+
+
 /** Printing ********************************************************/
 void PrintIntArray( File &f, int[+] A)
 {
-   FibrePrint( f, A);
+   SAC4SNetFibreIO::FibrePrint( f, A);
 }
 
 void PrintDoubleArray( File &f, double[+] A)
 {
-   FibrePrint( f, A);
+   SAC4SNetFibreIO::FibrePrint( f, A);
 }
 
 void PrintFloatArray( File &f, float[+] A)
 {
-   FibrePrint( f, A);
+   SAC4SNetFibreIO::FibrePrint( f, A);
 }
 
 
@@ -28,15 +106,15 @@ void PrintFloatArray( File &f, float[+] A)
 /** Scanning *********************************************************/
 int[+] ScanIntArray( File &f, int[+] shp)
 {
-  return( FibreScanIntArray( f));
+  return( SAC4SNetFibreIO::FibreScanIntArray( f));
 }
 
 float[+] ScanFloatArray( File &f, int[+] shp)
 {
-  return( FibreScanFloatArray( f));
+  return( SAC4SNetFibreIO::FibreScanFloatArray( f));
 }
 
 double[+] ScanDoubleArray( File &f, int[+] shp)
 {
-  return( FibreScanDoubleArray( f));
+  return( SAC4SNetFibreIO::FibreScanDoubleArray( f));
 }
