@@ -4,7 +4,7 @@ core
 gw
 sane
 #netif
-#svp4snetc
+svp4snetc
 
 #---
 

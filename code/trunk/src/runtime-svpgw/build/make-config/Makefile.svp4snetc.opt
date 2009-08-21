@@ -1,0 +1,61 @@
+PROJ_NAME := svp4snetc
+LIB_NAME  := lib$(PROJ_NAME)
+
+#---
+
+CONFIGS   := debug release
+
+#---
+
+SOURCE_DIR  := ../../src/svp4snetc
+SCRIPTS_DIR := ../../build-tools
+
+#---
+
+INTERM_DIR  := intermediate
+TARGET_DIR  := ..
+
+#---
+
+SRC_FILES_LST := SrcFiles.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := ../make-config
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# The following file that is being included contains functions that allow 
+# to deal with libraries / frameworks that are not usually found installed
+# on a system (e.g. uTC-PTL library) and from this point on that functionality 
+# will be required.
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+INCLUDE_DIRS :=                        \
+	$(SOURCE_DIR)/../include/svp4snetc \
+	$(call NONSTD_LIB,SNET,INCLUDE)
+
+#---
+
+LIB_DIRS :=
+
+#-------------------------------------------------------------------------------
+# Build Toolsets!
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.toolsets
+
+#-------------------------------------------------------------------------------
+# This is built as a shared object library
+# and thus it requires a few extra options
+# for the linker
+#
+LD_FLAGS := $(LD_FLAGS) -shared -dy -Wl -allow-shlib-undefined
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+
