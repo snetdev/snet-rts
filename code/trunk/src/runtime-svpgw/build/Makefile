@@ -111,7 +111,7 @@ $(1)_$(2): $$(foreach p,$$(PROJ_DEP_$(2)),$(1)_$$(p))
 		$$(PROJ_CFG_$(2)_$(1)) PRINT_INDENT=$$(PRINT_INDENT)xxxx
 
 clean-$(1)_$(2):
-	$$(call print,,"Cleaning $(2) \($(1)\)")
+	$$(call print,,"Cleaning $(2) \($$(PROJ_CFG_$(2)_$(1))\)...")
 	
 	$$(MAKE) -C           \
 		$$(PROJ_DIR_$(2)) \
