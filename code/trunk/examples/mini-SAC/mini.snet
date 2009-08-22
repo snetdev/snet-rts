@@ -1,19 +1,15 @@
-<?xml version="1.0"?>
-<metadata xmlns="snet-home.org" >
-  <interface name="SAC4SNet" default="true" />
-</metadata>
+  <metadata>
+   <boxdefault>
+     <interface value="SAC4SNet" />
+     <SACmodule>mini</SACmodule>
+   </boxdefault>
+  </metadata>
 
 net mini {
 
-  <?xml version="1.0"?>
-    <metadata xmlns="snet-home.org" >
+    <metadata>
       <box name="boxA" >
-        <SACmodule>mini</SACmodule>
         <SACboxfun>A</SACboxfun>
-      </box>
-      <box name="B" >
-        <SACmodule>mini</SACmodule>
-        <SACboxfun>B</SACboxfun>
       </box>
     </metadata>
 
