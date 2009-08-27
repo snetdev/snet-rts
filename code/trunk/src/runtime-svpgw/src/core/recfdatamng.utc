@@ -77,7 +77,7 @@ decrease_dcptr_refcnt(snet_rec_fdata_descriptor_t *dcptr)
         return;
     }
 
-    snet_bli_freefptr_t freefun = SNetGetFreeFun(dcptr->blid);
+    snet_bli_freefptr_t freefun = SNetBliGetFreeFun(dcptr->blid);
 
     if (freefun == NULL && dcptr->dptr != NULL) {
         SNetReportWarning(
@@ -180,7 +180,7 @@ SNetRecFieldDataCopy(
     }
 
     if (__chk_flag(lflags, REC_FDATA_COPY_SERIALIZED_FLAG)) {
-        snet_bli_serfptr_t serfun = SNetGetSerializationFun(dcptr->blid);
+        snet_bli_serfptr_t serfun = SNetBliGetSerializationFun(dcptr->blid);
 
         if (serfun == NULL) {
             sz  = 0;
@@ -228,7 +228,7 @@ SNetRecFieldDataCopy(
         }
 
     } else {
-        snet_bli_copyfptr_t cpyfun = SNetGetCopyFun(dcptr->blid);
+        snet_bli_copyfptr_t cpyfun = SNetBliGetCopyFun(dcptr->blid);
 
         sz = 0;
         

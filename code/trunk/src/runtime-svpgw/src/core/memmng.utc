@@ -292,7 +292,8 @@ get_block_dataptr_from_hdr(const snet_datablk_header_t *hdr)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void SNetMemMngSubSystemInit()
+void
+SNetMemMngSubSystemInit()
 {
     if (IS_INITIALIZED) {
         return;
@@ -323,7 +324,8 @@ void SNetMemMngSubSystemInit()
 
 /*----------------------------------------------------------------------------*/
 
-void SNetMemMngSubSystemDestroy()
+void
+SNetMemMngSubSystemDestroy()
 {
     if (!IS_INITIALIZED) {
         return;
@@ -346,7 +348,8 @@ void SNetMemMngSubSystemDestroy()
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void* SNetMaskPointer(const void *ptr)
+void*
+SNetMaskPointer(const void *ptr)
 {
 #ifdef SVPSNETGWRT_NO_POINTER_MASKING
     return (void *) ptr;
@@ -363,7 +366,8 @@ void* SNetMaskPointer(const void *ptr)
 #endif
 }
 
-void* SNetUnmaskPointer(const void *ptr)
+void*
+SNetUnmaskPointer(const void *ptr)
 {
 #ifdef SVPSNETGWRT_NO_POINTER_MASKING
     return (void *) ptr;
@@ -375,7 +379,8 @@ void* SNetUnmaskPointer(const void *ptr)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-size_t SNetMemGetBlockSize(const void *p)
+size_t
+SNetMemGetBlockSize(const void *p)
 {
     if (p == NULL) {
         return 0;
@@ -389,12 +394,14 @@ size_t SNetMemGetBlockSize(const void *p)
 /*----------------------------------------------------------------------------*/
 
 #ifdef SVPSNETGWRT_MONITOR_MALLOC
-size_t SNetMemGetAllocSize()
+size_t
+SNetMemGetAllocSize()
 {
     return (size_t)(MALLOC_SZ);
 }
 
-unsigned long SNetMemGetAllocCount()
+unsigned long
+SNetMemGetAllocCount()
 {
     return MALLOC_COUNT;
 }
@@ -403,7 +410,8 @@ unsigned long SNetMemGetAllocCount()
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void* SNetMemAlloc(size_t sz)
+void*
+SNetMemAlloc(size_t sz)
 {
     void *p = SNetMemTryAlloc(sz);
 
@@ -429,7 +437,8 @@ void* SNetMemRealloc(void *p, size_t sz)
 
 /*----------------------------------------------------------------------------*/
 
-void* SNetMemTryAlloc(size_t sz)
+void*
+SNetMemTryAlloc(size_t sz)
 {
     snet_datablk_header_t *hdr = 
         (snet_datablk_header_t *) 
@@ -453,7 +462,8 @@ void* SNetMemTryAlloc(size_t sz)
 
 /*----------------------------------------------------------------------------*/
 
-void* SNetMemTryRealloc(void *p, size_t sz)
+void*
+SNetMemTryRealloc(void *p, size_t sz)
 {
     assert(p != NULL);
 
@@ -493,7 +503,8 @@ void* SNetMemTryRealloc(void *p, size_t sz)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-snet_ref_t SNetMemCreateRef(void *p, int type)
+snet_ref_t
+SNetMemCreateRef(void *p, int type)
 {
     assert(p != NULL);
 
@@ -534,7 +545,8 @@ snet_ref_t SNetMemCreateRef(void *p, int type)
 /*----------------------------------------------------------------------------*/
 
 #ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
-void* SNetMemGetPtr(const snet_ref_t ref)
+void*
+SNetMemGetPtr(const snet_ref_t ref)
 {
     snet_reflookup_entry_t *ltbl_entry = find_reflookup_tbl_entry(ref);
 
@@ -545,7 +557,8 @@ void* SNetMemGetPtr(const snet_ref_t ref)
     return ltbl_entry->data;
 }
 
-void* SNetMemGetPtrWithType(const snet_ref_t ref, int type)
+void*
+SNetMemGetPtrWithType(const snet_ref_t ref, int type)
 {
     snet_reflookup_entry_t *ltbl_entry = find_reflookup_tbl_entry(ref);
 
@@ -561,12 +574,14 @@ void* SNetMemGetPtrWithType(const snet_ref_t ref, int type)
 }
 
 #else
-void* SNetMemGetPtr(const snet_ref_t ref)
+void*
+SNetMemGetPtr(const snet_ref_t ref)
 {
     return (void *)((uintptr_t)(ref));
 }
 
-void* SNetMemGetPtrWithType(const snet_ref_t ref, int type)
+void*
+SNetMemGetPtrWithType(const snet_ref_t ref, int type)
 {
     return (void *)((uintptr_t)(ref));
 }
@@ -575,7 +590,8 @@ void* SNetMemGetPtrWithType(const snet_ref_t ref, int type)
 
 /*----------------------------------------------------------------------------*/
 
-snet_ref_t SNetMemGetRef(const void *p)
+snet_ref_t
+SNetMemGetRef(const void *p)
 {
 #ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
     snet_datablk_header_t *hdr = (
@@ -589,7 +605,8 @@ snet_ref_t SNetMemGetRef(const void *p)
 #endif
 }
 
-snet_ref_t SNetMemGetExternDataRef(const void *p)
+snet_ref_t
+SNetMemGetExternDataRef(const void *p)
 {
 #ifdef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
     snet_ref_t ref = NULL_REF;
@@ -629,7 +646,8 @@ snet_ref_t SNetMemGetExternDataRef(const void *p)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void SNetMemFree(void *p)
+void
+SNetMemFree(void *p)
 {
     assert(p != NULL);
 
@@ -645,7 +663,8 @@ void SNetMemFree(void *p)
     free(hdr);
 }
 
-void SNetMemDestroyRef(const snet_ref_t ref)
+void
+SNetMemDestroyRef(const snet_ref_t ref)
 {
     assert(ref != NULL_REF);
 
@@ -657,12 +676,6 @@ void SNetMemDestroyRef(const snet_ref_t ref)
             SNetListItemGetValueByRef(REF_LOOKUP, ref2uint(ref));
 
     if (lookup_entry != NULL) {
-        unlock_reflookup(true);
-        lock_reflookup(false);
-
-        SNetListRemove(REF_LOOKUP, ref2uint(ref));
-        unlock_reflookup(false);
-
         if (lookup_entry->type != DATABLK_TYPE_EXTERN) {
             snet_datablk_header_t *hdr = 
                 get_block_header(lookup_entry->data);
@@ -670,7 +683,7 @@ void SNetMemDestroyRef(const snet_ref_t ref)
             hdr->ref = NULL_REF;
         }
 
-        return;
+        SNetListRemove(REF_LOOKUP, ref2uint(ref));
     }
 
     unlock_reflookup(true);
@@ -710,7 +723,8 @@ SNetMemDecreaseRefCount(void *p)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-void SNetMemSet(void *p, int value, size_t sz)
+void
+SNetMemSet(void *p, int value, size_t sz)
 {
     assert(p != NULL);
     assert(sz != 0);
@@ -718,7 +732,8 @@ void SNetMemSet(void *p, int value, size_t sz)
     memset(p, value, sz);
 }
 
-void SNetMemCopy(const void *src, void *dest, size_t count)
+void
+SNetMemCopy(const void *src, void *dest, size_t count)
 {
     assert(src != NULL);
     assert(dest != NULL);

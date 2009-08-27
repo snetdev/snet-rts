@@ -52,11 +52,14 @@ LIB_DIRS_release_mb      :=
 #---
 
 LD_LIBS_FLAGS_release_mb := -lsnets-mb -lcommon-mb
+
 LD_LIBS_FLAGS_release_mb += -lsvp-snetgwsane-mb
 LD_LIBS_FLAGS_release_mb += -lsvp-snetgwcore-mb
+
 LD_LIBS_FLAGS_release_mb += -Wl,--whole-archive
 LD_LIBS_FLAGS_release_mb += -lsep_common-mb
 LD_LIBS_FLAGS_release_mb += -Wl,--no-whole-archive
+
 LD_LIBS_FLAGS_release_mb += -lsep_sane-mb -lutcptl-mb -lpthread
 
 #---

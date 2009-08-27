@@ -3,7 +3,7 @@
 core
 gw
 sane
-#netif
+netif
 svp4snetc
 
 #---

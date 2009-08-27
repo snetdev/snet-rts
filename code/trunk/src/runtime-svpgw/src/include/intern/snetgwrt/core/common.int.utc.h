@@ -61,7 +61,6 @@ $include <string.h>
  */
 
 // Errors!!
-
 #define SNET_ERR_NONE                   0x0000
 #define SNET_ERR_UNEXPECTED             0x0001
 #define SNET_ERR_INIT                   0x0002
@@ -70,7 +69,6 @@ $include <string.h>
 #define SNET_ERR_PLACE                  0x0005
 
 // Warnings!!
-
 #define SNET_WRN_NONE                   0x0000
 #define SNET_WRN_UNSUPPORTED            0x0001
 #define SNET_WRN_IGNORED                0x0002

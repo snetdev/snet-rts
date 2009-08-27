@@ -218,9 +218,9 @@ int SNetMain__ts00(int argc, char* argv[])
     }
 
     // Initialize runtime
-    SNetGlobalInitialize();
-
-    SNetGlobalRegisterInterface(
+    SNetGlobalGwInit();
+    
+    SNetGlobalBliRegister(
         0, 
         &free_record_field, &copy_record_field, NULL, NULL);
 
@@ -232,7 +232,7 @@ int SNetMain__ts00(int argc, char* argv[])
     
     // Cleanup
     SNetDomainDestroy(snetd);
-    SNetGlobalDestroy();
+    SNetGlobalGwDestroy();
 
     return ret;
 }

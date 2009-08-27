@@ -77,7 +77,7 @@ init_normal_node(snet_gnode_t *n, snet_gnode_flags_t flags)
     n->data.normal->lnk.node        = NULL;
     n->data.normal->lnk.cached_node = NULL;
 
-    SNetGWSetupNormalGNodeHndFuncs(n);
+    SNetGwSetupNormalGNodeHndFuncs(n);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1067,7 +1067,7 @@ SNetSyncCellGNodeAddState(snet_gnode_t *gnode, const snet_idxvec_t *idx)
     };
 
     for (unsigned int i=0; i < patterns_cnt; i++) {
-        new_state.mhnds[i] = NULL;
+        new_state.mhnds[i]  = NULL;
     }
 
     unsigned int new_state_id = 

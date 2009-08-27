@@ -39,8 +39,10 @@
 struct gwhandle {
     snet_handle_t        base;
     snet_conslst_node_t *cons_node;
+
     snet_place_t         box_plc;
     void                *synccell_state;
+    bool                 synccell_definite_match;
 
 }; // struct gwhandle
 
@@ -111,9 +113,10 @@ SNetGwHndInit(
         &vtbl_boxsignget_fun,
         &vtbl_snetdhostplcget_fun);
  
-    hnd->cons_node      = cons_node;
-    hnd->box_plc        = SNetPlaceGetNull();
-    hnd->synccell_state = NULL;
+    hnd->cons_node               = cons_node;
+    hnd->box_plc                 = SNetPlaceGetNull();
+    hnd->synccell_state          = NULL;
+    hnd->synccell_definite_match = false;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -172,6 +175,12 @@ SNetGwHndGetSyncCellState(const snet_gwhandle_t *hnd)
     assert(hnd != NULL); return hnd->synccell_state;
 }
 
+bool
+SNetGwHndGetSyncCellDefiniteMatch(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->synccell_definite_match;
+}
+
 snet_place_t
 SNetGwHndGetBoxSelectedPlace(const snet_gwhandle_t *hnd)
 {
@@ -195,6 +204,13 @@ SNetGwHndSetSyncCellState(snet_gwhandle_t *hnd, void *state)
 {
     assert(hnd != NULL);
     hnd->synccell_state = state;
+}
+
+void
+SNetGwHndSetSyncCellDefiniteMatch(snet_gwhandle_t *hnd, bool value)
+{
+    assert(hnd != NULL);
+    hnd->synccell_definite_match = value;
 }
 
 void

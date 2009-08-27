@@ -92,7 +92,7 @@ static bool run_unit_test(unsigned int tid)
 {
     bool ret = true;
 
-    SNetGlobalInitialize();
+    SNetGlobalGwInit();
 
     printf(
         "Started at "
@@ -199,7 +199,7 @@ static bool run_unit_test(unsigned int tid)
     
     /*---*/
 
-    SNetGlobalDestroy();
+    SNetGlobalGwDestroy();
 
     return ret;
 }

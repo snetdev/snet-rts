@@ -41,9 +41,9 @@
  * is supposed to be called by parts of the runtime that work on
  * top of the core (e.g. the "gw" library).
  */
-extern void SNetGlobalInitializeCore();
-extern void SNetGlobalDestroyCore();
-extern void SNetGlobalDestroyCoreEx(bool force);
+extern void SNetGlobalCoreInit();
+extern void SNetGlobalCoreDestroy();
+extern void SNetGlobalCoreDestroyEx(bool force);
 
 #endif // __SVPSNETGWRT_CORE_SNET_INT_H
 

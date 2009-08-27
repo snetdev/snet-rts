@@ -50,14 +50,12 @@
  */
 
 // Errors!!
-
 #define SNET_GWERR_NONE                 0x0000
 #define SNET_GWERR_TYPE_ERROR           0x0001
 #define SNET_GWERR_BOX                  0x0002
 #define SNET_GWERR_GCTOR_INV_RETVAL     0x0003
 
 // Warnings!!
-
 #define SNET_GWWRN_NONE                 0x0000
 #define SNET_GWWRN_IGNORED_ENTITY       0x0001
 #define SNET_GWWRN_NULL_NETOUT_TFUN     0x0002

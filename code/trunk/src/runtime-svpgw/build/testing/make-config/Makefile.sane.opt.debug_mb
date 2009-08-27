@@ -51,11 +51,14 @@ LIB_DIRS_debug_mb :=
 #---
 
 LD_LIBS_FLAGS_debug_mb := -lsnets-mb_dbg -lcommon-mb_dbg
+
 LD_LIBS_FLAGS_debug_mb += -lsvp-snetgwsane-mb_dbg
 LD_LIBS_FLAGS_debug_mb += -lsvp-snetgwcore-mb_dbg
+
 LD_LIBS_FLAGS_debug_mb += -Wl,--whole-archive
 LD_LIBS_FLAGS_debug_mb += -lsep_common-mb_dbg
 LD_LIBS_FLAGS_debug_mb += -Wl,--no-whole-archive
+
 LD_LIBS_FLAGS_debug_mb += -lsep_sane-mb_dbg -lutcptl-mb_dbg -lpthread
 
 #---

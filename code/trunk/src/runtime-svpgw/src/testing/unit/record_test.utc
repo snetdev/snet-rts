@@ -49,7 +49,7 @@ static void do_test()
 
     /*---*/
 
-    SNetGlobalRegisterInterface(
+    SNetGlobalBliRegister(
         0, 
         &free_record_field, &copy_record_field, NULL, NULL);
 

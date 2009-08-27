@@ -45,8 +45,8 @@
  * functions below are the only ones that are "internal" used only within
  * this file we declare them here.
  */
-extern void SNetBLISubSystemInit();
-extern void SNetBLISubSystemDestroy();
+extern void SNetBliSubSystemInit();
+extern void SNetBliSubSystemDestroy();
 
 /**
  * Same as the above 2 functions but for
@@ -69,7 +69,7 @@ extern void SNetErrorSubSystemDestroy();
  * library has!
  */
 extern thread void 
-SNetGWFork(snet_handle_t *hnd, snet_record_t *rec);
+SNetGwFork(snet_handle_t *hnd, snet_record_t *rec);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -80,12 +80,12 @@ SNetGWFork(snet_handle_t *hnd, snet_record_t *rec);
  * top of the core (e.g. the "gw" library).
  */
 
-void SNetGlobalInitializeCore()
+void SNetGlobalCoreInit()
 {
     SNetErrorSubSystemInit();
     SNetMemMngSubSystemInit();
     SNetPlaceMngSubSystemInit();
-    SNetBLISubSystemInit();
+    SNetBliSubSystemInit();
 
     /**
      * Call this again to finalize initializtion
@@ -97,12 +97,12 @@ void SNetGlobalInitializeCore()
 
 /*----------------------------------------------------------------------------*/
 
-void SNetGlobalDestroyCore()
+void SNetGlobalCoreDestroy()
 {
-    SNetGlobalDestroyCoreEx(true);
+    SNetGlobalCoreDestroyEx(true);
 }
 
-void SNetGlobalDestroyCoreEx(bool force)
+void SNetGlobalCoreDestroyEx(bool force)
 {
     if (!force) {
         /**
@@ -114,7 +114,7 @@ void SNetGlobalDestroyCoreEx(bool force)
 
     SNetErrorSubSystemDestroy();
  
-    SNetBLISubSystemDestroy();
+    SNetBliSubSystemDestroy();
     SNetPlaceMngSubSystemDestroy();
     SNetMemMngSubSystemDestroy();
     SNetErrorSubSystemDestroy();
@@ -170,7 +170,7 @@ void SNetOut(snet_handle_t *hnd, snet_record_t *rec)
             SNetHndGetNetDomainHostPlace(hnd));
 
     // Ok now we can invoke the GW!!
-    create (fid; snetdplc; 0; 0; 1; 1;;) SNetGWFork(hnd, rec_local);
+    create (fid; snetdplc; 0; 0; 1; 1;;) SNetGwFork(hnd, rec_local);
     sync (fid);
 }
 

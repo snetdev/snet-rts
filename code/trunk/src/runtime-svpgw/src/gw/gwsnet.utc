@@ -86,7 +86,7 @@ SNetPushIn(snet_domain_t *snetd, snet_record_t *rec)
     family fid;
 
     create (fid; plc; 0; 0; 1; 1;;) 
-        SNetGWInit(SNetMemGetRef(snetd), (snet_handle_t *)(NULL), rec);
+        SNetGwInit(SNetMemGetRef(snetd), (snet_handle_t *)(NULL), rec);
 
     sync(fid);
 }
@@ -172,6 +172,14 @@ SNetGetBoxSelectedResource(const snet_handle_t *hnd)
         return SNetPlaceToUTCPlace(plc);
     else
         return SNetPlaceToUTCPlace(SNetPlaceGetMine());
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetWarnMissingBoxImplementation(snet_handle_t *hnd)
+{
+    SNetOnWarning();
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

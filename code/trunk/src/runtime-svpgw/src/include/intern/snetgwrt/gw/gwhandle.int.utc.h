@@ -75,6 +75,9 @@ SNetGwHndGetConsNodeRecord(const snet_gwhandle_t *hnd);
 extern void*
 SNetGwHndGetSyncCellState(const snet_gwhandle_t *hnd);
 
+extern bool
+SNetGwHndGetSyncCellDefiniteMatch(const snet_gwhandle_t *hnd);
+
 extern snet_place_t
 SNetGwHndGetBoxSelectedPlace(const snet_gwhandle_t *hnd);
 
@@ -86,6 +89,9 @@ SNetGwHndSetConsNode(
 
 extern void
 SNetGwHndSetSyncCellState(snet_gwhandle_t *hnd, void *state);
+
+extern void
+SNetGwHndSetSyncCellDefiniteMatch(snet_gwhandle_t *hnd, bool value);
 
 extern void
 SNetGwHndSetBoxSelectedPlace(snet_gwhandle_t *hnd, snet_place_t plc);

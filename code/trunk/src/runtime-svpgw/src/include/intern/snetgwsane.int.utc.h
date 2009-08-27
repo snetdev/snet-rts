@@ -10,7 +10,7 @@
                          
       -------------------------------------------------------------------
 
-    File Name      : snetsame.int.utc.h
+    File Name      : snetgwsane.int.utc.h
 
     File Type      : Header File
 

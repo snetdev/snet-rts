@@ -47,6 +47,7 @@ endif
 LD_LIBS_FLAGS_debug += -lcommon_dbg
 
 LD_LIBS_FLAGS_debug += -lsvp-snetgw_dbg
+LD_LIBS_FLAGS_debug += -lsvp-snetgwnetif_dbg
 LD_LIBS_FLAGS_debug += -lsvp-snetgwcore_dbg
 
 ifneq ($(strip $(WITH_NO_SEP)),true)

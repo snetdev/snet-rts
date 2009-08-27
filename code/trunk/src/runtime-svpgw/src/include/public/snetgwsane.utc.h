@@ -10,7 +10,7 @@
                          
       -------------------------------------------------------------------
 
-    File Name      : snetsane.utc.h
+    File Name      : snetgwsane.utc.h
 
     File Type      : Header File
 
@@ -30,7 +30,7 @@
 
 #include "snetgwcore.utc.h"
 
-#endif // __SVPSNETGWRT_SNET_GWRT_MASTER_HEADER
+#endif // __SVPSNETGWRT_SANE_MASTER_HEADER
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

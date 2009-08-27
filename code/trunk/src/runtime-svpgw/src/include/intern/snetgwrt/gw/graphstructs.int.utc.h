@@ -56,6 +56,8 @@ typedef struct {
     snet_idxvec_t    *idx;
     unsigned int      mpcnt;
     snet_gwhandle_t **mhnds;
+    snet_gwhandle_t **dmhnds;
+
 
 } snet_synccell_state_t;
 

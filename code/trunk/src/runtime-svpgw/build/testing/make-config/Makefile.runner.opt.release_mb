@@ -48,6 +48,7 @@ endif
 LD_LIBS_FLAGS_release_mb += -lcommon-mb
 
 LD_LIBS_FLAGS_release_mb += -lsvp-snetgw-mb
+LD_LIBS_FLAGS_release_mb += -lsvp-snetgwnetif-mb
 LD_LIBS_FLAGS_release_mb += -lsvp-snetgwcore-mb
 
 ifneq ($(strip $(WITH_NO_SEP)),true)

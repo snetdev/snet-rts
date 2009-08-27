@@ -58,7 +58,8 @@ static snet_list_t *BLI_REGISTRY = NULL;
 /*----------------------------------------------------------------------------*/
 /* Module's static functions */
 
-static unsigned int find_bli_with_id(snet_bli_id_t id)
+static unsigned int
+find_bli_with_id(snet_bli_id_t id)
 {
     for (unsigned int it = SNetListBegin(BLI_REGISTRY); 
          it != 0; it = SNetListItemGetNext(BLI_REGISTRY, it)) {
@@ -79,7 +80,8 @@ static unsigned int find_bli_with_id(snet_bli_id_t id)
 /*----------------------------------------------------------------------------*/
 /* Sub-system initialization functions */
 
-void SNetBLISubSystemInit()
+void
+SNetBliSubSystemInit()
 {
     if (BLI_REGISTRY != NULL) {
         return;
@@ -90,7 +92,8 @@ void SNetBLISubSystemInit()
 
 /*----------------------------------------------------------------------------*/
 
-void SNetBLISubSystemDestroy()
+void
+SNetBliSubSystemDestroy()
 {
     if (BLI_REGISTRY == NULL) {
         return;
@@ -104,7 +107,8 @@ void SNetBLISubSystemDestroy()
 /*----------------------------------------------------------------------------*/
 /* Interface registration function */
 
-bool SNetGlobalRegisterInterface(
+bool
+SNetGlobalBliRegister(
     snet_bli_id_t id,
     snet_bli_freefptr_t  freefun,
     snet_bli_copyfptr_t  copyfun,
@@ -133,7 +137,7 @@ bool SNetGlobalRegisterInterface(
 /* Functions to retrieve box language interface functions by interface id */
 
 snet_bli_freefptr_t
-SNetGetFreeFun(snet_bli_id_t id)
+SNetBliGetFreeFun(snet_bli_id_t id)
 {
     assert(BLI_REGISTRY != NULL);
 
@@ -150,7 +154,7 @@ SNetGetFreeFun(snet_bli_id_t id)
 }
 
 snet_bli_copyfptr_t
-SNetGetCopyFun(snet_bli_id_t id)
+SNetBliGetCopyFun(snet_bli_id_t id)
 {
     assert(BLI_REGISTRY != NULL);
 
@@ -167,7 +171,7 @@ SNetGetCopyFun(snet_bli_id_t id)
 }
 
 snet_bli_serfptr_t
-SNetGetSerializationFun(snet_bli_id_t id)
+SNetBliGetSerializationFun(snet_bli_id_t id)
 {
     assert(BLI_REGISTRY != NULL);
 
@@ -184,7 +188,7 @@ SNetGetSerializationFun(snet_bli_id_t id)
 }
 
 snet_bli_deserfptr_t
-SNetGetDeserializationFun(snet_bli_id_t id)
+SNetBliGetDeserializationFun(snet_bli_id_t id)
 {
     assert(BLI_REGISTRY != NULL);
 

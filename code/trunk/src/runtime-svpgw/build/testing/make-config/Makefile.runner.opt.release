@@ -48,6 +48,7 @@ endif
 LD_LIBS_FLAGS_release += -lcommon
 
 LD_LIBS_FLAGS_release += -lsvp-snetgw
+LD_LIBS_FLAGS_release += -lsvp-snetgwnetif
 LD_LIBS_FLAGS_release += -lsvp-snetgwcore
 
 ifneq ($(strip $(WITH_NO_SEP)),true)

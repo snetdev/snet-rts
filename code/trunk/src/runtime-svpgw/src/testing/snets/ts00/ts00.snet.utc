@@ -11,10 +11,10 @@
  *
 */
 
+#include "tsboxes.utc.h"
+
 #include "ts00.h"
 #include "networkinterface.h"
-
-#include "tsboxes.utc.h"
 
 char *snet_ts00_labels[] = {
 	"E__ts00__None",

@@ -44,7 +44,7 @@
 /*----------------------------------------------------------------------------*/
 
 extern void
-SNetGWSetupNormalGNodeHndFuncs(snet_gnode_t *n);
+SNetGwSetupNormalGNodeHndFuncs(snet_gnode_t *n);
 
 /*---*/
 
@@ -54,12 +54,12 @@ SNetGWSetupNormalGNodeHndFuncs(snet_gnode_t *n);
  */
   
 extern thread void 
-SNetGWInit(
+SNetGwInit(
     snet_ref_t snetd, 
     snet_handle_t *hnd, snet_record_t *rec);
 
 extern thread void 
-SNetGWFork(snet_handle_t *hnd, snet_record_t *rec);
+SNetGwFork(snet_handle_t *hnd, snet_record_t *rec);
 
 #endif // __SVPSNETGWRT_GW_GW_INT_H
 

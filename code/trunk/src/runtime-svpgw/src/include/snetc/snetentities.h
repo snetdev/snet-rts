@@ -30,7 +30,7 @@
 #ifndef __SVPSNETGWRT_SNETC_SNETENTITIES_H
 #define __SVPSNETGWRT_SNETC_SNETENTITIES_H
 
-#include "snetgw.utc.h"
+#include "snet.utc.h"
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -67,7 +67,6 @@
 
 #define SNetEcreateList      SNetEListCreate
 #define SNetTencCreateVector SNetTencVectorCreate
-#define SNetGlobalInitialise SNetGlobalInitialize
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -80,6 +79,24 @@
  * the compiler generated code.
  */
 typedef snet_gnode_t snet_tl_stream_t;
+
+/*----------------------------------------------------------------------------*/
+
+static
+inline void
+SNetGlobalInitialise()
+{
+    SNetGlobalGwInit();
+    SNetGlobalNetIfInit();
+}
+
+static 
+inline void
+SNetGlobalDestroy()
+{
+    SNetGlobalNetIfDestroy();
+    SNetGlobalGwDestroy();
+}
 
 #endif // __SVPSNETGWRT_SNETC_SNETENTITIES_H
 

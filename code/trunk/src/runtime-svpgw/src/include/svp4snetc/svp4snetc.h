@@ -41,10 +41,10 @@
 /*----------------------------------------------------------------------------*/
 /**
  * Pointer to functions that generate the "actual"
- * box wrapper function.
+ * box wrapper generation function.
  */
 
-typedef char* (*snet_ifgenwrapper_fptr_t)(
+typedef char* (*snet_genwrapper_fptr_t)(
     char *, snet_input_type_enc_t *, snet_meta_data_enc_t *);
 
 /*----------------------------------------------------------------------------*/
@@ -53,17 +53,19 @@ typedef char* (*snet_ifgenwrapper_fptr_t)(
 extern "C" {
 #endif
 
-char* SVP4SNetGenBoxWrapper( 
+char*
+SVP4SNetGenBoxWrapper( 
     char *box_name,
     snet_input_type_enc_t *type,
     snet_meta_data_enc_t  *metadata);
 
-char* SVP4SNetGenBoxWrapperEx( 
+char*
+SVP4SNetGenBoxWrapperEx( 
     char *box_name,
     snet_input_type_enc_t *type,
     snet_meta_data_enc_t  *meta_data,
-    snet_ifgenwrapper_fptr_t decldef_genwrapper_fun,
-    snet_ifgenwrapper_fptr_t callstmnt_genwrapper_fun);
+    snet_genwrapper_fptr_t decldef_genwrapper_fun,
+    snet_genwrapper_fptr_t callstmnt_genwrapper_fun);
 
 #ifdef __cplusplus
 }

@@ -39,15 +39,15 @@
 /*----------------------------------------------------------------------------*/
 
 extern void
-SNetGlobalInitialize();
+SNetGlobalGwInit();
 
 /*---*/
 
 extern void
-SNetGlobalDestroy();
+SNetGlobalGwDestroy();
 
 extern void
-SNetGlobalDestroyEx(bool force);
+SNetGlobalGwDestroyEx(bool force);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -101,6 +101,16 @@ SNetGetOutputBufferSize(const snet_domain_t *snetd);
  */
 extern place
 SNetGetBoxSelectedResource(const snet_handle_t *hnd);
+
+/*----------------------------------------------------------------------------*/
+/**
+ * Function that can be used within "default" implementations
+ * of a box for a place in order to warn the user that the 
+ * box is not implemented on that place (see the "svp4snetc"
+ * compiler plugin for an example use of this function).
+ */
+extern void
+SNetWarnMissingBoxImplementation(snet_handle_t *hnd);
 
 #endif // __SVPSNETGWRT_GW_GW_H
 

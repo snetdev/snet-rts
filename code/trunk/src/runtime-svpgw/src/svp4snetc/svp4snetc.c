@@ -144,7 +144,7 @@ default_decldef_genwrapper(
     }
     
     STRAPPEND(code, ")\n{\n");
-    STRAPPEND(code, "  // SNetEmptyBox(hnd);\n}");
+    STRAPPEND(code, "  // SNetWarnMissingBoxImplementation(hnd);\n}");
 
     return code;
 }
@@ -208,8 +208,8 @@ char* SVP4SNetGenBoxWrapperEx(
     char *box_name,
     snet_input_type_enc_t *t,
     snet_meta_data_enc_t  *meta_data,
-    snet_ifgenwrapper_fptr_t decldef_genwrapper_fun,
-    snet_ifgenwrapper_fptr_t callstmnt_genwrapper_fun)
+    snet_genwrapper_fptr_t decldef_genwrapper_fun,
+    snet_genwrapper_fptr_t callstmnt_genwrapper_fun)
 {
     int i;
 

@@ -39,7 +39,6 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
-
 /**
  * These are declared here because they are
  * not being used anywhere else thus not included
@@ -60,9 +59,9 @@ SNetGwErrorSubSystemDestroy();
  */
 
 void
-SNetGlobalInitialize()
+SNetGlobalGwInit()
 {
-    SNetGlobalInitializeCore();
+    SNetGlobalCoreInit();
 
     SNetGwErrorSubSystemInit();
     SNetResMngSubSystemInit();
@@ -70,13 +69,13 @@ SNetGlobalInitialize()
 }
 
 void
-SNetGlobalDestroy()
+SNetGlobalGwDestroy()
 {
-    SNetGlobalDestroyEx(false);
+    SNetGlobalGwDestroyEx(false);
 }
 
 void
-SNetGlobalDestroyEx(bool force)
+SNetGlobalGwDestroyEx(bool force)
 {
     if (!force) {
         /**
@@ -90,7 +89,7 @@ SNetGlobalDestroyEx(bool force)
     SNetResMngSubSystemDestroy();
     SNetGwErrorSubSystemDestroy();
 
-    SNetGlobalDestroyCoreEx(force);
+    SNetGlobalCoreDestroyEx(force);
 }
 
 /*------------------------------- END OF FILE --------------------------------*/

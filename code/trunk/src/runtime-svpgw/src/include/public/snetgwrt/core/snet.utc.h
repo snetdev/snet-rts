@@ -108,7 +108,7 @@ extern void SNetGlobalSetErrorStream(FILE *stream);
  */
 
 extern bool
-SNetGlobalRegisterInterface(
+SNetGlobalBliRegister(
     snet_bli_id_t        id,
     snet_bli_freefptr_t  freefun,
     snet_bli_copyfptr_t  copyfun,
@@ -118,16 +118,16 @@ SNetGlobalRegisterInterface(
 /*---*/
 
 extern snet_bli_freefptr_t
-SNetGetFreeFun(snet_bli_id_t id);
+SNetBliGetFreeFun(snet_bli_id_t id);
 
 extern snet_bli_copyfptr_t
-SNetGetCopyFun(snet_bli_id_t id);
+SNetBliGetCopyFun(snet_bli_id_t id);
 
 extern snet_bli_serfptr_t
-SNetGetSerializationFun(snet_bli_id_t id);
+SNetBliGetSerializationFun(snet_bli_id_t id);
 
 extern snet_bli_deserfptr_t
-SNetGetDeserializationFun(snet_bli_id_t id);
+SNetBliGetDeserializationFun(snet_bli_id_t id);
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/

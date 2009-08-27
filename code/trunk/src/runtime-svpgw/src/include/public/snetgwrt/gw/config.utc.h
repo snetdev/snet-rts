@@ -40,7 +40,7 @@
  * symbols specific to the GW library.
  */
 
-#endif // __SVPSNETGWRT_CONFIG_H
+#endif // __SVPSNETGWRT_GW_CONFIG_H
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

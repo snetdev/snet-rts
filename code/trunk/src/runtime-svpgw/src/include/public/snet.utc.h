@@ -28,6 +28,7 @@
 #ifndef __SVPSNETRT_MASTER_HEADER
 #define __SVPSNETRT_MASTER_HEADER
 #include "snetgw.utc.h"
+#include "snetgwnetif.utc.h"
 #endif // __SVPSNETRT_MASTER_HEADER
 
 /*------------------------------- END OF FILE --------------------------------*/

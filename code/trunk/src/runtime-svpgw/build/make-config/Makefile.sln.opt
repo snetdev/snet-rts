@@ -28,14 +28,15 @@ BUILD_SPEC_OPT_DIR := make-config
 PROJ_DEP_core      :=
 PROJ_DEP_gw        := core
 PROJ_DEP_sane      := core
+PROJ_DEP_netif     := gw
 PROJ_DEP_svp4snetc :=
 
 #---
 
 ifneq ($(strip $(WITH_NO_SEP)),true)
-PROJ_DEP_testing := sane svp4snetc
+PROJ_DEP_testing := netif sane svp4snetc
 else
-PROJ_DEP_testing := gw svp4snetc
+PROJ_DEP_testing := netif svp4snetc
 endif
 
 #-------------------------------------------------------------------------------
@@ -66,6 +67,11 @@ PROJ_CFG_sane_release_mb      :=
 endif
 
 #---
+
+PROJ_CFG_netif_debug          := debug
+PROJ_CFG_netif_release        := release
+PROJ_CFG_netif_debug_mb       := debug_mb
+PROJ_CFG_netif_release_mb     := release_mb
 
 PROJ_CFG_svp4snetc_debug      := debug
 PROJ_CFG_svp4snetc_release    := release
@@ -107,10 +113,15 @@ endif
 
 #---
 
+PROJ_CFG_netif_debug_libs          := debug
+PROJ_CFG_netif_release_libs        := release
+PROJ_CFG_netif_debug_libs__mb      := debug_mb
+PROJ_CFG_netif_release_libs_mb     := release_mb
+
 PROJ_CFG_svp4snetc_debug_libs      := debug
 PROJ_CFG_svp4snetc_release_libs    := release
-PROJ_CFG_svp4snetc_debug_mb_libs   :=
-PROJ_CFG_svp4snetc_release_mb_libs :=
+PROJ_CFG_svp4snetc_debug_libs_mb   :=
+PROJ_CFG_svp4snetc_release_libs_mb :=
 
 #---
 
