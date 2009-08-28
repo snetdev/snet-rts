@@ -1,5 +1,7 @@
 .SUFFIXES:
 .DEFAULT : all
+.IGNORE  : clean
+.PHONY   : update-src-list
 
 #---
 
@@ -17,7 +19,9 @@ endif
 #-------------------------------------------------------------------------------
 # Cached variable must
 # be set first.
+ifeq ($(MAKELEVEL),0)
 -include Makefile.cache
+endif
 
 # Inclusion of options makefiles
 #
@@ -41,6 +45,7 @@ $(foreach cfg,$(CONFIGS),\
 #-------------------------------------------------------------------------------
 # Command line defined variables' value caching
 #
+ifeq ($(MAKELEVEL),0)
 ifeq ($(strip $(CMDLINE_VAR_CACHE)),true)
 define clean_cache
 rm -f Makefile.cache
@@ -57,6 +62,7 @@ endef
 $(foreach var,$(CMDLINE_CACHED_VARS),\
 	$(eval $(call cache_cmdline_var,$(var))))
 								
+endif
 endif
 
 #-------------------------------------------------------------------------------
@@ -111,11 +117,12 @@ $(1)_$(2): $$(foreach p,$$(PROJ_DEP_$(2)),$(1)_$$(p))
 		$$(PROJ_CFG_$(2)_$(1)) PRINT_INDENT=$$(PRINT_INDENT)xxxx
 
 clean-$(1)_$(2):
-	$$(call print,,"Cleaning $(2) \($(1)\)")
+	$$(call print,,"Cleaning $(2) \($$(PROJ_CFG_$(2)_$(1))\)...")
 	
-	$$(MAKE) -C           \
-		$$(PROJ_DIR_$(2)) \
-		clean-$$(PROJ_CFG_$(2)_$(1)) PRINT_INDENT=$$(PRINT_INDENT)xxxx
+	$$(MAKE) -C                                               \
+		$$(PROJ_DIR_$(2))                                     \
+		$$(foreach cfg, $$(PROJ_CFG_$(2)_$(1)),clean-$$(cfg)) \
+		PRINT_INDENT=$$(PRINT_INDENT)xxxx
 
 else
 $(1)_$(2):
@@ -138,6 +145,18 @@ $$(foreach p,$$(PROJ_NAMES),\
 
 endef
 
+#---
+
+define update_prj_srclst_tmpl
+.PHONY: update-src-list_$(1)
+
+update-src-list_$(1):
+	$$(call print,,"Updating source files list of $(1)...")
+	
+	$$(MAKE) -C \
+	   $$(PROJ_DIR_$(1)) update-src-list PRINT_INDENT=$$(PRINT_INDENT)xxxx
+endef
+
 #-------------------------------------------------------------------------------
 
 all: $(CONFIGS) ;
@@ -150,6 +169,8 @@ $(foreach p,$(PROJ_NAMES),\
 $(foreach p,$(PROJ_NAMES),\
 	$(eval clean_$(p): $(foreach cfg,$(CONFIGS),clean-$(cfg)_$(p))))
 
+$(foreach p,$(PROJ_NAMES), $(eval $(call update_prj_srclst_tmpl,$(p))))
+
 #---
 
 $(foreach cfg,$(CONFIGS),\
@@ -158,7 +179,7 @@ $(foreach cfg,$(CONFIGS),\
 $(foreach cfg,$(CONFIGS_EXT),\
 	$(eval $(call cfg_tmpl,$(cfg))))
 
-#---
+#--
 
 clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))
 	$(call print)
@@ -166,6 +187,8 @@ clean: $(foreach cfg,$(CONFIGS),clean-$(cfg))
 	
 	rm -f *.log
 
+update-src-list: $(foreach p,$(PROJ_NAMES),update-src-list_$(p))
+	
 #---
 
 # Additional rules defined in the options file!

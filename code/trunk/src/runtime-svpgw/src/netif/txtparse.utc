@@ -157,42 +157,42 @@ syntax_error(unsigned int code, unsigned int lineno, const char *msg)
 
 /*----------------------------------------------------------------------------*/
 
-static const char*
-get_matched_substr(char *str, regmatch_t *match)
-{
-    if (str == NULL || match == NULL ||
-        match->rm_so == -1 || match->rm_eo == -1) {
-
-        return NULL;
-    }
-
-    if (str[match->rm_eo] != 0) {
-        str[match->rm_eo] = 0;
-    }
-
-    return str + match->rm_so;
-}
+//static const char*
+//get_matched_substr(char *str, regmatch_t *match)
+//{
+//    if (str == NULL || match == NULL ||
+//        match->rm_so == -1 || match->rm_eo == -1) {
+//
+//        return NULL;
+//    }
+//
+//    if (str[match->rm_eo] != 0) {
+//        str[match->rm_eo] = 0;
+//    }
+//
+//    return str + match->rm_so;
+//}
 
 /*----------------------------------------------------------------------------*/
 
-static bool
-strtouint(const char *s, unsigned long max, unsigned int *val)
-{
-    char *endPtr = NULL;
-    unsigned long lval = strtoul(s, &endPtr, 10);
-
-    if (endPtr != NULL && (*endPtr) != 0) {
-        return false;
-    }
-
-    if (lval > max || errno == ERANGE) {
-        return false;
-    }
-
-    (*val) = (unsigned int)(lval);
-
-    return true;
-}
+//static bool
+//strtouint(const char *s, unsigned long max, unsigned int *val)
+//{
+//    char *endPtr = NULL;
+//    unsigned long lval = strtoul(s, &endPtr, 10);
+//
+//    if (endPtr != NULL && (*endPtr) != 0) {
+//        return false;
+//    }
+//
+//    if (lval > max || errno == ERANGE) {
+//        return false;
+//    }
+//
+//    (*val) = (unsigned int)(lval);
+//
+//    return true;
+//}
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
