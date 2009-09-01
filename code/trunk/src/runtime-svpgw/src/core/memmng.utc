@@ -676,6 +676,9 @@ SNetMemDestroyRef(const snet_ref_t ref)
             SNetListItemGetValueByRef(REF_LOOKUP, ref2uint(ref));
 
     if (lookup_entry != NULL) {
+        unlock_reflookup(true);
+        lock_reflookup(false);
+
         if (lookup_entry->type != DATABLK_TYPE_EXTERN) {
             snet_datablk_header_t *hdr = 
                 get_block_header(lookup_entry->data);
@@ -684,6 +687,9 @@ SNetMemDestroyRef(const snet_ref_t ref)
         }
 
         SNetListRemove(REF_LOOKUP, ref2uint(ref));
+
+        unlock_reflookup(false);
+        return;
     }
 
     unlock_reflookup(true);

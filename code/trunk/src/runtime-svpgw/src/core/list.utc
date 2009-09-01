@@ -119,8 +119,8 @@ static void reset_bucket(snet_list_bucket_t *b)
     b->nodes    = NULL;
 
     b->free_nodes_lst.sz   = 0;
-    b->free_nodes_lst.head = 0;
-    b->free_nodes_lst.tail = 0;
+    b->free_nodes_lst.head = NULL;
+    b->free_nodes_lst.tail = NULL;
 
     b->blst_id   = 0;
     b->blst_next = 0;

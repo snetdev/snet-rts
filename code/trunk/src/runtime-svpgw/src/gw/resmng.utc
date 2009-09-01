@@ -50,10 +50,10 @@ void
 SNetResMngSubSystemInit()
 {
 #ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
-    family fid;
+    //family fid;
 
-    create (fid; SEP_PLACE; 0; 0; 1; 1;;) SEP_init();
-    sync (fid);
+    //create (fid; SEP_PLACE; 0; 0; 1; 1;;) SEP_init();
+    //sync (fid);
 #endif
 }
 
@@ -61,10 +61,10 @@ void
 SNetResMngSubSystemDestroy()
 {
 #ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
-    family fid;
+    //family fid;
 
-    create (fid; SEP_PLACE; 0; 0; 1; 1;;) SEP_end();
-    sync (fid);
+    //create (fid; SEP_PLACE; 0; 0; 1; 1;;) SEP_end();
+    //sync (fid);
 #endif
 }
 

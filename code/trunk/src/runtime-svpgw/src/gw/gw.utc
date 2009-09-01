@@ -132,6 +132,7 @@ conslst_node_reset_flag(snet_conslst_node_t *cnode, unsigned int flag)
 static void 
 printfx(snet_conslst_node_t *cnode, const char *fmt, ...)
 {
+    return;
     const char *infinite_idxs = "<inf>";
 
     const char *cnode_idxs = (
@@ -282,30 +283,29 @@ gnode_hnd_box(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
         // function to move the node at the end of the graph.
         SNetConsLstNodeSetRecord(SNetGwHndGetConsNode(hnd), NULL);
 
-        return false;
+    } else {
+        // The box emmited records. This GW instance will keep 
+        // running and handling the last emitted record. For the
+        // others (if any) new GW instances should have already 
+        // been created by "SNetOut()".
+
+        // Deal with flow-inheritance (for data records only)
+        // input record cleanup!!
+        snet_record_t *in_rec = 
+            SNetGwHndGetConsNodeRecord(hnd);
+
+        assert(in_rec != NULL);
+
+        if (SNetRecGetDescription(out_rec) != SNET_REC_DESCR_CTRL) {
+            apply_flow_inheritance(in_rec, out_rec, true);
+        }
+
+        SNetRecDestroy(in_rec);
+
+        // Reset the cons-node and handle
+        SNetConsLstNodeSetRecord(SNetGwHndGetConsNode(hnd), out_rec);
+        SNetHndSetOutRecord(SNetGwHndToBaseHandle(hnd), NULL);
     }
-    
-    // The box emmited records. This GW instance will keep 
-    // running and handling the last emitted record. For the
-    // others (if any) new GW instances should have already 
-    // been created by "SNetOut()".
-
-    // Deal with flow-inheritance (for data records only)
-    // input record cleanup!!
-    snet_record_t *in_rec = 
-        SNetGwHndGetConsNodeRecord(hnd);
-
-    assert(in_rec != NULL);
-
-    if (SNetRecGetDescription(out_rec) != SNET_REC_DESCR_CTRL) {
-        apply_flow_inheritance(in_rec, out_rec, true);
-    }
-
-    SNetRecDestroy(in_rec);
-
-    // Reset the cons-node and handle
-    SNetConsLstNodeSetRecord(SNetGwHndGetConsNode(hnd), out_rec);
-    SNetHndSetOutRecord(SNetGwHndToBaseHandle(hnd), NULL);
 
     return true;
 }
@@ -405,7 +405,8 @@ synccell_start_gw_for_suspended_handle(
 
     printfx(
         SNetGwHndGetConsNode(hnd), 
-        "SYNC_CELL_GW_RESTART (NOT walking): %d\n", (int)(SNetConsLstNodeGetState(cnode)));
+            "SYNC_CELL_GW_RESTART (NOT walking): %d\n",
+            (int)(SNetConsLstNodeGetState(cnode)));
  
     conslst_node_reset_flag(
         cnode, CNODE_SYNCCELL_WAKING_FLAG);
@@ -711,7 +712,7 @@ synccell_test_definite_match_cnode_exclusive(
         cmpres == IDXVEC_CMP_RES_EQUAL
         || cmpres == IDXVEC_CMP_RES_GREATER);
 
-    if (result && sc_state->mpcnt + matched_patterns_cnt >= patterns_cnt) {
+    if (lresult && sc_state->mpcnt + matched_patterns_cnt >= patterns_cnt) {
         result = lresult;
         status = 0;
 
@@ -1072,9 +1073,7 @@ gnode_hnd_synccell(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
             printfx(cnode, "SYNCCELL_HND_DEFINITE_CHECKED: %d, %d\n", result, status);
 
             if (result < 0 || result == 2) {
-                // !!FIXME!!: Investigate why this assertion
-                // go of in some cases!!
-                // assert(status < 2);
+                assert(status < 2);
                 break;
             }
 
@@ -1599,8 +1598,8 @@ check_reorder_point(snet_conslst_node_t *cnode)
 /*----------------------------------------------------------------------------*/
 /* Cons-Node "moving" to graph node */
 
-static void
-move_cnode_to_gnode(snet_conslst_node_t *cnode, snet_gnode_t *gnode)
+static thread void
+move_cnode_to_gnode_exclusive(snet_conslst_node_t *cnode, snet_gnode_t *gnode)
 {
     printfx(cnode, "MOVING...\n");
     // Moving means set the cons-nodes's graph node to
@@ -1640,6 +1639,22 @@ move_cnode_to_gnode(snet_conslst_node_t *cnode, snet_gnode_t *gnode)
         SNetIdxVecPush(dyn_idx, gnode->data.normal->idx, dyn_idx_len);
 
     printfx(cnode, "MOVED\n");
+}
+
+static inline void
+move_cnode_to_gnode(snet_conslst_node_t *cnode, snet_gnode_t *gnode)
+{
+    place cnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBase(cnode)));
+
+    family fid;
+
+    create (fid; cnode_mutex_plc; 0; 0; 1; 1;;)
+        move_cnode_to_gnode_exclusive(cnode, gnode);
+
+    sync (fid);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1852,8 +1867,8 @@ net_output_record(snet_conslst_node_t *cnode)
 
         cnode = next_cnode;
 
-        if (cnode != NULL)
-            propagate_infimum(cnode, 4);
+        //if (cnode != NULL)
+        //    propagate_infimum(cnode, 4);
 
     } while (cnode != NULL);
 
@@ -1930,6 +1945,10 @@ conslst_node_on_infimum_changed(synccell_gwchkstart)(
 
         return;
     } 
+
+    if (conslst_node_chk_flag(cnode, CNODE_SYNCCELL_WAKING_FLAG)) {
+        return;
+    }
 
     printfx(cnode, "ON_INFIMUM_CHANGE_SYNCCELL: starting GW... \n");
 
@@ -2091,19 +2110,12 @@ update_next_conslst_node_infimum(
     assert(cnode != NULL);
     assert(min_idx != NULL);
 
+    printfx(cnode, "INFIMUM_UPDATE(next)\n");
+
     snet_conslst_node_t *lcnode     = cnode;
     snet_idxvec_t       *lmin_idx   = min_idx;
-    snet_idxvec_t       *cnode_gidx = conslst_node_gidx(lcnode);
 
     SNetConsLstNodeSetMinGIdx(lcnode, lmin_idx);
-
-    if (cnode_gidx == NULL) {
-        min_idx = lmin_idx;
-
-    } else {
-        min_idx = SNetIdxVecCalcInfimumEx(cnode_gidx, lmin_idx);
-        SNetIdxVecDestroy(lmin_idx);
-    }
 
     snet_conslst_node_state_t
         lcnode_state = cnode_state;
@@ -2114,6 +2126,22 @@ update_next_conslst_node_infimum(
         conslst_node_chk_flag(lcnode, CNODE_SYNCCELL_WAKING_FLAG)) {
 
         conslst_node_set_flag(lcnode, CNODE_INFIMUM_CHANGED_FLAG);
+
+        cnode       = NULL;
+        cnode_gnode = NULL;
+        cnode_state = lcnode_state;
+
+        return;
+    }
+
+    snet_idxvec_t *cnode_gidx = conslst_node_gidx(lcnode);
+
+    if (cnode_gidx == NULL) {
+        min_idx = lmin_idx;
+
+    } else {
+        min_idx = SNetIdxVecCalcInfimumEx(cnode_gidx, lmin_idx);
+        SNetIdxVecDestroy(lmin_idx);
     }
 
     cnode       = SNetConsLstNodeGetNext(lcnode);
@@ -2271,7 +2299,9 @@ walk(snet_gwhandle_t *hnd, bool start_from_current)
 
             // Now we call the node's handler
             // and terminate the "walking".
-            bool continue_walk = (*gnode->data.normal->hnd_func)(gnode, hnd);
+            if(!(*gnode->data.normal->hnd_func)(gnode, hnd)) {
+                break;
+            }
 
             // If the handler has made the cons-node a
             // "null node" then it must be moved to the
@@ -2288,10 +2318,6 @@ walk(snet_gwhandle_t *hnd, bool start_from_current)
                 SNetConsLstNodeGetRecord(cnode)) == SNET_REC_DESCR_CTRL) {
 
                 gnode = NULL;
-                break;
-            }
-
-            if (!continue_walk) {
                 break;
             }
         }
@@ -2377,9 +2403,17 @@ static thread void
 conslst_insert_before_n2_prev_exclusive(
     snet_conslst_node_t *n1, snet_conslst_node_t *n2)
 {
-    SNetConsLstNodeSetMinGIdx(
-        n1,
-        SNetConsLstNodeGetMinGIdx(n2));
+    SNetConsLstNodeSetMinGIdx(n1, SNetConsLstNodeGetMinGIdx(n2));
+
+    if (SNetConsLstNodeGetMinGIdx(n2) != NULL) {
+        snet_idxvec_t *new_infimum = 
+            SNetIdxVecCalcInfimumEx(
+                conslst_node_gidx(n2), 
+                SNetConsLstNodeGetMinGIdx(n2));
+    
+        SNetConsLstNodeSetMinGIdx(n2, new_infimum);
+        SNetIdxVecDestroy(new_infimum);
+    }
 
     SNetConsLstInsertBefore(n1, n2);
 }
@@ -2391,11 +2425,13 @@ conslst_insert_before_n2_exclusive(
     snet_conslst_node_t *n2_prev = SNetConsLstNodeGetPrevious(n2);
 
     if (n2_prev == NULL) {
+        SNetConsLstNodeSetMinGIdx(n1,SNetConsLstNodeGetMinGIdx(n2));
+        SNetConsLstNodeSetMinGIdx(n2, NULL);
         SNetConsLstInsertBefore(n1, n2);
 
-        // The list is empty so the node must be marked as 
-        // "disposable" because there would be none to do it.
         conslst_node_set_flag(n1, CNODE_DISPOSABLE_FLAG);
+        conslst_node_reset_flag(n2, CNODE_DISPOSABLE_FLAG);
+
         return;
     }
 

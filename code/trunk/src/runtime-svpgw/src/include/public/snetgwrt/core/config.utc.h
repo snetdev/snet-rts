@@ -83,7 +83,7 @@
  * library will have (if not defined a default value is 
  * used in "debug" builds).
  */
-#define SVPSNETGWRT_DEBUG_LEVEL 3
+#define SVPSNETGWRT_DEBUG_LEVEL 2
 
 #endif // __SVPSNETGWRT_CORE_CONFIG_H
 

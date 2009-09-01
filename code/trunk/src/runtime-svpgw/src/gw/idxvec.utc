@@ -284,10 +284,6 @@ calc_infimum(const snet_idxvec_t *idxv1, const snet_idxvec_t *idxv2, bool ext)
         idxv1->data->len < idxv2->data->len ? 
         idxv1->data->len : idxv2->data->len);
 
-    min_len = (
-        idxv1->data->len < idxv2->data->len ? 
-        idxv1->data->len : idxv2->data->len);
-
     for (unsigned int i=0; i < min_len; i++) {
         snet_idxvec_item_t idxv1_it = SNetIdxVecGetItemValue(idxv1, i);
         snet_idxvec_item_t idxv2_it = SNetIdxVecGetItemValue(idxv2, i);
@@ -348,16 +344,8 @@ void SNetIdxVecInitCopy(snet_idxvec_t *idxv, const snet_idxvec_t *srcv)
         return;
     }
 
-    //idxv->data = srcv->data;
-    //SNetMemIncreaseRefCount(srcv->data);
-    idxv->data = alloc_data_struct(srcv->data->len);
- 
-    SNetMemCopy(
-        srcv->data->items,
-        idxv->data->items,
-        srcv->data->len * sizeof(snet_idxvec_item_t));
-
-    idxv->data->len = srcv->data->len;
+    idxv->data = srcv->data;
+    SNetMemIncreaseRefCount(srcv->data);
 }
 
 void SNetIdxVecInitFromStr(snet_idxvec_t *idxv, const char *str)
