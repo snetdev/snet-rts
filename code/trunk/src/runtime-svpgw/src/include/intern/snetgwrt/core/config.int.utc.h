@@ -43,7 +43,7 @@
  * the runtime to "user" code are not being masked
  * as it is done by default.
  */
-// #define SVPSNETGWRT_NO_POINTER_MASKING
+#define SVPSNETGWRT_NO_POINTER_MASKING
 
 /**
  * Sets whether memory allocations should
