@@ -92,7 +92,7 @@ conslst_node_gidx(snet_conslst_node_t *cnode)
     snet_idxvec_t *dyn_idx = SNetConsLstNodeGetDynGIdx(cnode);
     snet_gnode_t  *gnode   = SNetConsLstNodeGetGraphNode(cnode);
 
-    if (gnode == NULL) {
+    if (gnode == NULL || gnode->type == GRAPH_NODE_TYPE_NOP) {
         return NULL;
     }
 
