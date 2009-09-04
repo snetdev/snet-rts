@@ -154,34 +154,6 @@ SNetGetOutputBufferSize(const snet_domain_t *snetd)
     return (buf == NULL ? 0 : SNetBufGetSize(buf));
 }
 
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-
-place
-SNetGetBoxSelectedResource(const snet_handle_t *hnd)
-{
-    hnd = (const snet_handle_t *) SNetUnmaskPointer(hnd);
-
-    snet_gwhandle_t *gwhnd = 
-        (snet_gwhandle_t *) 
-            SNetHndCastToDerivedHandle(hnd);
-
-    snet_place_t plc = SNetGwHndGetBoxSelectedPlace(gwhnd);
-
-    if (!SNetPlaceIsNull(plc))
-        return SNetPlaceToUTCPlace(plc);
-    else
-        return SNetPlaceToUTCPlace(SNetPlaceGetMine());
-}
-
-/*----------------------------------------------------------------------------*/
-
-void
-SNetWarnMissingBoxImplementation(snet_handle_t *hnd)
-{
-    SNetOnWarning();
-}
-
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/
 

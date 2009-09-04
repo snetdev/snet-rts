@@ -10,14 +10,15 @@
                          
       -------------------------------------------------------------------
 
-    File Name      : snetgw.utc.h
+    File Name      : common.utc.h
 
     File Type      : Header File
 
     ---------------------------------------
 
     File 
-    Description    : Master header.
+    Description    : Header file with symbols, macros, etc.. common 
+                     to all modules.
 
     Updates 
     Description    : N/A
@@ -25,29 +26,23 @@
 */
 /*----------------------------------------------------------------------------*/
 
-#ifndef __SVPSNETGWRT_GW_MASTER_HEADER
-#define __SVPSNETGWRT_GW_MASTER_HEADER
+#ifndef __SVPSNETGWRT_SANE_COMMON_H
+#define __SVPSNETGWRT_SANE_COMMON_H
 
-#include "snetgwrt/gw/gw.utc.h"
-#include "snetgwrt/gw/domain.utc.h"
+// The "common" from the "core"
+// library
+#include "snetgwrt/core/common.utc.h"
 
-#include "snetgwrt/gw/graph.utc.h"
-#include "snetgwrt/gw/entities.utc.h"
-
-#include "snetgwrt/gw/expression.utc.h"
-#include "snetgwrt/gw/filteriset.utc.h"
-
+/*----------------------------------------------------------------------------*/
 /**
- * SNetc plugins' specific
- * interoperability APIs.
+ * Include the default configuration header file
+ * if no other has been included yet.
  */
-#include "snetgwrt/gw/svp4snetc.utc.h"
+#ifndef SVPSNETGWRT_SANE_CFG_HEADER
+#include "config.utc.h"
+#endif
 
-/*---*/
-
-#include "snetgwcore.utc.h"
-
-#endif // __SVPSNETGWRT_GW_MASTER_HEADER
+#endif // __SVPSNETGWRT_SANE_COMMON_H
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

@@ -117,11 +117,9 @@ default_decldef_genwrapper(
     char *code    = NULL;
     char *tmp_str = NULL;
 
-    STRAPPEND(code, "#pragma weak ");
-    STRAPPEND(code, box_name);
     STRAPPEND(code, "\nvoid ");
     STRAPPEND(code, box_name);
-    STRAPPEND(code, "(void *hnd");
+    STRAPPEND(code, "(snet_handle_t *hnd");
 
     if (t != NULL) {
         for (i=0; i < t->num; i++) {
@@ -144,7 +142,10 @@ default_decldef_genwrapper(
     }
     
     STRAPPEND(code, ")\n{\n");
-    STRAPPEND(code, "  // SNetWarnMissingBoxImplementation(hnd);\n}");
+    STRAPPEND(code, "  SNetWarnMissingBoxDefinition(hnd);\n}\n");
+
+    STRAPPEND(code, "#pragma weak ");
+    STRAPPEND(code, box_name);
 
     return code;
 }
@@ -227,10 +228,6 @@ char* SVP4SNetGenBoxWrapperEx(
     }
     
     // Thread definition
-    STRAPPEND(code, "#pragma weak SNetBox__");
-    STRAPPEND(code, box_name);
-    STRAPPEND(code, "\n");
-
     STRAPPEND(code, "thread void SNetBox__");
     STRAPPEND(code, box_name);
     STRAPPEND(code, "(snet_handle_t *hnd");
@@ -283,18 +280,14 @@ char* SVP4SNetGenBoxWrapperEx(
         STRAPPEND(code, "\n");
     }
 
-    STRAPPEND(code, "}\n\n");
-
-    // Thread I/O function
-    STRAPPEND(code, "#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL\n");
-
-    STRAPPEND(code, "#pragma weak _utctmp_SNetBox__");
-    STRAPPEND(code, box_name);
-    STRAPPEND(code, "\n");
+    STRAPPEND(code, "}\n");
 
     STRAPPEND(code, "#pragma weak SNetBox__");
     STRAPPEND(code, box_name);
-    STRAPPEND(code, "_io_\n\n");
+    STRAPPEND(code, "\n\n");
+
+    // Thread I/O function
+    STRAPPEND(code, "#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL\n");
 
     STRAPPEND(code, "DISTRIBUTABLE_THREAD(SNetBox__");
     STRAPPEND(code, box_name);
@@ -320,7 +313,7 @@ char* SVP4SNetGenBoxWrapperEx(
     }
 
     STRAPPEND(code, ")\n{\n");
-    STRAPPEND(code, "  // SNetRecItemsXDR(db, &hnd, ");
+    STRAPPEND(code, "  SNetRecItemsXDR(db, hnd, ");
 
     tmp_str = itoa(fields_cnt);
 
@@ -338,7 +331,7 @@ char* SVP4SNetGenBoxWrapperEx(
         for (i=0; i < t->num; i++) {
             tmp_str = itoa(i);
 
-            STRAPPEND(code, ", &arg_");
+            STRAPPEND(code, ", arg_");
             STRAPPEND(code, tmp_str);
 
             free(tmp_str);
@@ -348,6 +341,14 @@ char* SVP4SNetGenBoxWrapperEx(
     STRAPPEND(code, ");\n}\nASSOCIATE_THREAD(SNetBox__");
     STRAPPEND(code, box_name);
     STRAPPEND(code, ");\n");
+
+    //STRAPPEND(code, "#pragma weak _utctmp_SNetBox__");
+    //STRAPPEND(code, box_name);
+    //STRAPPEND(code, "\n");
+
+    //STRAPPEND(code, "#pragma weak SNetBox__");
+    //STRAPPEND(code, box_name);
+    //STRAPPEND(code, "_io_\n");
 
     STRAPPEND(code, "#endif\n\n");
 

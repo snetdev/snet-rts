@@ -682,6 +682,15 @@ SNetGNodeGetType(const snet_gnode_t *n)
     assert(n != NULL); return n->type;
 }
 
+snet_idxvec_t*
+SNetGNodeGetIndex(const snet_gnode_t *n)
+{
+    assert(n != NULL);
+    assert(n->type != GRAPH_NODE_TYPE_NOP);
+
+    return n->data.normal->idx;
+}
+
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 

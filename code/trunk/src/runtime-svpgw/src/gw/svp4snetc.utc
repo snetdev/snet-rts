@@ -1,0 +1,127 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : svp4snetc.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+                     
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "svp4snetc.int.utc.h"
+
+#include "graph.int.utc.h"
+#include "idxvec.int.utc.h"
+#include "gwhandle.int.utc.h"
+#include "conslist.int.utc.h"
+
+/*---*/
+
+#include "core/handle.int.utc.h"
+#include "core/plcmng.int.utc.h"
+#include "core/memmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+place
+SNetGetBoxSelectedResource(const snet_handle_t *hnd)
+{
+    hnd = (const snet_handle_t *) SNetUnmaskPointer(hnd);
+
+    snet_gwhandle_t *gwhnd = 
+        (snet_gwhandle_t *) 
+            SNetHndCastToDerivedHandle(hnd);
+
+    snet_place_t plc = SNetGwHndGetBoxSelectedPlace(gwhnd);
+
+    if (!SNetPlaceIsNull(plc))
+        return SNetPlaceToUTCPlace(plc);
+    else
+        return SNetPlaceToUTCPlace(SNetPlaceGetMine());
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetWarnMissingBoxDefinition(const snet_handle_t *hnd)
+{
+    hnd = (const snet_handle_t *) SNetUnmaskPointer(hnd);
+
+    snet_gwhandle_t *gwhnd = 
+        (snet_gwhandle_t *) 
+            SNetHndCastToDerivedHandle(hnd);
+
+    const char *gidxs = 
+        SNetIdxVecToString(
+            SNetGNodeGetIndex(
+                SNetConsLstNodeGetGraphNode(
+                    SNetGwHndGetConsNode(gwhnd))), NULL);
+
+    SNetReportWarningCustom(
+        "Missing definition for box at index '%s'", gidxs);
+
+    SNetMemFree((void *)(gidxs));
+    SNetOnWarning();
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Routine used by the plugin generated code to XDR record
+ * items for boxes executed on remote places when using the
+ * duTC-PTL SVP platform.
+ *
+ * NOTE: The GW library does not provide the "real" implementation
+ * of this function. This is provided by the SANE import library. It only
+ * exists here so that there are no link errors when an application will
+ * intentionally only use "local" boxes (no remote creates). In that case
+ * the application does not require the functionality provided by the
+ * SANE import library so for those cases linking with the SANE import
+ * library should not be a requirement. However the code the SVP4SNetC
+ * plugin generates relies on the function below. Thus a "dummy" version
+ * of the function is provided (below) by the GW library.
+ *
+ * Also note that the function is defined as a weak symbol thus if the
+ * SANE import library is linked then its definition of this function
+ * will be used and the definition below will be ignored!!
+ */
+#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+void SNetRecItemsXDR(
+    uTC::DataBuffer *db, 
+    snet_handle_t   *hnd, int fields_cnt, int tags_cnt, ...)
+{
+    SNetReportErrorCustom(
+        "It appears that while the application has "
+        "been configured to allow boxes to be executed "
+        "on remote places, it has not been linked with "
+        "the SNet/SANE import library; please check that the "
+        "application is properly built and configured and try again");
+
+    SNetOnError();
+}
+#pragma weak SNetRecItemXDR
+#endif
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

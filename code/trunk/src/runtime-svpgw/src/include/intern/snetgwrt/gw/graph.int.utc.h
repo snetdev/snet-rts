@@ -84,11 +84,16 @@ SNetGNodeCreate(snet_gnode_type_t type);
 
 /*---*/
 
-extern void SNetGNodeDestroy(snet_gnode_t *n, bool deep);
+extern void 
+SNetGNodeDestroy(snet_gnode_t *n, bool deep);
 
 /*----------------------------------------------------------------------------*/
 
-extern snet_gnode_type_t SNetGNodeGetType(const snet_gnode_t *n);
+extern snet_gnode_type_t 
+SNetGNodeGetType(const snet_gnode_t *n);
+
+extern snet_idxvec_t*
+SNetGNodeGetIndex(const snet_gnode_t *n);
 
 /*----------------------------------------------------------------------------*/
 
@@ -119,7 +124,8 @@ SNetGNodeSetupSyncCell(
 
 /*---*/
 
-extern void SNetGNodeSetupFilter(snet_gnode_t *n);
+extern void
+SNetGNodeSetupFilter(snet_gnode_t *n);
 
 /*----------------------------------------------------------------------------*/
 

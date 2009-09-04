@@ -10,14 +10,15 @@
                          
       -------------------------------------------------------------------
 
-    File Name      : snetgw.utc.h
+    File Name      : config.utc.h
 
     File Type      : Header File
 
     ---------------------------------------
 
     File 
-    Description    : Master header.
+    Description    : Header file that contains symbols for enabling / disabling
+                     features (thus allowing some customization).
 
     Updates 
     Description    : N/A
@@ -25,29 +26,21 @@
 */
 /*----------------------------------------------------------------------------*/
 
-#ifndef __SVPSNETGWRT_GW_MASTER_HEADER
-#define __SVPSNETGWRT_GW_MASTER_HEADER
-
-#include "snetgwrt/gw/gw.utc.h"
-#include "snetgwrt/gw/domain.utc.h"
-
-#include "snetgwrt/gw/graph.utc.h"
-#include "snetgwrt/gw/entities.utc.h"
-
-#include "snetgwrt/gw/expression.utc.h"
-#include "snetgwrt/gw/filteriset.utc.h"
+#ifndef __SVPSNETGWRT_SANE_CONFIG_H
+#define __SVPSNETGWRT_SANE_CONFIG_H
 
 /**
- * SNetc plugins' specific
- * interoperability APIs.
+ * Define this to specify that this
+ * header is the configuration header
  */
-#include "snetgwrt/gw/svp4snetc.utc.h"
+#define SVPSNETGWRT_SANE_CFG_HEADER
 
-/*---*/
+/**
+ * So far there are no "public" configuration
+ * symbols specific to the SANE library.
+ */
 
-#include "snetgwcore.utc.h"
-
-#endif // __SVPSNETGWRT_GW_MASTER_HEADER
+#endif // __SVPSNETGWRT_SANE_CONFIG_H
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

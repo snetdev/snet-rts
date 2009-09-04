@@ -10,14 +10,15 @@
                          
       -------------------------------------------------------------------
 
-    File Name      : snetgw.utc.h
+    File Name      : sane.utc.h
 
     File Type      : Header File
 
     ---------------------------------------
 
     File 
-    Description    : Master header.
+    Description    : This file contains runtime initialization and cleanup
+                     functions as well as "primary" runtime services.
 
     Updates 
     Description    : N/A
@@ -25,29 +26,25 @@
 */
 /*----------------------------------------------------------------------------*/
 
-#ifndef __SVPSNETGWRT_GW_MASTER_HEADER
-#define __SVPSNETGWRT_GW_MASTER_HEADER
+#ifndef __SVPSNETGWRT_SANE_SANE_H
+#define __SVPSNETGWRT_SANE_SANE_H
 
-#include "snetgwrt/gw/gw.utc.h"
-#include "snetgwrt/gw/domain.utc.h"
+#include "common.utc.h"
 
-#include "snetgwrt/gw/graph.utc.h"
-#include "snetgwrt/gw/entities.utc.h"
+/*----------------------------------------------------------------------------*/
 
-#include "snetgwrt/gw/expression.utc.h"
-#include "snetgwrt/gw/filteriset.utc.h"
-
-/**
- * SNetc plugins' specific
- * interoperability APIs.
- */
-#include "snetgwrt/gw/svp4snetc.utc.h"
+extern void
+SNetGlobalSaneInit();
 
 /*---*/
 
-#include "snetgwcore.utc.h"
+extern void
+SNetGlobalSaneDestroy();
 
-#endif // __SVPSNETGWRT_GW_MASTER_HEADER
+extern void
+SNetGlobalSaneDestroyEx(bool force);
+
+#endif // __SVPSNETGWRT_SANE_SANE_H
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

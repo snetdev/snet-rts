@@ -12,6 +12,7 @@
 ../../src/gw/conslist.utc
 ../../src/gw/gwsnet.utc
 ../../src/gw/idxvec.utc
+../../src/gw/svp4snetc.utc
 ../../src/gw/expression.utc
 ../../src/gw/graph.utc
 ../../src/gw/resmng.utc

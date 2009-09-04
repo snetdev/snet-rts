@@ -118,7 +118,7 @@ allocate_place_struct(
         } else {
             assert(specs->type_spec_data_sz > 0);
 
-            if (specs->type_spec_data_copyfun == NULL) {
+            if (specs->type_spec_data_copyfun != NULL) {
                 ps->specs.type_spec_data =
                     (*specs->type_spec_data_copyfun)(specs->type_spec_data);
 
