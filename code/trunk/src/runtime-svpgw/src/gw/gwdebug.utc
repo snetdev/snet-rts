@@ -35,6 +35,11 @@
 
 /*---*/
 
+#include "core/record.int.utc.h"
+#include "core/typeencode.int.utc.h"
+
+/*---*/
+
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -77,7 +82,8 @@ conslst_node_gidx(snet_conslst_node_t *cnode)
 void 
 SNetGwDebugPrint(snet_conslst_node_t *cnode, const char *fmt, ...)
 {
-    snet_gwhandle_t *hnd = SNetConsLstNodeGetHandle(cnode);
+    snet_gwhandle_t *hnd       = SNetConsLstNodeGetHandle(cnode);
+    snet_record_t   *cnode_rec = SNetConsLstNodeGetRecord(cnode);
 
     void *tid  = uTC::GetThreadInfo()->f;
     void *ptid = uTC::GetThreadInfo()->f->get_parent();
@@ -114,6 +120,21 @@ SNetGwDebugPrint(snet_conslst_node_t *cnode, const char *fmt, ...)
                 infinite_idxs :
                 SNetIdxVecToString(SNetConsLstNodeGetMinGIdx(cnode), NULL));
 
+    unsigned int cnode_rec_tags_cnt   = (
+        cnode_rec == NULL ?
+        0                 : 
+        SNetTencVariantGetTagsCount(SNetRecGetVariantEncoding(cnode_rec)));
+        
+    unsigned int cnode_rec_btags_cnt  = (
+        cnode_rec == NULL ?
+        0                 :
+        SNetTencVariantGetBTagsCount(SNetRecGetVariantEncoding(cnode_rec)));
+
+    unsigned int cnode_rec_fields_cnt = (
+        cnode_rec == NULL ?
+        0                 :
+        SNetTencVariantGetFieldsCount(SNetRecGetVariantEncoding(cnode_rec)));
+
     va_list  vargs;
     va_start(vargs, fmt);
 
@@ -125,9 +146,15 @@ SNetGwDebugPrint(snet_conslst_node_t *cnode, const char *fmt, ...)
     vsprintf(str, fmt, vargs);
 
     printf(
-        "SNET/GW[tid=%p->%p,\tcn=(%p:\thnd=%p,\ts=%s, si=%s, gi=%s, ii=%s)]: %s\n",
+        "SNET/GW[tid=%p->%p,\t"
+        "cn=(%p:\thnd=%p,\t"
+        "s=%s, si=%s, gi=%s, ii=%s, rec(%p: %u, %u, %u))]: %s\n",
         ptid,  tid,
-        cnode, hnd, cnode_states, cnode_oidxs, cnode_idxs, cnode_midxs, str);
+        cnode, hnd, 
+        cnode_states, 
+        cnode_oidxs, cnode_idxs, cnode_midxs,
+        cnode_rec, 
+        cnode_rec_tags_cnt, cnode_rec_btags_cnt, cnode_rec_fields_cnt, str);
 
     va_end(vargs);
 

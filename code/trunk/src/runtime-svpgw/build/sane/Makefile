@@ -78,9 +78,9 @@ OBJ_FILES_$(1) := $$(subst .utc,.o,\
  
 OBJ_FILES_$(1) := $$(subst $$(SOURCE_DIR),,$$(OBJ_FILES_$(1)))
 OBJ_FILES_$(1) := $$(patsubst /%,%,$$(OBJ_FILES_$(1)))
-OBJ_FILES_$(1) := $$(filter-out %.imp.o,$$(OBJ_FILES_$(1)))
 
 IMPLIB_OBJ_FILES_$(1) := $$(filter %.imp.o,$$(OBJ_FILES_$(1)))
+OBJ_FILES_$(1) := $$(filter-out %.imp.o,$$(OBJ_FILES_$(1)))
 endef
 
 #-------------------------------------------------------------------------------

@@ -31,6 +31,8 @@
 
 /*---*/
 
+//#include "gw/gw.int.utc.h"
+
 #include "core/record.int.utc.h"
 #include "core/memmng.int.utc.h"
   
@@ -38,20 +40,42 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+#pragma weak SNetGwInit
+extern thread void
+SNetGwInit(snet_ref_t snetd, snet_handle_t *hnd, snet_record_t *rec)
+{
+    // SNetReportSaneWarning(.....);
+}
+//#pragma weak SNetGwInit
+
+/*----------------------------------------------------------------------------*/
+
 DISTRIBUTABLE_THREAD(SNetGwInit)(
-    dutc_db db
+    dutc_db db,
     dutc_global(snet_ref_t) snetd, 
     dutc_global(snet_handle_t *) hnd, dutc_global(snet_record_t *) rec)
 {
 }
+ASSOCIATE_THREAD(SNetGwInit);
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+extern thread void
+SNetGwFork(snet_handle_t *hnd, snet_record_t *rec)
+{
+    // SNetReportSaneWarning(.....);
+}
+#pragma weak SNetGwFork
 
 /*----------------------------------------------------------------------------*/
 
 DISTRIBUTABLE_THREAD(SNetGwFork)(
-    dutc_db db
+    dutc_db db,
     dutc_global(snet_handle_t *) hnd, dutc_global(snet_record_t *) rec)
 {
 }
+ASSOCIATE_THREAD(SNetGwFork);
 
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/

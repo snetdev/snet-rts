@@ -239,6 +239,19 @@ SNetRecGetCtrlData(const snet_record_t *rec);
 extern void*
 SNetRecFieldGetData(void *field);
 
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Routine used by the XDR record items for boxes executed on 
+ * remote places when using the duTC-PTL SVP platform.
+ */
+#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+extern void 
+SNetRecItemsXDR(
+    uTC::DataBuffer *db, 
+    snet_handle_t   *hnd, int fields_cnt, int tags_cnt, ...);
+#endif
+
 #endif // __SVPSNETGWRT_CORE_RECORD_H
 
 /*------------------------------- END OF FILE --------------------------------*/

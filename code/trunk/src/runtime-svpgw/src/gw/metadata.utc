@@ -62,7 +62,7 @@ typedef struct metadata {
 #endif
 #endif
 
-snet_metadata_t*
+extern snet_metadata_t*
 SNetMetaDataLoad(snet_metadata_type_t type, ...)
 {
     // This is the "default" implementation
@@ -71,7 +71,7 @@ SNetMetaDataLoad(snet_metadata_type_t type, ...)
     return NULL;
 }
  
-void
+extern void
 SNetMetaDataDestroySpecialized(snet_metadata_t *meta)
 {
     // This is the "default" implementation
@@ -85,9 +85,6 @@ SNetMetaDataDestroySpecialized(snet_metadata_t *meta)
 #pragma weak SNetMetaDataLoad
 #pragma weak SNetMetaDataDestroySpecialized
 #endif
-#else
-#pragma weak SNetMetaDataLoad
-#pragma weak SNetMetaDataDestroySpecialized
 #endif
 
 /*----------------------------------------------------------------------------*/

@@ -65,18 +65,6 @@ SNetGetBoxSelectedResource(const snet_handle_t *hnd);
 extern void
 SNetWarnMissingBoxDefinition(const snet_handle_t *hnd);
 
-/*----------------------------------------------------------------------------*/
-/**
- * Routine used by the plugin generated code to XDR record
- * items for boxes executed on remote places when using the
- * duTC-PTL SVP platform.
- */
-#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
-void SNetRecItemsXDR(
-    uTC::DataBuffer *db, 
-    snet_handle_t   *hnd, int fields_cnt, int tags_cnt, ...);
-#endif
-
 #endif // __SVPSNETGWRT_GW_SVP4SNETC_H
 
 /*------------------------------- END OF FILE --------------------------------*/

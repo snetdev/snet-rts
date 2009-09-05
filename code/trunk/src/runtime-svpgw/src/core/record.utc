@@ -2221,6 +2221,57 @@ SNetRecFieldGetData(void *field)
     return SNetRecFieldDataDescriptorGetDPtr(dcptr);
 }
 
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Routine used to XDR record items for boxes executed on remote places 
+ * when using the duTC-PTL SVP platform.
+ *
+ * NOTE: The Core library does not provide the "real" implementation
+ * of this function. This is provided by the SANE import library. It only
+ * exists here so that there are no link errors when an application will
+ * intentionally only use "local" boxes (no remote creates). In that case
+ * the application does not require the functionality provided by the
+ * SANE import library so for those cases linking with the SANE import
+ * library should not be a requirement. However the code the SVP4SNetC
+ * plugin generates relies on the function below. Thus a "dummy" version
+ * of the function is provided (below) by the Core library.
+ *
+ * Also note that the function is defined as a weak symbol thus if the
+ * SANE import library is linked then its definition of this function
+ * will be used and the definition below will be ignored!!
+ */
+#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+
+#ifdef SVPSNETGWRT_COMP_GCC
+#if SVPSNETGWRT_COMP_VER < 40000
+#pragma weak SNetRecItemsXDR
+#endif
+#endif
+
+void SNetRecItemsXDR(
+    uTC::DataBuffer *db, 
+    snet_handle_t   *hnd, int fields_cnt, int tags_cnt, ...)
+{
+    SNetReportErrorCustom(
+        "It appears that while the application has "
+        "been configured to allow boxes to be executed "
+        "on remote places, it has not been linked with "
+        "the SNet/SANE import library; please check that the "
+        "application is properly built and configured and try again");
+
+    SNetOnError();
+}
+
+#ifdef SVPSNETGWRT_COMP_GCC
+#if SVPSNETGWRT_COMP_VER >= 40000
+#pragma weak SNetRecItemsXDR
+#endif
+#endif
+
+#endif // SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+
 /*------------------------------- END OF FILE --------------------------------*/
 /*----------------------------------------------------------------------------*/
 
