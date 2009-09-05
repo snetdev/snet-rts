@@ -232,15 +232,14 @@ static int TstrToNum( char *s)
 
 static void *SAC4SNetDataDeserialise( FILE *file)
 {
-  int i, res;
+  int i;
   char buf[128], tstr[128];
   int basetype, dim, *shape;
   SACarg *scanres, *sac_shp, *dummy;
 
   fscanf( file, "%s", buf); 
 
-  res = strcmp( IDSTRINGPRE, buf);
-  if( res == 0) {
+  if( strcmp( IDSTRINGPRE, buf) == 0) {
     fscanf( file, "%s%d", tstr, &dim);
     basetype = TstrToNum ( tstr);
     shape = SNetMemAlloc( dim * sizeof( int));
@@ -248,8 +247,7 @@ static void *SAC4SNetDataDeserialise( FILE *file)
       fscanf( file, "%d", &shape[i]);
     }
     fscanf( file, "%s", buf);
-    res = strcmp( IDSTRINGSUF, buf);
-    if( res == 0) {
+    if( strcmp( IDSTRINGSUF, buf) == 0) {
       sac_shp = SACARGconvertFromIntPointerVect( shape, 1, &dim);
       switch( basetype) {
         case SACint:
@@ -275,15 +273,18 @@ static void *SAC4SNetDataDeserialise( FILE *file)
           break;
         default: /* unsupported base type */
             scanres = NULL;
+            Error("Unsupported Base Type");
           break;
       }
     }
     else { /* Illegal Header Suffix */
       scanres = NULL;
+      Error( "Illegal Header Suffix"); 
     }
   } 
   else { /* Illegal Header Prefix*/
     scanres = NULL;
+      Error( "Illegal Header Prefix"); 
   }
 
   return( (void*)scanres);
