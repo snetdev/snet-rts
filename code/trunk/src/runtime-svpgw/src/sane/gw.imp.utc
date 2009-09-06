@@ -31,7 +31,7 @@
 
 /*---*/
 
-//#include "gw/gw.int.utc.h"
+#include "gw/gw.int.utc.h"
 
 #include "core/record.int.utc.h"
 #include "core/memmng.int.utc.h"
@@ -40,13 +40,12 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-#pragma weak SNetGwInit
-extern thread void
+thread void
 SNetGwInit(snet_ref_t snetd, snet_handle_t *hnd, snet_record_t *rec)
 {
     // SNetReportSaneWarning(.....);
 }
-//#pragma weak SNetGwInit
+#pragma weak SNetGwInit
 
 /*----------------------------------------------------------------------------*/
 
@@ -61,7 +60,7 @@ ASSOCIATE_THREAD(SNetGwInit);
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-extern thread void
+thread void
 SNetGwFork(snet_handle_t *hnd, snet_record_t *rec)
 {
     // SNetReportSaneWarning(.....);

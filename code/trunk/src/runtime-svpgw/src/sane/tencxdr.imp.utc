@@ -1,0 +1,66 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : tencxdr.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "tencxdr.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetSaneXDRTencVector(XDR *xdrs, snet_vector_t *vec)
+{
+}
+
+void
+SNetSaneXDRTencVariant(XDR *xdrs, snet_variantencoding_t *venc)
+{
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetSaneXDRTencType(XDR *xdrs, snet_typeencoding_t *tenc)
+{    
+    unsigned int venc_cnt = SNetTencTypeGetVariantsCount(tenc);
+
+    for (unsigned int i=0; i < venc_cnt; i++)
+        SNetSaneXDRTencVariant(xdrs, SNetTencTypeGetVariant(tenc, i));
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetSaneXDRTencBoxSing(XDR *xdrs, snet_box_sign_t *sign)
+{
+    SNetSaneXDRTencType(xdrs, SNetTencBoxSignGetType(sign));
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

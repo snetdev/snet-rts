@@ -30,6 +30,23 @@
 
 #include "common.int.utc.h"
 
+/*---*/
+
+#include "core/record.int.utc.h"
+#include "core/typeencode.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/**
+ * Datatype for a SANE handle. This
+ * is a "derived" type of the type
+ * "snet_handle_t" from the "core"
+ * library.
+ */
+typedef struct sanehandle snet_sanehandle_t;
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
 #endif // __SVPSNETGWRT_SANE_SANEHANDLE_INT_H
 
 /*------------------------------- END OF FILE --------------------------------*/

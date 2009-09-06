@@ -26,7 +26,7 @@ UTC2CPP_INCL_DIRS_FLAGS_debug_mb :=
 
 #---
 
-CXX_FLAGS_debug_mb           := -DDEBUG -O0
+CXX_FLAGS_debug_mb           := -DDEBUG
 CXX_INCL_DIRS_FLAGS_debug_mb :=
 
 #---
