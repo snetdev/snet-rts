@@ -8,7 +8,7 @@ AR        = ar
 DISTFLAGS = -distributed
 INCDIRS   = -I. -I$(SNETBASE)/include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib 
-LIBS      = -lpthread -lC4SNet -lsnet -lsnetutil $(SOCKETLIBS)
+LIBS      = -lpthread -lC4SNet -lsnet -lsnetutil $(SOCKETLIBS) $(RPATH)
 FILES     = condif.c leq1.c mult.c sub.c
 
 # = = = = = = = = = = = = = = = = = = = =

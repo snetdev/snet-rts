@@ -5,7 +5,7 @@ SNETCFLAGS= -b7 -distributed
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/interfaces/C
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(MPIROOT)/lib
-LIBS      = -lpthread -lC4SNet -lC4SNetc -lmpich -lsnetmpi -lsnetutil -lcrypt 
+LIBS      = -lpthread -lC4SNet -lC4SNetc -lmpi -lsnetmpi -lsnetutil -lcrypt 
 
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = crypto
