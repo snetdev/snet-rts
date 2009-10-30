@@ -7,6 +7,8 @@ INCDIRS   = -I.  -I$(SNETBASE)/include \
 		 -I$(SAC2CBASE)/include \
 		 -I$(SAC2CBASE)/src/include
 
+MPIINCDIRS = -I$(MPIROOT)/include
+
 LIBDIR	= sac_lib
 LIB		  = $(IFNAME)FibreIO
 
@@ -47,12 +49,12 @@ sac_lib/lib$(IFNAME)FibreIO.so: $(IFNAME)FibreIO.sac
 	$(SAC2C) $(SACFLAGS) $(SACTARGET).sac
 	$(SAC4C) $(S4CFLAGS) $(SACTARGET)
 
-mpi:
-	$(CC) $(CCFLAGS) $(DISFLAGS) $(INCDIRS) $(S4CINCS) -c *.c
-#$(CC) $(LD_DYNAMIC) $(S4CLIBS) -o $(TARGET) $(OBJECTS) 
-#	$(CC) $(LD_DYNAMIC) -o $(WRAPTARGET) $(WRAPOBJECTS) 
-#	$(COPY) $(TARGET) $(WRAPTARGET) $(LIBDIR)/lib$(LIB).so $(TARGETDIR)
-#	$(COPY) $(IFNAME).h $(SNETBASE)/include
+mpi: libSNetMod.so sac_lib/lib$(IFNAME)FibreIO.so
+	$(CC) $(CCFLAGS) $(DISTFLAGS) $(INCDIRS) $(MPIINCDIRS) $(S4CINCS) -c *.c
+	$(CC) $(LD_DYNAMIC) $(S4CLIBS) -o $(TARGET) $(OBJECTS) 
+	$(CC) $(LD_DYNAMIC) -o $(WRAPTARGET) $(WRAPOBJECTS) 
+	$(COPY) $(TARGET) $(WRAPTARGET) $(LIBDIR)/lib$(LIB).so $(TARGETDIR)
+	$(COPY) $(IFNAME).h $(SNETBASE)/include
 
 clean:
 	rm -f *.o *.a *.so $(TARGETDIR)/$(TARGET) $(TARGETDIR)/$(WRAPTARGET) sac_include/* $(LIBDIR)/* $(SNETBASE)/include/$(IFNAME).h

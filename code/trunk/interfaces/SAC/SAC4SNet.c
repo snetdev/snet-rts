@@ -64,6 +64,7 @@ int my_interface_id;
 
 typedef enum { SACint=1, SACflt=7, SACdbl=8} SACbasetype_t; 
 
+#ifdef DISTRIBUTED_SNET
 typedef struct { int basetype; int dim; int *shape;} sac4snet_typeinf_t;
 
 #define TIbasetype( n) n->basetype
@@ -83,7 +84,7 @@ static void *TIdestroy( sac4snet_typeinf_t *ti)
   SNetMemFree( ti);
   return( NULL);
 }
-  
+#endif  
 
 
 extern void SACARGfree( void*);
@@ -140,7 +141,7 @@ static int SAC4SNetPack( MPI_Comm comm,
 static void SAC4SNetCleanup( MPI_Datatype type, 
                              void *opt);
 
-static int SAC4SNetDeserializeType( MPI_Comm comm, 
+static int SAC4SNetDeserialiseType( MPI_Comm comm, 
                                     void *buf, 
                                     int size, 
                                     MPI_Datatype *type, 
@@ -224,7 +225,7 @@ void SAC4SNetInit( int id)
 #                            ifdef DISTRIBUTED_SNET
                                &SAC4SNetDataDecode,
                                &SAC4SNetSerializeType,
-                               &SAC4SNetDeserializeType,
+                               &SAC4SNetDeserialiseType,
                                &SAC4SNetPack,
                                &SAC4SNetUnpack,
                                &SAC4SNetCleanup
@@ -429,13 +430,13 @@ static int SAC4SNetPack(MPI_Comm comm, void *data, MPI_Datatype *type, void **bu
 
   switch( basetype) {
     case SACint:
-      *buf = SACARGconvertToIntArray( tmp);
+      *buf = SACARGconvertToIntArray( SACARGnewReference( tmp));
       break;
     case SACdbl:
-      *buf = SACARGconvertToDoubleArray( tmp);
+      *buf = SACARGconvertToDoubleArray( SACARGnewReference( tmp));
       break;
     case SACflt:
-      *buf = SACARGconvertToFloatArray( tmp);
+      *buf = SACARGconvertToFloatArray( SACARGnewReference( tmp));
       break;
     default:
       Error( "Unsupported basetype in pack function");
@@ -450,7 +451,7 @@ static void SAC4SNetCleanup(MPI_Datatype type, void *opt)
   /* currently nothing to do! */
 }
 
-static int C4SNetDeserializeType(MPI_Comm comm, void *buf, int size, MPI_Datatype *type, void **opt)
+static int SAC4SNetDeserialiseType(MPI_Comm comm, void *buf, int size, MPI_Datatype *type, void **opt)
 {
   int position = 0;
   int i;
