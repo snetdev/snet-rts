@@ -43,6 +43,10 @@
 #include "typeencode.h"
 #include "out.h"
 
+#ifdef DISTRIBUTED_SNET
+#include <mpi.h>
+#endif /* DISTRIBUTED_SNET */
+
 #define F_COUNT( c) c->counter[0]
 #define T_COUNT( c) c->counter[1]
 #define B_COUNT( c) c->counter[2]
@@ -56,14 +60,35 @@ const char *t_descr[] = {
 #undef TYP_IFdb_str
 };
 
+int my_interface_id;
 
 typedef enum { SACint=1, SACflt=7, SACdbl=8} SACbasetype_t; 
+
+typedef struct { int basetype; int dim; int *shape;} sac4snet_typeinf_t;
+
+#define TIbasetype( n) n->basetype
+#define TIdim( n) n->dim
+#define TIshape( n) n->shape
+
+static sac4snet_typeinf_t *TIcreate( int dim)
+{
+  sac4snet_typeinf_t *ti = SNetMemAlloc( sizeof ( sac4snet_typeinf_t));
+  TIshape( ti) = SNetMemAlloc( dim * sizeof( int));
+  return( ti);
+}
+
+static void *TIdestroy( sac4snet_typeinf_t *ti)
+{
+  SNetMemFree( TIshape( ti));
+  SNetMemFree( ti);
+  return( NULL);
+}
+  
 
 
 extern void SACARGfree( void*);
 extern void *SACARGcopy( void*);
 
-int my_interface_id;
 
 struct container {
   snet_handle_t *hnd;
@@ -100,6 +125,34 @@ static void *SAC4SNetDataDecode(FILE *file)
   Error( "DataDecoding not implemented.");
   return( 0);
 }
+#ifdef DISTRIBUTED_SNET
+static int SAC4SNetSerializeType( MPI_Comm comm, 
+                                  void *data, 
+                                  void *buf, 
+                                  int size);
+
+static int SAC4SNetPack( MPI_Comm comm, 
+                         void *data, 
+                         MPI_Datatype *type, 
+                         void **buf, 
+                         void **opt);
+
+static void SAC4SNetCleanup( MPI_Datatype type, 
+                             void *opt);
+
+static int SAC4SNetDeserializeType( MPI_Comm comm, 
+                                    void *buf, 
+                                    int size, 
+                                    MPI_Datatype *type, 
+                                    void **opt);
+
+static void* SAC4SNetUnpack( MPI_Comm comm, 
+                             void *buf, 
+                             MPI_Datatype type, 
+                             int count, 
+                             void *opt);
+#endif /* DISTRIBUTED_SNET */
+
 
 /******************************************************************************/
 
@@ -157,14 +210,27 @@ void SAC4SNet_out( void *hnd, int variant, ...)
 void SAC4SNetInit( int id)
 {
   my_interface_id = id;
-  SNetGlobalRegisterInterface( id, 
-			       SNET_interface_basic,
+  SNetGlobalRegisterInterface( id,
+#                            ifdef DISTRIBUTED_SNET
+                               SNET_interface_MPI,
+#                            else 
+			                         SNET_interface_basic,
+#                            endif
                                &SACARGfree, 
                                &SACARGcopy, 
                                &SAC4SNetDataSerialise, 
                                &SAC4SNetDataDeserialise,
                                &SAC4SNetDataEncode,
+#                            ifdef DISTRIBUTED_SNET
+                               &SAC4SNetDataDecode,
+                               &SAC4SNetSerializeType,
+                               &SAC4SNetDeserializeType,
+                               &SAC4SNetPack,
+                               &SAC4SNetUnpack,
+                               &SAC4SNetCleanup
+#                            else
                                &SAC4SNetDataDecode
+#                            endif
                                );  
 }
 
@@ -289,6 +355,154 @@ static void *SAC4SNetDataDeserialise( FILE *file)
 
   return( (void*)scanres);
 }
+
+/******************************************************************************/
+
+
+#ifdef DISTRIBUTED_SNET
+static MPI_Datatype SAC4SNetBasetypeToMPIType( int basetype)
+{
+  switch( basetype)
+  {
+    case SACint:
+      return( MPI_INT);
+      break;
+    case SACflt:
+      return( MPI_FLOAT);
+      break;
+    case SACdbl:
+      return( MPI_DOUBLE);
+      break;
+    default:
+      Error( "Unsupported basetype in type conversion.");
+      break;
+  }
+  return( MPI_DATATYPE_NULL);
+}
+
+static int SAC4SNetSerializeType(MPI_Comm comm, void *data, void *buf, int size)
+{
+  SACarg *temp = (SACarg *)data;
+  int pack_size;
+  int position = 0;
+  int dims, type, *shape;
+  int i;
+
+  /* We pack the following type information:
+   * 1 int  - basetype
+   * 1 int  - dimensionality n
+   * n ints - size of dims 0 .. n-1
+   */
+
+  dims = SACARGgetDim( temp);
+  type = SACARGgetBasetype( temp);
+  shape = SNetMemAlloc( dims * sizeof( int));
+  for( i=0; i<dims; i++) {
+    shape[i] = SACARGgetShape( temp, i);  
+  }
+  
+  MPI_Pack_size( 2+dims, MPI_INT, comm, &pack_size);
+
+  if(pack_size < size) {
+    MPI_Pack( &type, 1, MPI_INT, buf, size, &position, comm);
+    MPI_Pack( &dims, 1, MPI_INT, buf, size, &position, comm);
+    MPI_Pack( shape, dims, MPI_INT, buf, size, &position, comm);
+  } else {
+    position = SNET_INTERFACE_ERR;
+  }
+
+  return position;
+}
+
+static int SAC4SNetPack(MPI_Comm comm, void *data, MPI_Datatype *type, void **buf, void **opt)
+{
+  SACarg *tmp = (SACarg *)data;
+  int i;
+  int basetype = SACARGgetBasetype( tmp);
+  int num_elems = 1;
+
+  *type = SAC4SNetBasetypeToMPIType( basetype);
+
+  for( i=0; i<SACARGgetDim( tmp); i++) {
+    num_elems *= SACARGgetShape( tmp, i);
+  }
+
+  switch( basetype) {
+    case SACint:
+      *buf = SACARGconvertToIntArray( tmp);
+      break;
+    case SACdbl:
+      *buf = SACARGconvertToDoubleArray( tmp);
+      break;
+    case SACflt:
+      *buf = SACARGconvertToFloatArray( tmp);
+      break;
+    default:
+      Error( "Unsupported basetype in pack function");
+      break;
+  }
+
+  return num_elems;
+}
+
+static void SAC4SNetCleanup(MPI_Datatype type, void *opt)
+{
+  /* currently nothing to do! */
+}
+
+static int C4SNetDeserializeType(MPI_Comm comm, void *buf, int size, MPI_Datatype *type, void **opt)
+{
+  int position = 0;
+  int i;
+  int basetype;
+  int dims;
+  int num_elems = 1;
+  sac4snet_typeinf_t *ti;
+
+  
+  MPI_Unpack( buf, size, &position, &basetype, 1, MPI_INT, comm);
+  MPI_Unpack( buf, size, &position, &dims, 1, MPI_INT, comm);
+
+  ti = TIcreate( dims);
+  TIbasetype( ti) = basetype;
+
+  MPI_Unpack( buf, size, &position, &TIshape( ti), dims, MPI_INT, comm);
+
+  for( i=0; i<dims; i++) {
+    num_elems *= TIshape( ti)[i];
+  }
+
+  *opt = ti;
+
+  *type = SAC4SNetBasetypeToMPIType( basetype);
+
+  return num_elems;
+}
+
+static void* SAC4SNetUnpack(MPI_Comm comm, void *buf, MPI_Datatype type, int count, void *opt)
+{
+  SACarg *t;
+  sac4snet_typeinf_t *ti = (sac4snet_typeinf_t *)opt;
+  switch( TIbasetype( ti)) {
+    case SACint:
+      t = SACARGconvertFromIntPointerVect( buf, TIdim( ti), TIshape( ti));
+      break;
+    case SACflt:
+      t = SACARGconvertFromFloatPointerVect( buf, TIdim( ti), TIshape( ti));
+      break;
+    case SACdbl:
+      t = SACARGconvertFromDoublePointerVect( buf, TIdim( ti), TIshape( ti));
+      break;
+    default:
+      Error( "Unsupported basetype in unpack function");
+      break;
+  }
+  
+  ti = TIdestroy( ti);
+
+  return t;
+}
+#endif
 
 /******************************************************************************/
 
