@@ -75,6 +75,7 @@ static sac4snet_typeinf_t *TIcreate( int dim)
 {
   sac4snet_typeinf_t *ti = SNetMemAlloc( sizeof ( sac4snet_typeinf_t));
   TIshape( ti) = SNetMemAlloc( dim * sizeof( int));
+  TIdim( ti) = dim;
   return( ti);
 }
 
@@ -301,6 +302,9 @@ static void *SAC4SNetDataDeserialise( FILE *file)
 {
   int i;
   char buf[128], tstr[128];
+  char datafile_name[128];
+  FILE *datafile;
+
   int basetype, dim, *shape;
   SACarg *scanres, *sac_shp, *dummy;
 
@@ -314,6 +318,17 @@ static void *SAC4SNetDataDeserialise( FILE *file)
       fscanf( file, "%d", &shape[i]);
     }
     fscanf( file, "%s", buf);
+    
+    /* This is a temporary workaround to avoid 
+     * having two yaccs accessing the same file (which results
+     * in interesting behaviour...)
+     */
+    fscanf( file, "%s", datafile_name);
+    datafile = fopen( datafile_name, "r");
+    if( datafile == NULL) {
+      Error( "Failed to open datafile");
+    }
+    
     if( strcmp( IDSTRINGSUF, buf) == 0) {
       sac_shp = SACARGconvertFromIntPointerVect( shape, 1, &dim);
       switch( basetype) {
@@ -321,21 +336,21 @@ static void *SAC4SNetDataDeserialise( FILE *file)
           SAC4SNetFibreIO__ScanIntArray2( 
               &dummy, 
               &scanres, 
-              SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
+              SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, datafile),
               sac_shp);
           break;
         case SACdbl:
           SAC4SNetFibreIO__ScanDoubleArray2( 
               &dummy, 
               &scanres, 
-              SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
+              SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, datafile),
               sac_shp);
           break;
         case SACflt:
           SAC4SNetFibreIO__ScanFloatArray2( 
               &dummy, 
               &scanres, 
-              SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
+              SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, datafile),
               sac_shp);
           break;
         default: /* unsupported base type */
@@ -343,13 +358,14 @@ static void *SAC4SNetDataDeserialise( FILE *file)
             Error("Unsupported Base Type");
           break;
       }
+      fclose( datafile);
     }
     else { /* Illegal Header Suffix */
       scanres = NULL;
       Error( "Illegal Header Suffix"); 
     }
   } 
-  else { /* Illegal Header Prefix*/
+  else { /* Illegal Header Prefix */
     scanres = NULL;
       Error( "Illegal Header Prefix"); 
   }
@@ -439,7 +455,7 @@ static int SAC4SNetPack(MPI_Comm comm, void *data, MPI_Datatype *type, void **bu
       *buf = SACARGconvertToFloatArray( SACARGnewReference( tmp));
       break;
     default:
-      Error( "Unsupported basetype in pack function");
+      Error( "Unsupported basetype in pack function.");
       break;
   }
 
@@ -467,7 +483,7 @@ static int SAC4SNetDeserialiseType(MPI_Comm comm, void *buf, int size, MPI_Datat
   ti = TIcreate( dims);
   TIbasetype( ti) = basetype;
 
-  MPI_Unpack( buf, size, &position, &TIshape( ti), dims, MPI_INT, comm);
+  MPI_Unpack( buf, size, &position, TIshape( ti), dims, MPI_INT, comm);
 
   for( i=0; i<dims; i++) {
     num_elems *= TIshape( ti)[i];
@@ -476,7 +492,6 @@ static int SAC4SNetDeserialiseType(MPI_Comm comm, void *buf, int size, MPI_Datat
   *opt = ti;
 
   *type = SAC4SNetBasetypeToMPIType( basetype);
-
   return num_elems;
 }
 
@@ -495,7 +510,7 @@ static void* SAC4SNetUnpack(MPI_Comm comm, void *buf, MPI_Datatype type, int cou
       t = SACARGconvertFromDoublePointerVect( buf, TIdim( ti), TIshape( ti));
       break;
     default:
-      Error( "Unsupported basetype in unpack function");
+      Error( "Unsupported basetype in unpack function.");
       break;
   }
   
