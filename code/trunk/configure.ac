@@ -381,15 +381,23 @@ case "$target_os" in
   *darwin*)      
     dnl darwin needs some extra flags
     RANLIB="$RANLIB -c"
-    OSFLAGS=["-no-cpp-precomp -Wno-long-double"]
     case "$target_os" in
+      *darwin10\.*)
+        OSFLAGS=["-no-cpp-precomp"]
+        LD_DYNAMIC=["-undefined suppress -flat_namespace -dynamiclib -install_name '@rpath/%libname%' "]
+        LD_PATH=["-Wl,-rpath,"]
+        LD_FLAGS=""
+        AC_MSG_RESULT([darwin 10.x settings])
+        ;;
       *darwin9\.*)
+        OSFLAGS=["-no-cpp-precomp -Wno-long-double"]
         LD_DYNAMIC=["-undefined suppress -flat_namespace -dynamiclib -install_name '@rpath/%libname%' "]
         LD_PATH=["-Wl,-rpath,"]
         LD_FLAGS=""
         AC_MSG_RESULT([darwin 9.x settings])
         ;;
       [*darwin[6-8]\.*)]
+        OSFLAGS=["-no-cpp-precomp -Wno-long-double"]
         LD_DYNAMIC=["-undefined suppress -flat_namespace -bundle"]
         LD_PATH=["-L"]
         LD_FLAGS=""
