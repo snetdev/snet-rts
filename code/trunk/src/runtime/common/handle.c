@@ -342,7 +342,7 @@ extern snet_handle_t *SNetHndCopy( snet_handle_t *hnd)
 {
   printf("\n\n ** Runtime Error ** : Attempt to copy a handle. Handles must not be copied! (This is most likely a language-interface bug.)\n\n");
   exit( 1);
-  return( NULL);
+  return( hnd);
 }
 
 extern snet_record_t *SNetHndGetRecord( snet_handle_t *hnd) {

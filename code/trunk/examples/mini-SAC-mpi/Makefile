@@ -1,6 +1,6 @@
 include $(SNETBASE)/src/makefiles/config.mkf
 
-CC        = mpicc
+CC        = scalasca -instrument -v mpicc
 CCFLAGS   = -Wall -g -DDISTRIBUTED_SNET -DFILTER_VERSION_2 $(RPATH)
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I./include -I$(MPIROOT)/include

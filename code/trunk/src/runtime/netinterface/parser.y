@@ -30,6 +30,11 @@
 #include "constants.h"
 #include "debug.h"
 
+
+#ifndef YY_BUF_SIZE
+#define YY_BUF_SIZE 16384
+#endif
+
 /* SNet record types */
 #define SNET_REC_DATA       "data" 
 #define SNET_REC_COLLECT    "collect"
@@ -486,30 +491,28 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	    }
 	
 	    if(iid != INTERFACE_UNKNOWN) {
-
-	      if(current.mode == MODE_TEXTUAL) {
-		data = SNetGetDeserializationFun(iid)(yyin);
+	
+        if(current.mode == MODE_TEXTUAL) {
+          data = SNetGetDeserializationFun(iid)(yyin);
 	      } else if(current.mode == MODE_BINARY) {
-		data = SNetGetDecodingFun(iid)(yyin);
+		        data = SNetGetDecodingFun(iid)(yyin);
 	      } else {
-		data = NULL;
-		yyerror("Unknown data mode");
+		        data = NULL;
+		        yyerror("Unknown data mode");
 	      }
 
 	      if(data != NULL) {
-
-		SNetRecAddField(current.record, label);
-		SNetRecSetField(current.record, label, data);
+      		SNetRecAddField(current.record, label);
+	      	SNetRecSetField(current.record, label, data);
 	      } else {
-		yyerror("Could not decode data!");
+		      yyerror("Could not decode data!");
 	      }
-
+	     
 	      while(getc(yyin) != '<');		  
 	      if(ungetc('<', yyin) == EOF){
 		/* This is an error. First char of the next tag is already consumed! */
-		SNetUtilDebugFatal("Input: Reading error.");
+      		SNetUtilDebugFatal("Input: Reading error.");
 	      }
-	    
 	      yyrestart(yyin);
 	    }else { 
 	      /* If we cannot deserialise the data we must ignore it! */

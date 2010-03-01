@@ -1,11 +1,12 @@
+include $(SNETBASE)/src/makefiles/config.mkf
 CC        = mpicc
-CCFLAGS  = -Wall -g -DFILTER_VERSION_2 -DDISTRIBUTED_SNET -DSNET_DEBUG_COUNTERS
+CCFLAGS  = -Wall -g -DDISTRIBUTED_SNET 
 SNETC     = snetc
 SNETCFLAGS= -b7 -distributed
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I$(SNETBASE)/interfaces/C
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L$(MPIROOT)/lib
-LIBS      = -lpthread -lC4SNet -lC4SNetc -lmpi -lsnetmpi -lsnetutil -lcrypt 
+LIBS      = -lpthread -lC4SNet -lC4SNetc -lsnetmpi -lsnetutil -lcrypt 
 
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = crypto

@@ -56,5 +56,12 @@ mpi: libSNetMod.so sac_lib/lib$(IFNAME)FibreIO.so
 	$(COPY) $(TARGET) $(WRAPTARGET) $(LIBDIR)/lib$(LIB).so $(TARGETDIR)
 	$(COPY) $(IFNAME).h $(SNETBASE)/include
 
+mpiprofiler: libSNetMod.so sac_lib/lib$(IFNAME)FibreIO.so
+	/opt/Scalasca/bin/scalasca -instrument mpicc  $(CCFLAGS) $(DISTFLAGS) $(INCDIRS) $(MPIINCDIRS) $(S4CINCS) -c *.c
+	/opt/Scalasca/bin/scalasca -instrument mpicc  $(LD_DYNAMIC) $(S4CLIBS) -o $(TARGET) $(OBJECTS) 
+	/opt/Scalasca/bin/scalasca -instrument mpicc  $(LD_DYNAMIC) -o $(WRAPTARGET) $(WRAPOBJECTS) 
+	$(COPY) $(TARGET) $(WRAPTARGET) $(LIBDIR)/lib$(LIB).so $(TARGETDIR)
+	$(COPY) $(IFNAME).h $(SNETBASE)/include
+
 clean:
 	rm -f *.o *.a *.so $(TARGETDIR)/$(TARGET) $(TARGETDIR)/$(WRAPTARGET) sac_include/* $(LIBDIR)/* $(SNETBASE)/include/$(IFNAME).h
