@@ -1,0 +1,9 @@
+module boxes;
+
+import Fractal_module : all;
+import mandelbrot_simple : all;
+import SNetDisplay : all;
+
+export all;
+
+

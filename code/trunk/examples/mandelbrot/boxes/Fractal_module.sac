@@ -1,0 +1,173 @@
+module Fractal_module;
+
+use Structures: all;
+use Numerical: all;
+
+export all;
+
+/** <!--*******************************************************************-->
+ * 
+ * @fn : complex[.,.] genComplexArray( int[2] shp, complex cmin, complex cmax)
+ *
+ *   @brief generates an array of complex numbers with shape "shp" and 
+ *          linearly increasing/decreasing values between "cmin" and "cmax".
+ *          The element at index [0,0] should be "cmin".
+ *
+ *****************************************************************************/
+inline
+complex[.,.] genComplexArray( int[2] shp, complex cmin, complex cmax)
+{
+  res = with {
+          ( . <= iv <= .) : cmin + toc( (tod(iv) / tod(shp))  * todv(cmax-cmin));
+        } : genarray( shp, toc( 0,0));
+  return( res);
+}
+
+
+/** <!--*******************************************************************-->
+ * 
+ * @fn int escapeTime(complex z, int depth)
+ *
+ *   @brief iteratively computes c = c*c + z starting from c=z.
+ *          terminates either when |c| > 2 or depth iterations
+ *          have been performed.
+ *          NB: Besides "norm" there exists "normSq" which computes |c|^2.
+ *
+ *   @return number of iterations done
+ *****************************************************************************/
+inline
+int escapeTime(complex z, int depth)
+{
+  i=0; c=z;
+
+  while( (normSq( c) <= 4d) && (i <= depth)) {
+    c=c*c+z; i++;
+  }
+
+  return(i);
+}
+
+/** <!--*******************************************************************-->
+ *
+ * @fn int[*] escapeTime(complex[*] z, int depth)
+ *
+ *   @brief maps escapeTime to an entire array of complex numbers
+ *
+ *****************************************************************************/
+
+inline
+int[*] escapeTime( complex[*] plane, int depth)
+{
+  values = with {
+             ( . <= iv <= .) : escapeTime( plane[iv], depth);
+           } : genarray( shape( plane), 0);
+
+  return( values);
+}
+
+/** <!--*******************************************************************-->
+ *
+ * @fn color[.,.] intArrayToMonochrome( int[.,.] a)
+ *
+ *   @brief converts integer values into color values using
+ *          a logarithmic clut from black to red.
+ *****************************************************************************/
+inline
+Color8::color[.,.] intArrayToMonochrome( int[.,.] a)
+{
+  clut = genLogarithmicClut( 0.4d, 0.9d, Color8::black(), Color8::red());
+
+  d = with {
+        ( .<= iv <= .) : clut[ a[ iv]];
+      } : genarray( shape(a), Color8::black());
+
+  return( d);
+}
+/** <!--*******************************************************************-->
+ *
+ * @fn complex escapeValue(complex z, int depth)
+ *
+ *   @brief iteratively computes c = c*c + z starting from c=z.
+ *          terminates either when |c| > 2 or depth iterations
+ *          have been performed.
+ *          NB: Besides "norm" there exists "normSq" which computes |c|^2.
+ *
+ *   @return final complex value
+ *****************************************************************************/
+inline
+complex escapeValue(complex z, int depth)
+{
+  i=0; c=z;
+
+  while( (normSq( c) <= 4d) && (i <= depth)) {
+    c=c*c+z; i++;
+  }
+
+  return(c);
+}
+
+/** <!--*******************************************************************-->
+ *
+ * @fn complex[*] escapeValue(complex[*] z, int depth)
+ *
+ *   @brief maps escapeValue to an entire array of complex numbers
+ *
+ *****************************************************************************/
+inline
+complex[.,.] escapeValue( complex[.,.] plane, int depth)
+{
+  values = with {
+             ( . <= x <= .) : escapeValue( plane[x], depth);
+           } : genarray( shape( plane), toc(0));
+
+  return( values);
+}
+
+
+/** <!--*******************************************************************-->
+ *
+ * @fn double normalizedIterationCount(int n, complex zn)
+ *
+ *   @brief normalizes the iteration counts in "n" taking the distance of the 
+ *          corresponding final complex numbers from the origin into account.
+ *          For corresponding elements in "n" and "zn", we have:
+ *             0.0                          iff |zn| <= 2
+ *             (n+1) - log2( log2( |zn|))   otherwise
+ *
+ *   @return the normalized iteration counts
+ *****************************************************************************/
+inline
+double[*] normalizedIterationCount(int[*] n, complex[*] zn)
+{
+  return( where( (norm( zn) <= 2d) , 0d , tod(n+1) - log2( log2( norm( zn)))));
+}
+
+
+/** <!--*******************************************************************-->
+ *
+ * @fn color[.,.] doubleArrayToRGB( double[.,.] a)
+ *
+ *   @brief transforms an array of doubles into RGB values, by 
+ *          FIRST scaling them into values between 0.0 and 360.0, and
+ *          THEN  using them as HSB angles to choose a color.
+ *          NB: Color8 provides a function Hsb2Rgb for the actual
+ *              conversion.
+ *  
+ *   @return RGB values
+ *****************************************************************************/
+inline
+Color8::color[.,.] doubleArrayToRGB( double[.,.] a)
+{
+  max = maxval( a);
+  min = minval( a);
+
+  scaled_vals = (a - min)/ (max-min);
+
+  rgbs = Color8::Hsb2Rgb(toi( scaled_vals * 360d), 60, 80);
+
+  return( rgbs);
+}
+
+
+
+
