@@ -1,6 +1,6 @@
 <metadata>
   <boxdefault>
-    <interface value="SAC4SNet" />
+    <interface value="SAC4SNetMPI" />
     <SACmodule>boxes</SACmodule>
   </boxdefault>
 </metadata>

@@ -12,11 +12,11 @@ INCDIRS   = -I. -I$(SNETBASE)/include -I./include
 LIBDIRS   = -L. -Lboxes -Lboxes/src -L$(SNETBASE)/lib -L./lib \
             -L$(SNETBASE)/interfaces/SAC
 ifdef MPIMODE
-SLIB     = snetmpi 
+SLIB     = -lsnetmpi -lSAC4SNetMPI 
 else
-SLIB     = snet
+SLIB     = -lsnet -lSAC4SNet 
 endif
-LIBS      = -lpthread -l$(SLIB) -lSAC4SNet -lsnetutil
+LIBS      = -lpthread $(SLIB) -lsnetutil
 
 SACNAMES  = -DSACTYPE_SNet_SNet=23 -DSNetMain__$(TARGET)=main
 TMAPIDS   = -DCID=24 -DCPXID=20 -DDISPID=26
