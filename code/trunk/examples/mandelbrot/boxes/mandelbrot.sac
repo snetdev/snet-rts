@@ -1,4 +1,4 @@
-module mandelbrot_simple;
+module mandelbrot;
 
 #define XRES 800
 #define YRES 800

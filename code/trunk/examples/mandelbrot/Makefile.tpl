@@ -28,7 +28,7 @@ SNETCFLAGS = -b7 -v0 $(SMPIFLAG)
 SACTARGET = boxes
 SACDISP   = SNetDisplay
 SACFRAC   = Fractal_module
-SACMANDEL = mandelbrot_simple
+SACMANDEL = mandelbrot
 # - - - - - - - - - - - - - - - - - - - -
 
 SAC2C     = sac2c
