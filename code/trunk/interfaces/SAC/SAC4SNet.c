@@ -62,7 +62,7 @@ const char *t_descr[] = {
 
 int my_interface_id;
 
-typedef enum { SACint=1, SACflt=7, SACdbl=8} SACbasetype_t; 
+typedef enum { SACint=3, SACflt=11, SACdbl=12} SACbasetype_t; 
 
 #ifdef DISTRIBUTED_SNET
 typedef struct { int basetype; int dim; int *shape;} sac4snet_typeinf_t;
@@ -110,6 +110,28 @@ static void Error( char *msg)
   printf("\n\n** SAC4SNet Fatal Error ** (abort) : %s\n\n", msg);
   exit( -1);
 }
+
+static int TstrToNum( char *s)
+{
+  int i = 0;
+  
+  /* T_nothing is the last entry of the types table */
+  while( strcmp( t_descr[i], s) != 0) {
+    if( strcmp( t_descr[i], "nothing") == 0) {
+      Error( "Invalid Basetype");
+    } 
+    i += 1;
+  }
+  return( i);
+}
+
+static int MaxTNum() 
+{
+  int i = 0;
+  while( strcmp( t_descr[i++], "nothing") != 0);
+  return( i-1);
+}
+
 
 
 /*
@@ -243,12 +265,27 @@ static int SAC4SNetDataSerialise( FILE *file, void *ptr)
 {
   int i, dim;
   SACarg *ret, *arg = (SACarg*)ptr;
+  char *basetype_str;
+  int btype;
 
+  btype = SACARGgetBasetype( arg);
+
+  if( btype <= MaxTNum()) {
+    basetype_str = SNetMemAlloc( 
+                      (strlen( t_descr[ btype]) + 1) * sizeof( char));
+    strcpy( basetype_str, t_descr[ btype]);
+  } 
+  else {
+    basetype_str = SNetMemAlloc( 
+                      (strlen( "(UDT)") + 1) * sizeof( char));
+    strcpy( basetype_str, "(UDT)");
+  }
+   
   if( arg != NULL) { 
 
     dim = SACARGgetDim( arg);
     fprintf( file, "\n%s %s %d ", IDSTRINGPRE, 
-                                  t_descr[SACARGgetBasetype( arg)], 
+                                  basetype_str, 
                                   dim);
     for( i=0; i<dim; i++) {
       fprintf( file, "%d ",SACARGgetShape( arg, i));
@@ -275,27 +312,14 @@ static int SAC4SNetDataSerialise( FILE *file, void *ptr)
             SACARGnewReference( arg));
       break;
       default:
-        fprintf( file, "##UNSUPPORTED BASETYPE##");
+        fprintf( file, "## UNSERIALISABLE BASETYPE (%d) ##\n", btype);
       break;
     }
 
   }
+  SNetMemFree( basetype_str);
 
   return( 0);
-}
-
-static int TstrToNum( char *s)
-{
-  int i = 0;
-  
-  /* T_nothing is the last entry of the types table */
-  while( strcmp( t_descr[i], s) != 0) {
-    if( strcmp( t_descr[i], "nothing") == 0) {
-      Error( "Invalid Basetype");
-    } 
-    i += 1;
-  }
-  return( i);
 }
 
 static void *SAC4SNetDataDeserialise( FILE *file)
