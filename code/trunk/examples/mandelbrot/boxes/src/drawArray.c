@@ -58,12 +58,12 @@ Display drawArray( Display disp,
   /*
    * unlock it
    */
-  if (SDL_MUSTLOCK( NT_NAME( disp_nt))) {
-    SDL_UnlockSurface( NT_NAME( disp_nt));
+  if (SDL_MUSTLOCK( disp)) {
+    SDL_UnlockSurface( disp);
   }
 
   if( !SDLsac_isasync) {
-    SDL_UpdateRect( NT_NAME( disp_nt), 0, 0, 0, 0);
+    SDL_Flip( disp);
   }
 
   /*

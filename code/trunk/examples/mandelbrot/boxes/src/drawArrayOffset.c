@@ -15,8 +15,8 @@ Display drawArrayOffset( Display disp,
     SAC_RuntimeError( "Failed to lock the access mutex");
   }
 
-  xoffset = pic_offset[0];
-  yoffset = pic_offset[1];
+  xoffset = pic_offset[1];
+  yoffset = pic_offset[0];
 
   /*
    * check bounds

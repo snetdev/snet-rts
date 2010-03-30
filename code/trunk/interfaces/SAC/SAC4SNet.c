@@ -379,6 +379,7 @@ static void *SAC4SNetDataDeserialise( FILE *file)
           break;
         default: /* unsupported base type */
             scanres = NULL;
+            printf( "\n>%d<\n", basetype);
             Error("Unsupported Base Type");
           break;
       }
