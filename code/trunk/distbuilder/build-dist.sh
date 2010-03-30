@@ -13,7 +13,7 @@ DESTDIR=$TMPDIR/$DIST
 # what to delete from tree
 DEL_FROM_ROOT="Makefile config* ide src tests TODO distbuilder"
 EXAMPLE_DIR=$DESTDIR/examples
-DEL_FROM_EXAMPLES="crypto factorial_mpi matrix socrad"
+DEL_FROM_EXAMPLES="mti-stap factorial_mpi matrix socrad"
 
 # misc
 VERSION=`svn info $SNETBASE | grep Revision | awk '{print $2}'`
