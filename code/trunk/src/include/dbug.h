@@ -17,6 +17,14 @@
  ***********************************************************************
  */
  
+/************************************************************************
+ *                                                                      *
+ * Note that this file has undergone substantial rewriting by the       *
+ * SAC team!!                                                           *
+ *                                                                      *
+ ************************************************************************
+ */
+ 
 
 /*
  *  FILE 
@@ -78,17 +86,22 @@
     extern int _db_dummy_;                 /* dummy for fooling macro preprocessor */
     extern FILE *_db_fp_;                  /* Current debug output stream */
     extern char *_db_process_;             /* Name of current process */
-    extern int _db_keyword_ ();            /* Accept/reject keyword */
-    extern void _db_push_ ();              /* Push state, set up new state */
-    extern void _db_pop_ ();               /* Pop previous debug state */
-    extern void _db_enter_ ();             /* New user function entered */
-    extern void _db_return_ ();            /* User function return */
-    extern void _db_pargs_ ();             /* Remember args for line */
-    extern void _db_doprnt_ ();            /* Print debug output */
-    extern void _db_doprnt_assert_1_ ();   /* Print debug output */
-    extern void _db_doprnt_assert_2_ ();   /* Print debug output */
-    extern void _db_setjmp_ ();            /* Save debugger environment */
-    extern void _db_longjmp_ ();           /* Restore debugger environment */
+    extern int _db_keyword_ (char *);      /* Accept/reject keyword */
+    extern void _db_push_ (char *);        /* Push state, set up new state */
+    extern void _db_pop_ (void);           /* Pop previous debug state */
+    extern void _db_enter_ (char *, char *, int, char **, char **, int *);
+                                           /* New user function entered */
+    extern void _db_return_ (int, char **, char **, int *);
+                                           /* User function return */
+    extern void _db_pargs_ (int, char*);   /* Remember args for line */
+    extern void _db_doprnt_ (char *, ...);
+                                           /* Print debug output */
+    extern void _db_doprnt_assert_1_ (char *, int, char *);   
+                                           /* Print debug output */
+    extern void _db_doprnt_assert_2_ (char *, ...);
+                                           /* Print debug output */
+    extern void _db_setjmp_ (void);        /* Save debugger environment */
+    extern void _db_longjmp_ (void);       /* Restore debugger environment */
 # endif
  
 

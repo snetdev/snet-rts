@@ -18,7 +18,7 @@ AC_LANG(C)
 
 dnl and which files to create
 AC_CONFIG_FILES(src/makefiles/config.mkf)
-AC_CONFIG_HEADER(src/compiler/global/config.h)
+AC_CONFIG_HEADER(src/include/config.h)
 
 dnl check for host type
 AC_CANONICAL_BUILD()

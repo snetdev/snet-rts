@@ -1,19 +1,28 @@
 
 /************************************************************************
- *                                                                     *
- *                     Copyright (c) 1984, Fred Fish                   *
- *                         All Rights Reserved                         *
- *                                                                     *
- *     This software and/or documentation is released for public       *
- *     distribution for personal, non-commercial use only.             *
- *     Limited rights to use, modify, and redistribute are hereby      *
- *     granted for non-commercial purposes, provided that all          *
- *     copyright notices remain intact and all changes are clearly     *
- *     documented.  The author makes no warranty of any kind with      *
- *     respect to this product and explicitly disclaims any implied    *
- *     warranties of merchantability or fitness for any particular     *
- *     purpose.                                                        *
- *                                                                     *
+ *                                                                      *
+ *                     Copyright (c) 1984, Fred Fish                    *
+ *                         All Rights Reserved                          *
+ *                                                                      *
+ *     This software and/or documentation is released for public        *
+ *     distribution for personal, non-commercial use only.              *
+ *     Limited rights to use, modify, and redistribute are hereby       *
+ *     granted for non-commercial purposes, provided that all           *
+ *     copyright notices remain intact and all changes are clearly      *
+ *     documented.  The author makes no warranty of any kind with       *
+ *     respect to this product and explicitly disclaims any implied     *
+ *     warranties of merchantability or fitness for any particular      *
+ *     purpose.                                                         *
+ *                                                                      *
+ ************************************************************************
+ */
+ 
+
+/************************************************************************
+ *                                                                      *
+ * Note that this file has undergone substantial rewriting by the       *
+ * SAC team!!                                                           *
+ *                                                                      *
  ************************************************************************
  */
  
@@ -49,14 +58,13 @@
 
 #ifndef DBUG_OFF 
 
-#define HAVE_STRTOK
-#define HAVE_STRRCHR
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdarg.h>
 
+#include "config.h"
 #include "dbug.h"
  
 /*
@@ -110,22 +118,6 @@ typedef int BOOLEAN;
 #define AUTO auto              /* Names to be allocated on stack */
 #define REGISTER register      /* Names to be placed in registers */
  
-/*
- *     The following define is for the variable arguments kluge, see
- *     the comments in _db_doprnt_().
- *
- *     Also note that the longer this list, the less prone to failing
- *     on long argument lists, but the more stuff that must be moved
- *     around for each call to the runtime support routines.  The
- *     length may really be critical if the machine convention is
- *     to pass arguments in registers.
- *
- *     Note that the default define allows up to 16 integral arguments,
- *     or 8 floating point arguments (doubles), on most machines.
- *
- */
- 
-#define ARGLIST a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15
  
 /*
  *     Variables which are available externally but should only
@@ -414,8 +406,7 @@ IMPORT unsigned sleep ();      /* Pause for given number of seconds */
  */
  
 
-VOID _db_push_ (control)
-char *control;
+VOID _db_push_ (char *control)
 {
     REGISTER char *scan;
     REGISTER struct link *temp;
@@ -514,7 +505,7 @@ char *control;
  *
  */
  
-VOID _db_pop_ ()
+VOID _db_pop_ (VOID)
 {
     REGISTER struct state *discard;
  
@@ -573,13 +564,8 @@ VOID _db_pop_ ()
  *
  */
  
-VOID _db_enter_ (_func_, _file_, _line_, _sfunc_, _sfile_, _slevel_)
-char *_func_;
-char *_file_;
-int _line_;
-char **_sfunc_;
-char **_sfile_;
-int *_slevel_;
+VOID _db_enter_ (char *_func_, char *_file_, int _line_, 
+                 char **_sfunc_, char **_sfile_, int *_slevel_)
 {
     if (!init_done) {
        _db_push_ ("");
@@ -591,7 +577,14 @@ int *_slevel_;
     stack -> level++;
     if( stack -> level == stack -> maxdepth+1 ) {
       fprintf( _db_fp_, "WARNING: dbug-maxdepth %d too low\n", stack -> maxdepth);
+#if 0
+      /**
+       * automatic tracing is a good idea for detecting the reason for the 
+       * overflow, but it sometimes kills the masterrun. Therefore, we decided
+       * NOT to automatically trace anymore.....
+       */
       _db_push_("t");
+#endif
     }
     *_slevel_ = stack -> level;
     if (DoTrace ()) {
@@ -626,11 +619,7 @@ int *_slevel_;
  *
  */
  
-VOID _db_return_ (_line_, _sfunc_, _sfile_, _slevel_)
-int _line_;
-char **_sfunc_;
-char **_sfile_;
-int *_slevel_;
+VOID _db_return_ (int _line_, char **_sfunc_, char **_sfile_, int *_slevel_)
 {
     if (!init_done) {
        _db_push_ ("");
@@ -671,10 +660,7 @@ int *_slevel_;
 *
  */
  
-VOID _db_lpargs_ (_line_, key1, key2)
-int _line_;
-char *key1;
-char *key2;
+VOID _db_lpargs_ (int _line_, char *key1, char *key2)
 {
     u_line = _line_;
     u_keyword = key1;
@@ -720,10 +706,12 @@ char *key2;
  */
 
  
-VOID _db_ldoprnt_ (format, ARGLIST)
-char *format;
-long ARGLIST;
+VOID _db_ldoprnt_ (char *format, ...)
 {
+    va_list args;
+
+    va_start( args, format);
+
     if ( (_db_keyword_ (u_keyword)) && (_db_keyword_ (u_keyword2)) )
     {
 #if SHM
@@ -739,17 +727,15 @@ long ARGLIST;
         (VOID) fprintf (_db_fp_, "%12.12s: ", func);
       } 
       (VOID) fprintf (_db_fp_, "%s(%s): ", u_keyword, u_keyword2);
-      (VOID) fprintf (_db_fp_, format, ARGLIST);
+      (VOID) vfprintf (_db_fp_, format, args);
       (VOID) fprintf (_db_fp_, "\n");
       (VOID) fflush (_db_fp_);
       (VOID) Delay (stack -> delay);
     }
+    va_end(args);
 }
 
-VOID _db_doprnt_assert_1_ (file, line, text)
-char *file;
-int line;
-char *text;
+VOID _db_doprnt_assert_1_ (char *file, int line, char *text)
 {
   fprintf(_db_fp_,                                               
           "ASSERTION FAILED: file '%s', line %d\n",        
@@ -761,14 +747,18 @@ char *text;
   }
 }
 
-VOID _db_doprnt_assert_2_ (format, ARGLIST)
-char *format;
-long ARGLIST;
+VOID _db_doprnt_assert_2_ (char *format, ...)
 {
-  fprintf (_db_fp_, format, ARGLIST);
+  va_list args;
+
+  va_start( args, format);
+
+  vfprintf (_db_fp_, format, args);
   fprintf (_db_fp_, "\n");
   fprintf(_db_fp_, "EXECUTION TERMINATED\n");
   fflush (_db_fp_);
+
+  va_end( args);
 }
 
 
@@ -792,9 +782,7 @@ long ARGLIST;
 *
  */
  
-VOID _db_pargs_ (_line_, keyword)
-int _line_;
-char *keyword;
+VOID _db_pargs_ (int _line_, char *keyword)
 {
     u_line = _line_;
     u_keyword = keyword;
@@ -839,10 +827,12 @@ char *keyword;
  */
  
 /*VARARGS1*/
-VOID _db_doprnt_ (format, ARGLIST)
-char *format;
-long ARGLIST;
+VOID _db_doprnt_ (char *format, ...)
 {
+    va_list args;
+
+    va_start( args, format);
+
     if (_db_keyword_ (u_keyword)) {
 #if SHM
       (VOID) fprintf ( _db_fp_, "m%2d: ", processid);
@@ -854,36 +844,16 @@ long ARGLIST;
            (VOID) fprintf (_db_fp_, "%12.12s: ", func);
        } 
        (VOID) fprintf (_db_fp_, "%s: ", u_keyword);
-       (VOID) fprintf (_db_fp_, format, ARGLIST);
+       (VOID) vfprintf (_db_fp_, format, args);
        (VOID) fprintf (_db_fp_, "\n");
        (VOID) fflush (_db_fp_);
        (VOID) Delay (stack -> delay);
     }
+
+    va_end( args);
 }
  
-/*
- *     The following routine is kept around temporarily for compatibility
- *     with older objects that were compiled with the DBUG_N macro form
- *     of the print routine.  It will print a warning message on first
- *     usage.  It will go away in subsequent releases...
- */
- 
-/*VARARGS3*/
-VOID _db_printf_ (_line_, keyword, format, ARGLIST)
-int _line_;
-char *keyword,  *format;
-long ARGLIST;
-{
-    static BOOLEAN firsttime = TRUE;
- 
-    if (firsttime) {
-       (VOID) fprintf (stderr, ERR_PRINTF, _db_process_, file);
-       firsttime = FALSE;
-    }
-    _db_pargs_ (_line_, keyword);
-    _db_doprnt_ (format, ARGLIST);
-}
- 
+
 
 /*
  *  FUNCTION
@@ -909,8 +879,7 @@ long ARGLIST;
  *
  */
  
-LOCAL struct link *ListParse (ctlp)
-char *ctlp;
+LOCAL struct link *ListParse (char *ctlp)
 {
     REGISTER char *start;
     REGISTER struct link *new;
@@ -958,9 +927,7 @@ char *ctlp;
  *
  */
  
-LOCAL BOOLEAN InList (linkp, cp)
-struct link *linkp;
-char *cp;
+LOCAL BOOLEAN InList (struct link *linkp, char *cp)
 {
     REGISTER struct link *scan;
     REGISTER BOOLEAN accept;
@@ -1002,7 +969,7 @@ char *cp;
  *
  */
  
-LOCAL VOID PushState ()
+LOCAL VOID PushState (VOID)
 {
     REGISTER struct state *new;
  
@@ -1047,7 +1014,7 @@ LOCAL VOID PushState ()
  *
  */
  
-LOCAL BOOLEAN DoTrace ()
+LOCAL BOOLEAN DoTrace (VOID)
 {
     REGISTER BOOLEAN trace;
  
@@ -1090,8 +1057,7 @@ LOCAL BOOLEAN DoTrace ()
  *
  */
  
-BOOLEAN _db_keyword_ (keyword)
-char *keyword;
+BOOLEAN _db_keyword_ (char *keyword)
 {
     REGISTER BOOLEAN accept;
  
@@ -1135,8 +1101,7 @@ char *keyword;
  *
  */
  
-LOCAL void Indent (indent)
-int indent;
+LOCAL void Indent (int indent)
 {
     REGISTER int count;
     AUTO char buffer[PRINTBUF];
@@ -1150,7 +1115,7 @@ int indent;
        } 
     }
     buffer[count] = EOS;
-    (VOID) fprintf (_db_fp_, buffer);
+    (VOID) fprintf (_db_fp_, "%s", buffer);
     (VOID) fflush (_db_fp_);
 }
  
@@ -1172,8 +1137,7 @@ int indent;
  *
  */
  
-LOCAL void FreeList (linkp)
-struct link *linkp;
+LOCAL void FreeList (struct link *linkp)
 {
     REGISTER struct link *old;
  
@@ -1208,8 +1172,7 @@ struct link *linkp;
  */
  
 
-LOCAL char *StrDup (string)
-char *string;
+LOCAL char *StrDup (char *string)
 {
     REGISTER char *new;
  
@@ -1239,8 +1202,7 @@ char *string;
  */
  
  
-LOCAL void DoPrefix (_line_)
-int _line_;
+LOCAL void DoPrefix (int _line_)
 {
     lineno++;
     if (stack -> flags & NUMBER_ON) {
@@ -1279,8 +1241,7 @@ int _line_;
  *
  */
  
-LOCAL VOID OpenFile (name)
-char *name;
+LOCAL VOID OpenFile (char *name)
 {
     REGISTER FILE *fp;
  
@@ -1311,7 +1272,7 @@ char *name;
                } else {
                    _db_fp_ = fp;
                    stack -> out_file = fp;
-/*  j.d. 23.2.89  changeowner ist Bloedsinn.
+/*  j.d. 23.2.89  changeowner is nonsense
                    if (newfile) {
                        ChangeOwner (name);
                    }
@@ -1340,8 +1301,7 @@ char *name;
  *
  */
  
-LOCAL VOID CloseFile (fp)
-FILE *fp;
+LOCAL VOID CloseFile (FILE *fp)
 {
     if (fp != stderr && fp != stdout) {
        if (fclose (fp) == EOF) {
@@ -1373,8 +1333,7 @@ FILE *fp;
  *
  */
  
-LOCAL VOID DbugExit (why)
-char *why;
+LOCAL VOID DbugExit (char *why)
 {
     (VOID) fprintf (stderr, ERR_ABORT, _db_process_, why);
     (VOID) fflush (stderr);
@@ -1404,8 +1363,7 @@ char *why;
  *
  */
  
-LOCAL char *DbugMalloc (size)
-int size;
+LOCAL char *DbugMalloc (int size)
 {
     register char *new;
  
@@ -1423,8 +1381,7 @@ int size;
  */
  
 #ifndef HAVE_STRTOK
-LOCAL char *strtok (s1, s2)
-char *s1, *s2;
+LOCAL char *strtok (char *s1, char *s2)
 {
     static char *end = NULL;
     REGISTER char *rtnval;
@@ -1467,8 +1424,7 @@ char *s1, *s2;
  *
  */
  
-LOCAL char *BaseName (pathname)
-char *pathname;
+LOCAL char *BaseName (char *pathname)
 {
     register char *base;
  
@@ -1503,8 +1459,7 @@ char *pathname;
  *
  */
  
-LOCAL BOOLEAN Writable (pathname)
-char *pathname;
+LOCAL BOOLEAN Writable (char *pathname)
 {
     REGISTER BOOLEAN granted;
 #ifdef unix
@@ -1545,9 +1500,7 @@ char *pathname;
  */
  
 #ifndef HAVE_STRRCHR
-LOCAL char *strrchr (s, c)
-char *s; 
-char c;
+LOCAL char *strrchr (char *s, char c)
 {
     REGISTER char *scan;
  
@@ -1585,8 +1538,7 @@ char c;
  *
  */
  
-LOCAL VOID ChangeOwner (pathname)
-char *pathname;
+LOCAL VOID ChangeOwner (char *pathname)
 {
 #ifdef unix
     if (chown (pathname, getuid (), getgid ()) == -1) {
@@ -1617,7 +1569,7 @@ char *pathname;
  *
  */
  
-EXPORT void _db_setjmp_ ()
+EXPORT void _db_setjmp_ (VOID)
 {
    jmplevel = stack -> level;
    jmpfunc = func;
@@ -1642,7 +1594,7 @@ EXPORT void _db_setjmp_ ()
  *
  */
  
-EXPORT void _db_longjmp_ ()
+EXPORT void _db_longjmp_ (VOID)
 {
     stack -> level = jmplevel;
     if (jmpfunc) {
@@ -1682,8 +1634,7 @@ EXPORT void _db_longjmp_ ()
 #endif
  
 /*ARGSUSED*/ /* lint: value used */
-LOCAL int DelayArg (value)
-int value;
+LOCAL int DelayArg (int value)
 {
     int delayarg;
 #define UNIX 
@@ -1699,12 +1650,11 @@ int value;
 }
  
  
-void postmortem(s)
-  char * s;
-  {
-  fprintf(stderr,"\n\nPostMortem: %s\n",s);
+void postmortem(char * s)
+{
+  fprintf( stderr, "\n\nPostMortem: %s\n",s);
   exit(99);
-  }
+}
 
 #else  /* DBUG_OFF */
 

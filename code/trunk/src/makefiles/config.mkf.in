@@ -67,7 +67,7 @@ RANLIB       := @RANLIB@
 TOUCH        := touch
 
 EXCLUDE_INCS := xml
-INCS         := -I../../inc \
+INCS         := -I../../include -I../include \
                 $(patsubst %,-I../%,$(filter-out $(EXCLUDE_INCS),\
                                   $(notdir $(wildcard ../*))))
 LIBS         := @LIBS@ #@LIB_M@
@@ -80,9 +80,9 @@ RPATH        := @LD_PATH@$(SNETBASE)/lib
 EFLIBS       := -lefence
 
 CONFIGURED   := $(PROJECT_ROOT)/src/makefiles/config.mkf \
-                $(PROJECT_ROOT)/src/compiler/global/config.h \
+                $(PROJECT_ROOT)/src/include/config.h \
                 $(PROJECT_ROOT)/configure
-AUTOHEADERED := $(PROJECT_ROOT)/src/compiler/global/config.h.in
+AUTOHEADERED := $(PROJECT_ROOT)/src/include/config.h.in
 
 ifeq ($(OS),solaris2.8)
   YYFLAGS   := -DYYDEBUG=1 -DYYLMAX=8192
