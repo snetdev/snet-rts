@@ -3,6 +3,7 @@
 # trivial distribution builder
 #
 # v0.01 initial version (fpz, 13.07.09)
+# v0.02 minor refinements 
 #
 
 # where to build the distribution
@@ -11,9 +12,9 @@ TMPDIR=/tmp
 DESTDIR=$TMPDIR/$DIST
 
 # what to delete from tree
-DEL_FROM_ROOT="Makefile config* ide src tests TODO distbuilder"
+DEL_FROM_ROOT="Makefile config* README.MPI ide src tests TODO distbuilder"
 EXAMPLE_DIR=$DESTDIR/examples
-DEL_FROM_EXAMPLES="mti-stap factorial_mpi matrix socrad"
+DEL_FROM_EXAMPLES="mti-stap factorial_mpi matrix ocrad"
 
 # misc
 VERSION=`svn info $SNETBASE | grep Revision | awk '{print $2}'`
@@ -48,7 +49,7 @@ else
   echo
   echo "Renaming/copying executables/libraries..."
   mv $DESTDIR/bin/snetc.prod $DESTDIR/bin/snetc
-  cp $DESTDIR/lib/libsnet.prod.a $DESTDIR/lib/libsnet.a
+  cp $DESTDIR/lib/libsnet.prod.so $DESTDIR/lib/libsnet.so
   cp $DESTDIR/lib/libsnetutil.prod.so $DESTDIR/lib/libsnetutil.so
   echo "done"
   echo
