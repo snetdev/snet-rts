@@ -10,12 +10,12 @@
 #
 
 ifeq ($(DISTRIBUTED),yes)
-targets_runtime_devel     := libsnetmpi.a 
-targets_runtime_prod      := libsnetmpi.prod.a 
+targets_runtime_devel     := libsnetmpi.so 
+targets_runtime_prod      := libsnetmpi.prod.so 
 targets_runtime_default   := $(targets_runtime_devel)
 else
-targets_runtime_devel     := libsnet.a 
-targets_runtime_prod      := libsnet.prod.a 
+targets_runtime_devel     := libsnet.so 
+targets_runtime_prod      := libsnet.prod.so 
 targets_runtime_default   := $(targets_runtime_devel)
 endif
 

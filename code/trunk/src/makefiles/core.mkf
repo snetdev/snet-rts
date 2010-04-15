@@ -175,41 +175,39 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
-$(PROJECT_ROOT)/lib/libsnetmpi.a: $(TARGETDIRS_DEVEL) 
+$(PROJECT_ROOT)/lib/libsnetmpi.so: $(TARGETDIRS_DEVEL) 
 	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetmpi.a (developer version)"
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetmpi.so (developer version)"
 	$(HIDE) $(AR) $@ $^
 	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
-$(PROJECT_ROOT)/lib/libsnetmpi.prod.a:  $(TARGETDIRS_PROD) 
+$(PROJECT_ROOT)/lib/libsnetmpi.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetmpi.prod.a (product version)"
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetmpi.prod.so (product version)"
 	$(HIDE) $(AR) $@ $^
 	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)
 
-$(PROJECT_ROOT)/lib/libsnet.a: $(TARGETDIRS_DEVEL) 
+$(PROJECT_ROOT)/lib/libsnet.so: $(TARGETDIRS_DEVEL) 
 	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.a (developer version)"
-	$(HIDE) $(AR) $@ $^
-	$(HIDE) $(RANLIB) $@
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.so (developer version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
-$(PROJECT_ROOT)/lib/libsnet.prod.a:  $(TARGETDIRS_PROD) 
+$(PROJECT_ROOT)/lib/libsnet.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.prod.a (product version)"
-	$(HIDE) $(AR) $@ $^
-	$(HIDE) $(RANLIB) $@
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.prod.so (product version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)
+	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/lib/libsnetutil.so: $(TARGETDIRS_DEVEL) 
 	@$(ECHO) ""

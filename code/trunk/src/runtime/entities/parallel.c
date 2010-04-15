@@ -32,7 +32,7 @@
 #include "memfun.h"
 #include "debug.h"
 #include "threading.h"
-#include "stream_layer.c"
+#include "stream_layer.h"
 
 #ifdef DISTRIBUTED_SNET
 #include "routing.h"

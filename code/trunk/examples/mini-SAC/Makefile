@@ -5,7 +5,7 @@ CCFLAGS   = -Wall -g -DFILTER_VERSION_2
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I./include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib -L$(SNETBASE)/interfaces/SAC
-LIBS      = -lpthread -lsnet -lSAC4SNet -lsnetutil
+LIBS      = -lSAC4SNet -lpthread -lsnetutil -lsnet 
 
 SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__mini=main
 
@@ -19,7 +19,7 @@ SACTARGET = mini
 SAC2C     = sac2c
 S2CFLAGS  = -v1 -g
 SAC4C     = sac4c
-S4CFLAGS  = -v3 -incdir include -libdir lib -g $(LIBDIRS) -d nocleanup -d cccall
+S4CFLAGS  = -v3 -incdir include -libdir lib -g $(LIBDIRS) 
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)` 
 
@@ -32,7 +32,7 @@ TARGET    = mini
 
 all: lib$(SACTARGET)Mod.so $(TARGET).c
 	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c *.c
-	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(LIBS) $(S4CLIBS) $(LIBS)
+	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(S4CLIBS) $(LIBS)
 
 lib$(SACTARGET)Mod.so: $(SACTARGET).sac
 	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $(SACTARGET).sac
