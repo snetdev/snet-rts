@@ -198,6 +198,7 @@ extern int *SNetRecGetUnconsumedTagNames( snet_record_t *rec);
 extern void SNetRecSetBTag( snet_record_t *r, int id, int val);
 
 
+int SNetRecReadTag( snet_record_t *r, int id);
 
 
 /* 
@@ -286,6 +287,7 @@ extern void *SNetRecTakeField( snet_record_t *r, int id);
 extern void SNetRecMoveFieldToRec( snet_record_t *from, int old_name ,
 				   snet_record_t *to, int new_name);
 
+void *SNetRecReadField( snet_record_t *r, int id);
 
 
 /*

@@ -553,6 +553,10 @@ extern int SNetRecGetTag( snet_record_t *rec, int name)
   return( DATA_REC( rec, tags[offset]));
 }
 
+int SNetRecReadTag( snet_record_t *rec, int name) 
+{
+  return( SNetRecGetTag( rec, name));
+}
 
 extern int SNetRecGetBTag( snet_record_t *rec, int name)
 {
@@ -581,6 +585,24 @@ extern void *SNetRecGetField( snet_record_t *rec, int name)
   return( DATA_REC( rec, fields[offset]));
 #endif /* DISTRIBUTED_SNET */
 }
+
+extern void *SNetRecReadField( snet_record_t *rec, int name) 
+{
+  int offset;
+  snet_copy_fun_t copyfun;
+  offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
+                        SNetTencGetNumFields( GetVEnc( rec)), name);
+  if( offset == NOT_FOUND) {
+    NotFoundError( name, "get", "field");
+  }
+#ifdef DISTRIBUTED_SNET
+  return SNetRefCopy( SNetRefGetData(DATA_REC( rec, fields[offset])));
+#else
+  copyfun = SNetGetCopyFunFromRec( rec);
+  return( copyfun( DATA_REC( rec, fields[offset])));
+#endif /* DISTRIBUTED_SNET */
+}
+
 
 extern int SNetRecTakeTag( snet_record_t *rec, int name)
 {
