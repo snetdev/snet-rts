@@ -53,7 +53,9 @@ static char *strappend( char *dest, const char *src)
 }
 
 char *C4SNetGenBoxWrapper( char *box_name,
-                           snet_input_type_enc_t *t,
+                           snetc_type_enc_t *t,
+                           int num_out_types,
+                           snetc_type_enc_t **out_types,
                            snet_meta_data_enc_t *meta_data) 
 {
   int i;

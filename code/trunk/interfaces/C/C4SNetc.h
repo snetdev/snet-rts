@@ -10,7 +10,9 @@ extern "C" {
 #include "metadata.h"
 
 char *C4SNetGenBoxWrapper( char *box_name,
-                           snet_input_type_enc_t *type,
+                           snetc_type_enc_t *type,
+                           int num_out_types,
+                           snetc_type_enc_t **out_types,
                            snet_meta_data_enc_t *meta_data);
 
 #ifdef __cplusplus

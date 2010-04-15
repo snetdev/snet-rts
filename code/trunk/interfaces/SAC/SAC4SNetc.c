@@ -12,6 +12,7 @@
 
 #define MOD_NAME      "SACmodule"
 #define BOX_FUN       "SACboxfun"
+#define OUTVIARETURN  "SACoutViaReturn"
 /** ********************************************************* **/
 
 
@@ -83,7 +84,9 @@ static void constructSACfqn( char **fqn,
 }
 
 char *SAC4SNetGenBoxWrapper( char *box_name,
-                             snet_input_type_enc_t *t,
+                             snetc_type_enc_t *t,
+                             int num_outtypes,
+                             snetc_type_enc_t **out_types,
                              snet_meta_data_enc_t *meta_data) 
 {
   int i;
@@ -168,6 +171,7 @@ char *SAC4SNetGenBoxWrapper( char *box_name,
   STRAPPEND( wrapper_code, "}\n");
    
   free( sac_fqn);
+
   return( wrapper_code);
 }
 

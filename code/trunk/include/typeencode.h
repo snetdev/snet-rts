@@ -12,10 +12,13 @@ typedef enum {
   field, tag, btag
 } snet_type_t;
 
+/* These encodings are used by the compiler */
 typedef struct {
   int num;
   snet_type_t *type;
-} snet_input_type_enc_t;
+} snetc_type_enc_t;
+/* **************************************** */
+
 
 typedef struct vector snet_vector_t;
 
