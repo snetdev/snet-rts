@@ -25,7 +25,7 @@ all:
 	make clean
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
 	$(CC) $(subst %libname%,$(notdir $(TARGET)),$(LD_DYNAMIC))\
-  -o $(TARGET) $(OBJECTS) -L$(TARGETLIBDIR) -lsnet
+  -o $(TARGET) $(OBJECTS) 
 	$(CC) $(subst %libname%,$(notdir $(WRAPTARGET)),$(LD_DYNAMIC))\
   -o $(WRAPTARGET) $(WRAPOBJECTS) 
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETLIBDIR)
