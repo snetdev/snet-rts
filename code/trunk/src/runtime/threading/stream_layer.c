@@ -99,7 +99,8 @@ static snet_record_t *UnifiedRead(snet_tl_stream_t *stream)
   if(stream->is_unbounded) {
     result = SNetUBufGet(stream->buffers.ubuffer);
   } else {
-    result = SNetBufGet(stream->buffers.buffer);
+    /* SNetBufGet returns void* */
+    result = (snet_record_t *)SNetBufGet(stream->buffers.buffer);
   }
 
   return result;

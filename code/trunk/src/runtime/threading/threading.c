@@ -9,9 +9,6 @@
 #include "debug.h"
 #include "threading.h"
 
-#ifdef DBG_RT_TRACE_THREAD_CREATE 
-#include <sys/time.h>
-#endif
 
 static void ThreadDetach( pthread_t *thread)
 {
@@ -96,12 +93,12 @@ extern void SNetThreadCreate( void *(*fun)(void*),
   //SNetUtilDebugNotice("Thread created");
 #ifdef DBG_RT_TRACE_THREAD_CREATE 
   gettimeofday( &t, NULL);
-  SNetLockThreadMutex();
-  SNetIncThreadCount();
+  SNetGlobalLockThreadMutex();
+  SNetGlobalIncThreadCount();
   fprintf( stderr, 
            "[DBG::RT::Threads] Thread #%3d created (stack:%5dkb)         %lf\n", 
-           SNetGetThreadCount(), stack_size/1024, t.tv_sec + t.tv_usec /1000000.0);
-  SNetUnlockThreadMutex();
+           SNetGlobalGetThreadCount(), stack_size/1024, t.tv_sec + t.tv_usec /1000000.0);
+  SNetGlobalUnlockThreadMutex();
 #endif
 
   if( res != 0) {

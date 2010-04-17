@@ -22,9 +22,10 @@
 static void *BoxThread( void *hndl) {
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
-  struct timeval tv_in;
-  struct timeval tv_out;
-#endif 
+  static struct timeval tv_in;
+  static struct timeval tv_out;
+#endif
+
 #ifdef SNET_DEBUG_COUNTERS 
   snet_time_t time_in;
   snet_time_t time_out;
@@ -63,8 +64,8 @@ static void *BoxThread( void *hndl) {
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_out, NULL);
-        SNetUtilDebugNotice("[DBG::RT::TimeTrace] SnetBox resumes from %p after"
-                    "$lf\n\n", boxfun, (tv_out.tv_sec - tv_in.tv_sec) +
+        SNetUtilDebugNotice("[DBG::RT::TimeTrace] SnetBox resumes from %p after "
+                    "%lf\n\n", boxfun, (tv_out.tv_sec - tv_in.tv_sec) +
                         (tv_out.tv_usec - tv_in.tv_usec) / 1000000.0);
 #endif
 #ifdef SNET_DEBUG_COUNTERS

@@ -2,6 +2,38 @@
 #include "debug.h"
 #include "memfun.h"
 
+
+#ifdef DBG_RT_TRACE_INIT
+  static struct timeval t;
+#endif
+
+#ifdef DBG_RT_TRACE_THREAD_CREATE
+  static int tcount = 0;
+  static pthread_mutex_t *t_count_mtx;
+
+  int SNetGlobalGetThreadCount()
+  {
+    return( tcount);
+  }
+
+  int SNetGlobalIncThreadCount()
+  {
+    tcount += 1;
+  }
+
+  void SNetGlobalLockThreadMutex()
+  {
+     pthread_mutex_lock( t_count_mtx);
+  }
+
+  void SNetGlobalUnlockThreadMutex()
+  {
+     pthread_mutex_unlock( t_count_mtx);
+  }
+#endif
+
+
+
 static snet_global_info_structure_t *snet_global = NULL;
 
 static void SNetGlobalSetInterfaceSupportLevel( snet_global_interface_functions_t *f,
@@ -119,9 +151,6 @@ bool SNetGlobalRuntimeInitialised()
 bool SNetGlobalInitialise() 
 {
   bool success = false;
-#ifdef DBG_RT_TRACE_INIT
-  struct timeval t;
-#endif
 #ifdef DBG_RT_TRACE_THREAD_CREATE
   t_count_mtx = SNetMemAlloc( sizeof( pthread_mutex_t));
   pthread_mutex_init( t_count_mtx, NULL);
@@ -141,7 +170,7 @@ bool SNetGlobalInitialise()
   }
 #ifdef DBG_RT_TRACE_INIT
   gettimeofday( &t, NULL);
-  SNetUtilDebugNotice("[DBG::RT::Global] Runtime system initialisesd at %lf\n",
+  SNetUtilDebugNotice("[DBG::RT::Global] Runtime system initialised at %lf\n",
                         t.tv_sec + t.tv_usec / 1000000.0);
 #endif
   return( success);
@@ -151,6 +180,7 @@ void SNetGlobalDestroy()
 {
   int i;
 #ifdef DBG_RT_TRACE_THREAD_CREATE
+  struct timeval t2;
   pthread_mutex_destroy( t_count_mtx);
   SNetMemFree(t_count_mtx);
 #endif
@@ -167,9 +197,11 @@ void SNetGlobalDestroy()
     SNetUtilDebugFatal("[Global] Runtime system not initialized");
   }
 #ifdef DBG_RT_TRACE_INIT
-  gettimeofday( &t, NULL);
-  SNetUtilDebugNotice("[DBG::RT::Global] Runtime system destroyed at %lf\n",
-                        t.tv_sec + t.tv_usec / 1000000.0);
+
+  gettimeofday( &t2, NULL);
+
+  SNetUtilDebugNotice("[DBG::RT::Global] Runtime system destroyed at %lf (after %lf sec) \n",
+                        t2.tv_sec + t2.tv_usec / 1000000.0, (t2.tv_sec-t.tv_sec) + (t2.tv_usec-t.tv_usec)/1000000.0);
 #endif
   return;
 }

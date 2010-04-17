@@ -78,7 +78,7 @@ extern snet_handle_t
   gettimeofday( &tv_in, NULL);
   SNetUtilDebugNotice("[DBG::RT::TimeTrace], SNetOut called from %p at"
                       " %lf\n", SNetHndGetBoxfun(hnd), 
-                        tv_in.tv_sec + tv_in.tv_usex/1000000.0);
+                        tv_in.tv_sec + tv_in.tv_usec/1000000.0);
 #endif
 
   // set values from box
@@ -151,8 +151,8 @@ extern snet_handle_t
   SNetTlWrite( SNetHndGetOutput( hnd), out_rec);
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
-  SNetUtilDebugNotice("[DBG::RT::TimeTrance] SnetOut finished for %p at %lf\n",
-                SNetHandGetBoxfun(hnd),
+  SNetUtilDebugNotice("[DBG::RT::TimeTrace] SNetOut finished for %p at %lf\n",
+                SNetHndGetBoxfun(hnd),
                 (tv_out.tv_sec - tv_in.tv_sec) +
                     (tv_out.tv_usec-tv_in.tv_usec) / 1000000.0);
 #endif
@@ -180,7 +180,7 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
   gettimeofday( &tv_in, NULL);
   SNetUtilDebugNotice("[DBG::RT::TimeTrace], SNetOut called from %p at"
                       " %lf\n", SNetHndGetBoxfun(hnd), 
-                        tv_in.tv_sec + tv_in.tv_usex/1000000.0);
+                        tv_in.tv_sec + tv_in.tv_usec/1000000.0);
 #endif
 
   // set values from box
@@ -259,7 +259,7 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
   SNetUtilDebugNotice("[DBG::RT::TimeTrance] SnetOut finished for %p at %lf\n",
-                SNetHandGetBoxfun(hnd),
+                SNetHndGetBoxfun(hnd),
                 (tv_out.tv_sec - tv_in.tv_sec) +
                     (tv_out.tv_usec-tv_in.tv_usec) / 1000000.0);
 #endif
