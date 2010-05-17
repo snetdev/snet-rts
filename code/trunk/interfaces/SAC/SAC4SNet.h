@@ -1,7 +1,7 @@
 #ifndef _SAC4SNet_h_
 #define _SAC4SNet_h_
 
-#include <sacinterface.h>
+#include "sacinterface.h"
 
 typedef struct container sac4snet_container_t;
 
