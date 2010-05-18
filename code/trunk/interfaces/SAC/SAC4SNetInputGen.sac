@@ -63,6 +63,22 @@ File StartOutput( string prefix)
  ******************************************************************************/
 void FinalizeOutput( File xmlfile)
 {
+  FinalizeOutput( xmlfile, false);
+}
+
+/** <!-- ****************************************************************** -->
+ * @brief Finishes the output session for the given xmlfile. If terminate
+ *        is true, a termination record is appended.
+ * 
+ * @param xmlfile    the file to finalise
+ * @param terminate  whether to add a termination record
+ ******************************************************************************/
+void FinalizeOutput( File xmlfile, bool terminate)
+{
+  if (terminate) {
+    AddTerminationRecord( xmlfile);
+  }
+
   fclose( xmlfile);
 }
 
@@ -88,6 +104,16 @@ void FinalizeRecord( File &out)
 }
 
 /** <!-- ****************************************************************** -->
+ * @brief Adds a termination record to the output file.
+ * 
+ * @param out output file to amend
+ ******************************************************************************/
+void AddTerminationRecord( File &out)
+{
+  fprintf( out, "<record type=\"terminate\"/>\n");
+}
+
+/** <!-- ****************************************************************** -->
  * @brief Adds a new field to the record currently being written to the 
  *        output file.
  * 
@@ -105,7 +131,7 @@ void Add##name##Field( File &out, string to, string field, type[*] data)      \
   fclose( fibre);                                                             \
   /* add xml description for field */                                         \
   fprintf( out, "<field label=\"%s\" interface=\"SAC4SNet\">\n", field);      \
-  fprintf( out, "::: SACFIBRE : " #type " %d ", dim( data));                   \
+  fprintf( out, ":::SACFIBRE: " #type " %d ", dim( data));                   \
   for (cnt = 0; cnt < dim(data); cnt++) {                                     \
     fprintf( out, "%d ", shape(data)[[cnt]]);                                 \
   }                                                                           \
