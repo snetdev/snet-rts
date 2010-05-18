@@ -33,7 +33,7 @@ void report( bool fail, string msg) {
  ******************************************************************************/
 File, string openFibreOutput( string prefix, string field)
 {
-  filename = sprintf( "%s_%d_%s.fib", prefix, next( recordNo), field);
+  filename = sprintf( "%s_%d_%s.fib", prefix, valueOf( recordNo), field);
   err, handle = fopen( filename, "w");
   report( SysErr::fail( err), "Cannot open fibre output file");
   return( handle, filename);
@@ -84,6 +84,7 @@ void StartRecord( File &out)
 void FinalizeRecord( File &out)
 {
   fprintf( out, "</record>\n");
+  increment( recordNo);
 }
 
 /** <!-- ****************************************************************** -->
@@ -104,7 +105,7 @@ void Add##name##Field( File &out, string to, string field, type[*] data)      \
   fclose( fibre);                                                             \
   /* add xml description for field */                                         \
   fprintf( out, "<field label=\"%s\" interface=\"SAC4SNet\">\n", field);      \
-  fprintf( out, ":::SACFIBRE : " #type " %d ", dim( data));                   \
+  fprintf( out, "::: SACFIBRE : " #type " %d ", dim( data));                   \
   for (cnt = 0; cnt < dim(data); cnt++) {                                     \
     fprintf( out, "%d ", shape(data)[[cnt]]);                                 \
   }                                                                           \
