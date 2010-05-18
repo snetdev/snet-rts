@@ -1,0 +1,144 @@
+module SAC4SNetInputGen;
+
+use Counter : all;
+use Structures : all;
+use StdIO : all;
+
+provide all except {report, openFibreOutput};
+
+objdef Counter recordNo = newCounter();
+
+/** <!-- ****************************************************************** -->
+ * @brief Helper function to report errors. If fail is true, the program
+ *        is aborted and msg is printed.
+ * 
+ * @param fail true if previous operation failed
+ * @param msg  error message to print
+ ******************************************************************************/
+void report( bool fail, string msg) {
+  if (fail) {
+    RuntimeError::error( 10, msg);
+  }
+}
+
+/** <!-- ****************************************************************** -->
+ * @brief Helper function to open a file for a partial fibre output. The
+ *        file is named <prefix>_<recordNo>_<field>.fib and opened for
+ *        writing.
+ * 
+ * @param prefix prefix for the filename
+ * @param field  name of the field in the record
+ * 
+ * @return the file handle and the name of the file as a string
+ ******************************************************************************/
+File, string openFibreOutput( string prefix, string field)
+{
+  filename = sprintf( "%s_%d_%s.fib", prefix, next( recordNo), field);
+  err, handle = fopen( filename, "w");
+  report( SysErr::fail( err), "Cannot open fibre output file");
+  return( handle, filename);
+}
+
+/** <!-- ****************************************************************** -->
+ * @brief Starts a new output session. The generated xml file is named
+ *        <prefix>.xml
+ * 
+ * @param prefix  prefix to use for all output files
+ * 
+ * @return file handle for main xml output file
+ ******************************************************************************/
+File StartOutput( string prefix)
+{
+  xmlname = sprintf("%s.xml", prefix);
+  err, xmlfile = fopen( xmlname, "w");
+  report( SysErr::fail( err), "Cannot open xml output file");
+
+  return( xmlfile);
+}
+
+/** <!-- ****************************************************************** -->
+ * @brief Finished the output session for the given xmlfile.
+ * 
+ * @param xmlfile the xmlfile to finalise
+ ******************************************************************************/
+void FinalizeOutput( File xmlfile)
+{
+  fclose( xmlfile);
+}
+
+/** <!-- ****************************************************************** -->
+ * @brief Prints the start of a new record to the output file provided.
+ * 
+ * @param out handle of output file
+ ******************************************************************************/
+void StartRecord( File &out)
+{
+  fprintf( out, "<record type=\"data\" mode=\"textual\">\n");
+}
+
+/** <!-- ****************************************************************** -->
+ * @brief Prints the end of a record to the output file provided.
+ * 
+ * @param out handle of output file
+ ******************************************************************************/
+void FinalizeRecord( File &out)
+{
+  fprintf( out, "</record>\n");
+}
+
+/** <!-- ****************************************************************** -->
+ * @brief Adds a new field to the record currently being written to the 
+ *        output file.
+ * 
+ * @param out    output file to amend
+ * @param to     filename prefix for component output files
+ * @param field  the name of the field
+ * @param data   the data for the field
+ ******************************************************************************/
+#define ADDFIELD( type, name)                                                 \
+void Add##name##Field( File &out, string to, string field, type[*] data)      \
+{                                                                             \
+  /* write fibre data to file */                                              \
+  fibre, fibrename = openFibreOutput( to, field);                             \
+  FibrePrint( fibre, data);                                                   \
+  fclose( fibre);                                                             \
+  /* add xml description for field */                                         \
+  fprintf( out, "<field label=\"%s\" interface=\"SAC4SNet\">\n", field);      \
+  fprintf( out, ":::SACFIBRE : " #type " %d ", dim( data));                   \
+  for (cnt = 0; cnt < dim(data); cnt++) {                                     \
+    fprintf( out, "%d ", shape(data)[[cnt]]);                                 \
+  }                                                                           \
+  fprintf( out, ":::\n");                                                     \
+  fprintf( out, "%s\n", fibrename);                                           \
+  fprintf( out, "</field>\n");                                                \
+}
+
+ADDFIELD( double, Double)
+ADDFIELD( float, Float)
+ADDFIELD( int, Int)
+
+/** <!-- ****************************************************************** -->
+ * @brief Adds a tag to the record currently being written to the 
+ *        output file.
+ * 
+ * @param out    output file to amend
+ * @param name   name of the tag to be added
+ * @param value  value of the tag to be added
+ ******************************************************************************/
+void AddTag( File &out, string name, int value)
+{
+  fprintf( out, "<tag label=\"%s\">%d</tag>\n", name, value);
+}
+
+/** <!-- ****************************************************************** -->
+ * @brief Adds a binding tag to the record currently being written to the 
+ *        output file.
+ * 
+ * @param out    output file to amend
+ * @param name   name of the binding tag to be added
+ * @param value  value of the binding tag to be added
+ ******************************************************************************/
+void AddBindingTag( File &out, string name, int value)
+{
+  fprintf( out, "<btag label=\"%s\">%d</tag>\n", name, value);
+}

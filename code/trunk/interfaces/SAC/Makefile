@@ -35,15 +35,15 @@ TARGETDIR   = $(SNETBASE)/lib
 # = = = = = = = = = = = = = = = = = = = =
 
 
-all: libSNetMod.so sac_lib/lib$(IFNAME)FibreIO.so
+all: libSNetMod.so libSAC4SNetInputGenMod.so sac_lib/lib$(IFNAME)FibreIO.so
 	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) -c *.c
 	$(CC) $(subst %libname%,$(TARGET),$(LD_DYNAMIC)) $(S4CLIBS) -o $(TARGET) $(OBJECTS) 
 	$(CC) $(subst %libname%,$(WRAPTARGET),$(LD_DYNAMIC)) -o $(WRAPTARGET) $(WRAPOBJECTS) 
 	$(COPY) *.so $(LIBDIR)/lib$(LIB).so $(TARGETDIR)
 	$(COPY) $(IFNAME).h $(SNETBASE)/include
 
-libSNetMod.so: SNet.sac
-	$(SAC2C) $(SACFLAGS) SNet.sac
+lib%Mod.so: %.sac
+	$(SAC2C) $(SACFLAGS) $<
 
 sac_lib/lib$(IFNAME)FibreIO.so: $(IFNAME)FibreIO.sac 
 	$(SAC2C) $(SACFLAGS) $(SACTARGET).sac
