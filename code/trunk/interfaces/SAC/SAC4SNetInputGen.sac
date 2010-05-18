@@ -53,6 +53,7 @@ File StartOutput( string prefix)
   err, xmlfile = fopen( xmlname, "w");
   report( SysErr::fail( err), "Cannot open xml output file");
 
+  fprintf( xmlfile, "<?xml version=\"1.0\" ?>\n");
   return( xmlfile);
 }
 
