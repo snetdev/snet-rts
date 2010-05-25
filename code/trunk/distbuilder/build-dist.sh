@@ -14,7 +14,7 @@ DESTDIR=$TMPDIR/$DIST
 # what to delete from tree
 DEL_FROM_ROOT="Makefile config* README.MPI ide src tests TODO distbuilder"
 EXAMPLE_DIR=$DESTDIR/examples
-DEL_FROM_EXAMPLES="mti-stap factorial_mpi matrix ocrad"
+DEL_FROM_EXAMPLES="mti-stap factorial_mpi matrix ocrad raytracing"
 
 # misc
 VERSION=`svn info $SNETBASE | grep Revision | awk '{print $2}'`
