@@ -136,7 +136,7 @@ extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
     
 #ifdef BOX_DEBUG
     SNetUtilDebugNotice("-");
-    SNetUtilDebugNotice("| BOX");
+    SNetUtilDebugNotice("| BOX %s [%p]", boxname, boxfun);
     SNetUtilDebugNotice("| input: %x", input);
     SNetUtilDebugNotice("| output: %x", output);
     SNetUtilDebugNotice("-");

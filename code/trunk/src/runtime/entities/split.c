@@ -232,26 +232,20 @@ static void *SplitBoxThread( void *hndl) {
       case REC_terminate:
         terminate = true;
 
-	if(!SNetUtilListIsEmpty(repos)) {
-	  do {
-	    current_position = SNetUtilListFirst(repos);
-	    elem = SNetUtilListIterGet(current_position);
-	    SNetTlWrite(elem->stream, SNetRecCopy( rec));
+	      if(repos != NULL) {
+	        while(!SNetUtilListIsEmpty(repos)) {
+	          current_position = SNetUtilListFirst(repos);
+	          elem = SNetUtilListIterGet(current_position);
+	          SNetTlWrite(elem->stream, SNetRecCopy( rec));
 
-	    SNetTlMarkObsolete(elem->stream);
-	    SNetMemFree(elem);
+	          SNetTlMarkObsolete(elem->stream);
+	          SNetMemFree(elem);
 
-	    repos = SNetUtilListIterDelete(current_position);
-	  } while(!SNetUtilListIsEmpty(repos));
+	          repos = SNetUtilListIterDelete(current_position);
+	        } 
 
           SNetUtilListIterDestroy(current_position);
-
-	  SNetUtilListDestroy(repos);
-        } else {
-#ifdef DEBUG_SPLIT
-          SNetUtilDebugNotice("[SPLIT] got termination record with nowhere"
-              " send it!");
-#endif
+          SNetUtilListDestroy(repos);
           //SNetRecDestroy(rec);
         }
 

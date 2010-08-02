@@ -113,19 +113,22 @@ static bool CompareSortRecords( snet_record_t *rec1, snet_record_t *rec2) {
 }
 
 static snet_collect_elem_t*
-FindElement(snet_util_list_t *lst, snet_tl_stream_t *key) {
+FindElement( snet_util_list_t *lst, snet_tl_stream_t *key) {
   snet_util_list_iter_t *current_position;
   snet_collect_elem_t *current_element;
 
-  current_position = SNetUtilListFirst(lst);
-  while(SNetUtilListIterCurrentDefined(current_position)) {
-      current_element = SNetUtilListIterGet(current_position);
-      current_position = SNetUtilListIterNext(current_position);
-      if(current_element->stream == key) {
+  current_position = SNetUtilListFirst( lst);
+  while( SNetUtilListIterCurrentDefined( current_position)) {
+      current_element = SNetUtilListIterGet( current_position);
+      current_position = SNetUtilListIterNext( current_position);
+      if( current_element->stream == key) {
           break;
       }
+      else {
+        current_element = NULL;
+      }
   }
-  SNetUtilListIterDestroy(current_position);
+  SNetUtilListIterDestroy( current_position);
   return current_element;
 }
 
@@ -209,7 +212,7 @@ static void *Collector( void *info) {
   int sort_end_counter = 0;
 
   snet_tl_streamset_t *inputs;
-  snet_tl_stream_t *current_stream;
+  snet_tl_stream_t *current_stream = NULL;
   snet_tl_stream_record_pair_t peek_result;
 
 #ifdef COLLECTOR_DEBUG
@@ -241,7 +244,7 @@ static void *Collector( void *info) {
           output, current_stream);
 #endif
 
-      if( rec != NULL) {
+      if( (rec != NULL) && (elem != NULL)) {
 #ifdef COLLECTOR_DEBUG
           SNetUtilDebugDumpRecord(rec, record_message);
           SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (start of main loop) "
@@ -360,18 +363,10 @@ static void *Collector( void *info) {
             break;
 
             case REC_terminate:
-#ifdef COLLECTOR_DEBUG
-              SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) (in switch, before DeleteStream) "
-                                  "(%d buffers left before deletion))",
-                                  output, SNetUtilListCount(lst));
-#endif
-              DeleteStream(lst, inputs, current_stream);
-#ifdef COLLECTOR_DEBUG
-                SNetUtilDebugNotice("(STATEINFO (COLLECTOR %p) "
-                                    "(in switch, after DeleteStream) (%d buffers left))",
-                                    output, SNetUtilListCount(lst));
-#endif
-              if(SNetUtilListIsEmpty(lst)) {
+              if( current_stream != NULL) {
+                DeleteStream(lst, inputs, current_stream);
+              }
+              if( SNetUtilListIsEmpty(lst)) {
                 terminate = true;
                 SNetTlWrite(output, rec);
               }
@@ -379,7 +374,6 @@ static void *Collector( void *info) {
                 SNetRecDestroy( rec);
               }
               processed_record = true;
-
             break;
 
             case REC_probe:
