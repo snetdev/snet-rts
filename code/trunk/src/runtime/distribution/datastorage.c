@@ -117,7 +117,7 @@ typedef struct storage {
   pthread_mutex_t mutex;        /**< Mutex to guard access to 'hashtable'. */
   unsigned int op_id;           /**< Next free operation ID. */
   pthread_mutex_t id_mutex;     /**< Mutex to guard access to 'op_id'. */
-  pthread_t thread;             /**< Data manager thread (needed for join). */
+  snet_thread_t *thread;         /**< Data manager thread (needed for join). */
 } storage_t;
 
 static storage_t storage;       /**< Variable to hold the common data. */
@@ -183,7 +183,9 @@ static void *DataManagerThread(void *ptr)
   int bit;
 
   bool recv;
-
+#ifdef SOME_NOT_ANY
+  int  rj, rcount, rlist[MAX_REQUESTS+1]; 
+#endif
 
   map = SNetUtilBitmapCreate(MAX_REQUESTS);
 
@@ -218,8 +220,13 @@ static void *DataManagerThread(void *ptr)
 			 storage.comm, &requests[MAX_REQUESTS]);
       recv = false;
     }
-    
+#ifndef SOME_NOT_ANY 
     result = MPI_Waitany(MAX_REQUESTS + 1, requests, &bit, &status);
+#else
+    result = MPI_Waitsome(MAX_REQUESTS + 1, requests, &rcount, rlist, &status);
+    for( rj=0; rj<rcount; rj++) {
+      bit = rlist[rj];
+#endif
 
     if(bit == MAX_REQUESTS) {
       recv = true;
@@ -273,7 +280,6 @@ static void *DataManagerThread(void *ptr)
 	  /* Acquire free index for the operation. */
 	  while((bit = SNetUtilBitmapFindNSet(map)) == SNET_BITMAP_ERR) {
 	    /* No free indices, wait until a fetch operation ends */
-
 	    result = MPI_Waitany(MAX_REQUESTS, requests, &bit, &req_status);
 
 	    switch(ops[bit].op) {
@@ -373,8 +379,10 @@ static void *DataManagerThread(void *ptr)
     }
     
     msg = NULL;
+#ifdef SOME_NOT_ANY
+  } /* for-loop of Waitsome */
+#endif
   }
-
 
   SNetUtilBitmapDestroy(map);
   SNetMemFree(buf);
@@ -552,7 +560,7 @@ static void *DataManagerThread(void *ptr)
 
 static void DataManagerInit()
 {
-  pthread_create(&storage.thread, NULL, DataManagerThread, NULL);
+  storage.thread = SNetThreadCreateNoDetach( DataManagerThread, NULL, ENTITY_dist);
 }
 
 
@@ -576,7 +584,7 @@ static void DataManagerDestroy()
 
   MPI_Send(&msg, 1, storage.op_type, storage.rank, TAG_DATA_OP, storage.comm);
 
-  pthread_join(storage.thread, NULL);
+  SNetThreadJoin( storage.thread, NULL);
 }
 
 

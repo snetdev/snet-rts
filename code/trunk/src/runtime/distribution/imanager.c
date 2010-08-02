@@ -1,4 +1,5 @@
 #ifdef DISTRIBUTED_SNET
+
 /** <!--********************************************************************-->
  * $Id$
  *
@@ -102,7 +103,7 @@ typedef struct {
  * operation MPI_Finalize might be called too early
  * (This is a problem al least with OpenMPI) 
  */
-static pthread_t master_thread;
+static snet_thread_t *master_thread;
 
 /** <!--********************************************************************-->
  *
@@ -138,7 +139,7 @@ static void *IManagerInputThread( void *ptr)
 
   buf_size = ORIGINAL_MAX_MSG_SIZE;
 
-  buf = SNetMemAlloc(sizeof(char) * buf_size);
+  buf = SNetMemAlloc( sizeof(char) * buf_size);
 
   while(!terminate) {
     result = MPI_Probe(data->node, data->index, MPI_COMM_WORLD, &status);
@@ -148,7 +149,7 @@ static void *IManagerInputThread( void *ptr)
     if(count > buf_size) {
       SNetMemFree(buf);
       buf_size = count;
-      buf = SNetMemAlloc(sizeof(char) * buf_size);
+      buf = SNetMemAlloc( sizeof(char) * buf_size);
     }     
   
     result = MPI_Recv(buf, buf_size, MPI_PACKED, status.MPI_SOURCE, 
@@ -209,7 +210,6 @@ static void *IManagerInputThread( void *ptr)
 
 static void IManagerCreateInput(snet_tl_stream_t *stream, int node, int index)
 {
-  pthread_t thread;
   imanager_data_t *data;
 
   data = SNetMemAlloc(sizeof(imanager_data_t));
@@ -218,8 +218,7 @@ static void IManagerCreateInput(snet_tl_stream_t *stream, int node, int index)
   data->node = node;
   data->index = index;
 
-  pthread_create(&thread, NULL, IManagerInputThread, (void *)data);
-  pthread_detach(thread);
+  SNetThreadCreate( IManagerInputThread, (void*)data, ENTITY_dist);
 }
 
 /** <!--********************************************************************-->
@@ -384,8 +383,6 @@ static void *IManagerMasterThread( void *ptr)
   int index;
   int i;
 
-  pthread_t thread;
-
   int my_rank;
 
   snet_queue_t *update_queue;
@@ -397,6 +394,12 @@ static void *IManagerMasterThread( void *ptr)
 
   snet_tl_stream_t * stream = NULL;
 
+#ifdef SOME_NOT_ANY
+  int rj, rcount, rlist[NUM_MESSAGE_TYPES]; 
+  MPI_Status rstats[NUM_MESSAGE_TYPES];
+#else
+#endif
+  
   MPI_Comm_rank( MPI_COMM_WORLD, &my_rank );
 
   update_queue = SNetQueueCreate();
@@ -425,7 +428,14 @@ static void *IManagerMasterThread( void *ptr)
   /* Serve messages */
 
   while(!terminate) {
+#ifndef SOME_NOT_ANY
     MPI_Waitany(NUM_MESSAGE_TYPES, requests, &index, &status);
+#else 
+    MPI_Waitsome(NUM_MESSAGE_TYPES, requests, &rcount, rlist, rstats);
+    for( rj=0; rj<rcount; rj++) {
+      status = rstats[rj];
+      index = rlist[rj];
+#endif
 
     switch(index) {
     case TYPE_TERMINATE: /* Terminate */
@@ -488,14 +498,16 @@ static void *IManagerMasterThread( void *ptr)
 
       bufs[index] = SNetMemAlloc(true_extent);
 
-      pthread_create(&thread, NULL, IManagerCreateNetwork, (void *)msg_create_network); 
-      pthread_detach(thread);
+      SNetThreadCreate( IManagerCreateNetwork, (void*)msg_create_network, ENTITY_dist);
       break;
     default:
       break;
     }
     
     MPI_Irecv(bufs[index], 2, types[index], MPI_ANY_SOURCE, tags[index], MPI_COMM_WORLD, &requests[index]); 
+#ifdef SOME_NOT_ANY
+    } /* for-loop of Waitsome */
+#endif
   } 
 
 
@@ -528,7 +540,7 @@ static void *IManagerMasterThread( void *ptr)
 
 void SNetIManagerCreate()
 {
-  pthread_create(&master_thread, NULL, IManagerMasterThread, NULL);
+  master_thread = SNetThreadCreateNoDetach( IManagerMasterThread, NULL, ENTITY_dist);
 }
 
 
@@ -547,7 +559,7 @@ void SNetIManagerCreate()
 
 void SNetIManagerDestroy()
 {
-  pthread_join(master_thread, NULL);
+  SNetThreadJoin( master_thread, NULL);
 }
 
 /*@}*/

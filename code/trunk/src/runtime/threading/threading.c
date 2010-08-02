@@ -1,5 +1,14 @@
 /* $Id$ */
 
+#define EXPERIMENTAL_AFFINITY_SETTINGS
+
+#ifdef EXPERIMENTAL_AFFINITY_SETTINGS
+#define _GNU_SOURCE
+#include <sys/types.h>
+#include <unistd.h>
+#include <sched.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -8,6 +17,62 @@
 #include "snetentities.h"
 #include "debug.h"
 #include "threading.h"
+
+struct snet_thread {
+  pthread_t *tid;
+};
+#define SNT_TID( t)  ((t)->tid)
+
+
+#ifdef EXPERIMENTAL_AFFINITY_SETTINGS
+typedef enum { DEFAULT, MASKMOD2, STRICTLYFIRST, ALLBUTFIRST} taffy_t;
+
+static void SetThreadAffinity( pthread_t *thread, taffy_t mode)
+{
+  int i, rv, numcores;
+  cpu_set_t cpuset;
+
+  int setsize;
+
+  rv = sched_getaffinity( getpid(), sizeof( cpu_set_t), &cpuset);
+  numcores = CPU_COUNT_S( sizeof( cpu_set_t), &cpuset);
+  setsize = CPU_ALLOC_SIZE( numcores);
+
+  if( rv != 0) {
+    SNetUtilDebugNotice("Could not get thread affinity [ERR: %d].", rv);
+  } 
+  
+  switch( mode) {
+    case MASKMOD2: 
+      CPU_ZERO_S( setsize, &cpuset);
+      for( i=0; i<numcores; i+=2) {
+        CPU_SET_S( i, setsize, &cpuset);
+      }
+      break;
+    case STRICTLYFIRST:
+      CPU_ZERO_S( setsize, &cpuset);
+      CPU_SET_S( 0, setsize, &cpuset);
+      break;
+    case ALLBUTFIRST: 
+      CPU_ZERO_S( setsize, &cpuset);
+      for( i=1; i<numcores; i++) {
+        CPU_SET_S( i, setsize, &cpuset);
+      }
+      break;
+    default:
+      break;
+  } 
+  rv = pthread_setaffinity_np( *thread, setsize, &cpuset);
+  if( rv != 0) {
+    SNetUtilDebugNotice("Could not set thread affinity [ERR: %d].", rv);
+  }
+  else {
+  rv = pthread_getaffinity_np( *thread, sizeof( cpu_set_t), &cpuset);
+  numcores = CPU_COUNT_S( sizeof( cpu_set_t), &cpuset);
+    SNetUtilDebugNotice("CPU set after setting affinity: %d", numcores);
+  }
+}
+#endif
 
 
 static void ThreadDetach( pthread_t *thread)
@@ -46,6 +111,7 @@ static size_t ThreadStackSize( snet_entity_id_t id)
       stack_size = 256*1024; /* HGHILY EXPERIMENTAL! */
       break;
     case ENTITY_box:
+    case ENTITY_dist:
     case ENTITY_none:
     default:
       /* return 0 (caller will use default stack size) */
@@ -57,40 +123,31 @@ static size_t ThreadStackSize( snet_entity_id_t id)
 }
 
 
-extern void SNetThreadCreate( void *(*fun)(void*),
-                              void *fun_args,
-                  snet_entity_id_t id) 
+static snet_thread_t *ThreadCreate( void *(*fun)(void*),
+                                    void *fun_args,
+                                    snet_entity_id_t id,
+                                    bool detach) 
 {
-  pthread_t thread;
+  snet_thread_t *snt = NULL;
+  pthread_t *thread;
   pthread_attr_t attr;
   size_t stack_size;
   int res;
 #ifdef DBG_RT_TRACE_THREAD_CREATE 
   struct timeval t;
-  #endif
+#endif
 
-  //SNetUtilDebugNotice("Creating thread1");
+  thread = SNetMemAlloc( sizeof( pthread_t));
   res = pthread_attr_init( &attr);
-
-  //SNetUtilDebugNotice("Creating thread2");
-
   stack_size = ThreadStackSize( id);
 
-  //SNetUtilDebugNotice("Creating thread3");
   if( stack_size > 0) {
-    //SNetUtilDebugNotice("Creating thread3.5b");
     pthread_attr_setstacksize( &attr, stack_size);
-    //SNetUtilDebugNotice("Creating thread3,5a");
   }
   
-  //SNetUtilDebugNotice("Creating thread4");
   pthread_attr_getstacksize( &attr, &stack_size);
-  //SNetUtilDebugNotice("Creating thread5");
-  res = pthread_create( &thread, &attr, fun, fun_args);
+  res = pthread_create( thread, &attr, fun, fun_args);
 
-  //SNetUtilDebugNotice("Creating thread6");
-  pthread_attr_destroy( &attr);
-  //SNetUtilDebugNotice("Thread created");
 #ifdef DBG_RT_TRACE_THREAD_CREATE 
   gettimeofday( &t, NULL);
   SNetGlobalLockThreadMutex();
@@ -109,8 +166,42 @@ extern void SNetThreadCreate( void *(*fun)(void*),
     exit( 1);
   }
   else {
-    //SNetUtilDebugNotice("Detaching thread");
-    ThreadDetach( &thread);
-    //SNetUtilDebugNotice("Thread detached");
+#ifdef EXPERIMENTAL_AFFINITY_SETTINGS
+    if( id == ENTITY_dist) {
+      SetThreadAffinity( thread, STRICTLYFIRST);
+    } 
+    else {
+      SetThreadAffinity( thread, ALLBUTFIRST);
+    }
+#endif
+    pthread_attr_destroy( &attr);
+    if( detach) {
+      ThreadDetach( thread);
+    } 
+    else {
+      snt = SNetMemAlloc( sizeof( snet_thread_t));
+      SNT_TID( snt) = thread;
+    }
   }
+
+  return( snt);
+}
+
+void SNetThreadCreate( void *(*fun)(void*), 
+                       void *fun_args,
+                       snet_entity_id_t id)
+{
+  (void)ThreadCreate( fun, fun_args, id, true);
+}
+
+snet_thread_t *SNetThreadCreateNoDetach( void *(*fun)(void*), 
+                                         void *fun_args,
+                                         snet_entity_id_t id)
+{
+  return( ThreadCreate( fun, fun_args, id, false));
+}
+
+void SNetThreadJoin( snet_thread_t *t, void **ret)
+{
+  pthread_join( *SNT_TID( t), ret);
 }

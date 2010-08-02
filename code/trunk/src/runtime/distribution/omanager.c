@@ -159,7 +159,6 @@ static void *OManagerThread(void *ptr)
  ******************************************************************************/
 void SNetOManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int index)
 {
-  pthread_t thread;
   omanager_data_t *data;
 
 #ifdef DISTRIBUTED_DEBUG
@@ -176,8 +175,7 @@ void SNetOManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int inde
   data->node = node;
   data->index = index;
   
-  pthread_create(&thread, NULL, OManagerThread, (void *)data);
-  pthread_detach(thread);
+  SNetThreadCreate( OManagerThread, (void*)data, ENTITY_dist);
   
   return;
 }
