@@ -5399,7 +5399,8 @@ esac
 
 
 
-ac_fn_c_check_decl "$LINENO" "pthread_setaffinity_np" "ac_cv_have_decl_pthread_setaffinity_np" "$ac_includes_default"
+ac_fn_c_check_decl "$LINENO" "pthread_setaffinity_np" "ac_cv_have_decl_pthread_setaffinity_np" "#include <pthread.h>
+"
 if test "x$ac_cv_have_decl_pthread_setaffinity_np" = x""yes; then :
   ac_have_decl=1
 else
@@ -5416,7 +5417,8 @@ else
   SCHEDFLAGS=""
 
 fi
-ac_fn_c_check_decl "$LINENO" "pthread_getaffinity_np" "ac_cv_have_decl_pthread_getaffinity_np" "$ac_includes_default"
+ac_fn_c_check_decl "$LINENO" "pthread_getaffinity_np" "ac_cv_have_decl_pthread_getaffinity_np" "#include <pthread.h>
+"
 if test "x$ac_cv_have_decl_pthread_getaffinity_np" = x""yes; then :
   ac_have_decl=1
 else

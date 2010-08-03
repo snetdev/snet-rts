@@ -418,7 +418,8 @@ AC_SUBST(LD_FLAGS)
 dnl check for GNU pthread extensions
 AC_CHECK_DECLS( [pthread_setaffinity_np, pthread_getaffinity_np],
                 AC_SUBST(SCHEDFLAGS, ["-DUSE_CORE_AFFINITY"]),
-                AC_SUBST(SCHEDFLAGS, [""]))
+                AC_SUBST(SCHEDFLAGS, [""]),
+                [[#include <pthread.h>]])
 
 dnl check if $SNETBASE is set
 AC_MSG_CHECKING([if SNETBASE is set])
