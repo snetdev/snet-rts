@@ -1,8 +1,6 @@
 /* $Id$ */
 
-#define EXPERIMENTAL_AFFINITY_SETTINGS
-
-#ifdef EXPERIMENTAL_AFFINITY_SETTINGS
+#ifdef USE_CORE_AFFINITY
 #define _GNU_SOURCE
 #include <sys/types.h>
 #include <unistd.h>
@@ -24,7 +22,7 @@ struct snet_thread {
 #define SNT_TID( t)  ((t)->tid)
 
 
-#ifdef EXPERIMENTAL_AFFINITY_SETTINGS
+#ifdef USE_CORE_AFFINITY
 typedef enum { DEFAULT, MASKMOD2, STRICTLYFIRST, ALLBUTFIRST} taffy_t;
 
 static void SetThreadAffinity( pthread_t *thread, taffy_t mode)
@@ -69,7 +67,6 @@ static void SetThreadAffinity( pthread_t *thread, taffy_t mode)
   else {
   rv = pthread_getaffinity_np( *thread, sizeof( cpu_set_t), &cpuset);
   numcores = CPU_COUNT_S( sizeof( cpu_set_t), &cpuset);
-    SNetUtilDebugNotice("CPU set after setting affinity: %d", numcores);
   }
 }
 #endif
@@ -166,14 +163,19 @@ static snet_thread_t *ThreadCreate( void *(*fun)(void*),
     exit( 1);
   }
   else {
-#ifdef EXPERIMENTAL_AFFINITY_SETTINGS
+#ifdef USE_CORE_AFFINITY
+#ifdef DISTRIBUTED_SNET
     if( id == ENTITY_dist) {
       SetThreadAffinity( thread, STRICTLYFIRST);
     } 
     else {
       SetThreadAffinity( thread, ALLBUTFIRST);
     }
-#endif
+#else
+    SetThreadAffinity( thread, DEFAULT);
+#endif /* DISTRIBUTED_SNET */
+#endif /* USE_CORE_AFFINITY */
+
     pthread_attr_destroy( &attr);
     if( detach) {
       ThreadDetach( thread);

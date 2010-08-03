@@ -31,6 +31,9 @@ AC_SUBST(OS,$target_os)
 AC_DEFINE_UNQUOTED(ARCH,"$target_cpu",set to the architecture)
 AC_SUBST(ARCH,$target_cpu)
 
+dnl allow GNU extensions if present
+AC_USE_SYSTEM_EXTENSIONS( _GNU_SOURCE)
+
 dnl search for a C compiler
 AC_PROG_CC(gcc cc)
 
@@ -245,18 +248,6 @@ if test "$GCC" = yes; then
   rm -f .snet_configure_temp.c .snet_configure_temp
 fi
 
-
-dnl check for socket libs
-dnl AC_CHECK_LIB(,bind,
-dnl     AC_SUBST( LIB_SOCKET, ""),
-dnl     AC_CHECK_LIB(socket,bind,
-dnl       AC_SUBST( LIB_SOCKET, ""),
-dnl       AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv")))
-
-dnl check if we need -lrt
-dnl AC_CHECK_LIB(,sem_open,
-dnl     AC_SUBST( LIB_RT, ""),
-dnl     AC_SUBST( LIB_RT, "-lrt"))
 AC_SEARCH_LIBS(socket,,
    AC_SUBST( LIB_SOCKET, ""),
    AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),)
@@ -424,9 +415,10 @@ AC_SUBST(LD_PATH)
 AC_SUBST(LD_FLAGS)
 
 
-dnl 
-dnl static sac2c settings for config.h
-dnl
+dnl check for GNU pthread extensions
+AC_CHECK_DECLS( [pthread_setaffinity_np, pthread_getaffinity_np],
+                AC_SUBST(SCHEDFLAGS, ["-DUSE_CORE_AFFINITY"]),
+                AC_SUBST(SCHEDFLAGS, [""]))
 
 dnl check if $SNETBASE is set
 AC_MSG_CHECKING([if SNETBASE is set])
