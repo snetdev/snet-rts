@@ -396,8 +396,6 @@ SNetTlDeleteFromStreamset(snet_tl_streamset_t *set,
 
   pthread_mutex_lock(&stream->access);
 
-  set = stream->set;
-
   pthread_mutex_lock(&set->access);
 
   set->rec_counts[stream->set_index] = 0;

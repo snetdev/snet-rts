@@ -88,7 +88,7 @@ static bool AllProbed(snet_util_list_t *streams)
  *
  *      This compares two sort records. Two sort records are considered
  *      equal if either both are NULL or the RecordLevel and the RecordNumber
- *      is identical.
+ *      are identical.
  *      If one or both of the parameter records is something else than some
  *      sort record, undefined things happen.
  *      Furthermore, this function is commutative.
@@ -133,9 +133,9 @@ FindElement( snet_util_list_t *lst, snet_tl_stream_t *key) {
 }
 
 
-void DeleteStream(snet_util_list_t *lst,
-                  snet_tl_streamset_t *inputs,
-                  snet_tl_stream_t *target_stream)
+static void DeleteStream(snet_util_list_t *lst,
+                         snet_tl_streamset_t *inputs,
+                         snet_tl_stream_t *target_stream)
 {
   snet_util_list_iter_t *current_position;
   snet_collect_elem_t *target_element;
@@ -185,6 +185,26 @@ void DeleteStream(snet_util_list_t *lst,
  }
  inputs = SNetTlDeleteFromStreamset(inputs, target_stream);
 }
+
+static void ReplaceStream( snet_util_list_t *lst,
+                           snet_tl_streamset_t *inputs,
+                           snet_record_t *srec,
+                           snet_tl_stream_t *old,
+                           snet_tl_stream_t *new) 
+{
+  snet_collect_elem_t *tmp_elem;
+
+  DeleteStream( lst, inputs, old);
+  
+  SNetTlAddToStreamset(inputs, new);
+  
+  tmp_elem = SNetMemAlloc( sizeof( snet_collect_elem_t));
+  tmp_elem->current = (srec == NULL) ? NULL : SNetRecCopy( srec);
+  tmp_elem->stream = new;
+
+  lst = SNetUtilListAddBeginning(lst, tmp_elem);
+}
+
 /** <!--********************************************************************-->
  *
  * @fn void Collector(void *info)
@@ -268,8 +288,8 @@ static void *Collector( void *info) {
             break;
 
             case REC_sync:
-              SNetTlReplaceInStreamset(inputs, current_stream,
-                                          SNetRecGetStream(rec));
+              ReplaceStream( lst, inputs, current_sort_rec,
+                             current_stream, SNetRecGetStream( rec));
               processed_record = true;
             break;
 
