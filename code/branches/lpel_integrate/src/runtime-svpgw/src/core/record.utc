@@ -1,0 +1,2277 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : record.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "record.int.utc.h"
+#include "memmng.int.utc.h"
+#include "plcmng.int.utc.h"
+#include "recfdatamng.int.utc.h"
+#include "typeencode.int.utc.h"
+
+
+/*---*/
+
+#include <stdarg.h>
+#include <inttypes.h>
+
+/*----------------------------------------------------------------------------*/
+/**
+ * Flags common to both tags
+ * and fields.
+ */
+#define DREC_ITEM_DELETED_FLAG        0x01
+#define DREC_ITEM_CONSUMED_FLAG       0x02
+
+/**
+ * Flags specific to fields.
+ */
+#define DREC_FIELD_DATA_EXCL_FLAG     0x04
+#define DREC_FIELD_DATA_LOCAL_FLAG    0x08
+#define DREC_FIELD_DATA_FETCHED_FLAG  0x10
+
+/*---*/
+
+/**
+ * Flags that control how copying
+ * of record items is done.
+ */
+#define DREC_ITEMS_COPY_ALL_FLAG      0x01
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Helper macros to make easier the manipulation 
+ * of the different types of items a data record has.
+ */
+
+#define return_macro(macro) \
+    do { macro; return __macro_ret_val; } while (0)
+
+#define assign_macro_val(var, type, macro) \
+    do { macro; var = (type)(__macro_ret_val); } while (0)
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+#define drecord_is_item_consumed(rec, name, iv, type)                         \
+    bool __macro_ret_val = false;                                             \
+                                                                              \
+    do {                                                                      \
+        assert(rec != NULL);                                                  \
+        assert(rec->descr == SNET_REC_DESCR_DATA);                            \
+                                                                              \
+        unsigned int idx;                                                     \
+                                                                              \
+        if (SNetTencVariantContains##type(rec->spec.data.venc, name, &idx)) { \
+            __macro_ret_val = __chk_flag(                                     \
+                rec->spec.data.iv[idx].flags, DREC_ITEM_CONSUMED_FLAG);       \
+        }                                                                     \
+    } while (0)
+
+/*----------------------------------------------------------------------------*/
+
+#define drecord_reset_consumed_item(rec, name, iv, type)                      \
+    do {                                                                      \
+        assert(rec != NULL);                                                  \
+        assert(rec->descr == SNET_REC_DESCR_DATA);                            \
+                                                                              \
+        unsigned int idx;                                                     \
+                                                                              \
+        if (SNetTencVariantContains##type(rec->spec.data.venc, name, &idx)) { \
+            __reset_flag(                                                     \
+                rec->spec.data.iv[idx].flags, DREC_ITEM_CONSUMED_FLAG);       \
+        }                                                                     \
+    } while (0)
+
+/*----------------------------------------------------------------------------*/
+
+#define drecord_get_item(                                                     \
+    rec, name, iv, type,                                                      \
+    wrn_arg_req, wrn_arg_item_type, wrn_arg_defval)                           \
+                                                                              \
+    void *__macro_ret_val = NULL;                                             \
+                                                                              \
+    do {                                                                      \
+        assert(rec != NULL);                                                  \
+        assert(rec->descr == SNET_REC_DESCR_DATA);                            \
+                                                                              \
+        unsigned int idx;                                                     \
+                                                                              \
+        if (SNetTencVariantContains##type(rec->spec.data.venc, name, &idx)) { \
+            __macro_ret_val = (void *)(rec->spec.data.iv + idx);              \
+                                                                              \
+        } else {                                                              \
+            SNetReportWarning(                                                \
+                SNET_WRN_REC_ITEM_NOT_FOUND,                                  \
+                wrn_arg_req, wrn_arg_item_type, name, wrn_arg_defval);        \
+                                                                              \
+            SNetOnWarning();                                                  \
+        }                                                                     \
+    } while (0)
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+#define drecord_get_tag(rec, name, iv, type, wrn_type)                     \
+    int __macro_ret_val = 0;                                               \
+                                                                           \
+    do {                                                                   \
+        snet_record_tag_t *t = NULL;                                       \
+                                                                           \
+        assign_macro_val(                                                  \
+            t,                                                             \
+            snet_record_tag_t*,                                            \
+            drecord_get_item(rec, name, iv, type, "GET", wrn_type, "0"));  \
+                                                                           \
+        __macro_ret_val = (t == NULL ? 0 : t->value);                      \
+    } while (0)
+
+   
+/*----------------------------------------------------------------------------*/
+
+#define drecord_take_tag(rec, name, iv, type, wrn_type)                    \
+    int __macro_ret_val = 0;                                               \
+                                                                           \
+    do {                                                                   \
+        snet_record_tag_t *t = NULL;                                       \
+                                                                           \
+        assign_macro_val(                                                  \
+            t,                                                             \
+            snet_record_tag_t*,                                            \
+            drecord_get_item(rec, name, iv, type, "TAKE", wrn_type, "0")); \
+                                                                           \
+        if (t != NULL) {                                                   \
+            __macro_ret_val = t->value;                                    \
+            __set_flag(t->flags, DREC_ITEM_CONSUMED_FLAG);                 \
+        }                                                                  \
+    } while (0)
+
+/*----------------------------------------------------------------------------*/
+
+#define drecord_set_tag(rec, name, val, iv, type, wrn_type)                \
+    do {                                                                   \
+        assert(rec != NULL);                                               \
+        assert(!rec->alias);                                               \
+                                                                           \
+        snet_record_tag_t *t = NULL;                                       \
+                                                                           \
+        assign_macro_val(                                                  \
+            t,                                                             \
+            snet_record_tag_t*,                                            \
+            drecord_get_item(rec, name, iv, type, "SET", wrn_type, "0"));  \
+                                                                           \
+        if (t != NULL) t->value = (val);                                   \
+    } while (0)
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Datatypes for different 
+ * types of records.
+ */
+
+typedef uint8_t snet_record_item_flags_t;
+typedef int32_t snet_record_tag_value_t;
+
+typedef struct {
+    snet_record_tag_value_t  value;
+    snet_record_item_flags_t flags;
+
+} snet_record_tag_t;
+
+typedef struct {
+    snet_ref_t               data_dcptr;
+    snet_place_t             data_plc;
+    snet_record_item_flags_t flags;
+
+} snet_record_field_t;
+
+/*---*/
+/**
+ * Normal data record.
+ */
+
+typedef struct data_record {
+    snet_bli_id_t           blid;
+    snet_variantencoding_t *venc;
+
+    snet_record_tag_t      *tags;
+    snet_record_tag_t      *btags;
+    snet_record_field_t    *fields;
+
+} snet_data_record_t;
+
+/*----------------------------------------------------------------------------*/
+/**
+ * Control record.
+ */
+
+typedef struct ctrl_record {
+    snet_record_ctrl_mode_t mode;
+
+    uint16_t  opcode;
+    uint32_t  data_sz;
+    void     *data;
+
+} snet_ctrl_record_t;
+
+/*----------------------------------------------------------------------------*/
+/**
+ * "Other" type of record; just a typedef
+ * to some data block of unknown format.
+ */
+typedef void* snet_other_record_t;
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * The actual "record" data structure that 
+ * combines all the above.
+ */
+
+struct record {
+    bool                    alias;
+    snet_record_descr_t     descr;
+    snet_record_data_mode_t data_mode;
+
+    union {
+        snet_data_record_t  data;
+        snet_ctrl_record_t  ctrl;
+        snet_other_record_t other;
+
+    } spec;
+
+}; // struct record
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static functions */
+
+static inline
+int rectagval2int(snet_record_tag_value_t tval)
+{
+    return (int)(tval);
+}
+
+static inline
+snet_record_tag_value_t int2rectagval(int tval)
+{
+    return (snet_record_tag_value_t)(tval);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void record_init_common(
+    snet_record_t *rec,
+    snet_record_descr_t descr,
+    snet_record_data_mode_t dmode)
+{
+    rec->alias     = false;
+    rec->descr     = descr;
+    rec->data_mode = dmode;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Data record functions */
+
+/**
+ * Fields' management.
+ */
+
+static inline void*
+drecord_get_field(const snet_record_t *rec, int name, const char *op)
+{
+    return_macro(
+        drecord_get_item(
+            rec, name, fields, Field, op, "field", "NULL"));
+}
+
+static void
+drecord_set_field_data(
+    snet_record_field_t *f,
+    void *data, snet_bli_id_t blid)
+{
+    if (data == NULL) {
+        f->data_dcptr = NULL_REF;
+        f->data_plc   = SNetPlaceGetNull();
+        f->flags      = 0;
+
+    } else {
+        f->data_dcptr = SNetRecFieldDataDescriptorCreate(data, blid);
+        f->data_plc   = SNetPlaceGetMine();
+        f->flags      = 0;
+
+        __set_flag(f->flags, DREC_FIELD_DATA_EXCL_FLAG);
+        __set_flag(f->flags, DREC_FIELD_DATA_LOCAL_FLAG);
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void
+drecord_copy_field(snet_record_field_t *src, snet_record_field_t *dest)
+{
+    assert(dest->data_dcptr == NULL_REF);
+    assert(SNetPlaceIsNull(dest->data_plc));
+
+    if (src->data_dcptr == NULL_REF) {
+        dest->data_dcptr = NULL_REF;
+        dest->data_plc   = SNetPlaceGetNull();
+        dest->flags      = 0;
+
+        return;
+    }
+
+    assert(!SNetPlaceIsNull(src->data_plc));
+
+    dest->data_dcptr = src->data_dcptr;
+    dest->data_plc   = SNetPlaceCopy(src->data_plc);
+    dest->flags      = 0;
+
+    if (__chk_flag(src->flags, DREC_FIELD_DATA_LOCAL_FLAG)) {
+        __set_flag(dest->flags, DREC_FIELD_DATA_LOCAL_FLAG);
+    }
+
+    __reset_flag(src->flags, DREC_FIELD_DATA_EXCL_FLAG);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static 
+snet_record_field_t**
+drecord_create_fields_ptrv(const snet_data_record_t *rec)
+{
+    unsigned int fcnt = SNetTencVariantGetFieldsCount(rec->venc);
+
+    if (fcnt == 0)
+        return NULL;
+
+    snet_record_field_t **fv = 
+        (snet_record_field_t **)
+            SNetMemAlloc(fcnt * sizeof(snet_record_field_t *));
+
+    for (unsigned int i=0; i < fcnt; i++) {
+        fv[i] = rec->fields + i;
+    }
+
+    return fv;
+}
+
+static unsigned int
+drecord_group_fields_by_place(
+    snet_record_field_t **fields,
+    unsigned int count, unsigned int *grp_szv)
+{
+    unsigned int k;
+    unsigned int z = 0;
+
+    snet_record_field_t *tmp = NULL;
+
+    for (unsigned int i=0; i < count; i = k, z++) {
+        k = i + 1;
+
+        for (unsigned int j = k; j < count; j++) {
+            if (SNetPlaceCompare(fields[j]->data_plc, fields[i]->data_plc)) {
+                if (k != j) {
+                    tmp       = fields[k];
+                    fields[k] = fields[j];
+                    fields[j] = tmp;
+                }
+                                
+                ++k;
+            }
+        }
+
+        if (grp_szv != NULL)
+            grp_szv[z] = k - i;
+    }
+
+    return z;
+}
+
+static void*
+drecord_create_raw_format_field_info(
+    snet_record_field_t **fields, 
+    unsigned int          count, 
+    unsigned int         *grp_cnt, 
+    unsigned int        **grp_szv,
+    snet_ref_t          **dv,
+    snet_place_t       ***plcv)
+{
+    if (fields == NULL || count == 0) {
+        return NULL;
+    }
+
+    (*grp_szv) = (unsigned int *)
+        SNetMemAlloc(count * sizeof(unsigned int));
+
+    (*grp_cnt) = drecord_group_fields_by_place(fields, count, (*grp_szv));
+
+    if (count > (*grp_cnt)) {
+        (*grp_szv) = (unsigned int *) 
+            SNetMemRealloc((*grp_szv), (*grp_cnt) * sizeof(unsigned int));
+    }
+
+    void *buf = SNetMemAlloc(
+        (count * sizeof(snet_ref_t)) +
+        ((*grp_cnt) * sizeof(snet_place_t *)));
+
+    (*dv)   = (snet_ref_t *)(buf);
+    (*plcv) = (snet_place_t **)((*dv) + count);
+
+    for (unsigned int i=0; i < count; i++) {
+        (*dv)[i] = fields[i]->data_dcptr;
+    }
+
+    for (unsigned int i=0; i < (*grp_cnt); i++)
+        (*plcv)[i] = &fields[(i == 0 ? 0 : (*grp_szv)[i - 1])]->data_plc;
+
+    return buf;
+}
+
+/*----------------------------------------------------------------------------*/
+
+typedef thread void
+    (*field_data_refcnt_update_fptr_t)(snet_ref_t *rfddv, uint32_t count);
+
+/*---*/
+
+static void
+drecord_update_field_data_refcount(
+    snet_ref_t   *dv,
+    snet_place_t  plc,
+    unsigned int  gsz,
+    field_data_refcnt_update_fptr_t refcnt_update_fun)
+{
+    if (dv == NULL || SNetPlaceIsNull(plc)) {
+        return;
+    }
+
+    family   fid;
+    place    lplc = SNetPlaceToUTCPlace(plc);
+    uint32_t lgsz = gsz;
+
+    create (fid; lplc; 0; 0; 1; 1;;) (*refcnt_update_fun)(dv, lgsz);
+    sync (fid);
+}
+
+static thread void
+drecord_update_field_data_refcounts(
+    shared snet_ref_t  *dv,
+    snet_place_t      **plcv,
+    unsigned int       *gszv,
+    field_data_refcnt_update_fptr_t refcnt_update_fun)
+{
+    index i;
+    snet_ref_t *ldv = dv;
+
+    dv = ldv + gszv[i];
+
+    drecord_update_field_data_refcount(
+        ldv, (*plcv[i]), gszv[i], refcnt_update_fun);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Item vectors' management */
+
+static void*
+drecord_resize_dvec(
+    void *vec,
+    unsigned int item_sz,
+    unsigned int current_sz, unsigned int new_sz)
+{
+    if (new_sz == 0) {
+        if (vec != NULL)
+            SNetMemFree(vec);
+
+        return NULL;
+    }
+
+    vec = (
+        vec == NULL ?
+        SNetMemAlloc(new_sz * item_sz) :
+        SNetMemRealloc(vec, new_sz * item_sz));
+
+    if (new_sz > current_sz) {
+        uint8_t *byte_vec  = ((uint8_t *)(vec)) + (current_sz * item_sz);
+        
+        SNetMemSet(
+            byte_vec,
+            0,
+            (new_sz - current_sz) * item_sz);
+    }
+
+    return vec;
+}
+
+static inline
+snet_record_field_t*
+drecord_resize_fields_vec(
+    snet_record_field_t *vec,
+    unsigned int current_sz, unsigned int new_sz)
+{
+    return (snet_record_field_t *) drecord_resize_dvec(
+        vec, 
+        sizeof(snet_record_field_t), current_sz, new_sz);
+}
+
+static inline
+snet_record_tag_t*
+drecord_resize_tags_vec(
+    snet_record_tag_t *vec,
+    unsigned int current_sz, unsigned int new_sz)
+{
+    return (snet_record_tag_t *) drecord_resize_dvec(
+        vec, 
+        sizeof(snet_record_tag_t), current_sz, new_sz);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void*
+drecord_pack_dvec(
+    void *vec,
+    unsigned int item_sz,
+    unsigned int vec_sz,
+    unsigned int flags_offset,
+    unsigned int start_item_idx)
+{
+    unsigned int i;
+
+    for (i = start_item_idx; i < vec_sz; i++) {
+        snet_record_item_flags_t *flags =        
+            (snet_record_item_flags_t *)(
+                ((uint8_t *)(vec)) + (i * item_sz) + flags_offset);
+
+        if (__chk_flag((*flags), DREC_ITEM_DELETED_FLAG)) {
+            break;
+        }
+    }
+
+    for (unsigned int j = i + 1; j < vec_sz; j++) {
+        snet_record_item_flags_t *flags =        
+            (snet_record_item_flags_t *)(
+                ((uint8_t *)(vec)) + (j * item_sz) + flags_offset);
+
+        if (!__chk_flag((*flags), DREC_ITEM_DELETED_FLAG)) {
+            SNetMemCopy(
+                ((uint8_t *)(vec)) + (j * item_sz),
+                ((uint8_t *)(vec)) + (i++ * item_sz), (size_t)(item_sz));
+        }
+    }
+
+    return (i == vec_sz ? 
+        vec : drecord_resize_dvec(vec, item_sz, vec_sz, i));
+}
+
+static inline
+snet_record_field_t*
+drecord_pack_fields_vec(
+    snet_record_field_t *vec,
+    unsigned int vec_sz,
+    unsigned int start_item_idx)
+{
+    assert(vec != NULL);
+
+    return (snet_record_field_t *) drecord_pack_dvec(
+        vec, 
+        sizeof(snet_record_field_t),
+        vec_sz,
+        (((uint8_t *)(&vec->flags)) - ((uint8_t *)(vec))), start_item_idx);
+}
+
+static inline
+snet_record_tag_t*
+drecord_pack_tags_vec(
+    snet_record_tag_t *vec,
+    unsigned int vec_sz,
+    unsigned int start_item_idx)
+{
+    assert(vec != NULL);
+
+    return (snet_record_tag_t *) drecord_pack_dvec(
+        vec, 
+        sizeof(snet_record_tag_t),
+        vec_sz,
+        (((uint8_t *)(&vec->flags)) - ((uint8_t *)(vec))), start_item_idx);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void
+drecord_init_common(
+    snet_data_record_t *rec,
+    snet_bli_id_t blid, snet_variantencoding_t *venc)
+{
+    rec->blid = blid;
+    rec->venc = venc;
+
+    rec->tags = drecord_resize_tags_vec(
+        NULL,
+        0, SNetTencVariantGetTagsCount(venc));
+
+    rec->btags = drecord_resize_tags_vec(
+        NULL,
+        0, SNetTencVariantGetBTagsCount(venc));
+
+    rec->fields = drecord_resize_fields_vec(
+        NULL,
+        0, SNetTencVariantGetFieldsCount(venc));
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void
+drecord_init_copy(
+    snet_data_record_t *rec,
+    const snet_data_record_t *src)
+{
+    snet_variantencoding_t *venc = 
+       SNetTencVariantCreateCopy(src->venc);
+
+    drecord_init_common(rec, src->blid, venc);
+
+    // Update field data reference counters!
+    snet_record_field_t **src_fields = drecord_create_fields_ptrv(src);
+
+    unsigned int   fields_cnt   = SNetTencVariantGetFieldsCount(venc);
+    unsigned int   srcf_grp_cnt = 0;
+    unsigned int  *srcf_grp_szv = NULL;
+    snet_ref_t    *srcf_dv      = NULL;
+    snet_place_t **srcf_plcv    = NULL;
+
+    void *buf = drecord_create_raw_format_field_info(
+        src_fields,
+        fields_cnt,
+        &srcf_grp_cnt, &srcf_grp_szv, &srcf_dv, &srcf_plcv);
+
+    family fid = (family)(0);
+
+    if (buf != NULL) {
+        create (fid;; 0; srcf_grp_cnt - 1; 1;;;)
+            drecord_update_field_data_refcounts(
+                srcf_dv, 
+                srcf_plcv,
+                srcf_grp_szv, 
+                &SNetRecFieldDataIncreaseRefCount);
+    }
+
+    // There is some work that can be done while
+    // the reference counters for the field data
+    // are being updated. Thus we will not "sync"
+    // yet but instead we can copy the tags and
+    // field information from the source record.
+    unsigned int tags_cnt  = SNetTencVariantGetTagsCount(venc);
+    unsigned int btags_cnt = SNetTencVariantGetBTagsCount(venc);
+
+    // For tags a memory copy will
+    // do the job.
+    if (tags_cnt > 0) {
+        SNetMemCopy(
+            src->tags,
+            rec->tags,
+            tags_cnt * sizeof(snet_record_tag_t));
+    }
+
+    if (btags_cnt > 0) {
+        SNetMemCopy(
+            src->btags,
+            rec->btags,
+            btags_cnt * sizeof(snet_record_tag_t));
+    }
+
+    // Fields however require special
+    // treatment!
+    for (unsigned int i=0; i < fields_cnt; i++)
+        drecord_copy_field(src->fields + i, rec->fields + i);
+
+    // There is nothing else left to do other
+    // than wait for the reference counters'
+    // update to finish and then cleanup.
+    if (buf != NULL) {
+        sync(fid);
+
+        SNetMemFree(buf);
+        SNetMemFree(srcf_grp_szv);
+    }
+
+    if (src_fields != NULL)
+        SNetMemFree(src_fields);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void
+drecord_destroy_partial(snet_data_record_t *rec)
+{
+    // For data records partial destroy means
+    // cleanup everything but do not dispose
+    // any field data.
+    unsigned int fields_cnt = SNetTencVariantGetFieldsCount(rec->venc);
+
+    for (unsigned int i=0; i < fields_cnt; i++) {
+        SNetPlaceFree(rec->fields[i].data_plc);
+    }
+
+    if (rec->fields != NULL)
+        SNetMemFree(rec->fields);
+
+    if (rec->btags != NULL)
+        SNetMemFree(rec->btags);
+
+    if (rec->tags != NULL)
+        SNetMemFree(rec->tags);
+
+    SNetTencVariantDestroy(rec->venc);
+}
+
+
+static void
+drecord_destroy(snet_record_t *rec)
+{
+    snet_data_record_t *drec = &rec->spec.data;
+    
+    // If the instance is an alias then 
+    // we always only do a partial destroy!!
+
+    if (!rec->alias) {
+        snet_record_field_t **fields = drecord_create_fields_ptrv(drec);
+
+        unsigned int   grp_cnt = 0;
+        unsigned int  *grp_szv = NULL;
+        snet_ref_t    *dv      = NULL;
+        snet_place_t **plcv    = NULL;
+
+        unsigned int fields_cnt = 
+            SNetTencVariantGetFieldsCount(drec->venc);
+
+        void *buf = drecord_create_raw_format_field_info(
+            fields, fields_cnt, &grp_cnt, &grp_szv, &dv, &plcv);
+
+        if (buf != NULL) {
+            family fid;
+
+            create (fid;; 0; grp_cnt - 1; 1;;;)
+                drecord_update_field_data_refcounts(
+                dv, 
+                plcv,
+                grp_szv, 
+                &SNetRecFieldDataDecreaseRefCount);
+
+            sync(fid);
+
+            SNetMemFree(buf);
+            SNetMemFree(grp_szv);
+        }
+
+        if (fields != NULL)
+            SNetMemFree(fields);
+    }
+
+    drecord_destroy_partial(drec);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Items' add, remove, copy functions */
+
+typedef bool (*venc_add_fptr)(snet_variantencoding_t *, int);
+typedef unsigned int (*venc_items_cnt_fptr)(const snet_variantencoding_t *);
+
+/*---*/
+
+static
+unsigned int
+drecord_add_items(
+    snet_record_t       *rec,
+    int                 *names,
+    unsigned int         names_cnt,
+    void               **vec,
+    unsigned int         item_sz,
+    venc_add_fptr        venc_add_fun,
+    venc_items_cnt_fptr  venc_items_cnt_fun)
+{
+    unsigned int added_cnt = 0;
+
+    for (unsigned int i=0; i < names_cnt; i++) {
+        if ((*venc_add_fun)(rec->spec.data.venc, names[i])) {
+            added_cnt++;
+        }
+    }
+
+    if (added_cnt == 0) {
+        return 0;
+    }
+
+    unsigned int items_cnt =
+        (*venc_items_cnt_fun)(rec->spec.data.venc);
+
+    (*vec) = drecord_resize_dvec(
+        (*vec),
+        item_sz, items_cnt - added_cnt, items_cnt);
+
+    return added_cnt;
+}
+
+/*----------------------------------------------------------------------------*/
+
+typedef bool (*venc_remove_fptr)(
+    snet_variantencoding_t *, int, unsigned int *, bool);
+
+typedef void (*venc_remove_marked_fptr)(snet_variantencoding_t *);
+
+/*---*/
+
+static 
+unsigned int
+drecord_remove_items(
+    snet_record_t            *rec,
+    const int                *names,
+    unsigned int              count,
+    void                    **vec,
+    venc_items_cnt_fptr       venc_items_cnt_fun,
+    venc_remove_fptr          venc_remove_fun,
+    venc_remove_marked_fptr   venc_remove_marked_fun)
+{
+    unsigned int  items_cnt   = (*venc_items_cnt_fun)(rec->spec.data.venc);
+    unsigned int  first       = items_cnt;
+
+    assert(count <= items_cnt);
+
+    unsigned int  removed_total_cnt      = 0;
+    unsigned int  removed_set_fields_cnt = 0;
+
+    snet_record_field_t **removed_set_fields = (
+        (*vec) != rec->spec.data.fields || count == 0 ? 
+        NULL :
+        (snet_record_field_t **)
+            SNetMemAlloc(count * sizeof(snet_record_field_t *)));
+
+    for (unsigned int i=0; i < count; i++) {
+        unsigned int              idx;
+        snet_record_item_flags_t *flags;
+
+        if (!(*venc_remove_fun)(rec->spec.data.venc, names[i], &idx, true)) {
+            continue;
+        }
+
+        if (idx < first) {
+            first = idx;
+        }
+
+        if ((*vec) != rec->spec.data.fields) {
+            flags = &((((snet_record_tag_t *)(*vec)) + idx)->flags);
+
+        } else {
+            snet_record_field_t *field =
+                ((snet_record_field_t *)(*vec)) + idx;
+
+            flags = &field->flags;
+
+            if (field->data_dcptr != NULL_REF)
+                removed_set_fields[removed_set_fields_cnt++] = field;
+        }
+
+        __set_flag((*flags), DREC_ITEM_DELETED_FLAG);
+        ++removed_total_cnt;
+    }
+
+    if (removed_set_fields_cnt > 0) {
+        unsigned int   grp_cnt = 0;
+        unsigned int  *grp_szv = NULL;
+        snet_ref_t    *dv      = NULL;
+        snet_place_t **plcv    = NULL;
+
+        void *buf = drecord_create_raw_format_field_info(
+            removed_set_fields, 
+            removed_set_fields_cnt, &grp_cnt, &grp_szv, &dv, &plcv);
+
+        if (buf != NULL) {
+            family fid;
+
+            create (fid;; 0; grp_cnt - 1; 1;;;)
+                drecord_update_field_data_refcounts(
+                dv, 
+                plcv,
+                grp_szv, 
+                &SNetRecFieldDataDecreaseRefCount);
+
+            sync(fid);
+
+            SNetMemFree(buf);
+            SNetMemFree(grp_szv);
+        }
+
+        for (unsigned int i=0; i < removed_set_fields_cnt; i++) {
+            SNetPlaceFree(removed_set_fields[i]->data_plc);
+        }
+    }
+
+    if (removed_set_fields != NULL)
+        SNetMemFree(removed_set_fields);
+
+    if (removed_total_cnt > 0) {
+        (*venc_remove_marked_fun)(rec->spec.data.venc);
+
+        if ((*vec) != rec->spec.data.fields) {
+            (*vec) = drecord_pack_tags_vec(
+                (snet_record_tag_t *)(*vec), items_cnt, first);
+
+        } else {
+            (*vec) = drecord_pack_fields_vec(
+                (snet_record_field_t *)(*vec), items_cnt, first);
+        }
+    }
+
+    return removed_total_cnt;
+}
+
+/*----------------------------------------------------------------------------*/
+
+typedef int (*venc_itemget_fptr)(
+    const snet_variantencoding_t *, unsigned int);
+
+typedef bool (*venc_search_fptr)(
+    const snet_variantencoding_t*, int, unsigned int*);
+
+/*---*/
+
+static unsigned int
+drecord_copy_items(
+    snet_record_t            *rec1,
+    snet_record_t            *rec2,
+    const int                *names,
+    const int                *new_names,
+    unsigned int              count,
+    void                    **vec1,
+    void                    **vec2,
+    unsigned int              flags, 
+    venc_items_cnt_fptr       venc_items_cnt_fun,
+    venc_itemget_fptr         venc_itemget_fun,
+    venc_search_fptr          venc_search_fun,
+    venc_add_fptr             venc_add_fun,
+    venc_remove_fptr          venc_remove_fun,
+    venc_remove_marked_fptr   venc_remove_marked_fun)
+{
+    assert(names != NULL || count == 0);
+    
+    if (!__chk_flag(flags, DREC_ITEMS_COPY_CONSUMED) &&
+        !__chk_flag(flags, DREC_ITEMS_COPY_UNCONSUMED)) {
+
+        // If both of these flags are set then there is nothing
+        // to copy (because there is not gonna be a case where
+        // an item is neither consumed or unconsumed). 
+        //
+        // Should this be an "assertion"???
+        return 0;
+    }
+
+    if (new_names == NULL) {
+        new_names = names;
+    }
+
+    unsigned int i = 0;
+
+    unsigned int copied_items_cnt      = 0;
+    unsigned int copied_set_fields_cnt = 0;
+
+    unsigned int item_sz = (
+        (*vec1) == rec1->spec.data.fields ?
+        sizeof(snet_record_field_t) : sizeof(snet_record_tag_t));
+
+    unsigned int r1_items_cnt =
+        (*venc_items_cnt_fun)(rec1->spec.data.venc);
+
+    unsigned int r2_items_cnt =
+        (*venc_items_cnt_fun)(rec2->spec.data.venc);
+
+    unsigned int first = r1_items_cnt;
+    unsigned int copy_loop_cnt = (names == NULL ? r1_items_cnt : count);
+
+    assert(copy_loop_cnt <= r1_items_cnt);
+
+    if (copy_loop_cnt == 0) {
+        return 0;
+    }
+
+    (*vec2) = drecord_resize_dvec(
+        (*vec2),
+        item_sz,
+        r2_items_cnt, r2_items_cnt + copy_loop_cnt);
+
+    snet_record_field_t **copied_set_fields = (
+        ((*vec1) != rec1->spec.data.fields ||
+           __chk_flag(flags, DREC_ITEMS_COPY_MOVE)) ?
+        NULL :
+        (snet_record_field_t **)
+            SNetMemAlloc(copy_loop_cnt * sizeof(snet_record_field_t *)));
+
+    do {
+        signed   int cpi_name;
+        unsigned int cpi_idx1;
+        unsigned int cpi_idx2 = r2_items_cnt + copied_items_cnt; 
+
+        // Get the index and name of the item to be
+        // copied.
+        if (names != NULL) {
+            if (!(*venc_search_fun)(
+                rec1->spec.data.venc, names[i], &cpi_idx1)) {
+                i++;
+                continue;
+            }
+
+            cpi_name = new_names[i];
+
+        } else {
+            cpi_name = (*venc_itemget_fun)(rec1->spec.data.venc, i);
+            cpi_idx1 = i;
+        }
+
+        // Get the flags of the item to be copied.
+        snet_record_item_flags_t *cpi_flags = (
+            (*vec1) != rec1->spec.data.fields ?
+            &((((snet_record_tag_t *)(*vec1)) + cpi_idx1)->flags) :
+            &((((snet_record_field_t *)(*vec1)) + cpi_idx1)->flags));
+           
+        // Check the item's flags and the copy "options" flags
+        // to see whether this item should be copied or not.
+        bool unconsumed_flag = (
+            __chk_flag(flags, DREC_ITEMS_COPY_UNCONSUMED) &&
+            !__chk_flag((*cpi_flags), DREC_ITEM_CONSUMED_FLAG));
+
+        bool consumed_flag = (
+            __chk_flag(flags, DREC_ITEMS_COPY_CONSUMED) &&
+            __chk_flag((*cpi_flags), DREC_ITEM_CONSUMED_FLAG));
+
+        if (!unconsumed_flag && !consumed_flag) {
+            i++;
+            continue;
+        }
+
+        // Try to add the new name to the variant encoding of the
+        // destination record. If it fails it means the record
+        // already has an item with this name thus we should not
+        // copy the item from the source record.
+        if (!(*venc_add_fun)(rec2->spec.data.venc, cpi_name)) {
+            i++;
+            continue;
+        }
+
+        if ((*vec1) != rec1->spec.data.fields) {
+            assert((*vec2) == rec2->spec.data.tags
+                   || (*vec2) == rec2->spec.data.btags);
+
+            snet_record_tag_t *t1 =
+                ((snet_record_tag_t *)(*vec1)) + cpi_idx1;
+
+            snet_record_tag_t *t2 =
+                ((snet_record_tag_t *)(*vec2)) + cpi_idx2;
+
+            t2->value = t1->value;
+            t2->flags = t1->flags;
+
+        } else {
+            assert((*vec2) == rec2->spec.data.fields);
+
+            snet_record_field_t *f1 =
+                ((snet_record_field_t *)(*vec1)) + cpi_idx1;
+
+            snet_record_field_t *f2 =
+                ((snet_record_field_t *)(*vec2)) + cpi_idx2;
+
+            if (f1->data_dcptr != NULL_REF) {
+                f2->data_dcptr = f1->data_dcptr;
+                f2->flags      = 0;
+           
+                if (__chk_flag(flags, DREC_ITEMS_COPY_MOVE)) {
+                    f2->data_plc = SNetPlaceCopyAndFree(f1->data_plc);
+
+                    if (__chk_flag(f1->flags, DREC_FIELD_DATA_EXCL_FLAG)) {
+                        __set_flag(f2->flags, DREC_FIELD_DATA_EXCL_FLAG);
+                    }
+
+                } else {
+                    f2->data_plc = SNetPlaceCopy(f1->data_plc);
+
+                    __reset_flag(
+                        f1->flags, 
+                        DREC_FIELD_DATA_EXCL_FLAG);
+
+                    copied_set_fields[copied_set_fields_cnt++] = f1;
+                }
+
+                if (__chk_flag(f1->flags, DREC_FIELD_DATA_LOCAL_FLAG)) {
+                    __set_flag(f2->flags, DREC_FIELD_DATA_LOCAL_FLAG);
+                }
+            }
+        }
+
+        if (__chk_flag(flags, DREC_ITEMS_COPY_MOVE)) {
+            if (cpi_idx1 < first) {
+                first = cpi_idx1;
+            }
+
+            // Flag the item from the src record as "deleted"; note
+            // that "cpi_flags" points to the flags of the current
+            // item from the src record (rec1).
+            __set_flag((*cpi_flags), DREC_ITEM_DELETED_FLAG);
+
+            // Finally the item name must be removed from the variant. Note
+            // that we only mark it as deleted. The "remove_marked" function
+            // on the variant encoding later to complete the removal!!
+            (*venc_remove_fun)(rec1->spec.data.venc, cpi_name, NULL, true);
+        }
+
+        copied_items_cnt++;
+        i++;
+
+    } while (i < copy_loop_cnt);
+
+    // Everything has been copied/moved. In either copy or move the
+    // vector for the destination is resized ">= copied_items_count"! So
+    // shrinking it down to exactly "copied_items_count" applys in both
+    // cases!
+    (*vec2) =  drecord_resize_dvec(
+        (*vec2),
+        item_sz,
+        r2_items_cnt + copy_loop_cnt, r2_items_cnt + copied_items_cnt);
+
+    // The final steps depend on whether we are doing a move or a copy. If
+    // it is a move we have do deal with "finallizing" names' removal from
+    // the variant encoding and "packing" the vector of the src record (rec1).
+    //
+    // If we are doing a copy we have to update reference counters in
+    // the data descriptors of fields (if we are doing fields) and 
+    // cleanup!
+    if (__chk_flag(flags, DREC_ITEMS_COPY_MOVE)) {
+        (*venc_remove_marked_fun)(rec1->spec.data.venc);
+
+        if ((*vec1) != rec1->spec.data.fields) {
+            (*vec1) = drecord_pack_tags_vec(
+                (snet_record_tag_t *)(*vec1), r1_items_cnt, first);
+
+        } else {
+            (*vec1) = drecord_pack_fields_vec(
+                (snet_record_field_t *)(*vec1), r1_items_cnt, first);
+        }
+
+    } else if ((*vec1) == rec1->spec.data.fields) {
+        // We are COPYING fields => must update
+        // data descriptor reference counters!!
+
+        if (copied_set_fields_cnt > 0) {
+            unsigned int   grp_cnt = 0;
+            unsigned int  *grp_szv = NULL;
+            snet_ref_t    *dv      = NULL;
+            snet_place_t **plcv    = NULL;
+
+            void *buf = drecord_create_raw_format_field_info(
+                copied_set_fields, 
+                copied_set_fields_cnt, &grp_cnt, &grp_szv, &dv, &plcv);
+
+            if (buf != NULL) {
+                family fid;
+
+                create (fid;; 0; grp_cnt - 1; 1;;;)
+                    drecord_update_field_data_refcounts(
+                    dv, 
+                    plcv,
+                    grp_szv, 
+                    &SNetRecFieldDataIncreaseRefCount);
+
+                sync(fid);
+
+                SNetMemFree(buf);
+                SNetMemFree(grp_szv);
+            }
+        }
+
+        if (copied_set_fields != NULL)
+            SNetMemFree(copied_set_fields);
+    }
+
+    return copied_items_cnt;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetRecInit(
+    snet_record_t *rec,
+    snet_record_descr_t descr, va_list vargs)
+{    
+    switch (descr) {
+        case SNET_REC_DESCR_DATA: {
+            snet_variantencoding_t *venc =
+                va_arg(vargs, snet_variantencoding_t*);
+
+            SNetDataRecInit(rec, (snet_bli_id_t)(0), venc, vargs);
+            break;
+        }
+
+        case SNET_REC_DESCR_CTRL: {           
+            unsigned int  mode    = va_arg(vargs, unsigned int);
+            unsigned int  opcode  = va_arg(vargs, unsigned int);
+            void         *data    = va_arg(vargs, void*);
+            unsigned int  data_sz = va_arg(vargs, unsigned int);
+
+            SNetCtrlRecInit(
+                rec, 
+                (snet_record_ctrl_mode_t) mode, opcode, data, data_sz);
+
+            break;
+        }
+
+        default: {
+            SNetReportError(
+                SNET_ERR_UNEXPECTED,
+                "attempt to create a "
+                "record of \"UNKNOWN/UNSUPPORTED\" type");
+
+            SNetOnError();
+            break;
+        }
+   }
+}
+   
+/*----------------------------------------------------------------------------*/
+
+void
+SNetDataRecInit(
+    snet_record_t *rec,
+    snet_bli_id_t  blid,
+    snet_variantencoding_t *venc, va_list vargs)
+{
+    assert(rec != NULL);
+    assert(venc != NULL);
+
+    record_init_common(
+        rec,
+        SNET_REC_DESCR_DATA,
+        SNET_REC_DATA_MODE_BIN);
+
+    drecord_init_common(&rec->spec.data, blid, venc);
+
+    unsigned int tags_cnt   = SNetTencVariantGetTagsCount(venc);
+    unsigned int btags_cnt  = SNetTencVariantGetBTagsCount(venc);
+    unsigned int fields_cnt = SNetTencVariantGetFieldsCount(venc);
+
+    for (unsigned int i=0; i < fields_cnt; i++) {
+        drecord_set_field_data(
+            rec->spec.data.fields + i, va_arg(vargs, void*), blid);
+    }
+
+    for (unsigned int i=0; i < tags_cnt; i++)
+        rec->spec.data.tags[i].value = int2rectagval(va_arg(vargs, int));
+
+    for (unsigned int i=0; i < btags_cnt; i++)
+        rec->spec.data.btags[i].value = int2rectagval(va_arg(vargs, int));
+}
+
+void
+SNetDataRecInitFromArrays(
+    snet_record_t *rec,
+    snet_bli_id_t  blid,
+    snet_variantencoding_t *venc, void **fields, int *tags, int *btags)
+{
+    assert(rec != NULL);
+    assert(venc != NULL);
+
+    record_init_common(
+        rec,
+        SNET_REC_DESCR_DATA,
+        SNET_REC_DATA_MODE_BIN);
+
+    drecord_init_common(&rec->spec.data, blid, venc);
+
+    unsigned int tags_cnt   = SNetTencVariantGetTagsCount(venc);
+    unsigned int btags_cnt  = SNetTencVariantGetBTagsCount(venc);
+    unsigned int fields_cnt = SNetTencVariantGetFieldsCount(venc);
+
+    for (unsigned int i=0; i < tags_cnt; i++)
+        rec->spec.data.tags[i].value = int2rectagval(tags[i]);
+
+    for (unsigned int i=0; i < btags_cnt; i++)
+        rec->spec.data.btags[i].value = int2rectagval(btags[i]);
+
+    for (unsigned int i=0; i < fields_cnt; i++)
+        drecord_set_field_data(rec->spec.data.fields + i, fields[i], blid);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetCtrlRecInit(
+    snet_record_t *rec,
+    snet_record_ctrl_mode_t mode,
+    unsigned int opcode, const void *data, unsigned int data_sz)
+{
+    assert(rec != NULL);
+
+    record_init_common(rec, SNET_REC_DESCR_CTRL, SNET_REC_DATA_MODE_BIN);
+
+    rec->spec.ctrl.mode    = mode;
+    rec->spec.ctrl.opcode  = opcode;
+    rec->spec.ctrl.data_sz = data_sz;
+
+    if (data == NULL || data_sz == 0) {
+        rec->spec.ctrl.data = NULL;
+
+    } else {
+        rec->spec.ctrl.data = SNetMemAlloc(data_sz);
+
+        SNetMemCopy(
+            data,
+            rec->spec.ctrl.data, data_sz);
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetRecInitCopy(snet_record_t *rec, const snet_record_t *src)
+{
+    assert(rec != NULL);
+    assert(src != NULL);
+    assert(!src->alias);
+
+    switch (src->descr) {
+        case SNET_REC_DESCR_DATA:
+            record_init_common(rec, src->descr, src->data_mode);
+            drecord_init_copy(&rec->spec.data, &src->spec.data);
+
+            break;
+
+        case SNET_REC_DESCR_CTRL:
+            SNetCtrlRecInit(
+                rec,
+                src->spec.ctrl.mode,
+                src->spec.ctrl.opcode,
+                src->spec.ctrl.data,
+                src->spec.ctrl.data_sz);
+
+            break;
+
+        default:
+            SNetReportError(
+                SNET_ERR_UNEXPECTED,
+                "attempt to create copy "
+                "of a record of \"UNKNOWN/UNSUPPORTED\" type");
+
+            SNetOnError();
+            break;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_record_t*
+SNetRecCreate(snet_record_descr_t descr, ...)
+{
+    snet_record_t *rec = 
+        (snet_record_t *) SNetMemAlloc(sizeof(snet_record_t));
+
+    va_list  vargs;
+    va_start(vargs, descr);
+
+    SNetRecInit(rec, descr, vargs);
+
+    va_end(vargs);
+    return rec;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_record_t*
+SNetDataRecCreate(
+    snet_bli_id_t blid,
+    snet_variantencoding_t *venc, ...)
+{
+    va_list  vargs;
+    va_start(vargs, venc);
+
+    snet_record_t *rec =
+        SNetDataRecVCreate(blid, venc, vargs);
+
+    va_end(vargs);
+    return rec;
+}
+
+snet_record_t*
+SNetDataRecVCreate(
+    snet_bli_id_t blid,
+    snet_variantencoding_t *venc, va_list vargs)
+{
+    assert(venc != NULL);
+
+    snet_record_t *rec = 
+        (snet_record_t *)
+            SNetMemAlloc(sizeof(snet_record_t));
+
+    SNetDataRecInit(rec, blid, venc, vargs);
+    return rec;
+}
+
+snet_record_t*
+SNetDataRecCreateFromArrays(
+    snet_bli_id_t blid,
+    snet_variantencoding_t *venc, void **fields, int *tags, int *btags)
+{
+    assert(venc != NULL);
+
+    snet_record_t *rec = 
+        (snet_record_t *)
+            SNetMemAlloc(sizeof(snet_record_t));
+
+    SNetDataRecInitFromArrays(rec, blid, venc, fields, tags, btags);
+    return rec;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_record_t*
+SNetCtrlRecCreate(
+    snet_record_ctrl_mode_t mode,
+    unsigned int opcode, const void *data, unsigned int data_sz)
+{
+    snet_record_t *rec = 
+        (snet_record_t *)
+            SNetMemAlloc(sizeof(snet_record_t));
+
+    SNetCtrlRecInit(rec, mode, opcode, data, data_sz);
+    return rec;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_record_t*
+SNetRecCreateCopy(const snet_record_t *src)
+{
+    assert(src != NULL);
+
+    snet_record_t *rec = 
+        (snet_record_t *)
+            SNetMemAlloc(sizeof(snet_record_t));
+
+    SNetRecInitCopy(rec, src);
+    return rec;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetRecDestroy(snet_record_t *rec)
+{
+    assert(rec != NULL);
+
+    switch (rec->descr) {
+        case SNET_REC_DESCR_DATA:
+            drecord_destroy(rec);
+            break;
+
+        case SNET_REC_DESCR_CTRL:
+            if (rec->spec.ctrl.data != NULL)
+                SNetMemFree(rec->spec.ctrl.data);
+
+            break;
+
+        default:
+            SNetReportError(
+                SNET_ERR_UNEXPECTED,
+                "attempt to destroy a "
+                "record of \"UNKNOWN/UNSUPPORTED\" type");
+
+            SNetOnError();
+            break;
+    }
+
+    SNetMemFree(rec);
+}
+
+void
+SNetRecDestroyPartial(snet_record_t *rec)
+{
+    assert(rec != NULL);
+
+    switch (rec->descr) {
+        case SNET_REC_DESCR_DATA:
+            drecord_destroy_partial(&rec->spec.data);
+            break;
+
+        case SNET_REC_DESCR_CTRL:
+            // For "control" records "partial" destroy
+            // is the same as the "normal" one!
+            if (rec->spec.ctrl.data != NULL)
+                SNetMemFree(rec->spec.ctrl.data);
+
+            break;
+
+        default:
+            SNetReportError(
+                SNET_ERR_UNEXPECTED,
+                "attempt to destroy a "
+                "record of \"UNKNOWN/UNSUPPORTED\" type");
+
+            SNetOnError();
+            break;
+    }
+
+    SNetMemFree(rec);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_record_descr_t
+SNetRecGetDescription(const snet_record_t *rec)
+{
+    assert(rec != NULL);
+    return rec->descr;
+}
+
+snet_bli_id_t 
+SNetRecGetInterfaceId(const snet_record_t *rec)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_DATA);
+
+    return rec->spec.data.blid;
+}
+ 
+void 
+SNetRecSetInterfaceId(snet_record_t *rec, snet_bli_id_t id)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_DATA);
+
+    rec->spec.data.blid = id;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_variantencoding_t*
+SNetRecGetVariantEncoding(const snet_record_t *rec)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_DATA);   
+
+    return rec->spec.data.venc;
+}
+
+void
+SNetRecSetVariantEncoding(
+    snet_record_t *rec, const snet_variantencoding_t *venc)
+{
+    assert(rec != NULL);
+    assert(venc != NULL);
+    assert(rec->descr == SNET_REC_DESCR_DATA);   
+
+    rec->spec.data.venc = (snet_variantencoding_t *)(venc);
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool
+SNetRecHasTag(const snet_record_t *rec, int name)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_DATA);
+
+    return SNetTencVariantContainsTag(rec->spec.data.venc, name, NULL);
+}
+
+bool
+SNetRecHasBTag(const snet_record_t *rec, int name)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_DATA);
+
+    return SNetTencVariantContainsBTag(rec->spec.data.venc, name, NULL);
+}
+
+bool
+SNetRecHasField(const snet_record_t *rec, int name)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_DATA);
+
+    return SNetTencVariantContainsField(rec->spec.data.venc, name, NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool
+SNetRecIsTagConsumed(const snet_record_t *rec, int name)
+{
+    return_macro(drecord_is_item_consumed(rec, name, tags, Tag));
+}
+
+bool
+SNetRecIsBTagConsumed(const snet_record_t *rec, int name)
+{
+    return_macro(drecord_is_item_consumed(rec, name, btags, BTag));
+}
+
+bool
+SNetRecIsFieldConsumed(const snet_record_t *rec, int name)
+{
+    return_macro(drecord_is_item_consumed(rec, name, fields, Field));
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetRecResetConsumed(snet_record_t *rec)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_DATA);
+
+    unsigned int tags_cnt =
+        SNetTencVariantGetTagsCount(rec->spec.data.venc);
+
+    for (unsigned int i=0; i < tags_cnt; i++)
+        __reset_flag(rec->spec.data.tags[i].flags, DREC_ITEM_CONSUMED_FLAG);
+
+    unsigned int btags_cnt =
+        SNetTencVariantGetBTagsCount(rec->spec.data.venc);
+
+    for (unsigned int i=0; i < btags_cnt; i++)
+        __reset_flag(rec->spec.data.btags[i].flags, DREC_ITEM_CONSUMED_FLAG);
+
+    unsigned int fields_cnt =
+        SNetTencVariantGetFieldsCount(rec->spec.data.venc);
+
+    for (unsigned int i=0; i < fields_cnt; i++)
+        __reset_flag(rec->spec.data.fields[i].flags, DREC_ITEM_CONSUMED_FLAG);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetRecResetConsumedTag(snet_record_t *rec, int name)
+{
+    drecord_reset_consumed_item(rec, name, tags, Tag);
+}
+
+void
+SNetRecResetConsumedBTag(snet_record_t *rec, int name)
+{
+    drecord_reset_consumed_item(rec, name, btags, BTag);
+}
+
+void
+SNetRecResetConsumedField(snet_record_t *rec, int name)
+{
+    drecord_reset_consumed_item(rec, name, fields, Field);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+int
+SNetRecGetTag(const snet_record_t *rec, int name)
+{
+    return_macro(drecord_get_tag(rec, name, tags, Tag, "tag"));
+}
+
+int
+SNetRecTakeTag(snet_record_t *rec, int name)
+{
+    return_macro(drecord_take_tag(rec, name, tags, Tag, "tag"));
+}
+
+void
+SNetRecSetTag(snet_record_t *rec, int name, int val)
+{
+    drecord_set_tag(rec, name, val, tags, Tag, "tag");
+}
+
+/*----------------------------------------------------------------------------*/
+
+int
+SNetRecGetBTag(const snet_record_t *rec, int name)
+{
+    return_macro(drecord_get_tag(rec, name, btags, BTag, "binding tag"));
+}
+
+int
+SNetRecTakeBTag(snet_record_t *rec, int name)
+{
+    return_macro(drecord_take_tag(rec, name, btags, BTag, "binding tag"));
+}
+
+void
+SNetRecSetBTag(snet_record_t *rec, int name, int val)
+{
+    drecord_set_tag(rec, name, val, btags, BTag, "binding tag");
+}
+
+/*----------------------------------------------------------------------------*/
+
+void*
+SNetRecGetField(const snet_record_t *rec, int name)
+{
+    return SNetMaskPointer(drecord_get_field(rec, name, "GET"));
+}
+
+void*
+SNetRecTakeField(snet_record_t *rec, int name)
+{
+    snet_record_field_t *f =
+        (snet_record_field_t *)(
+            drecord_get_field(rec, name, "TAKE"));
+
+    if (f != NULL)
+        __set_flag(f->flags, DREC_ITEM_CONSUMED_FLAG);
+
+    return SNetMaskPointer(f);
+}
+
+void SNetRecSetField(snet_record_t *rec, int name, void *val)
+{
+    assert(rec != NULL);
+    assert(!rec->alias);
+
+    snet_record_field_t *f =
+        (snet_record_field_t *)(
+            drecord_get_field(rec, name, "SET"));
+
+    if (f == NULL) {
+        return;
+    }
+
+    drecord_update_field_data_refcount(
+        &f->data_dcptr,
+        f->data_plc,
+        1,
+        &SNetRecFieldDataDecreaseRefCount);
+
+    SNetPlaceFree(f->data_plc);
+
+    drecord_set_field_data(f, val, rec->spec.data.blid);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_record_ctrl_mode_t
+SNetRecGetCtrlMode(const snet_record_t *rec)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_CTRL);
+
+    return rec->spec.ctrl.mode;
+}
+
+unsigned int
+SNetRecGetOpCode(const snet_record_t *rec)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_CTRL);
+
+    return rec->spec.ctrl.opcode;
+}
+
+const void*
+SNetRecGetCtrlData(const snet_record_t *rec)
+{
+    assert(rec != NULL);
+    assert(rec->descr == SNET_REC_DESCR_CTRL);
+
+    return rec->spec.ctrl.data;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetRecAddItems(
+    snet_record_t *rec,
+    int *names, 
+    unsigned int fields_cnt, 
+    unsigned int tags_cnt, unsigned int btags_cnt)
+{
+     assert(rec != NULL);
+     assert(names != NULL);
+     assert(rec->descr == SNET_REC_DESCR_DATA);
+
+     unsigned int added_items_cnt = 0;
+
+     if (fields_cnt > 0) {
+         void **fields_vec = (void **)(&rec->spec.data.fields);
+
+         added_items_cnt += drecord_add_items(
+             rec,
+             names,
+             fields_cnt,
+             fields_vec,
+             sizeof(snet_record_field_t),
+             &SNetTencVariantAddField,
+             &SNetTencVariantGetFieldsCount);
+     }
+
+     if (tags_cnt > 0) {
+         void **tags_vec = (void **)(&rec->spec.data.tags);
+
+         added_items_cnt += drecord_add_items(
+             rec,
+             names + fields_cnt,
+             tags_cnt,
+             tags_vec,
+             sizeof(snet_record_tag_t),
+             &SNetTencVariantAddTag,
+             &SNetTencVariantGetTagsCount);
+     }
+
+     if (btags_cnt > 0) {
+         void **btags_vec = (void **)(&rec->spec.data.btags);
+
+         added_items_cnt += drecord_add_items(
+             rec,
+             names + fields_cnt + tags_cnt,
+             btags_cnt,
+             btags_vec,
+             sizeof(snet_record_tag_t),
+             &SNetTencVariantAddBTag,
+             &SNetTencVariantGetBTagsCount);
+     }
+
+     return added_items_cnt;
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetRecAddTag(snet_record_t *rec, int name)
+{
+    return (SNetRecAddItems(rec, &name, 0, 1, 0) == 1);
+}
+
+bool SNetRecAddBTag(snet_record_t *rec, int name)
+{
+    return (SNetRecAddItems(rec, &name, 0, 0, 1) == 1);
+}
+
+bool SNetRecAddField(snet_record_t *rec, int name)
+{
+    return (SNetRecAddItems(rec, &name, 1, 0, 0) == 1);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetRecRemoveItems(
+    snet_record_t *rec, 
+    int *names,
+    unsigned int fields_cnt, 
+    unsigned int tags_cnt, unsigned int btags_cnt)
+{
+    assert(rec != NULL);
+    assert(names != NULL);
+    assert(rec->descr == SNET_REC_DESCR_DATA);
+
+    unsigned int removed_items_cnt = 0;
+
+    if (fields_cnt > 0) {
+        void **fields_vec = (void **)(&rec->spec.data.fields);
+
+        removed_items_cnt += drecord_remove_items(
+            rec,
+            names,
+            fields_cnt,
+            fields_vec,
+            &SNetTencVariantGetFieldsCount,
+            &SNetTencVariantRemoveFieldEx,
+            &SNetTencVariantRemoveMarkedFields);
+    }
+
+    if (tags_cnt > 0) {
+        void **tags_vec = (void **)(&rec->spec.data.tags);
+
+        removed_items_cnt += drecord_remove_items(
+            rec,
+            names + fields_cnt,
+            tags_cnt,
+            tags_vec,
+            &SNetTencVariantGetTagsCount,
+            &SNetTencVariantRemoveTagEx,
+            &SNetTencVariantRemoveMarkedTags);
+    }
+
+    if (btags_cnt > 0) {
+        void **btags_vec = (void **)(&rec->spec.data.btags);
+
+        removed_items_cnt += drecord_remove_items(
+            rec,
+            names + fields_cnt + tags_cnt,
+            btags_cnt,
+            btags_vec,
+            &SNetTencVariantGetBTagsCount,
+            &SNetTencVariantRemoveBTagEx,
+            &SNetTencVariantRemoveMarkedBTags);
+    }
+
+    return removed_items_cnt;
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetRecRemoveTag(snet_record_t *rec, int name)
+{
+    return (SNetRecRemoveItems(rec, &name, 0, 1, 0) == 1);
+}
+
+bool SNetRecRemoveBTag(snet_record_t *rec, int name)
+{
+    return (SNetRecRemoveItems(rec, &name, 0, 0, 1) == 1);
+}
+
+bool SNetRecRemoveField(snet_record_t *rec, int name)
+{
+    return (SNetRecRemoveItems(rec, &name, 1, 0, 0) == 1);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetRecCopyItems(
+    snet_record_t *rec1,
+    snet_record_t *rec2,
+    unsigned int   flags,
+    snet_record_items_copy_specs_t *specs)
+{
+    assert(rec1 != NULL);
+    assert(rec2 != NULL);
+    assert(rec1 != rec2);
+    assert(rec1->descr == SNET_REC_DESCR_DATA);
+    assert(rec2->descr == SNET_REC_DESCR_DATA);
+
+    unsigned int copied_items_cnt = 0;
+
+    if (__chk_flag(flags, DREC_ITEMS_COPY_FIELDS)) {
+        void **fields_vec1 = (void **)(&rec1->spec.data.fields);
+        void **fields_vec2 = (void **)(&rec2->spec.data.fields);
+
+        copied_items_cnt += drecord_copy_items(
+            rec1,
+            rec2,
+            specs == NULL ? NULL : specs->names,
+            specs == NULL ? NULL : specs->new_names,
+            specs == NULL ? 0    : specs->fields_cnt,
+            fields_vec1,
+            fields_vec2,
+            flags,
+            &SNetTencVariantGetFieldsCount,
+            &SNetTencVariantGetField,
+            &SNetTencVariantContainsField,
+            &SNetTencVariantAddField,
+            &SNetTencVariantRemoveFieldEx,
+            &SNetTencVariantRemoveMarkedFields);
+    }
+
+    if (__chk_flag(flags, DREC_ITEMS_COPY_TAGS)) {
+        void **tags_vec1 = (void **)(&rec1->spec.data.tags);
+        void **tags_vec2 = (void **)(&rec2->spec.data.tags);
+
+        copied_items_cnt += drecord_copy_items(
+            rec1,
+            rec2,
+            (specs == NULL ? NULL : specs->names + specs->fields_cnt),
+            (specs == NULL ? NULL : specs->new_names + specs->fields_cnt),
+            (specs == NULL ? 0    : specs->tags_cnt),
+            tags_vec1,
+            tags_vec2,
+            flags,
+            &SNetTencVariantGetTagsCount,
+            &SNetTencVariantGetTag,
+            &SNetTencVariantContainsTag,
+            &SNetTencVariantAddTag,
+            &SNetTencVariantRemoveTagEx,
+            &SNetTencVariantRemoveMarkedTags);
+    }
+
+    if (__chk_flag(flags, DREC_ITEMS_COPY_BTAGS)) {
+        void **btags_vec1 = (void **)(&rec1->spec.data.btags);
+        void **btags_vec2 = (void **)(&rec2->spec.data.btags);
+
+        copied_items_cnt += drecord_copy_items(
+            rec1,
+            rec2,
+            (specs == NULL ? NULL : specs->names + specs->tags_cnt),
+            (specs == NULL ? NULL : specs->new_names + specs->tags_cnt),
+            (specs == NULL ? 0    : specs->btags_cnt),
+            btags_vec1,
+            btags_vec2,
+            flags,
+            &SNetTencVariantGetBTagsCount,
+            &SNetTencVariantGetBTag,
+            &SNetTencVariantContainsBTag,
+            &SNetTencVariantAddBTag,
+            &SNetTencVariantRemoveBTagEx,
+            &SNetTencVariantRemoveMarkedBTags);
+    }
+    
+    return copied_items_cnt;
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetRecCopyTag(
+    snet_record_t *rec1,
+    snet_record_t *rec2, int name, int new_name)
+{
+    unsigned int flags =
+        DREC_ITEMS_COPY_TAGS
+        | DREC_ITEMS_COPY_CONSUMED
+        | DREC_ITEMS_COPY_UNCONSUMED;
+
+    snet_record_items_copy_specs_t specs = {
+        &name,
+        &new_name,
+        0,
+        1,
+        0
+    };
+
+    return (SNetRecCopyItems(rec1, rec2, flags, &specs) == 1);
+}
+
+bool SNetRecCopyBTag(
+    snet_record_t *rec1,
+    snet_record_t *rec2, int name, int new_name)
+{
+    unsigned int flags =
+        DREC_ITEMS_COPY_BTAGS
+        | DREC_ITEMS_COPY_CONSUMED
+        | DREC_ITEMS_COPY_UNCONSUMED;
+
+    snet_record_items_copy_specs_t specs = {
+        &name,
+        &new_name,
+        0,
+        0,
+        1
+    };
+
+    return (SNetRecCopyItems(rec1, rec2, flags, &specs) == 1);
+}
+
+bool SNetRecCopyField(
+    snet_record_t *rec1,
+    snet_record_t *rec2, int name, int new_name)
+{
+    unsigned int flags =
+        DREC_ITEMS_COPY_FIELDS
+        | DREC_ITEMS_COPY_CONSUMED
+        | DREC_ITEMS_COPY_UNCONSUMED;
+
+    snet_record_items_copy_specs_t specs = {
+        &name,
+        &new_name,
+        1,
+        0,
+        0
+    };
+
+    return (SNetRecCopyItems(rec1, rec2, flags, &specs) == 1);
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool SNetRecMoveTag(
+    snet_record_t *rec1,
+    snet_record_t *rec2, int name, int new_name)
+{
+    unsigned int flags =
+        DREC_ITEMS_COPY_TAGS
+        | DREC_ITEMS_COPY_MOVE
+        | DREC_ITEMS_COPY_CONSUMED
+        | DREC_ITEMS_COPY_UNCONSUMED;
+
+    snet_record_items_copy_specs_t specs = {
+        &name,
+        &new_name,
+        0,
+        1,
+        0
+    };
+
+    return (SNetRecCopyItems(rec1, rec2, flags, &specs) == 1);
+}
+
+bool SNetRecMoveBTag(
+    snet_record_t *rec1,
+    snet_record_t *rec2, int name, int new_name)
+{
+    unsigned int flags =
+        DREC_ITEMS_COPY_BTAGS
+        | DREC_ITEMS_COPY_MOVE
+        | DREC_ITEMS_COPY_CONSUMED
+        | DREC_ITEMS_COPY_UNCONSUMED;
+
+    snet_record_items_copy_specs_t specs = {
+        &name,
+        &new_name,
+        0,
+        0,
+        1
+    };
+
+    return (SNetRecCopyItems(rec1, rec2, flags, &specs) == 1);
+}
+
+bool SNetRecMoveField(
+    snet_record_t *rec1,
+    snet_record_t *rec2, int name, int new_name)
+{
+    unsigned int flags =
+        DREC_ITEMS_COPY_FIELDS
+        | DREC_ITEMS_COPY_MOVE
+        | DREC_ITEMS_COPY_CONSUMED
+        | DREC_ITEMS_COPY_UNCONSUMED;
+
+    snet_record_items_copy_specs_t specs = {
+        &name,
+        &new_name,
+        1,
+        0,
+        0
+    };
+
+    return (SNetRecCopyItems(rec1, rec2, flags, &specs) == 1);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Functions specific to record fields */
+
+void*
+SNetRecFieldGetData(void *field)
+{
+    if (field == NULL) {
+        return NULL;
+    }
+
+    snet_record_field_t *f = (snet_record_field_t *) SNetUnmaskPointer(field);
+    
+    place      plc   = SNetPlaceToUTCPlace(f->data_plc);
+    uint8_t    flags = REC_FDATA_COPY_DEFAULT_FLAGS;
+    uint32_t   dsz   = 0;
+    snet_ref_t dcptr = NULL_REF;
+
+    family fid;
+
+    create (fid; plc; 0; 0; 1; 1;;)
+        SNetRecFieldDataCopy(f->data_dcptr, flags, dcptr, dsz); 
+
+    sync(fid);
+    SNetPlaceFree(f->data_plc);
+
+    if (dcptr == NULL_REF) {
+        f->data_dcptr = NULL_REF;
+        f->data_plc   = SNetPlaceGetNull();
+
+        return NULL;
+    }
+
+    f->data_dcptr = dcptr;
+    f->data_plc   = SNetPlaceGetMine();
+    
+    __set_flag(f->flags, DREC_FIELD_DATA_EXCL_FLAG);
+    __set_flag(f->flags, DREC_FIELD_DATA_LOCAL_FLAG);
+
+    return SNetRecFieldDataDescriptorGetDPtr(dcptr);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Routine used to XDR record items for boxes executed on remote places 
+ * when using the duTC-PTL SVP platform.
+ *
+ * NOTE: The Core library does not provide the "real" implementation
+ * of this function. This is provided by the SANE import library. It only
+ * exists here so that there are no link errors when an application will
+ * intentionally only use "local" boxes (no remote creates). In that case
+ * the application does not require the functionality provided by the
+ * SANE import library so for those cases linking with the SANE import
+ * library should not be a requirement. However the code the SVP4SNetC
+ * plugin generates relies on the function below. Thus a "dummy" version
+ * of the function is provided (below) by the Core library.
+ *
+ * Also note that the function is defined as a weak symbol thus if the
+ * SANE import library is linked then its definition of this function
+ * will be used and the definition below will be ignored!!
+ */
+#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+
+#ifdef SVPSNETGWRT_COMP_GCC
+#if SVPSNETGWRT_COMP_VER < 40000
+#pragma weak SNetRecItemsXDR
+#endif
+#endif
+
+void SNetRecItemsXDR(
+    uTC::DataBuffer *db, 
+    snet_handle_t   *hnd, int fields_cnt, int tags_cnt, ...)
+{
+    SNetReportErrorCustom(
+        "It appears that while the application has "
+        "been configured to allow boxes to be executed "
+        "on remote places, it has not been linked with "
+        "the SNet/SANE import library; please check that the "
+        "application is properly built and configured and try again");
+
+    SNetOnError();
+}
+
+#ifdef SVPSNETGWRT_COMP_GCC
+#if SVPSNETGWRT_COMP_VER >= 40000
+#pragma weak SNetRecItemsXDR
+#endif
+#endif
+
+#endif // SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

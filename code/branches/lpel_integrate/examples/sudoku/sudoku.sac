@@ -1,0 +1,236 @@
+module sudoku;
+
+
+use sacprelude: {wrap};
+
+use Structures: all;
+use StdIO: all;
+
+export all;
+
+
+#define SIZE 3
+
+/*******************************************************************************
+ * 
+ * Sudkou solver in SaC.
+ *
+ * This program tries to solve sudokus in a straight forward manner:
+ * During the solving process, we store the state of our sudoku in two
+ * arrays:
+ *
+ * - a 9x9 matrix 'set' of integers holding the numbers put down so far.
+ * - a 9x9 matrix 'opts' of 9-element boolean vectors holding the possible
+ *                       options for all positions.
+ *
+ * As soon as we place a number ( function 'addNumber'), we update the set
+ * and opts arrays accordingly.
+ *
+ * The solution process requires back-tracking which is implemented by
+ * recursion (function 'solve'). In order to keep the amount of back-
+ * tracking to a minimum, we identify those positions with a minimum of
+ * options first. The function 'findMinTrues' is used to that effect.
+ */
+
+int[*], bool[*] addNumber( int i, int j, int k, int[*] set, bool[*] opts)
+{
+  set[i,j] = k;
+  k = k-1;
+  i_q = (i/SIZE)*SIZE;
+  j_q = (j/SIZE)*SIZE;
+  opts = with {
+          ([i,j,0] <= iv <= [i,j,SIZE*SIZE-1]) : false;
+          ([i,0,k] <= iv <= [i,SIZE*SIZE-1,k]) : false;
+          ([0,j,k] <= iv <= [SIZE*SIZE-1,j,k]) : false;
+          ([i_q,j_q,k] <= iv <= [i_q+SIZE-1,j_q+SIZE-1,k]) : false;
+  } : modarray( opts);
+
+  return( set, opts);
+}
+
+int countTrues( bool[*] b)
+{
+  return( sum( toi( b)));
+}
+
+int findTrue( bool[.] b)
+{
+  i=0;
+  while( !(b[i])) {
+    i++;
+  }
+  return( i);
+}
+
+int, int findMinTrues( bool[*] opts)
+{
+  minCount = SIZE*SIZE;
+  min_i = 0;
+  min_j = 0;
+
+  for( i=0; i<SIZE*SIZE; i++) {
+    for( j=0; j<SIZE*SIZE; j++) {
+      if( (countTrues( opts[i,j]) < minCount)
+          && (0 < countTrues( opts[i,j]))) {
+        minCount = countTrues( opts[i,j]);
+        min_i = i;
+        min_j = j;
+      }
+    }
+  }
+  return( min_i, min_j);
+}
+
+bool isStuck( int[*] set, bool[*] opts)
+{
+  stuck = { [i,j] -> (set[i,j] == 0) && !any( opts[i,j]) };
+  return( any( stuck));
+}
+
+bool isCompleted(  int[*] set)
+{
+  return( all(set != 0));
+}
+
+int getPlaced( int[*] board) 
+{
+  placed = { [i,j] -> board[i,j] != 0};
+  return( sum( toi( placed)));
+}
+
+int[*],bool[*] solveRec( int[*] set, bool[*] opts)
+{
+  while( !( isStuck( set, opts) || isCompleted( set)) ) {
+    i,j = findMinTrues( opts);
+    if( countTrues( opts[i,j]) == 1) {
+      set, opts = addNumber( i,j, findTrue( opts[i,j]) +1  ,set,opts);
+    } else {
+      /**
+       * here, we need to place a number without being sure that it
+       * is the correct one, i.e., we may need to back-track.
+       * This is achieved by storing the actual state in 'mem_set'
+       * and 'mem_opts', which are used within the for-loop that
+       * actually successively tries all possible values until
+       * a solution is found.
+       */
+      mem_set = set;
+      mem_opts = opts;
+      for( k=0; (k<9) && (!isCompleted(set)); k++) {
+        if( mem_opts[i, j, k] ) {
+          set, opts = addNumber( i, j, k+1, mem_set, mem_opts);
+          set, opts = solveRec( set, opts);
+        }
+      }
+    }
+  }
+  return( set, opts);
+}
+
+void solve( SNet::SNet &hnd, int[*] set, bool[*] opts)
+{
+  set, opts = solveRec( set, opts);
+  if( isCompleted( set)) {
+    SNet::out( hnd, 1, wrap( set));
+  }
+}
+/*****************************************************************************/ 
+
+void solver( SNet::SNet &hnd, int[*] board, bool[*] opts, int MAX, int m)
+{
+  if( !isStuck( board, opts)) {
+    if( !isCompleted( board)) {
+      if( m != 0) {
+        c = 0;
+        i,j = findMinTrues( opts);
+        numbers = genarray( shape( opts)[0], -1);
+        for( k=0; k<shape( opts)[0]; k++) {
+          if( opts[i,j,k]) { 
+            numbers[c] = k;
+            c++;
+          }
+        }
+        tmp_board = board;
+        tmp_opts = opts;
+        for( k=0; k<m && k<=c; k++) {
+          board, opts = addNumber( i, j, numbers[k]+1, tmp_board, tmp_opts);
+          solver( hnd, board, opts, MAX, m/shape( numbers)[0]);
+        }
+      }
+      else { 
+        SNet::out( hnd, 1, wrap( board), wrap( opts), MAX);
+      }
+    }
+    else { 
+      SNet::out( hnd, 2, wrap( board), 0);
+    }
+  }
+}
+
+void solveLevels( SNet::SNet &hnd, int[*] board, bool[*] opts, int N) 
+{
+  solver( hnd, board, opts, N, N);
+}
+/*****************************************************************************/ 
+
+void solveOneLevel( SNet::SNet &hnd, int[*] board, bool[*] opts)
+{
+  if ( !isStuck( board, opts)
+        && !isCompleted( board)) {
+    i,j = findMinTrues( opts);
+    mem_board = board;
+    mem_opts = opts;
+    for( k=1; (k<=SIZE*SIZE) && !isCompleted(board); k++) {
+      if( mem_opts[i,j,k-1] ) {
+        board, opts = addNumber( i, j, k, mem_board, mem_opts);
+        SNet::out( hnd, 1, 
+                      wrap( board), 
+                      wrap( opts),
+                      k,
+                      getPlaced( board));
+      }
+    }
+  }
+}
+
+
+/*
+int[*], bool[*] solveOneLevel( int[*] board, bool[*] opts)
+{
+ if ( !isStuck( board, opts)  && !isCompleted( board)) {
+	i,j = findMinTrues( opts);
+	mem_board = board;
+	mem_opts = opts;
+	for( k=1; (k<=9) && !isCompleted(board); k++) {
+		if( mem_opts[i,j,k-1] ) {
+			board, opts = addNumber( i, j, k, mem_board, mem_opts);
+		}
+	}
+  }
+
+  if ( !(isCompleted( board)) && !(isStuck(board, opts))) {
+   	resopts = opts;
+  } 
+  else {
+  	resopts = false;
+  }
+
+  return( board, resopts);
+}
+*/
+
+void computeOpts( SNet::SNet &hnd, int[*] board)
+{ 
+  set = genarray( [SIZE*SIZE,SIZE*SIZE], 0);
+  opts = genarray( [SIZE*SIZE,SIZE*SIZE,SIZE*SIZE], true);
+
+
+  for( i=0; i<SIZE*SIZE; i++) {
+    for( j=0; j<SIZE*SIZE; j++) {
+      if( board[i,j] > 0 ) {
+        set, opts = addNumber( i,j, board[i,j],set,opts);
+      }
+    }
+  }
+
+  SNet::out( hnd, 1, wrap( set), wrap( opts));
+}

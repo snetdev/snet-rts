@@ -1,0 +1,41 @@
+LIB_NAME_debug_mb      := $(LIB_NAME)-mb_dbg.a
+IMPLIB_NAME_debug_mb   := $(IMPLIB_NAME)-mb_dbg.imp.a
+
+#---
+
+SRC_FILES_LST_debug_mb := $(SRC_FILES_LST)
+
+#---
+
+INTERM_DIR_debug_mb        :=
+TARGET_DIR_debug_mb        := lib
+IMPLIB_TARGET_DIR_debug_mb := lib
+
+#---
+
+PREREQUISITES_debug_mb     := test_petalinux_env
+BUILD_TOOLSET_debug_mb     := mb
+
+#-------------------------------------------------------------------------------
+
+MAKEDEP_FLAGS_debug_mb           :=
+MAKEDEP_INCL_DIRS_FLAGS_debug_mb :=
+
+#---
+
+UTC2CPP_FLAGS_debug_mb           := --cpp:-DDEBUG
+UTC2CPP_INCL_DIRS_FLAGS_debug_mb :=
+
+#---
+
+CXX_FLAGS_debug_mb           := -DDEBUG
+CXX_INCL_DIRS_FLAGS_debug_mb :=
+
+#---
+
+AR_FLAGS_debug_mb    :=
+ARINX_FLAGS_debug_mb :=
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

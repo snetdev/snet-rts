@@ -1,0 +1,85 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : sane.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "sane.int.utc.h"
+
+/*---*/
+
+#include "core/snet.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * These are declared here because they are
+ * not being used anywhere else thus not included
+ * in any header (they are defined in the file "saneerrwrn.utc").
+ */
+extern void
+SNetSaneErrorSubSystemInit();
+
+extern void
+SNetSaneErrorSubSystemDestroy();
+  
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetGlobalSaneInit()
+{
+    SNetGlobalCoreInit();
+    SNetSaneErrorSubSystemInit();
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetGlobalSaneDestroy()
+{
+    SNetGlobalSaneDestroyEx(false);
+}
+
+void
+SNetGlobalSaneDestroyEx(bool force)
+{
+    if (!force) {
+        /**
+         * !!TODO!!: Check if all sub-systems
+         * are at a state that they can be destroyed
+         * and if they are not wait!!
+         */
+    }
+
+    SNetSaneErrorSubSystemDestroy();
+    SNetGlobalCoreDestroyEx(force);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+

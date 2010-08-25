@@ -1,0 +1,2643 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : gw.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "gw.int.utc.h"
+#include "gwdebug.int.utc.h"
+#include "gwhandle.int.utc.h"
+#include "graphstructs.int.utc.h"
+
+#include "resmng.int.utc.h"
+#include "metadata.int.utc.h"
+
+/*---*/
+
+#include "core/snet.int.utc.h"
+#include "core/list.int.utc.h"
+#include "core/buffer.int.utc.h"
+#include "core/memmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/**
+ *  Flag that indicates that a cons-node
+ *  can be "safely" disposed (see comment
+ *  in function "net_output_record()").
+ */
+#define CNODE_DISPOSABLE_FLAG      0x01
+
+/**
+ * Flag that indicates whether there has been a change to a
+ * cons-node's infimum => there is a "pending" propagation
+ * that needs to be performed.
+ *
+ * It is checked by functions which are changing the state
+ * of a cons-node from "WALKING" to one of the "WAIT" 
+ * states (to make sure that all required propagations
+ * are done).
+ */
+#define CNODE_INFIMUM_CHANGED_FLAG 0x02
+
+/**
+ * Flag that when set specifies that a GW instance 
+ * should perform synchro-cell related checks before
+ * it terminates (emulating a "suspend" operation).
+ */
+#define CNODE_SYNCCELL_CHECK_FLAG  0x04
+#define CNODE_SYNCCELL_WAKING_FLAG 0x08
+
+/*----------------------------------------------------------------------------*/
+
+#define conslst_node_on_infimum_changed(name) \
+    conslst_node_on_infimum_changed_##name
+
+/*---*/
+
+static thread void 
+walk(snet_gwhandle_t *hnd, bool start_from_current);
+
+static void
+propagate_infimum(snet_conslst_node_t *cnode);
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Helper functions */
+
+static inline snet_idxvec_t* 
+conslst_node_gidx(snet_conslst_node_t *cnode)
+{
+    snet_idxvec_t *dyn_idx = SNetConsLstNodeGetDynGIdx(cnode);
+    snet_gnode_t  *gnode   = SNetConsLstNodeGetGraphNode(cnode);
+
+    if (gnode == NULL || gnode->type == GRAPH_NODE_TYPE_NOP) {
+        return NULL;
+    }
+
+    return (dyn_idx != NULL ? dyn_idx : gnode->data.normal->idx);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static inline bool
+conslst_node_chk_flag(snet_conslst_node_t *cnode, unsigned int flag)
+{
+    return __chk_flag(SNetConsLstNodeGetFlags(cnode), flag);
+}
+
+static inline void
+conslst_node_set_flag(snet_conslst_node_t *cnode, unsigned int flag)
+{
+    unsigned int flags = 
+        SNetConsLstNodeGetFlags(cnode);
+
+    __set_flag(flags, flag);
+    SNetConsLstNodeSetFlags(cnode, flags);
+}
+
+static inline void
+conslst_node_reset_flag(snet_conslst_node_t *cnode, unsigned int flag)
+{
+    unsigned int flags = 
+        SNetConsLstNodeGetFlags(cnode);
+
+    __reset_flag(flags, flag);
+    SNetConsLstNodeSetFlags(cnode, flags);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void
+warn_unsupported_entity(snet_gnode_t *gnode, const char *entity_descr)
+{
+    const char *gidx_str = 
+        SNetIdxVecToString(gnode->data.normal->idx, NULL);
+
+    SNetReportGwWarning(
+        SNET_GWWRN_IGNORED_ENTITY,
+        entity_descr, gidx_str, "not supported yet");
+
+    SNetMemFree((void *) gidx_str);
+    SNetOnWarning();
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void
+apply_flow_inheritance(
+    snet_record_t *rec1, snet_record_t *rec2, bool with_move)
+{
+    assert(rec1 != NULL);
+    assert(rec2 != NULL);
+
+    unsigned int flags =  
+        DREC_ITEMS_COPY_TAGS   | 
+        DREC_ITEMS_COPY_BTAGS  | 
+        DREC_ITEMS_COPY_FIELDS |
+        DREC_ITEMS_COPY_UNCONSUMED;
+
+    if (with_move)
+        __set_flag(flags, DREC_ITEMS_COPY_MOVE);
+
+    // We use "NULL" for specs because
+    // no renaming of items is needed for
+    // flow-inheritance.
+    SNetRecCopyItems(rec1, rec2, flags, NULL);
+}
+
+/*----------------------------------------------------------------------------*/
+/*-------------------- Handler functions for graph nodes ---------------------*/
+/*----------------------------------------------------------------------------*/
+/* BOX */
+
+static bool
+gnode_hnd_box(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{   
+    assert(gnode->type == GRAPH_NODE_TYPE_BOX);
+
+    snet_box_gnode_t *box_gnode = gnode->data.normal->entity.box;
+
+    if (box_gnode->func == NULL) {
+        return true;
+    }
+
+    // Get a place to execute the box
+    SNetGwHndSetBoxSelectedPlace(
+        hnd,
+        SNetResourceRequestBox(box_gnode->namex, box_gnode->meta));
+
+    // Execute the box
+    (*box_gnode->func)((snet_handle_t *) SNetMaskPointer(hnd));
+
+    // Release the place and reset it in
+    // the handle as well!!
+    SNetResourceRelease(SNetGwHndGetBoxSelectedPlace(hnd));
+    SNetGwHndSetBoxSelectedPlace(hnd, SNetPlaceGetNull());
+
+    snet_record_t *out_rec = 
+        SNetHndGetOutRecord(SNetGwHndToBaseHandleConst(hnd));
+
+    if (out_rec == NULL) {
+        // The box did not emmit any
+        // records; cleanup and return false
+        // so that this GW instance terminates.
+
+        // First destroy the input record.
+        SNetRecDestroy(SNetGwHndGetConsNodeRecord(hnd));
+
+        // Set the cons-node's record to NULL marking it as 
+        // a "null node" which will make the graph walking 
+        // function to move the node at the end of the graph.
+        SNetConsLstNodeSetRecord(SNetGwHndGetConsNode(hnd), NULL);
+
+    } else {
+        // The box emmited records. This GW instance will keep 
+        // running and handling the last emitted record. For the
+        // others (if any) new GW instances should have already 
+        // been created by "SNetOut()".
+
+        // Deal with flow-inheritance (for data records only)
+        // input record cleanup!!
+        snet_record_t *in_rec = 
+            SNetGwHndGetConsNodeRecord(hnd);
+
+        assert(in_rec != NULL);
+
+        if (SNetRecGetDescription(out_rec) != SNET_REC_DESCR_CTRL) {
+            apply_flow_inheritance(in_rec, out_rec, true);
+        }
+
+        SNetRecDestroy(in_rec);
+
+        // Reset the cons-node and handle
+        SNetConsLstNodeSetRecord(SNetGwHndGetConsNode(hnd), out_rec);
+        SNetHndSetOutRecord(SNetGwHndToBaseHandle(hnd), NULL);
+    }
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* SYNCHRO-CELL */
+
+static snet_synccell_state_t*
+synccell_get_state(
+    snet_gnode_t *gnode,
+    snet_conslst_node_t *cnode, bool suspended_cnode)
+{
+    snet_synccell_state_t *sc_state = NULL;
+    snet_synccell_gnode_t *sc_gnode = gnode->data.normal->entity.synccell;
+
+    // First search the synccell's list of states to find which one to
+    // use or whether there is a need for a new one.
+    snet_idxvec_t *cnode_gidx = conslst_node_gidx(cnode);
+
+    assert(cnode_gidx != NULL);
+    SNetGwDPrint(cnode, SYNCCELL_STATE_SEARCH, ());
+
+    for (unsigned int it = SNetListBegin(sc_gnode->states); 
+         it != 0; it = SNetListItemGetNext(sc_gnode->states, it)) {
+        
+        snet_synccell_state_t *ith_state =
+            (snet_synccell_state_t *) 
+                SNetListItemGetValueByRef(sc_gnode->states, it);
+
+        if (SNetIdxVecCompare(ith_state->idx, cnode_gidx) ==
+            IDXVEC_CMP_RES_EQUAL) {
+
+            sc_state = ith_state;
+            break;
+        }
+    }
+
+    if (sc_state != NULL || suspended_cnode) {
+        // An "active" state was found or we are looking
+        // for a "suspended" cons-node for which we only
+        // need to look for an "active" state; so return
+        // what we found (or not found)!!!
+        return sc_state;
+    }
+
+    // No state found; the list of indexes of identity states must
+    // now be searched. If a matching index is found there then it is
+    // the case of an identity synchro-cell thus we return NULL so that 
+    // the record moves on. If not then a new syncho-cell state must be
+    // created as this would be the case for a "fresh" synchro-cell.
+    for (unsigned int it = SNetListBegin(sc_gnode->ident_states_idxs); 
+         it != 0;
+         it  = SNetListItemGetNext(sc_gnode->ident_states_idxs, it)) {
+        
+        snet_idxvec_t *ith_gidx = NULL;
+
+        SNetListItemGetValue(
+            sc_gnode->ident_states_idxs, it, &ith_gidx);
+
+        if (SNetIdxVecCompare(ith_gidx, cnode_gidx) == IDXVEC_CMP_RES_EQUAL) {
+            // An identity state was found => the
+            // synchro-cell is a dead one!!!!
+            return NULL;
+        }
+    }
+
+    // It is not an identity/dead synchro-cell but a 
+    // "fresh" one => a new state must be created.
+    return SNetSyncCellGNodeAddState(gnode, cnode_gidx);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static thread void
+synccell_start_gw_for_suspended_handle(
+    snet_gwhandle_t *hnd, bool make_null, bool current_gnode)
+{
+    snet_conslst_node_t *cnode = SNetGwHndGetConsNode(hnd);
+
+    SNetGwHndSetSyncCellState(hnd, NULL);
+    SNetGwHndSetSyncCellDefiniteMatch(hnd, false);
+
+    if (make_null) {
+        SNetRecDestroy(SNetConsLstNodeGetRecord(cnode));
+        SNetConsLstNodeSetRecord(cnode, NULL);
+    }
+
+    if (SNetConsLstNodeGetState(cnode) == CONS_NODE_STATE_WALKING) {
+        SNetGwDPrintWithVariant(
+            SNetGwHndGetConsNode(hnd),
+            WALKING, SYNC_CELL_GW_RESTART, ());
+
+        conslst_node_set_flag(cnode, CNODE_SYNCCELL_CHECK_FLAG);
+        return;
+    }
+
+    SNetGwDPrint(
+        SNetGwHndGetConsNode(hnd),
+        SYNC_CELL_GW_RESTART_NWALKING,
+        ((int)(SNetConsLstNodeGetState(cnode))));
+ 
+    conslst_node_reset_flag(
+        cnode, CNODE_SYNCCELL_WAKING_FLAG);
+
+    SNetConsLstNodeSetState(cnode, CONS_NODE_STATE_WALKING);
+
+    // !!NOTE!!: This routine runs on the handle's associated cons-node's
+    // exclusive place  thus a simple "default create" will not do! We
+    // need to get the domain host place (where all GWs are executed) and
+    // create there!!!
+    SNetGwDPrint(SNetGwHndGetConsNode(hnd), SYNC_CELL_GW_RESTART, ());
+
+    place snetdplc =
+        SNetPlaceToUTCPlace(
+            SNetHndGetNetDomainHostPlace(
+                SNetGwHndToBaseHandle(hnd)));
+    
+    family fid;
+    create<nosync> (fid; snetdplc; 0; 0; 1; 1;;) walk(hnd, current_gnode);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool 
+synccell_swap_handles(
+    snet_gnode_t          *gnode,
+    snet_synccell_state_t *sc_state,
+    snet_gwhandle_t       *hnd1,
+    unsigned int hnd2_idx, unsigned int patterns_cnt)
+{
+    snet_gwhandle_t *hnd2 = sc_state->mhnds[hnd2_idx];
+
+    SNetGwDPrint(
+        SNetGwHndGetConsNode(hnd1), 
+        SYNCCELL_SWAP_HND_BEGIN, 
+        (gnode, sc_state, hnd2, SNetGwHndGetConsNode(hnd2)));
+
+    // Whether the handles will be swapped depends on the order
+    // of their respective cons-nodes.   
+    assert(SNetConsLstNodeGetOrdIdx(SNetGwHndGetConsNode(hnd1)) != NULL);
+    assert(SNetConsLstNodeGetOrdIdx(SNetGwHndGetConsNode(hnd2)) != NULL);
+
+    snet_idxvec_cmp_result_t cmpres = 
+        SNetIdxVecCompare(
+            SNetConsLstNodeGetOrdIdx(SNetGwHndGetConsNode(hnd1)),
+            SNetConsLstNodeGetOrdIdx(SNetGwHndGetConsNode(hnd2)));
+
+    assert(cmpres != IDXVEC_CMP_RES_EQUAL);
+    assert(cmpres != IDXVEC_CMP_RES_UNDEFINED);
+
+    if (cmpres == IDXVEC_CMP_RES_GREATER) {
+        // Our cons-node is a "newer" / more recent  one in which case 
+        // the other cons-node (already in the the synchro-cell) is
+        // the one who should synchronize (at least in relattion to the
+        // current cons-node)!
+        return false;
+    }
+
+    // The handles need to be swapped!!
+    sc_state->mhnds[hnd2_idx] = hnd1;
+
+    // Check whether the "swapped-out" handle has matched other patterns
+    // as well because if it has the it should not be restarted!!
+    for (unsigned int i=0; i < patterns_cnt; i++) {
+        if (sc_state->mhnds[i] == hnd2) {
+            return true;
+        }
+    }
+
+    // The state of the other handle (of its cons-node) must
+    // also be checked to see whether we need to start a new
+    // GW instance for it!
+    place hnd2_cnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBase(SNetGwHndGetConsNode(hnd2))));
+
+    family fid;
+
+    create (fid; hnd2_cnode_mutex_plc; 0; 0; 1; 1;;)
+        synccell_start_gw_for_suspended_handle(hnd2, false, false);
+
+    sync (fid);
+    return (true);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static unsigned int
+synccell_match_patterns(
+    snet_gnode_t *gnode,
+    snet_synccell_state_t *sc_state, snet_gwhandle_t *hnd)
+{
+    snet_synccell_gnode_t *sc_gnode = 
+        gnode->data.normal->entity.synccell;
+
+    unsigned int matched_patterns_cnt = 0;
+
+    unsigned int patterns_cnt = 
+        SNetTencTypeGetVariantsCount(sc_gnode->patterns);
+
+    snet_record_t          *rec  = SNetGwHndGetConsNodeRecord(hnd);
+    snet_variantencoding_t *venc = SNetRecGetVariantEncoding(rec);
+
+    for (unsigned int i=0; i < patterns_cnt; i++) {
+        bool matched_ident = false;
+
+        int match_cnt = SNetTencVariantsMatch(
+            venc, 
+            SNetTencTypeGetVariant(sc_gnode->patterns, i), &matched_ident);
+
+        if (match_cnt == 0) { 
+            if (!matched_ident) {
+                continue;
+            }
+        }
+
+        if (sc_gnode->guards != NULL) {
+            const snet_expr_t *guard =
+                SNetEListGetExpr(sc_gnode->guards, i);
+
+            if (guard != NULL && !SNetEEvaluateBool(guard, rec)) {
+                continue;
+            }
+        }
+
+        // It matches a pattern
+        if (sc_state->mhnds[i] == NULL) {
+            // No otherhandle is waitting
+            // so we just put our handle!
+            sc_state->mhnds[i] = hnd;
+
+        } else {
+            // There is another handle that has matched the pattern! 
+            //
+            // Check whether it is a descendant of ours (its cons-node). 
+            // if it is then we should move on. If not then then we should
+            // replace it and  start a GW instance for it so that it can 
+            // move on!!!!
+            assert(sc_state->mhnds[i] != hnd);
+
+            if (!synccell_swap_handles(gnode, sc_state, hnd, i, patterns_cnt)) {
+                continue;
+            }
+        }
+
+        matched_patterns_cnt++;
+    }
+
+    return matched_patterns_cnt;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static thread void
+gnode_walk_hnd_synccell_cnode_exclusive(
+    snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    snet_conslst_node_t *cnode = SNetGwHndGetConsNode(hnd);
+
+    SNetGwDPrint(cnode, SYNCCELL_WALK_HND_BEGIN, ());
+
+    if (SNetGwHndGetSyncCellState(hnd) != NULL) {
+        SNetGwDPrint(cnode, SYNCCELL_WALK_HND_CELL_STATE_NOT_NULL, ());
+        return;
+    }
+
+    // Find the correct or create new
+    // synchro-cell state.
+    snet_synccell_state_t *sc_state =
+        synccell_get_state(gnode, cnode, false);
+
+    // If no state is returned by synccell_get_state() it means
+    // that the synchro-cell is dead.
+    unsigned int patterns_cnt = 
+        SNetTencTypeGetVariantsCount(
+            gnode->data.normal->entity.synccell->patterns);
+
+    if (sc_state == NULL || sc_state->mpcnt >= patterns_cnt) {
+        SNetGwDPrint(cnode, SYNCCELL_WALK_HND_CELL_STATE_NULL, ());
+        return;
+    }
+
+    // OK we have an "active" synchro-cell! We must now see whether
+    // the record is a candidate of synchronization starting with 
+    // whether it matches any of the patterns!
+    unsigned int matched_patterns_cnt =
+        synccell_match_patterns(gnode, sc_state, hnd);
+
+    if (matched_patterns_cnt > 0) {
+        SNetGwDPrint(cnode, SYNCCELL_WALK_HND_MATCHED, (matched_patterns_cnt));
+        SNetGwHndSetSyncCellState(hnd, sc_state);
+    }
+
+    SNetGwDPrint(cnode, SYNCCELL_WALK_HND_END, ());
+}
+
+static thread void
+gnode_walk_hnd_synccell_exclusive(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    place cnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBase(SNetGwHndGetConsNode(hnd))));
+
+    family fid;
+
+    create (fid; cnode_mutex_plc; 0; 0; 1; 1;;) 
+        gnode_walk_hnd_synccell_cnode_exclusive(gnode, hnd);
+
+    sync (fid);
+}
+        
+/*----------------------------------------------------------------------------*/
+
+static snet_gnode_t*
+gnode_walk_hnd_synccell(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_SYNCCELL);
+
+    // Any operation on a synchro-cell must be done
+    // on an exclusive place!!
+    place gnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(SNetGNodeToBase(gnode)));
+              
+    family fid;
+
+    create (fid; gnode_mutex_plc; 0; 0; 1; 1;;) 
+        gnode_walk_hnd_synccell_exclusive(gnode, hnd);
+
+    sync(fid);
+
+    // The only reason for using the "walk" handler instead
+    // of the "normal" is because we need to do the tests on
+    // the synchro-cell BEFORE the cons-node has been "moved"
+    // to the graph-node of the synchro-cell (this is needed 
+    // otherwise the condition "infimum_idx >= synccell_idx"
+    // will not work!!
+    //
+    // Thus there will never be a case for "re-direction" so
+    // we always return NULL!!!
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static thread void
+synccell_test_definite_match_cnode_exclusive(
+    snet_conslst_node_t   *cnode,
+    snet_synccell_state_t *sc_state,
+    unsigned int patterns_cnt,
+    unsigned int matched_patterns_cnt,
+    shared bool result, shared int status)
+{
+    bool lresult = result;
+    int  lstatus = status;
+
+    assert(lresult == false);
+    assert(lstatus == 0);
+    assert(matched_patterns_cnt > 0);
+    
+    const snet_idxvec_t *cnode_infimum_idx = SNetConsLstNodeGetMinGIdx(cnode);
+
+    if (cnode_infimum_idx == NULL) {        
+        lresult = false;
+        
+        if (conslst_node_chk_flag(cnode, CNODE_INFIMUM_CHANGED_FLAG)) {
+            lstatus = 1;
+        }
+
+        if (conslst_node_chk_flag(cnode, CNODE_SYNCCELL_CHECK_FLAG)) {
+            lstatus = (lstatus == 1 ? 3 : 2);
+            conslst_node_reset_flag(cnode, CNODE_SYNCCELL_CHECK_FLAG);
+        }
+
+        if (lstatus != 0) {
+            result = lresult;
+            status = lstatus;
+
+            return;
+        }
+
+        SNetConsLstNodeSetState(
+            cnode, 
+            CONS_NODE_STATE_WAIT_SYNCCELL);
+
+        result = lresult;
+        status = 0;
+
+        return;
+    }
+
+    snet_idxvec_cmp_result_t cmpres =
+        SNetIdxVecCompareEx(cnode_infimum_idx, sc_state->idx);
+
+    lresult = (
+        cmpres == IDXVEC_CMP_RES_EQUAL
+        || cmpres == IDXVEC_CMP_RES_GREATER);
+
+    if (lresult && sc_state->mpcnt + matched_patterns_cnt >= patterns_cnt) {
+        result = lresult;
+        status = 0;
+
+    } else {
+        if (conslst_node_chk_flag(cnode, CNODE_INFIMUM_CHANGED_FLAG)) {
+            lstatus = 1;
+        }
+
+        if (conslst_node_chk_flag(cnode, CNODE_SYNCCELL_CHECK_FLAG)) {
+            lstatus = (lstatus == 1 ? 3 : 2);
+            conslst_node_reset_flag(cnode, CNODE_SYNCCELL_CHECK_FLAG);
+        }
+
+        if (lstatus != 0) {
+            status = lstatus;
+            result = lresult;
+
+            return;
+        }
+
+        SNetConsLstNodeSetState(
+            cnode, 
+            CONS_NODE_STATE_WAIT_SYNCCELL);
+    
+        result = lresult;
+        status = 0;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void
+synccell_merge_records_1st_pattern(snet_record_t *r1, snet_record_t *r2)
+{
+    assert(r1 != r2);
+
+    unsigned int flags =  
+        DREC_ITEMS_COPY_MOVE   |
+        DREC_ITEMS_COPY_TAGS   | 
+        DREC_ITEMS_COPY_BTAGS  | 
+        DREC_ITEMS_COPY_FIELDS |
+        DREC_ITEMS_COPY_UNCONSUMED;
+
+    SNetRecCopyItems(r2, r1, flags, NULL);
+}
+
+static void
+synccell_merge_records(
+    snet_record_t *r1, 
+    snet_record_t *r2,
+    snet_variantencoding_t *pattern)
+{
+    assert(r1 != r2);
+    assert(pattern != NULL);
+
+    const snet_vector_t *tags   = SNetTencVariantGetFields(pattern);
+    const snet_vector_t *btags  = SNetTencVariantGetBTags(pattern);
+    const snet_vector_t *fields = SNetTencVariantGetFields(pattern);
+
+    if (tags != NULL) {
+        unsigned int flags =  
+            DREC_ITEMS_COPY_MOVE   |
+            DREC_ITEMS_COPY_TAGS   | 
+            DREC_ITEMS_COPY_UNCONSUMED;
+
+        snet_record_items_copy_specs_t specs = {
+            SNetTencVectorToArray(tags, false),
+            NULL, 
+            0,
+            SNetTencVectorGetSize(tags),
+            0
+        };
+        
+        SNetRecCopyItems(r2, r1, flags, &specs);
+    }
+
+    if (btags != NULL) {
+        unsigned int flags =  
+            DREC_ITEMS_COPY_MOVE   |
+            DREC_ITEMS_COPY_BTAGS  | 
+            DREC_ITEMS_COPY_UNCONSUMED;
+
+        snet_record_items_copy_specs_t specs = {
+            SNetTencVectorToArray(btags, false),
+            NULL, 
+            0,
+            0,
+            SNetTencVectorGetSize(btags)
+        };
+        
+        SNetRecCopyItems(r2, r1, flags, &specs);
+    }
+    
+    if (fields != NULL) {
+        unsigned int flags =  
+            DREC_ITEMS_COPY_MOVE   |
+            DREC_ITEMS_COPY_FIELDS | 
+            DREC_ITEMS_COPY_UNCONSUMED;
+
+        snet_record_items_copy_specs_t specs = {
+            SNetTencVectorToArray(fields, false),
+            NULL, 
+            SNetTencVectorGetSize(fields),
+            0,
+            0
+        };
+        
+        SNetRecCopyItems(r2, r1, flags, &specs);
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_record_t*
+synccell_output(
+    snet_gnode_t          *gnode,
+    snet_conslst_node_t   *cnode,
+    snet_synccell_state_t *sc_state,
+    snet_typeencoding_t   *patterns, unsigned int patterns_cnt)
+{
+    snet_record_t *cnode_rec = SNetConsLstNodeGetRecord(cnode);
+
+    for (unsigned int i=0; i < patterns_cnt; i++) {
+        snet_gwhandle_t     *ith_hnd   = sc_state->mhnds[i];
+        snet_conslst_node_t *ith_cnode = SNetGwHndGetConsNode(ith_hnd);
+
+        assert(ith_hnd != NULL);
+        conslst_node_set_flag(ith_cnode, CNODE_SYNCCELL_WAKING_FLAG);
+    }
+
+    for (unsigned int i=0; i < patterns_cnt; i++) {
+        snet_gwhandle_t     *ith_hnd   = sc_state->mhnds[i];
+        snet_conslst_node_t *ith_cnode = SNetGwHndGetConsNode(ith_hnd);
+        snet_record_t       *ith_rec   = SNetConsLstNodeGetRecord(ith_cnode);
+
+        if (ith_cnode == cnode) {
+            SNetGwHndSetSyncCellState(ith_hnd, NULL);
+            SNetGwHndSetSyncCellDefiniteMatch(ith_hnd, false);
+
+            continue;
+        }
+
+        if (i == 0) {
+            synccell_merge_records_1st_pattern(cnode_rec, ith_rec);
+
+        } else {
+            synccell_merge_records(
+                cnode_rec,
+                ith_rec,
+                SNetTencTypeGetVariant(patterns, i));
+        }
+
+        // Start a new GW instance!!
+        place ith_cnode_mutex_plc =
+            SNetPlaceToUTCPlace(
+                SNetBaseTypeGetMutexPlace(
+                    SNetConsLstNodeToBase(ith_cnode)));
+
+        family fid;
+
+        create (fid; ith_cnode_mutex_plc; 0; 0; 1; 1;;)
+            synccell_start_gw_for_suspended_handle(ith_hnd, true, false);
+
+        sync(fid);
+    }
+
+    SNetGwDPrint(
+        cnode, 
+        SYNCCELL_OUT, (gnode, sc_state));
+
+    conslst_node_reset_flag(
+        cnode, CNODE_SYNCCELL_WAKING_FLAG);
+
+    SNetSyncCellGNodeRemoveState(gnode, sc_state->id, true);
+
+    return cnode_rec;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static thread void
+synccell_test_definite_match(
+    snet_gnode_t    *gnode,
+    snet_gwhandle_t *hnd,
+    shared int result, shared int status)
+{
+    int lresult = result;
+    int lstatus = status;
+
+    assert(lresult == 0);
+    assert(lstatus == 0);
+
+    snet_synccell_state_t *sc_state =
+        (snet_synccell_state_t *)(
+            SNetGwHndGetSyncCellState(hnd));
+
+    if (sc_state == NULL) {
+        result = -1;
+        status =  0;
+    
+        return;
+    }
+
+    snet_synccell_gnode_t *sc_gnode =
+        gnode->data.normal->entity.synccell;
+
+    unsigned int patterns_cnt = 
+        SNetTencTypeGetVariantsCount(sc_gnode->patterns);
+
+    unsigned int matched_patterns_cnt = 0;
+
+    assert(sc_state->mpcnt < patterns_cnt);
+
+    for (unsigned int i=0; i < patterns_cnt; i++) {
+        if (sc_state->mhnds[i] == hnd) {
+            matched_patterns_cnt++;
+        }
+    }
+
+    if (matched_patterns_cnt == 0) {
+        result = -1;
+        status =  0;
+
+        SNetGwHndSetSyncCellState(hnd, NULL);
+        SNetGwHndSetSyncCellDefiniteMatch(hnd, false);
+
+        return;
+    }
+
+    // The handle is still in there => the indexes must
+    // be compared (the infimum of the handle's cons-node
+    // and the synchro-cell's state)!!
+    snet_conslst_node_t *cnode = SNetGwHndGetConsNode(hnd);
+
+    place cnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBase(cnode)));
+    
+    bool llresult = false;
+
+    family fid;
+
+    create (fid; cnode_mutex_plc; 0; 0; 1; 1;;) 
+        synccell_test_definite_match_cnode_exclusive(
+            cnode,
+            sc_state,
+            patterns_cnt, 
+            matched_patterns_cnt, llresult, lstatus);
+
+    sync(fid);
+
+    if (!llresult) {
+        lresult = 0;
+
+    } else {
+        SNetGwHndSetSyncCellDefiniteMatch(hnd, true);
+
+        SNetGwDPrint(
+            cnode,
+            SYNCCELL_DEFINITE_CHECK_PASSED, 
+            (patterns_cnt, matched_patterns_cnt, sc_state->mpcnt, lstatus));
+
+        sc_state->mpcnt += matched_patterns_cnt;
+
+        if (sc_state->mpcnt < patterns_cnt) {
+            lresult = 1;
+
+        } else {
+            lresult = 2;
+
+            synccell_output(
+                gnode,
+                cnode, 
+                sc_state, sc_gnode->patterns, patterns_cnt);
+        }
+    }
+
+    result = lresult;
+    status = lstatus;
+}
+
+static thread void
+synccell_try_set_wait_state(snet_conslst_node_t *cnode, shared int status)
+{
+    int lstatus = status;
+
+    assert(lstatus == 0);
+    assert(SNetConsLstNodeGetState(cnode) == CONS_NODE_STATE_WALKING);
+
+    if (conslst_node_chk_flag(cnode, CNODE_INFIMUM_CHANGED_FLAG)) {
+        lstatus = 1;
+    }
+
+    if (conslst_node_chk_flag(cnode, CNODE_SYNCCELL_CHECK_FLAG)) {
+        lstatus = (lstatus == 1 ? 3 : 2);
+        conslst_node_reset_flag(cnode, CNODE_SYNCCELL_CHECK_FLAG);
+    }
+
+    if (lstatus != 0) {
+        status = lstatus;
+        return;
+    }
+
+    status = 0;
+    SNetConsLstNodeSetState(cnode, CONS_NODE_STATE_WAIT_SYNCCELL);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static bool
+gnode_hnd_synccell(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_SYNCCELL);
+
+    // We must check whether our handle is still there (has not been
+    // swapped out of the synchro-cell by another) and if its still
+    // there, whether is a "definite" match and if the synchro-cell
+    // should fire!!
+    snet_conslst_node_t *cnode = SNetGwHndGetConsNode(hnd);
+
+    SNetGwDPrint(cnode, SYNCCELL_HND, ());
+
+    place gnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(SNetGNodeToBase(gnode)));
+
+    place cnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(SNetConsLstNodeToBase(cnode)));
+
+    int result = 0;
+    int status = 0;
+
+    family fid;
+
+    do {
+        status = 0;
+
+        if (result == 0) {
+            SNetGwDPrint(
+                cnode, 
+                SYNCCELL_HND_CHECK_DEFINITE, ());
+
+            create (fid; gnode_mutex_plc; 0; 0; 1; 1;;) 
+                synccell_test_definite_match(gnode, hnd, result, status);
+
+            sync(fid);
+
+            SNetGwDPrint(
+                cnode,
+                SYNCCELL_HND_DEFINITE_CHECKED, (result, status));
+
+            if (result < 0 || result == 2) {
+                assert(status < 2);
+                break;
+            }
+
+        } else {       
+            SNetGwDPrint(cnode, SYNCCELL_HND_TRY_SET_STATE, ());
+
+            create (fid; cnode_mutex_plc; 0; 0; 1; 1;;) 
+                synccell_try_set_wait_state(cnode, status);
+
+            sync(fid);
+
+            if (status > 1) {
+                result = 0;
+                SNetGwDPrint(cnode, SYNCCELL_HND_WAKEUP_FLAG_SET, ());
+            }
+
+            SNetGwDPrint(cnode, SYNCCELL_HND_TRY_SET_STATE_DONE, (status));
+        }
+
+        if (status == 1 || status == 3) {
+            SNetGwDPrint(
+                cnode,
+                SYNCCELL_HND_INFPROP_START, ());
+            
+            propagate_infimum(SNetGwHndGetConsNode(hnd));
+
+            SNetGwDPrint(cnode, SYNCCELL_HND_INFPROP_END, ());
+        }
+
+    } while (status > 0);
+
+    SNetGwDPrint(
+        cnode,
+        SYNCCELL_HND_END,
+        ((int)((result < 0 || result == 2))));
+
+    return (result < 0 || result == 2);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* FILTER */
+
+static snet_gnode_t*
+gnode_walk_hnd_filter(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_FILTER);
+    return NULL;
+}
+
+static bool 
+gnode_hnd_filter(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_FILTER);
+    warn_unsupported_entity(gnode, "filter box");
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* NAME-SHIFT */
+
+static snet_gnode_t*
+gnode_walk_hnd_nameshift(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_NAMESHIFT);
+    warn_unsupported_entity(gnode, "name shift");
+
+    return NULL;
+}
+
+static snet_gnode_t*
+gnode_walk_hnd_nameshift_merge(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_NAMESHIFT);
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* PARALLEL COMBINATOR */
+
+static snet_gnode_t*
+gnode_walk_hnd_parallel(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_COMB_PARALLEL);
+
+    snet_parallel_gnode_t *par_gnode = gnode->data.normal->entity.parallel;
+
+    if (par_gnode->branches_cnt == 0) {
+        return NULL;
+    }
+
+    unsigned int best_match_cnt = 0;
+    unsigned int equally_matched_branches_cnt = 0;
+
+    snet_variantencoding_t *rec_venc =
+        SNetRecGetVariantEncoding(SNetGwHndGetConsNodeRecord(hnd));
+   
+    snet_par_comb_branch_t *sel_branch = NULL;
+
+    for (unsigned int i=0; i < par_gnode->branches_cnt; i++) {
+        snet_par_comb_branch_t *branch = par_gnode->branches + i;
+
+        bool matched_ident = false;
+
+        int  match_cnt = 
+            SNetTencVariantMatchesType(
+                rec_venc, branch->type, NULL, &matched_ident);
+
+        if (match_cnt <= 0 && !matched_ident) {
+            continue;
+        }
+
+        if ((unsigned int) match_cnt > best_match_cnt || sel_branch == NULL) {
+            sel_branch     = branch;
+            best_match_cnt = (unsigned int) match_cnt;
+
+        } else if ((unsigned int) match_cnt == best_match_cnt) {        
+            equally_matched_branches_cnt++;
+
+            if (branch->taken_cnt < sel_branch->taken_cnt) {
+                sel_branch     = branch;
+                best_match_cnt = (unsigned int) match_cnt;
+            }
+        }    
+    }
+
+    if (sel_branch == NULL) { 
+        const char *gidx_str = 
+            SNetIdxVecToString(gnode->data.normal->idx, NULL);
+
+        SNetReportGwError(
+            SNET_GWERR_TYPE_ERROR,
+            "parallel combinator", gidx_str);
+
+        SNetMemFree((void *) gidx_str);
+        SNetOnError();
+    }
+
+    if (equally_matched_branches_cnt > 1) {
+        sel_branch->taken_cnt++;
+    }
+
+    return sel_branch->groot;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* STAR COMBINATOR */
+
+static bool 
+test_star_exit_cond(const snet_gnode_t *gnode, const snet_record_t *rec)
+{
+    const snet_star_gnode_t *star_gnode = gnode->data.normal->entity.star;
+
+    if (star_gnode->type == NULL) {
+        // Star with no exit patterns
+        // (i.e. infinite star).
+
+#if SVPSNETGWRT_DEBUG > 1
+        const char *gidx_str =
+            SNetIdxVecToString(gnode->data.normal->idx, NULL);
+        
+        SNetReportWarningCustom(
+            "Infinite 'star' found at index %s", gidx_str);
+
+        SNetMemFree((void *) gidx_str);
+        SNetOnWarning();
+#endif
+
+        return false;
+    }
+
+    unsigned int variants_cnt = 
+        SNetTencTypeGetVariantsCount(star_gnode->type);
+
+    snet_variantencoding_t *venc = SNetRecGetVariantEncoding(rec);
+
+    for (unsigned int i=0; i < variants_cnt; i++) {
+        bool matched_ident = false;
+
+        int match_cnt = SNetTencVariantsMatch(
+            venc, 
+            SNetTencTypeGetVariant(star_gnode->type, i), &matched_ident);
+
+        if (match_cnt == 0) { 
+            if (!matched_ident) {
+                continue;
+            }
+        }
+
+        if (star_gnode->guards == NULL) {
+            return true;
+
+        } else {
+            const snet_expr_t *guard =
+                SNetEListGetExpr(star_gnode->guards, i);
+
+            if (guard == NULL || SNetEEvaluateBool(guard, rec)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_gnode_t*
+gnode_walk_hnd_star(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_COMB_STAR);
+    assert(gnode->data.normal->entity.star->groot != NULL);
+
+    // First test the exit condition!
+    // if true just return NULL so that the
+    // walking continues to the next node. Otherwise
+    // the walking is directed to the contained node!!
+    snet_conslst_node_t *cnode = SNetGwHndGetConsNode(hnd);
+
+    SNetGwDPrintWithVariant(cnode, BEGIN, STAR_WALK_IN, ());
+
+    if (test_star_exit_cond(gnode, SNetConsLstNodeGetRecord(cnode))) {
+        SNetGwDPrintWithVariant(cnode, CONDT, STAR_WALK_IN, ());
+        return NULL;
+    }
+
+    SNetGwDPrintWithVariant(cnode, CONDF, STAR_WALK_IN, ());
+
+    // Add dynamic index to the cons-node
+    SNetConsLstNodeAddDynGIdx(cnode, gnode->data.normal->idx);
+   
+    // Fix the dynamic index
+    snet_idxvec_t      *dyn_gidx      = SNetConsLstNodeGetDynGIdx(cnode);
+    snet_idxvec_item_t  gidx_item_val = 1;
+
+    if (!SNetConsLstNodeIsDynGIdxNew(cnode)) {
+        SNetIdxVecPush(
+            dyn_gidx, 
+            gnode->data.normal->idx, 
+            SNetIdxVecGetLen(dyn_gidx));
+    }
+
+    SNetIdxVecPushArray(dyn_gidx, &gidx_item_val, 1); 
+    SNetGwDPrintWithVariant(cnode, END, STAR_WALK_IN, ());
+
+    return gnode->data.normal->entity.star->groot;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_gnode_t*
+gnode_walk_hnd_star_merge(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_COMB_STAR);
+    assert(gnode->data.normal->entity.star->groot != NULL);
+
+    // First part is similar to the normal walk handler above. Test the
+    // exit condition and decide whether to go into the contained network
+    // again or not. One difference is that this routine assumes that
+    // there is always a valid network (see assert() below) because it is
+    // called after the contained has been processed at least once (so it
+    // has to be valid otherwise this function would have never been called).
+    snet_conslst_node_t *cnode = SNetGwHndGetConsNode(hnd);
+
+    SNetGwDPrintWithVariant(cnode, BEGIN, STAR_MERGE, ());
+
+    if (test_star_exit_cond(gnode, SNetConsLstNodeGetRecord(cnode))) {
+        SNetConsLstNodeRemoveDynGIdx(cnode);
+        SNetGwDPrintWithVariant(cnode, CONDT, STAR_MERGE, ());
+
+        return NULL;
+    }
+
+    SNetGwDPrintWithVariant(cnode, CONDF, STAR_MERGE, ());
+    
+    // It is going in the 'star' again. Because this is a "merge"
+    // the only thing we have to do is to chop the index and increase
+    // the value of the last item.
+    unsigned int dyn_idx_new_len = 
+        SNetIdxVecGetLen(gnode->data.normal->idx) + 1;
+
+    snet_idxvec_t *dyn_idx = SNetConsLstNodeGetDynGIdx(cnode);
+    
+    // When returning back to a 'star' node
+    // the node MUST ALWAYS have a dynamic index
+    // and its length MUST be >= than the graph node's (+1)!!!
+    assert(dyn_idx != NULL);
+    assert(SNetIdxVecGetLen(dyn_idx) >= dyn_idx_new_len);
+
+    // Fix the dynamic index!
+    if (SNetIdxVecGetLen(dyn_idx) > dyn_idx_new_len) {
+        SNetIdxVecPopRight(
+            dyn_idx,
+            SNetIdxVecGetLen(dyn_idx) - dyn_idx_new_len);
+    }
+
+    SNetIdxVecIncrItemValue(dyn_idx, dyn_idx_new_len - 1, 1);
+    SNetGwDPrintWithVariant(cnode, END, STAR_MERGE, ());
+
+    return gnode->data.normal->entity.star->groot;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* INDEX SPLIT COMBINATOR */
+
+static snet_gnode_t*
+gnode_walk_hnd_split(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_COMB_SPLIT);
+    assert(gnode->data.normal->entity.split->groot == NULL);
+
+    snet_conslst_node_t *cnode = SNetGwHndGetConsNode(hnd);
+    snet_record_t       *rec   = SNetConsLstNodeGetRecord(cnode);
+
+    SNetGwDPrintWithVariant(cnode, BEGIN, ISPLIT_WALK_IN, ());
+    
+    if (!SNetRecHasTag(rec, gnode->data.normal->entity.split->idx_tag)) {
+        const char *gidx_str =
+            SNetIdxVecToString(gnode->data.normal->idx, NULL);
+
+        SNetReportGwError(
+            SNET_GWERR_TYPE_ERROR,
+            "index-split combinator "
+            "(record does not have required tag)", gidx_str);
+
+        SNetMemFree((void *) gidx_str);
+        SNetOnError();
+    }
+
+    // Add dynamic index to the cons-node
+    SNetConsLstNodeAddDynGIdx(cnode, gnode->data.normal->idx);
+
+    // !!PORTABILITY NOTE!!
+    // The following code will not work as expected on systems
+    // that use ILP64 and SILP64 data models if the data type
+    // 'snet_idxvec_item_t' is typedefed to 'long long' as it
+    // currently is (see file idxvec.int.utc.h).     
+    assert(sizeof(snet_idxvec_item_t) == 2 * sizeof(unsigned int));
+
+    unsigned int tag_val = 
+        (unsigned int) SNetRecGetTag(
+            rec, gnode->data.normal->entity.split->idx_tag);
+
+    // Here the additional index item that will be added will take the
+    // value of the tag (with negative sign being a P label) instead of
+    // the value of 1 as it happens in the 'star' combinator.
+    snet_idxvec_item_t gidx_item_val = -(((snet_idxvec_item_t) tag_val) + 1);
+
+    SNetGwDPrintWithVariant(
+        cnode,
+        TAGVALS, ISPLIT_WALK_IN, (tag_val, gidx_item_val)); 
+
+    // !!END OF PORTABILITY NOTE!!
+
+    // Fix the dynamic index.
+    snet_idxvec_t *dyn_gidx = SNetConsLstNodeGetDynGIdx(cnode);    
+
+    if (!SNetConsLstNodeIsDynGIdxNew(cnode)) {
+        SNetIdxVecPush(
+            dyn_gidx, 
+            gnode->data.normal->idx, 
+            SNetIdxVecGetLen(dyn_gidx));
+    }
+
+    SNetIdxVecPushArray(dyn_gidx, &gidx_item_val, 1); 
+    SNetGwDPrintWithVariant(cnode, END, ISPLIT_WALK_IN, ());
+
+    return gnode->data.normal->entity.split->groot;
+}
+
+static snet_gnode_t*
+gnode_walk_hnd_split_merge(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    // Unlike the 'star' above here we only need to
+    // remove the dynamic index before exiting the
+    // index split.
+    SNetConsLstNodeRemoveDynGIdx(SNetGwHndGetConsNode(hnd));
+
+    // The network within the index split is executed
+    // only once thus here we always return NULL to 
+    // indicate to the "walking" routine to move forward.
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* EXTERNAL CONNECTION */
+
+static bool 
+gnode_hnd_extern_conn(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_EXTERN_CONNECTION);
+    warn_unsupported_entity(gnode, "external connection");
+
+    return true;
+}
+
+static snet_gnode_t*
+gnode_walk_hnd_extern_conn_merge(snet_gnode_t *gnode, snet_gwhandle_t *hnd)
+{
+    assert(gnode->type == GRAPH_NODE_TYPE_EXTERN_CONNECTION);
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* "re-order" points' functions */
+
+static thread void
+check_reorder_point_exclusive(
+    snet_conslst_node_t *cnode, 
+    shared bool state_changed, shared bool check_result)
+{
+    const snet_idxvec_t *min_idx = SNetConsLstNodeGetMinGIdx(cnode);
+
+    if (SNetConsLstNodeGetGraphNode(cnode) == NULL) {
+        // For the special "EndOfGraph" node (NULL) the
+        // condition is different. Because the "index" 
+        // when a cons-node "is" on that node is infinite (the
+        // propagation algorithm when given a cons-node "at" 
+        // the NULL node it will use <inf> as index for that
+        // cons-node) instead of checking the min index it must
+        // be checked whether the cons-node is the "head" of
+        // the cons-list. We test this by checking the value
+        // of the "prev" pointer instead of the actual "head"
+        // of the list (if the node is the "head" then "prev"
+        // SHOULD be NULL). That way we avoid locking the 
+        // whole list.
+        if (SNetConsLstNodeGetPrevious(cnode) == NULL) {
+            // assert(min_idx != NULL);
+            // assert(SNetIdxVecIsInfinite(min_idx));
+
+            check_result  = true;
+            state_changed = false;
+
+            return;
+        }
+
+        if (conslst_node_chk_flag(cnode, CNODE_INFIMUM_CHANGED_FLAG)) {
+            check_result  = false;
+            state_changed = false;
+
+            return;
+        }
+        
+        SNetConsLstNodeSetState(
+            cnode, 
+            CONS_NODE_STATE_WAIT_REORDER_POINT);
+
+        check_result  = false;
+        state_changed = true;
+
+        return;
+    }
+
+    // For "normal" graph nodes we just check whether
+    // the min index of the cons-node is greater than
+    // the current graph location index of the cons-node
+    // which is either the graph node index or the dynamic
+    // index of the cons-node.
+    if (min_idx != NULL &&
+        SNetIdxVecCompareEx(
+            min_idx,
+            conslst_node_gidx(cnode)) == IDXVEC_CMP_RES_GREATER) {
+
+        check_result  = true;
+        state_changed = false;
+
+        return;
+    } 
+    
+    if (conslst_node_chk_flag(cnode, CNODE_INFIMUM_CHANGED_FLAG)) {
+        check_result  = false;
+        state_changed = false;
+
+        return;
+    }
+
+    SNetConsLstNodeSetState(
+        cnode, 
+        CONS_NODE_STATE_WAIT_REORDER_POINT);
+
+    check_result  = false;
+    state_changed = true;
+}
+
+static bool 
+check_reorder_point(snet_conslst_node_t *cnode)
+{
+    place cnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBase(cnode)));
+
+    bool check_result;
+    bool state_changed;
+
+    do {
+        family fid;
+
+        check_result  = false;
+        state_changed = false;
+
+        create (fid; cnode_mutex_plc; 0; 0; 1; 1;;) 
+            check_reorder_point_exclusive(
+                cnode, state_changed, check_result);
+
+        sync(fid);
+        
+        if (!check_result && !state_changed) {
+            propagate_infimum(cnode);
+        }
+
+    } while (!check_result && !state_changed);
+
+    return check_result;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Cons-Node "moving" to graph node */
+
+static thread void
+move_cnode_to_gnode_exclusive(snet_conslst_node_t *cnode, snet_gnode_t *gnode)
+{
+    SNetGwDPrint(cnode, MOVING, ());
+    // Moving means set the cons-nodes's graph node to
+    // the found one and update its dynamic index (if
+    // there is one).
+    SNetConsLstNodeSetGraphNode(cnode, gnode);
+
+    if (gnode == NULL) {
+        // Remove its dynamic index if any!
+        while (SNetConsLstNodeGetDynGIdx(cnode) != NULL) {
+            SNetConsLstNodeRemoveDynGIdx(cnode);
+        }
+
+        SNetGwDPrintWithVariant(cnode, TONULL, MOVED, ());
+        return;
+    }
+
+    // If its not being moved at the end of the
+    // graph the dynamic index needs "fixing"!!
+    snet_idxvec_t *dyn_idx = SNetConsLstNodeGetDynGIdx(cnode);
+
+    if (dyn_idx == NULL) {    
+        SNetGwDPrint(cnode, MOVED, ());
+        return;
+    }
+
+    unsigned int dyn_idx_len   = SNetIdxVecGetLen(dyn_idx);
+    unsigned int gnode_idx_len = SNetIdxVecGetLen(gnode->data.normal->idx);
+
+    if (gnode_idx_len == dyn_idx_len) {
+        return;
+    }
+
+    if (gnode_idx_len < dyn_idx_len)
+        SNetIdxVecPopRight(dyn_idx, dyn_idx_len - gnode_idx_len);
+    else
+        SNetIdxVecPush(dyn_idx, gnode->data.normal->idx, dyn_idx_len);
+
+    SNetGwDPrint(cnode, MOVED, ());
+}
+
+static inline void
+move_cnode_to_gnode(snet_conslst_node_t *cnode, snet_gnode_t *gnode)
+{
+    place cnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBase(cnode)));
+
+    family fid;
+
+    create (fid; cnode_mutex_plc; 0; 0; 1; 1;;)
+        move_cnode_to_gnode_exclusive(cnode, gnode);
+
+    sync (fid);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Record output functions  */
+
+static thread void
+conslst_pop(shared snet_conslst_node_t *cnode)
+{
+    snet_conslst_node_t *lcnode = cnode;
+    snet_conslst_node_t *ncnode = SNetConsLstNodeGetNext(lcnode);
+
+    assert(ncnode != NULL);
+
+    snet_gnode_t *ncnode_gnode = 
+        SNetConsLstNodeGetGraphNode(ncnode);
+
+    snet_conslst_node_state_t 
+        ncnode_state = SNetConsLstNodeGetState(ncnode);
+
+    conslst_node_set_flag(ncnode, CNODE_DISPOSABLE_FLAG);
+
+    if (ncnode_gnode != NULL ||
+        ncnode_state == CONS_NODE_STATE_WALKING ||
+        ncnode_state == CONS_NODE_STATE_WAIT_SYNCCELL) {
+
+        ncnode = NULL;
+    }
+
+    cnode = ncnode;
+
+    SNetConsLstPop(SNetConsLstNodeGetList(lcnode));
+    SNetGwDPrint(lcnode, POPPED, ());
+}
+
+static thread void
+conslst_pop_node_n_exclusive(shared snet_conslst_node_t *cnode)
+{
+    snet_conslst_node_t *lcnode = cnode;
+    snet_conslst_node_t *ncnode = SNetConsLstNodeGetNext(lcnode);
+
+    if (ncnode == NULL) {
+        SNetConsLstPop(SNetConsLstNodeGetList(lcnode));
+        SNetGwDPrintWithVariant(lcnode, ELST, POPPED, ());
+
+        cnode = NULL;
+        return;
+    } 
+
+    place ncnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBaseConst(ncnode)));
+
+    family fid;
+
+    create (fid; ncnode_mutex_plc; 0; 0; 1; 1;;) conslst_pop(lcnode);
+    sync (fid);
+
+    cnode = lcnode;
+}
+
+static thread void
+conslst_pop_node(shared snet_conslst_node_t *cnode)
+{
+    snet_conslst_node_t *lcnode = cnode;    
+
+    place cnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBaseConst(lcnode)));
+
+    family fid;
+
+    create (fid; cnode_mutex_plc; 0; 0; 1; 1;;) 
+        conslst_pop_node_n_exclusive(lcnode);
+
+    sync (fid);
+
+    cnode = lcnode;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void 
+handle_rt_ctrl_record(snet_domain_t *snetd, snet_record_t *rec)
+{
+    /**
+     * !!TODO!!: Perform ctrl operation desribed
+     * by the ctrl record.
+     */
+    SNetRecDestroy(rec);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static thread void 
+domain_outbuf_push(snet_buffer_t *buf, snet_record_t *rec)
+{
+    SNetBufPush(buf, rec);
+}
+
+static void
+domain_outbuf_push_record(
+    snet_record_t *rec,
+    snet_buffer_t *buf, snet_place_t buf_mutex_plc)
+{
+    family fid;
+    place  plc = SNetPlaceToUTCPlace(buf_mutex_plc);
+
+    create (fid; plc; 0; 0; 1; 1;;) domain_outbuf_push(buf, rec);
+    sync (fid);
+}
+
+static bool
+net_invoke_outtfun(
+    snet_domain_t *snetd,
+    unsigned int count, bool ignore_threshold)
+{
+    assert(count > 0);
+
+    snet_netout_tfptr_t out_tfun = SNetDomainGetOutThreadFunction(snetd);
+
+    if (out_tfun == NULL) {
+        return false;
+    }
+
+    if (ignore_threshold ||
+        (SVPSNETGWRT_NETOUT_TFUN_INVOKE_THRESHOLD > 0 &&
+         count >= SVPSNETGWRT_NETOUT_TFUN_INVOKE_THRESHOLD)) {
+        
+        family fid;
+
+        create<nosync> (fid;; 0; 0; 1; 1;;)
+            (*out_tfun)((snet_domain_t *)(SNetMaskPointer(snetd)), count);
+
+        return true;
+    }
+
+    return false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void 
+net_output_record(snet_gwhandle_t *hnd)
+{
+    snet_conslst_node_t *cnode   = SNetGwHndGetConsNode(hnd);
+    snet_conslst_t      *clst    = SNetConsLstNodeGetList(cnode);
+    snet_domain_t       *snetd   = SNetConsLstGetDomain(clst);
+    snet_buffer_t       *out_buf = SNetDomainGetOutBuffer(snetd);
+
+    place clst_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstToBaseConst(clst)));
+
+    snet_place_t out_buf_mutex_plc = (
+        out_buf == NULL    ?
+        SNetPlaceGetNull() :
+        SNetBaseTypeGetMutexPlace(SNetBufToBase(out_buf)));
+
+    unsigned int count = 0;
+
+    do {
+        snet_record_t *rec = SNetConsLstNodeGetRecord(cnode);
+ 
+        // A box emitted no records making the
+        // cons-node a "null" node.
+        if (rec != NULL) {
+            if (SNetRecGetDescription(rec) == SNET_REC_DESCR_CTRL
+                && SNetRecGetCtrlMode(rec) == SNET_REC_CTRL_MODE_RT) {
+
+                handle_rt_ctrl_record(snetd, rec);
+
+            } else {
+                if (out_buf == NULL) {
+                    SNetRecDestroyPartial(rec);
+
+                } else {
+                    domain_outbuf_push_record(
+                        rec, out_buf, out_buf_mutex_plc);
+
+                    if (net_invoke_outtfun(snetd, ++count, false)) {
+                        count = 0;
+                    }
+                }
+            }
+        }
+
+        snet_conslst_node_t *next_cnode = cnode;
+
+        family fid;
+
+        create (fid; clst_mutex_plc; 0; 0; 1; 1;;) 
+            conslst_pop_node(next_cnode);
+
+        sync (fid);
+
+        // Wait until the cons-node becomes disposable
+        // because if we destroy the node the mutex place
+        // will also be destroyed while a "descendant" 
+        // GW instance is using it.
+        while (!conslst_node_chk_flag(cnode, CNODE_DISPOSABLE_FLAG));
+
+        SNetGwDPrint(cnode, DESTROYED, (next_cnode));
+
+        SNetGwHndDestroy(hnd);
+        SNetConsLstNodeDestroy(cnode);
+
+        cnode = next_cnode;
+        hnd   = cnode == NULL ? NULL : SNetConsLstNodeGetHandle(cnode);
+
+        //if (cnode != NULL)
+        //    propagate_infimum(cnode);
+
+    } while (cnode != NULL);
+
+    if (out_buf != NULL && count > 0)
+        net_invoke_outtfun(snetd, count, true);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Infimum graph index propagation */
+
+static thread void
+conslst_node_on_infimum_changed(synccell_cnode_exclusive)(
+    snet_conslst_node_t          *cnode,
+    shared snet_gnode_t          *gnode,
+    shared snet_gwhandle_t       *hnd,
+    shared snet_synccell_state_t *sc_state)
+{
+    assert(gnode == NULL);
+    assert(hnd == NULL);
+    assert(sc_state == NULL);
+
+    snet_gnode_t *lgnode =
+        SNetConsLstNodeGetGraphNode(cnode);
+
+    snet_gwhandle_t *lhnd = SNetConsLstNodeGetHandle(cnode);
+
+    snet_synccell_state_t *lsc_state =
+        (snet_synccell_state_t *)(SNetGwHndGetSyncCellState(lhnd));
+
+    if (lgnode == NULL || lgnode->type != GRAPH_NODE_TYPE_SYNCCELL) {
+        SNetGwDPrintWithVariant(cnode, NTAM, ON_INFIMUM_CHANGE_SYNCCELL, ());
+        goto RETURN_NULL;
+    }
+
+    // Is it still in the synchro-cell
+    if (SNetConsLstNodeGetState(cnode) == CONS_NODE_STATE_WALKING) {
+        conslst_node_set_flag(cnode, CNODE_SYNCCELL_CHECK_FLAG);
+        SNetGwDPrintWithVariant(cnode, FWGW, ON_INFIMUM_CHANGE_SYNCCELL, ());
+
+        goto RETURN_NULL;
+    }
+
+    // Is it still a not-definite match
+    if (SNetGwHndGetSyncCellDefiniteMatch(lhnd)) {
+        SNetGwDPrintWithVariant(cnode, STDF, ON_INFIMUM_CHANGE_SYNCCELL, ());
+        goto RETURN_NULL;
+    }
+
+    gnode    = lgnode;
+    hnd      = lhnd;
+    sc_state = lsc_state;
+
+    SNetGwDPrintWithVariant(
+        cnode, 
+        ST, 
+        ON_INFIMUM_CHANGE_SYNCCELL, (lgnode, lsc_state));
+
+    return;
+
+RETURN_NULL:
+    gnode    = NULL;
+    hnd      = NULL;
+    sc_state = NULL;
+}
+
+static thread void
+conslst_node_on_infimum_changed(synccell_gwchkstart)(
+    snet_conslst_node_t *cnode, 
+    snet_gwhandle_t *hnd, snet_synccell_state_t *sc_state)
+{
+    if (SNetConsLstNodeGetState(cnode) != CONS_NODE_STATE_WAIT_SYNCCELL) {
+        SNetGwDPrintWithVariant(
+            cnode,
+            NWSS, ON_INFIMUM_CHANGE_SYNCCELL, ());
+
+        if (SNetConsLstNodeGetState(cnode) == CONS_NODE_STATE_WALKING) {
+            SNetGwDPrintWithVariant(
+                cnode,
+                FWGW, ON_INFIMUM_CHANGE_SYNCCELL, ());
+
+            conslst_node_set_flag(cnode, CNODE_SYNCCELL_CHECK_FLAG);
+        }
+
+        return;
+    } 
+
+    if (conslst_node_chk_flag(cnode, CNODE_SYNCCELL_WAKING_FLAG)) {
+        return;
+    }
+
+    SNetGwDPrintWithVariant(
+        cnode,
+        SGW, ON_INFIMUM_CHANGE_SYNCCELL, ());
+
+    SNetConsLstNodeSetState(cnode, CONS_NODE_STATE_WALKING);
+
+    // !!NOTE!!: This routine runs on the handle's associated cons-node's
+    // exclusive place  thus a simple "default create" will not do! We
+    // need to get the domain host place (where all GWs are executed) and
+    // create there!!!
+    place snetdplc =
+        SNetPlaceToUTCPlace(
+            SNetHndGetNetDomainHostPlace(
+                SNetGwHndToBaseHandle(hnd)));
+    
+    family fid;
+    create<nosync> (fid; snetdplc; 0; 0; 1; 1;;) walk(hnd, false);
+
+    SNetGwDPrintWithVariant(cnode, GWSTRD, ON_INFIMUM_CHANGE_SYNCCELL, ());
+}
+
+static void
+conslst_node_on_infimum_changed(synccell)(snet_conslst_node_t *cnode)
+{
+    SNetGwDPrintWithVariant(cnode, START, ON_INFIMUM_CHANGE_SYNCCELL, ());
+
+    snet_gnode_t          *gnode = NULL;
+    snet_gwhandle_t       *hnd   = NULL;
+    snet_synccell_state_t *sc_state = NULL;
+
+    place cnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBase(cnode)));
+
+    family fid;
+
+    create (fid; cnode_mutex_plc; 0; 0; 1; 1;;)
+        conslst_node_on_infimum_changed(synccell_cnode_exclusive)(
+            cnode,
+            gnode,
+            hnd,
+            sc_state);
+
+    sync(fid);
+    
+    if (gnode == NULL || sc_state == NULL) {
+        return;
+    }
+
+    assert(hnd != NULL);
+    assert(sc_state != NULL);
+                    
+    place gnode_mutex_plc =
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(SNetGNodeToBase(gnode)));
+
+    int result = 0;
+    int status = 0;
+
+    SNetGwDPrintWithVariant(
+        cnode, 
+        TEST_DEFINITE_MATCH, 
+        ON_INFIMUM_CHANGE_SYNCCELL, ());
+
+    create (fid; gnode_mutex_plc; 0; 0; 1; 1;;) 
+        synccell_test_definite_match(gnode, hnd, result, status);
+    
+    sync(fid);
+
+    SNetGwDPrintWithVariant(
+        cnode, 
+        TEST_DEFINITE_MATCH_DONE,
+        ON_INFIMUM_CHANGE_SYNCCELL, (result));
+
+    if (result == 2) {
+        SNetGwDPrintWithVariant(
+            cnode,
+            START_GW_CHKSTART, 
+            ON_INFIMUM_CHANGE_SYNCCELL, ());
+
+        create (fid; cnode_mutex_plc; 0; 0; 1; 1;;)
+            conslst_node_on_infimum_changed(
+                synccell_gwchkstart)(cnode, hnd, sc_state);
+
+        sync(fid);
+
+        SNetGwDPrintWithVariant(
+            cnode,
+            START_GW_CHKSTART_DONE, 
+            ON_INFIMUM_CHANGE_SYNCCELL, ());
+    }
+
+    SNetGwDPrintWithVariant(cnode, END, ON_INFIMUM_CHANGE_SYNCCELL, (result));
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void
+conslst_node_on_infimum_changed(reorder_point)(snet_conslst_node_t *cnode)
+{
+    snet_gnode_t *gnode = SNetConsLstNodeGetGraphNode(cnode);
+
+    if (gnode == NULL || !check_reorder_point(cnode)) {
+        return;
+    }
+
+    // Other "re-order" point. Take action 
+    // according to graph node type.
+    switch (gnode->type) {
+        case GRAPH_NODE_TYPE_EXTERN_CONNECTION:
+            /**
+             * Not implemented yet!
+             */
+            break;
+
+        // So far no other type of node
+        // is supposed to be a "re-order"
+        // point => control should never
+        // reach this point.
+        default:
+            assert(false);
+            break;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+static thread void
+update_conslst_node_infimum(
+    shared snet_conslst_node_t *cnode, shared snet_idxvec_t *min_idx)
+{
+    assert(cnode != NULL);
+    assert(min_idx == NULL);
+
+    const snet_idxvec_t *cnode_min_idx = SNetConsLstNodeGetMinGIdx(cnode);
+
+    snet_idxvec_t *cnode_gidx = conslst_node_gidx(cnode);
+
+    if (SNetConsLstNodeGetPrevious(cnode) == NULL) {
+        min_idx = (
+            cnode_gidx == NULL ? 
+            SNetIdxVecCreate() :
+            SNetIdxVecCreateCopy(cnode_gidx));
+
+        SNetConsLstNodeSetMinGIdxToInfinite(cnode);
+
+    } else {
+        if (cnode_min_idx == NULL) {
+            min_idx = NULL;
+
+        } else {
+            min_idx = (
+                cnode_gidx == NULL ?
+                SNetIdxVecCreateCopy(cnode_min_idx) :
+                SNetIdxVecCalcInfimumEx(cnode_gidx, cnode_min_idx));
+        }
+    }
+
+    conslst_node_reset_flag(
+        cnode, 
+        CNODE_INFIMUM_CHANGED_FLAG);
+
+    cnode = SNetConsLstNodeGetNext(cnode);
+}
+
+static thread void
+update_next_conslst_node_infimum(
+    shared snet_conslst_node_t       *cnode, 
+    shared snet_idxvec_t             *min_idx, 
+    shared snet_gnode_t              *cnode_gnode,
+    shared snet_conslst_node_state_t  cnode_state)
+{
+    assert(cnode != NULL);
+    assert(min_idx != NULL);
+
+    SNetGwDPrint(cnode, INFIMUM_UPDATE, ());
+
+    snet_conslst_node_t *lcnode     = cnode;
+    snet_idxvec_t       *lmin_idx   = min_idx;
+
+    SNetConsLstNodeSetMinGIdx(lcnode, lmin_idx);
+
+    snet_conslst_node_state_t
+        lcnode_state = cnode_state;
+
+    lcnode_state = SNetConsLstNodeGetState(lcnode);
+
+    if (lcnode_state == CONS_NODE_STATE_WALKING ||
+        conslst_node_chk_flag(lcnode, CNODE_SYNCCELL_WAKING_FLAG)) {
+
+        conslst_node_set_flag(lcnode, CNODE_INFIMUM_CHANGED_FLAG);
+
+        cnode       = NULL;
+        cnode_gnode = NULL;
+        cnode_state = lcnode_state;
+
+        return;
+    }
+
+    snet_idxvec_t *cnode_gidx = conslst_node_gidx(lcnode);
+
+    if (cnode_gidx == NULL) {
+        min_idx = lmin_idx;
+
+    } else {
+        min_idx = SNetIdxVecCalcInfimumEx(cnode_gidx, lmin_idx);
+        SNetIdxVecDestroy(lmin_idx);
+    }
+
+    cnode       = SNetConsLstNodeGetNext(lcnode);
+    cnode_gnode = SNetConsLstNodeGetGraphNode(lcnode);
+    cnode_state = lcnode_state;
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void
+propagate_infimum(snet_conslst_node_t *cnode)
+{
+    assert(cnode != NULL);
+
+    SNetGwDPrint(cnode, INFPROPAGATE, ());
+
+    bool starting_cnode = true;
+    snet_idxvec_t *min_idx = NULL;
+
+    do {
+        place cnode_mutex_plc =
+            SNetPlaceToUTCPlace(
+                SNetBaseTypeGetMutexPlace(
+                    SNetConsLstNodeToBase(cnode)));
+
+        family fid;
+
+        if (starting_cnode) {
+            starting_cnode = false;
+
+            create (fid; cnode_mutex_plc; 0; 0; 1; 1;;)
+                update_conslst_node_infimum(cnode, min_idx);
+
+            sync(fid);
+            continue;
+        }
+
+        snet_conslst_node_t       *ccnode       = cnode;
+        snet_gnode_t              *ccnode_gnode = NULL;
+        snet_conslst_node_state_t  ccnode_state = CONS_NODE_STATE_INIT;
+
+        create (fid; cnode_mutex_plc; 0; 0; 1; 1;;)
+            update_next_conslst_node_infimum(
+                cnode, 
+                min_idx, ccnode_gnode, ccnode_state);
+
+        sync(fid);
+
+        switch (ccnode_state) {
+            case CONS_NODE_STATE_INIT:
+                assert(false);
+                break;
+
+            case CONS_NODE_STATE_WALKING:
+                cnode = NULL;
+                SNetGwDPrint(ccnode, STOPPING_INFPROP, ());
+                break;
+                
+            case CONS_NODE_STATE_WAIT_SYNCCELL:
+                conslst_node_on_infimum_changed(synccell)(ccnode);
+                break;
+
+            case CONS_NODE_STATE_WAIT_REORDER_POINT:
+                conslst_node_on_infimum_changed(reorder_point)(ccnode);
+                break;
+        }
+
+    } while (cnode != NULL && min_idx != NULL);
+
+    if (min_idx != NULL)
+        SNetIdxVecDestroy(min_idx);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* The "walking" thread function!!  */
+
+static thread void 
+walk(snet_gwhandle_t *hnd, bool start_from_current)
+{
+    assert(hnd != NULL);
+
+    snet_conslst_node_t *cnode       = SNetGwHndGetConsNode(hnd);
+    snet_gnode_t        *gnode_start = SNetConsLstNodeGetGraphNode(cnode);
+    snet_gnode_t        *gnode       = gnode_start;
+
+    assert(gnode_start != NULL);
+
+    if (SNetConsLstNodeIsNull(cnode) ||
+        SNetRecGetDescription(
+            SNetConsLstNodeGetRecord(cnode)) == SNET_REC_DESCR_CTRL) {
+
+        // NULL cons-nodes and control records are going directly to the
+        // end of the graph (NULL node)
+        gnode = NULL;
+    }
+
+    bool skip_one = (!start_from_current);
+
+    snet_gnode_contlink_t      *prev_lnk = NULL;
+    snet_gnode_walk_hnd_fptr_t  gnode_walk_hnd_func = NULL;
+
+    while (gnode != NULL) {
+        if (gnode->type == GRAPH_NODE_TYPE_NOP) {
+            prev_lnk    = &gnode->data.nop->lnk;
+            gnode       = gnode->data.nop->lnk.node;
+            gnode_start = NULL;
+
+            continue;
+        }
+
+        if (skip_one) {
+            skip_one    = false;
+            gnode_start = NULL;
+
+            goto NEXT_GNODE;
+        }
+
+        if (__chk_flag(gnode->flags, GNODE_REORDER_POINT_FLAG)) {
+            if (!check_reorder_point(cnode)) {
+                break;
+            }
+        }
+
+        gnode_walk_hnd_func = (
+            prev_lnk == NULL || !prev_lnk->merge ? 
+            gnode->data.normal->walk_hnd_func   : 
+            gnode->data.normal->walk_hnd_func_merge);
+
+        if (gnode_walk_hnd_func != NULL) {
+            snet_gnode_t *next_gnode = (*gnode_walk_hnd_func)(gnode, hnd);
+
+            if (next_gnode != NULL) {
+                prev_lnk = &gnode->data.normal->lnk;
+                gnode    = next_gnode;
+            
+                continue;
+            }
+        }
+
+        if (gnode->data.normal->hnd_func != NULL) {
+            // A graph node was found where the record
+            // must "stop".
+
+            if (gnode == gnode_start) {
+                gnode_start = NULL;
+
+            } else {
+                // This is not the 1st time round so the cons-list node
+                // must be moved the "found" graph node and its infimum 
+                // propagated.
+                move_cnode_to_gnode(cnode, gnode);
+                propagate_infimum(cnode);
+            }
+
+            // Now we call the node's handler
+            // and terminate the "walking".
+            if(!(*gnode->data.normal->hnd_func)(gnode, hnd)) {
+                break;
+            }
+
+            // If the handler has made the cons-node a
+            // "null node" then it must be moved to the
+            // end of the graph. So we set "gnode" to
+            // NULL before we break the loop so that
+            // this movement will be done by the code
+            // after the loop.
+            if (SNetConsLstNodeIsNull(cnode)) {
+                gnode = NULL;
+                break;
+            }
+
+            if (SNetRecGetDescription(
+                SNetConsLstNodeGetRecord(cnode)) == SNET_REC_DESCR_CTRL) {
+
+                gnode = NULL;
+                break;
+            }
+        }
+
+NEXT_GNODE:
+        prev_lnk = &gnode->data.normal->lnk;
+
+        assert(gnode != gnode->data.normal->lnk.node);
+
+        if (gnode->data.normal->lnk.cached_node == NULL)
+            gnode = gnode->data.normal->lnk.node;
+        else
+            gnode = gnode->data.normal->lnk.cached_node;
+
+    } // while (gnode != NULL)
+
+    if (gnode != NULL) {
+        // This means that the walking is stopped
+        // for reasons other than reaching the end
+        // of the network (it can happen due to the
+        // "break" statements in the loop; e.g. for
+        // cases where walking cannot continue until
+        // the ordering constraints are satisfied.
+        SNetGwDPrintWithVariant(cnode, SUSPEND, GW_TERMINATING, ());
+        return;
+    }
+
+    // The end of the graph has been reached. We treat this
+    // in the same way as a re-ordering point node with a
+    // handler function!
+    move_cnode_to_gnode(cnode, NULL);
+    propagate_infimum(cnode);
+
+    if (check_reorder_point(cnode)) {
+        net_output_record(hnd);
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Functions to insert new nodes into the cons-list */
+
+static thread void 
+conslst_push(snet_conslst_t *lst, snet_conslst_node_t *n)
+{
+    SNetConsLstPush(lst, n);
+}
+
+static thread void 
+conslst_push_back(snet_conslst_t *lst, snet_conslst_node_t *n)
+{
+    snet_conslst_node_t *tail = SNetConsLstGetTail(lst);
+
+    if (tail == NULL) {
+        SNetConsLstPush(lst, n);
+
+        // The list is empty so the node must be marked as 
+        // "disposable" because there would be none to do it.
+        conslst_node_set_flag(n, CNODE_DISPOSABLE_FLAG);
+        return;
+    }
+
+    // The list is not empty 
+    place tail_mutex_plc = 
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBaseConst(tail)));
+
+    family fid;
+
+    create (fid; tail_mutex_plc; 0; 0; 1; 1;;) conslst_push(lst, n);
+    sync (fid);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static thread void
+conslst_insert_before_n2_prev_exclusive(
+    snet_conslst_node_t *n1, snet_conslst_node_t *n2)
+{
+    SNetConsLstNodeSetMinGIdx(n1, SNetConsLstNodeGetMinGIdx(n2));
+
+    if (SNetConsLstNodeGetMinGIdx(n2) != NULL) {
+        snet_idxvec_t *new_infimum = 
+            SNetIdxVecCalcInfimumEx(
+                conslst_node_gidx(n2), 
+                SNetConsLstNodeGetMinGIdx(n2));
+    
+        SNetConsLstNodeSetMinGIdx(n2, new_infimum);
+        SNetIdxVecDestroy(new_infimum);
+    }
+
+    SNetConsLstInsertBefore(n1, n2);
+}
+
+static thread void
+conslst_insert_before_n2_exclusive(
+    snet_conslst_node_t *n1, snet_conslst_node_t *n2)
+{
+    snet_conslst_node_t *n2_prev = SNetConsLstNodeGetPrevious(n2);
+
+    if (n2_prev == NULL) {
+        SNetConsLstNodeSetMinGIdx(n1,SNetConsLstNodeGetMinGIdx(n2));
+        SNetConsLstNodeSetMinGIdx(n2, NULL);
+        SNetConsLstInsertBefore(n1, n2);
+
+        conslst_node_set_flag(n1, CNODE_DISPOSABLE_FLAG);
+        conslst_node_reset_flag(n2, CNODE_DISPOSABLE_FLAG);
+
+        return;
+    }
+
+    place n2_prev_mutex_plc = 
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBaseConst(n2_prev)));
+
+    family fid;
+
+    create (fid; n2_prev_mutex_plc; 0; 0; 1; 1;;) 
+        conslst_insert_before_n2_prev_exclusive(n1, n2);
+
+    sync (fid);
+}
+
+static thread void
+conslst_insert_before(
+    snet_conslst_node_t *n1, snet_conslst_node_t *n2)
+{
+    place n2_mutex_plc = 
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstNodeToBaseConst(n2)));
+
+    family fid;
+
+    create (fid; n2_mutex_plc; 0; 0; 1; 1;;) 
+        conslst_insert_before_n2_exclusive(n1, n2);
+
+    sync (fid);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static 
+snet_gwhandle_t* 
+conslst_insert_node(
+    snet_domain_t *snetd, 
+    snet_gwhandle_t *hnd, snet_record_t *rec)
+{
+    assert(snetd != NULL);
+    assert(rec != NULL);
+
+    // Create a new cons-list node.
+    snet_conslst_node_t *cnode = SNetConsLstNodeCreate(rec);
+
+    // Allocate mutex places for it (for the node itself and
+    // for its infimum.
+    snet_place_specs_t mutex_plc_specs =
+        SNET_DEFAULT_MUTEX_RTPLACE_SPECS_INITIALIZER;
+
+    SNetBaseTypeSetPlaces(
+        SNetConsLstNodeToBase(cnode),
+        SNetPlaceGetNull(), 
+        SNetPlaceAlloc(&mutex_plc_specs), SNetPlaceGetNull());
+
+    // Set the graph node of the new cons-node. It will be
+    // the root of the graph if 'hnd' is NULL (meaning the
+    // cons-node is for a new input record) or to the graph-node
+    // the cons-node of 'hnd' is (meaning the record is an output
+    // record from a box with multiplicity greater than 1).
+    if (hnd == NULL) {
+        SNetConsLstNodeSetGraphNode(
+            cnode,
+            SNetDomainGetGraphRoot(snetd));
+
+    } else {
+        snet_conslst_node_t *pcnode = SNetGwHndGetConsNode(hnd);
+
+        SNetConsLstNodeSetGraphNode(
+            cnode,
+            SNetConsLstNodeGetGraphNode(pcnode));
+
+        // Also in this case we need to check whether the parent
+        // cons-node has a dynamic index and if it does to add one
+        // also to the new cons-node and it has to be the same
+        // as the one of the parent. A special function is used
+        // for this to deal also with the ref-count the cons-node
+        // has for its dynamic index (see file conslist.utc for
+        // more details).
+        SNetConsLstNodeAddSameDynGIdxAs(cnode, pcnode);
+    }
+
+    // Now create a new handle!
+    snet_gwhandle_t *new_hnd = SNetGwHndCreate(snetd, cnode);
+
+    // Setup mutex place for the handle
+    SNetBaseTypeSetPlaces(
+        SNetHndToBase(SNetGwHndToBaseHandle(new_hnd)),
+        SNetPlaceGetNull(), 
+        SNetPlaceAlloc(&mutex_plc_specs), SNetPlaceGetNull());
+
+    // Finally before adding to the cons-list the node must be
+    // associated with its handle and its state must be set to WALKING.
+    SNetConsLstNodeSetHandle(cnode, new_hnd);
+    SNetConsLstNodeSetState(cnode, CONS_NODE_STATE_WALKING);
+
+    // Now we are ready to add the cons-node
+    // to the cons-list.
+    snet_conslst_t *conslst = SNetDomainGetConsList(snetd);
+
+    place conslst_mutex_plc = 
+        SNetPlaceToUTCPlace(
+            SNetBaseTypeGetMutexPlace(
+                SNetConsLstToBase(conslst)));
+
+    family fid;
+
+    if (hnd == NULL) {
+        create (fid; conslst_mutex_plc; 0; 0; 1; 1;;)
+            conslst_push_back(conslst, cnode);
+
+        sync(fid);
+
+    } else {
+        create (fid; conslst_mutex_plc; 0; 0; 1; 1;;)
+            conslst_insert_before(cnode, SNetGwHndGetConsNode(hnd));
+
+        sync(fid);
+    }
+    
+    return new_hnd;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's "public" functions */
+
+void SNetGwSetupNormalGNodeHndFuncs(snet_gnode_t *n)
+{
+    assert(n != NULL);
+    assert(n->type != GRAPH_NODE_TYPE_NOP);
+
+    snet_normal_gnode_t *normal = n->data.normal;
+
+    switch (n->type) {
+        case GRAPH_NODE_TYPE_NOP:
+            break;
+
+        case GRAPH_NODE_TYPE_BOX:
+            normal->hnd_func            = &gnode_hnd_box;
+            normal->walk_hnd_func       = NULL;
+            normal->walk_hnd_func_merge = NULL;
+            break;
+
+        case GRAPH_NODE_TYPE_SYNCCELL:
+            normal->hnd_func            = &gnode_hnd_synccell;
+            normal->walk_hnd_func       = &gnode_walk_hnd_synccell;
+            normal->walk_hnd_func_merge = NULL;
+            break;
+
+        case GRAPH_NODE_TYPE_FILTER:
+            normal->hnd_func            = &gnode_hnd_filter;
+            normal->walk_hnd_func       = &gnode_walk_hnd_filter;
+            normal->walk_hnd_func_merge = NULL;
+            break;
+
+        case GRAPH_NODE_TYPE_NAMESHIFT:
+            normal->hnd_func            = NULL;
+            normal->walk_hnd_func       = &gnode_walk_hnd_nameshift;
+            normal->walk_hnd_func_merge = &gnode_walk_hnd_nameshift_merge;
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_STAR:
+            normal->hnd_func            = NULL;
+            normal->walk_hnd_func       = &gnode_walk_hnd_star;
+            normal->walk_hnd_func_merge = &gnode_walk_hnd_star_merge;
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_SPLIT:
+            normal->hnd_func            = NULL;
+            normal->walk_hnd_func       = &gnode_walk_hnd_split;
+            normal->walk_hnd_func_merge = &gnode_walk_hnd_split_merge;
+            break;
+
+        case GRAPH_NODE_TYPE_COMB_PARALLEL:
+            normal->hnd_func            = NULL;
+            normal->walk_hnd_func       = &gnode_walk_hnd_parallel;
+            normal->walk_hnd_func_merge = NULL;
+            break;
+
+        case GRAPH_NODE_TYPE_EXTERN_CONNECTION:
+            normal->hnd_func            = &gnode_hnd_extern_conn;
+            normal->walk_hnd_func       = NULL;
+            normal->walk_hnd_func_merge = &gnode_walk_hnd_extern_conn_merge;
+            break;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* SNetGwxxx() thread functions */
+
+thread void
+SNetGwInit(
+    snet_ref_t snetd, 
+    snet_handle_t *hnd, snet_record_t *rec)
+{
+    assert(snetd != NULL_REF);
+    assert(rec != NULL);
+
+    // The handle is required when dealing with
+    // external connections; since these are only
+    // partially implemented for now we will always
+    // assume the handle to be NULL!!
+    assert(hnd == NULL);
+
+    snet_domain_t *snetd_ptr =
+        (snet_domain_t *)
+            SNetMemGetPtrWithType(snetd, DATABLK_TYPE_NET_DOMAIN);
+
+    if (snetd_ptr == NULL) {
+        /**
+         * !!TODO!!: Give warning for
+         * invalid type of reference!
+         */
+         return;
+    }
+
+    // Add a new cons-node (at the tail) and 
+    // create a new (local) handle for it.
+    snet_gwhandle_t *gwhnd = conslst_insert_node(snetd_ptr, NULL, rec);
+
+    // Create the "real" GW thread as
+    // a continuation!!!
+    family fid;
+    create<nosync> (fid;; 0; 0; 1; 1;;) walk(gwhnd, true);
+}
+
+/*----------------------------------------------------------------------------*/
+
+thread void
+SNetGwFork(snet_handle_t *hnd, snet_record_t *rec)
+{
+    assert(hnd != NULL);
+    assert(rec != NULL);
+
+    snet_gwhandle_t *gwhnd = 
+        (snet_gwhandle_t *) 
+            SNetHndCastToDerivedHandle(hnd);
+
+    // First deal with flow inheritance
+    apply_flow_inheritance(SNetGwHndGetConsNodeRecord(gwhnd), rec, false);
+ 
+    // Add a new cons-node (at the tail) and 
+    // create a new (local) handle for it.
+    gwhnd = conslst_insert_node(SNetGwHndGetDomain(gwhnd), gwhnd, rec);
+
+    // Create the "real" GW thread as
+    // a continuation!!!
+    family fid;
+    create<nosync> (fid;; 0; 0; 1; 1;;) walk(gwhnd, false);
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

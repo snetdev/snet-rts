@@ -1,0 +1,542 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : expression.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "expression.int.utc.h"
+#include "core/memmng.int.utc.h"
+
+/*---*/
+
+#include <stdarg.h>
+#include <math.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+struct expr {
+    snet_expr_type_t type;
+    snet_expr_op_t   op;
+
+    union {
+        int                ival;
+        bool               bval;
+        const snet_expr_t *expr;
+
+    } content[3];
+
+}; // struct expr
+
+/*---*/
+
+struct expr_list {
+    unsigned int   sz;
+    snet_expr_t  **exprs;
+
+}; // struct expr_list
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static funcions */
+
+static snet_expr_t*
+create_expr(snet_expr_type_t type, snet_expr_op_t op)
+{
+    snet_expr_t *e = (snet_expr_t *) SNetMemAlloc(sizeof(snet_expr_t));
+
+    e->type = type;
+    e->op   = op;
+
+    e->content[0].expr = NULL;
+    e->content[1].expr = NULL;
+    e->content[2].expr = NULL;
+
+    return e;
+}
+
+static snet_expr_t*
+create_binary_expr(
+    snet_expr_op_t op,
+    const snet_expr_t *a, const snet_expr_t *b)
+{
+    assert(a != NULL);
+    assert(b != NULL);
+
+    snet_expr_t *e = create_expr(SNET_EXPR_TYPE_BINARY, op);
+
+    e->content[0].expr = a;
+    e->content[1].expr = b;
+
+    return e;
+}
+
+static snet_expr_t* 
+create_unary_expr(snet_expr_op_t op, const snet_expr_t *a)
+{
+    assert(a != NULL);
+
+    snet_expr_t *e = create_expr(SNET_EXPR_TYPE_UNARY, op);
+
+    e->content[0].expr = a;
+    return e;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+int evaluate_unary_expr(
+    const snet_expr_t *expr, const snet_record_t *rec)
+{
+    switch (expr->op) {
+        case SNET_EXPR_OP_ABS:
+            return abs(SNetEEvaluateInt(expr->content[0].expr, rec));
+
+        case SNET_EXPR_OP_NOT:
+            return (int) !(SNetEEvaluateInt(expr->content[0].expr, rec));
+
+        default:
+            // !!!NOTE!!!: This should never happen.
+            // If it does there is a bug in the 
+            // expression "create" functions.
+            SNetReportError(
+                SNET_ERR_UNEXPECTED,
+                "tried to evaluate invalid unary expression");
+
+            SNetOnError();
+            break;
+    }
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------*/
+
+int evaluate_binary_expr(
+    const snet_expr_t *expr, const snet_record_t *rec)
+{
+    switch (expr->op) {
+        case SNET_EXPR_OP_MIN: {
+            int eval1 = SNetEEvaluateInt(expr->content[0].expr, rec);
+            int eval2 = SNetEEvaluateInt(expr->content[1].expr, rec);
+
+            return (eval1 > eval2 ? eval2 : eval1);
+        }
+
+        case SNET_EXPR_OP_MAX: {
+            int eval1 = SNetEEvaluateInt(expr->content[0].expr, rec);
+            int eval2 = SNetEEvaluateInt(expr->content[1].expr, rec);
+
+            return (eval1 < eval2 ? eval2 : eval1);
+        }
+
+        case SNET_EXPR_OP_ADD:
+            return SNetEEvaluateInt(expr->content[0].expr, rec) +
+                   SNetEEvaluateInt(expr->content[1].expr, rec); 
+
+        case SNET_EXPR_OP_MUL:
+            return SNetEEvaluateInt(expr->content[0].expr, rec) *
+                   SNetEEvaluateInt(expr->content[1].expr, rec);
+
+        case SNET_EXPR_OP_SUB:
+            return SNetEEvaluateInt(expr->content[0].expr, rec) -
+                   SNetEEvaluateInt(expr->content[1].expr, rec); 
+
+        case SNET_EXPR_OP_DIV:
+            return SNetEEvaluateInt(expr->content[0].expr, rec) /
+                   SNetEEvaluateInt(expr->content[1].expr, rec); 
+
+        case SNET_EXPR_OP_MOD:
+            return SNetEEvaluateInt(expr->content[0].expr, rec) %
+                   SNetEEvaluateInt(expr->content[1].expr, rec); 
+
+        case SNET_EXPR_OP_EQ:
+            return (int) (
+                SNetEEvaluateInt(expr->content[0].expr, rec) == 
+                SNetEEvaluateInt(expr->content[1].expr, rec));
+
+        case SNET_EXPR_OP_NE:
+            return (int) (
+                SNetEEvaluateInt(expr->content[0].expr, rec) != 
+                SNetEEvaluateInt(expr->content[1].expr, rec));
+
+        case SNET_EXPR_OP_GT:
+            return (int) (
+                SNetEEvaluateInt(expr->content[0].expr, rec) > 
+                SNetEEvaluateInt(expr->content[1].expr, rec));
+
+        case SNET_EXPR_OP_GE:
+            return (int) (
+                SNetEEvaluateInt(expr->content[0].expr, rec) >= 
+                SNetEEvaluateInt(expr->content[1].expr, rec));
+
+        case SNET_EXPR_OP_LT:
+            return (int) (
+                SNetEEvaluateInt(expr->content[0].expr, rec) < 
+                SNetEEvaluateInt(expr->content[1].expr, rec));
+
+        case SNET_EXPR_OP_LE:
+            return (int) (
+                SNetEEvaluateInt(expr->content[0].expr, rec) <= 
+                SNetEEvaluateInt(expr->content[1].expr, rec));
+
+        case SNET_EXPR_OP_AND:
+            return (int) (
+                SNetEEvaluateInt(expr->content[0].expr, rec) &&
+                SNetEEvaluateInt(expr->content[1].expr, rec));
+
+        case SNET_EXPR_OP_OR:
+            return (int) (
+                SNetEEvaluateInt(expr->content[0].expr, rec) || 
+                SNetEEvaluateInt(expr->content[1].expr, rec));
+
+        default:
+            // !!!NOTE!!!: This should never happen.
+            // If it does there is a bug in the 
+            // expression "create" functions.
+            SNetReportError(
+                SNET_ERR_UNEXPECTED,
+                "tried to evaluate invalid binary expression");
+
+            SNetOnError();
+            break;
+    }
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Expression functions */
+
+snet_expr_t*
+SNetEconsti(int val)
+{
+    snet_expr_t *e = create_expr(SNET_EXPR_TYPE_CONSTI, SNET_EXPR_OP_NONE);
+
+    e->content[0].ival = val;
+    return e;
+}
+
+snet_expr_t*
+SNetEconstb(bool val)
+{
+    snet_expr_t *e = create_expr(SNET_EXPR_TYPE_CONSTB, SNET_EXPR_OP_NONE);
+
+    e->content[0].bval = val;
+    return e;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_expr_t*
+SNetEtag(int name)
+{
+    snet_expr_t *e = create_expr(SNET_EXPR_TYPE_TAG, SNET_EXPR_OP_NONE);
+
+    e->content[0].ival = name;
+    return e;
+}
+
+snet_expr_t*
+SNetEbtag(int name)
+{
+    snet_expr_t *e = create_expr(SNET_EXPR_TYPE_BTAG, SNET_EXPR_OP_NONE);
+
+    e->content[0].ival = name;
+    return e;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_expr_t*
+SNetEadd(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_ADD, a, b);
+}
+
+snet_expr_t*
+SNetEsub(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_SUB, a, b);
+}
+
+snet_expr_t*
+SNetEmul(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_MUL, a, b);
+}
+
+snet_expr_t*
+SNetEdiv(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_DIV, a, b);
+}
+
+snet_expr_t*
+SNetEmod(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_MOD, a, b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_expr_t*
+SNetEabs(const snet_expr_t *a)
+{
+    return create_unary_expr(SNET_EXPR_OP_ABS, a);
+}
+
+snet_expr_t*
+SNetEmin(const snet_expr_t *a, snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_MIN, a, b);
+}
+
+snet_expr_t*
+SNetEmax(const snet_expr_t *a, snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_MAX, a, b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_expr_t*
+SNetEeq(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_EQ, a, b);
+}
+
+snet_expr_t*
+SNetEne(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_NE, a, b);
+}
+
+snet_expr_t*
+SNetEgt(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_GT, a, b);
+}
+
+snet_expr_t*
+SNetEge(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_GE, a, b);
+}
+
+snet_expr_t*
+SNetElt(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_LT, a, b);
+}
+
+snet_expr_t*
+SNetEle(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_LE, a, b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_expr_t*
+SNetEnot(const snet_expr_t *a)
+{
+    return create_unary_expr(SNET_EXPR_OP_NOT, a);
+}
+
+snet_expr_t*
+SNetEor(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_OR, a, b);
+}
+
+snet_expr_t*
+SNetEand(const snet_expr_t *a, const snet_expr_t *b)
+{
+    return create_binary_expr(SNET_EXPR_OP_AND, a, b);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_expr_t*
+SNetEcond(const snet_expr_t *a, const snet_expr_t *b, const snet_expr_t *c)
+{
+    assert(a != NULL);
+    assert(b != NULL);
+    assert(c != NULL);
+
+    snet_expr_t *e = create_expr(SNET_EXPR_TYPE_COND, SNET_EXPR_OP_NONE);
+
+    e->content[0].expr = a;
+    e->content[1].expr = b;
+    e->content[2].expr = c;
+
+    return e;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetEDestroy(snet_expr_t *expr)
+{
+    assert(expr != NULL);
+
+    if (expr->type == SNET_EXPR_TYPE_UNARY
+        || expr->type == SNET_EXPR_TYPE_BINARY
+        || expr->type == SNET_EXPR_TYPE_COND) {
+
+        for (unsigned int i=0; i < 3; i++) {
+            if (expr->content[i].expr != NULL)
+                SNetEDestroy((snet_expr_t *) expr->content[i].expr);
+        }
+    }
+
+    SNetMemFree(expr);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_expr_type_t
+SNetEGetType(const snet_expr_t *expr)
+{
+    assert(expr != NULL); return expr->type;
+}
+
+snet_expr_op_t
+SNetEGetOperator(const snet_expr_t *expr)
+{
+    assert(expr != NULL); return expr->op;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+int SNetEEvaluateInt(const snet_expr_t *expr, const snet_record_t *rec)
+{
+    assert(rec != NULL);
+
+    if (expr == NULL) {
+        return 0;
+    }
+
+    switch (expr->type) {
+        case SNET_EXPR_TYPE_CONSTI:
+            return expr->content[0].ival;
+
+        case SNET_EXPR_TYPE_CONSTB:
+            return (int) expr->content[0].bval;
+
+        case SNET_EXPR_TYPE_TAG:
+            return SNetRecGetTag(rec, expr->content[0].ival);
+            
+        case SNET_EXPR_TYPE_BTAG:
+            return SNetRecGetBTag(rec, expr->content[0].ival);
+
+        case SNET_EXPR_TYPE_UNARY:
+            return evaluate_unary_expr(expr, rec);
+
+        case SNET_EXPR_TYPE_BINARY:
+            return evaluate_binary_expr(expr, rec);
+
+        default:
+            break;
+    }
+
+    return 0;
+}
+
+bool SNetEEvaluateBool(const snet_expr_t *expr, const snet_record_t *rec)
+{
+    return (bool) SNetEEvaluateInt(expr, rec);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Expression list functions */
+
+snet_expr_list_t*
+SNetEListCreate(unsigned int sz, ...)
+{
+    snet_expr_list_t *lst =
+        (snet_expr_list_t *) SNetMemAlloc(sizeof(snet_expr_list_t));
+
+    if (sz == 0) {
+        lst->sz    = 0;
+        lst->exprs = NULL;
+
+        return lst;
+    }
+
+    lst->sz    = sz;
+    lst->exprs = (snet_expr_t **) SNetMemAlloc(sizeof(snet_expr_t *));
+
+    va_list  vargs;
+    va_start(vargs, sz);
+
+    for (unsigned int i=0; i < sz; i++)
+        lst->exprs[i] = va_arg(vargs, snet_expr_t *);
+
+    va_end(vargs);
+
+    return lst;
+}
+
+void SNetEListDestroy(snet_expr_list_t *lst)
+{
+    assert(lst != NULL);
+
+    for (unsigned int i=0; i < lst->sz; i++) {
+        if (lst->exprs[i] != NULL)
+            SNetEDestroy(lst->exprs[i]);
+    }
+
+    if (lst->exprs != NULL)
+        SNetMemFree(lst->exprs);
+
+    SNetMemFree(lst);
+}
+
+/*----------------------------------------------------------------------------*/
+
+unsigned int
+SNetEListGetSize(const snet_expr_list_t *lst)
+{
+    assert(lst != NULL); return lst->sz;
+}
+
+const snet_expr_t*
+SNetEListGetExpr(const snet_expr_list_t *lst, unsigned int idx)
+{
+    assert(lst != NULL);
+    assert(idx < lst->sz);
+
+    return lst->exprs[idx];
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

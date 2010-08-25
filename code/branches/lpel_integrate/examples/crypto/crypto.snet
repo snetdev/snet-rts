@@ -1,0 +1,40 @@
+/* 
+ * A simple dictionary-based brute force cracker 
+ *
+ */
+
+net crypto ( {dictionary, 
+              entries, 
+              <dictionary_size>, 
+              <num_entries>, 
+              <num_nodes>, 
+              <num_branches>}
+             -> 
+             {word, 
+              <entry>}
+             |
+              {<false>, 
+              <entry>})
+{
+	box split((entries, <num_entries>) -> (password, salt, <entry>));
+
+	net load_balancer( {<entry>,<num_nodes>,<num_branches>}
+                    -> {<entry>,<node>,<branch>})
+      connect 
+        [ {<entry>,<num_nodes>,<num_branches>} 
+           -> 
+           {<entry>,
+            <node = entry % num_nodes>,
+            <branch = (entry / num_nodes) % num_branches>}]; 
+
+
+	net cracker( {password, salt, dictionary, <dictionary_size>, <branch>}
+              -> {word} | {<false>})
+  {
+		 box algorithm( (password, salt, dictionary, <dictionary_size>) 
+                   -> (word) | (<false>)); 
+	} connect 
+      algorithm!<branch>;	
+
+} connect 
+    (split .. load_balancer .. cracker!@<node>)@0;

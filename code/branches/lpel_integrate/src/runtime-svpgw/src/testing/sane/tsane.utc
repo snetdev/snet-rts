@@ -1,0 +1,65 @@
+#include "tsane.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const unsigned int SANE_n_hw_places = 0;
+const unsigned int SANE_n_sw_places = 1;
+
+/*---*/
+
+SANE_SERVICE_SW(foo, 0, 1);
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+int SANE_init(int argc, const char **argv)
+{
+    // Return '0' to indicate that initialization
+    // was succesfull.
+    return 0;
+}
+
+bool SANE_main(int argc, const char **argv)
+{
+    //SNetGlobalInitializeSane();
+
+    // Return 'false' to indicate that we do not implement
+    // our own "shell" or "event loop", etc... and that the
+    // default (implemented within libsep_sane.a) should be used.
+    return false;
+}
+
+void SANE_terminate()
+{
+    //SNetGlobalDestroySane();
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SANE_init_hw_area(int area_id)
+{
+    /**
+     * Nothing to do here. However it is required
+     * for us to provide this function.
+     */
+}
+
+void SANE_configure_hw_area(
+    sane_module_t *module,
+    int area_id, const char *function)
+{
+    /**
+     * Nothing to do here. However it is required
+     * for us to provide this function.
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+

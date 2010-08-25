@@ -1,0 +1,71 @@
+BIN_NAME_debug      := $(BIN_NAME).dbg
+IMPLIB_NAME_debug   := lib$(IMPLIB_NAME)_dbg.imp.a
+
+#---
+
+SRC_FILES_LST_debug := $(SRC_FILES_LST)
+XDR_FILES_LST_debug := $(XDR_FILES_LST)
+
+#---
+
+INTERM_DIR_debug        :=
+TARGET_DIR_debug        := bin
+TARGET_INCL_DIR_debug   := .
+IMPLIB_TARGET_DIR_debug := lib
+
+#---
+
+PREREQUISITES_debug     :=
+BUILD_TOOLSET_debug     :=
+
+#-------------------------------------------------------------------------------
+
+MAKEDEP_FLAGS_debug           :=
+MAKEDEP_INCL_DIRS_FLAGS_debug :=
+
+#---
+
+UTC2CPP_FLAGS_debug           := --cpp:-DDEBUG
+UTC2CPP_INCL_DIRS_FLAGS_debug :=
+
+#---
+
+CXX_FLAGS_debug           := -gdwarf-2 -DDEBUG -O0
+CXX_INCL_DIRS_FLAGS_debug :=
+
+#---
+
+XDRHC_FLAGS_debug :=
+XDRCC_FLAGS_debug :=
+
+#---
+
+AR_FLAGS_debug    :=
+ARINX_FLAGS_debug :=
+
+#-------------------------------------------------------------------------------
+
+LD_FLAGS_debug := 
+LIB_DIRS_debug :=
+
+#---
+
+LD_LIBS_FLAGS_debug := -lsnets_dbg -lcommon_dbg
+
+LD_LIBS_FLAGS_debug += -lsvp-snetgwsane_dbg
+LD_LIBS_FLAGS_debug += -lsvp-snetgwcore_dbg
+
+LD_LIBS_FLAGS_debug += -Wl,--whole-archive
+LD_LIBS_FLAGS_debug += -lsep_common_dbg
+LD_LIBS_FLAGS_debug += -Wl,--no-whole-archive
+
+LD_LIBS_FLAGS_debug += -lsep_sane_dbg -lutcptl_dbg -lpthread
+
+#---
+
+LD_LIB_DIRS_FLAGS_debug := \
+	$(foreach d,$(LIB_DIRS_debug),-L$(d))
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

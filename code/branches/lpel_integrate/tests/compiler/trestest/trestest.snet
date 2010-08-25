@@ -1,0 +1,60 @@
+/*****************************************************************
+ *
+ * Test for typedefs and typesigdefs.
+ * Should print 10 warnings in dead code removal phase.
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ *
+ * Date:   24.05.2007
+ *
+ * Run:
+ *         $ snetc -b2:tres trestest.snet
+ *
+ ****************************************************************/
+
+type norefA_t = {C};
+type refA_t = {A};
+type refB_t = {B};
+type refC_t = {<T>}|{C};
+type refnorefA_t = {B};
+type refnorefB_t = {<T>}|{C};
+
+typesig refA = refA_t | {B} -> refB_t;
+typesig norefA = refnorefA_t -> refnorefB_t;
+
+typesig refB = refB_t -> refC_t;
+
+net trestest{
+
+    type refB_t = {B};
+
+    type norefC_t = refC_t;
+
+    typesig norefC = refA_t -> {C};
+	
+    net net1A (refA){
+        type norefC_t = norefC_t;
+ 
+	net net2A (refB, {A} -> refB_t){
+           net net3A (refB, {A} -> refB_t){
+
+           }
+           connect extnetA;
+        }
+        connect net3A;
+
+	net norefnet2B (norefA){
+           typesig norefB = refA_t -> {C};
+        }
+        connect norefextnetB;
+
+    }
+    connect net2A;
+
+    typesig refA = refA, refA_t -> {C};
+
+    net net1B (refA)
+    connect net1A;
+
+}
+connect net1B;

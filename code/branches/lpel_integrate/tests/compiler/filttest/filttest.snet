@@ -1,0 +1,21 @@
+
+/*****************************************************************
+ *
+ * Simple test for testing filter parsing and code-generation of SNetc
+ *
+ * Author: Jukka Julku, VTT Technical Research Centre of Finland
+ *
+ * Date:   04.06.2008
+ * 
+ * Run:
+ *         $ snetc -b1 example.snet
+ * 
+ ****************************************************************/
+
+net filttest ({A,<T>} -> {A,<T>}){
+	
+}
+connect [ {A,<T>} -> if <T == 0> then {<T=1>};{A} 
+                     else if <T == 1> then {<T=0>} 
+                     else {<T=2>} 
+        ] .. [ ] .. [ {A,<T>} -> {<T=1>} ];

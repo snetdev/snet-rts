@@ -1,0 +1,403 @@
+#include "trun.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const char *ARG_ERRS_TXT[] = {
+    "Invalid use of \"--help\" argument",
+    "Argument \"-net\" has already been specified",
+    "Missing network name for \"-net\" argument",
+    "Argument \"-net\" must be specified when using \"--net-args\""
+};
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void help()
+{
+    printf("\nUSAGE: trun [options] ID\n\n");
+
+    printf("where ID a number indicating the unit test to be run or the name\n");
+    printf("of the S-Net network to run if '-net' is specified (see below).\n");
+
+    printf("and options include:\n");
+    printf("    -net         Specifies that ID is a name for an S-Net network\n");
+    printf("                 as oposed to a unit test id (the network with the\n");
+    printf("                 given name is run as a result of using this option).\n");
+    printf("                 Network names consist of the name of a directory under\n");
+    printf("                 the 'src/testing/snets/' directory (e.g. using 'ts00' as a\n");
+    printf("                 network name will run the S-Net generated from the source\n");
+    printf("                 under the 'src/testing/snets/ts00/' directory).\n");
+    printf("    --net-args   Specifies that all arguments after this one will\n");
+    printf("                 be forwarded to the network to be run (it requires\n");
+    printf("                 the '-net' argument to have been specified.\n\n");
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC    
+    printf("    --show-mem   Prints info about the memory usage at exit (used to detect memory leaks).\n\n");
+#endif
+
+    printf("    --help       Displays this message.\n\n");
+
+    printf("List of unit tests:\n");
+    printf("      id       description\n");
+    printf("    ------------------------------------------------------------------------------------------------------------\n");
+    printf("       0       Test of runtime initialization and cleanup.\n");
+    printf("       1       Test of index vector.\n");
+    printf("       2       Test of \"buffer\" data structure.\n");
+    printf("       3       Test of \"cons-list\" structure.\n");
+    printf("       4       Test of \"list\" data structure.\n");
+    printf("       5       Test of type encoding.\n");
+    printf("       6       Test of \"record\" data structure.\n");
+    printf("       7       Test of \"references\" management.\n");
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_HAS_SEP
+    printf("       8       Test of \"remote creates\".\n\n");
+#else
+    printf("\n");
+#endif
+
+    printf("     100       Test of \"graph\" structure for network \"ts00\"\n");
+    printf("               build from sources in src/testing/snets/ts00\n");
+    printf("     101       Test of \"graph\" structure for network \"ts01\"\n");
+    printf("               build from sources in src/testing/snets/ts01\n");
+    printf("     102       Test of \"graph\" structure for network \"ts02\"\n");
+    printf("               build from sources in src/testing/snets/ts02\n\n");
+    printf("     103       Test of \"graph\" structure for network \"ocrad\"\n");
+    printf("               build from sources in src/testing/snets/ocrad\n\n");
+
+    printf("List of networks:\n");
+    printf("     name     description                                                  source directory\n");
+    printf("    ------------------------------------------------------------------------------------------------------------\n");
+    printf("     ts00     A..(B..(C || D))..E                                          src/testing/snets/ts00\n");
+    printf("     ts01     A..(B..(C || D))*{e, <T>} if <T < 5>..E!<T>                  src/testing/snets/ts01\n");
+    printf("     ts02     A..(B..(C || D))*{e, <T>} if <T < 5>..E!<T>..[|{e}, {f}|]    src/testing/snets/ts02\n");
+    printf("     ocrad    SNet version of the GNU/OCR application                      src/testing/snets/ocrad\n");
+
+    printf("\n\n");
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static bool run_unit_test(unsigned int tid)
+{
+    bool ret = true;
+
+    SNetGlobalGwInit();
+
+    printf(
+        "Started at "
+        "place %" PRISNETREF "\n",
+        (snet_ref_t) SNetPlaceGetMine());
+
+    printf("Running test %u...\n", tid);
+
+    /*---*/
+
+    switch (tid) {
+        case 0:
+            printf("Runtime Initialization and Cleanup Test!!\n\n");
+            break;
+
+        case 1:
+            printf("Index Vector Test!!\n\n");
+            idxvec_test();
+            break;
+
+        case 2:
+            printf("Buffer Test!!\n\n");
+            buffer_test();
+            break;
+
+        case 3:
+            printf("Cons-List Test!!\n\n");
+            conslst_test();
+            break;
+
+        case 4:
+            printf("List Test!!\n\n");
+            list_test();
+            break;
+
+        case 5:
+            printf("Type Encoding Test!!\n\n");
+            typeencode_test();
+            break;
+
+        case 6:
+            printf("Record Test!!\n\n");
+            record_test();
+            break;
+
+        case 7:
+            printf("References Management Test!!\n\n");
+            references_test();
+            break;
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_HAS_SEP
+        case 8:
+            printf("Remote Creates Test!!\n\n");
+            remote_create_test();
+            break;
+#endif
+
+        /*---*/
+
+        case 100: {
+            printf("Graph Test (net = \"ts00\")!!\n\n");
+
+            snet_domain_t *snetd = SNetSetup__ts00();
+            graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            SNetDomainDestroy(snetd);
+
+            break;
+        }
+
+        case 101: {
+            printf("Graph Test (net = \"ts01\")!!\n\n");
+
+            snet_domain_t *snetd = SNetSetup__ts01();
+            graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            SNetDomainDestroy(snetd);
+
+            break;
+        }
+
+        case 102: {
+            printf("Graph Test (net = \"ts02\")!!\n\n");
+
+            snet_domain_t *snetd = SNetSetup__ts02();
+            graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            SNetDomainDestroy(snetd);
+
+            break;
+        }
+
+        case 103: {
+            printf("Graph Test (net = \"ocrad\")!!\n\n");
+
+            snet_domain_t *snetd = SNetSetup__ocrad();
+            graph_test((snet_domain_t *) SNetUnmaskPointer(snetd));
+            SNetDomainDestroy(snetd);
+
+            break;
+        }
+
+        default:
+            ret = false;
+            break;
+    }
+    
+    /*---*/
+
+    SNetGlobalGwDestroy();
+
+    return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static int
+run_net(const char *name, int argc, const char **argv, bool *invalid_name)
+{
+    int (*net_main_fptr)(int, char **) = NULL;
+
+    if (strcmp(name, "ts00") == 0)
+        net_main_fptr = &SNetMain__ts00;
+    else if (strcmp(name, "ts01") == 0)
+        net_main_fptr = &SNetMain__ts01;
+    else if (strcmp(name, "ts02") == 0)
+        net_main_fptr = &SNetMain__ts02;
+    else if (strcmp(name, "ocrad") == 0)
+        net_main_fptr = &SNetMain__ocrad;
+
+    if (net_main_fptr == NULL) {
+        (*invalid_name) = true;
+        return 0;
+    }
+
+    printf("Running network \"%s\"...\n\n", name);
+
+    return (*net_main_fptr)(argc, (char **)(argv));
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+thread void main(int argc, const char **argv)
+{
+    const int    largc = argc;
+    const char **largv = argv;
+
+    bool net_arg  = false;
+    bool help_arg = false;
+
+    const char *arg_err  = NULL;
+    const char *inv_arg  = NULL;
+
+    signed int  unit_test_id   = -1;
+    const char *net_name       =  NULL;
+    signed int  net_args_start =  0;
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC    
+    bool show_mem_use_at_exit = false;
+#endif
+
+    /*---*/
+
+    for (int i=1; i < largc; i++) {
+        const char *arg = largv[i];
+
+        if (strcmp(arg, "--help") == 0) {
+            if (largc != 2) {
+                arg_err = ARG_ERRS_TXT[0];
+                break;
+            }
+
+            help_arg = true;
+            break;
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC    
+        } else if (strcmp(arg, "--show-mem") == 0) {
+            show_mem_use_at_exit = true;
+#endif
+
+        } else if (strcmp(arg, "-net") == 0) {
+            if (net_arg) {
+                arg_err = ARG_ERRS_TXT[1];
+                break;
+            }
+                
+            net_arg = true;
+
+        } else if (strcmp(arg, "--net-args") == 0) {
+            if (!net_arg) {
+                arg_err = ARG_ERRS_TXT[3];
+                break;
+            }
+
+            net_args_start = i;
+            break;
+
+        } else {
+            if (unit_test_id != -1 || net_name != NULL) {
+                inv_arg = arg;
+                break;
+            }
+
+            if (net_arg) {
+                net_name = arg;
+
+            } else {
+                char *endptr = NULL;
+
+                unit_test_id = (int) strtol(arg, &endptr, 0);
+
+                if (endptr == arg) {
+                    inv_arg = arg;
+                    break;
+                }
+            }
+        }
+    }
+
+    /*---*/
+
+    printf("!! S-Net GW Runtime for SVP - Testing !!\n");
+
+    if (arg_err != NULL) {
+        printf("\nERROR: %s.\n", arg_err);
+        help();
+
+        return;
+    }
+
+    if (inv_arg != NULL) {
+        printf("\nERROR: Invalid argument \"%s\".\n", inv_arg);
+        help();
+
+        return;
+    }
+
+    if (help_arg) {
+        help();
+        return;
+    }
+
+    if (!net_arg) {
+        if (unit_test_id == -1) {
+            printf("\nERROR: Missing unit test id.\n");
+            help();
+
+            return;
+        }
+
+        if (!run_unit_test(unit_test_id)) {
+            printf("\nERROR: Invalid  test id (%u)\n", unit_test_id);
+            help();
+
+            return;
+        }
+
+        printf("\n\nDONE!!\n");
+
+    } else {
+        if (net_name == NULL) {
+            printf("\nERROR: Missing network name.\n");
+            help();
+
+            return;
+        }
+
+        int          net_argc = 1;
+        const char **net_argv = argv + (argc - 1);
+
+        if (net_args_start > 0) {
+            net_argc = argc - net_args_start;
+            net_argv = argv + net_args_start;
+        }
+        
+        (*net_argv) = NULL;
+
+        bool invalid_net_name = false;
+
+        int  net_return_val =
+            run_net(net_name, net_argc, net_argv, &invalid_net_name);
+
+        if (invalid_net_name) {
+            printf("\nERROR: Invalid network name (%s)\n\n", net_name);
+            help();
+
+            return;
+        }
+
+        printf(
+            "\n\nNetwork \"%s\" "
+            "terminated with exit code %d\n\n", net_name, net_return_val);
+    }
+
+#ifdef SVPSNETGWRT_MONITOR_MALLOC    
+    if (show_mem_use_at_exit) {
+        printf("Memory usage at exit:\n");
+        printf("  Number of allocations      = %lu\n", SNetMemGetAllocCount());
+        printf("  Amount of allocated memory = %zu\n", SNetMemGetAllocSize());
+    }
+#endif
+
+    printf("\n\n");
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+

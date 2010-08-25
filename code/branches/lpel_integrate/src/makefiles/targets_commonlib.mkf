@@ -1,0 +1,52 @@
+#
+# $Id$
+#
+#
+
+
+###############################################################################
+#
+# Collection of targets
+#
+
+targets_commonlib_devel   := libcommon.a
+targets_commonlib_prod    := libcommon.prod.a
+targets_commonlib_default := $(targets_commonlib_devel)
+
+
+###############################################################################
+#
+# Collection of target directories
+#
+
+targetdir_commonlib       := src/lib
+
+
+###############################################################################
+#
+# Collection of additional files to be cleaned
+#
+
+clean_commonlib           := 
+clean_commonlib_devel     := 
+clean_commonlib_prod      := 
+
+
+###############################################################################
+#
+# Collection of source directories
+#
+
+commonlib       = dbug getoptions
+
+
+###############################################################################
+#
+# Collection of commonlib object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+dbug            = dbug.o
+
+getoptions      = getoptions.o

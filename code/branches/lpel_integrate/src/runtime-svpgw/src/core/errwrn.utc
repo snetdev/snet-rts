@@ -1,0 +1,397 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : errwrn.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "common.int.utc.h"
+#include "list.int.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdarg.h>
+
+/*---*/
+
+#define SNET_RUNTIME_TITLE "!!S-Net Runtime (GraphWalker)!!"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * Stream were errors and warnings are
+ * being ouput.
+ */
+static FILE *ERR_STREAM = NULL;
+
+/**
+ * Lists of arrays that contain error
+ * and warning messages.
+ */
+static snet_list_t *ERRMSG_SOURCES = NULL;
+static snet_list_t *WRNMSG_SOURCES = NULL;
+
+/*---*/
+/**
+ * Because not all parts of the "error-subsystem" can be
+ * initialized immediately (because other sub-systems are
+ * required to be initialized first; e.g. cannot initialize
+ * the 2 lists above without the memory management sub-system
+ * being initialized), the initialization happens in 2 phazes
+ * with multiple calls to "SNetErrorSubSystemInit()".
+ *
+ * When initialized at phaze 1 only errors from the "core"
+ * library can be handled (which is what is needed because at
+ * that phaze any errors would only come from initializing other
+ * sub-systems of the "core" library). When initialized at phaze
+ * 2 the whole "multiple error source" mechanism (registration and
+ * use) is operational.
+ *
+ * This counter here keeps track at which initializatio phaze we
+ * the sub-system is (with 0 meaning uninitialized).
+ */
+static unsigned int INIT_PHAZE = 0;
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Errors */
+
+static const char* ERR_MSGS[] = {
+    // 0x0000: SNET_ERR_NONE
+    "No errors occured!!!",
+
+    // 0x0001: SNET_ERR_UNEXPECTED
+    "An unexpected runtime error occured (%s)",
+
+    // 0x0002: SNET_ERR_INIT
+    "Initialization of the runtime failed due to %s",
+
+    // 0x0003: SNET_ERR_MEMORY
+    "An error occured during a memory management operation (%s)",
+
+    // 0x0004: SNET_ERR_IO
+    "An error occured during an i/o operation (%s)",
+
+    // 0x0005: SNET_ERR_PLACE
+    "An error occured during a 'place' management operation (%s)"
+
+}; // ERR_MSGS[]
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static const char* WRN_MSGS[] = {
+    // 0x0000: SNET_WRN_NONE
+    "No warnings issued!!!",
+
+    // 0x0001: SNET_WRN_UNSUPPORTED
+    "%s not supported (%s)",
+
+    // 0x0002: SNET_WRN_IGNORED
+    "Ignored %s (%s)",
+
+    // 0x0003: SNET_WRN_REC_FDATA_TOO_LARGE
+    "The data size of a record field for which a "
+    "copy was requested exceeds the maximum allowed (2^32) "
+    "size; data will be lost during the copy process which most "
+    "certainly will result in further errors and generally undefined behaviour",
+    
+    // 0x0004: SNET_WRN_REC_FDATA_COPY_FAILED
+    "Failed to create a copy of a record's field "
+    "data (%s); note that due to this further errors "
+    "might occure and generally undefined behaviour is possible",
+
+    // 0x0005: SNET_WRN_NULL_BLI_FUNCTION
+    "Unable to retrieve the \"%s\" function for "
+    "Box Language Interface with id '%u' (not registered?); %s",
+
+    // 0x0006: SNET_WRN_REC_ITEM_NOT_FOUND
+    "There was a '%s' request for %s with name %d which does not "
+    "exist in the record; ignoring and returning default value of '%s'"
+
+}; // WRN_MSGS[]
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void
+report_error(unsigned int code, const char **msgv, va_list vargs)
+{
+    if (ERR_STREAM == NULL || code == 0) {
+        return;
+    }
+
+    if (msgv == ERR_MSGS) {
+        fprintf(
+            ERR_STREAM, 
+            SNET_RUNTIME_TITLE ": ERROR(0x%x): ", code);
+    } else {
+        fprintf(
+            ERR_STREAM, 
+            SNET_RUNTIME_TITLE ": ERROR(%s-0x%x): ", msgv[0], code);
+    }
+
+    vfprintf(ERR_STREAM, msgv[code], vargs);
+    fprintf(ERR_STREAM, "\n");
+}
+
+static void
+report_warning(unsigned int code, const char **msgv, va_list vargs)
+{
+    if (ERR_STREAM == NULL || code == 0) {
+        return;
+    }
+
+    if (msgv == WRN_MSGS) {
+        fprintf(
+            ERR_STREAM, 
+            SNET_RUNTIME_TITLE ": WARNING(0x%x): ", code);
+    } else {
+        fprintf(
+            ERR_STREAM, 
+            SNET_RUNTIME_TITLE ": WARNING(%s-0x%x): ", msgv[0], code);
+    }
+
+    vfprintf(ERR_STREAM, msgv[code], vargs);
+    fprintf(ERR_STREAM, "\n");
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetErrorSubSystemInit()
+{
+    switch (INIT_PHAZE) {
+        case 0:
+            ERR_STREAM = stderr;
+            break;
+
+        case 1:
+            ERRMSG_SOURCES = SNetListCreate(sizeof(const char **), 4);
+            WRNMSG_SOURCES = SNetListCreate(sizeof(const char **), 4);
+
+            break;
+    }
+
+    if (INIT_PHAZE < 2) {
+        INIT_PHAZE++;
+    }
+}
+
+void SNetErrorSubSystemDestroy()
+{
+    if (INIT_PHAZE == 0) {
+        return;
+    }
+
+    switch (INIT_PHAZE) {
+        case 2:
+            SNetListDestroy(ERRMSG_SOURCES);
+            SNetListDestroy(WRNMSG_SOURCES);
+
+            ERRMSG_SOURCES = NULL;
+            WRNMSG_SOURCES = NULL;
+
+            break;
+
+        case 1:
+            ERR_STREAM = NULL;
+            break;
+    }
+
+    --INIT_PHAZE;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void SNetGlobalSetErrorStream(FILE *stream)
+{
+    ERR_STREAM = stream;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetReportError(unsigned int code, ...)
+{
+    assert(code < sizeof(ERR_MSGS) / sizeof(const char *));
+
+    va_list vargs;
+
+    va_start(vargs, code);
+    report_error(code, ERR_MSGS, vargs);
+    va_end(vargs);
+}
+
+void SNetReportWarning(unsigned int code, ...)
+{
+    assert(code < sizeof(WRN_MSGS) / sizeof(const char *));
+
+    va_list  vargs;
+
+    va_start(vargs, code);
+    report_warning(code, WRN_MSGS, vargs);
+    va_end(vargs);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetReportErrorCustom(const char *fmt, ...)
+{
+    if (ERR_STREAM == NULL) {
+        return;
+    }
+
+    va_list  vargs;
+    va_start(vargs, fmt);
+
+    fprintf(
+        ERR_STREAM, 
+        SNET_RUNTIME_TITLE ": ERROR: ");
+
+    vfprintf(ERR_STREAM, fmt, vargs);
+    fprintf(ERR_STREAM, "\n");
+
+    va_end(vargs);
+}
+
+void SNetReportWarningCustom(const char *fmt, ...)
+{
+    if (ERR_STREAM == NULL) {
+        return;
+    }
+
+    va_list  vargs;
+    va_start(vargs, fmt);
+
+    fprintf(
+        ERR_STREAM, 
+        SNET_RUNTIME_TITLE ": WARNING: ");
+
+    vfprintf(ERR_STREAM, fmt, vargs);
+    fprintf(ERR_STREAM, "\n");
+
+    va_end(vargs);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+int
+SNetRegisterErrorSource(const char **msgv)
+{
+    assert(msgv != NULL);
+    return SNetListPushBack(ERRMSG_SOURCES, &msgv);
+}
+
+int
+SNetRegisterWarningSource(const char **msgv)
+{
+    assert(msgv != NULL);
+    return SNetListPushBack(WRNMSG_SOURCES, &msgv);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void 
+SNetReportNonCoreError(unsigned int srcid, unsigned int code, ...)
+{
+    va_list  vargs;
+    va_start(vargs, code);
+
+    SNetReportNonCoreErrorV(srcid, code, vargs);
+
+    va_end(vargs);
+}
+
+void 
+SNetReportNonCoreWarning(unsigned int srcid, unsigned int code, ...)
+{
+    va_list  vargs;
+    va_start(vargs, code);
+
+    SNetReportNonCoreWarningV(srcid, code, vargs);
+
+    va_end(vargs);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void 
+SNetReportNonCoreErrorV(
+    unsigned int srcid, unsigned int code, va_list vargs)
+{
+    assert(srcid == 0);
+    assert(SNetListContainsItemWithId(ERRMSG_SOURCES, srcid));
+
+    const char **msgv = NULL;
+
+    if (!SNetListItemGetValue(ERRMSG_SOURCES, srcid, &msgv)) {
+        return;
+    }
+
+    assert(msgv != NULL);
+    report_error(code, msgv, vargs);
+}
+
+void 
+SNetReportNonCoreWarningV(
+    unsigned int srcid, unsigned int code, va_list vargs)
+{
+    assert(srcid != 0);
+    assert(SNetListContainsItemWithId(WRNMSG_SOURCES, srcid));
+
+    const char **msgv = NULL;
+
+    if (!SNetListItemGetValue(WRNMSG_SOURCES, srcid, &msgv)) {
+        return;
+    }
+
+    assert(msgv != NULL);
+    report_warning(code, msgv, vargs);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void SNetOnError()
+{
+    abort();
+}
+
+void SNetOnWarning()
+{
+#if SVPSNETGWRT_DEBUG > 4
+    abort();
+#endif
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

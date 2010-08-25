@@ -1,0 +1,81 @@
+#
+# $Id$
+#
+#
+
+
+###############################################################################
+#
+# Collection of targets
+#
+
+ifeq ($(DISTRIBUTED),yes)
+targets_runtime_devel     := libsnetmpi.so 
+targets_runtime_prod      := libsnetmpi.prod.so 
+targets_runtime_default   := $(targets_runtime_devel)
+else
+targets_runtime_devel     := libsnet.so 
+targets_runtime_prod      := libsnet.prod.so 
+targets_runtime_default   := $(targets_runtime_devel)
+endif
+
+###############################################################################
+#
+# Collection of target directories
+#
+
+targetdir_runtime         := lib
+
+
+###############################################################################
+#
+# Collection of additional files to be cleaned
+#
+
+clean_runtime             :=
+clean_runtime_devel       :=
+clean_runtime_prod        :=
+
+
+###############################################################################
+#
+# Collection of source directories
+#
+
+ifeq ($(DISTRIBUTED),yes)
+runtime         = common entities netinterface observer utility threading \
+                    interfacing distribution
+else
+runtime         = common entities netinterface observer utility threading \
+                    interfacing
+endif
+
+
+
+###############################################################################
+#
+# Collection of runtime object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+common          = handle.o record.o expression.o info.o
+
+entities        = filter.o syncro.o out.o box.o alias.o\
+                  serial.o collectors.o parallel.o star.o split.o
+
+utility		= list.o debug.o stack.o tree.o bitmap.o hashtable.o queue.o \
+                  debugtime.o debugcounters.o
+
+threading       = threading.o extended_semaphore.o stream_layer.o buffer.o\
+                  ubuffer.o
+
+interfacing     = interface_functions.o
+
+netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o\
+                  networkinterface.o
+
+observer	= observers.o
+
+distribution    = distribution.o datastorage.o message.o fun.o imanager.o \
+                  id.o omanager.o routing.o reference.o 

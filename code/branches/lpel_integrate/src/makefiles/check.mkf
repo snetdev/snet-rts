@@ -1,0 +1,41 @@
+#
+# $Id$
+#
+
+
+#######################################################################################
+#
+# Comment:
+#
+# This makefile is never called directly by the user. Instead, it is included at the
+# end of other makefiles to provide the necessary rules for a consistent checking
+# mechanism.
+#
+# Currently we check:
+#  - whether we need to re-configure first
+#  - whether we need to create a new configure script first
+
+.PHONY: checks
+
+checks: $(CONFIGURED)
+
+%: %.ac
+	@$(ECHO) ""
+	@$(ECHO) "************************************************************"
+	@$(ECHO) "* Unable to build S-Net $(SUBPROJECT) !"
+	@$(ECHO) "* Please, run autoconf and autoheader first !"
+	@$(ECHO) "* You may do so by typing:"
+	@$(ECHO) "*  make -C $(PROJECT_ROOT) config"
+	@$(ECHO) "************************************************************"
+	@$(ECHO) ""
+	@$ exit 1
+
+%: %.in
+	@$(ECHO) ""
+	@$(ECHO) "************************************************************"
+	@$(ECHO) "* Unable to build S-Net $(SUBPROJECT) !"
+	@$(ECHO) "* Please, run $(PROJECT_ROOT)/configure first !"
+	@$(ECHO) "************************************************************"
+	@$(ECHO) ""
+	@$ exit 1
+

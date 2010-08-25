@@ -1,0 +1,16 @@
+class SNet;
+
+
+external classtype;
+  #pragma freefun "SNetHndDestroy"
+  #pragma copyfun "SNetHndCopy"
+  #pragma linkwith "snet"
+
+provide all;
+
+external void out( SNet &handle, int variant, ...);
+  #pragma linkname "SAC4SNet_out"
+  #pragma linksign [1,2]
+
+
+

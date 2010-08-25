@@ -1,0 +1,18 @@
+use Structures : all;
+use StdIO : all;
+use SDLdisplay : all;
+use Fractal_module : {doubleArrayToRGB};
+
+int main()
+{
+  res = doubleArrayToRGB( FibreScanDoubleArray( stdin));
+  d = initDisplay( shape( res));
+  drawArray( d, res);
+ 
+  wait = fgetc( stdin);
+
+  destroyDisplay( d);
+
+  return( 0);
+}
+

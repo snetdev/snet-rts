@@ -1,0 +1,33 @@
+<metadata>
+  <boxdefault>
+    <interface value="SAC4SNet" />
+    <SACmodule>boxes</SACmodule>
+  </boxdefault>
+</metadata>
+
+net mandelbrot_pipe
+{
+  box genPlane( (params) -> (plane));
+  box escTime( (plane) -> (ts));
+  box escVals( (plane) -> (vs));
+  box normItCount( (ts, vs) -> (nvs));
+  box toRGB( (nvs) -> (rgb_img));
+  
+  net show {
+    box createDisplay( -> (disp));
+    box displayImg( (disp, rgb_img) -> (disp) | (<fin>));
+  } connect (createDisplay | []) 
+         .. ( [|{rgb_img},{disp}|] 
+              .. ( displayImg | [] )
+            )*{<fin>};
+}
+connect genPlane 
+     .. [{plane} -> {plane, <T>}; {plane, <V>}] 
+     .. ( ([{<T>} -> {}] .. escTime) 
+          |
+          ([{<V>} -> {}] .. escVals))
+     .. [|{ts}, {vs}|]*{ts,vs}
+     .. normItCount
+     .. toRGB
+     .. show;
+

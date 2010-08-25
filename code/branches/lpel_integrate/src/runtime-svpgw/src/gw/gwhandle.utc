@@ -1,0 +1,240 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : gwhandle.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "gwhandle.int.utc.h"
+#include "graph.int.utc.h"
+
+/*---*/
+ 
+#include "core/handle.int.utc.h"
+#include "core/plcmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+struct gwhandle {
+    snet_handle_t        base;
+    snet_conslst_node_t *cons_node;
+
+    snet_place_t         box_plc;
+    void                *synccell_state;
+    bool                 synccell_definite_match;
+
+}; // struct gwhandle
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* "VTBL" functions */
+
+static void*
+vtbl_cast_fun(const snet_handle_t *hnd)
+{
+    return (void *)(hnd);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_record_t*
+vtbl_recget_fun(const void *hnd)
+{
+    return SNetConsLstNodeGetRecord(
+        ((snet_gwhandle_t *)(hnd))->cons_node);
+}
+
+static const snet_box_sign_t*
+vtbl_boxsignget_fun(const void *hnd)
+{
+    const snet_gnode_t *gnode =
+        SNetConsLstNodeGetGraphNode(((snet_gwhandle_t *)(hnd))->cons_node);
+
+    if (gnode == NULL) {
+        return NULL;
+    }
+
+    if (SNetGNodeGetType(gnode) != GRAPH_NODE_TYPE_BOX) {
+        return NULL;
+    }
+
+    return SNetGNodeGetBoxTypeSignature(gnode);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static snet_place_t 
+vtbl_snetdhostplcget_fun(const void *hnd)
+{
+    return SNetDomainGetHostPlace(
+        SNetGwHndGetDomain((snet_gwhandle_t *)(hnd)));
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetGwHndInit(
+    snet_gwhandle_t     *hnd,
+    snet_domain_t       *snetd,
+    snet_conslst_node_t *cons_node)
+{
+    assert(hnd != NULL);
+    assert(snetd != NULL);
+    assert(cons_node != NULL);
+
+    SNetHndInit(
+        &hnd->base,
+        &vtbl_cast_fun,
+        &vtbl_recget_fun,
+        &vtbl_boxsignget_fun,
+        &vtbl_snetdhostplcget_fun);
+ 
+    hnd->cons_node               = cons_node;
+    hnd->box_plc                 = SNetPlaceGetNull();
+    hnd->synccell_state          = NULL;
+    hnd->synccell_definite_match = false;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_gwhandle_t*
+SNetGwHndCreate(
+    snet_domain_t  *snetd,
+    snet_conslst_node_t *cons_node)
+{
+    snet_gwhandle_t *hnd =
+        (snet_gwhandle_t *)
+            SNetMemAlloc(sizeof(snet_gwhandle_t));
+
+    SNetGwHndInit(hnd, snetd, cons_node);
+
+    return hnd;
+}
+
+void
+SNetGwHndDestroy(snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL);
+
+    SNetHndDispose(&hnd->base);
+    SNetMemFree(hnd);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_domain_t*
+SNetGwHndGetDomain(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); 
+    
+    return SNetConsLstGetDomain(
+        SNetConsLstNodeGetList(hnd->cons_node));
+}
+
+snet_conslst_node_t*
+SNetGwHndGetConsNode(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->cons_node;
+}
+
+snet_record_t*
+SNetGwHndGetConsNodeRecord(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL);
+    return SNetConsLstNodeGetRecord(hnd->cons_node);
+}
+
+void*
+SNetGwHndGetSyncCellState(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->synccell_state;
+}
+
+bool
+SNetGwHndGetSyncCellDefiniteMatch(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->synccell_definite_match;
+}
+
+snet_place_t
+SNetGwHndGetBoxSelectedPlace(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return hnd->box_plc;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetGwHndSetConsNode(snet_gwhandle_t *hnd, snet_conslst_node_t *cnode)
+{
+    assert(hnd != NULL);
+    assert(cnode != NULL);
+
+    hnd->cons_node = cnode;
+}
+
+void
+SNetGwHndSetSyncCellState(snet_gwhandle_t *hnd, void *state)
+{
+    assert(hnd != NULL);
+    hnd->synccell_state = state;
+}
+
+void
+SNetGwHndSetSyncCellDefiniteMatch(snet_gwhandle_t *hnd, bool value)
+{
+    assert(hnd != NULL);
+    hnd->synccell_definite_match = value;
+}
+
+void
+SNetGwHndSetBoxSelectedPlace(snet_gwhandle_t *hnd, snet_place_t plc)
+{
+    assert(hnd != NULL);
+    hnd->box_plc = plc;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_handle_t*
+SNetGwHndToBaseHandle(snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return &hnd->base;
+}
+
+const snet_handle_t*
+SNetGwHndToBaseHandleConst(const snet_gwhandle_t *hnd)
+{
+    assert(hnd != NULL); return &hnd->base;
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

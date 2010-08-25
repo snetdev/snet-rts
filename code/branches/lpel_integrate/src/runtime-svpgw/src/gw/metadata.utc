@@ -1,0 +1,216 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : metadata.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "metadata.int.utc.h"
+
+/*---*/
+
+#include "core/memmng.int.utc.h"
+
+/*---*/
+
+#include <string.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+typedef struct metadata {
+    snet_metadata_type_t type;
+    bool                 expl_destroy;
+
+    union {
+        snet_net_metadata_t    *net;
+        snet_box_metadata_t    *box;
+        snet_global_metadata_t *global;
+
+    } scope;
+
+} snet_metadata_t;
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+#ifdef SVPSNETGWRT_COMP_GCC
+#if SVPSNETGWRT_COMP_VER < 40000
+#pragma weak SNetMetaDataLoad
+#pragma weak SNetMetaDataDestroySpecialized
+#endif
+#endif
+
+extern snet_metadata_t*
+SNetMetaDataLoad(snet_metadata_type_t type, ...)
+{
+    // This is the "default" implementation
+    // which returns "no metadata" for
+    // everything.
+    return NULL;
+}
+ 
+extern void
+SNetMetaDataDestroySpecialized(snet_metadata_t *meta)
+{
+    // This is the "default" implementation
+    // which does nothing (because the "default"
+    // implementation of "SNetMetaDataLoad()" above
+    // returns no metadata).
+}
+
+#ifdef SVPSNETGWRT_COMP_GCC
+#if SVPSNETGWRT_COMP_VER >= 40000
+#pragma weak SNetMetaDataLoad
+#pragma weak SNetMetaDataDestroySpecialized
+#endif
+#endif
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_metadata_type_t
+SNetMetaDataGetType(const snet_metadata_t *meta)
+{
+    assert(meta != NULL);
+    return ((snet_metadata_t *)(SNetUnmaskPointer(meta)))->type;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_metadata_t*
+SNetMetaDataWrap(
+    snet_metadata_type_t type, 
+    const void *meta, bool explicit_destroy)
+{
+    snet_metadata_t *gmeta =
+        (snet_metadata_t *)
+            SNetMemAlloc(sizeof(snet_metadata_t));
+
+    gmeta->type         = type;
+    gmeta->expl_destroy = explicit_destroy;
+
+    switch (type) {
+        case SNET_METADATA_TYPE_NET:
+            gmeta->scope.net = (snet_net_metadata_t *)(meta);
+            break;
+
+        case SNET_METADATA_TYPE_BOX:
+            gmeta->scope.box = (snet_box_metadata_t *)(meta);
+            break;
+
+        case SNET_METADATA_TYPE_GLOBAL:
+            gmeta->scope.global = (snet_global_metadata_t *)(meta);
+            break;
+            
+    }
+
+    return (snet_metadata_t *)(SNetMaskPointer(gmeta));
+}
+
+/*----------------------------------------------------------------------------*/
+
+void*
+SNetMetaDataCastToSpecialized(const snet_metadata_t *meta)
+{
+    assert(meta != NULL);
+
+    meta = (snet_metadata_t *)(SNetUnmaskPointer(meta));
+    
+    switch (meta->type) {
+        case SNET_METADATA_TYPE_NET:
+            return meta->scope.net;
+
+        case SNET_METADATA_TYPE_BOX:
+            return meta->scope.box;
+
+        case SNET_METADATA_TYPE_GLOBAL:
+            return meta->scope.global;
+    }
+
+    // !!NOTE!!: Control should never
+    // reach this point!!
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Private to the runtime only functions */
+
+void
+SNetMetaDataDestroy(snet_metadata_t *meta)
+{
+    assert(meta != NULL);
+
+    if (meta->expl_destroy) {
+        SNetMetaDataDestroySpecialized(
+            (snet_metadata_t *)(SNetMaskPointer(meta)));
+    }
+
+    SNetMemFree(meta);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* "box name" manipulation */
+
+snet_box_name_t
+SNetMetaDataBoxNameCopy(snet_box_name_t bn)
+{
+    size_t  sz  = (strlen((const char *)(bn)) + 1) * sizeof(char);
+    char   *nbn = (char *) SNetMemAlloc(sz);
+
+    SNetMemCopy((const char *)(bn), nbn, sz);
+
+    return (snet_box_name_t)(nbn);
+}
+
+snet_box_name_t
+SNetMetaDataBoxNameXCreate(snet_box_name_t bn)
+{
+    size_t len = 
+        strlen((const char *)(bn)) + 
+        strlen(SVPSNETGWRT_BOX_XNAME_EXT);
+
+    char *bxn = (char *) SNetMemAlloc((len + 1) * sizeof(char));
+
+    strcpy(bxn, (const char *)(bn));
+    strcat(bxn, SVPSNETGWRT_BOX_XNAME_EXT);
+
+    return (snet_box_name_t)(bxn);
+}
+
+void
+SNetMetaDataBoxNameDestroy(snet_box_name_t bn)
+{
+    if (((void *)(bn)) != NULL)
+        SNetMemFree((void *)(bn));
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

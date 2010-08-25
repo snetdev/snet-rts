@@ -1,0 +1,107 @@
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Build toolsets!!
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Default
+
+MAKE    := make
+MAKEDEP := cpp
+UTC2CPP := $(call NONSTD_LIB,UTCPTL,BIN,utc2cpp)
+CC      := gcc
+CXX     := g++
+AR      := ar
+ARINX   := ranlib
+LD      := g++
+
+#-------------------------------------------------------------------------------
+
+MAKEDEP_FLAGS           := -MM -MP
+MAKEDEP_OUTF_FLAG       := -MF
+MAKEDEP_INCLD_FLAG      := -I
+MAKEDEP_TARGET_FLAG     := -MT
+MAKEDEP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),-I$(d))
+
+UTC2CPP_FLAGS           := --dollar-directives
+UTC2CPP_OUTF_FLAG       := -o
+UTC2CPP_INCL_DIRS_FLAGS := $(foreach d,$(INCLUDE_DIRS),--cpp:-I$(d))
+
+CC_FLAGS               := -c -Wall -fno-strict-aliasing
+CC_OUTF_FLAG           := -o
+CC_INCLD_FLAG          := -I
+CC_INCL_DIRS_FLAGS     := $(foreach d,$(INCLUDE_DIRS),-I$(d))
+
+CXX_FLAGS               := -c -Wall -fno-exceptions -fno-strict-aliasing
+CXX_OUTF_FLAG           := -o
+CXX_INCLD_FLAG          := -I
+CXX_INCL_DIRS_FLAGS     := $(foreach d,$(INCLUDE_DIRS),-I$(d))
+
+AR_FLAGS                := ru
+ARINX_FLAGS             :=
+
+#---
+
+#ifneq ($(strip $(WITH_NO_SEP)),true)
+MAKEDEP_FLAGS           +=       -DUTC_CONFIG_DISTRIBUTABLE
+UTC2CPP_FLAGS           += --cpp:-DUTC_CONFIG_DISTRIBUTABLE
+CXX_FLAGS               +=       -DUTC_CONFIG_DISTRIBUTABLE
+#endif
+
+#-------------------------------------------------------------------------------
+
+LD_FLAGS                := -shared-libgcc
+LD_OUTF_FLAG            := -o
+LD_LIB_DIRS_FLAGS       := $(foreach d,$(LIB_DIRS),-L$(d))
+LD_LIBS_FLAGS           :=
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Microblaze (mb)
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.petalinux
+
+MAKE_mb    := $(MAKE)
+MAKEDEP_mb := $(MAKEDEP)
+UTC2CPP_mb := $(UTC2CPP)
+ARINX_mb   := $(ARINX)
+
+# These are defined in Makefile.opt.petalinux
+# CXX_mb   := 
+# AR_mb    :=
+# LD_mb    :=
+
+#-------------------------------------------------------------------------------
+
+MAKEDEP_FLAGS_mb           := $(MAKEDEP_FLAGS)
+MAKEDEP_OUTF_FLAG_mb       := $(MAKEDEP_OUTF_FLAG)
+MAKEDEP_INCLD_FLAG_mb      := $(MAKEDEP_INCLD_FLAG)
+MAKEDEP_TARGET_FLAG_mb     := $(MAKEDEP_TARGET_FLAG)
+MAKEDEP_INCL_DIRS_FLAGS_mb := $(MAKEDEP_INCL_DIRS_FLAGS)
+
+UTC2CPP_FLAGS_mb           := $(UTC2CPP_FLAGS)
+UTC2CPP_OUTF_FLAG_mb       := $(UTC2CPP_OUTF_FLAG)
+UTC2CPP_INCL_DIRS_FLAGS_mb := $(UTC2CPP_INCL_DIRS_FLAGS)
+
+CXX_FLAGS_mb               := $(CFLAGS)
+CXX_FLAGS_mb               += $(CXX_FLAGS) 
+CXX_OUTF_FLAG_mb           := $(CXX_OUTF_FLAG)
+CXX_INCLD_FLAG_mb          := $(CXX_INCLD_FLAG)
+CXX_INCL_DIRS_FLAGS_mb     := $(CXX_INCL_DIRS_FLAGS)
+
+AR_FLAGS_mb                := $(AR_FLAGS)
+ARINX_FLAGS_mb             := $(ARINX_FLAGS)
+
+#-------------------------------------------------------------------------------
+
+LIB_DIRS_mb := $(LIB_DIRS)
+
+#---
+
+LD_FLAGS_mb                :=
+LD_OUTF_FLAG_mb            := -o
+LD_LIB_DIRS_FLAGS_mb       := $(foreach d,$(LIB_DIRS_mb),-L$(d))
+LD_LIBS_FLAGS_mb           :=
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

@@ -1,0 +1,14 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+ 
+
+
+net minic 
+{
+  box dec((A) -> (A));
+  box init(-> (X));
+} connect (dec | init);
+

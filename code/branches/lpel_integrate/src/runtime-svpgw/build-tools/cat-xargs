@@ -1,0 +1,77 @@
+#!/bin/sh
+
+#------------------------------------------------------------------------------
+# Shows the help text
+
+show_usage()
+{
+    echo "USAGE: cat-xargs [options] FILE..."
+    echo
+    echo "where FILE the file(s) to concatenate."
+    echo
+    echo "and options include:"
+    echo "    -comment <'character'>"
+    echo "            Specifies that lines starting with <character>"
+    echo "            should be treated as comments and not displayed."
+    echo
+    echo "    --help  Display available options."
+    echo   
+
+    exit $1
+}
+
+#------------------------------------------------------------------------------
+#Parse command line and setup options
+
+in_files=""
+comment_chr=""
+existing_in_files=""
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+    -comment)
+        shift
+        comment_chr=$1
+        ;;
+    --help)
+        show_usage 0
+        ;;
+    *)
+        in_files="$in_files $1"
+        ;;
+    esac
+    shift
+done
+
+#------------------------------------------------------------------------------
+# Main
+
+if [ "$in_files" == "" ]
+then
+   echo "Error: No input file(s)."
+   echo
+   show_usage 1
+fi
+
+for f in $in_files
+do
+    if [ -f $f ]
+    then
+        existing_in_files="$existing_in_files $f"
+    fi
+done
+
+if [ "$existing_in_files" != "" ]
+then
+    if [ "$comment_chr" == "" ]
+    then
+        cat $existing_in_files | xargs
+    else
+        grep -h -v -e "^$comment_chr." $existing_in_files | xargs
+    fi
+fi
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+

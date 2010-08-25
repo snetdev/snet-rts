@@ -1,0 +1,81 @@
+ifeq ($(strip $(WITH_NO_SEP)),true)
+$(info You should not be building \
+the Test SNet-SANE with no full SEP \
+support from the underlying SVP platform)
+endif
+
+#---
+
+PROJ_NAME   := sane
+BIN_NAME    := t$(PROJ_NAME)
+IMPLIB_NAME := t$(PROJ_NAME)
+
+#---
+
+CONFIGS     := debug release
+CONFIGS     += debug_mb release_mb
+
+#---
+
+SOURCE_DIR  := ../../../src/testing/sane
+SCRIPTS_DIR := ../../../build-tools
+
+#---
+
+INTERM_DIR        := intermediate
+TARGET_DIR        := ..
+TARGET_INCL_DIR   := $(SOURCE_DIR)
+IMPLIB_TARGET_DIR := ..
+
+#---
+
+SRC_FILES_LST   := SrcFiles.lst
+XDR_FILES_LST   := XdrFiles.lst
+
+#---
+
+BUILD_SPEC_OPT_DIR := ../make-config
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# The following file that is being included contains functions that allow 
+# to deal with libraries / frameworks that are not usually found installed
+# on a system (e.g. uTC-PTL library) and from this point on that functionality 
+# will be required.
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.nonstdlib
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Include directories
+
+INCLUDE_DIRS :=                                 \
+	$(SOURCE_DIR)                               \
+	$(SOURCE_DIR)/../units                      \
+	$(SOURCE_DIR)/../snets                      \
+	                                            \
+	$(SOURCE_DIR)/../../include/public          \
+	$(SOURCE_DIR)/../../include/intern          \
+	$(SOURCE_DIR)/../../include/snetc           \
+                                                \
+	$(SOURCE_DIR)/../../include/public/snetgwrt \
+	$(SOURCE_DIR)/../../include/intern/snetgwrt \
+                                                \
+	$(call NONSTD_LIB,UTCPTL,INCLUDE)
+
+#-------------------------------------------------------------------------------
+# Library directories
+
+LIB_DIRS :=              \
+	$(TARGET_DIR)/lib    \
+	$(TARGET_DIR)/../lib \
+	$(call NONSTD_LIB,UTCPTL,LIB)
+	
+#-------------------------------------------------------------------------------
+# Build Toolsets!
+#
+include $(BUILD_SPEC_OPT_DIR)/Makefile.opt.toolsets
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

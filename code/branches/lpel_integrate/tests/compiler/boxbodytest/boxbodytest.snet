@@ -1,0 +1,32 @@
+
+/*****************************************************************
+ *
+ * Example snet source file.
+ * Just for testing parser of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
+ * Run:
+ *
+ *         $ snetc -b1 boxbodytest.snet
+ * 
+ ****************************************************************/
+
+// This is a test comment line 
+
+box bodytest ((A)->(B)) {
+  <<< C | 
+        /* This is a code part of box */
+        // This is a test comment line inside code
+        int i;
+        for(i = 0; i < 10; ++i) {
+          printf("i=%d\n", i);
+        }
+  >>>
+}
+
+net boxbodytest
+connect bodytest;
+

@@ -1,0 +1,86 @@
+#include "snetgwcore.utc.h"
+
+/*---*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void buffer_test()
+{
+    unsigned int i = 0;
+    unsigned int test_sz = 100000;
+    unsigned int int_buf_item = 111;
+
+    snet_buffer_t *buf = SNetBufCreate(true, 32);
+
+    for (i=0; i < test_sz; i++) {
+        if (SNetBufPush(buf, &int_buf_item))
+            printf("Pushed item %u\n", i);
+        else
+            printf("Failed to push item %u\n", i);
+
+        printf(
+            "Dyn = %u, Empty = %u, Size = %u, Capacity = %u\n",
+            SNetBufIsDynamic(buf),
+            SNetBufIsEmpty(buf),
+            SNetBufGetSize(buf),
+            SNetBufGetCapacity(buf));
+    }
+
+    i=0;
+    printf("\n/*---*/\n\n");
+
+    while (!SNetBufIsEmpty(buf)) {
+        unsigned int *item = (unsigned int *) SNetBufPop(buf);
+
+        assert(item != NULL);
+        printf("Poped item %u: %u\n", i, *item);
+        
+        printf(
+            "Dyn = %u, Empty = %u, Size = %u, Capacity = %u\n",
+            SNetBufIsDynamic(buf),
+            SNetBufIsEmpty(buf),
+            SNetBufGetSize(buf),
+            SNetBufGetCapacity(buf));
+
+        i++;
+    }
+
+    printf("\n/*---*/\n\n");
+
+    for (i=0; i < test_sz; i++) {
+        if (SNetBufPush(buf, &int_buf_item)) {
+            printf("Pushed item %u\n", i);
+        } else {
+            srand(SNetBufGetSize(buf));
+
+            unsigned int n = 
+                ((unsigned int) rand()) % SNetBufGetSize(buf);
+
+            printf("Failed to push item %u --- Popping %u items\n", i, n);
+            
+            for (unsigned int j=0; j < n; j++) {
+                unsigned int *item = (unsigned int *) SNetBufPop(buf);
+
+                assert(item != NULL);
+                printf("Poped item %u: %u\n", j, *item);
+            }
+        }
+
+        printf(
+            "Dyn = %u, Empty = %u, Size = %u, Capacity = %u\n",
+            SNetBufIsDynamic(buf),
+            SNetBufIsEmpty(buf),
+            SNetBufGetSize(buf),
+            SNetBufGetCapacity(buf));
+    }
+    
+    SNetBufDestroy(buf);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/

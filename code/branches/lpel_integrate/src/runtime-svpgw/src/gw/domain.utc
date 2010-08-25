@@ -1,0 +1,419 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : domain.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    :
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "domain.int.utc.h"
+#include "graph.int.utc.h"
+#include "conslist.int.utc.h"
+
+/*---*/
+
+#include "core/list.int.utc.h"
+#include "core/basetype.int.utc.h"
+#include "core/plcmng.int.utc.h"
+#include "core/memmng.int.utc.h"
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Structures for the different types of domains */
+
+typedef struct {
+    snet_base_t     base;
+    snet_gnode_t   *graph_root;
+    snet_conslst_t *cons_list;
+
+    snet_buffer_t       *out_buf;
+    snet_netout_tfptr_t  out_tfun;
+
+} snet_domain_net_t;
+
+/*---*/
+
+typedef struct {
+    snet_ref_t   ref;
+    snet_place_t plc;
+
+} snet_domain_alias_t;
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+struct domain {
+    snet_domain_type_t type;
+
+    union {
+        snet_domain_net_t   net;
+        snet_domain_alias_t alias;
+
+    } data;
+
+}; // struct domain
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's static functions */
+
+static void
+destroy_net_domain(snet_domain_t *snetd)
+{
+    /**
+     * !!TODO!!: Make sure that all activity regarding
+     * this domain has stopped (meaning there are no
+     * active GW instances for this domain)??
+     */
+
+    if (snetd->data.net.out_buf != NULL)
+        SNetBufDestroy(snetd->data.net.out_buf);
+
+    SNetConsLstDestroy(snetd->data.net.cons_list);
+    
+    if (snetd->data.net.graph_root != NULL)
+        SNetGNodeDestroy(snetd->data.net.graph_root, true);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void
+destroy_alias_domain(snet_domain_t *snetd)
+{
+    SNetPlaceFree(snetd->data.alias.plc);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Sub-system initialization related functions (internal only) */
+
+void
+SNetDomainSubSystemInit()
+{
+    /**
+     * Nothing to do!!!
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetDomainSubSystemDestroy()
+{
+    /**
+     * Nothing to do!!!
+     */
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Public functions used by both the runtime and user code */
+
+snet_domain_t*
+SNetDomainCreate(
+    snet_graphctor_fptr_t gctor,
+    snet_netout_tfptr_t netout_tfun)
+{
+    assert(gctor != NULL);
+
+    snet_domain_t *snetd  =
+        (snet_domain_t *)
+            SNetMemAlloc(sizeof(snet_domain_t));
+
+    SNetDomainInitNet(snetd, gctor, netout_tfun);
+    SNetMemCreateRef(snetd, DATABLK_TYPE_NET_DOMAIN);
+
+    return (snet_domain_t *) SNetMaskPointer(snetd);
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetDomainDestroy(snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+
+    snetd = (snet_domain_t *) SNetUnmaskPointer(snetd);
+
+    switch (snetd->type) {
+        case DOMAIN_TYPE_NET:
+            destroy_net_domain(snetd);
+            break;
+
+        case DOMAIN_TYPE_ALIAS:
+            destroy_alias_domain(snetd);
+            break;
+    }
+
+    SNetMemDestroyRef(SNetMemGetRef(snetd));
+    SNetMemFree(snetd);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+// void
+// SNetDomainReplaceGraphNode(
+//    snet_domain_t *snetd,
+//    const snet_idxvec_t *idx,
+//    const snet_graphctor_fptr_t gctor)
+// {
+//     /**
+//      * Not implemented yet
+//      */
+// }
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Private functions only used within the runtime */
+
+void
+SNetDomainInitNet(
+    snet_domain_t *snetd,
+    snet_graphctor_fptr_t gctor,
+    snet_netout_tfptr_t netout_tfun)
+{
+    assert(snetd != NULL);
+    assert(gctor != NULL);
+
+    SNetBaseTypeInit(&snetd->data.net.base);
+    SNetBaseTypeSetPlacesDefault(&snetd->data.net.base);
+
+    snetd->type                = DOMAIN_TYPE_NET;
+    snetd->data.net.graph_root = SNetGNodeCreate(GRAPH_NODE_TYPE_NOP);
+
+    // Call the graph constructor to setup the
+    // the graph!
+    snet_gnode_t *glnode =
+        (snet_gnode_t *) 
+            SNetUnmaskPointer((*gctor)(
+                (snet_gnode_t *) 
+                    SNetMaskPointer(snetd->data.net.graph_root)));
+
+    if (glnode == NULL) {
+        SNetReportGwError(SNET_GWERR_GCTOR_INV_RETVAL);
+        SNetOnError();
+
+        return;
+    }
+
+    // Enumerate the network
+    SNetGraphEnumerate(snetd->data.net.graph_root);
+
+    // This will be used for all the 
+    // mutex places that need to be allocated.
+    snet_place_specs_t mutex_plc_specs = 
+        SNET_DEFAULT_MUTEX_RTPLACE_SPECS_INITIALIZER;
+
+    // Init the Cons-List and allocate
+    // a mutex place for it as well.
+    snetd->data.net.cons_list = SNetConsLstCreate(snetd);
+
+    SNetBaseTypeSetPlaces(
+        SNetConsLstToBase(snetd->data.net.cons_list),
+        SNetPlaceGetNull(), 
+        SNetPlaceAlloc(&mutex_plc_specs), SNetPlaceGetNull());
+
+    // Now setup the fields related to network
+    // output handling. First thing to do is to
+    // check what type of node is the last node 
+    // on the network because if it is a node for
+    // an external connection (the output is supposed
+    // to be forwarded) then there is no need for output
+    // buffers, output handling functions, etc..
+    if (SNetGNodeGetType(glnode) == GRAPH_NODE_TYPE_EXTERN_CONNECTION) {
+        snetd->data.net.out_buf  = NULL;
+        snetd->data.net.out_tfun = NULL;
+
+        if (netout_tfun != NULL) {
+            // Give warning that the output handling
+            // thread function will be ignored.
+            SNetReportWarning(
+                SNET_WRN_IGNORED,
+                "network output handling thread function, given for "
+                "network with an \"external connection\" as its last node",
+                "the thread function will be will never be invoked");
+
+            SNetOnWarning();
+        }
+
+    } else {
+        snetd->data.net.out_buf  = SNetBufCreate(true, 0);
+        snetd->data.net.out_tfun = netout_tfun;
+
+        if (netout_tfun == NULL) {
+            // Warn that no output handling function
+            // has been specified! 
+            SNetReportGwWarning(SNET_GWWRN_NULL_NETOUT_TFUN);
+            SNetOnWarning();
+        }
+
+        // The output buffer needs a mutex place.
+        SNetBaseTypeSetPlaces(
+            SNetBufToBase(snetd->data.net.out_buf),
+            SNetPlaceGetNull(), 
+            SNetPlaceAlloc(&mutex_plc_specs), SNetPlaceGetNull());
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetDomainInitAlias(
+    snet_domain_t *snetd, 
+    const snet_domain_t *snetd_orig)
+{
+    assert(snetd != NULL);
+    assert(snetd_orig != NULL);
+
+    snetd->type = DOMAIN_TYPE_ALIAS;
+
+    switch (snetd_orig->type) {
+        case DOMAIN_TYPE_NET:
+            snetd->data.alias.ref = 
+                SNetMemGetRef(snetd_orig);
+
+            snetd->data.alias.plc = 
+                SNetPlaceCopy(
+                    SNetBaseTypeGetOwnerPlace(
+                        &snetd_orig->data.net.base));
+
+            break;
+
+        case DOMAIN_TYPE_ALIAS:
+            snetd->data.alias.ref = 
+                snetd_orig->data.alias.ref;
+
+            snetd->data.alias.plc =
+                SNetPlaceCopy(snetd_orig->data.alias.plc);
+
+            break;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_domain_t*
+SNetDomainCreateAlias(const snet_domain_t *snetd_orig)
+{
+    snet_domain_t *snetd  =
+        (snet_domain_t *)
+            SNetMemAlloc(sizeof(snet_domain_t));
+
+    SNetDomainInitAlias(snetd, snetd_orig);
+    SNetMemCreateRef(snetd, DATABLK_TYPE_NET_DOMAIN);
+
+    return (snet_domain_t *) SNetMaskPointer(snetd);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_domain_type_t
+SNetDomainGetType(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL); return snetd->type;
+}
+
+snet_place_t
+SNetDomainGetHostPlace(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+
+    switch (snetd->type) {
+        case DOMAIN_TYPE_NET:
+            return SNetBaseTypeGetOwnerPlace(&snetd->data.net.base);
+
+        case DOMAIN_TYPE_ALIAS:
+            return snetd->data.alias.plc;
+    }
+
+    return SNetPlaceGetNull();
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_conslst_t*
+SNetDomainGetConsList(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+    assert(snetd->type == DOMAIN_TYPE_NET);
+    
+    return snetd->data.net.cons_list;
+}
+
+snet_gnode_t*
+SNetDomainGetGraphRoot(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+    assert(snetd->type == DOMAIN_TYPE_NET);
+    
+    return snetd->data.net.graph_root;
+}
+
+snet_buffer_t*
+SNetDomainGetOutBuffer(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+    assert(snetd->type == DOMAIN_TYPE_NET);
+
+    return snetd->data.net.out_buf;
+}
+
+snet_netout_tfptr_t
+SNetDomainGetOutThreadFunction(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+    assert(snetd->type == DOMAIN_TYPE_NET);
+
+    return snetd->data.net.out_tfun;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_base_t*
+SNetDomainToBase(snet_domain_t *snetd)
+{
+    assert(snetd != NULL); 
+    assert(snetd->type == DOMAIN_TYPE_NET);
+    
+    return &snetd->data.net.base;
+}
+
+const snet_base_t*
+SNetDomainToBaseConst(const snet_domain_t *snetd)
+{
+    assert(snetd != NULL);
+    assert(snetd->type == DOMAIN_TYPE_NET);
+
+    return &snetd->data.net.base;
+}
+
+/*------------------------------ END OF FILE ---------------------------------*/
+/*----------------------------------------------------------------------------*/
+

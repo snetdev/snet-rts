@@ -1,0 +1,305 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : recfdatamng.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    : This files implements the record field data management
+                     sub-system.
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+$ifndef __STDC_LIMIT_MACROS 
+$define __STDC_LIMIT_MACROS
+$endif
+
+/*---*/
+
+#include "recfdatamng.int.utc.h"
+
+/*---*/
+
+#include <inttypes.h>
+
+/*----------------------------------------------------------------------------*/
+
+/**
+ * 'snet_rec_fdata_descriptor_t' type
+ */
+struct rec_fdata_descriptor {
+    void          *dptr;
+    snet_bli_id_t  blid;
+};
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static inline snet_rec_fdata_descriptor_t*
+ref2dcptr(snet_ref_t ref)
+{
+    snet_rec_fdata_descriptor_t *dcptr = 
+        (snet_rec_fdata_descriptor_t *)
+            SNetMemGetPtrWithType(ref, DATABLK_TYPE_REC_FDATA_DCPTR);
+
+    if (dcptr == NULL) {
+        // !!TODO!!: Report invalid ref type
+        // warning!!!
+    }
+
+    return dcptr;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static void 
+decrease_dcptr_refcnt(snet_rec_fdata_descriptor_t *dcptr)
+{
+    if (SNetMemDecreaseRefCount(dcptr) > 1) {
+        return;
+    }
+
+    snet_bli_freefptr_t freefun = SNetBliGetFreeFun(dcptr->blid);
+
+    if (freefun == NULL && dcptr->dptr != NULL) {
+        SNetReportWarning(
+            SNET_WRN_NULL_BLI_FUNCTION,
+            "free",
+            dcptr->blid,
+            "This is a pottential cause for "
+            "memory leaks and undefined behaviour");
+
+        SNetOnWarning();
+        return;
+    }
+
+    if (dcptr->dptr != NULL)
+        (*freefun)(dcptr->dptr);
+
+    SNetMemDestroyRef(SNetMemGetRef(dcptr));
+    SNetMemFree(dcptr);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetRecFieldDataDescriptorInit(
+    snet_rec_fdata_descriptor_t *rfdd, void *data, snet_bli_id_t blid)
+{
+    assert(rfdd != NULL);
+
+    rfdd->dptr = data;
+    rfdd->blid = blid;
+
+    SNetMemIncreaseRefCount(rfdd);
+}
+
+/*----------------------------------------------------------------------------*/
+ 
+snet_ref_t
+SNetRecFieldDataDescriptorCreate(void *data, snet_bli_id_t blid)
+{
+    snet_rec_fdata_descriptor_t *dcptr =
+        (snet_rec_fdata_descriptor_t *)
+            SNetMemAlloc(sizeof(snet_rec_fdata_descriptor_t));
+
+    SNetRecFieldDataDescriptorInit(dcptr, data, blid);
+
+    return SNetMemCreateRef(dcptr, DATABLK_TYPE_REC_FDATA_DCPTR);
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void*
+SNetRecFieldDataDescriptorGetDPtr(snet_ref_t rfdd)
+{
+    assert(rfdd != NULL_REF);
+    return ref2dcptr(rfdd)->dptr;
+}
+
+snet_bli_id_t
+SNetRecFieldDataDescriptorGetBlid(snet_ref_t rfdd)
+{
+    assert(rfdd != NULL_REF);
+    return ref2dcptr(rfdd)->blid;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * All the functions above are used "localy". However this is not
+ * the case for the functions below (assuming a distributed system).
+ *
+ * NOTE!: Since there can be cases where the following functions
+ * are called remotely from a different place any errors due to 
+ * invalid input (i.e. invalid argument values) does/should not cause
+ * an "abort" (as it happens with other internal APIs) in order
+ * to avoid crashing a remote node (if it does this is a bug and should
+ * be fixed).
+ */
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Data copying */
+
+thread void
+SNetRecFieldDataCopy(
+    snet_ref_t rfdd, 
+    uint8_t    flags,
+    shared snet_ref_t ref, shared uint32_t sz)
+{
+    uint8_t lflags = flags;
+    snet_rec_fdata_descriptor_t *dcptr = ref2dcptr(rfdd);
+
+    if (dcptr == NULL) {
+        ref = NULL_REF;
+        sz  = 0;
+
+        return;
+    }
+
+    if (__chk_flag(lflags, REC_FDATA_COPY_SERIALIZED_FLAG)) {
+        snet_bli_serfptr_t serfun = SNetBliGetSerializationFun(dcptr->blid);
+
+        if (serfun == NULL) {
+            sz  = 0;
+            ref = NULL_REF;
+
+            SNetReportWarning(
+                SNET_WRN_NULL_BLI_FUNCTION,
+                "serialization",
+                dcptr->blid,
+                "The record field data copy "
+                "operation will abort returning no data");
+
+            SNetOnWarning();
+
+            return;
+        }
+
+        void   *buf = NULL;
+        size_t  dsz = (*serfun)(SNET_DATASER_FORMAT_BIN, dcptr->dptr, &buf);
+
+        if (buf == NULL) {
+            if (dsz != 0) {
+                SNetReportWarning(
+                    SNET_WRN_REC_FDATA_COPY_FAILED,
+                    "data serialization appears to have failed");
+
+                SNetOnWarning();
+            }
+
+            sz  = 0;
+            ref = NULL_REF;
+
+            return;
+
+        } else {
+            sz  = dsz;
+            ref = SNetMemCreateRef(buf, DATABLK_TYPE_EXTERN);
+
+            if (dsz > UINT32_MAX) {
+                dsz = UINT32_MAX;
+
+                SNetReportWarning(SNET_WRN_REC_FDATA_TOO_LARGE);
+                SNetOnWarning();
+            }
+        }
+
+    } else {
+        snet_bli_copyfptr_t cpyfun = SNetBliGetCopyFun(dcptr->blid);
+
+        sz = 0;
+        
+        if (cpyfun == NULL) {
+            ref = NULL_REF;
+
+            SNetReportWarning(
+                SNET_WRN_NULL_BLI_FUNCTION,
+                "copy",
+                dcptr->blid,
+                "The record field data copy "
+                "operation will abort returning no data");
+
+            SNetOnWarning();
+            return;
+        }
+
+        void *buf = (*cpyfun)(dcptr->dptr);
+
+        if (buf == NULL) {
+            ref = NULL_REF;
+            return;
+
+        } else {
+            if (__chk_flag(lflags, REC_FDATA_COPY_NO_NEW_DESCRIPTOR_FLAG)) {
+                ref = SNetMemCreateRef(buf, DATABLK_TYPE_EXTERN);
+
+            } else {
+                ref = SNetRecFieldDataDescriptorCreate(buf, dcptr->blid); 
+
+                // If a new descriptor is created then
+                // always decrease the ref count of the
+                // original one (no matter what the flag says).
+                __reset_flag(
+                    lflags,
+                    REC_FDATA_COPY_NO_REFCNT_DECR_FLAG);
+            }
+        }
+    }
+
+    if (!__chk_flag(lflags, REC_FDATA_COPY_NO_REFCNT_DECR_FLAG)) {
+        decrease_dcptr_refcnt(dcptr);
+    }
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Reference counting. */
+
+thread void
+SNetRecFieldDataIncreaseRefCount(snet_ref_t *rfddv, uint32_t count)
+{
+    for (uint32_t i=0; i < count; i++) {
+        snet_rec_fdata_descriptor_t *dcptr = ref2dcptr(rfddv[i]);
+
+        if (dcptr != NULL)
+            SNetMemIncreaseRefCount(dcptr);
+    }
+}
+
+thread void
+SNetRecFieldDataDecreaseRefCount(snet_ref_t *rfddv, uint32_t count)
+{
+    for (uint32_t i=0; i < count; i++) {
+        snet_rec_fdata_descriptor_t *dcptr = ref2dcptr(rfddv[i]);
+
+        if (dcptr != NULL)
+            decrease_dcptr_refcnt(dcptr);
+    }
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

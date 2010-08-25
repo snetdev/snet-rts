@@ -1,0 +1,412 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : plcmng.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    : This file contains function for handling places.  
+                    
+                     !!PORTABILITY NOTE!!: The following code is
+                     platform specific and currently there is support
+                     for the uTC-PTL variants of the SVP platform!!
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "plcmng.int.utc.h"
+
+/*---*/
+
+#ifndef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+#error \
+Selected SVP platform not fully supported yet.
+#endif
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+/**
+ * Structure where all required place info
+ * is stored.
+ */
+typedef struct {
+    bool               external;
+    place              utcplc;
+    snet_place_specs_t specs;
+
+} snet_place_struct_t;
+#endif
+
+/*----------------------------------------------------------------------------*/
+/* Module's data */
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+static snet_place_t MY_PLACE = (snet_place_t)(NULL_REF);
+#endif
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/* Module's private functions */
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+static inline snet_place_struct_t*
+get_place_struct_ptr(snet_ref_t plc)
+{
+    return ((snet_place_struct_t *)(SNetMemGetPtr(plc)));
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+static snet_ref_t
+allocate_place_struct(
+    place plc,
+    const snet_place_specs_t *specs, bool external)
+{
+    if (plc == (place)(NULL)) {
+        return NULL_REF;
+    }
+
+    snet_place_struct_t *ps =
+        (snet_place_struct_t *) 
+            SNetMemAlloc(sizeof(snet_place_struct_t));
+
+    ps->external = external;
+    ps->utcplc   = plc;
+
+    if (specs == NULL) {
+        ps->specs.expires = false;
+        ps->specs.mutex   = false;
+        ps->specs.type    = PLACE_TYPE_GENERIC;
+        ps->specs.flags   = 0;
+
+        ps->specs.type_spec_data         = NULL;
+        ps->specs.type_spec_data_sz      = 0;
+        ps->specs.type_spec_data_freefun = NULL;
+        ps->specs.type_spec_data_copyfun = NULL;
+    
+    } else {
+        ps->specs.expires = specs->expires;
+        ps->specs.mutex   = specs->mutex;
+        ps->specs.type    = specs->type;
+        ps->specs.flags   = specs->flags;
+
+        if (specs->type_spec_data == NULL) {
+            ps->specs.type_spec_data         = NULL;
+            ps->specs.type_spec_data_sz      = 0;
+            ps->specs.type_spec_data_freefun = NULL;
+            ps->specs.type_spec_data_copyfun = NULL;
+
+        } else {
+            assert(specs->type_spec_data_sz > 0);
+
+            if (specs->type_spec_data_copyfun != NULL) {
+                ps->specs.type_spec_data =
+                    (*specs->type_spec_data_copyfun)(specs->type_spec_data);
+
+            } else {
+                ps->specs.type_spec_data =
+                    SNetMemAlloc(specs->type_spec_data_sz);
+
+                SNetMemCopy(
+                    specs->type_spec_data,
+                    ps->specs.type_spec_data, specs->type_spec_data_sz);
+            }
+
+            ps->specs.type_spec_data_sz      = specs->type_spec_data_sz;
+            ps->specs.type_spec_data_freefun = specs->type_spec_data_freefun;
+            ps->specs.type_spec_data_copyfun = specs->type_spec_data_copyfun;
+        }
+    }
+
+    SNetMemIncreaseRefCount(ps);
+
+    return SNetMemCreateRef(ps, DATABLK_TYPE_PLACE_STRUCT);
+}
+
+/*----------------------------------------------------------------------------*/
+
+static void
+free_place_struct(snet_place_struct_t *ps)
+{
+    assert(ps != NULL);
+
+    if (ps->specs.type_spec_data != NULL) {
+        if (ps->specs.type_spec_data_freefun == NULL)
+            SNetMemFree(ps->specs.type_spec_data);
+        else
+            (*ps->specs.type_spec_data_freefun)(ps->specs.type_spec_data);
+    }
+
+    SNetMemDestroyRef(SNetMemGetRef(ps));
+    SNetMemFree(ps);
+}
+#endif // SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+void
+SNetPlaceMngSubSystemInit()
+{
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    if (MY_PLACE != (snet_place_t)(NULL_REF)) {
+        return;
+    }
+
+    MY_PLACE = allocate_place_struct(uTC::get_current_place(), NULL, true);
+#endif   
+}
+
+void
+SNetPlaceMngSubSystemDestroy()
+{
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    if (MY_PLACE == (snet_place_t)(NULL_REF)) {
+        return;
+    }
+
+    int old_ref_cnt =
+        SNetMemDecreaseRefCount(
+            get_place_struct_ptr(MY_PLACE));
+
+    assert(old_ref_cnt == 1);
+
+    if (old_ref_cnt == 1)
+        free_place_struct(get_place_struct_ptr(MY_PLACE));
+
+    MY_PLACE = (snet_place_t)(NULL_REF);
+#endif
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_place_t
+SNetPlaceGetMine()
+{
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    return MY_PLACE;
+#endif
+}
+
+snet_place_t
+SNetPlaceGetNull()
+{
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    return (snet_place_t)(NULL_REF);
+#endif
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+snet_place_t
+SNetPlaceTrackUTCPlace(const place plc, const snet_place_specs_t *specs)
+{    
+    return allocate_place_struct(plc, specs, true);
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_place_t 
+SNetPlaceAlloc(const snet_place_specs_t *specs)
+{
+    snet_place_t plc = SNetPlaceTryAlloc(specs);
+
+    if (SNetPlaceIsNull(plc)) {
+        SNetReportError(SNET_ERR_PLACE, "allocation failed");
+        SNetOnError();
+    }
+
+    return plc;
+}
+
+/*----------------------------------------------------------------------------*/
+
+snet_place_t 
+SNetPlaceTryAlloc(const snet_place_specs_t *specs)
+{
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    return allocate_place_struct(
+        uTC::generate_local_place(
+            (specs == NULL ? false : specs->mutex)), specs, false);
+#endif
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+SNetPlaceFree(snet_place_t plc)
+{
+    if (SNetPlaceIsNull(plc)) {
+        return;
+    }
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    if (plc == MY_PLACE) {
+        return;
+    }
+
+    snet_place_struct_t *ps = get_place_struct_ptr(plc);
+
+    if (SNetMemDecreaseRefCount(ps) == 1) {
+        bool  external = ps->external;
+        place utcplc   = ps->utcplc;
+
+        free_place_struct(ps);
+        
+        if (!external)
+            uTC::destroy_local_place(utcplc);
+    }
+#endif
+}
+
+snet_place_t
+SNetPlaceCopy(const snet_place_t plc)
+{
+    if (SNetPlaceIsNull(plc))
+        return SNetPlaceGetNull();
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    if (plc == MY_PLACE) {
+        return plc;
+    }
+
+    SNetMemIncreaseRefCount(get_place_struct_ptr(plc));
+
+    // The cast is needed to remove the
+    // "const" qualifier!
+    return ((snet_place_t)(plc));
+#endif        
+}
+
+snet_place_t
+SNetPlaceCopyAndFree(snet_place_t plc)
+{
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    return plc;
+#endif        
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+const snet_place_specs_t*
+SNetPlaceGetSpecs(const snet_place_t plc)
+{
+    if (SNetPlaceIsNull(plc)) {
+        return NULL;
+    }
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    return (&(get_place_struct_ptr(plc)->specs));
+#endif
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool
+SNetPlaceIsNull(const snet_place_t plc)
+{
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    return (plc == (snet_place_t)(NULL_REF));
+#endif
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool 
+SNetPlaceIsOnSharedMemory(const snet_place_t plc)
+{
+    if (SNetPlaceIsNull(plc)) {
+        return true;
+    }
+
+#ifndef SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
+    // We are being built with the assumption that
+    // the selected platform(s) is a shared memory
+    // system.
+    return true;
+
+#else 
+    // It is not sure that we run on shared memory system
+    // which means that parts of the system (places) might
+    // not share memory. Thus we have to check:
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+#ifdef SVPSNETGWRT_SVP_PLATFORM_DUTCPTL
+    return (!uTC::is_place_remote(get_place_struct_ptr(plc)->utcplc));
+
+#else 
+    // It is not duTC-PTL but the "normal" one
+    // which works only on shared memory systems
+    // thus:
+    return true;
+    
+#endif
+#endif // SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+
+    // For any other platform we will assume that
+    // it is a shared memory system.
+    return true;
+
+#endif // SVPSNETGWRT_ASSUME_DISTRIBUTED_MEMORY
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool
+SNetPlaceCompare(const snet_place_t plc1, const snet_place_t plc2)
+{
+    if (plc1 == plc2) {
+        return true;
+    }
+    
+    if (SNetPlaceIsNull(plc1) || SNetPlaceIsNull(plc2)) {
+        return false;
+    }
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    return uTC::compare_places(
+        get_place_struct_ptr(plc1)->utcplc,
+        get_place_struct_ptr(plc2)->utcplc);
+#endif
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+place
+SNetPlaceToUTCPlace(const snet_place_t plc)
+{
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+    if (SNetPlaceIsNull(plc))
+        return (place)(NULL);
+    else
+        return get_place_struct_ptr(plc)->utcplc;
+#endif
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

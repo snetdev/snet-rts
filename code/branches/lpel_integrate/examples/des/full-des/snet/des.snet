@@ -1,0 +1,53 @@
+net des ( {Key, Pt} -> {Ct}) {
+
+  box xor( (Op1, Op2) -> (Result));
+
+  box InitialP( (Pt) -> (L, R));
+  box genSubKeys( (Key) -> (KeySet));
+  box KeyInvert( (KeySet) -> (KeySet));
+  box FinalP( (L, R) -> (Ct));
+
+  net desRound {
+    net feistel {
+      net ExpandAndKeySelect {
+        box BitExpand( (R) -> (Rx));
+        box SubKey( (KeySet, <C>) -> (KeySet, NextKey, <C>));
+      } 
+      connect [{R, KeySet, <C>} -> {R}; {KeySet, <C>}] .. 
+              ( 
+                BitExpand 
+                |
+                SubKey
+              ) .. [| {KeySet,NextKey,<C>}, {Rx} |]*{Rx,KeySet,NextKey,<C>};
+
+      net KeyMix 
+      connect [{NextKey, Rx} -> {Op1=NextKey, Op2=Rx}] .. 
+              xor .. [{Result} -> {BitStr=Result}];
+
+      box Substitute( (BitStr) -> (SStr)); 
+      box Pbox( (SStr) -> (Rf));
+    } 
+    connect ExpandAndKeySelect .. KeyMix .. Substitute .. Pbox;
+
+     net XorHalfBlocks 
+     connect [{L, Rf} -> {Op1=L, Op2=Rf}] .. xor .. [{Result} -> {R=Result}];
+   } 
+   connect [{L,R,KeySet,<C>} -> {L,R,KeySet,<C=C+1>};{Rn=R}] .. 
+           ( 
+             [{Rn} -> {L=Rn}] 
+             | 
+             (  
+                [{L,R,KeySet,<C>} -> {L}; {R, KeySet, <C>}] .. 
+                ( 
+                  [{L}->{L}] 
+                  | 
+                  feistel
+                ) 
+                .. [|{L},{KeySet,Rf,<C>}|]*{L,KeySet,Rf,<C>} .. XorHalfBlocks
+             )
+           ) .. [|{L}, {R,KeySet,<C>}|]*{L,R,KeySet,<C>};
+
+} connect genSubKeys .. ( [] | ([{<Decipher>} -> {}] .. KeyInvert)) ..
+          InitialP .. [{L,R,KeySet} -> {L,R,KeySet,<C=0>}] .. 
+          desRound*{<C>} if <C==16> .. 
+          FinalP .. [{KeySet, <C>} -> {}];

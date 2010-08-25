@@ -1,0 +1,30 @@
+<record type="data" mode="textual">
+<field label="params" interface="SAC4SNet">
+:::SACFIBRE: double 1 3 :::
+simple-1.fibre 
+</field>
+</record> 
+<record type="data" mode="textual">
+<field label="params" interface="SAC4SNet">
+:::SACFIBRE: double 1 3 :::
+simple-2.fibre 
+</field>
+</record> 
+<record type="data" mode="textual">
+<field label="params" interface="SAC4SNet">
+:::SACFIBRE: double 1 3 :::
+simple-3.fibre 
+</field>
+</record> 
+<record type="data" mode="textual">
+<field label="params" interface="SAC4SNet">
+:::SACFIBRE: double 1 3 :::
+simple-4.fibre 
+</field>
+</record> 
+<record type="data" mode="textual">
+<field label="params" interface="SAC4SNet">
+:::SACFIBRE: double 1 3 :::
+simple-5.fibre 
+</field>
+</record> 

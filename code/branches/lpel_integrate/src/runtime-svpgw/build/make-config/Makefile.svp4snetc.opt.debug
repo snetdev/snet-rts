@@ -1,0 +1,40 @@
+LIB_NAME_debug      := $(LIB_NAME)_dbg.so
+
+#---
+
+SRC_FILES_LST_debug := $(SRC_FILES_LST)
+
+#---
+
+INTERM_DIR_debug    :=
+TARGET_DIR_debug    := lib
+
+#---
+
+PREREQUISITES_debug :=
+BUILD_TOOLSET_debug :=
+
+#-------------------------------------------------------------------------------
+
+MAKEDEP_FLAGS_debug           :=
+MAKEDEP_INCL_DIRS_FLAGS_debug :=
+
+#---
+
+CC_FLAGS_debug           := -gdwarf-2 -DDEBUG -O0
+CC_INCL_DIRS_FLAGS_debug :=
+
+#-------------------------------------------------------------------------------
+
+LD_FLAGS_debug      := 
+LIB_DIRS_debug      :=
+LD_LIBS_FLAGS_debug :=
+
+#---
+
+LD_LIB_DIRS_FLAGS_debug := \
+	$(foreach d,$(LIB_DIRS_debug),-L$(d))
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+

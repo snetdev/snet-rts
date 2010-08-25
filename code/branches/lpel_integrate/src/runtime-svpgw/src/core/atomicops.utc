@@ -1,0 +1,129 @@
+/*----------------------------------------------------------------------------*/
+/*
+      -------------------------------------------------------------------
+
+              * * * * ! SVP S-Net Graph Walker Runtime ! * * * *
+
+                  Computer Systems Architecture (CSA) Group
+                            Informatics Institute
+                        University Of Amsterdam  2008
+                         
+      -------------------------------------------------------------------
+
+    File Name      : atomicops.utc
+
+    File Type      : Code File
+
+    ---------------------------------------
+
+    File 
+    Description    : This file contains functions that can be used to
+                     perform atomic (thus thread-safe) operations on
+                     variables.
+
+                                 !!!PORTABILITY NOTE!!!
+                     The code in this file is heavily platform and 
+                     compiler specific currently supporting uTC-PTL
+                     variants under certain conventional OSes and 
+                     architectures. In particular the following are
+                     supported:
+                        a. uTC-PTL on Linux/x86 (including x64)
+                        b. uTC-PTL on Petalinux/MicroBlaze
+
+                     In all cases the supported compiler is GCC!!!
+
+    Updates 
+    Description    : N/A
+
+*/
+/*----------------------------------------------------------------------------*/
+
+#include "atomicops.int.utc.h"
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+#ifdef SVPSNETGWRT_COMP_GCC
+//$if SVPSNETGWRT_COMP_VER < 40100
+//$include <atomic.h>
+//$endif
+#else
+#error \
+The selected/used compiler is not \
+supported with regards to atomic operations.
+#endif
+#else
+#error \
+The selected/used SVP platform is not \
+supported with regards to atomic operations.
+#endif
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+#ifdef SVPSNETGWRT_SVP_PLATFORM_UTCPTL
+#ifdef SVPSNETGWRT_COMP_GCC
+$if SVPSNETGWRT_COMP_VER >= 40100
+typedef struct {
+    volatile 
+    unsigned long counter;
+
+} atomic_t;
+
+/*---*/
+
+static inline long
+atomic_add_return(unsigned long val, atomic_t *v) 
+{
+    return __sync_fetch_and_add(&v->counter, val);
+}
+
+static inline long
+atomic_sub_return(unsigned long val, atomic_t *v) 
+{
+    return __sync_fetch_and_sub(&v->counter, val);
+}
+
+$else // GCC ver < 40100
+typedef struct { 
+    volatile
+    unsigned long counter;
+
+} atomic_t;
+
+/*---*/
+
+static inline long
+atomic_add_return(unsigned long val, atomic_t *v) 
+{
+    return (v->counter++);
+}
+
+static inline long
+atomic_sub_return(unsigned long val, atomic_t *v) 
+{
+    return (v->counter--);
+}
+
+$endif
+#endif
+#endif
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+unsigned long 
+SNetAtomicAddULong(volatile unsigned long *var, unsigned long val)
+{
+    return atomic_add_return(val, (atomic_t *)(var));
+}
+
+unsigned long 
+SNetAtomicSubULong(volatile unsigned long *var, unsigned long val)
+{
+    return atomic_sub_return(val, (atomic_t *)(var));
+}
+
+/*------------------------------- END OF FILE --------------------------------*/
+/*----------------------------------------------------------------------------*/
+

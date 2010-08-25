@@ -1,0 +1,190 @@
+//! snet final
+
+net tag::tag (
+  {tag::A,tag::B} -> 
+      {tag::A,tag::B,<tag::T>}
+);
+net tag__translate_in (
+  {A,B} -> 
+      {tag::A,tag::B}
+)
+connect [(A,B) -> (tag::A,tag::B)];
+net tag__translate_out (
+  {tag::A,tag::B,<tag::T>} -> 
+      {A,B,<T>}
+)
+connect [(tag::A,tag::B,<tag::T>) -> (A,B,<T>)];
+net tag__tag (
+  {tag::A,tag::B} -> 
+      {tag::A,tag::B,<tag::T>}
+)
+connect tag::tag;
+net tag__in (
+  {A,B} -> 
+      {tag::A,tag::B,<tag::T>}
+)
+connect tag__translate_in .. tag__tag;
+net tag (
+  {A,B} -> 
+      {A,B,<T>}
+)
+connect tag__in .. tag__translate_out;
+box compABC___IN__compA compA ((A) -> (P));
+box compABC___IN__compB compB ((B) -> (Q));
+box compABC___IN__compC compC ((C) -> (P));
+net compABC___IN___PL (
+  {A} -> 
+      {P}
+)
+connect compABC___IN__compA;
+net compABC___IN___PR___PL (
+  {B} -> 
+      {Q}
+)
+connect compABC___IN__compB;
+net compABC___IN___PR___PR (
+  {C} -> 
+      {P}
+)
+connect compABC___IN__compC;
+net compABC___IN___PR (
+  {B} -> 
+      {Q},
+  {C} -> 
+      {P}
+)
+connect compABC___IN___PR___PL || compABC___IN___PR___PR;
+net compABC___IN (
+  {A} -> 
+      {P},
+  {B} -> 
+      {Q},
+  {C} -> 
+      {P}
+)
+connect compABC___IN___PL || compABC___IN___PR;
+net compABC (
+  {A} -> 
+      {P},
+  {B} -> 
+      {Q},
+  {C} -> 
+      {P}
+)
+connect compABC___IN;
+net example__split (
+  {A,B,<T>} -> 
+      {=A,=<T>}
+    | {=B,=<T>}
+)
+connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
+box example__examine examine ((P,Q) -> (A,B) | (Y,Z));
+box example__compute__compAB___IN__compABC___IN__compA compA ((A) -> (P));
+box example__compute__compAB___IN__compABC___IN__compB compB ((B) -> (Q));
+net example__compute__compAB___IN__compABC___IN___PL (
+  {A} -> 
+      {P}
+)
+connect example__compute__compAB___IN__compABC___IN__compA;
+net example__compute__compAB___IN__compABC___IN___PR__PL (
+  {B} -> 
+      {Q}
+)
+connect example__compute__compAB___IN__compABC___IN__compB;
+net example__compute__compAB___IN__compABC___IN (
+  {A} -> 
+      {P},
+  {B} -> 
+      {Q}
+)
+connect example__compute__compAB___IN__compABC___IN___PL || example__compute__compAB___IN__compABC___IN___PR__PL;
+net example__compute__compAB___IN__compABC (
+  {A} -> 
+      {P},
+  {B} -> 
+      {Q}
+)
+connect example__compute__compAB___IN__compABC___IN;
+net example__compute__compAB___IN (
+  {A} -> 
+      {P},
+  {B} -> 
+      {Q},
+  {C} -> 
+      {P}
+)
+connect example__compute__compAB___IN__compABC;
+net example__compute__compAB (
+  {A} -> 
+      {P},
+  {B} -> 
+      {Q}
+)
+connect example__compute__compAB___IN;
+net example__compute__syncPQ___ST (
+  {P} -> 
+      {P}
+    | {P,Q},
+  {P,Q} -> 
+      {P,Q},
+  {Q} -> 
+      {P,Q}
+    | {Q}
+)
+connect [|{P},{Q}|];
+net example__compute__syncPQ (
+  {P} -> 
+      {P,Q},
+  {P,Q} -> 
+      {=P,=Q},
+  {Q} -> 
+      {P,Q}
+)
+connect example__compute__syncPQ___ST ** {P,Q};
+net example__compute___IS___SL (
+  {<T>} -> 
+)
+connect [{<T>} -> {}];
+net example__compute___IS___SR (
+  {A} -> 
+      {P,Q},
+  {A,Q} -> 
+      {P,Q},
+  {P,B} -> 
+      {P,Q},
+  {B} -> 
+      {P,Q}
+)
+connect example__compute__compAB .. example__compute__syncPQ;
+net example__compute___IS (
+  {<T>} -> 
+)
+connect example__compute___IS___SL .. example__compute___IS___SR;
+net example__compute (
+  {<T>} -> 
+)
+connect example__compute___IS !! <T>;
+net example___ST___SR___SR___SR (
+  {P,Q} -> 
+      {A,B}
+    | {Y,Z}
+)
+connect example__examine;
+net example___ST___SR___SR (
+  {<T>} -> 
+)
+connect example__compute .. example___ST___SR___SR___SR;
+net example___ST___SR (
+  {A,B,<T>} -> 
+)
+connect example__split .. example___ST___SR___SR;
+net example___ST (
+  {A,B} -> 
+)
+connect tag .. example___ST___SR;
+net example (
+  {A,B} -> ,
+  {Y,Z} -> 
+      {=Y,=Z}
+)
+connect example___ST ** {Y,Z};

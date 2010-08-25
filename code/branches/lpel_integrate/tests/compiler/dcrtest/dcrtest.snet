@@ -1,0 +1,49 @@
+
+/*****************************************************************
+ *
+ * Example snet source file.
+ * Just for testing dead code removal of compiler.
+ *
+ * Author: Kari Keinanen, VTT Technical Research Centre of Finland
+ *
+ * Date:   21.02.2007
+ * 
+ * Run:
+ *
+ *         $ snetc -b2:dcr dcrtest.snet
+ * 
+ ****************************************************************/
+
+net testNotRef1
+connect [{A} -> {B}];
+
+net compABC ({A} | {C} -> {P}, {B} -> {Q}) {
+    box compA ((A) -> (P));
+    box compB ((B) -> (Q));
+    box compNotRef ((A) -> (P));
+    box compC ((C) -> (P));
+}
+connect compA || compB || compC;
+
+net testNotRef2
+connect compABC;
+
+net dcrtest {
+    net split
+    connect [{A,B,<T>} -> {A,<T>}; {B,<T>}];
+
+    box examine((P,Q) -> (A,B) | (Y,Z));
+
+    net compute {
+        net compAB
+        connect compABC;
+
+        net testNotRef3
+        connect compABC;
+
+        net syncPQ
+        connect [|{P},{Q}|] ** {P,Q};
+    }
+    connect ([{<T>} -> {}] .. compAB .. syncPQ) !! <T>;
+}
+connect (tag .. split .. compute .. examine) ** {Y,Z};
