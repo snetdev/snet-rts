@@ -2,6 +2,8 @@
 #include "buffer.h"
 #include "debug.h"
 
+#include "stream.h"
+
 #ifdef DISTRIBUTED_SNET
 #include "routing.h"
 #endif /* DISTRIBUTED_SNET */
@@ -12,7 +14,7 @@
 /*  SNetSerial                                                               */
 /* ------------------------------------------------------------------------- */
 
-extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input, 
+extern stream_t *SNetSerial(stream_t *input, 
 #ifdef DISTRIBUTED_SNET
 				    snet_info_t *info, 
 				    int location,
@@ -20,8 +22,8 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
 				    snet_startup_fun_t box_a,
 				    snet_startup_fun_t box_b)
 {
-  snet_tl_stream_t *internal_stream;
-  snet_tl_stream_t *output;
+  stream_t *internal_stream;
+  stream_t *output;
 
 #ifdef DISTRIBUTED_SNET
 #ifdef DISTRIBUTED_BUILD_SERIAL

@@ -10,6 +10,9 @@
 #include "stream_layer.h"
 #include "threading.h" /* for enumeration */
 
+#include "stream.h"
+#include "task.h"
+
 #ifdef DISTRIBUTED_SNET
 #include "routing.h"
 #endif
@@ -350,11 +353,14 @@ FilterInheritFromInrec( snet_typeencoding_t *in_type,
   return( out_rec);
 }
 
-static void *FilterThread( void *hnd)
+
+
+//static void *FilterThread( void *hnd)
+static void FilterTask(task_t *self, void *hnd)
 {
   int i,j,k;
   bool done, terminate;
-  snet_tl_stream_t *instream, *outstream;
+  stream_t *instream, *outstream;
   snet_record_t *in_rec;
   snet_expr_list_t *guard_list;
   snet_typeencoding_t *out_type, *in_type;
@@ -370,14 +376,19 @@ static void *FilterThread( void *hnd)
   SNetUtilDebugNotice("(CREATION FILTER)");
 #endif
   instream = SNetHndGetInput( hnd);
+  StreamOpen(self, instream, 'r');
+
   outstream = SNetHndGetOutput( hnd);
+  StreamOpen(self, outstream, 'w');
+
   guard_list = SNetHndGetGuardList( hnd);
   in_type = SNetHndGetInType( hnd);
   type_list = SNetHndGetOutTypeList( hnd);
   instr_lst = SNetHndGetFilterInstructionSetLists( hnd);
 
   while( !( terminate)) {
-    in_rec = SNetTlRead( instream);
+    //in_rec = SNetTlRead( instream);
+    in_rec = StreamRead( self, instream);
     done = false;
 
     switch( SNetRecGetDescriptor( in_rec)) {
@@ -436,7 +447,8 @@ static void *FilterThread( void *hnd)
 		  SNetUtilDebugNotice("FILTER %x: outputting %x",
 				      (unsigned int) outstream, (unsigned int) out_rec);
 #endif
-		  SNetTlWrite( outstream, out_rec);
+		  //SNetTlWrite( outstream, out_rec);
+		  StreamWrite( self, outstream, out_rec);
                 } // forall variants of selected out_type
               } // if guard is true
             } // forall guards
@@ -448,9 +460,14 @@ static void *FilterThread( void *hnd)
             }
         break; // case rec_data
         case REC_sync:
+        {
+          //instream = SNetRecGetStream( in_rec);
+          stream_t *newstream = SNetRecGetStream( in_rec);
+          StreamReplace(self, instream, newstream);
+
           SNetHndSetInput( hnd, SNetRecGetStream( in_rec));
-          instream = SNetRecGetStream( in_rec);
           SNetRecDestroy( in_rec);
+        }
         break;
         case REC_collect:
 #ifdef DEBUG_FILTER
@@ -460,19 +477,20 @@ static void *FilterThread( void *hnd)
           SNetRecDestroy( in_rec);
         break;
         case REC_sort_begin:
-          SNetTlWrite( SNetHndGetOutput( hnd), in_rec);
-        break;
         case REC_sort_end:
-          SNetTlWrite( SNetHndGetOutput( hnd), in_rec);
+          //SNetTlWrite( SNetHndGetOutput( hnd), in_rec);
+          StreamWrite( self, outstream, inrec);
         break;
         case REC_terminate:
           terminate = true;
-          SNetTlWrite( outstream, in_rec);
-          SNetTlMarkObsolete(outstream);
+          StreamWrite( self, outstream, in_rec);
+          StreamClose( self, outstream);
+          StreamDestroy( outstream);
+          StreamClose( instream);
           SNetHndDestroy( hnd);
         break;
         case REC_probe:
-          SNetTlWrite(SNetHndGetOutput(hnd), in_rec);
+          StreamWrite( outstream, in_rec);
         break;
     default:
       SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( in_rec));
@@ -484,7 +502,7 @@ static void *FilterThread( void *hnd)
 }
 
 
-extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
+extern stream_t* SNetFilter( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
 				     snet_info_t *info, 
 				     int location,
@@ -495,7 +513,7 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
   int i;
   int num_outtypes;
   snet_handle_t *hnd;
-  snet_tl_stream_t *outstream;
+  stream_t *outstream;
   snet_expr_list_t *guard_expr;
   snet_filter_instruction_set_list_t *lst;
   snet_filter_instruction_set_list_t **instr_list;
@@ -513,7 +531,7 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
 
 #endif /* DISTRIBUTED_SNET */
 
-    outstream = SNetTlCreateStream(BUFFER_SIZE);
+    outstream = StreamCreate(); //SNetTlCreateStream(BUFFER_SIZE);
     guard_expr = guards;
     
     if( guard_expr == NULL) {
@@ -535,7 +553,7 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
     
     hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
     
-    SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
+    SNetTlCreateComponent(FilterTask, (void*)hnd, ENTITY_filter);
     
 #ifdef DISTRIBUTED_SNET
   } else {
@@ -568,7 +586,7 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
 }
 
 
-extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
+extern stream_t* SNetTranslate( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
 					snet_info_t *info, 
 					int location,
@@ -580,7 +598,7 @@ extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
   int i;
   int num_outtypes;
   snet_handle_t *hnd;
-  snet_tl_stream_t *outstream;
+  stream_t *outstream;
   snet_expr_list_t *guard_expr;
   snet_filter_instruction_set_list_t **instr_list;
   snet_typeencoding_list_t *out_types;
@@ -597,7 +615,7 @@ extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
 
 #endif /* DISTRIBUTED_SNET */
     
-    outstream = SNetTlCreateStream(BUFFER_SIZE);
+    outstream = StreamCreate(); //SNetTlCreateStream(BUFFER_SIZE);
     guard_expr = guards;
     
     if( guard_expr == NULL) {
@@ -618,7 +636,7 @@ extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
     
     hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
     
-    SNetTlCreateComponent(FilterThread, (void*)hnd, ENTITY_filter);
+    SNetTlCreateComponent(FilterTask, (void*)hnd, ENTITY_filter);
   
 #ifdef DISTRIBUTED_SNET
   } else {
@@ -649,24 +667,30 @@ extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
 }
 
 
-static void *NameshiftThread( void *h)
+//static void *NameshiftThread( void *h)
+static void NameshiftTask( task_t *self, void *h)
 {
   bool terminate = false;
   snet_handle_t *hnd = (snet_handle_t*)h;
-  snet_tl_stream_t *outstream, *instream;
+  stream_t *outstream, *instream;
   snet_variantencoding_t *untouched;
   snet_record_t *rec;
   int i, num, *names, offset;
 
   instream = SNetHndGetInput( hnd);
+  StreamOpen( self, instream, 'r');
+
   outstream = SNetHndGetOutput( hnd);
+  StreamOpen( self, outstream, 'w');
+
   untouched = SNetTencGetVariant( SNetHndGetInType( hnd), 1);
 
   // Guards are misused for offset
   offset = SNetEevaluateInt( SNetEgetExpr( SNetHndGetGuardList( hnd), 0), NULL);
 
   while( !terminate) {
-    rec = SNetTlRead( instream);
+    //rec = SNetTlRead( instream);
+    rec = StreamRead( self, instream);
 
     switch( SNetRecGetDescriptor( rec)) {
       case REC_data:
@@ -697,12 +721,16 @@ static void *NameshiftThread( void *h)
         }
         SNetMemFree( names);
 
-        SNetTlWrite(outstream, rec);
+        //SNetTlWrite(outstream, rec);
+        StreamWrite( self, outstream, rec);
         break;
       case REC_sync:
-        SNetHndSetInput( hnd, SNetRecGetStream( rec));
-        instream = SNetRecGetStream( rec);
+      {
+        stream_t *newstream = SNetRecGetStream(rec);
+        SNetHndSetInput( hnd, newstream);
+        StreamReplace( self, instream, newstream);
         SNetRecDestroy( rec);
+      }
       break;
       case REC_collect:
         #ifdef DEBUG_FILTER
@@ -759,7 +787,7 @@ extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
 
 #endif /* DISTRIBUTED_SNET */
 
-    outstream = SNetTlCreateStream( BUFFER_SIZE);
+    outstream = StreamCreate(); //SNetTlCreateStream( BUFFER_SIZE);
     
     hnd = SNetHndCreate( HND_filter, instream, outstream,
 			 SNetTencTypeEncode( 1, untouched),

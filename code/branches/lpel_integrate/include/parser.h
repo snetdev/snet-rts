@@ -6,6 +6,9 @@
 #include "label.h"
 #include "interface.h"
 
+//LPEL
+#include "inport.h"
+
 /* Return values of parserParse() */
 
 #define SNET_PARSE_CONTINUE 0  /* Parsing can continue after this. */
@@ -25,7 +28,9 @@
 extern void SNetInParserInit(FILE *file,
 			     snetin_label_t *labels,
 			     snetin_interface_t *interfaces,
-			     snet_tl_stream_t *in_buf);
+                             //LPEL
+			     //snet_tl_stream_t *in_buf);
+			     inport_t *in_buf);
 
 
 /* Parse the next data element from standard input stream 

@@ -31,6 +31,12 @@
 
 #include "debug.h"
 
+//LPEL
+#include "lpel.h"
+#include "inport.h"
+#include "stream.h"
+
+
 #ifdef DISTRIBUTED_SNET
 #include "distribution.h"
 #endif /* DISTRIBUTED_SNET */
@@ -160,7 +166,12 @@ int SNetInRun(int argc, char *argv[],
   FILE *output = stdout;
   int bufsize = SNET_DEFAULT_BUFSIZE;
   int i = 0;
-  snet_tl_stream_t *in_buf = NULL;
+  //LPEL
+  //snet_tl_stream_t *in_buf = NULL;
+  stream_t *in_buf = NULL;
+  inport_t *in_buf_port = NULL;
+  lpelconfig_t config;
+
   snetin_label_t *labels = NULL;
   snetin_interface_t *interfaces = NULL;
   char *brk;
@@ -286,6 +297,7 @@ int SNetInRun(int argc, char *argv[],
     SNetUtilDebugFatal("Could not initialize output component");
   }
 
+  //LPEL TODO adapt interface!
   in_buf = DistributionWaitForInput();
 
   if(in_buf != NULL) {
@@ -303,7 +315,14 @@ int SNetInRun(int argc, char *argv[],
   SNetInOutputDestroy();
 
 #else
-  in_buf = SNetTlCreateStream(bufsize);
+  //LPEL
+  //in_buf = SNetTlCreateStream(bufsize);
+  in_buf = StreamCreate();
+  in_buf_port = InportCreate( in_buf);
+  /* Initialise LPEL */
+  config.flags = LPEL_FLAG_AUTO;
+  LpelInit(&config);
+
 
   out_buf = fun(in_buf);
 
@@ -312,8 +331,12 @@ int SNetInRun(int argc, char *argv[],
     SNetUtilDebugFatal("Could not initialize output component");
   }
   
-  SNetInParserInit(input, labels, interfaces, in_buf);
- 
+  //LPEL
+  // SNetInParserInit(input, labels, interfaces, in_buf);
+  SNetInParserInit(input, labels, interfaces, in_buf_port);
+  /* start workers */
+  LpelRun();
+
   i = SNET_PARSE_CONTINUE;
   while(i != SNET_PARSE_TERMINATE){
     i = SNetInParserParse();
@@ -321,12 +344,16 @@ int SNetInRun(int argc, char *argv[],
 
   SNetInOutputDestroy();
   
+  /*LPEL
   if(in_buf != NULL){
     SNetTlMarkObsolete(in_buf);
-  }
+  }*/
+  StreamDestroy( in_buf);
+  InportDestroy( in_buf_port);
   
   SNetInParserDestroy();
   
+  LpelCleanup();
 
 #endif /* DISTRIBUTED_SNET */ 
 

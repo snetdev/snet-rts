@@ -5,6 +5,9 @@
 #include "debug.h"
 #include "stream_layer.h"
 
+#include "stream.h"
+#include "task.h"
+
 #ifdef DISTRIBUTED_SNET
 #include "routing.h"
 #endif
@@ -19,7 +22,9 @@
 /*  SNetBox                                                                  */
 /* ------------------------------------------------------------------------- */
 
-static void *BoxThread( void *hndl) {
+//static void *BoxThread( void *hndl) {
+static void BoxTask(task_t *self, void *arg)
+{
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
   static struct timeval tv_in;
@@ -36,15 +41,27 @@ static void *BoxThread( void *hndl) {
   snet_record_t *rec;
   void (*boxfun)( snet_handle_t*);
   bool terminate = false;
-  hnd = (snet_handle_t*) hndl;
+
+  stream_t *instream, *outstream;
+
+  hnd = (snet_handle_t*) arg;
 #ifdef BOX_DEBUG
   SNetUtilDebugNotice("(CREATION BOX)");
 #endif
   boxfun = SNetHndGetBoxfun( hnd);
 
+  instream = SNetHndGetInput(hnd);
+  StreamOpen(self, instream, 'r');
+
+  outstream = SNetHndGetOutput(hnd);
+  StreamOpen(self, outstream, 'w');
+
+  /* set boxtask */
+  SNetHndSetBoxtask( hnd, self);
 
   while( !( terminate)) {
-    rec = SNetTlRead(SNetHndGetInput(hnd));
+    //rec = SNetTlRead(SNetHndGetInput(hnd));
+    rec = StreamRead(self, instream);
 
     switch( SNetRecGetDescriptor(rec)) {
       case REC_trigger_initialiser:
@@ -78,28 +95,38 @@ static void *BoxThread( void *hndl) {
         SNetRecDestroy( rec);
         break;
       case REC_sync:
-        SNetHndSetInput( hnd, SNetRecGetStream( rec));
-        SNetRecDestroy( rec);
+        {
+          stream_t *newinstream = SNetRecGetStream(rec);
+          SNetHndSetInput( hnd, newinstream);
+          StreamReplace( self, &instream, newinstream);
+          SNetRecDestroy( rec);
+        }
         break;
       case REC_collect:
         SNetUtilDebugNotice("Unhandled control record, destroying it");
         SNetRecDestroy( rec);
         break;
       case REC_sort_begin:
-        SNetTlWrite( SNetHndGetOutput( hnd), rec);
-        break;
       case REC_sort_end:
-        SNetTlWrite( SNetHndGetOutput( hnd), rec);
+        //SNetTlWrite( SNetHndGetOutput( hnd), rec);
+        StreamWrite( self, outstream, rec);
         break;
       case REC_terminate:
         terminate = true;
-        SNetTlWrite( SNetHndGetOutput( hnd), rec);
-        SNetTlMarkObsolete(SNetHndGetOutput(hnd));
+        //SNetTlWrite( SNetHndGetOutput( hnd), rec);
+        StreamWrite( self, outstream, rec);
+        //SNetTlMarkObsolete(SNetHndGetOutput(hnd));
+        StreamClose(self, outstream);
+        StreamDestroy(outstream);
+        
+        StreamClose( self, instream);
         SNetHndDestroy( hnd);
         break;
+      /*
       case REC_probe:
         SNetTlWrite(SNetHndGetOutput(hnd), rec);
       break;
+      */
     default:
       SNetUtilDebugNotice("[Box] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
@@ -110,7 +137,7 @@ static void *BoxThread( void *hndl) {
  
 }
 
-extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
+extern stream_t *SNetBox( stream_t *input,
 #ifdef DISTRIBUTED_SNET
 				  snet_info_t *info, 
 				  int location,
@@ -119,20 +146,21 @@ extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
 				  snet_box_fun_t boxfun,
 				  snet_box_sign_t *out_signs) 
 {
-  snet_tl_stream_t *output;
+  stream_t *output;
   snet_handle_t *hndl;
 
 #ifdef DISTRIBUTED_SNET
+//TODO LPEL
   input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
-
   if(location == SNetIDServiceGetNodeID()) {
-
 #ifdef DISTRIBUTED_DEBUG
     SNetUtilDebugNotice("Box \"%s\" created", boxname);
 #endif /* DISTRIBUTED_DEBUG */
-
 #endif /* DISTRIBUTED_SNET */
-    output = SNetTlCreateStream(BUFFER_SIZE);
+
+
+    //output = SNetTlCreateStream(BUFFER_SIZE);
+    output = StreamCreate();
     
 #ifdef BOX_DEBUG
     SNetUtilDebugNotice("-");
@@ -144,7 +172,7 @@ extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
     
     hndl = SNetHndCreate( HND_box, input, output, NULL, boxfun, out_signs);
     
-    SNetTlCreateComponent((void*)BoxThread, (void*)hndl, ENTITY_box);
+    SNetTlCreateComponent( BoxTask, (void*)hndl, ENTITY_box);
     
 #ifdef DISTRIBUTED_SNET
   } else {

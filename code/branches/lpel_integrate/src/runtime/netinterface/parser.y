@@ -30,6 +30,8 @@
 #include "constants.h"
 #include "debug.h"
 
+//LPEL
+#include "inport.h"
 
 #ifndef YY_BUF_SIZE
 #define YY_BUF_SIZE 16384
@@ -83,7 +85,9 @@
    snetin_interface_t *interface;
 
    /* Buffer where all the parsed data should be put */
-   snet_tl_stream_t *buffer;
+   //LPEL
+   //snet_tl_stream_t *buffer;
+   inport_t *buffer;
  }parser;
 
  /* Data values for record currently under parsing  */
@@ -298,7 +302,10 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 
 		if(parser.terminate != SNET_PARSE_ERROR) {
 		  if(current.record != NULL) {
-		    SNetTlWrite(parser.buffer, current.record);
+                    //LPEL
+		    //SNetTlWrite(parser.buffer, current.record);
+                    InportWrite(parser.buffer, current.record);
+
 		    current.record = NULL;
 		    current.interface = INTERFACE_UNKNOWN;
 		  }
@@ -391,7 +398,10 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      yyerror("Error encountered while parsing a record. Record discarded (2)!");
 		      parser.terminate = SNET_PARSE_CONTINUE;
 		    } else {
-		      SNetTlWrite(parser.buffer, current.record);
+                      //LPEL
+                      //SNetTlWrite(parser.buffer, current.record);
+                      InportWrite(parser.buffer, current.record);
+
 		      current.record = NULL;
 		      current.interface = INTERFACE_UNKNOWN;
 		    }
@@ -735,7 +745,8 @@ void yyerror(char *error)
 void SNetInParserInit(FILE *file,
 		      snetin_label_t *labels,
 		      snetin_interface_t *interfaces,
-		      snet_tl_stream_t *in_buf)
+		      /*snet_tl_stream_t *in_buf)*/
+                      inport_t *in_buf)
 {  
   yyin = file; 
   parser.labels = labels;

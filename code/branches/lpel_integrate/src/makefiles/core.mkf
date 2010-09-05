@@ -52,7 +52,7 @@ COMMONLIBPROD  := $(patsubst lib%.a,%,$(targets_commonlib_prod))
 UTILDEV := $(patsubst lib%.so,%,$(targets_util_devel))
 UTILPROD  := $(patsubst lib%.so,%,$(targets_util_prod))
 
-RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS)
+RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS) $(RTLIBS) $(PCLLIBS) $(CAPLIBS)
 RUNTIMEINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) $(GTKFLAGS) $(MPIFLAGS)
 
 UTILLIB  := -L$(PROJECT_ROOT)/lib

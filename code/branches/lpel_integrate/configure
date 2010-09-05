@@ -616,6 +616,8 @@ OPT_O3
 OPT_O2
 OPT_O1
 OPT_O0
+LIB_PCL
+LIB_CAP
 LIB_RT
 LIB_SOCKET
 DISABLE_MT
@@ -5158,6 +5160,125 @@ fi
 
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing cap" >&5
+$as_echo_n "checking for library containing cap... " >&6; }
+if test "${ac_cv_search_cap+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char cap ();
+int
+main ()
+{
+return cap ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' ; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_cap=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if test "${ac_cv_search_cap+set}" = set; then :
+  break
+fi
+done
+if test "${ac_cv_search_cap+set}" = set; then :
+
+else
+  ac_cv_search_cap=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_cap" >&5
+$as_echo "$ac_cv_search_cap" >&6; }
+ac_res=$ac_cv_search_cap
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  LIB_CAP=""
+
+else
+  LIB_CAP="-lcap"
+
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing co_create" >&5
+$as_echo_n "checking for library containing co_create... " >&6; }
+if test "${ac_cv_search_co_create+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char co_create ();
+int
+main ()
+{
+return co_create ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' ; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_co_create=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if test "${ac_cv_search_co_create+set}" = set; then :
+  break
+fi
+done
+if test "${ac_cv_search_co_create+set}" = set; then :
+
+else
+  ac_cv_search_co_create=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_co_create" >&5
+$as_echo "$ac_cv_search_co_create" >&6; }
+ac_res=$ac_cv_search_co_create
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  LIB_PCL=""
+
+else
+  LIB_PCL="-lpcl"
+
+fi
 
 
 
@@ -5178,11 +5299,11 @@ if  test "$GCC" = yes ; then
 
   SOFLAGS="-shared"
 
-  RCCCFLAGS="-Wall -Wno-unused -fno-builtin -std=c99 -D_POSIX_C_SOURCE=200112L"
+  RCCCFLAGS="-Wall -Wno-unused -fno-builtin -std=c99"
 
-  MKCCFLAGS="-Wall -g -std=c99 -D_POSIX_C_SOURCE=200112L"
+  MKCCFLAGS="-Wall -g -std=c99"
 
-  PDCCFLAGS="-Wall -O3 -std=c99 -D_POSIX_C_SOURCE=200112L"
+  PDCCFLAGS="-Wall -O3 -std=c99"
 
   GENPIC="-fPIC -DPIC"
 
@@ -5333,7 +5454,7 @@ case "$target_os" in
 $as_echo "solaris settings" >&6; }
     ;;
   *linux*)
-    OSFLAGS="-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint"
+    OSFLAGS="-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint -D_POSIX_C_SOURCE=200112L"
     LD_DYNAMIC="-dy -shared -allow-shlib-undefined"
     LD_PATH="-Wl,-rpath,"
     LD_FLAGS="-Wl,-allow-shlib-undefined"

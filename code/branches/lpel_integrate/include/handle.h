@@ -12,7 +12,8 @@
 #include <buffer.h>
 #include <expression.h>
 
-
+#include "stream.h"
+#include "task.h"
 
 typedef enum {
 	HND_box      = (1<<0),
@@ -78,11 +79,14 @@ extern snet_record_t *SNetHndGetRecord( snet_handle_t *hndl);
 
 extern void SNetHndSetRecord( snet_handle_t *hndl, snet_record_t *rec);
 
-extern void SNetHndSetInput( snet_handle_t *hnd, snet_tl_stream_t *inbuf);
-extern snet_tl_stream_t *SNetHndGetInput( snet_handle_t *hndl);
+extern task_t *SNetHndGetBoxtask( snet_handle_t *hnd);
+extern void SNetHndSetBoxtask( snet_handle_t *hnd, task_t *boxtask);
 
-extern snet_tl_stream_t *SNetHndGetOutput( snet_handle_t *hndl);
-extern snet_tl_stream_t **SNetHndGetOutputs( snet_handle_t *hndl);
+extern void SNetHndSetInput( snet_handle_t *hnd, stream_t *inbuf);
+extern stream_t *SNetHndGetInput( snet_handle_t *hndl);
+
+extern stream_t *SNetHndGetOutput( snet_handle_t *hndl);
+extern stream_t **SNetHndGetOutputs( snet_handle_t *hndl);
 
 extern void *SNetHndGetBoxfun( snet_handle_t *handle);
 extern void *SNetHndGetBoxfunA( snet_handle_t *handle);

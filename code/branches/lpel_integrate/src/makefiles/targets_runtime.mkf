@@ -44,10 +44,10 @@ clean_runtime_prod        :=
 
 ifeq ($(DISTRIBUTED),yes)
 runtime         = common entities netinterface observer utility threading \
-                    interfacing distribution
+                    interfacing distribution lpel
 else
 runtime         = common entities netinterface observer utility threading \
-                    interfacing
+                    interfacing lpel
 endif
 
 
@@ -79,3 +79,6 @@ observer	= observers.o
 
 distribution    = distribution.o datastorage.o message.o fun.o imanager.o \
                   id.o omanager.o routing.o reference.o 
+
+lpel            = lpel.o scheduler.o flagtree.o stream.o streamtab.o \
+                  inport.o taskqueue.o task.o monitoring.o

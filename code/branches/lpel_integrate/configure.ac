@@ -256,7 +256,13 @@ AC_SEARCH_LIBS(sem_open,,
    AC_CHECK_LIB( rt, sem_open,
       AC_SUBST( LIB_RT, "-lrt"),
       AC_MSG_ERROR( "Cannot find library for semaphores."),))
-
+dnl additionally for LPEL
+AC_SEARCH_LIBS(cap,,
+   AC_SUBST( LIB_CAP, ""),
+   AC_SUBST( LIB_CAP, "-lcap"),)
+AC_SEARCH_LIBS(co_create,,
+   AC_SUBST( LIB_PCL, ""),
+   AC_SUBST( LIB_PCL, "-lpcl"),)
 
 
 dnl test for compiler flags
@@ -356,7 +362,7 @@ case "$target_os" in
     AC_MSG_RESULT([solaris settings])
     ;;
   *linux*)      
-    OSFLAGS=["-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint"]
+    OSFLAGS=["-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint -D_POSIX_C_SOURCE=200112L"]
     LD_DYNAMIC=["-dy -shared -allow-shlib-undefined"]
     LD_PATH=["-Wl,-rpath,"]
     LD_FLAGS="-Wl,-allow-shlib-undefined"
