@@ -1,0 +1,14 @@
+
+TODO
+====
+
+ * adopt intrusive mpsc queue, to avoid allocating memory for each node
+ * aggregate modules into libraries with clear interface
+ * doxygenify comments
+ * port s-net!
+ * write test settings
+ * evaluate performance
+
+S-Net-porting:
+* clarify sort_begin/sort_end injection in parallel combinator
+

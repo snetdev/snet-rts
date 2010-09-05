@@ -1,0 +1,10 @@
+
+Dependencies
+============
+
+libpcl     - GNU Portable Coroutine Library, currently v1.10
+libcap-dev - capabilities, for checking CAP_SYS_NICE in cpuassign module
+             (headers, only for compiling; libcap is available on all(?) systems anyway)
+
+timing module needs to be linked with librt (clock_gettime())
+
