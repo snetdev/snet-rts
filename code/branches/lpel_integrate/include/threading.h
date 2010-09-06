@@ -18,22 +18,28 @@
  * snet_entity_id_t type
  */
 typedef enum {
-	ENTITY_parallel_nondet,
-	ENTITY_parallel_det,
-	ENTITY_star_nondet,
-	ENTITY_star_det,
-	ENTITY_split_nondet,
-	ENTITY_split_det,
-	ENTITY_box,
-	ENTITY_sync,
-	ENTITY_filter,
-	ENTITY_collect_nondet,
-	ENTITY_collect_det,
+  ENTITY_parallel_nondet,
+  ENTITY_parallel_det,
+  ENTITY_star_nondet,
+  ENTITY_star_det,
+  ENTITY_split_nondet,
+  ENTITY_split_det,
+  ENTITY_box,
+  ENTITY_sync,
+  ENTITY_filter,
+  ENTITY_collect_nondet,
+  ENTITY_collect_det,
   ENTITY_dist,
-	ENTITY_none
+  ENTITY_none
 } snet_entity_id_t;
  
 typedef struct snet_thread snet_thread_t;
+
+
+
+
+extern void SNetEntitySpawn( taskfunc_t fun, void *arg, snet_entity_id_t id);
+
 
 
 /** <!-- ****************************************************************** -->

@@ -321,7 +321,7 @@ extern stream_t *SNetLocSplit(stream_t *input,
     initial = StreamCreate();
     hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true);
     output = CreateCollector(initial);
-    SNetTlCreateComponent(SplitBoxThread, (void*)hnd, ENTITY_split_nondet);
+    SNetTlCreateComponent(SplitBoxTask, (void*)hnd, ENTITY_split_nondet);
   } else { 
     output = input; 
   }

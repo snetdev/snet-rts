@@ -172,7 +172,7 @@ extern stream_t *SNetBox( stream_t *input,
     
     hndl = SNetHndCreate( HND_box, input, output, NULL, boxfun, out_signs);
     
-    SNetTlCreateComponent( BoxTask, (void*)hndl, ENTITY_box);
+    SNetEntitySpawn( BoxTask, (void*)hndl, ENTITY_box);
     
 #ifdef DISTRIBUTED_SNET
   } else {

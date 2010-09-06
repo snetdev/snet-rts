@@ -16,6 +16,8 @@
 #include "debug.h"
 #include "threading.h"
 
+#include "lpel.h"
+
 struct snet_thread {
   pthread_t *tid;
 };
@@ -206,4 +208,38 @@ snet_thread_t *SNetThreadCreateNoDetach( void *(*fun)(void*),
 void SNetThreadJoin( snet_thread_t *t, void **ret)
 {
   pthread_join( *SNT_TID( t), ret);
+}
+
+
+
+
+
+
+void SNetEntitySpawn( taskfunc_t fun, void *arg, snet_entity_id_t id)
+{
+  task_t *t;
+  taskattr_t tattr = {0};
+
+  /* monitoring */
+  if (id==ENTITY_box) {
+    tattr.flags |= TASK_ATTR_MONITOR;
+  }
+
+  /* stacksize */
+  if (id==ENTITY_box || id==ENTITY_none) {
+    tattr.stacksize = 8*1024*1024; /* 8 MB */
+  } else {
+    tattr.stacksize = 256*1024; /* 256 kB */
+  }
+
+  /* waitany tasks */
+  if ( id==ENTITY_collect_det || id==ENTITY_collect_det ) {
+    tattr |= TASK_ATTR_WAITANY;
+  }
+
+  /* create task */
+  t = TaskCreate( fun, arg, tattr);
+  /* add to LPEL system -
+     destroying the task is done by LPEL */
+  LpelTaskToWorker( t );
 }

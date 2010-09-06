@@ -463,7 +463,7 @@ static void FilterTask(task_t *self, void *hnd)
         {
           //instream = SNetRecGetStream( in_rec);
           stream_t *newstream = SNetRecGetStream( in_rec);
-          StreamReplace(self, instream, newstream);
+          StreamReplace(self, &instream, newstream);
 
           SNetHndSetInput( hnd, SNetRecGetStream( in_rec));
           SNetRecDestroy( in_rec);
@@ -479,26 +479,27 @@ static void FilterTask(task_t *self, void *hnd)
         case REC_sort_begin:
         case REC_sort_end:
           //SNetTlWrite( SNetHndGetOutput( hnd), in_rec);
-          StreamWrite( self, outstream, inrec);
+          StreamWrite( self, outstream, in_rec);
         break;
         case REC_terminate:
           terminate = true;
           StreamWrite( self, outstream, in_rec);
-          StreamClose( self, outstream);
-          StreamDestroy( outstream);
-          StreamClose( instream);
           SNetHndDestroy( hnd);
         break;
+        /*
         case REC_probe:
           StreamWrite( outstream, in_rec);
         break;
+        */
     default:
       SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( in_rec));
       SNetRecDestroy(in_rec);
       break;
     } // switch rec_descr
   } // while not terminate
-  return( NULL);
+  StreamClose( self, outstream);
+  StreamDestroy( outstream);
+  StreamClose( self, instream);
 }
 
 
@@ -539,7 +540,6 @@ extern stream_t* SNetFilter( stream_t *instream,
     }
     
     num_outtypes = SNetElistGetNumExpressions( guard_expr);
-    
     instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
     
     va_start( args, guards);
@@ -551,37 +551,35 @@ extern stream_t* SNetFilter( stream_t *instream,
     
     out_types = FilterComputeTypes( num_outtypes, instr_list);
     
-    hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
+    hnd = SNetHndCreate(
+        HND_filter,
+        instream, outstream,
+        in_type, out_types,
+        guard_expr, instr_list
+        );
     
-    SNetTlCreateComponent(FilterTask, (void*)hnd, ENTITY_filter);
+    SNetEntitySpawn( FilterTask, (void*)hnd, ENTITY_filter);
     
 #ifdef DISTRIBUTED_SNET
   } else {
     SNetDestroyTypeEncoding(in_type);
-    
     num_outtypes = SNetElistGetNumExpressions( guards);
-    
     if(num_outtypes == 0) {
       num_outtypes += 1;
     }
-    
     va_start( args, guards);
-
     for( i=0; i<num_outtypes; i++) {
       lst = va_arg( args, snet_filter_instruction_set_list_t*);
       if(lst != NULL) {
 	SNetDestroyFilterInstructionSetList(lst);
       }
-      
     }
     va_end( args);
     
     SNetEdestroyList( guards);
-
     outstream = instream;
   }
 #endif /* DISTRIBUTED_SNET */
-  
   return( outstream);
 }
 
@@ -594,7 +592,6 @@ extern stream_t* SNetTranslate( stream_t *instream,
 					snet_typeencoding_t *in_type,
 					snet_expr_list_t *guards, ... )
 {
-
   int i;
   int num_outtypes;
   snet_handle_t *hnd;
@@ -606,26 +603,20 @@ extern stream_t* SNetTranslate( stream_t *instream,
 
 #ifdef DISTRIBUTED_SNET
   instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location); 
-
   if(location == SNetIDServiceGetNodeID()) {
-
 #ifdef DISTRIBUTED_DEBUG
     SNetUtilDebugNotice("Translate created");
 #endif /* DISTRIBUTED_DEBUG */
-
 #endif /* DISTRIBUTED_SNET */
     
     outstream = StreamCreate(); //SNetTlCreateStream(BUFFER_SIZE);
     guard_expr = guards;
-    
     if( guard_expr == NULL) {
       guard_expr = SNetEcreateList( 1, SNetEconstb( true));
     }
-    
     num_outtypes = SNetElistGetNumExpressions( guard_expr);
-    
     instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
-    
+
     va_start( args, guards);
     for( i=0; i<num_outtypes; i++) {
       instr_list[i] = va_arg( args, snet_filter_instruction_set_list_t*);
@@ -634,9 +625,14 @@ extern stream_t* SNetTranslate( stream_t *instream,
     
     out_types = FilterComputeTypes( num_outtypes, instr_list);
     
-    hnd = SNetHndCreate( HND_filter, instream, outstream, in_type, out_types, guard_expr, instr_list);
+    hnd = SNetHndCreate(
+        HND_filter,
+        instream, outstream,
+        in_type, out_types,
+        guard_expr, instr_list
+        );
     
-    SNetTlCreateComponent(FilterTask, (void*)hnd, ENTITY_filter);
+    SNetEntitySpawn( FilterTask, (void*)hnd, ENTITY_filter);
   
 #ifdef DISTRIBUTED_SNET
   } else {
@@ -668,10 +664,10 @@ extern stream_t* SNetTranslate( stream_t *instream,
 
 
 //static void *NameshiftThread( void *h)
-static void NameshiftTask( task_t *self, void *h)
+static void NameshiftTask( task_t *self, void *arg)
 {
   bool terminate = false;
-  snet_handle_t *hnd = (snet_handle_t*)h;
+  snet_handle_t *hnd = (snet_handle_t*)arg;
   stream_t *outstream, *instream;
   snet_variantencoding_t *untouched;
   snet_record_t *rec;
@@ -728,7 +724,7 @@ static void NameshiftTask( task_t *self, void *h)
       {
         stream_t *newstream = SNetRecGetStream(rec);
         SNetHndSetInput( hnd, newstream);
-        StreamReplace( self, instream, newstream);
+        StreamReplace( self, &instream, newstream);
         SNetRecDestroy( rec);
       }
       break;
@@ -740,32 +736,31 @@ static void NameshiftTask( task_t *self, void *h)
         SNetRecDestroy( rec);
       break;
       case REC_sort_begin:
-        SNetTlWrite( SNetHndGetOutput( hnd), rec);
-      break;
       case REC_sort_end:
-        SNetTlWrite( SNetHndGetOutput( hnd), rec);
+        StreamWrite( self, outstream, rec);
       break;
       case REC_terminate:
         terminate = true;
-        SNetTlWrite( outstream, rec);
-        SNetTlMarkObsolete(outstream);
+        StreamWrite( self, outstream, rec);
         SNetHndDestroy( hnd);
       break;
+      /*
       case REC_probe:
         SNetTlWrite(SNetHndGetOutput(hnd), rec);
       break;
+      */
     default:
       SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
       break;
     }
   }
-
-  return( NULL);
+  StreamClose( self, instream);
+  StreamClose( self, outstream);
 }
 
 
-extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
+extern stream_t *SNetNameShift( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
 					snet_info_t *info, 
 					int location,
@@ -773,7 +768,7 @@ extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
 					int offset,
 					snet_variantencoding_t *untouched)
 {
-  snet_tl_stream_t *outstream;
+  stream_t *outstream;
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
@@ -795,7 +790,7 @@ extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
 			 SNetEcreateList( 1, SNetEconsti( offset)),
 			 NULL); // instructions
     
-    SNetThreadCreate( NameshiftThread, (void*)hnd, ENTITY_filter);
+    SNetEntitySpawn( NameshiftTask, (void*)hnd, ENTITY_filter);
   
 #ifdef DISTRIBUTED_SNET
   } else {

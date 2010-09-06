@@ -256,7 +256,7 @@ static void ParallelBoxTask( task_t *self, void *hndl) {
                         streams, 
                         num, 
                         i, 
-                        SNetRecCreate( REC_sync, SNetHndGetInput( hnd)), 
+                        SNetRecCreate( REC_sync, instream), 
                         counter, 
                         is_det);
         }
@@ -270,20 +270,15 @@ static void ParallelBoxTask( task_t *self, void *hndl) {
   }
 
 
-
   matchcounter = SNetMemAlloc( num * sizeof( match_count_t*));
-
   for( i=0; i<num; i++) {
     matchcounter[i] = SNetMemAlloc( sizeof( match_count_t));
   }
 
   while( !( terminate)) {
 #ifdef PARALLEL_DEBUG
-    SNetUtilDebugNotice("PARALLEL %p: reading %p",
-                        streams,
-                        instream);
+    SNetUtilDebugNotice("PARALLEL %p: reading %p", streams, instream);
 #endif
-    //rec = SNetTlRead( SNetHndGetInput( hnd));
     rec = StreamRead( self, instream);
 
     switch( SNetRecGetDescriptor( rec)) {
@@ -347,6 +342,7 @@ static void ParallelBoxTask( task_t *self, void *hndl) {
         SNetMemFree( matchcounter);
         SNetHndDestroy( hnd);
         break;
+      /*
       case REC_probe:
         if(is_det) {
           for(i = 0; i<num; i++) {
@@ -362,6 +358,7 @@ static void ParallelBoxTask( task_t *self, void *hndl) {
           }
         }
         break;
+      */
     default:
       SNetUtilDebugNotice("[Parallel] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
@@ -369,7 +366,8 @@ static void ParallelBoxTask( task_t *self, void *hndl) {
     }
   }
 
-  return( NULL);
+  /* close instream */
+  StreamClose( self, instream);
 }
 
 
@@ -471,7 +469,7 @@ static stream_t *SNetParallelStartup( stream_t *instream,
     }
     SNetUtilDebugNotice("-");
 #endif
-    SNetTlCreateComponent(ParallelBoxTask, (void*)hnd, my_id);
+    SNetEntitySpawn( ParallelBoxTask, (void*)hnd, my_id);
     
     SNetMemFree(outstreams);
     
