@@ -36,9 +36,10 @@ typedef enum {
 typedef struct snet_thread snet_thread_t;
 
 
+struct task;
 
-
-extern void SNetEntitySpawn( taskfunc_t fun, void *arg, snet_entity_id_t id);
+extern void SNetEntitySpawn( void (*fun)(struct task *t, void *arg),
+    void *arg, snet_entity_id_t id);
 
 
 
