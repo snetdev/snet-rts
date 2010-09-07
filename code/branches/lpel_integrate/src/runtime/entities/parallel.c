@@ -40,19 +40,16 @@
 
 //#define PARALLEL_DEBUG
 
-static bool ContainsName( int name, int *names, int num) {  
+static bool ContainsName( int name, int *names, int num)
+{
   int i;
-  bool found;
-
-  found = false;
-
+  bool found = false;
   for( i=0; i<num; i++) {
     if( names[i] == name) {
       found = true;
       break;
     }
   }
-
   return( found);
 }
 
@@ -73,11 +70,9 @@ for( i=0; i<TENCNUM( venc); i++) {\
 
 
 
-static match_count_t 
-*CheckMatch( snet_record_t *rec, 
-             snet_typeencoding_t *tenc, 
-             match_count_t *mc) {
-
+static match_count_t *CheckMatch( snet_record_t *rec, 
+    snet_typeencoding_t *tenc, match_count_t *mc)
+{
   snet_variantencoding_t *venc;
   int i,j,max=-1;
 
@@ -131,8 +126,8 @@ static match_count_t
 
 // Checks for "best match" and decides which buffer to dispatch to
 // in case of a draw.
-static int BestMatch( match_count_t **counter, int num) {
-
+static int BestMatch( match_count_t **counter, int num)
+{
   int i;
   int res, max;
   
@@ -146,21 +141,13 @@ static int BestMatch( match_count_t **counter, int num) {
       }
     }
   }
-
   return( res);
 }
 
 
-static void
-PutToBuffers(task_t *self,
-             stream_t **streams,
-             int num,
-             int idx,
-             snet_record_t *rec,
-             int counter,
-             bool det)
+static void PutToBuffers( task_t *self, stream_t **streams, int num,
+    int idx, snet_record_t *rec, int counter, bool det)
 {
-
   int i;
 
   for( i=0; i<num; i++) {
@@ -187,14 +174,18 @@ PutToBuffers(task_t *self,
   }
 }
 
-//static void *ParallelBoxThread( void *hndl) {
-static void ParallelBoxTask( task_t *self, void *hndl) {
+
+/**
+ * Main Parallel Box Task
+ */
+static void ParallelBoxTask( task_t *self, void *arg)
+{
 
   int i, num, stream_index;
-  snet_handle_t *hnd = (snet_handle_t*) hndl;
+  snet_handle_t *hnd = (snet_handle_t*) arg;
   snet_record_t *rec;
   //stream_t *go_stream = NULL;
-  stream_t *instream;
+  stream_t *instream, *initial;
   match_count_t **matchcounter;
   stream_t **streams;
   snet_typeencoding_list_t *types;
@@ -275,7 +266,8 @@ static void ParallelBoxTask( task_t *self, void *hndl) {
     matchcounter[i] = SNetMemAlloc( sizeof( match_count_t));
   }
 
-  while( !( terminate)) {
+  /* MAIN LOOP START */
+  while( !terminate) {
 #ifdef PARALLEL_DEBUG
     SNetUtilDebugNotice("PARALLEL %p: reading %p", streams, instream);
 #endif
@@ -342,33 +334,18 @@ static void ParallelBoxTask( task_t *self, void *hndl) {
         SNetMemFree( matchcounter);
         SNetHndDestroy( hnd);
         break;
-      /*
-      case REC_probe:
-        if(is_det) {
-          for(i = 0; i<num; i++) {
-            StreamWrite( self, streams[i],
-                      SNetRecCreate(REC_sort_begin, 0, counter));
-          }
-        }
-        for(i = 0; i<num;i++) {
-          if(i==(num-1)) {
-            StreamWrite( self, streams[i], rec);
-          } else {
-            StreamWrite( self, streams[i], SNetRecCopy(rec));
-          }
-        }
-        break;
-      */
+
     default:
       SNetUtilDebugNotice("[Parallel] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
       break;
     }
-  }
+  } /* MAIN LOOP END */
 
   /* close instream */
   StreamClose( self, instream);
-}
+
+} /* END of PARALLEL BOX TASK */
 
 
 

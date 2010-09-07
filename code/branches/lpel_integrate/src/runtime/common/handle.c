@@ -91,6 +91,7 @@ typedef struct {
   snet_box_fun_t boxfun_a;
   int tag_a;
   int tag_b;
+  bool is_det;
 #ifdef DISTRIBUTED_SNET
   bool split_by_location;
 #endif /* DISTRIBUTED_SNET */
@@ -169,65 +170,57 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 
   switch( desc) {
 
-    case HND_box: {
-            HANDLE( box_hnd) = SNetMemAlloc( sizeof( box_handle_t));
-            BOX_HND( input) = va_arg( args, stream_t*);
-            BOX_HND( output_a) = va_arg( args, stream_t*);
-            BOX_HND( rec) = va_arg( args, snet_record_t*);
-            BOX_HND( boxfun_a) = va_arg( args, void*);
-            BOX_HND( sign) = va_arg( args, snet_box_sign_t*);
-            BOX_HND( mapping) = NULL;
-            BOX_HND( boxtask) = NULL;
-            break;
-    }
-    case HND_parallel: {
+    case HND_box:
+      HANDLE( box_hnd) = SNetMemAlloc( sizeof( box_handle_t));
+      BOX_HND( input) = va_arg( args, stream_t*);
+      BOX_HND( output_a) = va_arg( args, stream_t*);
+      BOX_HND( rec) = va_arg( args, snet_record_t*);
+      BOX_HND( boxfun_a) = va_arg( args, void*);
+      BOX_HND( sign) = va_arg( args, snet_box_sign_t*);
+      BOX_HND( mapping) = NULL;
+      BOX_HND( boxtask) = NULL;
+      break;
+    
+    case HND_parallel: 
+      HANDLE( parallel_hnd) = SNetMemAlloc( sizeof( parallel_handle_t));
+      PAR_HND( input) = va_arg( args, stream_t*);
+      PAR_HND( outputs) = va_arg( args, stream_t**);
+      PAR_HND( type) = va_arg( args, snet_typeencoding_list_t*);
+      PAR_HND( is_det) = va_arg( args, bool);
+      break;
 
-            HANDLE( parallel_hnd) = SNetMemAlloc( sizeof( parallel_handle_t));
-            PAR_HND( input) = va_arg( args, stream_t*);
-            PAR_HND( outputs) = va_arg( args, stream_t**);
-            PAR_HND( type) = va_arg( args, snet_typeencoding_list_t*);
-            PAR_HND( is_det) = va_arg( args, bool);
-            break;
-    }
+    case HND_star:
+      HANDLE( star_hnd) = SNetMemAlloc( sizeof( star_handle_t));
+      STAR_HND( input) = va_arg( args, stream_t*);
+      STAR_HND( output_a) = va_arg( args, stream_t*);
+      STAR_HND( boxfun_a) = va_arg( args, void*);
+      STAR_HND( boxfun_b) = va_arg( args, void*);
+      STAR_HND( type) = va_arg( args, snet_typeencoding_t*);
+      STAR_HND( guard_list) = va_arg( args, snet_expr_list_t*);
+      STAR_HND( is_incarnate) = va_arg( args, bool);
+      break;
 
-    case HND_star: {
+    case HND_sync:
+      HANDLE( sync_hnd) = SNetMemAlloc( sizeof( sync_handle_t));
+      SYNC_HND( input) = va_arg( args, stream_t*);
+      SYNC_HND( output_a) = va_arg( args, stream_t*);
+      SYNC_HND( type) = va_arg( args, snet_typeencoding_t*);
+      SYNC_HND( patterns) = va_arg( args, snet_typeencoding_t*);
+      SYNC_HND( guard_list) = va_arg( args, snet_expr_list_t*);
+      break;
 
-            HANDLE( star_hnd) = SNetMemAlloc( sizeof( star_handle_t));
-            STAR_HND( input) = va_arg( args, stream_t*);
-            STAR_HND( output_a) = va_arg( args, stream_t*);
-            STAR_HND( boxfun_a) = va_arg( args, void*);
-            STAR_HND( boxfun_b) = va_arg( args, void*);
-            STAR_HND( type) = va_arg( args, snet_typeencoding_t*);
-            STAR_HND( guard_list) = va_arg( args, snet_expr_list_t*);
-            STAR_HND( is_incarnate) = va_arg( args, bool);
-
-            break;
-    }
-
-    case HND_sync: {
-
-            HANDLE( sync_hnd) = SNetMemAlloc( sizeof( sync_handle_t));
-            SYNC_HND( input) = va_arg( args, stream_t*);
-            SYNC_HND( output_a) = va_arg( args, stream_t*);
-            SYNC_HND( type) = va_arg( args, snet_typeencoding_t*);
-            SYNC_HND( patterns) = va_arg( args, snet_typeencoding_t*);
-            SYNC_HND( guard_list) = va_arg( args, snet_expr_list_t*);
-            break;
-    }
-
-    case HND_split: {
-
-            HANDLE( split_hnd) = SNetMemAlloc( sizeof( split_handle_t));
-            SPLIT_HND( input) = va_arg( args, stream_t*);
-            SPLIT_HND( output_a) = va_arg( args, stream_t*);
-            SPLIT_HND( boxfun_a) = va_arg( args, void*);
-            SPLIT_HND( tag_a) = va_arg( args, int);
-            SPLIT_HND( tag_b) = va_arg( args, int);
+    case HND_split:
+      HANDLE( split_hnd) = SNetMemAlloc( sizeof( split_handle_t));
+      SPLIT_HND( input) = va_arg( args, stream_t*);
+      SPLIT_HND( output_a) = va_arg( args, stream_t*);
+      SPLIT_HND( boxfun_a) = va_arg( args, void*);
+      SPLIT_HND( tag_a) = va_arg( args, int);
+      SPLIT_HND( tag_b) = va_arg( args, int);
+      SPLIT_HND( is_det) = va_arg( args, bool);
 #ifdef DISTRIBUTED_SNET
-	    SPLIT_HND( split_by_location) = va_arg( args, bool);
+      SPLIT_HND( split_by_location) = va_arg( args, bool);
 #endif /* DISTRIBUTED_SNET */
-            break;
-    }
+      break;
 
     case HND_filter:
       HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
@@ -238,9 +231,9 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
       FILTER_HND( guard_list) = va_arg( args, snet_expr_list_t*);
       FILTER_HND( instr_lists) = va_arg( args, snet_filter_instruction_set_list_t**);
       break;
-    default: {
+
+    default:
       SNetUtilDebugFatal("Cannot create requested handle type");
-    }
   }
 
   va_end( args);
@@ -490,6 +483,9 @@ extern bool SNetHndIsDet( snet_handle_t *hnd) {
   switch( hnd->descr) {
     case HND_parallel:
       result = PAR_HND( is_det);
+      break;
+    case HND_split:
+      result = SPLIT_HND( is_det);
       break;
     default: WrongHandleType();
   }

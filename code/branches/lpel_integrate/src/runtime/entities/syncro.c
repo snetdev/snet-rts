@@ -229,8 +229,8 @@ MatchPattern( snet_record_t *rec,
 
 
 //static void *SyncBoxThread( void *hndl) {
-static void SyncBoxTask( void *arg) {
-  
+static void SyncBoxTask( task_t *self, void *arg)
+{  
   int i; 
   int match_cnt=0, new_matches=0;
   int num_patterns;
@@ -402,7 +402,7 @@ extern stream_t *SNetSync( stream_t *input,
     SNetUtilDebugNotice("-");
 #endif
     hnd = SNetHndCreate( HND_sync, input, output, outtype, patterns, guards);
-    SNetTlCreateComponent( SyncBoxTask, (void*)hnd, ENTITY_sync);
+    SNetEntitySpawn( SyncBoxTask, (void*)hnd, ENTITY_sync);
 #ifdef SYNCRO_DEBUG
     SNetUtilDebugNotice("SYNCRO CREATION DONE");
 #endif
