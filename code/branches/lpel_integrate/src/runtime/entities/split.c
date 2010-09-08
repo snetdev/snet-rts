@@ -62,7 +62,7 @@ static void SplitBoxTask( task_t *self, void *arg)
   snet_handle_t *hnd = (snet_handle_t*)arg;
   stream_t *initial, *instream;
   int ltag, ltag_val, utag, utag_val;
-  snet_record_t *rec, *current_sort_rec;
+  snet_record_t *rec;
   snet_startup_fun_t boxfun;
   bool terminate = false;
   /* a list of outstreams + ltag info
@@ -104,7 +104,7 @@ static void SplitBoxTask( task_t *self, void *arg)
 
 
   /* MAIN LOOP START */
-  while( !( terminate)) {
+  while( !terminate) {
     /* read from input stream */
     rec = StreamRead( self, instream);
 
@@ -117,6 +117,13 @@ static void SplitBoxTask( task_t *self, void *arg)
         /* get lower and upper tag values */
         ltag_val = SNetRecGetTag( rec, ltag);
         utag_val = SNetRecGetTag( rec, utag);
+        
+        if (is_det) {
+          /* deterministic, sent sort_begin to initial */
+          StreamWrite( self, initial,
+              SNetRecCreate( REC_sort_begin, 0, counter));
+        }
+        
         /* for all tag values */
         for( i = ltag_val; i <= utag_val; i++) {
           elem = FindBufInList( repos, i);
@@ -140,23 +147,13 @@ static void SplitBoxTask( task_t *self, void *arg)
               temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
             }
             if(temp_stream != NULL) {
-              /* notify collector about the new instance */
-              if (is_det) {
-                /*if det: prepend with sort_begin */
-                StreamWrite( self, initial,
-                    SNetRecCreate( REC_sort_begin, 0, counter));
-              }
+              /* notify collector about the new instance via initial */
               StreamWrite( self, initial,
                   SNetRecCreate( REC_collect, temp_stream));
             }
             SNetInfoDestroy(info);
 #else
-            /* notify collector about the new instance */
-            if (is_det) {
-              /*if det: prepend with sort_begin */
-              StreamWrite( self, initial,
-                  SNetRecCreate( REC_sort_begin, 0, counter));
-            }
+            /* notify collector about the new instance via initial */
             StreamWrite( self, initial, 
                 SNetRecCreate( REC_collect, boxfun( elem->stream)));
 #endif /* DISTRIBUTED_SNET */
@@ -196,45 +193,32 @@ static void SplitBoxTask( task_t *self, void *arg)
         break;
 
       case REC_sort_begin:
-        if (is_det) {
-          /* increase level and send to collector */
-          SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-          StreamWrite( self, initial, rec);
-        } else {
-
-          /* the non-deterministic split component broadcasts */
-          current_sort_rec = rec;
-          if(!SNetUtilListIsEmpty(repos)) {
-            /* create iterator */
-            current_position = SNetUtilListFirst(repos);
-            /* all instances but the last receive copies of the record */
-            while(SNetUtilListIterHasNext(current_position)) {
-              elem = SNetUtilListIterGet(current_position);
-              StreamWrite( self, elem->stream,
-                  SNetRecCreate( REC_sort_begin, SNetRecGetLevel( rec),
-                    SNetRecGetNum( rec)));
-              current_position = SNetUtilListIterNext(current_position);
-            }
-            /* send the original record to the last instance in list */
+        /* broadcast the sort record */
+        if(!SNetUtilListIsEmpty(repos)) {
+          /* create iterator */
+          current_position = SNetUtilListFirst(repos);
+          /* all instances receive copies of the record */
+          while(SNetUtilListIterCurrentDefined(current_position)) {
             elem = SNetUtilListIterGet(current_position);
-            StreamWrite( self, elem->stream, rec);
-            /* destroy the iterator */
-            SNetUtilListIterDestroy(current_position);
-          } else {
-            /* we are unable to relay this record anyway, so we discard it? */
-#ifdef DEBUG_SPLIT
-            if( SNetRecGetDescriptor( rec) == REC_sort_begin) {
-              SNetUtilDebugNotice("[SPLIT] Got REC_sort_begin with nowhere to"
-                  " send it!");
-            } else {
-              SNetUtilDebugNotice("[SPLIT] Got REC_sort_end with nowhere to"
-                  " send it!");
-            }
-#endif
-            SNetRecDestroy(rec);
+            StreamWrite( self, elem->stream,
+                SNetRecCreate( REC_sort_begin,
+                  /* if deterministic, we have to increase level */
+                  (is_det)? SNetRecGetLevel( rec)+1 : SNetRecGetLevel( rec),
+                  SNetRecGetNum( rec))
+                );
+            current_position = SNetUtilListIterNext(current_position);
           }
+          /* destroy the iterator */
+          SNetUtilListIterDestroy(current_position);
         }
-        break;
+        /* send the original record to the initial stream */
+        if (is_det) {
+          /* if deterministic, we have to increase level */
+          SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        }
+        StreamWrite( self, initial, rec);
+    }
+    break;
 
       case REC_terminate:
         terminate = true;

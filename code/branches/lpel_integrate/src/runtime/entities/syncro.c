@@ -269,25 +269,29 @@ static void SyncBoxTask( task_t *self, void *arg)
   }
   match_cnt = 0;
   
-  while( !( terminate)) {
+  /* MAIN LOOP START */
+  while( !terminate) {
+  
+    /* read from input stream */
     rec = StreamRead( self, instream);
+
     switch( SNetRecGetDescriptor( rec)) {
+      
       case REC_data:
         new_matches = 0;
         for( i=0; i<num_patterns; i++) {
           /* storage empty and guard accepts => store record*/
           if( (storage[i] == NULL) &&
               (MatchPattern(rec, SNetTencGetVariant(patterns, i+1),
-                        SNetEgetExpr( guards, i)))) {
+                            SNetEgetExpr( guards, i)))) {
             storage[i] = rec;
             new_matches += 1;
           }
         }
- 
+
         if( new_matches == 0) {
           StreamWrite( self, outstream, rec);
-        }
-        else {
+        } else {
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
 #ifdef SYNC_FI_VARIANT_1
@@ -303,8 +307,9 @@ static void SyncBoxTask( task_t *self, void *arg)
 #endif
             StreamWrite( self, outstream, temp_record);
             /* current_state->terminated = true; */
-            StreamWrite( self, outstream, SNetRecCreate(REC_sync, 
-                                              instream));
+            StreamWrite( self, outstream,
+                SNetRecCreate(REC_sync, instream)
+                );
 
 	    StreamClose( self, outstream);
             StreamDestroy( outstream);
@@ -312,25 +317,28 @@ static void SyncBoxTask( task_t *self, void *arg)
             terminate = true;
           }
         }
-      break;
-    case REC_sync:
-    {
-      stream_t *newstream = SNetRecGetStream( rec);
-      StreamReplace( self, &instream, newstream);
-      SNetHndSetInput( hnd, newstream);
-      SNetRecDestroy( rec);
-    }
-   break;
+        break;
+
+      case REC_sync:
+        {
+          stream_t *newstream = SNetRecGetStream( rec);
+          StreamReplace( self, &instream, newstream);
+          SNetHndSetInput( hnd, newstream);
+          SNetRecDestroy( rec);
+        }
+        break;
+
       case REC_collect:
+        /* invalid record */
         SNetRecDestroy( rec);
         break;
+
       case REC_sort_begin:
+        /* forward all sort records */
         StreamWrite( self, outstream, rec);
         break;
-      case REC_sort_end:
-        StreamWrite( self, outstream, rec);
-        break;
-    case REC_terminate:
+
+      case REC_terminate:
         /* SNetUtilTreeDestroy(states);*/
         /* check if all storages are empty */
         /*
@@ -346,23 +354,21 @@ static void SyncBoxTask( task_t *self, void *arg)
           SNetMemFree(current_state);
         }
         SNetUtilListDestroy(to_free);
-        */
+         */
 
         terminate = true;
         StreamWrite( self, outstream, rec);
         StreamClose( self, outstream);
         StreamDestroy( outstream);
-      break;
+        break;
 
-      case REC_probe:
-        StreamWrite( self, outstream, rec);
-      break;
-    default:
-      SNetUtilDebugNotice("[Synchro] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
-      SNetRecDestroy( rec);
-      break;
+      default:
+        SNetUtilDebugNotice("[Synchro] Unknown control rec destroyed (%d).\n",
+            SNetRecGetDescriptor( rec));
+        SNetRecDestroy( rec);
     }
-  }
+  } /* MAIN LOOP END */
+
   SNetMemFree(storage);
   SNetDestroyTypeEncoding( outtype);
   SNetDestroyTypeEncoding( patterns);
@@ -372,14 +378,18 @@ static void SyncBoxTask( task_t *self, void *arg)
 }
 
 
-extern stream_t *SNetSync( stream_t *input,
+
+/**
+ * Synchro-Box creation function
+ */
+stream_t *SNetSync( stream_t *input,
 #ifdef DISTRIBUTED_SNET
-				   snet_info_t *info, 
-				   int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-				   snet_typeencoding_t *outtype,
-				   snet_typeencoding_t *patterns,
-				   snet_expr_list_t *guards )
+    snet_typeencoding_t *outtype,
+    snet_typeencoding_t *patterns,
+    snet_expr_list_t *guards )
 {
   stream_t *output;
   snet_handle_t *hnd;
@@ -390,29 +400,18 @@ extern stream_t *SNetSync( stream_t *input,
     SNetUtilDebugNotice("Synchrocell created");
 #endif /* DISTRIBUTED_DEBUG */
 #endif /* DISTRIBUTED_SNET */
-    
-    //  output = SNetBufCreate( BUFFER_SIZE);
-    //BUF_CREATE( output, BUFFER_SIZE);
+
     output = StreamCreate();
-#ifdef SYNCRO_DEBUG
-    SNetUtilDebugNotice("-");
-    SNetUtilDebugNotice("| SYNCRO CREATED");
-    SNetUtilDebugNotice("| input: %p", input);
-    SNetUtilDebugNotice("| output: %p", output);
-    SNetUtilDebugNotice("-");
-#endif
     hnd = SNetHndCreate( HND_sync, input, output, outtype, patterns, guards);
     SNetEntitySpawn( SyncBoxTask, (void*)hnd, ENTITY_sync);
-#ifdef SYNCRO_DEBUG
-    SNetUtilDebugNotice("SYNCRO CREATION DONE");
-#endif
+
 #ifdef DISTRIBUTED_SNET
   } else {
     SNetDestroyTypeEncoding( outtype);
     SNetDestroyTypeEncoding( patterns);
     SNetEdestroyList(guards);
     output = input;
-}
+  }
 #endif /* DISTRIBUTED_SNET */
   return( output);
 }

@@ -21,7 +21,14 @@
 /* ------------------------------------------------------------------------- */
 
 
-extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...) {
+/**
+ * Create a filter instruction
+ *
+ * @param opcode  the opcode
+ * @param ...     operands
+ * @return  the filter instruction
+ */
+snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...) {
 
   va_list args;
   snet_filter_instruction_t *instr;
@@ -60,7 +67,10 @@ extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcod
 }
 
 
-extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr) 
+/**
+ * Destroy a filter instruction
+ */
+void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr) 
 {
   if(instr->data != NULL) {
     SNetMemFree( instr->data);
@@ -71,8 +81,16 @@ extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr)
   SNetMemFree( instr);
 }
 
-extern snet_filter_instruction_set_t *SNetCreateFilterInstructionSet( int num, ...) {
-
+/**
+ * Create a filter instruction set holding a specified
+ * number of filter instructions.
+ *
+ * @param num   number of filter instructions
+ * @param ...   the filter instructions
+ * @return the filter instruction set
+ */
+snet_filter_instruction_set_t *SNetCreateFilterInstructionSet( int num, ...)
+{
   va_list args;
   int i;
   snet_filter_instruction_set_t *set;
@@ -83,18 +101,19 @@ extern snet_filter_instruction_set_t *SNetCreateFilterInstructionSet( int num, .
   set->instructions = SNetMemAlloc( num * sizeof( snet_filter_instruction_t*));
 
   va_start( args, num);
-
   for( i=0; i<num; i++) {
     set->instructions[i] = va_arg( args, snet_filter_instruction_t*);
   }
-
   va_end( args);
 
   return( set);
 }
 
 
-extern int SNetFilterGetNumInstructions( snet_filter_instruction_set_t *set)
+/**
+ * Get the number of instructions in a filter instruction set
+ */
+int SNetFilterGetNumInstructions( snet_filter_instruction_set_t *set)
 {
   if( set == NULL) {
     return( 0);
@@ -104,8 +123,12 @@ extern int SNetFilterGetNumInstructions( snet_filter_instruction_set_t *set)
   }
 }
 
-
-extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList( int num, ...) {
+/**
+ * Create a list of filter instruction sets
+ */
+snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList(
+    int num, ...)
+{
   va_list args;
   int i;
   snet_filter_instruction_set_list_t *lst;
@@ -123,25 +146,28 @@ extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList( i
   return( lst);
 }
 
-extern void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set) {
-
+/**
+ * Destroy a filter instruction set
+ */
+void SNetDestroyFilterInstructionSet( snet_filter_instruction_set_t *set)
+{
   int i;
-
   for( i=0; i<set->num; i++) {
     if(set->instructions[i] != NULL) {
       SNetDestroyFilterInstruction(set->instructions[i]);
     }
   }
-
   SNetMemFree( set->instructions);
   SNetMemFree( set);
 }
 
-extern void
-SNetDestroyFilterInstructionSetList( snet_filter_instruction_set_list_t *lst)
+/**
+ * Destroy a list of filter instruction sets
+ */
+void SNetDestroyFilterInstructionSetList(
+    snet_filter_instruction_set_list_t *lst)
 {
   int i;
-  
   for( i=0; i<lst->num; i++) {
    if(lst->lst[i] != NULL) {
       SNetDestroyFilterInstructionSet(lst->lst[i]);
@@ -151,19 +177,20 @@ SNetDestroyFilterInstructionSetList( snet_filter_instruction_set_list_t *lst)
   SNetMemFree(lst);
 }
 
-inline static void InitTypeArrayEntry( snet_typeencoding_t **type_array,
-                                                int i) {
+
+inline static void InitTypeArrayEntry(
+    snet_typeencoding_t **type_array, int i)
+{
   SNetTencAddVariant( type_array[i], 
-    SNetTencVariantEncode( 
-      SNetTencCreateEmptyVector( 0),
-      SNetTencCreateEmptyVector( 0),
-      SNetTencCreateEmptyVector( 0)));
+      SNetTencVariantEncode( 
+        SNetTencCreateEmptyVector( 0),
+        SNetTencCreateEmptyVector( 0),
+        SNetTencCreateEmptyVector( 0)));
 }
 
 // pass at least one set!! -> lst must not be NULL!
-static snet_typeencoding_list_t
-*FilterComputeTypes( int num,
-                     snet_filter_instruction_set_list_t **lst)
+static snet_typeencoding_list_t *FilterComputeTypes(
+    int num, snet_filter_instruction_set_list_t **lst)
 {
   int i, j, k;
   snet_typeencoding_t **type_array;
@@ -254,8 +281,8 @@ static snet_expr_t *getExprFromInstr( snet_filter_instruction_t *instr)
   return( instr->expr);
 }
 
-static snet_filter_instruction_t
-*FilterGetInstruction( snet_filter_instruction_set_t *set, int num)
+static snet_filter_instruction_t *FilterGetInstruction(
+    snet_filter_instruction_set_t *set, int num)
 {
   if( set == NULL) {
     return( NULL);
@@ -265,8 +292,8 @@ static snet_filter_instruction_t
   }
 }
 
-static snet_filter_instruction_set_t
-*FilterGetInstructionSet( snet_filter_instruction_set_list_t *l, int num)
+static snet_filter_instruction_set_t *FilterGetInstructionSet(
+    snet_filter_instruction_set_list_t *l, int num)
 {
   if( l == NULL) {
     return( NULL);
@@ -317,10 +344,10 @@ static bool FilterInTypeHasTag( snet_typeencoding_t *t, int name)
             name));
 }
 
-static snet_record_t*
-FilterInheritFromInrec( snet_typeencoding_t *in_type,
-                         snet_record_t *in_rec,
-                         snet_record_t *out_rec)
+static snet_record_t *FilterInheritFromInrec(
+    snet_typeencoding_t *in_type,
+    snet_record_t *in_rec,
+    snet_record_t *out_rec)
 {
   int i;
   int *names;
@@ -354,12 +381,14 @@ FilterInheritFromInrec( snet_typeencoding_t *in_type,
 }
 
 
-
-//static void *FilterThread( void *hnd)
-static void FilterTask(task_t *self, void *hnd)
+/**
+ * Filter task
+ */
+static void FilterTask( task_t *self, void *arg)
 {
   int i,j,k;
   bool done, terminate;
+  snet_handle_t *hnd = (snet_handle_t*)arg;
   stream_t *instream, *outstream;
   snet_record_t *in_rec;
   snet_expr_list_t *guard_list;
@@ -386,80 +415,82 @@ static void FilterTask(task_t *self, void *hnd)
   type_list = SNetHndGetOutTypeList( hnd);
   instr_lst = SNetHndGetFilterInstructionSetLists( hnd);
 
+  /* MAIN LOOP */
   while( !( terminate)) {
-    //in_rec = SNetTlRead( instream);
+    /* read from input stream */
     in_rec = StreamRead( self, instream);
     done = false;
 
     switch( SNetRecGetDescriptor( in_rec)) {
       case REC_data:
-          for( i=0; i<SNetElistGetNumExpressions( guard_list); i++) {
-              if( ( SNetEevaluateBool( SNetEgetExpr( guard_list, i), in_rec)) 
-                  && !( done)) { 
-                snet_record_t *out_rec = NULL;
-                done = true;
-                out_type = SNetTencGetTypeEncoding( type_list, i);
-                current_lst = instr_lst[i];
-                for( j=0; j<SNetTencGetNumVariants( out_type); j++) {
-                  out_rec = SNetRecCreate( REC_data, 
-                                           SNetTencCopyVariantEncoding( 
-                                           SNetTencGetVariant( out_type, j+1)));
-                  SNetRecCopyIterations(in_rec, out_rec);
-                  SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
-		  SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
+        for( i=0; i<SNetElistGetNumExpressions( guard_list); i++) {
+          if( ( SNetEevaluateBool( SNetEgetExpr( guard_list, i), in_rec)) 
+              && !( done)) { 
+            snet_record_t *out_rec = NULL;
+            done = true;
+            out_type = SNetTencGetTypeEncoding( type_list, i);
+            current_lst = instr_lst[i];
+            for( j=0; j<SNetTencGetNumVariants( out_type); j++) {
+              out_rec = SNetRecCreate( REC_data, 
+                  SNetTencCopyVariantEncoding( 
+                    SNetTencGetVariant( out_type, j+1)));
+              SNetRecCopyIterations(in_rec, out_rec);
+              SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
+              SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
 
-                  current_set = FilterGetInstructionSet( current_lst, j);
-                  for( k=0; k<SNetFilterGetNumInstructions( current_set); k++) {
-                    current_instr = FilterGetInstruction( current_set, k);
-                    switch( current_instr->opcode) {
-                      case snet_tag:
-                        SNetRecSetTag( 
-                            out_rec, 
-                            getNameFromInstr( current_instr),
-                            SNetEevaluateInt( 
-                              getExprFromInstr( current_instr), in_rec));
-                        break;
-                      case snet_btag:
-                        SNetRecSetBTag( 
-                            out_rec, 
-                            getNameFromInstr( current_instr),
-                            SNetEevaluateInt( 
-                              getExprFromInstr( current_instr), in_rec));
-                        break;
-                      case snet_field: {
-			SNetRecCopyFieldToRec(in_rec, 
-					      getFieldNameFromInstr( current_instr), 
-					      out_rec, 
-					      getNameFromInstr( current_instr));
-                        }
-                        break;
-                        case create_record: //noop
-                        break;
-                      default:
-                        SNetUtilDebugFatal("[Filter] Unknown opcode in filter" 
-					   " instruction [%d]\n\n",
-					   current_instr->opcode);
-                    } 
-                  } // forall instructions of current_set
+              current_set = FilterGetInstructionSet( current_lst, j);
+              for( k=0; k<SNetFilterGetNumInstructions( current_set); k++) {
+                current_instr = FilterGetInstruction( current_set, k);
+                switch( current_instr->opcode) {
+                  case snet_tag:
+                    SNetRecSetTag( 
+                        out_rec, 
+                        getNameFromInstr( current_instr),
+                        SNetEevaluateInt( 
+                          getExprFromInstr( current_instr), in_rec));
+                    break;
+                  case snet_btag:
+                    SNetRecSetBTag( 
+                        out_rec, 
+                        getNameFromInstr( current_instr),
+                        SNetEevaluateInt( 
+                          getExprFromInstr( current_instr), in_rec));
+                    break;
+                  case snet_field: {
+                                     SNetRecCopyFieldToRec(in_rec, 
+                                         getFieldNameFromInstr( current_instr), 
+                                         out_rec, 
+                                         getNameFromInstr( current_instr));
+                                   }
+                                   break;
+                  case create_record: //noop
+                                   break;
+                  default:
+                                   SNetUtilDebugFatal("[Filter] Unknown opcode in filter" 
+                                       " instruction [%d]\n\n",
+                                       current_instr->opcode);
+                } 
+              } // forall instructions of current_set
 
-                  out_rec = FilterInheritFromInrec( in_type, in_rec, out_rec);
+              out_rec = FilterInheritFromInrec( in_type, in_rec, out_rec);
 #ifdef DEBUG_FILTER
-		  SNetUtilDebugNotice("FILTER %x: outputting %x",
-				      (unsigned int) outstream, (unsigned int) out_rec);
+              SNetUtilDebugNotice("FILTER %x: outputting %x",
+                  (unsigned int) outstream, (unsigned int) out_rec);
 #endif
-		  //SNetTlWrite( outstream, out_rec);
-		  StreamWrite( self, outstream, out_rec);
-                } // forall variants of selected out_type
-              } // if guard is true
-            } // forall guards
-            SNetRecDestroy( in_rec);
-            if( !( done)) {
+              //SNetTlWrite( outstream, out_rec);
+              StreamWrite( self, outstream, out_rec);
+            } // forall variants of selected out_type
+          } // if guard is true
+        } // forall guards
+        SNetRecDestroy( in_rec);
+        if( !( done)) {
 #ifdef DEBUG_FILTER
-              SNetUtilDebugFatal("[Filter] All guards evaluated to FALSE.\n\n");
+          SNetUtilDebugFatal("[Filter] All guards evaluated to FALSE.\n\n");
 #endif
-            }
+        }
         break; // case rec_data
-        case REC_sync:
+
+      case REC_sync:
         {
           //instream = SNetRecGetStream( in_rec);
           stream_t *newstream = SNetRecGetStream( in_rec);
@@ -469,47 +500,48 @@ static void FilterTask(task_t *self, void *hnd)
           SNetRecDestroy( in_rec);
         }
         break;
-        case REC_collect:
+
+      case REC_collect:
 #ifdef DEBUG_FILTER
-          SNetUtilDebugNotice("[Filter] Unhandled control record, destroying "
-                              "it\n\n");
+        SNetUtilDebugNotice("[Filter] Unhandled control record, destroying "
+            "it\n\n");
 #endif
-          SNetRecDestroy( in_rec);
+        SNetRecDestroy( in_rec);
         break;
-        case REC_sort_begin:
-        case REC_sort_end:
-          //SNetTlWrite( SNetHndGetOutput( hnd), in_rec);
-          StreamWrite( self, outstream, in_rec);
+
+      case REC_sort_begin:
+        /* forward sort record */
+        StreamWrite( self, outstream, in_rec);
         break;
-        case REC_terminate:
+
+      case REC_terminate:
           terminate = true;
           StreamWrite( self, outstream, in_rec);
           SNetHndDestroy( hnd);
         break;
-        /*
-        case REC_probe:
-          StreamWrite( outstream, in_rec);
-        break;
-        */
-    default:
-      SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( in_rec));
-      SNetRecDestroy(in_rec);
-      break;
-    } // switch rec_descr
-  } // while not terminate
+
+      default:
+        SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( in_rec));
+        SNetRecDestroy(in_rec);
+    }
+  } /* MAIN LOOP END */
   StreamClose( self, outstream);
   StreamDestroy( outstream);
   StreamClose( self, instream);
 }
 
 
-extern stream_t* SNetFilter( stream_t *instream,
+
+/**
+ * Filter creation function
+ */
+stream_t* SNetFilter( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-				     snet_info_t *info, 
-				     int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-				     snet_typeencoding_t *in_type,
-				     snet_expr_list_t *guards, ... )
+    snet_typeencoding_t *in_type,
+    snet_expr_list_t *guards, ... )
 {
   int i;
   int num_outtypes;
@@ -523,13 +555,10 @@ extern stream_t* SNetFilter( stream_t *instream,
 
 #ifdef DISTRIBUTED_SNET
   instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location); 
-
   if(location == SNetIDServiceGetNodeID()) {
-
 #ifdef DISTRIBUTED_DEBUG
     SNetUtilDebugNotice("Filter created");
 #endif /* DISTRIBUTED_DEBUG */
-
 #endif /* DISTRIBUTED_SNET */
 
     outstream = StreamCreate(); //SNetTlCreateStream(BUFFER_SIZE);
@@ -584,13 +613,16 @@ extern stream_t* SNetFilter( stream_t *instream,
 }
 
 
-extern stream_t* SNetTranslate( stream_t *instream,
+/**
+ * Translate creation function
+ */
+stream_t* SNetTranslate( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-					snet_info_t *info, 
-					int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-					snet_typeencoding_t *in_type,
-					snet_expr_list_t *guards, ... )
+    snet_typeencoding_t *in_type,
+    snet_expr_list_t *guards, ... )
 {
   int i;
   int num_outtypes;
@@ -637,33 +669,29 @@ extern stream_t* SNetTranslate( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
   } else {
     SNetDestroyTypeEncoding(in_type);
-    
     num_outtypes = SNetElistGetNumExpressions( guards);
-    
     if(num_outtypes == 0) {
       num_outtypes += 1;
     }
     
     va_start( args, guards);
-
     for( i=0; i<num_outtypes; i++) {
       SNetDestroyFilterInstructionSetList(va_arg( args, snet_filter_instruction_set_list_t*));
       
     }
-
     va_end( args);
-    
-    SNetEdestroyList( guards);
 
+    SNetEdestroyList( guards);
     outstream = instream;
   }
 #endif /* DISTRIBUTED_SNET */
-
   return( outstream);
 }
 
 
-//static void *NameshiftThread( void *h)
+/**
+ * Nameshift task
+ */
 static void NameshiftTask( task_t *self, void *arg)
 {
   bool terminate = false;
@@ -684,11 +712,13 @@ static void NameshiftTask( task_t *self, void *arg)
   // Guards are misused for offset
   offset = SNetEevaluateInt( SNetEgetExpr( SNetHndGetGuardList( hnd), 0), NULL);
 
+  /* MAIN LOOP */
   while( !terminate) {
-    //rec = SNetTlRead( instream);
+    /* read from input stream */
     rec = StreamRead( self, instream);
 
     switch( SNetRecGetDescriptor( rec)) {
+
       case REC_data:
         names = SNetRecGetUnconsumedFieldNames( rec);
         num = SNetRecGetNumFields( rec);
@@ -720,70 +750,69 @@ static void NameshiftTask( task_t *self, void *arg)
         //SNetTlWrite(outstream, rec);
         StreamWrite( self, outstream, rec);
         break;
+
       case REC_sync:
-      {
-        stream_t *newstream = SNetRecGetStream(rec);
-        SNetHndSetInput( hnd, newstream);
-        StreamReplace( self, &instream, newstream);
-        SNetRecDestroy( rec);
-      }
-      break;
+        {
+          stream_t *newstream = SNetRecGetStream(rec);
+          SNetHndSetInput( hnd, newstream);
+          StreamReplace( self, &instream, newstream);
+          SNetRecDestroy( rec);
+        }
+        break;
+
       case REC_collect:
-        #ifdef DEBUG_FILTER
+#ifdef DEBUG_FILTER
         SNetUtilDebugNotice("[Filter] Unhandled control record, destroying"
-                            " it\n\n");
-        #endif
+            " it\n\n");
+#endif
         SNetRecDestroy( rec);
-      break;
+        break;
+
       case REC_sort_begin:
-      case REC_sort_end:
         StreamWrite( self, outstream, rec);
-      break;
+        break;
+
       case REC_terminate:
         terminate = true;
         StreamWrite( self, outstream, rec);
         SNetHndDestroy( hnd);
-      break;
-      /*
-      case REC_probe:
-        SNetTlWrite(SNetHndGetOutput(hnd), rec);
-      break;
-      */
-    default:
-      SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
-      SNetRecDestroy( rec);
-      break;
+        break;
+
+      default:
+        SNetUtilDebugNotice("[Filter] Unknown control rec destroyed (%d).\n",
+            SNetRecGetDescriptor( rec));
+        SNetRecDestroy( rec);
     }
   }
   StreamClose( self, instream);
   StreamClose( self, outstream);
+  StreamDestroy( outstream);
 }
 
 
-extern stream_t *SNetNameShift( stream_t *instream,
+/**
+ * Nameshift creation function
+ */
+stream_t *SNetNameShift( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-					snet_info_t *info, 
-					int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-					int offset,
-					snet_variantencoding_t *untouched)
+    int offset,
+    snet_variantencoding_t *untouched)
 {
   stream_t *outstream;
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
   instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location);
-
   if(location == SNetIDServiceGetNodeID()) {
-
 #ifdef DISTRIBUTED_DEBUG
     SNetUtilDebugNotice("Nameshift created");
 #endif /* DISTRIBUTED_DEBUG */
-
 #endif /* DISTRIBUTED_SNET */
 
     outstream = StreamCreate(); //SNetTlCreateStream( BUFFER_SIZE);
-    
     hnd = SNetHndCreate( HND_filter, instream, outstream,
 			 SNetTencTypeEncode( 1, untouched),
 			 NULL, // outtypes
@@ -794,13 +823,10 @@ extern stream_t *SNetNameShift( stream_t *instream,
   
 #ifdef DISTRIBUTED_SNET
   } else {
-    
     SNetTencDestroyVariantEncoding( untouched);
-
     outstream = instream;
   }
 #endif /* DISTRIBUTED_SNET */
-  
   return( outstream);
 }
 

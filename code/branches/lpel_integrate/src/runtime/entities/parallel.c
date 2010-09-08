@@ -148,30 +148,23 @@ static int BestMatch( match_count_t **counter, int num)
 static void PutToBuffers( task_t *self, stream_t **streams, int num,
     int idx, snet_record_t *rec, int counter, bool det)
 {
-  int i;
 
-  for( i=0; i<num; i++) {
-    if( det) {
-      //SNetTlWrite( streams[i], SNetRecCreate( REC_sort_begin, 0, counter));
-      StreamWrite( self, streams[i], SNetRecCreate( REC_sort_begin, 0, counter));
-    }
-
-    if( i == idx) {
-#ifdef PARALLEL_DEBUG
-      SNetUtilDebugNotice("PARALLEL %p: Writing record %p to stream %p",
-                          streams, 
-			  rec,
-                          streams[i]);
-#endif
-      //SNetTlWrite( streams[i], rec);
-      StreamWrite( self, streams[i], rec);
-    }
-
-    if( det) {
-      //SNetTlWrite( streams[i], SNetRecCreate( REC_sort_end, 0, counter));
-      StreamWrite( self, streams[i], SNetRecCreate( REC_sort_end, 0, counter));
+  if( det) {
+    /* for the deterministic variant, broadcast sort record beforehand */
+    int i;
+    for( i=0; i<num; i++) {
+      StreamWrite( self, streams[i],
+          SNetRecCreate( REC_sort_begin, 0, counter));
     }
   }
+  /* write data record to target stream */
+#ifdef PARALLEL_DEBUG
+  SNetUtilDebugNotice(
+      "PARALLEL %p: Writing record %p to stream %p",
+      streams, rec, streams[idx]
+      );
+#endif
+  StreamWrite( self, streams[idx], rec);
 }
 
 
@@ -180,11 +173,9 @@ static void PutToBuffers( task_t *self, stream_t **streams, int num,
  */
 static void ParallelBoxTask( task_t *self, void *arg)
 {
-
   int i, num, stream_index;
   snet_handle_t *hnd = (snet_handle_t*) arg;
   snet_record_t *rec;
-  //stream_t *go_stream = NULL;
   stream_t *instream, *initial;
   match_count_t **matchcounter;
   stream_t **streams;
@@ -271,34 +262,37 @@ static void ParallelBoxTask( task_t *self, void *arg)
 #ifdef PARALLEL_DEBUG
     SNetUtilDebugNotice("PARALLEL %p: reading %p", streams, instream);
 #endif
+    /* read a record from the instream */
     rec = StreamRead( self, instream);
 
     switch( SNetRecGetDescriptor( rec)) {
+
       case REC_data:
         for( i=0; i<num; i++) {
           CheckMatch( rec, SNetTencGetTypeEncoding( types, i), matchcounter[i]);
         }
- 
+
         stream_index = BestMatch( matchcounter, num);
-        //go_stream = streams[stream_index];
         PutToBuffers( self, streams, num, stream_index, rec, counter, is_det);
         counter += 1;
-      break;
+        break;
+
       case REC_sync:
-      {
-        stream_t *newstream = SNetRecGetStream( rec);
-        StreamReplace( self, &instream, newstream);
-        SNetHndSetInput( hnd, newstream);
-        SNetRecDestroy( rec);
-      }
-      break;
+        {
+          stream_t *newstream = SNetRecGetStream( rec);
+          StreamReplace( self, &instream, newstream);
+          SNetHndSetInput( hnd, newstream);
+          SNetRecDestroy( rec);
+        }
+        break;
+
       case REC_collect:
-        SNetUtilDebugNotice("[Parallel] Unhandled control record, destroying" 
-                            " it\n\n");
+        SNetUtilDebugNotice("[Parallel] Unhandled control record,"
+            "destroying it\n\n");
         SNetRecDestroy( rec);
         break;
+
       case REC_sort_begin:
-      case REC_sort_end:
         if( is_det) {
           SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
         }
@@ -307,28 +301,28 @@ static void ParallelBoxTask( task_t *self, void *arg)
         }
         StreamWrite( self, streams[num-1], rec);
         break;
+
       case REC_terminate:
         terminate = true;
+        /* broadcast the termination record */
         if( is_det) {
+          /* for deterministic variant, prepend with sort record */
           for( i=0; i<num; i++) {
             StreamWrite( self, streams[i], 
                 SNetRecCreate( REC_sort_begin, 0, counter));
           }
         }
         for( i=0; i<num; i++) {
-          if( i == (num-1)) {
-            StreamWrite( self, streams[i], rec);
-          }
-          else {
-            StreamWrite( self, streams[i], SNetRecCopy( rec));
-          }
+          /* send a copy to all but the last, the last gets the original */
+          StreamWrite( self,
+              streams[i],
+              (i != (num-1)) ? SNetRecCopy( rec) : rec
+              );
         }
         for( i=0; i<num; i++) {
           StreamClose( self, streams[i]);
           StreamDestroy( streams[i]);
           SNetMemFree( matchcounter[i]);
-
-          StreamClose( self, instream);
         }
         SNetMemFree( streams);
         SNetMemFree( matchcounter);
@@ -338,7 +332,6 @@ static void ParallelBoxTask( task_t *self, void *arg)
     default:
       SNetUtilDebugNotice("[Parallel] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
-      break;
     }
   } /* MAIN LOOP END */
 
