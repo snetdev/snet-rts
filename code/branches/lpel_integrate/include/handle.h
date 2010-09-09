@@ -87,6 +87,7 @@ extern stream_t *SNetHndGetInput( snet_handle_t *hndl);
 
 extern stream_t *SNetHndGetOutput( snet_handle_t *hndl);
 extern stream_t **SNetHndGetOutputs( snet_handle_t *hndl);
+extern stream_t **SNetHndGetAddresses( snet_handle_t *hndl);
 
 extern void *SNetHndGetBoxfun( snet_handle_t *handle);
 extern void *SNetHndGetBoxfunA( snet_handle_t *handle);

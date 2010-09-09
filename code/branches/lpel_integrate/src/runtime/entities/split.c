@@ -8,7 +8,6 @@
 #include "debug.h"
 #include "collectors.h"
 #include "threading.h"
-#include "stream_layer.h"
 #include "list.h"
 
 #include "stream.h"
@@ -215,8 +214,8 @@ static void SplitBoxTask( task_t *self, void *arg)
             elem = SNetUtilListIterGet(current_position);
             StreamWrite( self, elem->stream,
                 SNetRecCreate( REC_sort_end,
-                  /* if deterministic, we have to increase level */
-                  (is_det)? SNetRecGetLevel( rec)+1 : SNetRecGetLevel( rec),
+                  /* we have to increase level */
+                  SNetRecGetLevel( rec)+1,
                   SNetRecGetNum( rec))
                 );
             current_position = SNetUtilListIterNext(current_position);
@@ -224,14 +223,11 @@ static void SplitBoxTask( task_t *self, void *arg)
           /* destroy the iterator */
           SNetUtilListIterDestroy(current_position);
         }
-        /* send the original record to the initial stream */
-        if (is_det) {
-          /* if deterministic, we have to increase level */
-          SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-        }
+        /* send the original record to the initial stream,
+           but with increased level */
+        SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
         StreamWrite( self, initial, rec);
-    }
-    break;
+        break;
 
       case REC_terminate:
         terminate = true;

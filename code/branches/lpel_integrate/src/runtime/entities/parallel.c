@@ -32,7 +32,6 @@
 #include "memfun.h"
 #include "debug.h"
 #include "threading.h"
-#include "stream_layer.h"
 
 #ifdef DISTRIBUTED_SNET
 #include "routing.h"
@@ -85,7 +84,7 @@ static match_count_t *CheckMatch( snet_record_t *rec,
   if(mc == NULL) {
     SNetUtilDebugFatal("PARALLEL: CheckMatch: mc == NULL");
   }
-
+  /* for all variants */
   for( j=0; j<SNetTencGetNumVariants( tenc); j++) {
     venc = SNetTencGetVariant( tenc, j+1);
     MC_COUNT( mc) = 0;
@@ -95,26 +94,25 @@ static match_count_t *CheckMatch( snet_record_t *rec,
         ( SNetRecGetNumTags( rec) < SNetTencGetNumTags( venc)) ||
         ( SNetRecGetNumBTags( rec) != SNetTencGetNumBTags( venc))) {
       MC_ISMATCH( mc) = false;
-    }
-    else { // is_match is set to value inside the macros
+    } else {
+      /* is_match is set to value inside the macros */
       FIND_NAME_LOOP( SNetRecGetNumFields, SNetTencGetNumFields,
           SNetRecGetFieldNames, SNetTencGetFieldNames);
       FIND_NAME_LOOP( SNetRecGetNumTags, SNetTencGetNumTags, 
           SNetRecGetTagNames, SNetTencGetTagNames);
-  
+
       for( i=0; i<SNetRecGetNumBTags( rec); i++) {
-         if(!SNetTencContainsBTagName(venc, SNetRecGetBTagNames(rec)[i])) {
+        if(!SNetTencContainsBTagName(venc, SNetRecGetBTagNames(rec)[i])) {
           MC_ISMATCH( mc) = false;
-        }
-        else {
-         MC_COUNT( mc) += 1;
+        } else {
+          MC_COUNT( mc) += 1;
         }
       }
     }
     if( MC_ISMATCH( mc)) {
       max = MC_COUNT( mc) > max ? MC_COUNT( mc) : max;
     }
-  } // for all variants
+  } /* end for all variants */
 
   if( max >= 0) {
     MC_ISMATCH( mc) = true;
@@ -124,8 +122,10 @@ static match_count_t *CheckMatch( snet_record_t *rec,
   return( mc);
 }
 
-// Checks for "best match" and decides which buffer to dispatch to
-// in case of a draw.
+/**
+ * Check for "best match" and decide which buffer to dispatch to
+ * in case of a draw.
+ */
 static int BestMatch( match_count_t **counter, int num)
 {
   int i;
@@ -144,27 +144,33 @@ static int BestMatch( match_count_t **counter, int num)
   return( res);
 }
 
-
-static void PutToBuffers( task_t *self, stream_t **streams, int num,
-    int idx, snet_record_t *rec, int counter, bool det)
+/**
+ * Write a record to the buffers.
+ * @param counter   pointer to a counter -
+ *                  if NULL, no sort records are generated
+ */
+static void PutToBuffers( task_t *self, stream_t **outstreams, int num,
+    int idx, snet_record_t *rec, int *counter)
 {
 
-  if( det) {
-    /* for the deterministic variant, broadcast sort record beforehand */
-    int i;
-    for( i=0; i<num; i++) {
-      StreamWrite( self, streams[i],
-          SNetRecCreate( REC_sort_begin, 0, counter));
-    }
-  }
   /* write data record to target stream */
 #ifdef PARALLEL_DEBUG
   SNetUtilDebugNotice(
       "PARALLEL %p: Writing record %p to stream %p",
-      streams, rec, streams[idx]
+      outstreams, rec, outstreams[idx]
       );
 #endif
-  StreamWrite( self, streams[idx], rec);
+  StreamWrite( self, outstreams[idx], rec);
+
+  /* for the deterministic variant, broadcast sort record afterwards */
+  if( counter != NULL) {
+    int i;
+    for( i=0; i<num; i++) {
+      StreamWrite( self, outstreams[i],
+          SNetRecCreate( REC_sort_end, 0, *counter));
+    }
+    *counter += 1;
+  }
 }
 
 
@@ -177,12 +183,10 @@ static void ParallelBoxTask( task_t *self, void *arg)
   snet_handle_t *hnd = (snet_handle_t*) arg;
   snet_record_t *rec;
   stream_t *instream, *initial;
+  stream_t **outstreams;
   match_count_t **matchcounter;
-  stream_t **streams;
   snet_typeencoding_list_t *types;
-
-  bool is_det = SNetHndIsDet( hnd);
-  
+  bool is_det;
   int num_init_branches = 0;
   bool terminate = false;
   int counter = 1;
@@ -192,40 +196,47 @@ static void ParallelBoxTask( task_t *self, void *arg)
   SNetUtilDebugNotice("(CREATION PARALLEL)");
 #endif
 
-  streams = SNetHndGetOutputs( hnd);
-
   types = SNetHndGetTypeList( hnd);
   num = SNetTencGetNumTypes( types);
-
-  /* open streams for writing */
-  for (i=0; i<num; i++) {
-    StreamOpen( self, streams[i], 'w');
-  }
 
   /* open instream for reading */
   instream = SNetHndGetInput(hnd);
   StreamOpen(self, instream, 'r');
 
+  /* open initial stream for writing */
+  initial = SNetHndGetOutput( hnd);
+  StreamOpen( self, initial, 'w');
+
+  /* open outstreams for writing */
+  outstreams = SNetHndGetOutputs( hnd);
+  for (i=0; i<num; i++) {
+    StreamOpen( self, outstreams[i], 'w');
+  }
+
+  /* notify collector about collstreams */
+  {
+    stream_t **collstreams = SNetHndGetAddresses( hnd);
+    for (i=0; i<num; i++) {
+      StreamWrite( self, initial, SNetRecCreate( REC_collect, collstreams[i]));
+    }
+    SNetMemFree( collstreams);
+  }
+
+  is_det = SNetHndIsDet( hnd);
+
   /* Handle initialiser branches */
   for( i=0; i<num; i++) {
     if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( types, i)) == 0) {
 
-      PutToBuffers( self,
-                    streams, 
-                    num, 
-                    i, 
-                    SNetRecCreate( REC_trigger_initialiser), 
-                    counter, 
-                    is_det);
-      counter += 1;
-      PutToBuffers( self,
-                    streams, 
-                    num, 
-                    i, 
-                    SNetRecCreate( REC_terminate), 
-                    counter, 
-                    is_det);
-      counter += 1;
+      PutToBuffers( self, outstreams, num, i, 
+          SNetRecCreate( REC_trigger_initialiser), 
+          &counter
+          );
+      /* after terminate, it is not necessary to send a sort record */
+      PutToBuffers( self, outstreams, num, i, 
+          SNetRecCreate( REC_terminate), 
+          NULL
+          );
       num_init_branches += 1; 
     }
   }
@@ -234,21 +245,17 @@ static void ParallelBoxTask( task_t *self, void *arg)
     case 1: /* remove dispatcher from network ... */
       for( i=0; i<num; i++) { 
         if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( types, i)) > 0) {
-          PutToBuffers( self,
-                        streams, 
-                        num, 
-                        i, 
-                        SNetRecCreate( REC_sync, instream), 
-                        counter, 
-                        is_det);
+          /* Put to buffers? Is it not clearer to send it to the remaining stream??? */
+          PutToBuffers( self, outstreams, num, i, 
+              SNetRecCreate( REC_sync, instream), 
+              NULL
+              );
         }
       }    
     case 0: /* and terminate */
       terminate = true;
     break;
-
-    default: /* or resume operation as normal */
-    break;
+    default: ;/* or resume operation as normal */
   }
 
 
@@ -273,8 +280,7 @@ static void ParallelBoxTask( task_t *self, void *arg)
         }
 
         stream_index = BestMatch( matchcounter, num);
-        PutToBuffers( self, streams, num, stream_index, rec, counter, is_det);
-        counter += 1;
+        PutToBuffers( self, outstreams, num, stream_index, rec, (is_det)? &counter : NULL);
         break;
 
       case REC_sync:
@@ -292,45 +298,34 @@ static void ParallelBoxTask( task_t *self, void *arg)
         SNetRecDestroy( rec);
         break;
 
-      case REC_sort_begin:
-        if( is_det) {
-          SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+      case REC_sort_end:
+        for( i=0; i<num; i++) {
+          StreamWrite( self, outstreams[i],
+              SNetRecCreate( REC_sort_end,
+                /* we have to increase level */
+                SNetRecGetLevel( rec)+1,
+                SNetRecGetNum( rec))
+              );
         }
-        for( i=0; i<(num-1); i++) {
-          StreamWrite( self, streams[i], SNetRecCopy( rec));
-        }
-        StreamWrite( self, streams[num-1], rec);
+        SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        StreamWrite( self, initial, rec);
         break;
 
       case REC_terminate:
         terminate = true;
-        /* broadcast the termination record */
-        if( is_det) {
-          /* for deterministic variant, prepend with sort record */
-          for( i=0; i<num; i++) {
-            StreamWrite( self, streams[i], 
-                SNetRecCreate( REC_sort_begin, 0, counter));
-          }
-        }
         for( i=0; i<num; i++) {
           /* send a copy to all but the last, the last gets the original */
           StreamWrite( self,
-              streams[i],
+              outstreams[i],
               (i != (num-1)) ? SNetRecCopy( rec) : rec
               );
         }
-        for( i=0; i<num; i++) {
-          StreamClose( self, streams[i]);
-          StreamDestroy( streams[i]);
-          SNetMemFree( matchcounter[i]);
-        }
-        SNetMemFree( streams);
-        SNetMemFree( matchcounter);
-        SNetHndDestroy( hnd);
+        /* note that no sort record needs to be appended */
         break;
 
     default:
-      SNetUtilDebugNotice("[Parallel] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
+      SNetUtilDebugNotice("[Parallel] Unknown control rec destroyed (%d).\n",
+          SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
     }
   } /* MAIN LOOP END */
@@ -338,33 +333,48 @@ static void ParallelBoxTask( task_t *self, void *arg)
   /* close instream */
   StreamClose( self, instream);
 
+  /* close the initial stream */
+  StreamClose( self, initial);
+  StreamDestroy( initial);
+
+  /* close the outstreams */
+  for( i=0; i<num; i++) {
+    StreamClose( self, outstreams[i]);
+    StreamDestroy( outstreams[i]);
+    SNetMemFree( matchcounter[i]);
+  }
+  SNetMemFree( matchcounter);
+
+  SNetMemFree( outstreams);
+
+  //TODO ? SNetTencDestroyTypeEncodingList( types);
+  SNetHndDestroy( hnd);
 } /* END of PARALLEL BOX TASK */
 
 
 
 static stream_t *SNetParallelStartup( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-					      snet_info_t *info, 
-					      int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-					      snet_typeencoding_list_t *types,
-					      void **funs, bool is_det)
+    snet_typeencoding_list_t *types,
+    void **funs, bool is_det)
 {
 
   int i;
   int num;
   snet_handle_t *hnd;
-  stream_t *outstream;
+  stream_t *initial, *outstream;
   stream_t **transits;
   stream_t **outstreams;
   snet_startup_fun_t fun;
-  snet_entity_id_t my_id;
 
 #ifdef DISTRIBUTED_SNET
   snet_routing_context_t *context;
   snet_routing_context_t *new_context;
   context = SNetInfoGetRoutingContext(info);
-  instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location); 
+  instream = SNetRoutingContextUpdate(context, instream, location); 
 
   if(location == SNetIDServiceGetNodeID()) {
 #ifdef DISTRIBUTED_DEBUG
@@ -372,37 +382,16 @@ static stream_t *SNetParallelStartup( stream_t *instream,
 #endif /* DISTRIBUTED_DEBUG */
 #endif /* DISTRIBUTED_SNET */
 
+
     num = SNetTencGetNumTypes( types);
     outstreams = SNetMemAlloc( num * sizeof( stream_t*));
     transits = SNetMemAlloc( num * sizeof( stream_t*));
-    transits[0] = StreamCreate();
-    
-    fun = funs[0];
-    
-#ifdef DISTRIBUTED_SNET
-    new_context =  SNetRoutingContextCopy(context);
-    SNetRoutingContextSetLocation(new_context, location);
-    SNetRoutingContextSetParent(new_context, location);
-    SNetInfoSetRoutingContext(info, new_context);
-    outstreams[0] = (*fun)(transits[0], info, location);
-    outstreams[0] = SNetRoutingContextEnd(new_context, outstreams[0]);
-    SNetRoutingContextDestroy(new_context);
-#else
-    outstreams[0] = (*fun)( transits[0]);
-#endif /* DISTRIBUTED_SNET */
-    
-    outstream = CreateDetCollector( outstreams[0]);
-    my_id = is_det ? ENTITY_parallel_det : ENTITY_parallel_nondet;
-    if( is_det) {
-      //XXX this is invalid in new LPEL -> TODO a dedicated stream between disp-coll
-      StreamWrite(self outstreams[0], SNetRecCreate( REC_sort_begin, 0, 0));
-    }
-    
-    for( i=1; i<num; i++) {
+
+
+    /* create all branches */
+    for( i=0; i<num; i++) {
       transits[i] = StreamCreate();
-      
       fun = funs[i];
-      
 #ifdef DISTRIBUTED_SNET
       new_context = SNetRoutingContextCopy(context);
       SNetRoutingContextSetLocation(new_context, location);
@@ -416,18 +405,16 @@ static stream_t *SNetParallelStartup( stream_t *instream,
       outstreams[i] = (*fun)( transits[i]);
 #endif /* DISTRIBUTED_SNET */
       
-      //XXX ILLEGAL
-      StreamWrite( self, outstreams[0], SNetRecCreate( REC_collect, outstreams[i]));
-      if( is_det) {
-	StreamWrite( self, outstreams[i], SNetRecCreate( REC_sort_end, 0, 0));
-      }
     }
-    
-    if( is_det) {
-      //XXX ILLEGAL
-      StreamWrite( self, outstreams[0], SNetRecCreate( REC_sort_end, 0, 0));
-    }
-    hnd = SNetHndCreate( HND_parallel, instream, transits, types, is_det);
+    /* create initial stream and collector */
+    initial = StreamCreate();
+    outstream = CreateCollector( initial);
+
+    hnd = SNetHndCreate( HND_parallel,
+        instream, initial, transits, outstreams, types, is_det);
+    SNetEntitySpawn( ParallelBoxTask, (void*)hnd,
+        (is_det)? ENTITY_parallel_det: ENTITY_parallel_nondet
+        );
     
 #ifdef PARALLEL_DEBUG
     SNetUtilDebugNotice("-");
@@ -439,9 +426,7 @@ static stream_t *SNetParallelStartup( stream_t *instream,
     }
     SNetUtilDebugNotice("-");
 #endif
-    SNetEntitySpawn( ParallelBoxTask, (void*)hnd, my_id);
     
-    SNetMemFree(outstreams);
     
 #ifdef DISTRIBUTED_SNET
   } else { 
@@ -468,14 +453,16 @@ static stream_t *SNetParallelStartup( stream_t *instream,
   return( outstream);
 }
 
-
-extern stream_t *SNetParallel( stream_t *instream,
+/**
+ * Parallel creation function
+ */
+stream_t *SNetParallel( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-				       snet_info_t *info, 
-				       int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-				       snet_typeencoding_list_t *types,
-				       ...)
+    snet_typeencoding_list_t *types,
+    ...)
 {
   va_list args;
   int i, num;
@@ -497,13 +484,19 @@ extern stream_t *SNetParallel( stream_t *instream,
 
 }
 
-extern stream_t *SNetParallelDet( stream_t *inbuf,
+
+
+
+/**
+ * Det Parallel creation function
+ */
+stream_t *SNetParallelDet( stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
-					  snet_info_t *info, 
-					  int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-					  snet_typeencoding_list_t *types,
-					  ...)
+    snet_typeencoding_list_t *types,
+    ...)
 {
   va_list args;
   int i, num;

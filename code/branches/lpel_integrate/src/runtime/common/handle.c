@@ -62,7 +62,9 @@ typedef struct {
 
 typedef struct {
   stream_t *input;
+  stream_t *output_a;
   stream_t **outputs;
+  stream_t **addresses;
   snet_typeencoding_list_t *type;
   bool is_det;
 } parallel_handle_t;
@@ -185,7 +187,9 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
     case HND_parallel: 
       HANDLE( parallel_hnd) = SNetMemAlloc( sizeof( parallel_handle_t));
       PAR_HND( input) = va_arg( args, stream_t*);
+      PAR_HND( output_a) = va_arg( args, stream_t*);
       PAR_HND( outputs) = va_arg( args, stream_t**);
+      PAR_HND( addresses) = va_arg( args, stream_t**);
       PAR_HND( type) = va_arg( args, snet_typeencoding_list_t*);
       PAR_HND( is_det) = va_arg( args, bool);
       break;
@@ -447,6 +451,9 @@ extern stream_t *SNetHndGetOutput( snet_handle_t *hnd){
     case HND_box:
       result = BOX_HND( output_a);
       break;
+    case HND_parallel:
+      result = PAR_HND( output_a);
+      break;
     case HND_star:
       result = STAR_HND( output_a);
       break;
@@ -465,8 +472,7 @@ extern stream_t *SNetHndGetOutput( snet_handle_t *hnd){
   return( result);
 }
 
-extern stream_t **SNetHndGetOutputs( snet_handle_t *hnd){
-
+stream_t **SNetHndGetOutputs( snet_handle_t *hnd){
   stream_t **result;
   switch( hnd->descr) {
     case HND_parallel:
@@ -477,6 +483,19 @@ extern stream_t **SNetHndGetOutputs( snet_handle_t *hnd){
 
   return( result);
 }
+
+stream_t **SNetHndGetAddresses( snet_handle_t *hnd){
+  stream_t **result;
+  switch( hnd->descr) {
+    case HND_parallel:
+      result = PAR_HND( addresses);
+      break;
+    default: WrongHandleType();
+  }
+
+  return( result);
+}
+
 
 extern bool SNetHndIsDet( snet_handle_t *hnd) {
 

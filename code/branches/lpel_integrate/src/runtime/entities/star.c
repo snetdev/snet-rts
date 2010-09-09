@@ -66,7 +66,7 @@ static void StarBoxTask( task_t *selftask, void *arg)
   snet_typeencoding_t *exit_tags;
   snet_record_t *rec;
   snet_expr_list_t *guards;
-  bool is_det, is_det_master;
+  bool is_det, is_incarnate;
   /* for deterministic variant: */
   int counter = 0;
 
@@ -86,7 +86,7 @@ static void StarBoxTask( task_t *selftask, void *arg)
   self = SNetHndGetBoxfunB( hnd);
   guards = SNetHndGetGuardList( hnd);
   is_det = SNetHndIsDet( hnd);
-  is_det_master = is_det && !SNetHndIsIncarnate( hnd); 
+  is_incarnate = SNetHndIsIncarnate( hnd); 
 
 
 #ifdef DISTRIBUTED_SNET
@@ -113,8 +113,8 @@ static void StarBoxTask( task_t *selftask, void *arg)
 #endif
           /* send rec to collector */
           StreamWrite( selftask, outstream, rec);
-          if (is_det_master) {
-            /* send new sort record to collector */
+          if (is_det && !is_incarnate) {
+            /* append new sort record */
             StreamWrite( selftask, outstream,
                 SNetRecCreate( REC_sort_end, 0, counter) );
           }
@@ -165,11 +165,11 @@ static void StarBoxTask( task_t *selftask, void *arg)
           /* send the record to the instance */
           StreamWrite( selftask, nextstream, rec);
           /* deterministic non-incarnate has to append control records */
-          if (is_det_master) {
-            /* send new sort record to the instance */
+          if (is_det && !is_incarnate) {
+            /* append new sort record */
             StreamWrite( selftask, nextstream,
                 SNetRecCreate( REC_sort_end, 0, counter) );
-            /* send new sort record to collector */
+            /* also send new sort record to collector */
             StreamWrite( selftask, outstream,
                 SNetRecCreate( REC_sort_end, 0, counter) );
           }
@@ -197,23 +197,25 @@ static void StarBoxTask( task_t *selftask, void *arg)
         break;
 
       case REC_sort_end:
-        int rec_lvl = SNetRecGetLevel(rec);
-        /* send a copy to the box, if exists */
-        if( nextstream != NULL) {
-          StreamWrite( selftask,
-              nextstream,
-              SNetRecCreate( REC_sort_end,
-                (is_det_master)? rec_lvl+1 : rec_lvl,
-                SNetRecGetNum(rec) )
-              );
-        }
+        {
+          int rec_lvl = SNetRecGetLevel(rec);
+          /* send a copy to the box, if exists */
+          if( nextstream != NULL) {
+            StreamWrite( selftask,
+                nextstream,
+                SNetRecCreate( REC_sort_end,
+                  (!is_incarnate)? rec_lvl+1 : rec_lvl,
+                  SNetRecGetNum(rec) )
+                );
+          }
 
-        /* send the original one to the collector */
-        if (is_det_master) {
-          /* if deterministic non-incarnate, we have to increase level */
-          SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+          /* send the original one to the collector */
+          if (!is_incarnate) {
+            /* if non-incarnate, we have to increase level */
+            SNetRecSetLevel( rec, rec_lvl+1);
+          }
+          StreamWrite( selftask, outstream, rec);
         }
-        StreamWrite( selftask, outstream, rec);
         break;
 
       case REC_terminate:
@@ -375,7 +377,7 @@ stream_t *SNetStarDet(stream_t *input,
     SNetUtilDebugNotice("| output: %p", star_output);
     SNetUtilDebugNotice("-");
 #endif
-    SNetEntitySpawn( DetStarBoxTask, hnd, ENTITY_star_det);
+    SNetEntitySpawn( StarBoxTask, hnd, ENTITY_star_det);
     dispatch_output = CreateDetCollector( star_output);
 
 #ifdef DISTRIBUTED_SNET
@@ -425,7 +427,7 @@ stream_t *SNetStarDetIncarnate(stream_t *input,
     SNetUtilDebugNotice("| output: %p", output);
     SNetUtilDebugNotice("-");
 #endif
-    SNetEntitySpawn( DetStarBoxTask, hnd, ENTITY_star_det);
+    SNetEntitySpawn( StarBoxTask, hnd, ENTITY_star_det);
 #ifdef DISTRIBUTED_SNET
   } else {
     SNetEdestroyList( guards);
