@@ -18,11 +18,14 @@
 #endif /* SNET_DEBUG_COUNTERS  */
 
 //#define BOX_DEBUG
+
 /* ------------------------------------------------------------------------- */
 /*  SNetBox                                                                  */
 /* ------------------------------------------------------------------------- */
 
-//static void *BoxThread( void *hndl) {
+/**
+ * Box task
+ */
 static void BoxTask(task_t *self, void *arg)
 {
 
@@ -59,8 +62,9 @@ static void BoxTask(task_t *self, void *arg)
   /* set boxtask */
   SNetHndSetBoxtask( hnd, self);
 
-  while( !( terminate)) {
-    //rec = SNetTlRead(SNetHndGetInput(hnd));
+  /* MAIN LOOP */
+  while( !terminate) {
+    /* read from input stream */
     rec = StreamRead(self, instream);
 
     switch( SNetRecGetDescriptor(rec)) {
@@ -94,6 +98,7 @@ static void BoxTask(task_t *self, void *arg)
 #endif /* SNET_DEBUG_COUNTERS */
         SNetRecDestroy( rec);
         break;
+
       case REC_sync:
         {
           stream_t *newinstream = SNetRecGetStream(rec);
@@ -102,55 +107,53 @@ static void BoxTask(task_t *self, void *arg)
           SNetRecDestroy( rec);
         }
         break;
+
       case REC_collect:
         SNetUtilDebugNotice("Unhandled control record, destroying it");
         SNetRecDestroy( rec);
         break;
-      case REC_sort_begin:
+
       case REC_sort_end:
-        //SNetTlWrite( SNetHndGetOutput( hnd), rec);
+        /* forward the sort record */
         StreamWrite( self, outstream, rec);
         break;
+
       case REC_terminate:
         terminate = true;
-        //SNetTlWrite( SNetHndGetOutput( hnd), rec);
         StreamWrite( self, outstream, rec);
-        //SNetTlMarkObsolete(SNetHndGetOutput(hnd));
-        StreamClose(self, outstream);
-        StreamDestroy(outstream);
-        
-        StreamClose( self, instream);
-        SNetHndDestroy( hnd);
         break;
-      /*
-      case REC_probe:
-        SNetTlWrite(SNetHndGetOutput(hnd), rec);
-      break;
-      */
+
     default:
       SNetUtilDebugNotice("[Box] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
       break;
     }
-  }
-   return( NULL);
- 
+  } /* MAIN LOOP END */
+
+  StreamClose( self, instream);
+  StreamClose( self, outstream);
+  StreamDestroy(outstream);
+
+  SNetHndDestroy( hnd);
 }
 
-extern stream_t *SNetBox( stream_t *input,
+
+/**
+ * Box creation function
+ */
+stream_t *SNetBox( stream_t *input,
 #ifdef DISTRIBUTED_SNET
-				  snet_info_t *info, 
-				  int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */ 
-                                  const char *boxname,
-				  snet_box_fun_t boxfun,
-				  snet_box_sign_t *out_signs) 
+    const char *boxname,
+    snet_box_fun_t boxfun,
+    snet_box_sign_t *out_signs) 
 {
   stream_t *output;
   snet_handle_t *hndl;
 
 #ifdef DISTRIBUTED_SNET
-//TODO LPEL
   input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
   if(location == SNetIDServiceGetNodeID()) {
 #ifdef DISTRIBUTED_DEBUG
@@ -158,10 +161,7 @@ extern stream_t *SNetBox( stream_t *input,
 #endif /* DISTRIBUTED_DEBUG */
 #endif /* DISTRIBUTED_SNET */
 
-
-    //output = SNetTlCreateStream(BUFFER_SIZE);
     output = StreamCreate();
-    
 #ifdef BOX_DEBUG
     SNetUtilDebugNotice("-");
     SNetUtilDebugNotice("| BOX %s [%p]", boxname, boxfun);
@@ -171,16 +171,15 @@ extern stream_t *SNetBox( stream_t *input,
 #endif
     
     hndl = SNetHndCreate( HND_box, input, output, NULL, boxfun, out_signs);
-    
     SNetEntitySpawn( BoxTask, (void*)hndl, ENTITY_box);
     
 #ifdef DISTRIBUTED_SNET
   } else {
     SNetTencBoxSignDestroy(out_signs);
-
     output = input;
   }
 #endif /* DISTRIBUTED_SNET */
-
   return( output);
 }
+
+

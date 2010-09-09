@@ -19,14 +19,9 @@
 #endif /* DISTRIBUTED_SNET */
 
 //#define STAR_DEBUG
-/* ------------------------------------------------------------------------- */
-/*  SNetStar                                                                 */
-/* ------------------------------------------------------------------------- */
 
-static bool 
-MatchesExitPattern( snet_record_t *rec, 
-                    snet_typeencoding_t *patterns, 
-                    snet_expr_list_t *guards) 
+static bool MatchesExitPattern( snet_record_t *rec, 
+    snet_typeencoding_t *patterns, snet_expr_list_t *guards) 
 {
   int i;
   bool is_match;
@@ -62,31 +57,37 @@ static void StarBoxTask( task_t *selftask, void *arg)
   snet_handle_t *hnd = (snet_handle_t*)arg;
   snet_startup_fun_t box;
   snet_startup_fun_t self;
-  stream_t *real_outstream, *instream, *our_outstream, *starstream=NULL;
+  stream_t *instream;
+  stream_t *outstream; /* the stream to the collector */
+  /* The stream to the next instance;
+     a non-null value indicates that the instance has been created. */
+  stream_t *nextstream=NULL;
   bool terminate = false;
   snet_typeencoding_t *exit_tags;
   snet_record_t *rec;
   snet_expr_list_t *guards;
+  bool is_det, is_det_master;
+  /* for deterministic variant: */
+  int counter = 0;
 
 #ifdef DISTRIBUTED_SNET
   int node_id;
   snet_fun_id_t fun_id;
-  snet_info_t *info;
 #endif /* DISTRIBUTED_SNET */
 
   instream = SNetHndGetInput(hnd);
   StreamOpen( selftask, instream, 'r');
 
-  real_outstream = SNetHndGetOutput( hnd);
-  StreamOpen( selftask, real_outstream, 'w');
+  outstream = SNetHndGetOutput( hnd);
+  StreamOpen( selftask, outstream, 'w');
 
   exit_tags = SNetHndGetType( hnd);
   box = SNetHndGetBoxfunA( hnd);
   self = SNetHndGetBoxfunB( hnd);
   guards = SNetHndGetGuardList( hnd);
+  is_det = SNetHndIsDet( hnd);
+  is_det_master = is_det && !SNetHndIsIncarnate( hnd); 
 
-  our_outstream = StreamCreate();
-  StreamOpen( selftask, our_outstream, 'w');
 
 #ifdef DISTRIBUTED_SNET
   node_id = SNetIDServiceGetNodeID();
@@ -107,47 +108,71 @@ static void StarBoxTask( task_t *selftask, void *arg)
 #ifdef STAR_DEBUG
           SNetUtilDebugDumpRecord(rec, record_message);
           SNetUtilDebugNotice("STAR %p stopping iterations of %s",
-                              real_outstream,
+                              outstream,
                               record_message);
 #endif
           /* send rec to collector */
-          StreamWrite( selftask, real_outstream, rec);
+          StreamWrite( selftask, outstream, rec);
+          if (is_det_master) {
+            /* send new sort record to collector */
+            StreamWrite( selftask, outstream,
+                SNetRecCreate( REC_sort_end, 0, counter) );
+          }
         } else {
           /* send to next instance */
           /* if instance has not been created yet, create it */
-          if( starstream == NULL) {
+          if( nextstream == NULL) {
+            /* The outstream to the collector from a newly created incarnate.
+               Nothing is written to this stream, but it has to be registered
+               at the collector. */
+            stream_t *starstream;
+            /* Create the stream to the instance */
+            nextstream = StreamCreate();
+            StreamOpen( selftask, nextstream, 'w');
 #ifdef STAR_DEBUG
             SNetUtilDebugNotice("STAR %p creating new instance",
-                                real_outstream);
+                                outstream);
 #endif
             // register new buffer with dispatcher,
             // starstream is returned by self, which is SNetStarIncarnate
 #ifdef DISTRIBUTED_SNET
-	    info = SNetInfoInit();
-	    SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
-	    starstream = SNetSerial(our_outstream, info, node_id , box, self);
-	    starstream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), starstream);
-	    SNetInfoDestroy(info);
+            {
+              snet_info_t *info;
+              info = SNetInfoInit();
+              SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
+              starstream = SNetSerial(nextstream, info, node_id , box, self);
+              starstream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), starstream);
+              SNetInfoDestroy(info);
+            }
 #else
             /* starstream is the outstream of BOX + STAR_INC serial */
-            starstream = SNetSerial(our_outstream, box, self);
+            starstream = SNetSerial(nextstream, box, self);
 #ifdef STAR_DEBUG
             SNetUtilDebugNotice("STAR %p has created a new instance",
-                                real_outstream);
+                                outstream);
 #endif
 #endif /* DISTRIBUTED_SNET */
             /* notify collector about the new instance */
-            StreamWrite( selftask, real_outstream, SNetRecCreate(REC_collect, starstream));
+            StreamWrite( selftask, outstream, SNetRecCreate(REC_collect, starstream));
           }
 #ifdef STAR_DEBUG
           SNetUtilDebugDumpRecord(rec, record_message);
           SNetUtilDebugNotice("STAR %p: outputting %s to %p",
-                              real_outstream,
+                              outstream,
                               record_message,
-                              our_outstream);
+                              nextstream);
 #endif
           /* send the record to the instance */
-          StreamWrite( selftask, our_outstream, rec);
+          StreamWrite( selftask, nextstream, rec);
+          /* deterministic non-incarnate has to append control records */
+          if (is_det_master) {
+            /* send new sort record to the instance */
+            StreamWrite( selftask, nextstream,
+                SNetRecCreate( REC_sort_end, 0, counter) );
+            /* send new sort record to collector */
+            StreamWrite( selftask, outstream,
+                SNetRecCreate( REC_sort_end, 0, counter) );
+          }
         }
         break;
 
@@ -156,7 +181,7 @@ static void StarBoxTask( task_t *selftask, void *arg)
           stream_t *newstream = SNetRecGetStream( rec);
 #ifdef STAR_DEBUG
           SNetUtilDebugNotice("STAR %p: resetting input stream to %p",
-              real_outstream,
+              outstream,
               newstream);
 #endif
           StreamReplace( selftask, &instream, newstream);
@@ -171,26 +196,33 @@ static void StarBoxTask( task_t *selftask, void *arg)
         SNetRecDestroy( rec);
         break;
 
-      case REC_sort_begin:
+      case REC_sort_end:
+        int rec_lvl = SNetRecGetLevel(rec);
         /* send a copy to the box, if exists */
-        if( starstream != NULL) {
+        if( nextstream != NULL) {
           StreamWrite( selftask,
-              our_outstream,
-              SNetRecCreate( REC_sort_begin,
-                SNetRecGetLevel(rec),
+              nextstream,
+              SNetRecCreate( REC_sort_end,
+                (is_det_master)? rec_lvl+1 : rec_lvl,
                 SNetRecGetNum(rec) )
               );
         }
+
         /* send the original one to the collector */
-        StreamWrite( selftask, real_outstream, rec);
+        if (is_det_master) {
+          /* if deterministic non-incarnate, we have to increase level */
+          SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        }
+        StreamWrite( selftask, outstream, rec);
         break;
 
       case REC_terminate:
         terminate = true;
-        if( starstream != NULL) {
-          StreamWrite( selftask, our_outstream, SNetRecCopy( rec));
+        if( nextstream != NULL) {
+          StreamWrite( selftask, nextstream, SNetRecCopy( rec));
         }
-        StreamWrite( selftask, real_outstream, rec);
+        StreamWrite( selftask, outstream, rec);
+        /* note that no sort record has to be appended */
         break;
 
       default:
@@ -199,16 +231,26 @@ static void StarBoxTask( task_t *selftask, void *arg)
     }
   } /* MAIN LOOP END */
 
-  SNetHndDestroy( hnd);
-
   StreamClose(selftask, instream);
-  if( starstream != NULL) {
-    StreamClose( selftask, our_outstream);
+
+  if( nextstream != NULL) {
+    StreamClose( selftask, nextstream);
+    StreamDestroy(nextstream);
   }
-  StreamClose( selftask, real_outstream);
-  StreamDestroy(our_outstream);
-  StreamDestroy(real_outstream);
-}
+
+  StreamClose( selftask, outstream);
+  StreamDestroy(outstream);
+
+  /* destroy the handle*/
+  SNetHndDestroy( hnd);
+} /* STAR BOX TASK END */
+
+
+
+/* ------------------------------------------------------------------------- */
+/*  SNetStar                                                                 */
+/* ------------------------------------------------------------------------- */
+
 
 /**
  * Star creation function
@@ -236,15 +278,16 @@ stream_t *SNetStar( stream_t *input,
 
     star_output = StreamCreate();
     hnd = SNetHndCreate(HND_star,
-			input, star_output, box_a, box_b, type, guards, false);
+        input, star_output, box_a, box_b, type, guards, false, false);
     SNetEntitySpawn( StarBoxTask, hnd, ENTITY_star_nondet);
     dispatch_output = CreateCollector( star_output);
+
 #ifdef DISTRIBUTED_SNET
   } else {
     SNetEdestroyList( guards);
     SNetDestroyTypeEncoding( type);
     dispatch_output = input;
-}
+  }
 #endif /* DISTRIBUTED_SNET */
   return( dispatch_output);
 }
@@ -276,7 +319,7 @@ stream_t *SNetStarIncarnate( stream_t *input,
 
     output = StreamCreate();
     hnd = SNetHndCreate(HND_star,
-			input, output, box_a, box_b, type, guards, true);
+        input, output, box_a, box_b, type, guards, true, false);
     SNetEntitySpawn( StarBoxTask, hnd, ENTITY_star_nondet);
     
 #ifdef DISTRIBUTED_SNET
@@ -284,7 +327,7 @@ stream_t *SNetStarIncarnate( stream_t *input,
     SNetEdestroyList( guards);
     SNetDestroyTypeEncoding( type);
     output = input;
-}
+  }
 #endif /* DISTRIBUTED_SNET */
   return( output);
 }
@@ -296,200 +339,19 @@ stream_t *SNetStarIncarnate( stream_t *input,
 /*  SNetStarDet                                                              */
 /* ------------------------------------------------------------------------- */
 
-//static void *DetStarBoxThread( void *hndl) {
-static void DetStarBoxTask( task_t *selftask, void *arg) {
 
-  snet_handle_t *hnd = (snet_handle_t*)arg;
-  snet_startup_fun_t box;
-  snet_startup_fun_t self;
-  stream_t *real_output, *our_output, *instream, *starstream=NULL;
-  bool terminate = false;
-  snet_typeencoding_t *exit_tags;
-  snet_record_t *rec;
-  snet_expr_list_t *guards;
- 
-  snet_record_t *sort_begin = NULL, *sort_end = NULL;
-  int counter = 0;
-
+/**
+ * Det Star creation function
+ */
+stream_t *SNetStarDet(stream_t *input,
 #ifdef DISTRIBUTED_SNET
-  int node_id;
-  snet_fun_id_t fun_id;
-  snet_info_t *info;
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-
-  real_output = SNetHndGetOutput( hnd);
-  StreamOpen( selftask, real_output, 'w');
-  instream = SNetHndGetInput( hnd);
-  StreamOpen( selftask, instream, 'r');
-
-  exit_tags = SNetHndGetType( hnd);
-  box = SNetHndGetBoxfunA( hnd);
-  self = SNetHndGetBoxfunB( hnd);
-  guards = SNetHndGetGuardList( hnd);
-   
-  our_output = StreamCreate();
-  StreamOpen( selftask, our_output, 'w');
-
-#ifdef DISTRIBUTED_SNET
-  node_id = SNetIDServiceGetNodeID();
-  if(!SNetDistFunFun2ID(box, &fun_id)) {
-    /* TODO: This is an error!*/
-  }
-#endif /* DISTRIBUTED_SNET */
-
-  while( !( terminate)) {
-#ifdef STAR_DEBUG
-    SNetUtilDebugNotice("STAR %p: reading from %p",
-                        real_output,
-                        instream);
-#endif
-    rec = StreamRead( selftask, instream);
-    switch( SNetRecGetDescriptor( rec)) {
-      case REC_data:
-        if( !( SNetHndIsIncarnate( hnd))) { 
-          SNetRecDestroy( sort_begin); SNetRecDestroy( sort_end);
-          sort_begin = SNetRecCreate( REC_sort_begin, 0, counter);
-          sort_end = SNetRecCreate( REC_sort_end, 0, counter);
-        
-          StreamWrite( selftask, real_output, SNetRecCopy( sort_begin));
-          if( starstream != NULL) {
-            StreamWrite( selftask, our_output, SNetRecCopy( sort_begin));
-          }
-          
-          if(MatchesExitPattern( rec, exit_tags, guards)) {
-            StreamWrite( selftask, real_output, rec);
-          } else {
-            if(starstream == NULL) {
-#ifdef DISTRIBUTED_SNET
-	      info = SNetInfoInit();
-	      SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
-	      starstream = SNetSerial(our_output, info, node_id , box, self);
-	      starstream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), starstream);
-	      SNetInfoDestroy(info);
-#else
-	      starstream = SNetSerial(our_output, box, self);
-#endif /* DISTRIBUTED_SNET */  	      
-	      StreamWrite( selftask, real_output, SNetRecCreate(REC_collect,starstream));
-            }
-#ifdef STAR_DEBUG
-            SNetUtilDebugNotice("STAR %p: iteration: putting %p to %p",
-                                real_output,
-                                rec,
-                                our_output);
-#endif
-            StreamWrite( selftask, our_output, rec);
-          }
-
-          StreamWrite( selftask, real_output, SNetRecCopy( sort_end));
-          if( starstream != NULL) {
-            StreamWrite( selftask, our_output, SNetRecCopy( sort_end));
-          }
-          counter += 1;
-
-        } else {
-          /* incarnation */
-          if( MatchesExitPattern( rec, exit_tags, guards)) {
-           StreamWrite( selftask, real_output, rec);
-          } else {
-            if( starstream == NULL) {
-              // register new buffer with dispatcher,
-              // starstream is returned by self, which is SNetStarIncarnate
-#ifdef DISTRIBUTED_SNET
-              info = SNetInfoInit();
-              SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
-              starstream = SNetSerial(our_output, info, node_id , box, self);
-              starstream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), starstream);
-              SNetInfoDestroy(info);
-#else
-              starstream = SNetSerial(our_output, box, self);
-#endif /* DISTRIBUTED_SNET */      
-              StreamWrite( selftask, real_output, SNetRecCreate(REC_collect, starstream));
-              /* sort_begin is set in "case REC_sort_xxx" */
-            }
-#ifdef STAR_DEBUG
-            SNetUtilDebugNotice("STAR %p: outputting %p to %p",
-                real_output,
-                rec,
-                our_output);
-#endif
-            StreamWrite( selftask, our_output, rec);
-          }
-        }
-       break;
-
-      case REC_sync:
-      {
-        stream_t *newstream = SNetRecGetStream( rec);
-        StreamReplace( selftask, &instream, newstream);
-        SNetHndSetInput(hnd, newstream);
-        SNetRecDestroy( rec);
-      }
-      break;
-
-      case REC_collect:
-        SNetUtilDebugNotice("[STAR] Unhandled control record,"
-                      " destroying it.\n\n");
-        SNetRecDestroy( rec);
-        break;
-      case REC_sort_end:
-      case REC_sort_begin:
-        if( !( SNetHndIsIncarnate( hnd))) {
-          SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-        }
-        StreamWrite( selftask, real_output, SNetRecCopy( rec));
-        if( starstream != NULL) {
-          StreamWrite( selftask, our_output, SNetRecCopy( rec));
-        } else {
-          if( SNetRecGetDescriptor( rec) == REC_sort_begin) {
-            SNetRecDestroy( sort_begin);
-            sort_begin = SNetRecCopy( rec);
-          } else {
-            SNetRecDestroy( sort_end);
-            sort_end = SNetRecCopy( rec);
-          }
-        }
-        SNetRecDestroy( rec);
-        break;
-      case REC_terminate:
-
-        terminate = true;
-        
-        SNetHndDestroy( hnd);
-        if( starstream != NULL) {
-          StreamWrite( selftask, our_output, SNetRecCreate( REC_sort_begin, 0, counter));
-          StreamWrite( selftask, our_output, SNetRecCopy( rec));
-        }
-        StreamWrite( selftask, real_output, SNetRecCreate( REC_sort_begin, 0, counter));
-        StreamWrite( selftask, real_output, rec);
-        StreamClose( selftask, our_output);
-	StreamClose( selftask, real_output);
-        StreamDestroy( our_output);
-        StreamDestroy( real_output);
-        break;
-      case REC_probe:
-        if(starstream != NULL) {
-          StreamWrite( selftask, our_output, SNetRecCopy(rec));
-        }
-        StreamWrite( selftask, our_output, rec);
-      break;
-    default:
-      SNetUtilDebugNotice("[Star] Unknown control record destroyed (%d).\n", SNetRecGetDescriptor( rec));
-      SNetRecDestroy( rec);
-      break;
-    }
-  }
-  StreamClose( selftask, instream);
-}
-
-extern stream_t *SNetStarDet(stream_t *input,
-#ifdef DISTRIBUTED_SNET
-				     snet_info_t *info, 
-				     int location,
-#endif /* DISTRIBUTED_SNET */
-				     snet_typeencoding_t *type,
-				     snet_expr_list_t *guards,
-				     snet_startup_fun_t box_a,
-				     snet_startup_fun_t box_b)
+    snet_typeencoding_t *type,
+    snet_expr_list_t *guards,
+    snet_startup_fun_t box_a,
+    snet_startup_fun_t box_b)
 {
   stream_t *star_output, *dispatch_output;
   snet_handle_t *hnd;
@@ -501,11 +363,11 @@ extern stream_t *SNetStarDet(stream_t *input,
     SNetUtilDebugNotice("DetStar created");
 #endif /* DISTRIBUTED_DEBUG */
 #endif /* DISTRIBUTED_SNET */
+
     star_output = StreamCreate();
     hnd = SNetHndCreate( HND_star, 
-			 input, star_output, 
-			 box_a, box_b, 
-			 type, guards, false);
+        input, star_output, box_a, box_b, type, guards, false, true);
+
 #ifdef STAR_DEBUG
     SNetUtilDebugNotice("-");
     SNetUtilDebugNotice("| DET STAR CREATED");
@@ -513,27 +375,34 @@ extern stream_t *SNetStarDet(stream_t *input,
     SNetUtilDebugNotice("| output: %p", star_output);
     SNetUtilDebugNotice("-");
 #endif
-    SNetTlCreateComponent(DetStarBoxTask, hnd, ENTITY_star_det);
+    SNetEntitySpawn( DetStarBoxTask, hnd, ENTITY_star_det);
     dispatch_output = CreateDetCollector( star_output);
+
 #ifdef DISTRIBUTED_SNET
   } else {
     SNetEdestroyList( guards);
     SNetDestroyTypeEncoding( type);
     dispatch_output = input;
-}
+  }
 #endif /* DISTRIBUTED_SNET */
   return(dispatch_output);
 }
 
-extern stream_t *SNetStarDetIncarnate(stream_t *input,
+
+
+
+/**
+ * Det star incarnate creation function
+ */
+stream_t *SNetStarDetIncarnate(stream_t *input,
 #ifdef DISTRIBUTED_SNET
-				       snet_info_t *info, 
-				       int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-				       snet_typeencoding_t *type,
-				       snet_expr_list_t *guards,
-				       snet_startup_fun_t box_a,
-				       snet_startup_fun_t box_b)
+    snet_typeencoding_t *type,
+    snet_expr_list_t *guards,
+    snet_startup_fun_t box_a,
+    snet_startup_fun_t box_b)
 {
   stream_t *output;
   snet_handle_t *hnd;
@@ -545,12 +414,10 @@ extern stream_t *SNetStarDetIncarnate(stream_t *input,
     SNetUtilDebugNotice("DetStar incarnate created");
 #endif /* DISTRIBUTED_DEBUG */
 #endif /* DISTRIBUTED_SNET */
+
     output = StreamCreate();
     hnd = SNetHndCreate( HND_star,
-			 input, output, 
-			 box_a, box_b, 
-			 type, guards, true);
-    
+        input, output, box_a, box_b, type, guards, true, true);
 #ifdef STAR_DEBUG
     SNetUtilDebugNotice("-");
     SNetUtilDebugNotice("| DET STAR INCARNATE CREATED");
@@ -558,7 +425,7 @@ extern stream_t *SNetStarDetIncarnate(stream_t *input,
     SNetUtilDebugNotice("| output: %p", output);
     SNetUtilDebugNotice("-");
 #endif
-    SNetTlCreateComponent(DetStarBoxTask, hnd, ENTITY_star_det);
+    SNetEntitySpawn( DetStarBoxTask, hnd, ENTITY_star_det);
 #ifdef DISTRIBUTED_SNET
   } else {
     SNetEdestroyList( guards);

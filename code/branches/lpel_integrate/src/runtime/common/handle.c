@@ -75,6 +75,7 @@ typedef struct {
   snet_typeencoding_t *type;
   snet_expr_list_t *guard_list;
   bool is_incarnate;
+  bool is_det;
 } star_handle_t;
 
 typedef struct {
@@ -198,6 +199,7 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
       STAR_HND( type) = va_arg( args, snet_typeencoding_t*);
       STAR_HND( guard_list) = va_arg( args, snet_expr_list_t*);
       STAR_HND( is_incarnate) = va_arg( args, bool);
+      STAR_HND( is_det) = va_arg( args, bool);
       break;
 
     case HND_sync:
@@ -486,6 +488,9 @@ extern bool SNetHndIsDet( snet_handle_t *hnd) {
       break;
     case HND_split:
       result = SPLIT_HND( is_det);
+      break;
+    case HND_star:
+      result = STAR_HND( is_det);
       break;
     default: WrongHandleType();
   }

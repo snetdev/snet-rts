@@ -52,7 +52,7 @@ snet_blist_elem_t *FindBufInList(snet_util_list_t *list, int num) {
 
 
 /**
- * Main split box task.
+ * Split box task.
  *
  * Implements both the non-deterministic and deterministic variants.
  */
@@ -77,8 +77,6 @@ static void SplitBoxTask( task_t *self, void *arg)
 #ifdef DISTRIBUTED_SNET
   int node_id;
   snet_fun_id_t fun_id;
-  snet_info_t *info;
-  snet_tl_stream_t *temp_stream;
 #endif /* DISTRIBUTED_SNET */
 
   initial = SNetHndGetOutput( hnd);
@@ -118,12 +116,6 @@ static void SplitBoxTask( task_t *self, void *arg)
         ltag_val = SNetRecGetTag( rec, ltag);
         utag_val = SNetRecGetTag( rec, utag);
         
-        if (is_det) {
-          /* deterministic, sent sort_begin to initial */
-          StreamWrite( self, initial,
-              SNetRecCreate( REC_sort_begin, 0, counter));
-        }
-        
         /* for all tag values */
         for( i = ltag_val; i <= utag_val; i++) {
           elem = FindBufInList( repos, i);
@@ -136,43 +128,64 @@ static void SplitBoxTask( task_t *self, void *arg)
             repos = SNetUtilListAddBeginning(repos, elem);
 
 #ifdef DISTRIBUTED_SNET
-            info = SNetInfoInit();
-            if(SNetHndIsSplitByLocation( hnd)) {
-              SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, i));    
-              temp_stream = boxfun(elem->stream, info, i);    
-              temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
-            } else {
-              SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
-              temp_stream = boxfun(elem->stream, info, node_id);    
-              temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
+            {
+              snet_info_t *info;
+              snet_tl_stream_t *temp_stream;
+              info = SNetInfoInit();
+              if(SNetHndIsSplitByLocation( hnd)) {
+                SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, i));    
+                temp_stream = boxfun(elem->stream, info, i);    
+                temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
+              } else {
+                SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
+                temp_stream = boxfun(elem->stream, info, node_id);    
+                temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
+              }
+              if(temp_stream != NULL) {
+                /* notify collector about the new instance via initial */
+                StreamWrite( self, initial,
+                    SNetRecCreate( REC_collect, temp_stream));
+              }
+              SNetInfoDestroy(info);
             }
-            if(temp_stream != NULL) {
-              /* notify collector about the new instance via initial */
-              StreamWrite( self, initial,
-                  SNetRecCreate( REC_collect, temp_stream));
-            }
-            SNetInfoDestroy(info);
 #else
             /* notify collector about the new instance via initial */
             StreamWrite( self, initial, 
                 SNetRecCreate( REC_collect, boxfun( elem->stream)));
 #endif /* DISTRIBUTED_SNET */
-          } 
+          } /* end if (elem==NULL) */
 
           /* multicast the record */
-          if (is_det) {
-            /*if det: prepend with sort_begin */
-            StreamWrite( self, elem->stream,
-                SNetRecCreate( REC_sort_begin, 0, counter));
-          }
           StreamWrite( self,
               elem->stream,
               /* copy record for all but the last tag value */
               (i!=utag_val) ? SNetRecCopy( rec) : rec
               );
-          /* increment counter for deterministic variant */
-          counter += 1;
+        } /* end for all tags  ltag_val <= i <= utag_val */
+
+        /* If deterministic, append a sort record to *all* registered
+         * instances and the initial stream.
+         */
+        if( is_det ) {
+          if ( !SNetUtilListIsEmpty(repos) ) {
+            /* create iterator */
+            current_position = SNetUtilListFirst(repos);
+            while(SNetUtilListIterCurrentDefined(current_position)) {
+              elem = SNetUtilListIterGet(current_position);
+              StreamWrite( self, elem->stream,
+                  SNetRecCreate( REC_sort_end, 0, counter));
+              current_position = SNetUtilListIterNext(current_position);
+            }
+            /* destroy the iterator */
+            SNetUtilListIterDestroy(current_position);
+          }
+          /* Now also send a sort record to initial,
+             after the collect records for new instances have been sent */
+          StreamWrite( self, initial,
+              SNetRecCreate( REC_sort_end, 0, counter));
         }
+        /* increment counter for deterministic variant */
+        counter += 1;
         break;
 
       case REC_sync:
@@ -192,7 +205,7 @@ static void SplitBoxTask( task_t *self, void *arg)
         SNetRecDestroy( rec);
         break;
 
-      case REC_sort_begin:
+      case REC_sort_end:
         /* broadcast the sort record */
         if(!SNetUtilListIsEmpty(repos)) {
           /* create iterator */
@@ -201,7 +214,7 @@ static void SplitBoxTask( task_t *self, void *arg)
           while(SNetUtilListIterCurrentDefined(current_position)) {
             elem = SNetUtilListIterGet(current_position);
             StreamWrite( self, elem->stream,
-                SNetRecCreate( REC_sort_begin,
+                SNetRecCreate( REC_sort_end,
                   /* if deterministic, we have to increase level */
                   (is_det)? SNetRecGetLevel( rec)+1 : SNetRecGetLevel( rec),
                   SNetRecGetNum( rec))
@@ -222,15 +235,12 @@ static void SplitBoxTask( task_t *self, void *arg)
 
       case REC_terminate:
         terminate = true;
+        /* Note that no sort record has to be sent after a terminate record.
+         */
         /* send copies of the record to the instances */
         while(!SNetUtilListIsEmpty(repos)) {
           current_position = SNetUtilListFirst(repos);
           elem = SNetUtilListIterGet(current_position);
-          if (is_det) {
-            /* if det, prepend with sort record */
-            StreamWrite( self, elem->stream, 
-                SNetRecCreate( REC_sort_begin, 0, counter));
-          }
           StreamWrite( self, elem->stream, SNetRecCopy( rec));
           /* close & destroy the stream to the instance */
           StreamClose( self, elem->stream);
@@ -240,11 +250,6 @@ static void SplitBoxTask( task_t *self, void *arg)
         } 
         SNetUtilListIterDestroy(current_position);
         /* send the original record to the initial stream */
-        if (is_det) {
-          /* if det, prepend with sort record */
-          StreamWrite( self, initial,
-              SNetRecCreate( REC_sort_begin, 0, counter));
-        }
         StreamWrite( self, initial, rec);
         break;
 
@@ -264,7 +269,6 @@ static void SplitBoxTask( task_t *self, void *arg)
   StreamClose( self, instream);
   /* destroy the handle */
   SNetHndDestroy( hnd);
-
 } /* END of SPLIT BOX TASK */
 
 

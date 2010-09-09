@@ -201,11 +201,9 @@ static snet_record_t *Merge( snet_record_t **storage,
 #endif
 
 
-static bool
-MatchPattern( snet_record_t *rec,
-              snet_variantencoding_t *pat,
-              snet_expr_t *guard) {
-
+static bool MatchPattern( snet_record_t *rec,
+    snet_variantencoding_t *pat, snet_expr_t *guard)
+{
   int i,j, *names;
   bool is_match, found_name;
   is_match = true;
@@ -228,7 +226,9 @@ MatchPattern( snet_record_t *rec,
 
 
 
-//static void *SyncBoxThread( void *hndl) {
+/**
+ * Sync box task
+ */
 static void SyncBoxTask( task_t *self, void *arg)
 {  
   int i; 
@@ -271,7 +271,6 @@ static void SyncBoxTask( task_t *self, void *arg)
   
   /* MAIN LOOP START */
   while( !terminate) {
-  
     /* read from input stream */
     rec = StreamRead( self, instream);
 
@@ -333,8 +332,8 @@ static void SyncBoxTask( task_t *self, void *arg)
         SNetRecDestroy( rec);
         break;
 
-      case REC_sort_begin:
-        /* forward all sort records */
+      case REC_sort_end:
+        /* forward sort record */
         StreamWrite( self, outstream, rec);
         break;
 
@@ -358,8 +357,6 @@ static void SyncBoxTask( task_t *self, void *arg)
 
         terminate = true;
         StreamWrite( self, outstream, rec);
-        StreamClose( self, outstream);
-        StreamDestroy( outstream);
         break;
 
       default:
@@ -372,9 +369,13 @@ static void SyncBoxTask( task_t *self, void *arg)
   SNetMemFree(storage);
   SNetDestroyTypeEncoding( outtype);
   SNetDestroyTypeEncoding( patterns);
-  SNetHndDestroy( hnd);
 
   StreamClose( self, instream);
+
+  StreamClose( self, outstream);
+  StreamDestroy( outstream);
+
+  SNetHndDestroy( hnd);
 }
 
 

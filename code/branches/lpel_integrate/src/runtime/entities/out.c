@@ -58,18 +58,14 @@
 /* ------------------------------------------------------------------------- */
 
 
-extern snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec) {
+snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec)
+{
   SNetUtilDebugFatal("[SNetOut] Not implemented\n\n");
   return( hnd);
 }
 
-extern snet_handle_t
-*SNetOutRawArray( snet_handle_t *hnd, 
-                  int if_id,
-                  int variant_num,
-                  void **fields,
-                  int *tags,
-                  int *btags) 
+snet_handle_t *SNetOutRawArray( snet_handle_t *hnd, 
+    int if_id, int variant_num, void **fields, int *tags, int *btags) 
 {
   int i, *names;
   snet_record_t *out_rec, *old_rec;
@@ -155,7 +151,6 @@ extern snet_handle_t
   {
     task_t *boxtask = SNetHndGetBoxtask( hnd);
     stream_t *outstream = SNetHndGetOutput( hnd);
-    //SNetTlWrite( SNetHndGetOutput( hnd), out_rec);
     StreamWrite( boxtask, outstream, out_rec);
   }
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
@@ -165,17 +160,17 @@ extern snet_handle_t
                 (tv_out.tv_sec - tv_in.tv_sec) +
                     (tv_out.tv_usec-tv_in.tv_usec) / 1000000.0);
 #endif
-
   return( hnd);
-
 }
 
 
-extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd, 
-                                   int id,
-                                   int variant_num, 
-                                   va_list args) {
 
+/**
+ * Output Raw V
+ */
+snet_handle_t *SNetOutRawV( snet_handle_t *hnd, 
+    int id, int variant_num, va_list args)
+ {
   int i, *names;
   snet_record_t *out_rec, *old_rec;
   snet_variantencoding_t *venc;
@@ -278,10 +273,12 @@ extern snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
                 (tv_out.tv_sec - tv_in.tv_sec) +
                     (tv_out.tv_usec-tv_in.tv_usec) / 1000000.0);
 #endif
-
   return( hnd);
 }
 
+/**
+ * Output Raw
+ */
 snet_handle_t *SNetOutRaw( snet_handle_t *hnd, 
                            int id, 
 			   int variant_num, 

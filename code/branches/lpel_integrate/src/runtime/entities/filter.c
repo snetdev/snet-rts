@@ -422,6 +422,7 @@ static void FilterTask( task_t *self, void *arg)
     done = false;
 
     switch( SNetRecGetDescriptor( in_rec)) {
+
       case REC_data:
         for( i=0; i<SNetElistGetNumExpressions( guard_list); i++) {
           if( ( SNetEevaluateBool( SNetEgetExpr( guard_list, i), in_rec)) 
@@ -509,7 +510,7 @@ static void FilterTask( task_t *self, void *arg)
         SNetRecDestroy( in_rec);
         break;
 
-      case REC_sort_begin:
+      case REC_sort_end:
         /* forward sort record */
         StreamWrite( self, outstream, in_rec);
         break;
@@ -525,6 +526,7 @@ static void FilterTask( task_t *self, void *arg)
         SNetRecDestroy(in_rec);
     }
   } /* MAIN LOOP END */
+
   StreamClose( self, outstream);
   StreamDestroy( outstream);
   StreamClose( self, instream);
@@ -768,7 +770,8 @@ static void NameshiftTask( task_t *self, void *arg)
         SNetRecDestroy( rec);
         break;
 
-      case REC_sort_begin:
+      case REC_sort_end:
+        /* forward sort record */
         StreamWrite( self, outstream, rec);
         break;
 
@@ -783,7 +786,8 @@ static void NameshiftTask( task_t *self, void *arg)
             SNetRecGetDescriptor( rec));
         SNetRecDestroy( rec);
     }
-  }
+  } /* MAIN LOOP END */
+
   StreamClose( self, instream);
   StreamClose( self, outstream);
   StreamDestroy( outstream);
