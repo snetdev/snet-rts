@@ -282,7 +282,7 @@ stream_t *SNetStar( stream_t *input,
     hnd = SNetHndCreate(HND_star,
         input, star_output, box_a, box_b, type, guards, false, false);
     SNetEntitySpawn( StarBoxTask, hnd, ENTITY_star_nondet);
-    dispatch_output = CreateCollector( star_output);
+    dispatch_output = CollectorCreate( 1, &star_output);
 
 #ifdef DISTRIBUTED_SNET
   } else {
@@ -378,7 +378,7 @@ stream_t *SNetStarDet(stream_t *input,
     SNetUtilDebugNotice("-");
 #endif
     SNetEntitySpawn( StarBoxTask, hnd, ENTITY_star_det);
-    dispatch_output = CreateDetCollector( star_output);
+    dispatch_output = CollectorCreate( 1, &star_output);
 
 #ifdef DISTRIBUTED_SNET
   } else {

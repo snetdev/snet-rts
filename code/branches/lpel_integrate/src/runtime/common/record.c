@@ -902,21 +902,21 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec)
     break;
   case REC_sort_begin:
     new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_B_REC( rec, level),
-			     SORT_B_REC( rec, num));
+        SORT_B_REC( rec, num));
     break;
-    case REC_sort_end:
-      new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_E_REC( rec, level),
-                               SORT_E_REC( rec, num));
-      break;
+  case REC_sort_end:
+    new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_E_REC( rec, level),
+        SORT_E_REC( rec, num));
+    break;
   case REC_terminate:
     new_rec = SNetRecCreate( REC_terminate);
     break;
   case REC_probe:
     new_rec = SNetRecCreate(REC_probe);
     break;
-    default:
-      SNetUtilDebugFatal("Can't copy record of that type (%d)",
-                                              REC_DESCR( rec));
+  default:
+    SNetUtilDebugFatal("Can't copy record of that type (%d)",
+        REC_DESCR( rec));
   }
   
   current_iteration = SNetUtilStackBottom(rec->iteration_counters);

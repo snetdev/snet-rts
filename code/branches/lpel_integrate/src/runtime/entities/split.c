@@ -294,7 +294,7 @@ stream_t *SNetSplit( stream_t *input,
   
     initial = StreamCreate();
     hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, false, false);
-    output = CreateCollector( initial);
+    output = CollectorCreate( 1, &initial);
     SNetEntitySpawn( SplitBoxTask, (void*)hnd, ENTITY_split_nondet);
     
 #ifdef DISTRIBUTED_SNET
@@ -330,7 +330,7 @@ stream_t *SNetLocSplit( stream_t *input,
 #endif /* DISTRIBUTED_DEBUG */
     initial = StreamCreate();
     hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, false, true);
-    output = CreateCollector( initial);
+    output = CollectorCreate( 1, &initial);
     SNetEntitySpawn( SplitBoxTask, (void*)hnd, ENTITY_split_nondet);
   } else { 
     output = input; 
@@ -367,7 +367,7 @@ stream_t *SNetSplitDet( stream_t *input,
     
     initial = StreamCreate();
     hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true, false);
-    output = CreateDetCollector( initial);
+    output = CollectorCreate( 1, &initial);
     SNetEntitySpawn( SplitBoxTask, (void*)hnd, ENTITY_split_det);
 
 #ifdef DISTRIBUTED_SNET
@@ -402,7 +402,7 @@ stream_t *SNetLocSplitDet( stream_t *input,
 #endif /* DISTRIBUTED_DEBUG */
     initial = StreamCreate();
     hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true, true);
-    output = CreateDetCollector( initial);
+    output = CollectorCreate( 1, &initial);
     SNetEntitySpawn( SplitBoxTask, (void*)hnd, ENTITY_split_det);
   } else { 
     output = input; 

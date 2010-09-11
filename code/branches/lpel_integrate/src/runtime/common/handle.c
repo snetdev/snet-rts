@@ -62,9 +62,7 @@ typedef struct {
 
 typedef struct {
   stream_t *input;
-  stream_t *output_a;
   stream_t **outputs;
-  stream_t **addresses;
   snet_typeencoding_list_t *type;
   bool is_det;
 } parallel_handle_t;
@@ -100,7 +98,6 @@ typedef struct {
 #endif /* DISTRIBUTED_SNET */
 } split_handle_t;
 
-
 typedef struct {
   stream_t *input;
   stream_t *output_a;
@@ -110,6 +107,13 @@ typedef struct {
   snet_filter_instruction_set_list_t **instr_lists;
 } filter_handle_t;
 
+typedef struct {
+  stream_t **inputs;
+  stream_t *output;
+  int num_in;
+} collector_handle_t;
+
+
 typedef union {
   box_handle_t *box_hnd;
   parallel_handle_t *parallel_hnd;
@@ -117,6 +121,7 @@ typedef union {
   sync_handle_t *sync_hnd;
   split_handle_t *split_hnd;
   filter_handle_t *filter_hnd;
+  collector_handle_t *collector_hnd;
 } hnd_collection_t;
 
 struct handle {
@@ -158,6 +163,7 @@ static void WrongHandleType() {
 #define SYNC_HND( component) HANDLE( sync_hnd)->component
 #define SPLIT_HND( component) HANDLE( split_hnd)->component
 #define FILTER_HND( component) HANDLE( filter_hnd)->component
+#define COLL_HND( component) HANDLE( collector_hnd)->component
 
 extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 
@@ -187,9 +193,7 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
     case HND_parallel: 
       HANDLE( parallel_hnd) = SNetMemAlloc( sizeof( parallel_handle_t));
       PAR_HND( input) = va_arg( args, stream_t*);
-      PAR_HND( output_a) = va_arg( args, stream_t*);
       PAR_HND( outputs) = va_arg( args, stream_t**);
-      PAR_HND( addresses) = va_arg( args, stream_t**);
       PAR_HND( type) = va_arg( args, snet_typeencoding_list_t*);
       PAR_HND( is_det) = va_arg( args, bool);
       break;
@@ -236,6 +240,13 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
       FILTER_HND( out_types) = va_arg( args, snet_typeencoding_list_t*);
       FILTER_HND( guard_list) = va_arg( args, snet_expr_list_t*);
       FILTER_HND( instr_lists) = va_arg( args, snet_filter_instruction_set_list_t**);
+      break;
+
+    case HND_collector:
+      HANDLE( collector_hnd) = SNetMemAlloc( sizeof( collector_handle_t));
+      COLL_HND( inputs) = va_arg( args, stream_t**);
+      COLL_HND( output) = va_arg( args, stream_t*);
+      COLL_HND( num_in) = va_arg( args, int);
       break;
 
     default:
@@ -314,6 +325,9 @@ extern void SNetHndDestroy( snet_handle_t *hnd) {
     case HND_split: 
       SNetMemFree( HANDLE( split_hnd)); 
     break;
+    case HND_collector: 
+      SNetMemFree( HANDLE( collector_hnd)); 
+    break;
     case HND_filter: 
       SNetDestroyTypeEncoding( FILTER_HND( in_type));
       if(FILTER_HND( out_types) != NULL) {
@@ -390,7 +404,7 @@ void SNetHndSetBoxtask( snet_handle_t *hnd, task_t *boxtask) {
  }
 }
 
-extern void SNetHndSetInput(snet_handle_t *hnd, stream_t *input) {
+void SNetHndSetInput(snet_handle_t *hnd, stream_t *input) {
   switch( hnd->descr) {
     case HND_box:
       BOX_HND( input) = input;
@@ -414,7 +428,8 @@ extern void SNetHndSetInput(snet_handle_t *hnd, stream_t *input) {
   }
 }
 
-extern stream_t *SNetHndGetInput( snet_handle_t *hnd) {
+stream_t *SNetHndGetInput( snet_handle_t *hnd)
+{
   stream_t *result;
 
   switch( hnd->descr) {
@@ -442,17 +457,26 @@ extern stream_t *SNetHndGetInput( snet_handle_t *hnd) {
   return( result);
 }
 
+stream_t **SNetHndGetInputs( snet_handle_t *hnd)
+{
+  stream_t **result;
+  switch( hnd->descr) {
+    case HND_collector:
+      result = COLL_HND( inputs);
+      break;
+    default: WrongHandleType();
+  }
+  return( result);
+}
 
-extern stream_t *SNetHndGetOutput( snet_handle_t *hnd){
 
+stream_t *SNetHndGetOutput( snet_handle_t *hnd)
+{
   stream_t *result;
 
   switch( hnd->descr) {
     case HND_box:
       result = BOX_HND( output_a);
-      break;
-    case HND_parallel:
-      result = PAR_HND( output_a);
       break;
     case HND_star:
       result = STAR_HND( output_a);
@@ -466,13 +490,17 @@ extern stream_t *SNetHndGetOutput( snet_handle_t *hnd){
     case HND_filter:
       result = FILTER_HND( output_a);
       break;
+    case HND_collector:
+      result = COLL_HND( output);
+      break;
     default: WrongHandleType();
   }
 
   return( result);
 }
 
-stream_t **SNetHndGetOutputs( snet_handle_t *hnd){
+stream_t **SNetHndGetOutputs( snet_handle_t *hnd)
+{
   stream_t **result;
   switch( hnd->descr) {
     case HND_parallel:
@@ -480,22 +508,32 @@ stream_t **SNetHndGetOutputs( snet_handle_t *hnd){
       break;
     default: WrongHandleType();
   }
-
   return( result);
 }
 
-stream_t **SNetHndGetAddresses( snet_handle_t *hnd){
+stream_t **SNetHndGetInputs( snet_handle_t *hnd)
+{
   stream_t **result;
   switch( hnd->descr) {
-    case HND_parallel:
-      result = PAR_HND( addresses);
+    case HND_collector:
+      result = COLL_HND( inputs);
       break;
     default: WrongHandleType();
   }
-
   return( result);
 }
 
+int SNetHndGetNum( snet_handle_t *hnd)
+{
+  int result;
+  switch( hnd->descr) {
+    case HND_collector:
+      result = COLL_HND( num_in);
+      break;
+    default: WrongHandleType();
+  }
+  return( result);
+}
 
 extern bool SNetHndIsDet( snet_handle_t *hnd) {
 

@@ -27,8 +27,7 @@ typedef enum {
   ENTITY_box,
   ENTITY_sync,
   ENTITY_filter,
-  ENTITY_collect_nondet,
-  ENTITY_collect_det,
+  ENTITY_collect,
   ENTITY_dist,
   ENTITY_none
 } snet_entity_id_t;

@@ -20,6 +20,7 @@
 #include "collectors.h"
 #include "interface_functions.h"
 #include "out.h"
+#include "collectors.h"
 #include "parallel.h"
 #include "serial.h"
 #include "split.h"

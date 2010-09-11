@@ -21,7 +21,8 @@ typedef enum {
 	HND_star     = (1<<2),
 	HND_split    = (1<<3),
 	HND_sync     = (1<<4),
-	HND_filter   = (1<<5)
+	HND_filter   = (1<<5),
+	HND_collector= (1<<6)
 } snet_handledescriptor_t;
 
 typedef enum {
@@ -72,6 +73,7 @@ extern snet_filter_instruction_set_t **SNetFilterInstructionsGetSets( snet_filte
  *  HND_sync: inbuf, outbuf, patterns
  *  HND_split: inbuf, outbuf, boxfun, tagA(=ltag), tagB(=utag)
  *  HND_filter: inbuf, outbuf, filter_instructions
+ *  HND_collector: inputs, output, num_in
  */
 extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t descr, ...);
 
@@ -87,7 +89,7 @@ extern stream_t *SNetHndGetInput( snet_handle_t *hndl);
 
 extern stream_t *SNetHndGetOutput( snet_handle_t *hndl);
 extern stream_t **SNetHndGetOutputs( snet_handle_t *hndl);
-extern stream_t **SNetHndGetAddresses( snet_handle_t *hndl);
+extern stream_t **SNetHndGetInputs( snet_handle_t *hnd);
 
 extern void *SNetHndGetBoxfun( snet_handle_t *handle);
 extern void *SNetHndGetBoxfunA( snet_handle_t *handle);
@@ -114,13 +116,14 @@ extern snet_typeencoding_list_t
 extern snet_expr_list_t 
 *SNetHndGetGuardList( snet_handle_t *hnd);
 
+extern int SNetHndGetNum( snet_handle_t *hnd);
 
 extern bool SNetHndIsIncarnate( snet_handle_t *hnd);
+extern bool SNetHndIsDet( snet_handle_t *hnd);
 
 extern void SNetHndDestroy( snet_handle_t *hndl);
 extern snet_handle_t *SNetHndCopy( snet_handle_t *hnd);
 
-extern bool SNetHndIsDet( snet_handle_t *hnd);
 
 #ifdef DISTRIBUTED_SNET
 extern bool SNetHndIsSplitByLocation( snet_handle_t *hnd);

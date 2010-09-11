@@ -182,7 +182,7 @@ static void ParallelBoxTask( task_t *self, void *arg)
   int i, num, stream_index;
   snet_handle_t *hnd = (snet_handle_t*) arg;
   snet_record_t *rec;
-  stream_t *instream, *initial;
+  stream_t *instream;
   stream_t **outstreams;
   match_count_t **matchcounter;
   snet_typeencoding_list_t *types;
@@ -203,23 +203,10 @@ static void ParallelBoxTask( task_t *self, void *arg)
   instream = SNetHndGetInput(hnd);
   StreamOpen(self, instream, 'r');
 
-  /* open initial stream for writing */
-  initial = SNetHndGetOutput( hnd);
-  StreamOpen( self, initial, 'w');
-
   /* open outstreams for writing */
   outstreams = SNetHndGetOutputs( hnd);
   for (i=0; i<num; i++) {
     StreamOpen( self, outstreams[i], 'w');
-  }
-
-  /* notify collector about collstreams */
-  {
-    stream_t **collstreams = SNetHndGetAddresses( hnd);
-    for (i=0; i<num; i++) {
-      StreamWrite( self, initial, SNetRecCreate( REC_collect, collstreams[i]));
-    }
-    SNetMemFree( collstreams);
   }
 
   is_det = SNetHndIsDet( hnd);
@@ -293,22 +280,20 @@ static void ParallelBoxTask( task_t *self, void *arg)
         break;
 
       case REC_collect:
-        SNetUtilDebugNotice("[Parallel] Unhandled control record,"
-            "destroying it\n\n");
+        SNetUtilDebugNotice("[PAR] Received REC_collect, destroying it\n");
         SNetRecDestroy( rec);
         break;
 
       case REC_sort_end:
+        /* increase level */
+        SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
         for( i=0; i<num; i++) {
-          StreamWrite( self, outstreams[i],
-              SNetRecCreate( REC_sort_end,
-                /* we have to increase level */
-                SNetRecGetLevel( rec)+1,
-                SNetRecGetNum( rec))
+          /* send a copy to all but the last, the last gets the original */
+          StreamWrite( self,
+              outstreams[i],
+              (i != (num-1)) ? SNetRecCopy( rec) : rec
               );
         }
-        SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-        StreamWrite( self, initial, rec);
         break;
 
       case REC_terminate:
@@ -323,19 +308,15 @@ static void ParallelBoxTask( task_t *self, void *arg)
         /* note that no sort record needs to be appended */
         break;
 
-    default:
-      SNetUtilDebugNotice("[Parallel] Unknown control rec destroyed (%d).\n",
-          SNetRecGetDescriptor( rec));
-      SNetRecDestroy( rec);
+      default:
+        SNetUtilDebugNotice("[PAR] Unknown control rec destroyed (%d).\n",
+            SNetRecGetDescriptor( rec));
+        SNetRecDestroy( rec);
     }
   } /* MAIN LOOP END */
 
   /* close instream */
   StreamClose( self, instream);
-
-  /* close the initial stream */
-  StreamClose( self, initial);
-  StreamDestroy( initial);
 
   /* close the outstreams */
   for( i=0; i<num; i++) {
@@ -365,9 +346,9 @@ static stream_t *SNetParallelStartup( stream_t *instream,
   int i;
   int num;
   snet_handle_t *hnd;
-  stream_t *initial, *outstream;
+  stream_t *outstream;
   stream_t **transits;
-  stream_t **outstreams;
+  stream_t **collstreams;
   snet_startup_fun_t fun;
 
 #ifdef DISTRIBUTED_SNET
@@ -384,7 +365,7 @@ static stream_t *SNetParallelStartup( stream_t *instream,
 
 
     num = SNetTencGetNumTypes( types);
-    outstreams = SNetMemAlloc( num * sizeof( stream_t*));
+    collstreams = SNetMemAlloc( num * sizeof( stream_t*));
     transits = SNetMemAlloc( num * sizeof( stream_t*));
 
 
@@ -402,16 +383,14 @@ static stream_t *SNetParallelStartup( stream_t *instream,
       outstreams[i] = SNetRoutingContextEnd(new_context, outstreams[i]);
       SNetRoutingContextDestroy(new_context);
 #else
-      outstreams[i] = (*fun)( transits[i]);
+      collstreams[i] = (*fun)( transits[i]);
 #endif /* DISTRIBUTED_SNET */
       
     }
-    /* create initial stream and collector */
-    initial = StreamCreate();
-    outstream = CreateCollector( initial);
+    /* create collector with outstreams */
+    outstream = CollectorCreate(num, collstreams);
 
-    hnd = SNetHndCreate( HND_parallel,
-        instream, initial, transits, outstreams, types, is_det);
+    hnd = SNetHndCreate( HND_parallel, instream, transits, types, is_det);
     SNetEntitySpawn( ParallelBoxTask, (void*)hnd,
         (is_det)? ENTITY_parallel_det: ENTITY_parallel_nondet
         );

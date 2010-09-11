@@ -1,9 +1,7 @@
-#ifndef COLLECTORS_HEADERS
-#define COLLECTORS_HEADERS
+#ifndef _COLLECTORS_H_
+#define _COLLECTORS_H_
 
-#include "buffer.h"
-#include "record.h"
+#include "stream.h"
 
-snet_tl_stream_t *CreateCollector(snet_tl_stream_t *initial_stream);
-snet_tl_stream_t *CreateDetCollector(snet_tl_stream_t *initial_stream);
+stream_t *CollectorCreate( int num, stream_t **instreams);
 #endif
