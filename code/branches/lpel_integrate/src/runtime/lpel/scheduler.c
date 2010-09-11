@@ -11,6 +11,7 @@
 #include "timing.h"
 #include "monitoring.h"
 #include "atomic.h"
+#include "sysdep.h"
 
 #include "taskqueue.h"
 
@@ -324,15 +325,21 @@ static bool WaitingTestOnWrite(task_t *wt, void *arg)
   return *wt->event_ptr != 0;
 }
 
+/*XXX
 static void WaitingTestGather(int i, void *arg)
 {
   streamtab_t *tab = (streamtab_t *) arg;
   StreamtabChainAdd( tab, i );
 }
+*/
 
 static bool WaitingTestOnAny(task_t *wt, void *arg)
 {
   assert( TASK_IS_WAITANY(wt) );
+  return xchg(&wt->waitany_flag, 0) != 0;
+
+/*XXX */
+#if 0
   /* event_ptr points to the root of the flagtree */
 
   /* first of all, check root flag */
@@ -350,6 +357,7 @@ static bool WaitingTestOnAny(task_t *wt, void *arg)
     return cnt > 0;
   }
   return false;
+#endif
 }
 
 

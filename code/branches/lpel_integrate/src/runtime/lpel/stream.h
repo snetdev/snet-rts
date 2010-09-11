@@ -21,7 +21,6 @@ typedef struct stream stream_t;
 struct stream_odesc {
   task_t *task;
   streamtbe_t *tbe;
-  spinlock_t lock;
 };
 
 /* Padding is required to avoid false-sharing between core's private cache */
@@ -33,7 +32,10 @@ struct stream {
   void *buf[STREAM_BUFFER_SIZE];
   /* producer / consumer  */
   struct stream_odesc prod, cons;
+  spinlock_t lock;
+  /*XXX
   int wany_idx;
+  */
   atomic_t refcnt;
 };
 
@@ -48,9 +50,10 @@ extern void *StreamRead(task_t *ct, stream_t *s);
 extern bool StreamIsSpace(task_t *ct, stream_t *s);
 extern void StreamWrite(task_t *ct, stream_t *s, void *item);
 
+/*XXX
 extern void StreamWaitAny(task_t *ct);
 extern stream_t *StreamIterNext(task_t *ct);
 extern bool StreamIterHasNext(task_t *ct);
-
+*/
 
 #endif /* _STREAM_H_ */

@@ -36,7 +36,7 @@ typedef struct {
   int idx_grp;                /* current grp for next free entry */
   int idx_tab;                /* current index of the tab within
                                  the grp for next free entry */
-  int cnt_obsolete;           /* number of obsolete table entries */
+  int cnt_deleted;            /* number of deleted table entries */
   streamtbe_t *dirty_list;    /* start of 'dirty' list */
   struct {
     struct streamgrp *hnd;    /*   handle to the chain */

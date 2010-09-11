@@ -12,7 +12,7 @@
 #define STBE_OPEN     'O'
 #define STBE_CLOSED   'C'
 #define STBE_REPLACED 'R'
-#define STBE_OBSOLETE 'X'
+#define STBE_DELETED  'D'
 
 
 #define DIRTY_END   ((streamtbe_t *)-1)
@@ -60,8 +60,8 @@ void StreamtabInit(streamtab_t *tab, int init_cap2)
   /* point to the first position */
   tab->idx_grp = 0;
   tab->idx_tab = 0;
-  /* there is no obsolete entry initially */
-  tab->cnt_obsolete = 0;
+  /* there is no deleted entry initially */
+  tab->cnt_deleted = 0;
   /* dirty list is empty */
   tab->dirty_list = DIRTY_END;
 
@@ -109,29 +109,29 @@ streamtbe_t *StreamtabAdd(streamtab_t *tab, struct stream *s, int *grp_idx)
   streamtbe_t *ste;
   int ret_idx;
 
-  /* first try to obtain an obsolete entry */
-  if (tab->cnt_obsolete > 0) {
+  /* first try to obtain an deleted entry */
+  if (tab->cnt_deleted > 0) {
     int i,j;
     ste = NULL;
     /* iterate through all table entries from the beginning */
     for(i=0; i<=tab->idx_grp; i++) {
       grp = tab->lookup[i];
       for (j=0; j<STREAMTAB_GRP_SIZE; j++) {
-        if (grp->tab[j].state == STBE_OBSOLETE) {
+        if (grp->tab[j].state == STBE_DELETED) {
           ste = &grp->tab[j];
           ret_idx = i;
-          goto found_obsolete;
+          goto found_deleted;
         }
       }
     }
-    found_obsolete:
+    found_deleted:
     /* one will be found eventually (lower position than idx_grp/idx_tab) */
     assert(ste != NULL);
-    tab->cnt_obsolete--;
+    tab->cnt_deleted--;
   
   } else {
     /*
-     * No obsolete entry could be reused. Get a new entry.
+     * No deleted entry could be reused. Get a new entry.
      * Assume that tab->idx_grp and tab->idx_tab refer to
      * the next free position, but it has not to exist yet
      */
@@ -288,8 +288,19 @@ void StreamtabChainAdd(streamtab_t *tab, int grp_idx)
     tab->chain.hnd = grp;
   }
   
-  tab->chain.count += ( tab->idx_grp==grp_idx && tab->idx_tab!=0 )
-    ? tab->idx_tab : STREAMTAB_GRP_SIZE;
+  /* count the added tbes */
+  {
+    int max, i;
+    max = ( tab->idx_grp==grp_idx && tab->idx_tab!=0 )
+      ? tab->idx_tab : STREAMTAB_GRP_SIZE;
+    /* omit the closed and deleted tbes */
+    for (i=0; i<max; i++) {
+      char st = grp->tab[i].state;
+      if (st == STBE_OPEN || st == STBE_REPLACED) {
+        tab->chain.count++;
+      }
+    }
+  }
 }
 
 /**
@@ -331,8 +342,9 @@ streamtbe_t *StreamtabIterateNext(streamtab_t *tab, streamtbe_iter_t *iter)
 {
   streamtbe_t *next;
 
+  //TODO omit deleted!
+  do {
   next = &iter->grp->tab[ iter->tab_idx ];
-  iter->count++;
 
   /* advance next */
   iter->tab_idx++;
@@ -340,6 +352,9 @@ streamtbe_t *StreamtabIterateNext(streamtab_t *tab, streamtbe_iter_t *iter)
     iter->tab_idx = 0;
     iter->grp = iter->grp->next;
   }
+  } while ( next->state == STBE_DELETED || next->state == STBE_CLOSED );
+  
+  iter->count++;
   return next;
 }
 
@@ -376,8 +391,8 @@ void StreamtabPrint(streamtab_t *tab, FILE *file)
     /* update states */
     if (tbe->state == STBE_REPLACED) { tbe->state = STBE_OPEN; }
     if (tbe->state == STBE_CLOSED) {
-      tbe->state = STBE_OBSOLETE;
-      tab->cnt_obsolete++;
+      tbe->state = STBE_DELETED;
+      tab->cnt_deleted++;
     }
     /* get the next dirty entry, and clear the link in the current entry */
     next = tbe->dirty;

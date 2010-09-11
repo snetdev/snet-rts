@@ -5,8 +5,10 @@
                         GNU Portable Coroutine Library  */
 
 #include "streamtab.h"
+/*XXX
 #include "flagtree.h"
 #include "rwlock.h"
+*/
 #include "timing.h"
 #include "atomic.h"
 
@@ -52,13 +54,14 @@ typedef enum {
   WAIT_ON_ANY   = 'a'
 } taskstate_wait_t;
 
-
+/*XXX
 struct waitany {
   flagtree_t flagtree;
   rwlock_t rwlock;
   int max_grp_idx;
   streamtbe_iter_t iter;
 };
+*/
 
 typedef struct task task_t;
 
@@ -88,7 +91,10 @@ struct task {
   struct stream *wait_s;
 
   /* waitany-task specific stuff */
+  volatile int waitany_flag;
+  /*XXX
   struct waitany *waitany_info;
+  */
 
   /* reference counter */
   atomic_t refcnt;
