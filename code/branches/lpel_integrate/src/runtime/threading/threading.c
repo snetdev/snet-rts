@@ -105,8 +105,7 @@ static size_t ThreadStackSize( snet_entity_id_t id)
     case ENTITY_split_det:
     case ENTITY_sync:
     case ENTITY_filter:
-    case ENTITY_collect_nondet:
-    case ENTITY_collect_det:
+    case ENTITY_collect:
       stack_size = 256*1024; /* HGHILY EXPERIMENTAL! */
       break;
     case ENTITY_box:
@@ -233,8 +232,8 @@ void SNetEntitySpawn( taskfunc_t fun, void *arg, snet_entity_id_t id)
   }
 
   /* waitany tasks */
-  if ( id==ENTITY_collect_det || id==ENTITY_collect_det ) {
-    tattr |= TASK_ATTR_WAITANY;
+  if ( id==ENTITY_collect ) {
+    tattr.flags |= TASK_ATTR_WAITANY;
   }
 
   /* create task */

@@ -511,17 +511,6 @@ stream_t **SNetHndGetOutputs( snet_handle_t *hnd)
   return( result);
 }
 
-stream_t **SNetHndGetInputs( snet_handle_t *hnd)
-{
-  stream_t **result;
-  switch( hnd->descr) {
-    case HND_collector:
-      result = COLL_HND( inputs);
-      break;
-    default: WrongHandleType();
-  }
-  return( result);
-}
 
 int SNetHndGetNum( snet_handle_t *hnd)
 {
