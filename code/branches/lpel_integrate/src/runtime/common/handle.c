@@ -9,11 +9,8 @@
 #include <snetentities.h>
 #include <handle.h>
 
-#include "task.h"
-
 #include <bool.h>
 #include "snettypes.h"
-#include "stream_layer.h"
 #include "debug.h"
 
 #include <stdio.h>
@@ -57,7 +54,7 @@ typedef struct {
   snet_box_fun_t boxfun_a;
   snet_box_sign_t *sign;
   name_mapping_t *mapping;
-  task_t *boxtask;
+  stream_mh_t *out_mh;
 } box_handle_t;
 
 typedef struct {
@@ -187,7 +184,7 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
       BOX_HND( boxfun_a) = va_arg( args, void*);
       BOX_HND( sign) = va_arg( args, snet_box_sign_t*);
       BOX_HND( mapping) = NULL;
-      BOX_HND( boxtask) = NULL;
+      BOX_HND( out_mh) = NULL;
       break;
     
     case HND_parallel: 
@@ -384,21 +381,23 @@ extern void SNetHndSetRecord( snet_handle_t *hnd, snet_record_t *rec) {
  }
 }
 
-task_t *SNetHndGetBoxtask( snet_handle_t *hnd) {
-  task_t *boxtask;
+stream_mh_t *SNetHndGetOutMH( snet_handle_t *hnd)
+{
+  stream_mh_t *result;
   switch( hnd->descr) {
     case HND_box: 
-      boxtask = BOX_HND( boxtask); 
+      result = BOX_HND( out_mh); 
       break;
     default: WrongHandleType();
   }
-  return( boxtask);
+  return( result);
 }
 
-void SNetHndSetBoxtask( snet_handle_t *hnd, task_t *boxtask) {
+void SNetHndSetOutMH( snet_handle_t *hnd, stream_mh_t *out_mh)
+{
  switch( hnd->descr) {
     case HND_box: 
-      BOX_HND( boxtask) = boxtask; 
+      BOX_HND( out_mh) = out_mh; 
       break;
     default: WrongHandleType();
  }

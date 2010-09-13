@@ -33,13 +33,42 @@
 #include <assert.h>
 
 #include "stream.h"
-
-#include "lpel.h"
+#include "buffer.h"
 #include "task.h"
-/*XXX
-#include "flagtree.h"
-*/
-#include "sysdep.h"
+
+struct stream_mh {
+  task_t *task;
+  stream_t *stream;
+  char mode;
+  char state;
+  unsigned long counter;
+  struct stream_mh *dirty;
+};
+
+#define STMH_OPEN     'O'
+#define STMH_CLOSED   'C'
+#define STMH_REPLACED 'R'
+
+#define DIRTY_END   ((stream_mh_t *)-1)
+
+
+
+static inline void MarkDirty( stream_mh_t *mh)
+{
+
+  /* only add if not dirty yet */
+  if (mh->dirty == NULL) {
+    /*
+     * Set the dirty ptr of mh to the dirty_list ptr of the task
+     * and the dirty_list ptr of the task to mh, i.e.,
+     * insert the mh at the front of the dirty_list.
+     * Initially, dirty_list of the tab is empty DIRTY_END (!= NULL)
+     */
+    stream_mh_t **dirty_list = TaskGetDirtyStreams( mh->task);
+    mh->dirty = *dirty_list;
+    *dirty_list = mh;
+  }
+}
 
 
 /**
@@ -47,96 +76,41 @@
  */
 stream_t *StreamCreate(void)
 {
-  stream_t *s = (stream_t *) malloc( sizeof(stream_t) );
-  if (s != NULL) {
-    s->pread = 0;
-    s->pwrite = 0;
-    /* clear all the buffer space */
-    memset(&(s->buf), 0, STREAM_BUFFER_SIZE*sizeof(void *));
-
-    /* producer/consumer not assigned */
-    s->prod.task = s->cons.task = NULL;
-    s->prod.tbe = s->cons.tbe = NULL;
-    SpinlockInit(&s->lock);
-    /*XXX
-    s->wany_idx = -1;
-    */
-    /* refcnt reflects the number of tasks
-       + the stream itself opened this stream {1,2,3} */
-    atomic_set(&s->refcnt, 1);
-  }
-  return s;
+  return BufferCreate();
 }
 
 
-/**
- * Destroy a stream
- */
-void StreamDestroy(stream_t *s)
-{
-  /* if ( fetch_and_dec(&s->refcnt) == 1 ) { */
-  if ( atomic_dec(&s->refcnt) == 0 ) {
-    SpinlockCleanup(&s->lock);
-    free(s);
-  }
-}
 
 
 /**
- * Open a stream for reading/writing
+  * Open a stream for reading/writing
  *
  * @param ct  pointer to current task
  * @param s   stream to write to (not NULL)
  * @param mode  either 'r' for reading or 'w' for writing
  */
-bool StreamOpen(task_t *ct, stream_t *s, char mode)
+stream_mh_t *StreamOpen( task_t *ct, stream_t *s, char mode)
 {
-  /* increment reference counter of stream */
-  atomic_inc(&s->refcnt);
+  stream_mh_t *mh = (stream_mh_t *) malloc( sizeof( stream_mh_t));
 
   switch(mode) {
-  case 'w':
-    assert( s->prod.task == NULL );
-    s->prod.task = ct;
-    s->prod.tbe  = StreamtabAdd(&ct->streams_write, s, NULL);
-    break;
-
   case 'r':
-      /*XXX 
-      int grpidx;
-      */
-    assert( s->cons.task == NULL );
-    SpinlockLock(&s->lock);
-    s->cons.task = ct;
-    SpinlockUnlock(&s->lock);
-    s->cons.tbe  = StreamtabAdd(&ct->streams_read, s, NULL);
-
-    if ( TASK_IS_WAITANY(ct) && (s->buf[s->pread]!= NULL) ) {
-      /* the consumer does set the waitany_flag itself */
-      ct->waitany_flag = 1;
-    }
-      /*XXX */
-#if 0
-      s->cons.tbe  = StreamtabAdd(&ct->streams_read, s, &grpidx);
-      /*if consumer task is a collector, register flagtree */
-      if ( TASK_IS_WAITANY(ct) ) {
-        if (grpidx > ct->waitany_info->max_grp_idx) {
-          FlagtreeGrow(&ct->waitany_info->flagtree);
-          ct->waitany_info->max_grp_idx *= 2;
-        }
-        s->wany_idx = grpidx;
-        /* if stream not empty, mark flagtree */
-        if (s->buf[s->pread] != NULL) {
-          FlagtreeMark(&ct->waitany_info->flagtree, s->wany_idx, -1);
-        }
-      }
-#endif
+    BufferRegisterFlag( s, &ct->wany_flag);
+  case 'w':
+    mh->task = ct;
+    mh->stream = s;
+    mh->mode = mode;
+    mh->state = STMH_OPEN;
+    mh->counter = 0;
+    mh->dirty = NULL;
+    MarkDirty( mh);
     break;
 
   default:
-    return false;
+    free( mh);
+    return NULL;
   }
-  return true;
+  return mh;
 }
 
 /**
@@ -145,284 +119,158 @@ bool StreamOpen(task_t *ct, stream_t *s, char mode)
  * @param ct  pointer to current task
  * @param s   stream to write to (not NULL)
  */
-void StreamClose(task_t *ct, stream_t *s)
+void StreamClose( stream_mh_t *mh, bool destroy_s)
 {
-  if ( ct == s->prod.task ) {
-    StreamtabRemove( &ct->streams_write, s->prod.tbe );
-    s->prod.task = NULL;
-    s->prod.tbe = NULL;
+  mh->state = STMH_CLOSED;
+  /* mark dirty */
+  //TODO mh->task;
 
-  } else if ( ct == s->cons.task ) {
-    SpinlockLock(&s->lock);
-    s->cons.task = NULL;
-    SpinlockUnlock(&s->lock);
-
-    StreamtabRemove( &ct->streams_read, s->cons.tbe );
-    s->cons.tbe = NULL;
-      
-      /*XXX if consumer was collector, unregister flagtree */
-#if 0
-      if ( TASK_IS_WAITANY(ct) ) {
-        s->wany_idx = -1;
-      }
-#endif
-  
-  } else {
-    /* task is neither producer nor consumer:
-       something went wrong */
-    assert(0);
+  if (mh->mode=='r') {
+    BufferRegisterFlag( mh->stream, NULL);
   }
-  
-  /* destroy request */
-  StreamDestroy(s);
+  if (destroy_s) {
+    BufferDestroy( mh->stream);
+  }
+  /* do not free mh, as it will be kept until its state
+     has been output via dirty list */
 }
 
 
 /**
  * Replace a stream opened for reading by another stream
- *
- * This is like calling StreamClose(s); StreamOpen(snew, 'r');
- * sequentially, but with the difference that the "position"
- * of the old stream is used for the new stream.
- * Also, the pointer to the old stream is set to point to the
- * new stream.
- *
- * @param ct    current task
- * @param s     adr of ptr to stream which to replace
- * @param snew  ptr to stream that replaces s
+ * Destroys old stream.
+ * @pre snew must not be opened by same or other task
  */
-void StreamReplace(task_t *ct, stream_t **s, stream_t *snew)
+void StreamReplace( stream_mh_t *mh, stream_t *snew)
 {
-  /* only streams opened for reading can be replaced */
-  assert( ct == (*s)->cons.task );
-  /* new stream must have been closed by previous consumer */
-  assert( snew->cons.task == NULL );
-
-  /* Task has opened s, hence s contains a reference to the tbe.
-     In that tbe, the stream must be replaced. Then, the reference
-     to the tbe must be copied to the new stream */
-  StreamtabReplace( &ct->streams_read, (*s)->cons.tbe, snew );
-  snew->cons.tbe = (*s)->cons.tbe;
-
-  SpinlockLock(&snew->lock);
-  {
-    /* also, set the task in the new stream */
-    snew->cons.task = ct; /* ct == (*s)->cons.task */
-  }
-  SpinlockUnlock(&snew->lock);
-
-  /* if new consumer is collector, and stream is not empty,
-     set waitany_flag */
-  if ( TASK_IS_WAITANY(ct) && snew->buf[(*s)->pread]!=NULL) {
-    ct->waitany_flag = 1;
-  }
-
-  /*XXX */
-#if 0
-  /*if consumer is collector, register flagtree for new stream */
-  snew->wany_idx = (*s)->wany_idx;
-  /* if stream not empty, mark flagtree */
-  if (snew->wany_idx >= 0 && snew->buf[(*s)->pread] != NULL) {
-    FlagtreeMark(&ct->waitany_info->flagtree, snew->wany_idx, -1);
-  }
-#endif
-
-  /* NOTE: both producers of s and snew do possibly mark the flagtree now,
-   *  until the following CS is executed - has this to be considered harmful?
-   */
-
-  /* clear references in old stream */
-  SpinlockLock(&(*s)->lock);
-  {
-    (*s)->cons.task = NULL;
-  }
-  SpinlockUnlock(&(*s)->lock);
-  (*s)->cons.tbe = NULL;
-  /*XXX
-    (*s)->wany_idx = -1;
-   */
-
-  /* destroy request for old stream */
-  StreamDestroy(*s);
-
-  /* Let s point to the new stream */
-  *s = snew;
+  assert( mh->mode == 'r');
+  /* destroy old stream */
+  BufferDestroy( mh->stream);
+  /* assign new stream and register flag */
+  mh->stream = snew;
+  BufferRegisterFlag( mh->stream, &mh->task->wany_flag);
+  mh->state = STMH_REPLACED;
+  /* counter is not reset */
+  MarkDirty( mh);
 }
 
 
 /**
- * Non-blocking read from a stream
+ * Non-blocking, non-consuming read from a stream
  *
- * @param ct  pointer to current task
- * @pre       current task is single reader
- * @param s   stream to read from
  * @return    NULL if stream is empty
  */
-void *StreamPeek(task_t *ct, stream_t *s)
+void *StreamPeek( stream_mh_t *mh)
 { 
-  /* check if opened for reading */
-  assert( s->cons.task == ct );
-
-  /* if the buffer is empty, buf[pread]==NULL */
-  return s->buf[s->pread];  
+  assert( mh->mode == 'r');
+  return BufferTop( mh->stream);
 }    
 
 
 /**
- * Blocking read from a stream
+ * Blocking, consuming read from a stream
  *
- * Implementation note:
- * - modifies only pread pointer (not pwrite)
- *
- * @param ct  pointer to current task
- * @param s   stream to read from
  * @pre       current task is single reader
  */
-void *StreamRead(task_t *ct, stream_t *s)
+void *StreamRead( stream_mh_t *mh)
 {
   void *item;
 
-  /* check if opened for reading */
-  assert( s->cons.task == ct );
-
+  assert( mh->mode == 'r');
+  
+  item = BufferTop( mh->stream);
   /* wait if buffer is empty */
-  if ( s->buf[s->pread] == NULL ) {
-    TaskWaitOnWrite(ct, s);
-    assert( s->buf[s->pread] != NULL );
+  if ( item == NULL ) {
+    TaskWaitOnWrite( mh->task, mh->stream);
+    item = BufferTop( mh->stream);
   }
-
-  /* READ FROM BUFFER */
-  item = s->buf[s->pread];
-  s->buf[s->pread]=NULL;
-  s->pread += (s->pread+1 >= STREAM_BUFFER_SIZE) ?
-              (1-STREAM_BUFFER_SIZE) : 1;
+  assert( item != NULL);
+  /* pop off the top element */
+  BufferPop( mh->stream);
 
   /* for monitoring */
-  if (ct!=NULL) StreamtabEvent( &ct->streams_read, s->cons.tbe );
+  mh->counter++;
+  /* mark dirty */
+  MarkDirty( mh);
 
   return item;
 }
 
 
-/**
- * Check if there is space in the buffer
- *
- * A writer can use this function before a write
- * to ensure the write succeeds (without blocking)
- *
- * @param ct  pointer to current task
- * @param s   stream opened for writing
- * @pre       current task is single writer
- */
-bool StreamIsSpace(task_t *ct, stream_t *s)
-{
-  /* check if opened for writing */
-  assert( s->prod.task == ct );
-
-  /* if there is space in the buffer, the location at pwrite holds NULL */
-  return ( s->buf[s->pwrite] == NULL );
-}
-
 
 /**
  * Blocking write to a stream
  *
- * Precondition: item != NULL
- *
- * Implementation note:
- * - modifies only pwrite pointer (not pread)
- *
- * @param ct    pointer to current task
- * @param s     stream to write to
  * @param item  data item (a pointer) to write
  * @pre         current task is single writer
  * @pre         item != NULL
  */
-void StreamWrite(task_t *ct, stream_t *s, void *item)
+void StreamWrite( stream_mh_t *mh, void *item)
 {
   /* check if opened for writing */
-  assert( s->prod.task == ct );
-
+  assert( mh->mode == 'w' );
   assert( item != NULL );
 
   /* wait while buffer is full */
-  if ( s->buf[s->pwrite] != NULL ) {
-    TaskWaitOnRead(ct, s);
-    assert( s->buf[s->pwrite] == NULL );
+  if ( !BufferIsSpace( mh->stream) ) {
+    TaskWaitOnRead( mh->task, mh->stream);
   }
-
-  /* WRITE TO BUFFER */
-  /* Write Memory Barrier: ensure all previous memory write 
-   * are visible to the other processors before any later
-   * writes are executed.  This is an "expensive" memory fence
-   * operation needed in all the architectures with a weak-ordering 
-   * memory model where stores can be executed out-or-order 
-   * (e.g. PowerPC). This is a no-op on Intel x86/x86-64 CPUs.
-   */
-  WMB(); 
-  s->buf[s->pwrite] = item;
-  s->pwrite += (s->pwrite+1 >= STREAM_BUFFER_SIZE) ?
-               (1-STREAM_BUFFER_SIZE) : 1;
+  assert( BufferIsSpace( mh->stream) );
+  /* put item into buffer */
+  BufferPut( mh->stream, item);
 
   /* for monitoring */
-  if (ct!=NULL) StreamtabEvent( &ct->streams_write, s->prod.tbe );
+  mh->counter++;
+  /* mark dirty */
+  MarkDirty( mh);
+}
 
-  SpinlockLock(&s->lock);
 
-  if ( s->cons.task!=NULL && TASK_IS_WAITANY(s->cons.task)) {
-    s->cons.task->waitany_flag = 1;
+
+/**
+ * @pre   if file != NULL, it must be open for writing
+ */
+int StreamPrintDirty( task_t *t, FILE *file)
+{
+  stream_mh_t *mh, *next;
+  int close_cnt = 0;
+
+  assert( t != NULL);
+  mh = *TaskGetDirtyStreams( t);
+
+  if (file!=NULL) {
+    fprintf( file,"[" );
   }
-  /*XXX  if flagtree registered, use flagtree mark
-  if (s->wany_idx >= 0) {
-    FlagtreeMark(
-        &s->cons.task->waitany_info->flagtree,
-        s->wany_idx,
-        ct->owner
-        );
+
+  while (mh != DIRTY_END) {
+    /* all elements in the dirty list must belong to same task */
+    assert( mh->task == t );
+
+    /* print mh */
+    if (file!=NULL) {
+      fprintf( file,
+          "%p,%c,%c,%lu;",
+          mh->stream, mh->mode, mh->state, mh->counter
+          );
+    }
+
+    /* get the next dirty entry, and clear the link in the current entry */
+    next = mh->dirty;
+    
+    /* update states */
+    if (mh->state == STMH_REPLACED) { mh->state = STMH_OPEN; }
+    if (mh->state == STMH_CLOSED) {
+      close_cnt++;
+      free( mh);
+    } else {
+      mh->dirty = NULL;
+    }
+    mh = next;
   }
-  */
-  SpinlockUnlock(&s->lock);
+  if (file!=NULL) {
+    fprintf( file,"] " );
+  }
+  /* */
+  *(TaskGetDirtyStreams(t)) = DIRTY_END;
+  return close_cnt;
 }
-
-
-#if 0
-
-/**
- *TODO
- */
-void StreamWaitAny(task_t *ct)
-{
-  assert( TASK_IS_WAITANY(ct) );
-  TaskWaitOnAny(ct);
-  StreamtabIterateStart(
-      &ct->streams_read,
-      &ct->waitany_info->iter
-      );
-}
-
-/**
- *TODO
- */
-stream_t *StreamIterNext(task_t *ct)
-{
-  assert( TASK_IS_WAITANY(ct) );
-  streamtbe_t *ste = StreamtabIterateNext(
-      &ct->streams_read,
-      &ct->waitany_info->iter
-      );
-  return ste->s;
-}
-
-/**
- *TODO
- */
-bool StreamIterHasNext(task_t *ct)
-{
-  assert( TASK_IS_WAITANY(ct) );
-  return StreamtabIterateHasNext(
-      &ct->streams_read,
-      &ct->waitany_info->iter
-      ) > 0;
-}
-#endif
-

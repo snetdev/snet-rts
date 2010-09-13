@@ -32,11 +32,13 @@
 #include "constants.h"
 #include "record.h"
 #include "typeencode.h"
-#include "stream_layer.h"
 #include "memfun.h"
 #include "bool.h"
 #include "interface_functions.h"
 #include "observers.h"
+
+#include "inport.h"
+#include "outport.h"
 
 #include "debug.h"
 
@@ -59,16 +61,16 @@ typedef enum {OBSfile, OBSsocket} obstype_t;
 
 /* A handle for observer data. */
 typedef struct obs_handle {
-  obstype_t obstype;     // type of the observer
-  void *desc;            // Observer descriptor, depends on the type of the observer (obs_socket_t / obs_file_T)
-  bool isInteractive;    // Is this observer interactive
-  snet_tl_stream_t *inbuf;  // Stream for incoming records
-  snet_tl_stream_t *outbuf; // Stream for outgoing records
-  int id;                // Instance specific ID of this observer (NOTICE: this will change!)
-  const char *code;      // Code attribute
-  const char *position;  // Name of the net/box to which the observer is attached to
-  char type;             // Type of the observer (before/after)
-  char data_level;       // Data level used
+  obstype_t obstype;    // type of the observer
+  void *desc;           // Observer descriptor, depends on the type of the observer (obs_socket_t / obs_file_T)
+  bool isInteractive;   // Is this observer interactive
+  stream_t *inbuf;      // Stream for incoming records
+  stream_t *outbuf;     // Stream for outgoing records
+  int id;               // Instance specific ID of this observer (NOTICE: this will change!)
+  const char *code;     // Code attribute
+  const char *position; // Name of the net/box to which the observer is attached to
+  char type;            // Type of the observer (before/after)
+  char data_level;      // Data level used
 }obs_handle_t;
 
 
@@ -769,8 +771,6 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
     fprintf(file,"<record type=\"sync\" />");
   case REC_collect: 
     fprintf(file,"<record type=\"collect\" />");
-  case REC_sort_begin: 
-    fprintf(file,"<record type=\"sort_begin\" />");
   case REC_sort_end: 
     fprintf(file,"<record type=\"sort_end\" />");
   case REC_terminate:
@@ -869,16 +869,18 @@ static int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
  *
  ******************************************************************************/
 
-static void *ObserverBoxThread( void *hndl) 
+static void *ObserverBoxThread( void *arg) 
 {
-  obs_handle_t *hnd = (obs_handle_t*)hndl; 
+  obs_handle_t *hnd = (obs_handle_t*)arg; 
   snet_record_t *rec = NULL;
-
   bool isTerminated = false;
+
+  outport_t *outp = OutportCreate(hnd->inbuf);
+  inport_t *inp = InportCreate(hnd->outbuf);
 
   /* Do until terminate record is processed. */
   while(!isTerminated){ 
-    rec = SNetTlRead(hnd->inbuf);
+    rec = OutportRead( outp);
     if(rec != NULL) {
            
       /* Send message. */
@@ -891,14 +893,15 @@ static void *ObserverBoxThread( void *hndl)
       }
       
       /* Pass the record to next component. */
-      SNetTlWrite(hnd->outbuf, rec);
+      InportWrite( inp, rec);
     }
   } 
 
   /* Unregister observer */
   ObserverRemove(hnd);
 
-  SNetTlMarkObsolete(hnd->outbuf);
+  OutportDestroy( outp);
+  InportDestroy( inp);
 
   SNetMemFree(hnd);
 
@@ -907,7 +910,7 @@ static void *ObserverBoxThread( void *hndl)
 
 /** <!--********************************************************************-->
  *
- * @fn snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *input, 
+ * @fn stream_t *SNetObserverSocketBox(stream_t *input, 
  *				     snet_info_t *info, 
  *				     int location,
  *				     const char *addr, 
@@ -937,7 +940,7 @@ static void *ObserverBoxThread( void *hndl)
  *   @return              Stream for outcoming records.
  *
  ******************************************************************************/
-snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *input, 
+stream_t *SNetObserverSocketBox( stream_t *input, 
 #ifdef DISTRIBUTED_SNET
 					snet_info_t *info, 
 					int location,
@@ -952,7 +955,7 @@ snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *input,
 {
   pthread_t box_thread;
   obs_handle_t *hnd;
-  snet_tl_stream_t *output = NULL;
+  stream_t *output = NULL;
   
 #ifdef DISTRIBUTED_SNET
   input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
@@ -986,7 +989,7 @@ snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *input,
       return input;
     }
     
-    hnd->outbuf  = SNetTlCreateStream(BUFFER_SIZE);
+    hnd->outbuf  = StreamCreate();
 
     hnd->type = type;
     hnd->isInteractive = isInteractive;
@@ -1010,7 +1013,7 @@ snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *input,
 
 /** <!--********************************************************************-->
  *
- * @fn snet_tl_stream_t *SNetObserverFileBox(snet_tl_stream_t *input,
+ * @fn stream_t *SNetObserverFileBox(stream_t *input,
  *				   snet_info_t *info, 
  *				   int location,
  *				   const char *filename, 
@@ -1036,7 +1039,7 @@ snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *input,
  *   @return              Stream for outcoming records.
  *
  ******************************************************************************/
-snet_tl_stream_t *SNetObserverFileBox(snet_tl_stream_t *input, 
+stream_t *SNetObserverFileBox(stream_t *input, 
 #ifdef DISTRIBUTED_SNET
 				      snet_info_t *info, 
 				      int location,
@@ -1049,7 +1052,7 @@ snet_tl_stream_t *SNetObserverFileBox(snet_tl_stream_t *input,
 {
   pthread_t box_thread;
   obs_handle_t *hnd;
-  snet_tl_stream_t *output = NULL;
+  stream_t *output = NULL;
   
 #ifdef DISTRIBUTED_SNET
   input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
@@ -1069,7 +1072,7 @@ snet_tl_stream_t *SNetObserverFileBox(snet_tl_stream_t *input,
     }
 
     hnd->inbuf = input;
-    hnd->outbuf  = SNetTlCreateStream(BUFFER_SIZE);
+    hnd->outbuf  = StreamCreate();
     
     pthread_mutex_lock(&connection_mutex);
     hnd->id = id_pool++;

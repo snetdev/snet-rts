@@ -30,14 +30,14 @@
 
 #include "bool.h"
 #include "record.h"
-#include "buffer.h"
 #include "memfun.h"
 #include "handle.h"
 #include "debug.h"
 #include "threading.h"
 #include "tree.h"
 #include "list.h"
-#include "stream_layer.h"
+
+#include "task.h"
 
 #ifdef DISTRIBUTED_SNET
 #include "routing.h"
@@ -236,7 +236,7 @@ static void SyncBoxTask( task_t *self, void *arg)
   int num_patterns;
   bool terminate = false;
   snet_handle_t *hnd = (snet_handle_t*) arg;
-  stream_t *outstream, *instream;
+  stream_mh_t *outstream, *instream;
   snet_record_t **storage;
   snet_record_t *rec;
   snet_record_t *temp_record;
@@ -252,11 +252,8 @@ static void SyncBoxTask( task_t *self, void *arg)
 #ifdef SYNCRO_DEBUG
   SNetUtilDebugNotice("(CREATION SYNCRO)");
 #endif
-  outstream = SNetHndGetOutput( hnd);
-  StreamOpen( self, outstream, 'w');
-
-  instream= SNetHndGetInput( hnd);
-  StreamOpen( self, instream, 'r');
+  outstream = StreamOpen( self, SNetHndGetOutput( hnd), 'w');
+  instream  = StreamOpen( self, SNetHndGetInput( hnd),  'r');
 
   outtype = SNetHndGetType( hnd);
   patterns = SNetHndGetPatterns( hnd);
@@ -272,7 +269,7 @@ static void SyncBoxTask( task_t *self, void *arg)
   /* MAIN LOOP START */
   while( !terminate) {
     /* read from input stream */
-    rec = StreamRead( self, instream);
+    rec = StreamRead( instream);
 
     switch( SNetRecGetDescriptor( rec)) {
       
@@ -289,7 +286,7 @@ static void SyncBoxTask( task_t *self, void *arg)
         }
 
         if( new_matches == 0) {
-          StreamWrite( self, outstream, rec);
+          StreamWrite( outstream, rec);
         } else {
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
@@ -304,14 +301,16 @@ static void SyncBoxTask( task_t *self, void *arg)
                                   outtype, 
                                   storage[0]);
 #endif
-            StreamWrite( self, outstream, temp_record);
+            StreamWrite( outstream, temp_record);
             /* current_state->terminated = true; */
-            StreamWrite( self, outstream,
+            StreamWrite( outstream,
                 SNetRecCreate(REC_sync, instream)
                 );
 
-	    StreamClose( self, outstream);
-            StreamDestroy( outstream);
+            /* the receiver of REC_sync will destroy the outstream */
+            StreamClose( outstream, false);
+            /* instream has been sent to next entity, do not destroy  */
+            StreamClose( instream, false);
 
             terminate = true;
           }
@@ -321,7 +320,7 @@ static void SyncBoxTask( task_t *self, void *arg)
       case REC_sync:
         {
           stream_t *newstream = SNetRecGetStream( rec);
-          StreamReplace( self, &instream, newstream);
+          StreamReplace( instream, newstream);
           SNetHndSetInput( hnd, newstream);
           SNetRecDestroy( rec);
         }
@@ -334,7 +333,7 @@ static void SyncBoxTask( task_t *self, void *arg)
 
       case REC_sort_end:
         /* forward sort record */
-        StreamWrite( self, outstream, rec);
+        StreamWrite( outstream, rec);
         break;
 
       case REC_terminate:
@@ -356,7 +355,9 @@ static void SyncBoxTask( task_t *self, void *arg)
          */
 
         terminate = true;
-        StreamWrite( self, outstream, rec);
+        StreamWrite( outstream, rec);
+        StreamClose( outstream, false);
+        StreamClose( instream, true);
         break;
 
       default:
@@ -369,11 +370,6 @@ static void SyncBoxTask( task_t *self, void *arg)
   SNetMemFree(storage);
   SNetDestroyTypeEncoding( outtype);
   SNetDestroyTypeEncoding( patterns);
-
-  StreamClose( self, instream);
-
-  StreamClose( self, outstream);
-  StreamDestroy( outstream);
 
   SNetHndDestroy( hnd);
 }

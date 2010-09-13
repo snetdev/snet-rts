@@ -2,7 +2,7 @@
 #define _SNET_ROUTING_H_
 
 #include "bool.h"
-#include "stream_layer.h"
+#include "stream.h"
 #include "fun.h"
 #include "id.h"
 
@@ -28,17 +28,17 @@ int SNetRoutingContextGetLocation(snet_routing_context_t *context);
 void SNetRoutingContextSetParent(snet_routing_context_t *context, int parent);
 int SNetRoutingContextGetParent(snet_routing_context_t *context);
 
-snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet_tl_stream_t* stream, int location);
+stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, stream_t* stream, int location);
 
-snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl_stream_t* stream);
+stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, stream_t* stream);
 
-snet_tl_stream_t *SNetRoutingGetGlobalInput();
+stream_t *SNetRoutingGetGlobalInput();
 
-snet_tl_stream_t *SNetRoutingGetGlobalOutput();
+stream_t *SNetRoutingGetGlobalOutput();
 
-snet_tl_stream_t *SNetRoutingWaitForGlobalInput();
+stream_t *SNetRoutingWaitForGlobalInput();
 
-snet_tl_stream_t *SNetRoutingWaitForGlobalOutput(); 
+stream_t *SNetRoutingWaitForGlobalOutput(); 
 
 void SNetRoutingNotifyAll();
 

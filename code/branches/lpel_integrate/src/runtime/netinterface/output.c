@@ -24,22 +24,26 @@
 #include "snetentities.h"
 #include "label.h"
 #include "interface.h"
-#include "stream_layer.h"
+//#include "stream_layer.h"
 #include "bool.h"
 #include "debug.h"
+
+#include "lpel.h"
+#include "stream.h"
+#include "outport.h"
 
 #ifdef DISTRIBUTED_SNET
 #include "distribution.h"
 #endif /* DISTRIBUTED_SNET */
 
 /* Thread to do the output */
-static pthread_t thread; 
+static lpelthread_t *thread; 
 
 typedef struct { 
   FILE *file;
   snetin_label_t *labels;
   snetin_interface_t *interfaces;
-  snet_tl_stream_t *buffer;
+  stream_t *buffer;
 } handle_t;
 
 
@@ -129,9 +133,6 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
     case REC_collect: 
       SNetUtilDebugFatal("Output of REC_collect not yet implemented!");
       //fprintf(hnd->file, "<record type=\"collect\" />");
-    case REC_sort_begin: 
-      SNetUtilDebugFatal("Output of REC_sort_begin not yet implemented!");
-      //fprintf(hnd->file, "<record type=\"sort_begin\" />");
     case REC_sort_end:
       SNetUtilDebugFatal("Output of REC_sort_end not yet implemented!");
       //fprintf(hnd->file, "<record type=\"sort_end\" />");
@@ -162,8 +163,10 @@ static void *doOutput(void* data)
 #endif /* DISTRIBUTED_SNET */
 
   if(hnd->buffer != NULL){
+    outport_t *op = OutportCreate( hnd->buffer);
+
     while(!terminate){
-      rec = SNetTlRead(hnd->buffer);
+      rec = OutportRead(op);
       if(rec != NULL) {
 	switch(SNetRecGetDescriptor(rec)) {
 	case REC_sync:
@@ -171,7 +174,6 @@ static void *doOutput(void* data)
 	  break;
 	case REC_data:
 	case REC_collect:
-	case REC_sort_begin:
 	case REC_sort_end:
 	case REC_probe:
 	case REC_trigger_initialiser:
@@ -194,6 +196,8 @@ static void *doOutput(void* data)
 
     fflush(hnd->file);
     fprintf(hnd->file, "\n");
+
+    OutportDestroy(op);
   }
 
   SNetMemFree(hnd);
@@ -204,11 +208,12 @@ static void *doOutput(void* data)
 int SNetInOutputInit(FILE *file,
 		     snetin_label_t *labels, 
 #ifdef DISTRIBUTED_SNET
-		     snetin_interface_t *interfaces)
+		     snetin_interface_t *interfaces
 #else /* DISTRIBUTED_SNET */
 		     snetin_interface_t *interfaces,
-		     snet_tl_stream_t *in_buf)
+		     stream_t *in_buf
 #endif /* DISTRIBUTED_SNET */
+  )
 {
   handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
 
@@ -221,20 +226,26 @@ int SNetInOutputInit(FILE *file,
   hnd->buffer = in_buf;
 #endif /* DISTRIBUTED_SNET */
 
+  /*TODO catch error
   if(pthread_create(&thread, NULL, (void *)doOutput, (void *)hnd) == 0){
     return 0;
   }
-  
+  */
   /* error */
-  return 1;
+  //return 1;
+  thread = LpelThreadCreate( doOutput, hnd);
+
+  return 0;
 }
 
 int SNetInOutputDestroy()
 {
-
+  /*
   if(pthread_join(thread, NULL) == 0){
     return 0;
-  }
-  /* Error */
-  return 1;
+  }*/
+  /*TODO catch error */
+  LpelThreadJoin(thread, NULL);
+  return 0;
+  
 }

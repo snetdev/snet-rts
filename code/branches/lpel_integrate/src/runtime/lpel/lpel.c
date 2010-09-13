@@ -155,6 +155,8 @@ static void *WorkerStartup(void *arg)
   /* scheduler task will return when there is no more work to do */
   /**************************************************************************/
 
+  MonitoringDebug(&mon_info, "worker %d exiting\n", wid);
+
   /* cleanup monitoring */ 
   MonitoringCleanup(&mon_info);
 
@@ -162,7 +164,7 @@ static void *WorkerStartup(void *arg)
   co_thread_cleanup();
   
   /* exit thread */
-  return NULL;
+  pthread_exit(NULL);
 }
 
 
@@ -175,6 +177,9 @@ static void *WorkerLauncher(void *arg)
   int nw = config.num_workers;
   pthread_t thids[nw];
   int wid[nw];
+
+  /* Init libPCL */
+  //co_thread_init();
 
   /* initialise barrier */
   res = pthread_barrier_init(
@@ -202,6 +207,11 @@ static void *WorkerLauncher(void *arg)
   /* destroy barrier */
   res = pthread_barrier_destroy(&bar_worker_init);
   assert( res == 0 );
+
+  /* Cleanup libPCL */
+  //co_thread_cleanup();
+
+  pthread_exit(NULL);
   return NULL;
 }
 
@@ -392,6 +402,8 @@ void LpelThreadJoin( lpelthread_t *lt, void **joinarg)
   int res;
   res = pthread_join(lt->pthread, joinarg);
   assert( res==0 );
+
+  free(lt);
 
   /* decrease number of active entities in the LPEL system */
   atomic_dec(&lpel_active_entities);

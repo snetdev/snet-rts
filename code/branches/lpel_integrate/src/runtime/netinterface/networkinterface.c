@@ -181,7 +181,7 @@ int SNetInRun(int argc, char *argv[],
 #ifdef DISTRIBUTED_SNET
   int rank;
 #else /* DISTRIBUTED_SNET */
-  snet_tl_stream_t *out_buf = NULL;
+  stream_t *out_buf = NULL;
 #endif /* DISTRIBUTED_SNET */
 
 #ifdef DISTRIBUTED_SNET
@@ -284,7 +284,7 @@ int SNetInRun(int argc, char *argv[],
   labels     = SNetInLabelInit(static_labels, number_of_labels);
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
   
-  SNetObserverInit(labels, interfaces);
+  //SNetObserverInit(labels, interfaces);
 
 #ifdef DISTRIBUTED_SNET
 
@@ -316,7 +316,6 @@ int SNetInRun(int argc, char *argv[],
 
 #else
   //LPEL
-  //in_buf = SNetTlCreateStream(bufsize);
   in_buf = StreamCreate();
   in_buf_port = InportCreate( in_buf);
   /* Initialise LPEL */
@@ -332,7 +331,6 @@ int SNetInRun(int argc, char *argv[],
   }
   
   //LPEL
-  // SNetInParserInit(input, labels, interfaces, in_buf);
   SNetInParserInit(input, labels, interfaces, in_buf_port);
   /* start workers */
   LpelRun();
@@ -341,23 +339,19 @@ int SNetInRun(int argc, char *argv[],
   while(i != SNET_PARSE_TERMINATE){
     i = SNetInParserParse();
   }
-
-  SNetInOutputDestroy();
   
-  /*LPEL
-  if(in_buf != NULL){
-    SNetTlMarkObsolete(in_buf);
-  }*/
-  StreamDestroy( in_buf);
+  SNetInOutputDestroy();
+
+  LpelCleanup();
+
   InportDestroy( in_buf_port);
   
   SNetInParserDestroy();
   
-  LpelCleanup();
 
 #endif /* DISTRIBUTED_SNET */ 
 
-  SNetObserverDestroy();
+  //SNetObserverDestroy();
   
   SNetInLabelDestroy(labels);
   SNetInInterfaceDestroy(interfaces);

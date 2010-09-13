@@ -12,7 +12,6 @@
 #include "record.h"
 
 #include "snetentities.h"
-#include "stream_layer.h"
 
 #include "stack.h"
 #include "debug.h"
@@ -54,7 +53,6 @@
 
 #define DATA_REC( name, component) RECORD( name, data_rec)->component
 #define SYNC_REC( name, component) RECORD( name, sync_rec)->component
-#define SORT_B_REC( name, component) RECORD( name, sort_begin_rec)->component
 #define SORT_E_REC( name, component) RECORD( name, sort_end_rec)->component
 #define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
 #define STAR_REC( name, component) RECORD( name, star_rec)->component
@@ -82,13 +80,9 @@ typedef struct {
 #endif
 
 typedef struct {
-  snet_tl_stream_t *input;
+  stream_t *input;
 } sync_rec_t;
 
-typedef struct {
-  int num;
-  int level;
-} sort_begin_t;
 
 typedef struct {
   int num;
@@ -101,7 +95,7 @@ typedef struct {
 } terminate_rec_t;
 
 typedef struct {
-  snet_tl_stream_t *output;
+  stream_t *output;
 } star_rec_t;
 
 typedef struct {
@@ -112,7 +106,6 @@ union record_types {
   data_rec_t *data_rec;
   sync_rec_t *sync_rec;
   star_rec_t *star_rec;
-  sort_begin_t *sort_begin_rec;
   sort_end_t *sort_end_rec;
   terminate_rec_t *terminate_rec;
   probe_rec_t *probe_rec;
@@ -264,21 +257,15 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
     case REC_sync:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
       RECORD( rec, sync_rec) = SNetMemAlloc( sizeof( sync_rec_t));
-      SYNC_REC( rec, input) = va_arg( args, snet_tl_stream_t*);
+      SYNC_REC( rec, input) = va_arg( args, stream_t*);
       break;
     case REC_collect:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
       RECORD( rec, star_rec) = SNetMemAlloc( sizeof( star_rec_t));
-      STAR_REC( rec, output) = va_arg( args, snet_tl_stream_t*);
+      STAR_REC( rec, output) = va_arg( args, stream_t*);
       break;
     case REC_terminate:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
-      break;
-    case REC_sort_begin:
-      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
-      RECORD( rec, sort_begin_rec) = SNetMemAlloc( sizeof( sort_begin_t));
-      SORT_B_REC( rec, level) = va_arg( args, int);
-      SORT_B_REC( rec, num) =   va_arg( args, int);
       break;
     case REC_sort_end:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
@@ -355,10 +342,6 @@ extern void SNetRecDestroy( snet_record_t *rec)
       SNetMemFree( RECORD( rec, star_rec));
       break;
       
-    case REC_sort_begin:
-      SNetMemFree( RECORD( rec, sort_begin_rec));
-      break;
-    
     case REC_sort_end:
       SNetMemFree( RECORD( rec, sort_end_rec));
       break;
@@ -486,9 +469,9 @@ extern int SNetRecGetInterfaceId( snet_record_t *rec)
   return( result);
 }
 
-extern snet_tl_stream_t *SNetRecGetStream( snet_record_t *rec)
+extern stream_t *SNetRecGetStream( snet_record_t *rec)
 {
-  snet_tl_stream_t *result;
+  stream_t *result;
 
   switch( REC_DESCR( rec)) {
   case REC_sync:
@@ -688,9 +671,6 @@ extern int SNetRecGetNum( snet_record_t *rec)
   int counter;
   
   switch( REC_DESCR( rec)) {
-    case REC_sort_begin:
-      counter = SORT_B_REC( rec, num);
-      break;
     case REC_sort_end:
       counter = SORT_E_REC( rec, num);
       break;
@@ -705,9 +685,6 @@ extern int SNetRecGetNum( snet_record_t *rec)
 extern void SNetRecSetNum( snet_record_t *rec, int value)
 {
     switch( REC_DESCR( rec)) {
-    case REC_sort_begin:
-      SORT_B_REC( rec, num) = value;
-      break;
     case REC_sort_end:
       SORT_E_REC( rec, num) = value;
       break;
@@ -723,9 +700,6 @@ extern int SNetRecGetLevel( snet_record_t *rec)
   int counter;
   
   switch( REC_DESCR( rec)) {
-    case REC_sort_begin:
-      counter = SORT_B_REC( rec, level);
-      break;
     case REC_sort_end:
       counter = SORT_E_REC( rec, level);
       break;
@@ -740,9 +714,6 @@ extern int SNetRecGetLevel( snet_record_t *rec)
 extern void SNetRecSetLevel( snet_record_t *rec, int value)
 {
   switch( REC_DESCR( rec)) {
-    case REC_sort_begin:
-      SORT_B_REC( rec, level) = value;
-      break;
     case REC_sort_end:
       SORT_E_REC( rec, level) = value;
       break;
@@ -899,10 +870,6 @@ extern snet_record_t *SNetRecCopy( snet_record_t *rec)
     
     SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
       
-    break;
-  case REC_sort_begin:
-    new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_B_REC( rec, level),
-        SORT_B_REC( rec, num));
     break;
   case REC_sort_end:
     new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_E_REC( rec, level),
@@ -1180,14 +1147,6 @@ extern int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, i
     break;
   case REC_terminate:
     break;
-  case REC_sort_begin:
-    /* Pack num and level. */ 
-    if((result = MPI_Pack(&SORT_B_REC( rec, num), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-      return result; 
-    }
-
-    return MPI_Pack(&SORT_B_REC( rec, level), 1, MPI_INT, buf, buf_size, pos, comm);
-    break;
   case REC_sort_end:
     /* Pack num and level. */ 
     if((result = MPI_Pack(&SORT_E_REC( rec, num), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
@@ -1311,13 +1270,6 @@ extern snet_record_t *SNetRecUnpack(MPI_Comm comm, int *pos, void *buf, int buf_
       break;
     case REC_terminate:
       return SNetRecCreate(REC_terminate);
-      break;
-    case REC_sort_begin:
-      /* Unpack num and level. */ 
-      if(MPI_Unpack(buf, buf_size, pos, &temp_buf[0], 1, MPI_INT, comm) == MPI_SUCCESS
-	 && MPI_Unpack(buf, buf_size, pos, &temp_buf[1], 1, MPI_INT, comm) == MPI_SUCCESS) {
-	rec =  SNetRecCreate(REC_sort_begin, temp_buf[0], temp_buf[1]);
-      }
       break;
     case REC_sort_end:
       /* Unpack num and level. */ 

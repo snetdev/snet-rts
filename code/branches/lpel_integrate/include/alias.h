@@ -2,13 +2,13 @@
 #define ALIAS_HEADER
 
 #include "snettypes.h"
-#include "stream_layer.h"
+#include "stream.h"
 
-snet_tl_stream_t *SNetAlias(snet_tl_stream_t *instream,
+stream_t *SNetAlias(stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-			    snet_info_t *info, 
-			    int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */ 
-			    snet_startup_fun_t net);
+    snet_startup_fun_t net);
 
 #endif

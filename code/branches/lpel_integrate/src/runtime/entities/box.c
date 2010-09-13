@@ -3,7 +3,8 @@
 #include "record.h"
 #include "time.h"
 #include "debug.h"
-#include "stream_layer.h"
+
+#include "threading.h"
 
 #include "stream.h"
 #include "task.h"
@@ -42,10 +43,10 @@ static void BoxTask(task_t *self, void *arg)
 
   snet_handle_t *hnd;
   snet_record_t *rec;
+  stream_mh_t *instream, *outstream;
   void (*boxfun)( snet_handle_t*);
   bool terminate = false;
 
-  stream_t *instream, *outstream;
 
   hnd = (snet_handle_t*) arg;
 #ifdef BOX_DEBUG
@@ -53,19 +54,16 @@ static void BoxTask(task_t *self, void *arg)
 #endif
   boxfun = SNetHndGetBoxfun( hnd);
 
-  instream = SNetHndGetInput(hnd);
-  StreamOpen(self, instream, 'r');
-
-  outstream = SNetHndGetOutput(hnd);
-  StreamOpen(self, outstream, 'w');
+  instream = StreamOpen(self, SNetHndGetInput(hnd), 'r');
+  outstream =  StreamOpen(self, SNetHndGetOutput(hnd), 'w');
 
   /* set boxtask */
-  SNetHndSetBoxtask( hnd, self);
+  SNetHndSetOutMH( hnd, outstream);
 
   /* MAIN LOOP */
   while( !terminate) {
     /* read from input stream */
-    rec = StreamRead(self, instream);
+    rec = StreamRead( instream);
 
     switch( SNetRecGetDescriptor(rec)) {
       case REC_trigger_initialiser:
@@ -101,9 +99,9 @@ static void BoxTask(task_t *self, void *arg)
 
       case REC_sync:
         {
-          stream_t *newinstream = SNetRecGetStream(rec);
-          SNetHndSetInput( hnd, newinstream);
-          StreamReplace( self, &instream, newinstream);
+          stream_t *newstream = SNetRecGetStream(rec);
+          StreamReplace( instream, newstream);
+          SNetHndSetInput( hnd, newstream);
           SNetRecDestroy( rec);
         }
         break;
@@ -115,12 +113,12 @@ static void BoxTask(task_t *self, void *arg)
 
       case REC_sort_end:
         /* forward the sort record */
-        StreamWrite( self, outstream, rec);
+        StreamWrite( outstream, rec);
         break;
 
       case REC_terminate:
+        StreamWrite( outstream, rec);
         terminate = true;
-        StreamWrite( self, outstream, rec);
         break;
 
     default:
@@ -130,9 +128,8 @@ static void BoxTask(task_t *self, void *arg)
     }
   } /* MAIN LOOP END */
 
-  StreamClose( self, instream);
-  StreamClose( self, outstream);
-  StreamDestroy(outstream);
+  StreamClose( instream, true);
+  StreamClose( outstream, false);
 
   SNetHndDestroy( hnd);
 }

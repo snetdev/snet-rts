@@ -1,13 +1,13 @@
-#include "debug.h"
-#include "pthread.h"
-#include "record.h"
-#include "memfun.h"
+#include <pthread.h>
 #include <string.h>
 
 #ifdef DISTRIBUTED_SNET
 #include <mpi.h>
 #endif /* DISTRIBUTED_SNET */
 
+#include "debug.h"
+#include "record.h"
+#include "memfun.h"
 
 extern char* SNetUtilDebugDumpRecord(snet_record_t *source, char* storage) {
   if(source == NULL) {
@@ -29,13 +29,6 @@ extern char* SNetUtilDebugDumpRecord(snet_record_t *source, char* storage) {
         sprintf(storage, "(RECORD %p COLLECT (NEW STREAM %p))",
               source,
               SNetRecGetStream(source));
-      break;
-
-      case REC_sort_begin:
-        sprintf(storage, "(RECORD %p SORTBEGIN (LEVEL %d) (NUM %d))",
-              source,
-              SNetRecGetLevel(source),
-              SNetRecGetNum(source));
       break;
 
       case REC_sort_end:

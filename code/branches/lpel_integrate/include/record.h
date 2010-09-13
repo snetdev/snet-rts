@@ -14,8 +14,8 @@ typedef union record_types snet_record_types_t;
 #include "typeencode.h"
 #include "bool.h"
 #include "constants.h"
-#include "stream_layer.h"
 #include "stack.h"
+#include "stream.h"
 
 #ifdef DISTRIBUTED_SNET
 #include <mpi.h>
@@ -31,7 +31,6 @@ typedef enum {
 	REC_data,
 	REC_sync,
 	REC_collect,
-	REC_sort_begin,
 	REC_sort_end,
 	REC_terminate,
 	REC_probe,
@@ -97,7 +96,7 @@ extern snet_util_stack_t *SNetRecGetIterationStack(snet_record_t *rec);
 
 extern snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec);
 
-extern snet_tl_stream_t *SNetRecGetStream( snet_record_t *rec);
+extern stream_t *SNetRecGetStream( snet_record_t *rec);
 
 
 /*

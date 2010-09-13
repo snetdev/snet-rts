@@ -3,6 +3,7 @@
 
 #include "snettypes.h"
 #include "buffer.h"
+#include "stream.h"
 #include "typeencode.h"
 
 #define MC_ISMATCH( name) name->is_match
@@ -13,20 +14,20 @@ typedef struct {
 } match_count_t;
 
 
-snet_tl_stream_t *SNetParallel(snet_tl_stream_t *instream,
+stream_t *SNetParallel(stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-			       snet_info_t *info, 
-			       int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-			       snet_typeencoding_list_t *types,
-			       ...);
+    snet_typeencoding_list_t *types,
+    ...);
 
-snet_tl_stream_t *SNetParallelDet(snet_tl_stream_t *instream,
+stream_t *SNetParallelDet(stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-				  snet_info_t *info, 
-				  int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-				  snet_typeencoding_list_t *types,
-				  ...);
+    snet_typeencoding_list_t *types,
+    ...);
 
 #endif

@@ -12,14 +12,6 @@
 
 
 
-/**
- * 2 to the power of following constant
- * determines the initial group capacity of streamsets
- * in tasks that can wait on any input
- */
-#define TASK_WAITANY_GRPS_INIT  2
-
-
 
 static atomic_t taskseq = ATOMIC_INIT(0);
 
@@ -59,33 +51,9 @@ task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t attr)
   t->cnt_dispatch = 0;
 
   /* init streamset to write */
-  StreamtabInit( &t->streams_write, 0);
-
-  /* init streamset to read */
-  StreamtabInit( &t->streams_read,
-      (TASK_IS_WAITANY(t)) ?
-      TASK_WAITANY_GRPS_INIT : 0
-      );
-
-
-  /* other stuff that is special for WAIT_ANY tasks */
-  if ( TASK_IS_WAITANY(t) ) {
-    t->waitany_flag = 0;
-/*XXX */
-#if 0
-    /* allocate specific info struct */
-    t->waitany_info = (struct waitany *) malloc( sizeof(struct waitany) );
-
-    RwlockInit( &t->waitany_info->rwlock, LpelNumWorkers() );
-    FlagtreeInit(
-        &t->waitany_info->flagtree,
-        TASK_WAITANY_GRPS_INIT,
-        &t->waitany_info->rwlock
-        );
-    /* max_grp_idx = 2^x - 1 */
-    t->waitany_info->max_grp_idx = (1<<TASK_WAITANY_GRPS_INIT)-1;
-#endif
-  }
+  t->dirty_list = (stream_mh_t *)-1;
+  
+  t->wany_flag = NULL;
 
   t->code = func;
   /* function, argument (data), stack base address, stacksize */
@@ -110,20 +78,12 @@ int TaskDestroy(task_t *t)
   /* if ( fetch_and_dec(&t->refcnt) == 1) { */
   if ( atomic_dec(&t->refcnt) == 0) {
 
-    /* free the streamsets */
-    StreamtabCleanup(&t->streams_write);
-    StreamtabCleanup(&t->streams_read);
-
-/*XXX */
-#if 0
-    /* waitany-specific cleanup */
-    if ( TASK_IS_WAITANY(t) ) {
-      RwlockCleanup( &t->waitany_info->rwlock );
-      FlagtreeCleanup( &t->waitany_info->flagtree );
-      /* free waitany struct */
-      free( t->waitany_info );
+    /* free the not closed stream_mh's */
+    if (0 != StreamPrintDirty( t, NULL))
+    {
+      //TODO warning
+      assert(0);
     }
-#endif
 
     /* delete the coroutine */
     co_delete(t->ctx);
@@ -136,6 +96,11 @@ int TaskDestroy(task_t *t)
   return 0;
 }
 
+
+stream_mh_t **TaskGetDirtyStreams( task_t *ct)
+{
+  return &ct->dirty_list;
+}
 
 /**
  * Call a task (context switch to a task)
@@ -172,15 +137,14 @@ static void TaskStartup(void *data)
 /**
  * Set Task waiting for a read event
  *
- * @param ct  pointer to the current task
  * @pre ct->state == TASK_RUNNING
  */
-void TaskWaitOnRead(task_t *ct, stream_t *s)
-{
+void TaskWaitOnRead( task_t *ct, stream_t *s)
+{ 
   assert( ct->state == TASK_RUNNING );
   
   /* WAIT on read event*/;
-  ct->event_ptr = (int *) &s->buf[s->pwrite];
+  ct->event_ptr = (volatile void**) BufferGetWptr( s);
   ct->state = TASK_WAITING;
   ct->wait_on = WAIT_ON_READ;
   ct->wait_s = s;
@@ -192,15 +156,14 @@ void TaskWaitOnRead(task_t *ct, stream_t *s)
 /**
  * Set Task waiting for a read event
  *
- * @param ct  pointer to the current task
  * @pre ct->state == TASK_RUNNING
  */
-void TaskWaitOnWrite(task_t *ct, stream_t *s)
+void TaskWaitOnWrite( task_t *ct, stream_t *s)
 {
   assert( ct->state == TASK_RUNNING );
 
   /* WAIT on write event*/
-  ct->event_ptr = (int *) &s->buf[s->pread];
+  ct->event_ptr = (volatile void**) BufferGetRptr( s);
   ct->state = TASK_WAITING;
   ct->wait_on = WAIT_ON_WRITE;
   ct->wait_s = s;
@@ -212,16 +175,15 @@ void TaskWaitOnWrite(task_t *ct, stream_t *s)
 /**
  * @pre ct->state == TASK_RUNNING
  */
-void TaskWaitOnAny(task_t *ct)
+void TaskWaitOnAny( task_t *ct)
 {
   assert( ct->state == TASK_RUNNING );
-  assert( TASK_IS_WAITANY(ct) );
 
   /*XXX WAIT upon any input stream setting root flag
   ct->event_ptr = &ct->waitany_info->flagtree.buf[0];
   */
   /* WAIT upon any input stream setting waitany_flag */
-  ct->event_ptr = &ct->waitany_flag;
+  ct->event_ptr = &ct->wany_flag;
   ct->state = TASK_WAITING;
   ct->wait_on = WAIT_ON_ANY;
   ct->wait_s = NULL;
@@ -238,7 +200,7 @@ void TaskWaitOnAny(task_t *ct)
  * @param outarg  join argument
  * @pre ct->state == TASK_RUNNING
  */
-void TaskExit(task_t *ct, void *outarg)
+void TaskExit( task_t *ct, void *outarg)
 {
   assert( ct->state == TASK_RUNNING );
 
@@ -259,7 +221,7 @@ void TaskExit(task_t *ct, void *outarg)
  * @param ct  pointer to the current task
  * @pre ct->state == TASK_RUNNING
  */
-void TaskYield(task_t *ct)
+void TaskYield( task_t *ct)
 {
   assert( ct->state == TASK_RUNNING );
 

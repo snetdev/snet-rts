@@ -67,8 +67,7 @@ entities        = filter.o syncro.o out.o box.o alias.o\
 utility		= list.o debug.o stack.o tree.o bitmap.o hashtable.o queue.o \
                   debugtime.o debugcounters.o
 
-threading       = threading.o extended_semaphore.o stream_layer.o buffer.o\
-                  ubuffer.o
+threading       = threading.o 
 
 interfacing     = interface_functions.o
 
@@ -80,5 +79,6 @@ observer	= observers.o
 distribution    = distribution.o datastorage.o message.o fun.o imanager.o \
                   id.o omanager.o routing.o reference.o 
 
-lpel            = lpel.o scheduler.o flagtree.o stream.o streamtab.o \
-                  inport.o taskqueue.o task.o monitoring.o
+lpel            = lpel.o scheduler.o stream.o buffer.o task.o \
+                  inport.o outport.o taskqueue.o monitoring.o linklst.o
+                  

@@ -4,11 +4,6 @@
 #include <pcl.h>     /* tasks are executed in user-space with help of
                         GNU Portable Coroutine Library  */
 
-#include "streamtab.h"
-/*XXX
-#include "flagtree.h"
-#include "rwlock.h"
-*/
 #include "timing.h"
 #include "atomic.h"
 
@@ -19,8 +14,6 @@
 #define TASK_STACKSIZE_DEFAULT  8192  /* 8k stacksize*/
 
 
-/* 64bytes is the common size of a cache line */
-#define longxCacheLine  (64/sizeof(long))
 
 #define TASK_ATTR_DEFAULT      (0)
 #define TASK_ATTR_MONITOR   (1<<0)
@@ -37,7 +30,8 @@
 #define TASK_IS_WAITANY(t)  (BIT_IS_SET((t)->attr.flags, TASK_ATTR_WAITANY))
 
 
-struct stream;
+struct stream_mh;
+struct buffer;
 
 
 typedef enum {
@@ -54,14 +48,6 @@ typedef enum {
   WAIT_ON_ANY   = 'a'
 } taskstate_wait_t;
 
-/*XXX
-struct waitany {
-  flagtree_t flagtree;
-  rwlock_t rwlock;
-  int max_grp_idx;
-  streamtbe_iter_t iter;
-};
-*/
 
 typedef struct task task_t;
 
@@ -85,16 +71,16 @@ struct task {
   /* attributes */
   taskattr_t attr;
 
-  /* pointer to signalling flag */
-  volatile int *event_ptr;
+  /* pointer to signalling flag
+   * pointer to void*
+   * contents can change arbitrarily -> volatile
+   */
+  volatile void **event_ptr;
   taskstate_wait_t wait_on;
-  struct stream *wait_s;
+  struct buffer *wait_s;
 
   /* waitany-task specific stuff */
-  volatile int waitany_flag;
-  /*XXX
-  struct waitany *waitany_info;
-  */
+  volatile void* wany_flag;
 
   /* reference counter */
   atomic_t refcnt;
@@ -109,8 +95,8 @@ struct task {
   } times;
   /* dispatch counter */
   unsigned long cnt_dispatch;
-  /* streamtables: streams opened for writing/reading */
-  streamtab_t streams_read, streams_write;
+  /* streams marked as dirty */
+  struct stream_mh *dirty_list;
 
   /* CODE */
   coroutine_t ctx;
@@ -120,14 +106,15 @@ struct task {
 };
 
 
-struct stream;
 
 extern task_t *TaskCreate( taskfunc_t, void *inarg, taskattr_t attr);
 extern int TaskDestroy(task_t *t);
 
+struct stream_mh **TaskGetDirtyStreams( task_t *ct);
+
 extern void TaskCall(task_t *ct);
-extern void TaskWaitOnRead(task_t *ct, struct stream *s);
-extern void TaskWaitOnWrite(task_t *ct, struct stream *s);
+extern void TaskWaitOnRead( task_t *ct, struct buffer *s);
+extern void TaskWaitOnWrite( task_t *ct, struct buffer *s);
 extern void TaskWaitOnAny(task_t *ct);
 extern void TaskExit(task_t *ct, void *outarg);
 extern void TaskYield(task_t *ct);

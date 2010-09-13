@@ -1,6 +1,8 @@
 #ifndef _MONITORING_H_
 #define _MONITORING_H_
 
+#include <stdio.h>
+
 /**
  * Monitoring prints internals of a task
  */

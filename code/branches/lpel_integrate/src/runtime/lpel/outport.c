@@ -2,35 +2,31 @@
 #include <sched.h>
 
 #include "outport.h"
-#include "atomic.h"
 
 
-outport_t *OutportCreate(stream_t *s)
+outport_t *OutportCreate(buffer_t *buf)
 {
   outport_t *op;
 
-  atomic_inc(&s->refcnt);
-
   op = (outport_t *) malloc(sizeof(outport_t));
-  op->stream = s;
+  op->buffer = buf;
 
   return op;
 }
 
 void *OutportRead(outport_t *op)
 {
-  while( StreamPeek(NULL, op->stream) == NULL ) {
+  void *item = BufferTop( op->buffer);
+  while( item == NULL ) {
     (void) sched_yield();
+    item = BufferTop( op->buffer);
   }
-  return StreamRead(NULL, op->stream);
+  BufferPop( op->buffer);
+  return item;
 }
 
 void OutportDestroy(outport_t *op)
 {
-  /* as a "close request" */
-  StreamDestroy(op->stream);
-
-  /* stream has to be freed by client */
-
+  BufferDestroy( op->buffer);
   free(op);
 }

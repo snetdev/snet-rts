@@ -31,7 +31,10 @@
 #include "collectors.h"
 #include "memfun.h"
 #include "debug.h"
+
 #include "threading.h"
+
+#include "task.h"
 
 #ifdef DISTRIBUTED_SNET
 #include "routing.h"
@@ -149,7 +152,7 @@ static int BestMatch( match_count_t **counter, int num)
  * @param counter   pointer to a counter -
  *                  if NULL, no sort records are generated
  */
-static void PutToBuffers( task_t *self, stream_t **outstreams, int num,
+static void PutToBuffers( stream_mh_t **outstreams, int num,
     int idx, snet_record_t *rec, int *counter)
 {
 
@@ -160,13 +163,13 @@ static void PutToBuffers( task_t *self, stream_t **outstreams, int num,
       outstreams, rec, outstreams[idx]
       );
 #endif
-  StreamWrite( self, outstreams[idx], rec);
+  StreamWrite( outstreams[idx], rec);
 
   /* for the deterministic variant, broadcast sort record afterwards */
   if( counter != NULL) {
     int i;
     for( i=0; i<num; i++) {
-      StreamWrite( self, outstreams[i],
+      StreamWrite( outstreams[i],
           SNetRecCreate( REC_sort_end, 0, *counter));
     }
     *counter += 1;
@@ -179,13 +182,15 @@ static void PutToBuffers( task_t *self, stream_t **outstreams, int num,
  */
 static void ParallelBoxTask( task_t *self, void *arg)
 {
-  int i, num, stream_index;
   snet_handle_t *hnd = (snet_handle_t*) arg;
+  snet_typeencoding_list_t *types = SNetHndGetTypeList( hnd);
+  /* the number of outputs */
+  int num = SNetTencGetNumTypes( types);
+  stream_mh_t *instream;
+  stream_mh_t *outstreams[num];
+  int i, stream_index;
   snet_record_t *rec;
-  stream_t *instream;
-  stream_t **outstreams;
   match_count_t **matchcounter;
-  snet_typeencoding_list_t *types;
   bool is_det;
   int num_init_branches = 0;
   bool terminate = false;
@@ -196,17 +201,18 @@ static void ParallelBoxTask( task_t *self, void *arg)
   SNetUtilDebugNotice("(CREATION PARALLEL)");
 #endif
 
-  types = SNetHndGetTypeList( hnd);
-  num = SNetTencGetNumTypes( types);
 
   /* open instream for reading */
-  instream = SNetHndGetInput(hnd);
-  StreamOpen(self, instream, 'r');
+  instream = StreamOpen(self, SNetHndGetInput(hnd), 'r');
 
   /* open outstreams for writing */
-  outstreams = SNetHndGetOutputs( hnd);
-  for (i=0; i<num; i++) {
-    StreamOpen( self, outstreams[i], 'w');
+  {
+    stream_t **tmp = SNetHndGetOutputs( hnd);
+    for (i=0; i<num; i++) {
+      outstreams[i] = StreamOpen( self, tmp[i], 'w');
+    }
+    /* the mem region is not needed anymore */
+    SNetMemFree( tmp);
   }
 
   is_det = SNetHndIsDet( hnd);
@@ -215,12 +221,12 @@ static void ParallelBoxTask( task_t *self, void *arg)
   for( i=0; i<num; i++) {
     if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( types, i)) == 0) {
 
-      PutToBuffers( self, outstreams, num, i, 
+      PutToBuffers( outstreams, num, i, 
           SNetRecCreate( REC_trigger_initialiser), 
-          &counter
+          (is_det) ? &counter : NULL
           );
       /* after terminate, it is not necessary to send a sort record */
-      PutToBuffers( self, outstreams, num, i, 
+      PutToBuffers( outstreams, num, i, 
           SNetRecCreate( REC_terminate), 
           NULL
           );
@@ -233,7 +239,7 @@ static void ParallelBoxTask( task_t *self, void *arg)
       for( i=0; i<num; i++) { 
         if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( types, i)) > 0) {
           /* Put to buffers? Is it not clearer to send it to the remaining stream??? */
-          PutToBuffers( self, outstreams, num, i, 
+          PutToBuffers( outstreams, num, i, 
               SNetRecCreate( REC_sync, instream), 
               NULL
               );
@@ -254,10 +260,10 @@ static void ParallelBoxTask( task_t *self, void *arg)
   /* MAIN LOOP START */
   while( !terminate) {
 #ifdef PARALLEL_DEBUG
-    SNetUtilDebugNotice("PARALLEL %p: reading %p", streams, instream);
+    SNetUtilDebugNotice("PARALLEL %p: reading %p", outstreams, instream);
 #endif
     /* read a record from the instream */
-    rec = StreamRead( self, instream);
+    rec = StreamRead( instream);
 
     switch( SNetRecGetDescriptor( rec)) {
 
@@ -267,13 +273,13 @@ static void ParallelBoxTask( task_t *self, void *arg)
         }
 
         stream_index = BestMatch( matchcounter, num);
-        PutToBuffers( self, outstreams, num, stream_index, rec, (is_det)? &counter : NULL);
+        PutToBuffers( outstreams, num, stream_index, rec, (is_det)? &counter : NULL);
         break;
 
       case REC_sync:
         {
           stream_t *newstream = SNetRecGetStream( rec);
-          StreamReplace( self, &instream, newstream);
+          StreamReplace( instream, newstream);
           SNetHndSetInput( hnd, newstream);
           SNetRecDestroy( rec);
         }
@@ -289,7 +295,7 @@ static void ParallelBoxTask( task_t *self, void *arg)
         SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
         for( i=0; i<num; i++) {
           /* send a copy to all but the last, the last gets the original */
-          StreamWrite( self,
+          StreamWrite(
               outstreams[i],
               (i != (num-1)) ? SNetRecCopy( rec) : rec
               );
@@ -300,7 +306,7 @@ static void ParallelBoxTask( task_t *self, void *arg)
         terminate = true;
         for( i=0; i<num; i++) {
           /* send a copy to all but the last, the last gets the original */
-          StreamWrite( self,
+          StreamWrite(
               outstreams[i],
               (i != (num-1)) ? SNetRecCopy( rec) : rec
               );
@@ -316,17 +322,14 @@ static void ParallelBoxTask( task_t *self, void *arg)
   } /* MAIN LOOP END */
 
   /* close instream */
-  StreamClose( self, instream);
+  StreamClose( instream, true);
 
   /* close the outstreams */
   for( i=0; i<num; i++) {
-    StreamClose( self, outstreams[i]);
-    StreamDestroy( outstreams[i]);
+    StreamClose( outstreams[i], false);
     SNetMemFree( matchcounter[i]);
   }
   SNetMemFree( matchcounter);
-
-  SNetMemFree( outstreams);
 
   //TODO ? SNetTencDestroyTypeEncodingList( types);
   SNetHndDestroy( hnd);

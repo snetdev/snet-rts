@@ -336,7 +336,7 @@ static void WaitingTestGather(int i, void *arg)
 static bool WaitingTestOnAny(task_t *wt, void *arg)
 {
   assert( TASK_IS_WAITANY(wt) );
-  return xchg(&wt->waitany_flag, 0) != 0;
+  return xchg( (volatile int *) &wt->wany_flag, 0) != 0;
 
 /*XXX */
 #if 0

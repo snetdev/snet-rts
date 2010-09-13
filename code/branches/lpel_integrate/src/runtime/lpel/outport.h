@@ -1,19 +1,17 @@
 #ifndef _OUTPORT_H_
 #define _OUTPORT_H_
 
-#include "task.h"
-#include "stream.h"
+#include "buffer.h"
 
 typedef struct outport outport_t;
 
 struct outport {
-  stream_t *stream;
-  //task_t *task;
+  buffer_t *buffer;
 };
 
-extern outport_t *OutportCreate(stream_t *s);
-extern void *OutportRead(outport_t *op);
-extern void OutportDestroy(outport_t *op);
+extern outport_t *OutportCreate( buffer_t *buf);
+extern void *OutportRead( outport_t *op);
+extern void OutportDestroy( outport_t *op);
 
 
 #endif /* _OUTPORT_H_ */

@@ -7,7 +7,6 @@
 #include "debug.h"
 #include "interface_functions.h"
 #include "typeencode.h"
-#include "stream_layer.h"
 #include "threading.h" /* for enumeration */
 
 #include "stream.h"
@@ -389,7 +388,7 @@ static void FilterTask( task_t *self, void *arg)
   int i,j,k;
   bool done, terminate;
   snet_handle_t *hnd = (snet_handle_t*)arg;
-  stream_t *instream, *outstream;
+  stream_mh_t *instream, *outstream;
   snet_record_t *in_rec;
   snet_expr_list_t *guard_list;
   snet_typeencoding_t *out_type, *in_type;
@@ -404,11 +403,8 @@ static void FilterTask( task_t *self, void *arg)
 #ifdef FILTER_DEBUG
   SNetUtilDebugNotice("(CREATION FILTER)");
 #endif
-  instream = SNetHndGetInput( hnd);
-  StreamOpen(self, instream, 'r');
-
-  outstream = SNetHndGetOutput( hnd);
-  StreamOpen(self, outstream, 'w');
+  instream  = StreamOpen(self, SNetHndGetInput( hnd), 'r');
+  outstream = StreamOpen(self, SNetHndGetOutput( hnd), 'w');
 
   guard_list = SNetHndGetGuardList( hnd);
   in_type = SNetHndGetInType( hnd);
@@ -418,7 +414,7 @@ static void FilterTask( task_t *self, void *arg)
   /* MAIN LOOP */
   while( !( terminate)) {
     /* read from input stream */
-    in_rec = StreamRead( self, instream);
+    in_rec = StreamRead( instream);
     done = false;
 
     switch( SNetRecGetDescriptor( in_rec)) {
@@ -478,8 +474,7 @@ static void FilterTask( task_t *self, void *arg)
               SNetUtilDebugNotice("FILTER %x: outputting %x",
                   (unsigned int) outstream, (unsigned int) out_rec);
 #endif
-              //SNetTlWrite( outstream, out_rec);
-              StreamWrite( self, outstream, out_rec);
+              StreamWrite( outstream, out_rec);
             } // forall variants of selected out_type
           } // if guard is true
         } // forall guards
@@ -493,11 +488,9 @@ static void FilterTask( task_t *self, void *arg)
 
       case REC_sync:
         {
-          //instream = SNetRecGetStream( in_rec);
           stream_t *newstream = SNetRecGetStream( in_rec);
-          StreamReplace(self, &instream, newstream);
-
-          SNetHndSetInput( hnd, SNetRecGetStream( in_rec));
+          StreamReplace( instream, newstream);
+          SNetHndSetInput( hnd, newstream);
           SNetRecDestroy( in_rec);
         }
         break;
@@ -512,13 +505,12 @@ static void FilterTask( task_t *self, void *arg)
 
       case REC_sort_end:
         /* forward sort record */
-        StreamWrite( self, outstream, in_rec);
+        StreamWrite( outstream, in_rec);
         break;
 
       case REC_terminate:
+          StreamWrite( outstream, in_rec);
           terminate = true;
-          StreamWrite( self, outstream, in_rec);
-          SNetHndDestroy( hnd);
         break;
 
       default:
@@ -527,9 +519,10 @@ static void FilterTask( task_t *self, void *arg)
     }
   } /* MAIN LOOP END */
 
-  StreamClose( self, outstream);
-  StreamDestroy( outstream);
-  StreamClose( self, instream);
+  StreamClose( outstream, false);
+  StreamClose( instream, true);
+
+  SNetHndDestroy( hnd);
 }
 
 
@@ -698,16 +691,13 @@ static void NameshiftTask( task_t *self, void *arg)
 {
   bool terminate = false;
   snet_handle_t *hnd = (snet_handle_t*)arg;
-  stream_t *outstream, *instream;
+  stream_mh_t *outstream, *instream;
   snet_variantencoding_t *untouched;
   snet_record_t *rec;
   int i, num, *names, offset;
 
-  instream = SNetHndGetInput( hnd);
-  StreamOpen( self, instream, 'r');
-
-  outstream = SNetHndGetOutput( hnd);
-  StreamOpen( self, outstream, 'w');
+  instream  = StreamOpen(self, SNetHndGetInput( hnd), 'r');
+  outstream = StreamOpen(self, SNetHndGetOutput( hnd), 'w');
 
   untouched = SNetTencGetVariant( SNetHndGetInType( hnd), 1);
 
@@ -717,7 +707,7 @@ static void NameshiftTask( task_t *self, void *arg)
   /* MAIN LOOP */
   while( !terminate) {
     /* read from input stream */
-    rec = StreamRead( self, instream);
+    rec = StreamRead( instream);
 
     switch( SNetRecGetDescriptor( rec)) {
 
@@ -749,15 +739,14 @@ static void NameshiftTask( task_t *self, void *arg)
         }
         SNetMemFree( names);
 
-        //SNetTlWrite(outstream, rec);
-        StreamWrite( self, outstream, rec);
+        StreamWrite( outstream, rec);
         break;
 
       case REC_sync:
         {
           stream_t *newstream = SNetRecGetStream(rec);
+          StreamReplace( instream, newstream);
           SNetHndSetInput( hnd, newstream);
-          StreamReplace( self, &instream, newstream);
           SNetRecDestroy( rec);
         }
         break;
@@ -772,13 +761,12 @@ static void NameshiftTask( task_t *self, void *arg)
 
       case REC_sort_end:
         /* forward sort record */
-        StreamWrite( self, outstream, rec);
+        StreamWrite( outstream, rec);
         break;
 
       case REC_terminate:
+        StreamWrite( outstream, rec);
         terminate = true;
-        StreamWrite( self, outstream, rec);
-        SNetHndDestroy( hnd);
         break;
 
       default:
@@ -788,9 +776,9 @@ static void NameshiftTask( task_t *self, void *arg)
     }
   } /* MAIN LOOP END */
 
-  StreamClose( self, instream);
-  StreamClose( self, outstream);
-  StreamDestroy( outstream);
+  StreamClose( instream, true);
+  StreamClose( outstream, false);
+  SNetHndDestroy( hnd);
 }
 
 

@@ -2,13 +2,13 @@
 #define SERIAL_HEADER
 
 #include "snettypes.h"
-#include "stream_layer.h"
+#include "stream.h"
 
-snet_tl_stream_t *SNetSerial(snet_tl_stream_t *instream,
+extern stream_t *SNetSerial( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-			     snet_info_t *info, 
-			     int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */
-			     snet_startup_fun_t box_a,
-			     snet_startup_fun_t box_b);
+    snet_startup_fun_t box_a,
+    snet_startup_fun_t box_b);
 #endif

@@ -147,12 +147,10 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
   else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
+  
   /* write to stream */
-  {
-    task_t *boxtask = SNetHndGetBoxtask( hnd);
-    stream_t *outstream = SNetHndGetOutput( hnd);
-    StreamWrite( boxtask, outstream, out_rec);
-  }
+  StreamWrite( SNetHndGetOutMH( hnd), out_rec);
+
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
   SNetUtilDebugNotice("[DBG::RT::TimeTrace] SNetOut finished for %p at %lf\n",
@@ -259,13 +257,12 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
   else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
+
   /* write to stream */
-  {
-    task_t *boxtask = SNetHndGetBoxtask( hnd);
-    stream_t *outstream = SNetHndGetOutput( hnd);
-    //SNetTlWrite( SNetHndGetOutput( hnd), out_rec);
-    StreamWrite( boxtask, outstream, out_rec);
-  }
+  StreamWrite( SNetHndGetOutMH( hnd), out_rec);
+
+
+
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
   SNetUtilDebugNotice("[DBG::RT::TimeTrance] SnetOut finished for %p at %lf\n",

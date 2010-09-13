@@ -59,7 +59,7 @@ static void SplitBoxTask( task_t *self, void *arg)
 {
   int i;
   snet_handle_t *hnd = (snet_handle_t*)arg;
-  stream_t *initial, *instream;
+  stream_mh_t *initial, *instream;
   int ltag, ltag_val, utag, utag_val;
   snet_record_t *rec;
   snet_startup_fun_t boxfun;
@@ -78,16 +78,14 @@ static void SplitBoxTask( task_t *self, void *arg)
   snet_fun_id_t fun_id;
 #endif /* DISTRIBUTED_SNET */
 
-  initial = SNetHndGetOutput( hnd);
-  StreamOpen( self, initial, 'w');
+  initial = StreamOpen( self, SNetHndGetOutput( hnd), 'w');
 
   boxfun = SNetHndGetBoxfun( hnd);
   ltag = SNetHndGetTagA( hnd);
   utag = SNetHndGetTagB( hnd);
   is_det = SNetHndIsDet( hnd);
 
-  instream = SNetHndGetInput( hnd);
-  StreamOpen( self, instream, 'r');
+  instream = StreamOpen( self, SNetHndGetInput( hnd), 'r');
 
   /* create repository */
   repos = SNetUtilListCreate();
@@ -103,7 +101,7 @@ static void SplitBoxTask( task_t *self, void *arg)
   /* MAIN LOOP START */
   while( !terminate) {
     /* read from input stream */
-    rec = StreamRead( self, instream);
+    rec = StreamRead( instream);
 
     switch( SNetRecGetDescriptor( rec)) {
 
@@ -119,44 +117,43 @@ static void SplitBoxTask( task_t *self, void *arg)
         for( i = ltag_val; i <= utag_val; i++) {
           elem = FindBufInList( repos, i);
           if( elem == NULL) {
+            stream_t *newstream_addr = StreamCreate();
             /* instance does not exist yet, create it */
             elem = SNetMemAlloc( sizeof( snet_blist_elem_t));
             elem->num = i;
-            elem->stream = StreamCreate();
-            StreamOpen( self, elem->stream, 'w');
+            elem->stream = StreamOpen( self, newstream_addr, 'w');
             repos = SNetUtilListAddBeginning(repos, elem);
 
 #ifdef DISTRIBUTED_SNET
             {
               snet_info_t *info;
-              snet_tl_stream_t *temp_stream;
+              stream_t *temp_stream;
               info = SNetInfoInit();
               if(SNetHndIsSplitByLocation( hnd)) {
                 SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, i));    
-                temp_stream = boxfun(elem->stream, info, i);    
+                temp_stream = boxfun(newstream_addr, info, i);    
                 temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
               } else {
                 SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
-                temp_stream = boxfun(elem->stream, info, node_id);    
+                temp_stream = boxfun(newstream_addr, info, node_id);    
                 temp_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), temp_stream);
               }
               if(temp_stream != NULL) {
                 /* notify collector about the new instance via initial */
-                StreamWrite( self, initial,
+                StreamWrite( initial,
                     SNetRecCreate( REC_collect, temp_stream));
               }
               SNetInfoDestroy(info);
             }
 #else
             /* notify collector about the new instance via initial */
-            StreamWrite( self, initial, 
-                SNetRecCreate( REC_collect, boxfun( elem->stream)));
+            StreamWrite( initial, 
+                SNetRecCreate( REC_collect, boxfun( newstream_addr)));
 #endif /* DISTRIBUTED_SNET */
           } /* end if (elem==NULL) */
 
           /* multicast the record */
-          StreamWrite( self,
-              elem->stream,
+          StreamWrite( elem->stream,
               /* copy record for all but the last tag value */
               (i!=utag_val) ? SNetRecCopy( rec) : rec
               );
@@ -171,7 +168,7 @@ static void SplitBoxTask( task_t *self, void *arg)
             current_position = SNetUtilListFirst(repos);
             while(SNetUtilListIterCurrentDefined(current_position)) {
               elem = SNetUtilListIterGet(current_position);
-              StreamWrite( self, elem->stream,
+              StreamWrite( elem->stream,
                   SNetRecCreate( REC_sort_end, 0, counter));
               current_position = SNetUtilListIterNext(current_position);
             }
@@ -180,7 +177,7 @@ static void SplitBoxTask( task_t *self, void *arg)
           }
           /* Now also send a sort record to initial,
              after the collect records for new instances have been sent */
-          StreamWrite( self, initial,
+          StreamWrite( initial,
               SNetRecCreate( REC_sort_end, 0, counter));
         }
         /* increment counter for deterministic variant */
@@ -190,7 +187,7 @@ static void SplitBoxTask( task_t *self, void *arg)
       case REC_sync:
         {
           stream_t *newstream = SNetRecGetStream( rec);
-          StreamReplace( self, &instream, newstream);
+          StreamReplace( instream, newstream);
           SNetHndSetInput( hnd, newstream);
           SNetRecDestroy( rec);
         }
@@ -212,7 +209,7 @@ static void SplitBoxTask( task_t *self, void *arg)
           /* all instances receive copies of the record */
           while(SNetUtilListIterCurrentDefined(current_position)) {
             elem = SNetUtilListIterGet(current_position);
-            StreamWrite( self, elem->stream,
+            StreamWrite( elem->stream,
                 SNetRecCreate( REC_sort_end,
                   /* we have to increase level */
                   SNetRecGetLevel( rec)+1,
@@ -226,7 +223,7 @@ static void SplitBoxTask( task_t *self, void *arg)
         /* send the original record to the initial stream,
            but with increased level */
         SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-        StreamWrite( self, initial, rec);
+        StreamWrite( initial, rec);
         break;
 
       case REC_terminate:
@@ -237,16 +234,15 @@ static void SplitBoxTask( task_t *self, void *arg)
         while(!SNetUtilListIsEmpty(repos)) {
           current_position = SNetUtilListFirst(repos);
           elem = SNetUtilListIterGet(current_position);
-          StreamWrite( self, elem->stream, SNetRecCopy( rec));
-          /* close & destroy the stream to the instance */
-          StreamClose( self, elem->stream);
-          StreamDestroy( elem->stream);
+          StreamWrite( elem->stream, SNetRecCopy( rec));
+          /* close  the stream to the instance */
+          StreamClose( elem->stream, false);
           SNetMemFree(elem);
           repos = SNetUtilListIterDelete(current_position);
         } 
         SNetUtilListIterDestroy(current_position);
         /* send the original record to the initial stream */
-        StreamWrite( self, initial, rec);
+        StreamWrite( initial, rec);
         break;
 
       default:
@@ -259,10 +255,9 @@ static void SplitBoxTask( task_t *self, void *arg)
   /* destroy repository */
   SNetUtilListDestroy(repos);
   /* close and destroy initial stream */
-  StreamClose( self, initial);
-  StreamDestroy(initial);
+  StreamClose( initial, false);
   /* close instream */
-  StreamClose( self, instream);
+  StreamClose( instream, true);
   /* destroy the handle */
   SNetHndDestroy( hnd);
 } /* END of SPLIT BOX TASK */
@@ -281,7 +276,7 @@ stream_t *SNetSplit( stream_t *input,
     snet_startup_fun_t box_a,
     int ltag, int utag) 
 {
-  stream_t *initial, *output;
+  stream_t **initial, *output;
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
@@ -291,10 +286,11 @@ stream_t *SNetSplit( stream_t *input,
     SNetUtilDebugNotice("Split created");
 #endif /* DISTRIBUTED_DEBUG */
 #endif /* DISTRIBUTED_SNET */
-  
-    initial = StreamCreate();
-    hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, false, false);
-    output = CollectorCreate( 1, &initial);
+    
+    initial = (stream_t **) SNetMemAlloc(sizeof(stream_t *));
+    initial[0] = StreamCreate();
+    hnd = SNetHndCreate( HND_split, input, initial[0], box_a, ltag, utag, false, false);
+    output = CollectorCreate( 1, initial);
     SNetEntitySpawn( SplitBoxTask, (void*)hnd, ENTITY_split_nondet);
     
 #ifdef DISTRIBUTED_SNET

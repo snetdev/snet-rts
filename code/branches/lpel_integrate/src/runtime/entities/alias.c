@@ -1,5 +1,4 @@
 #include "alias.h"
-#include "stream_layer.h"
 #include "stream.h"
 
 /* ------------------------------------------------------------------------- */

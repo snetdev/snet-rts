@@ -19,7 +19,7 @@
  *******************************************************************************/
 
 #include "snettypes.h"
-#include "stream_layer.h"
+#include "stream.h"
 #include "bool.h"
 #include "label.h"
 #include "interface.h"
@@ -33,32 +33,32 @@
 #define SNET_OBSERVERS_TYPE_BEFORE 0
 #define SNET_OBSERVERS_TYPE_AFTER 1
 
-snet_tl_stream_t *SNetObserverSocketBox(snet_tl_stream_t *inbuf, 
+stream_t *SNetObserverSocketBox(stream_t *inbuf, 
 #ifdef DISTRIBUTED_SNET
-					snet_info_t *info, 
-					int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */ 
-					const char *addr,
-					int port, 
-					bool interactive, 
-					const char *position, 
-					char type, 
-					char data_level, 
-					const char *code);
+    const char *addr,
+    int port, 
+    bool interactive, 
+    const char *position, 
+    char type, 
+    char data_level, 
+    const char *code);
 
-snet_tl_stream_t *SNetObserverFileBox(snet_tl_stream_t *inbuf, 
+stream_t *SNetObserverFileBox(stream_t *inbuf, 
 #ifdef DISTRIBUTED_SNET
-					snet_info_t *info, 
-					int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */ 
-				   const char *filename, 
-				   const char *position, 
-				   char type, 
-				   char data_level, 
-				   const char *code);
+    const char *filename, 
+    const char *position, 
+    char type, 
+    char data_level, 
+    const char *code);
 
 extern int SNetObserverInit(snetin_label_t *labels, 
-			    snetin_interface_t *interfaces);
+    snetin_interface_t *interfaces);
 
 extern void SNetObserverDestroy();
 

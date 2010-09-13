@@ -6,13 +6,13 @@
 #include "handle.h"
 #include "typeencode.h"
 
-snet_tl_stream_t *SNetBox(snet_tl_stream_t *instream,
+extern stream_t *SNetBox( stream_t *instream,
 #ifdef DISTRIBUTED_SNET
-			  snet_info_t *info, 
-			  int location,
+    snet_info_t *info, 
+    int location,
 #endif /* DISTRIBUTED_SNET */ 
-        const char *boxname,
-			  snet_box_fun_t fun,
-			  snet_box_sign_t *sign);
+    const char *boxname,
+    snet_box_fun_t fun,
+    snet_box_sign_t *sign);
 
 #endif

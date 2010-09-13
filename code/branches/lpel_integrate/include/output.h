@@ -20,7 +20,7 @@
 
 #include <stdio.h>
 #include "record.h"
-#include "stream_layer.h"
+#include "stream.h"
 #include "label.h"
 #include "interface.h"
 
@@ -42,7 +42,7 @@ int SNetInOutputInit(FILE *file,
 		     snetin_interface_t *interfaces);
 #else /* DISTRIBUTED_SNET */
                      snetin_interface_t *interfaces,
-                     snet_tl_stream_t *in_buf);
+                     stream_t *in_buf);
 #endif/* DISTRIBUTED_SNET */
            
 
