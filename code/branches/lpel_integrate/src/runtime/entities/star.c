@@ -111,11 +111,6 @@ static void StarBoxTask( task_t *self, void *arg)
 #endif
           /* send rec to collector */
           StreamWrite( outstream, rec);
-          if (is_det && !is_incarnate) {
-            /* append new sort record */
-            StreamWrite( outstream,
-                SNetRecCreate( REC_sort_end, 0, counter) );
-          }
         } else {
           /* send to next instance */
           /* if instance has not been created yet, create it */
@@ -162,13 +157,17 @@ static void StarBoxTask( task_t *self, void *arg)
 #endif
           /* send the record to the instance */
           StreamWrite( nextstream, rec);
-          /* deterministic non-incarnate has to append control records */
-          if (is_det && !is_incarnate) {
-            /* append new sort record */
+        } /* end if not matches exit pattern */
+
+        /* deterministic non-incarnate has to append control records */
+        if (is_det && !is_incarnate) {
+          /* send new sort record to collector */
+          StreamWrite( outstream,
+              SNetRecCreate( REC_sort_end, 0, counter) );
+
+          /* if has next instance, send new sort record */
+          if (nextstream != NULL) {
             StreamWrite( nextstream,
-                SNetRecCreate( REC_sort_end, 0, counter) );
-            /* also send new sort record to collector */
-            StreamWrite( outstream,
                 SNetRecCreate( REC_sort_end, 0, counter) );
           }
         }

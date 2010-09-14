@@ -316,7 +316,7 @@ stream_t *SNetLocSplit( stream_t *input,
     snet_startup_fun_t box_a,
     int ltag, int utag)
 {
-  stream_t *initial, *output;
+  stream_t **initial, *output;
   snet_handle_t *hnd;
 
   input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 
@@ -324,9 +324,11 @@ stream_t *SNetLocSplit( stream_t *input,
 #ifdef DISTRIBUTED_DEBUG
     SNetUtilDebugNotice("LocSplit created");
 #endif /* DISTRIBUTED_DEBUG */
-    initial = StreamCreate();
-    hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, false, true);
-    output = CollectorCreate( 1, &initial);
+
+    initial = (stream_t **) SNetMemAlloc(sizeof(stream_t *));
+    initial[0] = StreamCreate();
+    hnd = SNetHndCreate( HND_split, input, initial[0], box_a, ltag, utag, false, true);
+    output = CollectorCreate( 1, initial);
     SNetEntitySpawn( SplitBoxTask, (void*)hnd, ENTITY_split_nondet);
   } else { 
     output = input; 
@@ -350,7 +352,7 @@ stream_t *SNetSplitDet( stream_t *input,
     snet_startup_fun_t box_a,
     int ltag, int utag) 
 {
-  stream_t *initial, *output;
+  stream_t **initial, *output;
   snet_handle_t *hnd;
 
 #ifdef DISTRIBUTED_SNET
@@ -361,9 +363,10 @@ stream_t *SNetSplitDet( stream_t *input,
 #endif /* DISTRIBUTED_DEBUG */
 #endif /* DISTRIBUTED_SNET */
     
-    initial = StreamCreate();
-    hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true, false);
-    output = CollectorCreate( 1, &initial);
+    initial = (stream_t **) SNetMemAlloc(sizeof(stream_t *));
+    initial[0] = StreamCreate();
+    hnd = SNetHndCreate( HND_split, input, initial[0], box_a, ltag, utag, true, false);
+    output = CollectorCreate( 1, initial);
     SNetEntitySpawn( SplitBoxTask, (void*)hnd, ENTITY_split_det);
 
 #ifdef DISTRIBUTED_SNET
@@ -388,7 +391,7 @@ stream_t *SNetLocSplitDet( stream_t *input,
     snet_startup_fun_t box_a,
     int ltag, int utag)
 {
-  stream_t *initial, *output;
+  stream_t **initial, *output;
   snet_handle_t *hnd;
 
   input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 							  
@@ -396,9 +399,11 @@ stream_t *SNetLocSplitDet( stream_t *input,
 #ifdef DISTRIBUTED_DEBUG
     SNetUtilDebugNotice("DetLocSplit created");
 #endif /* DISTRIBUTED_DEBUG */
-    initial = StreamCreate();
-    hnd = SNetHndCreate( HND_split, input, initial, box_a, ltag, utag, true, true);
-    output = CollectorCreate( 1, &initial);
+
+    initial = (stream_t **) SNetMemAlloc(sizeof(stream_t *));
+    initial[0] = StreamCreate();
+    hnd = SNetHndCreate( HND_split, input, initial[0], box_a, ltag, utag, true, true);
+    output = CollectorCreate( 1, initial);
     SNetEntitySpawn( SplitBoxTask, (void*)hnd, ENTITY_split_det);
   } else { 
     output = input; 

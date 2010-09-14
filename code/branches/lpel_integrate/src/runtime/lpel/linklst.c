@@ -148,6 +148,22 @@ list_node_t *ListIterNext( list_iter_t *iter)
 }
 
 
+void ListIterAppend( list_iter_t *iter, list_node_t *node)
+{
+  /* insert after cur */
+  node->next = iter->cur->next;
+  iter->cur->next = node;
+  /* if current node was last node, update list */
+  if (iter->cur == *iter->list) {
+    *iter->list = node;
+  }
+
+  /* handle case if current was single element */
+  if (iter->prev == iter->cur) {
+    iter->prev = node;
+  }
+}
+
 /**
  * Remove the current node from list
  * @pre iter points to valid element
@@ -156,7 +172,7 @@ list_node_t *ListIterNext( list_iter_t *iter)
  */
 void ListIterRemove( list_iter_t *iter)
 {
-    /* handle case if there is only a single element */
+  /* handle case if there is only a single element */
   if (iter->prev == iter->cur) {
     assert( iter->prev == *iter->list );
     iter->cur->next = NULL;

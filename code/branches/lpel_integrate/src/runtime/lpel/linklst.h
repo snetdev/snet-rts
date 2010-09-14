@@ -26,6 +26,7 @@ extern void ListIterDestroy( list_iter_t *iter);
 extern void ListIterReset( list_hnd_t *lst, list_iter_t *iter);
 extern int ListIterHasNext( list_iter_t *iter);
 extern list_node_t *ListIterNext( list_iter_t *iter);
+extern void ListIterAppend( list_iter_t *iter, list_node_t *node);
 extern void ListIterRemove( list_iter_t *iter);
 
 

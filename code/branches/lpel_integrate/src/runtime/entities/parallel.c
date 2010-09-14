@@ -240,17 +240,17 @@ static void ParallelBoxTask( task_t *self, void *arg)
         if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( types, i)) > 0) {
           /* Put to buffers? Is it not clearer to send it to the remaining stream??? */
           PutToBuffers( outstreams, num, i, 
-              SNetRecCreate( REC_sync, instream), 
+              SNetRecCreate( REC_sync, SNetHndGetInput(hnd)), 
               NULL
               );
         }
       }    
     case 0: /* and terminate */
       terminate = true;
+      StreamClose( instream, false);
     break;
     default: ;/* or resume operation as normal */
   }
-
 
   matchcounter = SNetMemAlloc( num * sizeof( match_count_t*));
   for( i=0; i<num; i++) {
@@ -310,6 +310,8 @@ static void ParallelBoxTask( task_t *self, void *arg)
               outstreams[i],
               (i != (num-1)) ? SNetRecCopy( rec) : rec
               );
+          /* close instream: only destroy if not synch'ed before */
+          StreamClose( instream, true);
         }
         /* note that no sort record needs to be appended */
         break;
@@ -321,8 +323,6 @@ static void ParallelBoxTask( task_t *self, void *arg)
     }
   } /* MAIN LOOP END */
 
-  /* close instream */
-  StreamClose( instream, true);
 
   /* close the outstreams */
   for( i=0; i<num; i++) {

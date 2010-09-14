@@ -284,7 +284,7 @@ int SNetInRun(int argc, char *argv[],
   labels     = SNetInLabelInit(static_labels, number_of_labels);
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
   
-  //SNetObserverInit(labels, interfaces);
+  SNetObserverInit(labels, interfaces);
 
 #ifdef DISTRIBUTED_SNET
 
@@ -351,7 +351,7 @@ int SNetInRun(int argc, char *argv[],
 
 #endif /* DISTRIBUTED_SNET */ 
 
-  //SNetObserverDestroy();
+  SNetObserverDestroy();
   
   SNetInLabelDestroy(labels);
   SNetInInterfaceDestroy(interfaces);

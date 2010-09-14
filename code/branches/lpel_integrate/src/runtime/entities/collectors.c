@@ -122,8 +122,8 @@ void CollectorTask( task_t *self, void *arg)
                   SNetRecGetStream( rec), 'r');
               /* create new node */
               list_node_t *newnode = ListNodeCreate( new_mh);
-              /* add to readyset (valid during iteration!) */
-              ListAppend( &readyset, newnode);
+              /* add to readyset (via iterator: after current) */
+              ListIterAppend( iter, newnode);
             }
             /* destroy record */
             SNetRecDestroy( rec);
@@ -132,7 +132,7 @@ void CollectorTask( task_t *self, void *arg)
           case REC_terminate:
             /* termination record: close stream and remove from ready set */
             if ( !ListIsEmpty( &waitingset)) {
-              SNetUtilDebugNotice("[COLL] Warning: Termination record"
+              SNetUtilDebugNotice("[COLL] Warning: Termination record "
                   "received while waiting on sort records!\n");
             }
             StreamClose( cur_stream, true);
@@ -165,6 +165,7 @@ void CollectorTask( task_t *self, void *arg)
       if ( !ListIsEmpty( &waitingset)) {
         /* "swap" sets */
         readyset = waitingset;
+        waitingset = NULL;
         /* check sort record: if level > 0, forward to outstream */
         if( SNetRecGetLevel( sort_rec) > 0) {
           StreamWrite( outstream, sort_rec);
