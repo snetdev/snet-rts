@@ -166,11 +166,17 @@ void CollectorTask( task_t *self, void *arg)
         /* "swap" sets */
         readyset = waitingset;
         waitingset = NULL;
-        /* check sort record: if level > 0, forward to outstream */
-        if( SNetRecGetLevel( sort_rec) > 0) {
-          StreamWrite( outstream, sort_rec);
-        } else {
-          SNetRecDestroy( sort_rec);
+        /* check sort record: if level > 0,
+           decrement and forward to outstream */
+        assert( sort_rec != NULL);
+        {
+          int level = SNetRecGetLevel( sort_rec);
+          if( level > 0) {
+            SNetRecSetLevel( sort_rec, level-1);
+            StreamWrite( outstream, sort_rec);
+          } else {
+            SNetRecDestroy( sort_rec);
+          }
           sort_rec = NULL;
         }
       } else {

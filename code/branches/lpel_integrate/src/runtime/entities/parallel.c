@@ -163,14 +163,18 @@ static void PutToBuffers( stream_mh_t **outstreams, int num,
       outstreams, rec, outstreams[idx]
       );
 #endif
-  StreamWrite( outstreams[idx], rec);
+  if (outstreams[idx] != NULL) {
+    StreamWrite( outstreams[idx], rec);
+  }
 
   /* for the deterministic variant, broadcast sort record afterwards */
   if( counter != NULL) {
     int i;
     for( i=0; i<num; i++) {
-      StreamWrite( outstreams[i],
-          SNetRecCreate( REC_sort_end, 0, *counter));
+      if (outstreams[i] != NULL) {
+        StreamWrite( outstreams[i],
+            SNetRecCreate( REC_sort_end, 0, *counter));
+      }
     }
     *counter += 1;
   }
@@ -230,6 +234,8 @@ static void ParallelBoxTask( task_t *self, void *arg)
           SNetRecCreate( REC_terminate), 
           NULL
           );
+      StreamClose( outstreams[i], false);
+      outstreams[i] = NULL;
       num_init_branches += 1; 
     }
   }
@@ -238,16 +244,15 @@ static void ParallelBoxTask( task_t *self, void *arg)
     case 1: /* remove dispatcher from network ... */
       for( i=0; i<num; i++) { 
         if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( types, i)) > 0) {
-          /* Put to buffers? Is it not clearer to send it to the remaining stream??? */
-          PutToBuffers( outstreams, num, i, 
-              SNetRecCreate( REC_sync, SNetHndGetInput(hnd)), 
-              NULL
+          /* send a sync record to the remaining branch */
+          StreamWrite( outstreams[i],
+              SNetRecCreate( REC_sync, SNetHndGetInput(hnd)) 
               );
+          StreamClose( instream, false);
         }
       }    
     case 0: /* and terminate */
       terminate = true;
-      StreamClose( instream, false);
     break;
     default: ;/* or resume operation as normal */
   }
@@ -293,26 +298,28 @@ static void ParallelBoxTask( task_t *self, void *arg)
       case REC_sort_end:
         /* increase level */
         SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        /* send a copy to all */
         for( i=0; i<num; i++) {
-          /* send a copy to all but the last, the last gets the original */
-          StreamWrite(
-              outstreams[i],
-              (i != (num-1)) ? SNetRecCopy( rec) : rec
-              );
+          if (outstreams[i] != NULL) {
+            StreamWrite( outstreams[i], SNetRecCopy( rec));
+          }
         }
+        /* destroy the original */
+        SNetRecDestroy( rec);
         break;
 
       case REC_terminate:
         terminate = true;
+        /* send a copy to all */
         for( i=0; i<num; i++) {
-          /* send a copy to all but the last, the last gets the original */
-          StreamWrite(
-              outstreams[i],
-              (i != (num-1)) ? SNetRecCopy( rec) : rec
-              );
-          /* close instream: only destroy if not synch'ed before */
-          StreamClose( instream, true);
+          if (outstreams[i] != NULL) {
+            StreamWrite( outstreams[i], SNetRecCopy( rec));
+          }
         }
+        /* destroy the original */
+        SNetRecDestroy( rec);
+        /* close instream: only destroy if not synch'ed before */
+        StreamClose( instream, true);
         /* note that no sort record needs to be appended */
         break;
 
@@ -326,7 +333,9 @@ static void ParallelBoxTask( task_t *self, void *arg)
 
   /* close the outstreams */
   for( i=0; i<num; i++) {
-    StreamClose( outstreams[i], false);
+    if (outstreams[i] != NULL) {
+      StreamClose( outstreams[i], false);
+    }
     SNetMemFree( matchcounter[i]);
   }
   SNetMemFree( matchcounter);

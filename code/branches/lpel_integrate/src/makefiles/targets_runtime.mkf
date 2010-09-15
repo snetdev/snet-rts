@@ -79,6 +79,6 @@ observer	= observers.o
 distribution    = distribution.o datastorage.o message.o fun.o imanager.o \
                   id.o omanager.o routing.o reference.o 
 
-lpel            = lpel.o scheduler.o stream.o buffer.o task.o \
-                  inport.o outport.o taskqueue.o monitoring.o linklst.o
+lpel            = lpel.o scheduler.o stream.o buffer.o task.o taskqueue.o \
+                  inport.o outport.o monitoring.o hashtab.o linklst.o
                   

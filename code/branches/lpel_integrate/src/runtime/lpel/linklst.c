@@ -150,13 +150,31 @@ list_node_t *ListIterNext( list_iter_t *iter)
 
 void ListIterAppend( list_iter_t *iter, list_node_t *node)
 {
+#if 0
   /* insert after cur */
   node->next = iter->cur->next;
   iter->cur->next = node;
+
   /* if current node was last node, update list */
   if (iter->cur == *iter->list) {
     *iter->list = node;
   }
+
+  /* handle case if current was single element */
+  if (iter->prev == iter->cur) {
+    iter->prev = node;
+  }
+#endif
+
+  /* insert at end of list */
+  node->next = (*iter->list)->next;
+  (*iter->list)->next = node;
+
+  /* if current node was first node */
+  if (iter->prev == *iter->list) {
+    iter->prev = node;
+  }
+  *iter->list = node;
 
   /* handle case if current was single element */
   if (iter->prev == iter->cur) {

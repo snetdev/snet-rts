@@ -5,12 +5,6 @@
 #include "stream.h"
 
 
-typedef struct {
-  stream_mh_t *stream;
-  int num;
-} snet_blist_elem_t;
-
-
 extern stream_t *SNetSplit( stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
     snet_info_t *info, 

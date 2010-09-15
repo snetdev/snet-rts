@@ -1,0 +1,10 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+ 
+
+net star {
+  box ident((A,<T>) -> (A,<T>));
+} connect ident*{<T>} if <T >= 5>;

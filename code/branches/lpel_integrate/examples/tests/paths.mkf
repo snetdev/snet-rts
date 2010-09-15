@@ -1,0 +1,8 @@
+
+include $(SNETBASE)/src/makefiles/config.mkf
+
+ALL_LIBS  = $(SOCKETLIBS) $(CAPLIBS) $(PCLLIBS) $(RTLIBS)
+
+SNETLIBS = $(SNETBASE)/lib/*.so
+INCLUDES  = -I. -I$(SNETBASE)/include
+LIBRARIES = -L. -L$(SNETBASE)/lib $(ALL_LIBS)

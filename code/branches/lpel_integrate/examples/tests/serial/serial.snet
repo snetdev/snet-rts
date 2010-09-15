@@ -1,0 +1,10 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+ 
+
+net serial {
+  box dec((A) -> (A));
+} connect dec..dec..dec;
