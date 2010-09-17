@@ -39,11 +39,11 @@
  *
  * <!--
  * int DistributionInit(int argc, char *argv[]) : Initializes disributed S-Net.
- * snet_tl_stream_t *DistributionStart(snet_startup_fun_t fun) : Constructs the S-Net.
+ * stream_t *DistributionStart(snet_startup_fun_t fun) : Constructs the S-Net.
  * void DistributionStop() : Stops distributed S-Net.
  * void DistributionDestroy() : Destroys distributed S-Net and frees resources.
- * snet_tl_stream_t *DistributionWaitForInput() : Waits until the node has input stream.
- * snet_tl_stream_t *DistributionWaitForOutput() : Waits until the node has output stream.
+ * stream_t *DistributionWaitForInput() : Waits until the node has input stream.
+ * stream_t *DistributionWaitForOutput() : Waits until the node has output stream.
  * -->
  *
  *****************************************************************************/
@@ -123,7 +123,7 @@ int DistributionInit(int argc, char *argv[])
 
 /** <!--********************************************************************-->
  *
- * @fn  snet_tl_stream_t *DistributionStart(snet_startup_fun_t fun)
+ * @fn  stream_t *DistributionStart(snet_startup_fun_t fun)
  *
  *   @brief  Construct distributed S-Net      
  *
@@ -135,14 +135,14 @@ int DistributionInit(int argc, char *argv[])
 void DistributionStart(snet_startup_fun_t fun)
 {
   int my_rank;
-  snet_tl_stream_t *ret_stream, *input;
+  stream_t *ret_stream, *input;
   snet_info_t *info;
   snet_fun_id_t fun_id;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
   if(my_rank == 0) {
-    input = SNetTlCreateStream(BUFFER_SIZE);
+    input = StreamCreate();
 
     SNetDistFunFun2ID(fun, &fun_id);
 
@@ -155,7 +155,7 @@ void DistributionStart(snet_startup_fun_t fun)
     ret_stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), ret_stream);
 
     if(ret_stream != NULL) {
-      SNetTlMarkObsolete(ret_stream);
+      //SNetTlMarkObsolete(ret_stream);
     }
 
     SNetInfoDestroy(info);
@@ -251,7 +251,7 @@ void DistributionDestroy()
 
 /** <!--********************************************************************-->
  *
- * @fn  snet_tl_stream_t *DistributionWaitForInput()
+ * @fn  stream_t *DistributionWaitForInput()
  *
  *   @brief   Block until input stream of S-Net is in this node.   
  *
@@ -259,7 +259,7 @@ void DistributionDestroy()
  *
  ******************************************************************************/
 
-snet_tl_stream_t *DistributionWaitForInput()
+stream_t *DistributionWaitForInput()
 {
   return SNetRoutingWaitForGlobalInput();
 }
@@ -267,7 +267,7 @@ snet_tl_stream_t *DistributionWaitForInput()
 
 /** <!--********************************************************************-->
  *
- * @fn  snet_tl_stream_t *DistributionWaitForOutput()
+ * @fn  stream_t *DistributionWaitForOutput()
  *
  *   @brief   Block until output stream of S-Net is in this node.   
  *
@@ -275,7 +275,7 @@ snet_tl_stream_t *DistributionWaitForInput()
  *
  ******************************************************************************/
 
-snet_tl_stream_t *DistributionWaitForOutput()
+stream_t *DistributionWaitForOutput()
 {
   return SNetRoutingWaitForGlobalOutput();
 }

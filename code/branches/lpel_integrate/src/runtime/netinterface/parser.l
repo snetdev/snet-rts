@@ -21,7 +21,7 @@
 #include <memfun.h>
 
 #define LINEBUF_SIZE 256
-#define YY_NO_UNPUT
+#define YY_NO_INPUT
 
 char *STRcpy(const char *text){
   char *t = SNetMemAlloc(sizeof(char) * (strlen(text) + 1));

@@ -12,7 +12,6 @@
 
 #include "stream.h"
 #include "task.h"
-#include "linklst.h"
 
 //#define COLLECTOR_DEBUG
 
@@ -34,8 +33,8 @@ static bool SortRecEqual( snet_record_t *rec1, snet_record_t *rec2)
 void CollectorTask( task_t *self, void *arg)
 {
   snet_handle_t *hnd = (snet_handle_t *)arg;
-  list_hnd_t readyset, waitingset;
-  list_iter_t *iter;
+  stream_list_t readyset, waitingset;
+  stream_iter_t *iter;
   stream_mh_t *outstream;
   snet_record_t *sort_rec = NULL;
   snet_record_t *term_rec = NULL;
@@ -55,23 +54,21 @@ void CollectorTask( task_t *self, void *arg)
       /* open each stream in listening set for reading */
       tmp = StreamOpen( self, instreams[i], 'r');
       /* add each stream instreams[i] to listening set of collector */
-      list_node_t *node = ListNodeCreate( tmp);
-      ListAppend( &readyset, node);
+      StreamListAppend( &readyset, tmp);
     }
     SNetMemFree( instreams );
   }
 
   /* create an iterator, is reused within main loop*/
-  iter = ListIterCreate( &readyset);
+  iter = StreamIterCreate( &readyset);
   
   /* MAIN LOOP */
   while( !terminate) {
 
     /* iterate through readyset: for each node (stream) */
-    ListIterReset( &readyset, iter);
-    while( ListIterHasNext(iter)) {
-      list_node_t *cur_node = ListIterNext(iter);
-      stream_mh_t *cur_stream = (stream_mh_t *)ListNodeGet( cur_node);
+    StreamIterReset( &readyset, iter);
+    while( StreamIterHasNext(iter)) {
+      stream_mh_t *cur_stream = StreamIterNext(iter);
       bool do_next = false;
   
       /* process stream until empty or next sort record or empty */
@@ -83,9 +80,9 @@ void CollectorTask( task_t *self, void *arg)
           case REC_sort_end:
             /* sort record: place node in waitingset */
             /* remove node */
-            ListIterRemove(iter);
+            StreamIterRemove(iter);
             /* put in waiting set */
-            ListAppend( &waitingset, cur_node);
+            StreamListAppend( &waitingset, cur_stream);
 
             if (sort_rec!=NULL) {
               /* assure that level & counter match */
@@ -120,10 +117,8 @@ void CollectorTask( task_t *self, void *arg)
               /* new stream */
               stream_mh_t *new_mh = StreamOpen( self,
                   SNetRecGetStream( rec), 'r');
-              /* create new node */
-              list_node_t *newnode = ListNodeCreate( new_mh);
               /* add to readyset (via iterator: after current) */
-              ListIterAppend( iter, newnode);
+              StreamIterAppend( iter, new_mh);
             }
             /* destroy record */
             SNetRecDestroy( rec);
@@ -131,13 +126,12 @@ void CollectorTask( task_t *self, void *arg)
 
           case REC_terminate:
             /* termination record: close stream and remove from ready set */
-            if ( !ListIsEmpty( &waitingset)) {
+            if ( !StreamListIsEmpty( &waitingset)) {
               SNetUtilDebugNotice("[COLL] Warning: Termination record "
                   "received while waiting on sort records!\n");
             }
+            StreamIterRemove( iter);
             StreamClose( cur_stream, true);
-            ListIterRemove( iter);
-            ListNodeDestroy( cur_node);
             if (term_rec==NULL) {
               term_rec = rec;
             } else {
@@ -160,9 +154,9 @@ void CollectorTask( task_t *self, void *arg)
     /* one iteration finished through readyset */
     
     /* check if all sort records are received */
-    if ( ListIsEmpty( &readyset)) {
+    if ( StreamListIsEmpty( &readyset)) {
       
-      if ( !ListIsEmpty( &waitingset)) {
+      if ( !StreamListIsEmpty( &waitingset)) {
         /* "swap" sets */
         readyset = waitingset;
         waitingset = NULL;
@@ -199,7 +193,7 @@ void CollectorTask( task_t *self, void *arg)
   StreamClose( outstream, false);
 
   /* destroy iterator */
-  ListIterDestroy( iter);
+  StreamIterDestroy( iter);
 
   SNetHndDestroy( hnd);
 

@@ -286,6 +286,11 @@ int SNetInRun(int argc, char *argv[],
   
   SNetObserverInit(labels, interfaces);
 
+
+  /* Initialise LPEL */
+  config.flags = LPEL_FLAG_AUTO;
+  LpelInit(&config);
+
 #ifdef DISTRIBUTED_SNET
 
   if(rank == 0) {    
@@ -301,8 +306,9 @@ int SNetInRun(int argc, char *argv[],
   in_buf = DistributionWaitForInput();
 
   if(in_buf != NULL) {
+    in_buf_port = InportCreate( in_buf);
 
-    SNetInParserInit(input, labels, interfaces, in_buf);
+    SNetInParserInit(input, labels, interfaces, in_buf_port);
 
     i = SNET_PARSE_CONTINUE;
     while(i != SNET_PARSE_TERMINATE){
@@ -315,13 +321,8 @@ int SNetInRun(int argc, char *argv[],
   SNetInOutputDestroy();
 
 #else
-  //LPEL
   in_buf = StreamCreate();
   in_buf_port = InportCreate( in_buf);
-  /* Initialise LPEL */
-  config.flags = LPEL_FLAG_AUTO;
-  LpelInit(&config);
-
 
   out_buf = fun(in_buf);
 

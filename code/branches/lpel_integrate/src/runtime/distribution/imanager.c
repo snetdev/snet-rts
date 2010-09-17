@@ -29,11 +29,14 @@
 #include "memfun.h"
 #include "record.h"
 #include "interface_functions.h"
-#include "stream_layer.h"
 #include "fun.h"
 #include "id.h"
 #include "queue.h"
 #include "debug.h"
+
+#include "lpel.h"
+#include "stream.h"
+#include "inport.h"
 
 /** <!--********************************************************************-->
  *
@@ -41,12 +44,12 @@
  *
  * <!--
  * static void *IManagerInputThread( void *ptr) : Main loop of input thread.
- * static void IManagerCreateInput(snet_tl_stream_t *stream, int node, int index) : Create a new input thread.
+ * static void IManagerCreateInput(stream_t *stream, int node, int index) : Create a new input thread.
  * static void *IManagerCreateNetwork(void *op)  : Create a new network.
  * static int IManagerMatchUpdateToIndex(snet_queue_t *queue, snet_id_t op, int node) : Get buffered index message that matched the update message.
  * static void IOManagerPutIndexToBuffer(snet_queue_t *queue, snet_id_t op, int node, int index) : Buffer unused index message.
- * static snet_tl_stream_t *IManagerMatchIndexToUpdate(snet_queue_t *queue, snet_id_t op, int node) : Get buffered update message that matches the index message.
- * static void IOManagerPutUpdateToBuffer(snet_queue_t *queue, snet_id_t op, int node, snet_tl_stream_t *stream) : Buffer unused update message.
+ * static stream_t *IManagerMatchIndexToUpdate(snet_queue_t *queue, snet_id_t op, int node) : Get buffered update message that matches the index message.
+ * static void IOManagerPutUpdateToBuffer(snet_queue_t *queue, snet_id_t op, int node, stream_t *stream) : Buffer unused update message.
  * static void *IManagerMasterThread( void *ptr) : Main loop for master thread.
  * void SNetIManagerCreate() : Create input manager.
  * void SNetIManagerDestroy() : Destroy input manager.
@@ -62,9 +65,9 @@
 #define NUM_MESSAGE_TYPES 4
 
 #define TYPE_TERMINATE 0
-#define TYPE_UPDATE 1
-#define TYPE_INDEX 2
-#define TYPE_CREATE 3
+#define TYPE_UPDATE    1
+#define TYPE_INDEX     2
+#define TYPE_CREATE    3
 
 /* These structures are used to buffer control messages
  * that cannot be yet used.
@@ -73,7 +76,7 @@
 typedef struct snet_ru_entry {
   snet_id_t op_id;
   int node;
-  snet_tl_stream_t *stream;
+  stream_t *stream;
 } snet_ru_entry_t;
 
 typedef struct snet_ri_entry {
@@ -90,9 +93,9 @@ typedef struct snet_ri_entry {
  */
 
 typedef struct {
-  snet_tl_stream_t *stream; /**< Output stream. */
-  int node;                 /**< Node to listen to. */
-  int index;                /**< Stream index to use. */
+  stream_t *stream; /**< Output stream. */
+  int node;         /**< Node to listen to. */
+  int index;        /**< Stream index to use. */
 } imanager_data_t;
 
 
@@ -103,13 +106,13 @@ typedef struct {
  * operation MPI_Finalize might be called too early
  * (This is a problem al least with OpenMPI) 
  */
-static snet_thread_t *master_thread;
+static lpelthread_t *master_thread;
 
 /** <!--********************************************************************-->
  *
  * @fn  static void *IManagerInputThread( void *ptr) 
  *
- *   @brief  Main loop of an imput thread
+ *   @brief  Main loop of an input thread
  *
  *           Receives, deserializes and sends records to a stream.
  *
@@ -136,6 +139,7 @@ static void *IManagerInputThread( void *ptr)
 
   MPI_Status status;
 
+  inport_t *iport = InportCreate( data->stream);
 
   buf_size = ORIGINAL_MAX_MSG_SIZE;
 
@@ -164,17 +168,15 @@ static void *IManagerInputThread( void *ptr)
     switch( SNetRecGetDescriptor(record)) {
     case REC_data:
     case REC_collect:
-    case REC_sort_begin:	
     case REC_sort_end:
     case REC_probe: 
 
-      SNetTlWrite(data->stream, record);
+      InportWrite( iport, record);
 
       break;
     case REC_terminate:
 
-      SNetTlWrite(data->stream, record);
-      SNetTlMarkObsolete(data->stream);
+      InportWrite( iport, record);
 
       terminate = true;
       break;
@@ -189,6 +191,8 @@ static void *IManagerInputThread( void *ptr)
 
   }
 
+  InportDestroy( iport);
+
   SNetMemFree(buf);
   SNetMemFree(data);
 
@@ -197,7 +201,7 @@ static void *IManagerInputThread( void *ptr)
 
 /** <!--********************************************************************-->
  *
- * @fn  static void IManagerCreateInput(snet_tl_stream_t *stream, int node, int index)
+ * @fn  static void IManagerCreateInput(stream_t *stream, int node, int index)
  *
  *   @brief  Creates a new input thread
  *
@@ -208,7 +212,7 @@ static void *IManagerInputThread( void *ptr)
  *
  ******************************************************************************/
 
-static void IManagerCreateInput(snet_tl_stream_t *stream, int node, int index)
+static void IManagerCreateInput(stream_t *stream, int node, int index)
 {
   imanager_data_t *data;
 
@@ -218,7 +222,8 @@ static void IManagerCreateInput(snet_tl_stream_t *stream, int node, int index)
   data->node = node;
   data->index = index;
 
-  SNetThreadCreate( IManagerInputThread, (void*)data, ENTITY_dist);
+  //TODO detached
+  LpelThreadCreate( IManagerInputThread, (void*)data);
 }
 
 /** <!--********************************************************************-->
@@ -237,7 +242,7 @@ static void IManagerCreateInput(snet_tl_stream_t *stream, int node, int index)
 
 static void *IManagerCreateNetwork(void *op) 
 {
-  snet_tl_stream_t *stream;
+  stream_t *stream;
   snet_info_t *info;
   snet_startup_fun_t fun;
   snet_msg_create_network_t *msg;
@@ -246,9 +251,9 @@ static void *IManagerCreateNetwork(void *op)
 
   SNetDistFunID2Fun(&msg->fun_id, &fun);
   
-  stream = SNetTlCreateStream(BUFFER_SIZE);
+  stream = StreamCreate();
 
-  SNetTlSetFlag(stream, true);
+  //SNetTlSetFlag(stream, true);
 
   info = SNetInfoInit();
 
@@ -263,7 +268,7 @@ static void *IManagerCreateNetwork(void *op)
   stream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), stream);
   
   if(stream != NULL) {
-    stream = SNetTlMarkObsolete(stream);
+    //stream = SNetTlMarkObsolete(stream);
   }
 
   SNetInfoDestroy(info);
@@ -312,13 +317,13 @@ static void IOManagerPutIndexToBuffer(snet_queue_t *queue, snet_id_t op, int nod
 }
 
 /* Match index message to buffered update message. */
-static snet_tl_stream_t *IManagerMatchIndexToUpdate(snet_queue_t *queue, snet_id_t op, int node)
+static stream_t *IManagerMatchIndexToUpdate(snet_queue_t *queue, snet_id_t op, int node)
 {
   
   snet_ru_entry_t *ru;
   snet_queue_iterator_t q_iter;
 
-  snet_tl_stream_t *stream = NULL;
+  stream_t *stream = NULL;
 
   q_iter = SNetQueueIteratorBegin(queue);
   
@@ -338,7 +343,7 @@ static snet_tl_stream_t *IManagerMatchIndexToUpdate(snet_queue_t *queue, snet_id
 }
 
 /* Buffer update message*/
-static void IOManagerPutUpdateToBuffer(snet_queue_t *queue, snet_id_t op, int node, snet_tl_stream_t *stream)
+static void IOManagerPutUpdateToBuffer(snet_queue_t *queue, snet_id_t op, int node, stream_t *stream)
 {
   snet_ru_entry_t *ru;
 
@@ -392,7 +397,7 @@ static void *IManagerMasterThread( void *ptr)
   snet_msg_route_index_t *msg_route_index;
   snet_msg_create_network_t *msg_create_network;
 
-  snet_tl_stream_t * stream = NULL;
+  stream_t *stream = NULL;
 
 #ifdef SOME_NOT_ANY
   int rj, rcount, rlist[NUM_MESSAGE_TYPES]; 
@@ -498,7 +503,8 @@ static void *IManagerMasterThread( void *ptr)
 
       bufs[index] = SNetMemAlloc(true_extent);
 
-      SNetThreadCreate( IManagerCreateNetwork, (void*)msg_create_network, ENTITY_dist);
+      //TODO detached
+      LpelThreadCreate( IManagerCreateNetwork, (void*)msg_create_network);
       break;
     default:
       break;
@@ -540,7 +546,7 @@ static void *IManagerMasterThread( void *ptr)
 
 void SNetIManagerCreate()
 {
-  master_thread = SNetThreadCreateNoDetach( IManagerMasterThread, NULL, ENTITY_dist);
+  master_thread = LpelThreadCreate( IManagerMasterThread, NULL);
 }
 
 
@@ -559,7 +565,7 @@ void SNetIManagerCreate()
 
 void SNetIManagerDestroy()
 {
-  SNetThreadJoin( master_thread, NULL);
+  LpelThreadJoin( master_thread, NULL);
 }
 
 /*@}*/

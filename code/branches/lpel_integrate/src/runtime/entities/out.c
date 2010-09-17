@@ -247,9 +247,6 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
     }
     SNetMemFree( names);
   }
-  if(out_rec != old_rec) {
-    SNetRecCopyIterations(old_rec, out_rec);
-  }
   // output record
   if( SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
     SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));

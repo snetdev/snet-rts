@@ -36,7 +36,7 @@ void SNetMessageTypesInit()
   
   block_lengths[0] = 1;
   block_lengths[1] = 1;
-  block_lengths[2] = sizeof(snet_tl_stream_t *);
+  block_lengths[2] = sizeof(stream_t *);
  
   MPI_Address(&route_update.op_id, displacements);
   MPI_Address(&route_update.node, displacements + 1);

@@ -431,7 +431,6 @@ static void FilterTask( task_t *self, void *arg)
               out_rec = SNetRecCreate( REC_data, 
                   SNetTencCopyVariantEncoding( 
                     SNetTencGetVariant( out_type, j+1)));
-              SNetRecCopyIterations(in_rec, out_rec);
               SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
               SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
 

@@ -4,7 +4,7 @@
 #include <mpi.h>
 
 #include "record.h"
-#include "stream_layer.h"
+#include "stream.h"
 #include "fun.h"
 
 /* Message types. 
@@ -40,7 +40,7 @@ typedef enum {
 typedef struct snet_msg_route_update {
   snet_id_t op_id;
   int node;
-  snet_tl_stream_t *stream;
+  stream_t *stream;
 } snet_msg_route_update_t;
 
 /* SNET_msg_route_index:

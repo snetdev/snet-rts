@@ -56,7 +56,7 @@ buffer_t *BufferCreate(void)
 
     buf->flag_stub = (void *)0x0;
     buf->flag_ptr = &buf->flag_stub;
-    pthread_spin_init( &buf->lock, 0);
+    pthread_spin_init( &buf->lock, PTHREAD_PROCESS_PRIVATE);
   }
   return buf;
 }
@@ -178,7 +178,7 @@ void BufferRegisterFlag( buffer_t *buf, volatile void **flag_ptr)
 {
   pthread_spin_lock( &buf->lock);
   buf->flag_ptr = ( (void**)flag_ptr != NULL) ? flag_ptr : &buf->flag_stub;
-  *buf->flag_ptr = (void *)0x1;
   pthread_spin_unlock( &buf->lock);
+  *buf->flag_ptr = (void *)0x1;
 }
 

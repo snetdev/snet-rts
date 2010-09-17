@@ -18,6 +18,8 @@
 
 #include "lpel.h"
 
+#if 0
+
 struct snet_thread {
   pthread_t *tid;
 };
@@ -209,7 +211,7 @@ void SNetThreadJoin( snet_thread_t *t, void **ret)
   pthread_join( *SNT_TID( t), ret);
 }
 
-
+#endif
 
 
 

@@ -22,11 +22,13 @@
 
 #include "omanager.h"
 #include "record.h"
-#include "stream_layer.h"
 #include "memfun.h"
 #include "message.h"
 #include "debug.h"
 
+#include "lpel.h"
+#include "stream.h"
+#include "outport.h"
 
 /** <!--********************************************************************-->
  *
@@ -34,7 +36,7 @@
  *
  * <!--
  * static void *OManagerThread(void *ptr) : Main loop of an output thread.
- * void SNetOManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int index) : Add a new output thread
+ * void SNetOManagerUpdateRoutingTable(stream_t *stream, int node, int index) : Add a new output thread
  * -->
  *
  *****************************************************************************/
@@ -50,7 +52,7 @@
  */
 
 typedef struct {
-  snet_tl_stream_t *stream; /**< Input stream. */
+  stream_t *stream; /**< Input stream. */
   int node;                 /**< Node to send the records. */
   int index;                /**< Stream index. */
 } omanager_data_t;
@@ -81,12 +83,16 @@ static void *OManagerThread(void *ptr)
   int *buf;
   int buf_size;
 
+  outport_t *op = OutportCreate(data->stream);
+
   buf_size = ORIGINAL_MAX_MSG_SIZE;
   buf = SNetMemAlloc(sizeof(char) * buf_size);
 
+  
+
   while(!terminate) {
 
-    record = SNetTlRead(data->stream);
+    record = OutportRead( op);
 
     switch(SNetRecGetDescriptor(record)) {
     case REC_sync:
@@ -97,7 +103,6 @@ static void *OManagerThread(void *ptr)
       break;
     case REC_data:
     case REC_collect:
-    case REC_sort_begin:	
     case REC_sort_end:
     case REC_probe:
       position = 0;
@@ -139,6 +144,8 @@ static void *OManagerThread(void *ptr)
 
   }
 
+  OutportDestroy( op);
+
   SNetMemFree(buf);
   SNetMemFree(data);
 
@@ -147,7 +154,7 @@ static void *OManagerThread(void *ptr)
 
 /** <!--********************************************************************-->
  *
- * @fn  void SNetOManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int index)
+ * @fn  void SNetOManagerUpdateRoutingTable(stream_t *stream, int node, int index)
  *
  *   @brief  Creates a new output thread to serialize and send records to other node.
  *
@@ -157,7 +164,7 @@ static void *OManagerThread(void *ptr)
  *   @param index   Stream index to use
  *
  ******************************************************************************/
-void SNetOManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int index)
+void SNetOManagerUpdateRoutingTable(stream_t *stream, int node, int index)
 {
   omanager_data_t *data;
 
@@ -175,7 +182,8 @@ void SNetOManagerUpdateRoutingTable(snet_tl_stream_t *stream, int node, int inde
   data->node = node;
   data->index = index;
   
-  SNetThreadCreate( OManagerThread, (void*)data, ENTITY_dist);
+  //TODO detached
+  LpelThreadCreate( OManagerThread, (void*)data);
   
   return;
 }

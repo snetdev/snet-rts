@@ -11,7 +11,7 @@ all: $(TARGET)
 
 
 $(TARGET):  $(TARGET).snet $(BOXES) $(SNETLIBS)
-	snetc $(INCLUDES) $(LIBRARIES)  $(TARGET).snet -o $(TARGET)
+	snetc $(INCLUDES) $(LIBRARIES) $(TARGET).snet -o $(TARGET)
 
 
 clean:

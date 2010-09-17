@@ -44,8 +44,8 @@ typedef struct {
   int self;                      /**< Node's own rank. */
   int max_nodes;                 /**< Number of nodes. */
   bool terminate;                /**< True if SNetDistributionStop has been called. */
-  snet_tl_stream_t *global_in;   /**< Global input stream if in this node. */
-  snet_tl_stream_t *global_out;  /**< Global output stream if in this node. */
+  stream_t *global_in;   /**< Global input stream if in this node. */
+  stream_t *global_out;  /**< Global output stream if in this node. */
   pthread_cond_t input_cond;     /**< Signalled if global input is in this node. */
   pthread_cond_t output_cond;    /**< Signalled if global output is in this node. */
 } global_routing_info_t;
@@ -128,7 +128,7 @@ static int RoutingGetNumNodes()
   return r_info->max_nodes;
 }
 
-static void RoutingSetGlobalInput(snet_tl_stream_t *stream) 
+static void RoutingSetGlobalInput(stream_t *stream) 
 {
   pthread_mutex_lock(&r_info->mutex);
 
@@ -139,7 +139,7 @@ static void RoutingSetGlobalInput(snet_tl_stream_t *stream)
   pthread_mutex_unlock(&r_info->mutex);
 }
 
-static void RoutingSetGlobalOutput(snet_tl_stream_t *stream) 
+static void RoutingSetGlobalOutput(stream_t *stream) 
 {
   pthread_mutex_lock(&r_info->mutex);
 
@@ -150,9 +150,9 @@ static void RoutingSetGlobalOutput(snet_tl_stream_t *stream)
   pthread_mutex_unlock(&r_info->mutex);
 }
 
-snet_tl_stream_t *SNetRoutingGetGlobalInput() 
+stream_t *SNetRoutingGetGlobalInput() 
 {
-  snet_tl_stream_t *stream;
+  stream_t *stream;
   
   pthread_mutex_lock(&r_info->mutex);
 
@@ -163,9 +163,9 @@ snet_tl_stream_t *SNetRoutingGetGlobalInput()
   return stream;
 }
 
-snet_tl_stream_t *SNetRoutingGetGlobalOutput() 
+stream_t *SNetRoutingGetGlobalOutput() 
 {
-  snet_tl_stream_t *stream;
+  stream_t *stream;
 
   pthread_mutex_lock(&r_info->mutex);
 
@@ -176,9 +176,9 @@ snet_tl_stream_t *SNetRoutingGetGlobalOutput()
   return stream;
 }
 
-snet_tl_stream_t *SNetRoutingWaitForGlobalInput() 
+stream_t *SNetRoutingWaitForGlobalInput() 
 {
-  snet_tl_stream_t *stream;
+  stream_t *stream;
   
   pthread_mutex_lock(&r_info->mutex);
 
@@ -195,9 +195,9 @@ snet_tl_stream_t *SNetRoutingWaitForGlobalInput()
   return stream;
 }
 
-snet_tl_stream_t *SNetRoutingWaitForGlobalOutput() 
+stream_t *SNetRoutingWaitForGlobalOutput() 
 {
-  snet_tl_stream_t *stream;
+  stream_t *stream;
 
   pthread_mutex_lock(&r_info->mutex);
 
@@ -264,7 +264,7 @@ static void CreateNetwork(snet_routing_context_t *info, int node)
   MPI_Send(&msg, 1, type, node, SNET_msg_create_network, MPI_COMM_WORLD);
 }
 
-static void UpdateITable(snet_id_t id, int node, snet_tl_stream_t *stream) 
+static void UpdateITable(snet_id_t id, int node, stream_t *stream) 
 {
   snet_msg_route_update_t msg;
   MPI_Datatype type;
@@ -283,7 +283,7 @@ static void UpdateITable(snet_id_t id, int node, snet_tl_stream_t *stream)
 
 }
 
-static void UpdateOTable(snet_id_t id, int node, int index, snet_tl_stream_t *stream) 
+static void UpdateOTable(snet_id_t id, int node, int index, stream_t *stream) 
 {
   snet_msg_route_index_t msg;
   MPI_Datatype type;
@@ -418,7 +418,7 @@ static bool RoutingContextIsNodeVisited(snet_routing_context_t *context, int nod
 
 /** <!--********************************************************************-->
  *
- * @fn  snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet_tl_stream_t* stream, int location)
+ * @fn  stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, stream_t* stream, int location)
  *
  *   @brief  Update routing context when a new component is to be built
  *
@@ -433,7 +433,7 @@ static bool RoutingContextIsNodeVisited(snet_routing_context_t *context, int nod
  *
  ******************************************************************************/
 
-snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet_tl_stream_t* stream, int location)
+stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, stream_t* stream, int location)
 {
   int index;
 
@@ -447,7 +447,7 @@ snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet
      
       UpdateOTable(RoutingContextGetID(context), location, index, stream);
 
-      stream = SNetTlCreateStream(BUFFER_SIZE);
+      stream = StreamCreate();
 
     } else if(location == RoutingGetSelf()) {
 
@@ -457,7 +457,7 @@ snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet
 
       } else {
 
-	SNetTlSetFlag(stream, true);
+	//SNetTlSetFlag(stream, true);
 
 	UpdateITable(RoutingContextGetID(context), previous, stream);
       }
@@ -485,7 +485,7 @@ snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet
 
 /** <!--********************************************************************-->
  *
- * @fn  snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl_stream_t* stream)
+ * @fn  stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, stream_t* stream)
  *
  *   @brief  Update routing context at the end of the network creation.
  *
@@ -500,7 +500,7 @@ snet_tl_stream_t *SNetRoutingContextUpdate(snet_routing_context_t *context, snet
  *
  ******************************************************************************/
 
-snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl_stream_t* stream)
+stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, stream_t* stream)
 {
   int previous = SNetRoutingContextGetLocation(context);
   int location = SNetRoutingContextGetParent(context);
@@ -509,7 +509,7 @@ snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl
   if(location != previous) {
     if(location == RoutingGetSelf()) {
 
-      SNetTlSetFlag(stream, true);
+      //SNetTlSetFlag(stream, true);
 
       UpdateITable(RoutingContextGetID(context), previous, stream);
 
@@ -525,7 +525,7 @@ snet_tl_stream_t *SNetRoutingContextEnd(snet_routing_context_t *context, snet_tl
 
 	UpdateOTable(RoutingContextGetID(context), location, index, stream);
 
-	stream = SNetTlCreateStream(BUFFER_SIZE);
+	stream = StreamCreate();
       }
     } 
   }

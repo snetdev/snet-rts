@@ -9,11 +9,9 @@
 #include "collectors.h"
 #include "threading.h"
 
-#include "linklst.h"
-#include "hashtab.h"
-
 #include "stream.h"
 #include "task.h"
+#include "hashtab.h"
 
 #ifdef DISTRIBUTED_SNET
 #include "routing.h"
@@ -40,8 +38,8 @@ static void SplitBoxTask( task_t *self, void *arg)
   snet_startup_fun_t boxfun;
   bool terminate = false;
   /* a list of all outstreams for all yet created instances */
-  list_hnd_t repos_list = NULL;
-  list_iter_t *iter = ListIterCreate( &repos_list);
+  stream_list_t repos_list = NULL;
+  stream_iter_t *iter = StreamIterCreate( &repos_list);
   /* a hashtable for fast lookup, initial capacity = 2^4 = 16 */
   hashtab_t *repos_tab = HashtabCreate( 4);
 
@@ -97,7 +95,7 @@ static void SplitBoxTask( task_t *self, void *arg)
             /* add to lookup table */
             HashtabPut( repos_tab, i, outstream);
             /* add to list */
-            ListAppend( &repos_list, ListNodeCreate( outstream));
+            StreamListAppend( &repos_list, outstream);
 #ifdef DISTRIBUTED_SNET
             {
               snet_info_t *info;
@@ -138,9 +136,9 @@ static void SplitBoxTask( task_t *self, void *arg)
          */
         if( is_det ) {
           /* reset iterator */
-          ListIterReset( &repos_list, iter);
-          while( ListIterHasNext( iter)) {
-            stream_mh_t *cur_stream = ListNodeGet( ListIterNext( iter));
+          StreamIterReset( &repos_list, iter);
+          while( StreamIterHasNext( iter)) {
+            stream_mh_t *cur_stream = StreamIterNext( iter);
 
             StreamWrite( cur_stream,
                 SNetRecCreate( REC_sort_end, 0, counter));
@@ -173,10 +171,10 @@ static void SplitBoxTask( task_t *self, void *arg)
 
       case REC_sort_end:
         /* broadcast the sort record */
-        ListIterReset( &repos_list, iter);
+        StreamIterReset( &repos_list, iter);
         /* all instances receive copies of the record */
-        while( ListIterHasNext( iter)) {
-          stream_mh_t *cur_stream = ListNodeGet( ListIterNext( iter));
+        while( StreamIterHasNext( iter)) {
+          stream_mh_t *cur_stream = StreamIterNext( iter);
           StreamWrite( cur_stream,
               SNetRecCreate( REC_sort_end,
                 /* we have to increase level */
@@ -192,17 +190,15 @@ static void SplitBoxTask( task_t *self, void *arg)
 
       case REC_terminate:
 
-        ListIterReset( &repos_list, iter);
+        StreamIterReset( &repos_list, iter);
         /* all instances receive copies of the record */
-        while( ListIterHasNext( iter)) {
-          list_node_t *cur_node = ListIterNext( iter);
-          stream_mh_t *cur_stream = ListNodeGet( cur_node);
+        while( StreamIterHasNext( iter)) {
+          stream_mh_t *cur_stream = StreamIterNext( iter);
           StreamWrite( cur_stream, SNetRecCopy( rec));
 
-          ListIterRemove( iter);
+          StreamIterRemove( iter);
           /* close  the stream to the instance */
           StreamClose( cur_stream, false);
-          ListNodeDestroy( cur_node);
         }
         /* send the original record to the initial stream */
         StreamWrite( initial, rec);
@@ -219,7 +215,7 @@ static void SplitBoxTask( task_t *self, void *arg)
 
   /* destroy repository */
   HashtabDestroy( repos_tab);
-  ListIterDestroy( iter);
+  StreamIterDestroy( iter);
 
   /* close and destroy initial stream */
   StreamClose( initial, false);

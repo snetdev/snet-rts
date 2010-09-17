@@ -24,6 +24,8 @@
 #include "interface_functions.h"
 #include "debug.h"
 
+#include "lpel.h"
+
 #ifdef SNET_DEBUG_COUNTERS
 #include "debugtime.h"
 #include "debugcounters.h"
@@ -117,7 +119,7 @@ typedef struct storage {
   pthread_mutex_t mutex;        /**< Mutex to guard access to 'hashtable'. */
   unsigned int op_id;           /**< Next free operation ID. */
   pthread_mutex_t id_mutex;     /**< Mutex to guard access to 'op_id'. */
-  snet_thread_t *thread;         /**< Data manager thread (needed for join). */
+  lpelthread_t *thread;        /**< Data manager thread (needed for join). */
 } storage_t;
 
 static storage_t storage;       /**< Variable to hold the common data. */
@@ -560,7 +562,7 @@ static void *DataManagerThread(void *ptr)
 
 static void DataManagerInit()
 {
-  storage.thread = SNetThreadCreateNoDetach( DataManagerThread, NULL, ENTITY_dist);
+  storage.thread = LpelThreadCreate( DataManagerThread, NULL);
 }
 
 
@@ -584,7 +586,7 @@ static void DataManagerDestroy()
 
   MPI_Send(&msg, 1, storage.op_type, storage.rank, TAG_DATA_OP, storage.comm);
 
-  SNetThreadJoin( storage.thread, NULL);
+  LpelThreadJoin( storage.thread, NULL);
 }
 
 

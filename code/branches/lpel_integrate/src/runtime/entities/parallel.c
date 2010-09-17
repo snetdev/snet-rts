@@ -391,8 +391,8 @@ static stream_t *SNetParallelStartup( stream_t *instream,
       SNetRoutingContextSetParent(new_context, location);
 
       SNetInfoSetRoutingContext(info, new_context);
-      outstreams[i] = (*fun)(transits[i], info, location);
-      outstreams[i] = SNetRoutingContextEnd(new_context, outstreams[i]);
+      collstreams[i] = (*fun)(transits[i], info, location);
+      collstreams[i] = SNetRoutingContextEnd(new_context, collstreams[i]);
       SNetRoutingContextDestroy(new_context);
 #else
       collstreams[i] = (*fun)( transits[i]);

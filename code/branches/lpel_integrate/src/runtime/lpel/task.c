@@ -60,6 +60,7 @@ task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t attr)
   t->ctx = co_create(TaskStartup, (void *)t, NULL, t->attr.stacksize);
   if (t->ctx == NULL) {
     /*TODO throw error!*/
+    assert(0);
   }
   t->inarg = inarg;
   t->outarg = NULL;

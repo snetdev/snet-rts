@@ -42,8 +42,17 @@ struct stream_mh {
   char mode;
   char state;
   unsigned long counter;
-  struct stream_mh *dirty;
+  struct stream_mh *next;   /* for organizing in lists */
+  struct stream_mh *dirty;  /* for maintaining a list of 'dirty' elements */
 };
+
+struct stream_iter {
+  stream_mh_t    *cur;
+  stream_mh_t    *prev;
+  stream_list_t  *list;
+};
+
+
 
 #define STMH_OPEN     'O'
 #define STMH_CLOSED   'C'
@@ -102,12 +111,14 @@ stream_mh_t *StreamOpen( task_t *ct, stream_t *s, char mode)
     mh->mode = mode;
     mh->state = STMH_OPEN;
     mh->counter = 0;
+    mh->next  = NULL;
     mh->dirty = NULL;
     MarkDirty( mh);
     break;
 
-  default:
+  default: /* wrong mode */
     free( mh);
+    assert(0); /* TODO throw error */
     return NULL;
   }
   return mh;
@@ -258,7 +269,9 @@ int StreamPrintDirty( task_t *t, FILE *file)
     next = mh->dirty;
     
     /* update states */
-    if (mh->state == STMH_REPLACED) { mh->state = STMH_OPEN; }
+    if (mh->state == STMH_REPLACED) { 
+      mh->state = STMH_OPEN;
+    }
     if (mh->state == STMH_CLOSED) {
       close_cnt++;
       free( mh);
@@ -274,3 +287,157 @@ int StreamPrintDirty( task_t *t, FILE *file)
   *(TaskGetDirtyStreams(t)) = DIRTY_END;
   return close_cnt;
 }
+
+
+
+/****************************************************************************/
+/* Functions for maintaining a list of stream modifiers                     */
+/****************************************************************************/
+
+
+
+
+/**
+ * it is NOT safe to append while iterating
+ */
+void StreamListAppend( stream_list_t *lst, stream_mh_t *node)
+{
+  if (*lst  == NULL) {
+    /* list is empty */
+    *lst = node;
+    node->next = node; /* selfloop */
+  } else { 
+    /* insert stream between last element=*lst
+       and first element=(*lst)->next */
+    node->next = (*lst)->next;
+    (*lst)->next = node;
+    *lst = node;
+  }
+}
+
+
+/**
+ * 
+ */
+int StreamListIsEmpty( stream_list_t *lst)
+{
+  return (*lst == NULL);
+}
+
+
+/**
+ *
+ */
+stream_iter_t *StreamIterCreate( stream_list_t *lst)
+{
+  stream_iter_t *iter = (stream_iter_t *) malloc( sizeof(stream_iter_t));
+  if (lst) {
+    iter->prev = *lst;
+    iter->list = lst;
+  }
+  iter->cur = NULL;
+  return iter;
+}
+
+void StreamIterDestroy( stream_iter_t *iter)
+{
+  free(iter);
+}
+
+void StreamIterReset( stream_list_t *lst, stream_iter_t *iter)
+{
+  iter->prev = *lst;
+  iter->list = lst;
+  iter->cur = NULL;
+}
+
+
+int StreamIterHasNext( stream_iter_t *iter)
+{
+  return (*iter->list != NULL) &&
+    ( (iter->cur != *iter->list) || (iter->cur == NULL) );
+}
+
+
+stream_mh_t *StreamIterNext( stream_iter_t *iter)
+{
+  assert( StreamIterHasNext(iter) );
+
+  if (iter->cur != NULL) {
+    /* this also does account for the state after deleting */
+    iter->prev = iter->cur;
+    iter->cur = iter->cur->next;
+  } else {
+    iter->cur = iter->prev->next;
+  }
+  return iter->cur;
+}
+
+
+void StreamIterAppend( stream_iter_t *iter, stream_mh_t *node)
+{
+#if 0
+  /* insert after cur */
+  node->next = iter->cur->next;
+  iter->cur->next = node;
+
+  /* if current node was last node, update list */
+  if (iter->cur == *iter->list) {
+    *iter->list = node;
+  }
+
+  /* handle case if current was single element */
+  if (iter->prev == iter->cur) {
+    iter->prev = node;
+  }
+#endif
+
+  /* insert at end of list */
+  node->next = (*iter->list)->next;
+  (*iter->list)->next = node;
+
+  /* if current node was first node */
+  if (iter->prev == *iter->list) {
+    iter->prev = node;
+  }
+  *iter->list = node;
+
+  /* handle case if current was single element */
+  if (iter->prev == iter->cur) {
+    iter->prev = node;
+  }
+}
+
+/**
+ * Remove the current node from list
+ * @pre iter points to valid element
+ * @note IterRemove() may only be called once after
+ *       IterNext(), as the current node is not a valid
+ *       list node anymore. 
+ */
+void StreamIterRemove( stream_iter_t *iter)
+{
+  /* handle case if there is only a single element */
+  if (iter->prev == iter->cur) {
+    assert( iter->prev == *iter->list );
+    iter->cur->next = NULL;
+    *iter->list = NULL;
+  } else {
+    /* remove cur */
+    iter->prev->next = iter->cur->next;
+    /* cur becomes invalid */
+    iter->cur->next = NULL;
+    /* if the first element was deleted, clear cur */
+    if (*iter->list == iter->prev) {
+      iter->cur = NULL;
+    } else {
+      /* if the last element was deleted, correct list */
+      if (*iter->list == iter->cur) {
+        *iter->list = iter->prev;
+      }
+      iter->cur = iter->prev;
+    }
+  }
+}
+
+

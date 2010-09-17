@@ -131,13 +131,16 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
     case REC_sync: 
       SNetUtilDebugFatal("REC_synch in output! This should not happen.");
     case REC_collect: 
-      SNetUtilDebugFatal("Output of REC_collect not yet implemented!");
+      SNetUtilDebugFatal("REC_collect in output! This should not happen.");
+      //SNetUtilDebugFatal("Output of REC_collect not yet implemented!");
       //fprintf(hnd->file, "<record type=\"collect\" />");
     case REC_sort_end:
-      SNetUtilDebugFatal("Output of REC_sort_end not yet implemented!");
+      SNetUtilDebugFatal("REC_sort_end in output! This should not happen.");
+      //SNetUtilDebugFatal("Output of REC_sort_end not yet implemented!");
       //fprintf(hnd->file, "<record type=\"sort_end\" />");
     case REC_trigger_initialiser:
-      SNetUtilDebugFatal("Output of REC_trigger_initializer not yet implemented!");
+      SNetUtilDebugFatal("REC_trigger_initializer in output! This should not happen.");
+      //SNetUtilDebugFatal("Output of REC_trigger_initializer not yet implemented!");
       //fprintf(hnd->file, "<record type=\"trigger_initialiser\" />");
       break;
     case REC_terminate:
@@ -175,7 +178,6 @@ static void *doOutput(void* data)
 	case REC_data:
 	case REC_collect:
 	case REC_sort_end:
-	case REC_probe:
 	case REC_trigger_initialiser:
 	  printRec(rec, hnd);
 	  break;

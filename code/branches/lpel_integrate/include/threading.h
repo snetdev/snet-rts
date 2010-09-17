@@ -32,7 +32,6 @@ typedef enum {
   ENTITY_none
 } snet_entity_id_t;
  
-typedef struct snet_thread snet_thread_t;
 
 
 struct task;
@@ -40,7 +39,9 @@ struct task;
 extern void SNetEntitySpawn( void (*fun)(struct task *t, void *arg),
     void *arg, snet_entity_id_t id);
 
+#if 0
 
+typedef struct snet_thread snet_thread_t;
 
 /** <!-- ****************************************************************** -->
 * @brief Spawns a new thread
@@ -85,5 +86,8 @@ snet_thread_t *SNetThreadCreateNoDetach( void *(*fun)(void*),
 * @param ret     thread's return value
 ******************************************************************************/
 void SNetThreadJoin( snet_thread_t *t, void **ret);
+
+#endif
+
 #endif /* _threading_h_ */					 
 

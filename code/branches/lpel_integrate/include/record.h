@@ -14,7 +14,6 @@ typedef union record_types snet_record_types_t;
 #include "typeencode.h"
 #include "bool.h"
 #include "constants.h"
-#include "stack.h"
 #include "stream.h"
 
 #ifdef DISTRIBUTED_SNET
@@ -28,18 +27,17 @@ typedef union record_types snet_record_types_t;
 
 
 typedef enum {
-	REC_data,
-	REC_sync,
-	REC_collect,
-	REC_sort_end,
-	REC_terminate,
-	REC_probe,
+  REC_data,
+  REC_sync,
+  REC_collect,
+  REC_sort_end,
+  REC_terminate,
   REC_trigger_initialiser
 } snet_record_descr_t;
 
 typedef enum {
-	MODE_textual,
-	MODE_binary,
+  MODE_textual,
+  MODE_binary,
 } snet_record_mode_t;
 
 
@@ -55,39 +53,6 @@ extern bool SNetRecPatternMatches(snet_variantencoding_t *pat, struct record *re
  */
 
 extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...);
-
-/*
- * returns if we keep track of the iteration this record is in
- * RETURNS: 1 if we do, 0 otherwise
- */
-extern int SNetRecHasIteration(snet_record_t *rec);
-
-/*
- * returns the number of times this record was iterated in the current star
- * RETURNS: amount of iterations
- */
-extern int SNetRecGetIteration(snet_record_t *rec);
-
-/*
- * Increments the times this record was iterated in the current star
- * by 1.
- */
-extern void SNetRecIncIteration(snet_record_t *rec);
-
-/*
- * Adds a new iteration counter and initializes this counter with the given
- * initial value. Iteration counters that are already present will be saved
- */
-extern void SNetRecAddIteration(snet_record_t *rec, int inital_value);
-
-/*
- * Removes the current iteration counter.
- */
-extern void SNetRecRemoveIteration(snet_record_t *rec);
-
-extern void SNetRecCopyIterations(snet_record_t *source, snet_record_t *target);
-
-extern snet_util_stack_t *SNetRecGetIterationStack(snet_record_t *rec);
 
 /*
  * CREC_sync: snet_buffer_t *inbuf

@@ -2,7 +2,7 @@
 #define _SNET_DISTRIBUTION_H_
 
 #include "snettypes.h"
-#include "stream_layer.h"
+#include "stream.h"
 #include "fun.h"
 
 int DistributionInit(int argc, char *argv[]);
@@ -11,7 +11,7 @@ void DistributionStart(snet_startup_fun_t fun);
 void DistributionStop();
 void DistributionDestroy();
 
-snet_tl_stream_t *DistributionWaitForInput();
-snet_tl_stream_t *DistributionWaitForOutput();
+stream_t *DistributionWaitForInput();
+stream_t *DistributionWaitForOutput();
 
 #endif /* _SNET_DISTRIBUTION_H_ */
