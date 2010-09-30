@@ -21,8 +21,8 @@ EXAMPLE_DIR=$DESTDIR/examples
 CPY_FROM_EXAMPLES="crypto des factorial mandelbrot mini-C mini-SAC sudoku"
 
 # misc
-URL=`svn info $SNETBASE | grep URL | awk '{print $2}'`
-VERSION=`svn info $SNETBASE | grep Revision | awk '{print $2}'`
+URL="svn+ssh://svn@obelix.stca.herts.ac.uk/home/svn/repositories/snet/code/trunk"
+VERSION=`svn info $URL | grep Revision | awk '{print $2}'`
 OS=`uname -s`
 ARCH=`uname -p`
 DISTFILE=$HOME/snet-v$VERSION-$OS-$ARCH
