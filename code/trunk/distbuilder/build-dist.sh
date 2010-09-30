@@ -11,7 +11,7 @@
 
 # where to build the distribution
 DIST=snet
-TMPDIR=`mktemp -d -t snetbuild`
+TMPDIR=`mktemp -d -t snetbuild.XXXXX`
 DESTDIR=$TMPDIR/$DIST
 CDIR=$TMPDIR/snetsrc
 
