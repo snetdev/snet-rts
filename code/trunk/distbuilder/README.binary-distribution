@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
- S-Net Binary Distribution (preview release / July'09)
+ S-Net Binary Distribution (preview release)
 -------------------------------------------------------------------------------
 
 This binary distribution consists of:
@@ -32,8 +32,12 @@ Directory structure:
       |
       +- (several subdirs, see README there)
    +- sudoku
-   +- factorial (hand-written deployer)
-   +- factorial_netinterface (generated deployer)
+   +- factorial 
+   +- mandelbrot
+|
++- src
+   |
+   +- makefiles (contains platform-specific configuration)
 
 
 

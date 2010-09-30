@@ -1,25 +1,32 @@
+#!/bin/bash
+
 #$Id$
 #
 # trivial distribution builder
 #
 # v0.01 initial version (fpz, 13.07.09)
 # v0.02 minor refinements 
+# v0.03 compilation now based on svn tree (Sep.10)
 #
 
 # where to build the distribution
-DIST=snet-dist
-TMPDIR=/tmp
+DIST=snet
+TMPDIR=`mktemp -d -t snetbuild`
 DESTDIR=$TMPDIR/$DIST
+CDIR=$TMPDIR/snetsrc
 
-# what to delete from tree
-DEL_FROM_ROOT="Makefile config* README.MPI ide src tests TODO distbuilder"
+# what to copy from tree
+CPY_FROM_ROOT="LICENSE bin interfaces lib include"
 EXAMPLE_DIR=$DESTDIR/examples
-DEL_FROM_EXAMPLES="mti-stap factorial_mpi matrix ocrad raytracing"
+CPY_FROM_EXAMPLES="crypto des factorial mandelbrot mini-C mini-SAC sudoku"
 
 # misc
+URL=`svn info $SNETBASE | grep URL | awk '{print $2}'`
 VERSION=`svn info $SNETBASE | grep Revision | awk '{print $2}'`
 OS=`uname -s`
 ARCH=`uname -p`
+DISTFILE=$HOME/snet-v$VERSION-$OS-$ARCH
+
 
 GMCHECK=`which gmake`
 if [ $? -ne 0 ];
@@ -30,67 +37,64 @@ MAKE=gmake
 fi
 
 
-if [ -d $DESTDIR ]; then
-  echo "Directory $DESTDIR exists, please delete.";
+if [ -f $DISTFILE* ]; then
+  echo "$DISTFILE* exists, please delete.";
 else
-  echo "Exporting $SNETBASE...";
-  svn export $SNETBASE $DESTDIR;
-  echo "done"
+  echo;
+  echo "========================================================="
+  echo " S-Net Distribution Builder" 
+  echo "---------------------------------------------------------"
+  echo 
+  echo " - TmpDir: $TMPDIR"
+  echo " - Final Archive will be: $DISTFILE.tar.gz"
   echo
-  echo "Copying README"
-  cp $SNETBASE/distbuilder/README.binary-distribution $DESTDIR/README
-  echo "done"
+  echo "========================================================="
   echo
-  echo "Building Compiler & Runtime (ignore svn warnings)...";
-  cd $DESTDIR;
-  SNETBASE=$DESTDIR ./configure > /dev/null
-  SNETBASE=$DESTDIR $MAKE prod > /dev/null
-  echo "done"
+  mkdir $DESTDIR;
+  echo "Checking out sources...";
+  svn co -q $URL $CDIR;
+  echo "done";
+  echo;
+
+  echo "Configuring sources..."; 
+  cd $CDIR;
+  SNETBASE=$CDIR ./configure > /dev/null;
+  echo "done";
+  echo;
+
+  echo "Building Compiler & Runtime...";
+  NDSFLAGS=`cat $CDIR/src/makefiles/config.mkf | grep -m 1 CCFLAGS | awk -F':=' '{print $2}' | sed 's/-g//g'`;
+  cd $CDIR; $MAKE CCFLAGS="$NDSFLAGS" > /dev/null;
+  cd $CDIR/interfaces/C; SNETBASE=$CDIR $MAKE > /dev/null; 
+  echo "done";
+  echo;
+
+  echo "Constructing Distribution...";
+  rm -rf `find $CDIR -type d -name ".svn"`
+  rm -rf `find $CDIR -name "*.o"`
+  for f in $CPY_FROM_ROOT; do
+    cp -r $CDIR/$f $DESTDIR
+  done;
+  mkdir $DESTDIR/examples
+  for f in $CPY_FROM_EXAMPLES; do
+    cp -r $CDIR/examples/$f $DESTDIR/examples/
+  done;
+  mkdir -p $DESTDIR/src/makefiles;
+  cp $CDIR/src/makefiles/config.mkf $DESTDIR/src/makefiles;
+  cp $CDIR/distbuilder/README.binary-distribution $DESTDIR/README;
+  echo "done";
+  echo;
+
+  echo "Building Distribution Archive...";
+  tar -C $DESTDIR/.. -cf - $DIST | gzip -c > $DISTFILE.tar.gz;
+  echo "done";
+
   echo
-  echo "Renaming/copying executables/libraries..."
-  mv $DESTDIR/bin/snetc.prod $DESTDIR/bin/snetc
-  cp $DESTDIR/lib/libsnet.prod.so $DESTDIR/lib/libsnet.so
-  cp $DESTDIR/lib/libsnetutil.prod.so $DESTDIR/lib/libsnetutil.so
-  echo "done"
+  echo "Cleaning up ..."
+  rm -rf $TMPDIR
+  echo "All done ($DISTFILE.tar.gz created)."
   echo
-  echo "Building C & SAC interfaces";
-  cd $DESTDIR/interfaces/C 
-  SNETBASE=$DESTDIR $MAKE > /dev/null
-  echo "SKIPPING SAC4C INTERFACE"
-  echo "done"
-  echo
-#  cd $DISTDIR/interfaces/SAC;
-#  SNETBASE=$DESTDIR $MAKE
-  echo "Saving config.mkf"
-  cp $DESTDIR/src/makefiles/config.mkf $DESTDIR/save.config.mkf
-  echo "done"
-  echo
-  echo "Purging developer related contents..."
-  for F in $DEL_FROM_ROOT; do
-    echo " - Deleting $DESTDIR/$F"
-    rm -rf $DESTDIR/$F
-  done
-  echo done
-  echo
-  echo "Purging unwanted examples..."
-  for F in $DEL_FROM_EXAMPLES; do
-    echo " - Deleting $EXAMPLE_DIR/$F"
-    rm -rf $EXAMPLE_DIR/$F
-  done
-  echo "done"
-  echo
-  echo "Restoring config.mkf into original destination";
-  mkdir $DESTDIR/src
-  mkdir $DESTDIR/src/makefiles
-  mv $DESTDIR/save.config.mkf $DESTDIR/src/makefiles/config.mkf
-  echo "done"
-  echo
-  echo "Building archive..."
-  cd /tmp;
-  tar cvf $SNETBASE/snet-v$VERSION-$OS-$ARCH.tar -C $TMPDIR $DIST > /dev/null
-  gzip $SNETBASE/snet-v$VERSION-$OS-$ARCH.tar
-  echo
-  echo "Done."
-  echo "Archive saved to: $SNETBASE/snet-v$VERSION-$OS-$ARCH.tar.gz"
-  echo
-fi
+
+fi # check for file 
+
+
