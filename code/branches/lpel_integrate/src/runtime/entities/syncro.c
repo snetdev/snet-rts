@@ -236,7 +236,7 @@ static void SyncBoxTask( task_t *self, void *arg)
   int num_patterns;
   bool terminate = false;
   snet_handle_t *hnd = (snet_handle_t*) arg;
-  stream_mh_t *outstream, *instream;
+  stream_desc_t *outstream, *instream;
   snet_record_t **storage;
   snet_record_t *rec;
   snet_record_t *temp_record;

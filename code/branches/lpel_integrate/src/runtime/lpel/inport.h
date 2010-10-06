@@ -1,15 +1,15 @@
 #ifndef _INPORT_H_
 #define _INPORT_H_
 
-#include "buffer.h"
+#include "stream.h"
 
 typedef struct inport inport_t;
 
 struct inport {
-  buffer_t *buffer;
+  stream_t *stream;
 };
 
-extern inport_t *InportCreate( buffer_t *buf);
+extern inport_t *InportCreate( stream_t *buf);
 extern void InportWrite( inport_t *ip, void *item);
 extern void InportDestroy( inport_t *ip);
 

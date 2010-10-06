@@ -1,6 +1,6 @@
 include ../paths.mkf
 
 TARGET = star
-BOXES  = ident.o
+BOXES  = foo.o
 
 include ../rules.mkf

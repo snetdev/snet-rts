@@ -54,7 +54,7 @@ typedef struct {
   snet_box_fun_t boxfun_a;
   snet_box_sign_t *sign;
   name_mapping_t *mapping;
-  stream_mh_t *out_mh;
+  stream_desc_t *out_sd;
 } box_handle_t;
 
 typedef struct {
@@ -184,7 +184,7 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
       BOX_HND( boxfun_a) = va_arg( args, void*);
       BOX_HND( sign) = va_arg( args, snet_box_sign_t*);
       BOX_HND( mapping) = NULL;
-      BOX_HND( out_mh) = NULL;
+      BOX_HND( out_sd) = NULL;
       break;
     
     case HND_parallel: 
@@ -381,23 +381,23 @@ extern void SNetHndSetRecord( snet_handle_t *hnd, snet_record_t *rec) {
  }
 }
 
-stream_mh_t *SNetHndGetOutMH( snet_handle_t *hnd)
+stream_desc_t *SNetHndGetOutSD( snet_handle_t *hnd)
 {
-  stream_mh_t *result;
+  stream_desc_t *result;
   switch( hnd->descr) {
     case HND_box: 
-      result = BOX_HND( out_mh); 
+      result = BOX_HND( out_sd); 
       break;
     default: WrongHandleType();
   }
   return( result);
 }
 
-void SNetHndSetOutMH( snet_handle_t *hnd, stream_mh_t *out_mh)
+void SNetHndSetOutSD( snet_handle_t *hnd, stream_desc_t *out_sd)
 {
  switch( hnd->descr) {
     case HND_box: 
-      BOX_HND( out_mh) = out_mh; 
+      BOX_HND( out_sd) = out_sd; 
       break;
     default: WrongHandleType();
  }

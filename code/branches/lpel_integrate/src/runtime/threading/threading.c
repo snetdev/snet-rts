@@ -234,9 +234,11 @@ void SNetEntitySpawn( taskfunc_t fun, void *arg, snet_entity_id_t id)
   }
 
   /* waitany tasks */
+  /*
   if ( id==ENTITY_collect ) {
     tattr.flags |= TASK_ATTR_WAITANY;
   }
+  */
 
   /* create task */
   t = TaskCreate( fun, arg, tattr);

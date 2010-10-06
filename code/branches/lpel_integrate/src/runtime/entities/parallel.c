@@ -152,7 +152,7 @@ static int BestMatch( match_count_t **counter, int num)
  * @param counter   pointer to a counter -
  *                  if NULL, no sort records are generated
  */
-static void PutToBuffers( stream_mh_t **outstreams, int num,
+static void PutToBuffers( stream_desc_t **outstreams, int num,
     int idx, snet_record_t *rec, int *counter)
 {
 
@@ -190,8 +190,8 @@ static void ParallelBoxTask( task_t *self, void *arg)
   snet_typeencoding_list_t *types = SNetHndGetTypeList( hnd);
   /* the number of outputs */
   int num = SNetTencGetNumTypes( types);
-  stream_mh_t *instream;
-  stream_mh_t *outstreams[num];
+  stream_desc_t *instream;
+  stream_desc_t *outstreams[num];
   int i, stream_index;
   snet_record_t *rec;
   match_count_t **matchcounter;

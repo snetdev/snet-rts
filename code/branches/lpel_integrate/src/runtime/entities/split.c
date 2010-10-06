@@ -32,7 +32,7 @@ static void SplitBoxTask( task_t *self, void *arg)
 {
   int i;
   snet_handle_t *hnd = (snet_handle_t*)arg;
-  stream_mh_t *initial, *instream;
+  stream_desc_t *initial, *instream;
   int ltag, ltag_val, utag, utag_val;
   snet_record_t *rec;
   snet_startup_fun_t boxfun;
@@ -86,7 +86,7 @@ static void SplitBoxTask( task_t *self, void *arg)
         
         /* for all tag values */
         for( i = ltag_val; i <= utag_val; i++) {
-          stream_mh_t *outstream = HashtabGet( repos_tab, i);
+          stream_desc_t *outstream = HashtabGet( repos_tab, i);
 
           if( outstream == NULL) {
             stream_t *newstream_addr = StreamCreate();
@@ -138,7 +138,7 @@ static void SplitBoxTask( task_t *self, void *arg)
           /* reset iterator */
           StreamIterReset( &repos_list, iter);
           while( StreamIterHasNext( iter)) {
-            stream_mh_t *cur_stream = StreamIterNext( iter);
+            stream_desc_t *cur_stream = StreamIterNext( iter);
 
             StreamWrite( cur_stream,
                 SNetRecCreate( REC_sort_end, 0, counter));
@@ -174,7 +174,7 @@ static void SplitBoxTask( task_t *self, void *arg)
         StreamIterReset( &repos_list, iter);
         /* all instances receive copies of the record */
         while( StreamIterHasNext( iter)) {
-          stream_mh_t *cur_stream = StreamIterNext( iter);
+          stream_desc_t *cur_stream = StreamIterNext( iter);
           StreamWrite( cur_stream,
               SNetRecCreate( REC_sort_end,
                 /* we have to increase level */
@@ -193,7 +193,7 @@ static void SplitBoxTask( task_t *self, void *arg)
         StreamIterReset( &repos_list, iter);
         /* all instances receive copies of the record */
         while( StreamIterHasNext( iter)) {
-          stream_mh_t *cur_stream = StreamIterNext( iter);
+          stream_desc_t *cur_stream = StreamIterNext( iter);
           StreamWrite( cur_stream, SNetRecCopy( rec));
 
           StreamIterRemove( iter);

@@ -31,51 +31,52 @@
 #include <malloc.h>
 #include <string.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "stream.h"
 #include "buffer.h"
 #include "task.h"
 
-struct stream_mh {
+
+struct stream_desc {
   task_t *task;
   stream_t *stream;
   char mode;
   char state;
   unsigned long counter;
-  struct stream_mh *next;   /* for organizing in lists */
-  struct stream_mh *dirty;  /* for maintaining a list of 'dirty' elements */
+  struct stream_desc *next;   /* for organizing in lists */
+  struct stream_desc *dirty;  /* for maintaining a list of 'dirty' elements */
 };
 
 struct stream_iter {
-  stream_mh_t    *cur;
-  stream_mh_t    *prev;
+  stream_desc_t    *cur;
+  stream_desc_t    *prev;
   stream_list_t  *list;
 };
 
 
 
-#define STMH_OPEN     'O'
-#define STMH_CLOSED   'C'
-#define STMH_REPLACED 'R'
+#define STDESC_OPEN     'O'
+#define STDESC_CLOSED   'C'
+#define STDESC_REPLACED 'R'
 
-#define DIRTY_END   ((stream_mh_t *)-1)
+#define DIRTY_END   ((stream_desc_t *)-1)
 
 
 
-static inline void MarkDirty( stream_mh_t *mh)
+static inline void MarkDirty( stream_desc_t *sd)
 {
 
   /* only add if not dirty yet */
-  if (mh->dirty == NULL) {
+  if (sd->dirty == NULL) {
     /*
-     * Set the dirty ptr of mh to the dirty_list ptr of the task
-     * and the dirty_list ptr of the task to mh, i.e.,
-     * insert the mh at the front of the dirty_list.
+     * Set the dirty ptr of sd to the dirty_list ptr of the task
+     * and the dirty_list ptr of the task to sd, i.e.,
+     * insert the sd at the front of the dirty_list.
      * Initially, dirty_list of the tab is empty DIRTY_END (!= NULL)
      */
-    stream_mh_t **dirty_list = TaskGetDirtyStreams( mh->task);
-    mh->dirty = *dirty_list;
-    *dirty_list = mh;
+    sd->dirty = sd->task->dirty_list;
+    sd->task->dirty_list = sd;
   }
 }
 
@@ -85,10 +86,24 @@ static inline void MarkDirty( stream_mh_t *mh)
  */
 stream_t *StreamCreate(void)
 {
-  return BufferCreate();
+  stream_t *s = (stream_t *) malloc( sizeof( stream_t));
+  BufferReset( &s->buffer);
+  s->flag_stub = (void *)0x0;
+  s->flag_ptr = &s->flag_stub;
+  pthread_spin_init( &s->lock, PTHREAD_PROCESS_PRIVATE);
+
+  return s;
 }
 
 
+/**
+ * Destroy a stream
+ */
+void StreamDestroy( stream_t *s)
+{
+  pthread_spin_destroy( &s->lock);
+  free( s);
+}
 
 
 /**
@@ -98,30 +113,37 @@ stream_t *StreamCreate(void)
  * @param s   stream to write to (not NULL)
  * @param mode  either 'r' for reading or 'w' for writing
  */
-stream_mh_t *StreamOpen( task_t *ct, stream_t *s, char mode)
+stream_desc_t *StreamOpen( task_t *ct, stream_t *s, char mode)
 {
-  stream_mh_t *mh = (stream_mh_t *) malloc( sizeof( stream_mh_t));
+  stream_desc_t *sd = (stream_desc_t *) malloc( sizeof( stream_desc_t));
 
   switch(mode) {
   case 'r':
-    BufferRegisterFlag( s, &ct->wany_flag);
+    /* set the flag pointer to consumers "wait any flag" */
+    pthread_spin_lock( &s->lock);
+    s->flag_ptr = &ct->wany_flag;
+    pthread_spin_unlock( &s->lock);
+    if ( BufferTop( &s->buffer) != NULL) {
+      *s->flag_ptr = (void *)0x1;
+    }
+
   case 'w':
-    mh->task = ct;
-    mh->stream = s;
-    mh->mode = mode;
-    mh->state = STMH_OPEN;
-    mh->counter = 0;
-    mh->next  = NULL;
-    mh->dirty = NULL;
-    MarkDirty( mh);
+    sd->task = ct;
+    sd->stream = s;
+    sd->mode = mode;
+    sd->state = STDESC_OPEN;
+    sd->counter = 0;
+    sd->next  = NULL;
+    sd->dirty = NULL;
+    MarkDirty( sd);
     break;
 
   default: /* wrong mode */
-    free( mh);
+    free( sd);
     assert(0); /* TODO throw error */
     return NULL;
   }
-  return mh;
+  return sd;
 }
 
 /**
@@ -130,19 +152,22 @@ stream_mh_t *StreamOpen( task_t *ct, stream_t *s, char mode)
  * @param ct  pointer to current task
  * @param s   stream to write to (not NULL)
  */
-void StreamClose( stream_mh_t *mh, bool destroy_s)
+void StreamClose( stream_desc_t *sd, bool destroy_s)
 {
-  mh->state = STMH_CLOSED;
+  sd->state = STDESC_CLOSED;
   /* mark dirty */
-  //TODO mh->task;
+  MarkDirty( sd);
 
-  if (mh->mode=='r') {
-    BufferRegisterFlag( mh->stream, NULL);
+  if (sd->mode=='r') {
+    /* let the flag pointer point to the stub */
+    pthread_spin_lock( &sd->stream->lock);
+    sd->stream->flag_ptr = &sd->stream->flag_stub;
+    pthread_spin_unlock( &sd->stream->lock);
   }
   if (destroy_s) {
-    BufferDestroy( mh->stream);
+    StreamDestroy( sd->stream);
   }
-  /* do not free mh, as it will be kept until its state
+  /* do not free sd, as it will be kept until its state
      has been output via dirty list */
 }
 
@@ -152,17 +177,24 @@ void StreamClose( stream_mh_t *mh, bool destroy_s)
  * Destroys old stream.
  * @pre snew must not be opened by same or other task
  */
-void StreamReplace( stream_mh_t *mh, stream_t *snew)
+void StreamReplace( stream_desc_t *sd, stream_t *snew)
 {
-  assert( mh->mode == 'r');
+  assert( sd->mode == 'r');
   /* destroy old stream */
-  BufferDestroy( mh->stream);
-  /* assign new stream and register flag */
-  mh->stream = snew;
-  BufferRegisterFlag( mh->stream, &mh->task->wany_flag);
-  mh->state = STMH_REPLACED;
+  StreamDestroy( sd->stream);
+  /* assign new stream */
+  sd->stream = snew;
+  /*register flag */
+  pthread_spin_lock( &sd->stream->lock);
+  sd->stream->flag_ptr = &sd->task->wany_flag;
+  pthread_spin_unlock( &sd->stream->lock);
+  if ( BufferTop(&sd->stream->buffer) != NULL) {
+    *sd->stream->flag_ptr = (void *)0x1;
+  }
+
+  sd->state = STDESC_REPLACED;
   /* counter is not reset */
-  MarkDirty( mh);
+  MarkDirty( sd);
 }
 
 
@@ -171,10 +203,10 @@ void StreamReplace( stream_mh_t *mh, stream_t *snew)
  *
  * @return    NULL if stream is empty
  */
-void *StreamPeek( stream_mh_t *mh)
+void *StreamPeek( stream_desc_t *sd)
 { 
-  assert( mh->mode == 'r');
-  return BufferTop( mh->stream);
+  assert( sd->mode == 'r');
+  return BufferTop( &sd->stream->buffer);
 }    
 
 
@@ -183,26 +215,26 @@ void *StreamPeek( stream_mh_t *mh)
  *
  * @pre       current task is single reader
  */
-void *StreamRead( stream_mh_t *mh)
+void *StreamRead( stream_desc_t *sd)
 {
   void *item;
 
-  assert( mh->mode == 'r');
+  assert( sd->mode == 'r');
   
-  item = BufferTop( mh->stream);
+  item = BufferTop( &sd->stream->buffer);
   /* wait if buffer is empty */
   if ( item == NULL ) {
-    TaskWaitOnWrite( mh->task, mh->stream);
-    item = BufferTop( mh->stream);
+    TaskWaitOnWrite( sd->task, sd->stream);
+    item = BufferTop( &sd->stream->buffer);
   }
   assert( item != NULL);
   /* pop off the top element */
-  BufferPop( mh->stream);
+  BufferPop( &sd->stream->buffer);
 
   /* for monitoring */
-  mh->counter++;
+  sd->counter++;
   /* mark dirty */
-  MarkDirty( mh);
+  MarkDirty( sd);
 
   return item;
 }
@@ -216,24 +248,29 @@ void *StreamRead( stream_mh_t *mh)
  * @pre         current task is single writer
  * @pre         item != NULL
  */
-void StreamWrite( stream_mh_t *mh, void *item)
+void StreamWrite( stream_desc_t *sd, void *item)
 {
   /* check if opened for writing */
-  assert( mh->mode == 'w' );
+  assert( sd->mode == 'w' );
   assert( item != NULL );
 
   /* wait while buffer is full */
-  if ( !BufferIsSpace( mh->stream) ) {
-    TaskWaitOnRead( mh->task, mh->stream);
+  if ( !BufferIsSpace( &sd->stream->buffer) ) {
+    TaskWaitOnRead( sd->task, sd->stream);
   }
-  assert( BufferIsSpace( mh->stream) );
+  assert( BufferIsSpace( &sd->stream->buffer) );
   /* put item into buffer */
-  BufferPut( mh->stream, item);
+  BufferPut( &sd->stream->buffer, item);
+
+  /* set the flag to notify consumers */
+  pthread_spin_lock( &sd->stream->lock);
+  *sd->stream->flag_ptr = (void *)0x1;
+  pthread_spin_unlock( &sd->stream->lock);
 
   /* for monitoring */
-  mh->counter++;
+  sd->counter++;
   /* mark dirty */
-  MarkDirty( mh);
+  MarkDirty( sd);
 }
 
 
@@ -243,55 +280,100 @@ void StreamWrite( stream_mh_t *mh, void *item)
  */
 int StreamPrintDirty( task_t *t, FILE *file)
 {
-  stream_mh_t *mh, *next;
+  stream_desc_t *sd, *next;
   int close_cnt = 0;
 
   assert( t != NULL);
-  mh = *TaskGetDirtyStreams( t);
+  sd = t->dirty_list;
 
   if (file!=NULL) {
     fprintf( file,"[" );
   }
 
-  while (mh != DIRTY_END) {
+  while (sd != DIRTY_END) {
     /* all elements in the dirty list must belong to same task */
-    assert( mh->task == t );
+    assert( sd->task == t );
 
-    /* print mh */
+    /* print sd */
     if (file!=NULL) {
       fprintf( file,
           "%p,%c,%c,%lu;",
-          mh->stream, mh->mode, mh->state, mh->counter
+          sd->stream, sd->mode, sd->state, sd->counter
           );
     }
 
     /* get the next dirty entry, and clear the link in the current entry */
-    next = mh->dirty;
+    next = sd->dirty;
     
     /* update states */
-    if (mh->state == STMH_REPLACED) { 
-      mh->state = STMH_OPEN;
+    if (sd->state == STDESC_REPLACED) { 
+      sd->state = STDESC_OPEN;
     }
-    if (mh->state == STMH_CLOSED) {
+    if (sd->state == STDESC_CLOSED) {
       close_cnt++;
-      free( mh);
+      free( sd);
     } else {
-      mh->dirty = NULL;
+      sd->dirty = NULL;
     }
-    mh = next;
+    sd = next;
   }
   if (file!=NULL) {
     fprintf( file,"] " );
   }
   /* */
-  *(TaskGetDirtyStreams(t)) = DIRTY_END;
+  t->dirty_list = DIRTY_END;
   return close_cnt;
 }
 
 
+/****************************************************************************/
+/*  Functions to support polling on a stream descriptor list                */
+/****************************************************************************/
+
+
+/**
+ * Poll a list of streams
+ *
+ * @pre list must not be empty (*list != NULL)
+ */
+void StreamPoll( stream_list_t *list)
+{
+  task_t *self;
+  stream_iter_t *iter;
+
+  assert( *list != NULL);
+
+  /* get 'self', i.e. the task calling StreamPoll() */
+  self = (*list)->task;
+
+  /* set task as waiting */
+
+  /* for each stream in the list */
+  iter = StreamIterCreate( list);
+  while( StreamIterHasNext( iter)) {
+    stream_desc_t *sd = StreamIterNext( iter);
+    /* lock stream (prod-side) */
+    /* check if there is something in the buffer */
+    /* - if yes, we can try to take the token in task (lock task) */
+    /*   - if we have it, we do not have to switch context at all */
+    /*   - if not, somebody has already woken me up, cancel & ctx switch*/
+         /* unlock stream */
+    /* - if not, register stream as activator */
+    /* unlock stream */
+  }
+  /* context switch */
+
+
+  /*NOTE: activator could 'rotate' list handle to the activating stream descriptor */
+}
+
+
+
+
+
 
 /****************************************************************************/
-/* Functions for maintaining a list of stream modifiers                     */
+/* Functions for maintaining a list of stream descriptors                   */
 /****************************************************************************/
 
 
@@ -300,7 +382,7 @@ int StreamPrintDirty( task_t *t, FILE *file)
 /**
  * it is NOT safe to append while iterating
  */
-void StreamListAppend( stream_list_t *lst, stream_mh_t *node)
+void StreamListAppend( stream_list_t *lst, stream_desc_t *node)
 {
   if (*lst  == NULL) {
     /* list is empty */
@@ -326,7 +408,9 @@ int StreamListIsEmpty( stream_list_t *lst)
 
 
 /**
- *
+ * Creates a stream list iterator for
+ * a given stream list, and, if the stream list is not empty,
+ * initialises the iterator to point to the first element
  */
 stream_iter_t *StreamIterCreate( stream_list_t *lst)
 {
@@ -344,8 +428,15 @@ void StreamIterDestroy( stream_iter_t *iter)
   free(iter);
 }
 
+/**
+ * Initialises the stream list iterator to point to the first element
+ * of the stream list.
+ *
+ * @pre The stream list is not empty, i.e. *lst != NULL
+ */
 void StreamIterReset( stream_list_t *lst, stream_iter_t *iter)
 {
+  assert(*lst != NULL);
   iter->prev = *lst;
   iter->list = lst;
   iter->cur = NULL;
@@ -359,7 +450,7 @@ int StreamIterHasNext( stream_iter_t *iter)
 }
 
 
-stream_mh_t *StreamIterNext( stream_iter_t *iter)
+stream_desc_t *StreamIterNext( stream_iter_t *iter)
 {
   assert( StreamIterHasNext(iter) );
 
@@ -374,7 +465,7 @@ stream_mh_t *StreamIterNext( stream_iter_t *iter)
 }
 
 
-void StreamIterAppend( stream_iter_t *iter, stream_mh_t *node)
+void StreamIterAppend( stream_iter_t *iter, stream_desc_t *node)
 {
 #if 0
   /* insert after cur */

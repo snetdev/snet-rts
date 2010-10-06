@@ -5,15 +5,17 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <assert.h>
+#include <sched.h>
 
 #include "lpel.h"
 #include "scheduler.h"
 #include "timing.h"
 #include "monitoring.h"
 #include "atomic.h"
-#include "sysdep.h"
-
 #include "taskqueue.h"
+
+#include "stream.h"
+#include "buffer.h"
 
 struct schedcfg {
   int dummy;
@@ -33,6 +35,7 @@ struct schedctx {
     int cnt;
   } waiting_queue;
   int cnt_tasks;
+  int cnt_yield;
 };
 
 static int num_workers = -1;
@@ -143,7 +146,8 @@ void SchedTask(int wid, monitoring_t *mon)
   schedctx_t *sc = &schedarray[wid];
   unsigned int loop;
   task_t *act;  
- 
+  
+  sc->cnt_yield = 0;
 
   /* create ActivatorTask */
   {
@@ -154,7 +158,6 @@ void SchedTask(int wid, monitoring_t *mon)
     /* put into ready queue */
     TaskqueueEnqueue( &sc->ready_queue, act );
   }
-
 
   /* MAIN SCHEDULER LOOP */
   loop=0;
@@ -185,7 +188,12 @@ void SchedTask(int wid, monitoring_t *mon)
   } while ( LpelWorkerTerminate() == 0 );
   /* stop only if there are no more tasks in the system */
   /* MAIN SCHEDULER LOOP END */
-
+  
+  {
+    double idle = (double)act->cnt_dispatch / (double)loop;
+    MonitoringDebug(mon, "worker %d idle %f, yielded %d times\n", wid, idle, sc->cnt_yield);
+  }
+  
   /* destroy ActivatorTask */
   TaskDestroy(act);
 }
@@ -210,26 +218,32 @@ static void ActivatorTask(task_t *self, void *inarg)
     /* wakeup waiting tasks */
     if (sc->waiting_queue.cnt > 0) {
       if (sc->waiting_queue.on_read.count > 0) {
-        TaskqueueIterateRemove(
+        cnt += TaskqueueIterateRemove(
             &sc->waiting_queue.on_read,
             WaitingTestOnRead,  /* on read test */
             WaitingRemove, (void*)sc
             );
       }
       if (sc->waiting_queue.on_write.count > 0) {
-        TaskqueueIterateRemove(
+        cnt += TaskqueueIterateRemove(
             &sc->waiting_queue.on_write,
             WaitingTestOnWrite,  /* on write test */
             WaitingRemove, (void*)sc
             );
       }
       if (sc->waiting_queue.on_any.count > 0) {
-        TaskqueueIterateRemove(
+        cnt += TaskqueueIterateRemove(
             &sc->waiting_queue.on_any,
             WaitingTestOnAny,  /* on any test */
             WaitingRemove, (void*)sc
             );
       }
+    }
+
+    /* yield kernel level thread */
+    if (cnt == 0) {
+      sched_yield();
+      sc->cnt_yield++;
     }
 
     /* give control back to scheduler */
@@ -313,16 +327,12 @@ static int CollectFromInit(schedctx_t *sc)
 
 static bool WaitingTestOnRead(task_t *wt, void *arg)
 {
-  /* event_ptr points to the position in the buffer
-     where task wants to write to */
-  return *wt->event_ptr == 0;
+  return BufferIsSpace( &wt->wait_s->buffer);
 }
 
 static bool WaitingTestOnWrite(task_t *wt, void *arg)
 {
-  /* event_ptr points to the position in the buffer
-     where task wants to read from */
-  return *wt->event_ptr != 0;
+  return BufferTop( &wt->wait_s->buffer) != NULL;
 }
 
 /*XXX
@@ -335,8 +345,14 @@ static void WaitingTestGather(int i, void *arg)
 
 static bool WaitingTestOnAny(task_t *wt, void *arg)
 {
-  assert( TASK_IS_WAITANY(wt) );
-  return xchg( (volatile int *) &wt->wany_flag, 0) != 0;
+  // assert( TASK_IS_WAITANY(wt) );
+  //TODO exchange pointer size?
+  // return xchg( (volatile void *) &wt->wany_flag, 0) != 0;
+  if ( wt->wany_flag != 0 ) {
+    wt->wany_flag = 0;
+    return true;
+  }
+  return false;
 
 /*XXX */
 #if 0

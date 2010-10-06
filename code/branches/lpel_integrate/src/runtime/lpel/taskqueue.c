@@ -160,9 +160,10 @@ task_t *TaskqueueDequeue(taskqueue_t *tq) {
  * @param action  callback for the action after unlinking
  * @param arg     argument (context) for the callback functions
  */
-void TaskqueueIterateRemove(taskqueue_t *tq, 
+int TaskqueueIterateRemove(taskqueue_t *tq, 
   bool (*cond)(task_t*, void*), void (*action)(task_t*, void*), void *arg )
 {
+  int cnt_removed = 0;
   task_t *cur = tq->head;
   while (cur != NULL) {
     /* check condition */
@@ -188,11 +189,13 @@ void TaskqueueIterateRemove(taskqueue_t *tq,
       p->next = NULL;
       /* decrement task count */
       tq->count--;
+      cnt_removed++;
       /* do action */
       action(p, arg);
     } else {
       cur = cur->next;
     }
   }
+  return cnt_removed;
 }
 

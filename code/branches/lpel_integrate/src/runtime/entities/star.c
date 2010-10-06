@@ -58,11 +58,11 @@ static void StarBoxTask( task_t *self, void *arg)
   snet_handle_t *hnd = (snet_handle_t*)arg;
   snet_startup_fun_t box;
   snet_startup_fun_t selffun;
-  stream_mh_t *instream;
-  stream_mh_t *outstream; /* the stream to the collector */
+  stream_desc_t *instream;
+  stream_desc_t *outstream; /* the stream to the collector */
   /* The stream to the next instance;
      a non-null value indicates that the instance has been created. */
-  stream_mh_t *nextstream=NULL;
+  stream_desc_t *nextstream=NULL;
   bool terminate = false;
   snet_typeencoding_t *exit_tags;
   snet_record_t *rec;

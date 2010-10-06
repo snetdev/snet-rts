@@ -43,7 +43,7 @@ static void BoxTask(task_t *self, void *arg)
 
   snet_handle_t *hnd;
   snet_record_t *rec;
-  stream_mh_t *instream, *outstream;
+  stream_desc_t *instream, *outstream;
   void (*boxfun)( snet_handle_t*);
   bool terminate = false;
 
@@ -58,7 +58,7 @@ static void BoxTask(task_t *self, void *arg)
   outstream =  StreamOpen(self, SNetHndGetOutput(hnd), 'w');
 
   /* set boxtask */
-  SNetHndSetOutMH( hnd, outstream);
+  SNetHndSetOutSD( hnd, outstream);
 
   /* MAIN LOOP */
   while( !terminate) {

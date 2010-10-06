@@ -34,8 +34,8 @@ void CollectorTask( task_t *self, void *arg)
 {
   snet_handle_t *hnd = (snet_handle_t *)arg;
   stream_list_t readyset, waitingset;
-  stream_iter_t *iter;
-  stream_mh_t *outstream;
+  stream_iter_t *iter, *wait_iter;
+  stream_desc_t *outstream;
   snet_record_t *sort_rec = NULL;
   snet_record_t *term_rec = NULL;
   bool terminate = false;
@@ -50,7 +50,7 @@ void CollectorTask( task_t *self, void *arg)
     int i;
     /* fill initial readyset of collector */
     for (i=0; i<num; i++) {
-      stream_mh_t *tmp;
+      stream_desc_t *tmp;
       /* open each stream in listening set for reading */
       tmp = StreamOpen( self, instreams[i], 'r');
       /* add each stream instreams[i] to listening set of collector */
@@ -59,8 +59,9 @@ void CollectorTask( task_t *self, void *arg)
     SNetMemFree( instreams );
   }
 
-  /* create an iterator, is reused within main loop*/
+  /* create an iterator for both sets, is reused within main loop*/
   iter = StreamIterCreate( &readyset);
+  wait_iter = StreamIterCreate( &waitingset);
   
   /* MAIN LOOP */
   while( !terminate) {
@@ -68,7 +69,7 @@ void CollectorTask( task_t *self, void *arg)
     /* iterate through readyset: for each node (stream) */
     StreamIterReset( &readyset, iter);
     while( StreamIterHasNext(iter)) {
-      stream_mh_t *cur_stream = StreamIterNext(iter);
+      stream_desc_t *cur_stream = StreamIterNext(iter);
       bool do_next = false;
   
       /* process stream until empty or next sort record or empty */
@@ -112,15 +113,38 @@ void CollectorTask( task_t *self, void *arg)
             break;
 
           case REC_collect:
-            /* collect: add new stream to listening set */
+            /* collect: add new stream to ready set */
+
+            /* but first, check if we can free resources by checking the
+               waiting set for arrival of termination records */
+            if ( !StreamListIsEmpty( &waitingset)) {
+              StreamIterReset( &waitingset, wait_iter);
+              while( StreamIterHasNext( wait_iter)) {
+                stream_desc_t *sd = StreamIterNext( wait_iter);
+                snet_record_t *wait_rec = StreamPeek( sd);
+
+                /* for this stream, check if there is a termination record next */
+                if ( wait_rec != NULL &&
+                    SNetRecGetDescriptor( wait_rec) == REC_terminate ) {
+                  /* consume, remove from waiting set and free the stream */
+                  (void) StreamRead( sd);
+                  StreamIterRemove( wait_iter);
+                  StreamClose( sd, true);
+                  /* destroy record */
+                  SNetRecDestroy( wait_rec);
+                }
+                /* else do nothing */
+              }
+            }
+            /* finally, add new stream to ready set */
             {
               /* new stream */
-              stream_mh_t *new_mh = StreamOpen( self,
+              stream_desc_t *new_sd = StreamOpen( self,
                   SNetRecGetStream( rec), 'r');
               /* add to readyset (via iterator: after current) */
-              StreamIterAppend( iter, new_mh);
+              StreamIterAppend( iter, new_sd);
             }
-            /* destroy record */
+            /* destroy collect record */
             SNetRecDestroy( rec);
             break;
 

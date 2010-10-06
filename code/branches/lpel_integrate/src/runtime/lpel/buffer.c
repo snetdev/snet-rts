@@ -6,71 +6,29 @@
  * the location is empty. After reading a value, the consumer writes NULL back to the
  * position it read the data from.
  *
- * There is the possibility to register a pointer to a flag which will be set upon writing
- * to the buffer. 
- *
  * @see http://www.cs.colorado.edu/department/publications/reports/docs/CU-CS-1023-07.pdf
  *      accessed Aug 26, 2010
  *      for more details on the FastForward queue.
- *
- * 
  */
 
 #include <malloc.h>
 #include <string.h>
 #include <assert.h>
-#include <pthread.h>
 
 
 #include "buffer.h"
-#include "sysdep.h"
-
-/* 64bytes is the common size of a cache line */
-#define longxCacheLine  (64/sizeof(long))
-
-/* Padding is required to avoid false-sharing between core's private cache */
-struct buffer {
-  volatile unsigned long pread;
-  long padding1[longxCacheLine-1];
-  volatile unsigned long pwrite;
-  long padding2[longxCacheLine-1];
-  void *data[STREAM_BUFFER_SIZE];
-  pthread_spinlock_t lock;
-  volatile void **flag_ptr;
-  volatile void *flag_stub;
-};
-
 
 
 /**
- * Create a buffer
+ * Reset a buffer
  */
-buffer_t *BufferCreate(void)
+void BufferReset( buffer_t *buf)
 {
-  buffer_t *buf = (buffer_t *) malloc( sizeof(buffer_t) );
-  if (buf != NULL) {
-    buf->pread = 0;
-    buf->pwrite = 0;
-    /* clear all the buffer space */
-    memset(&(buf->data), 0, STREAM_BUFFER_SIZE*sizeof(void *));
-
-    buf->flag_stub = (void *)0x0;
-    buf->flag_ptr = &buf->flag_stub;
-    pthread_spin_init( &buf->lock, PTHREAD_PROCESS_PRIVATE);
-  }
-  return buf;
+  buf->pread = 0;
+  buf->pwrite = 0;
+  /* clear all the buffer space */
+  memset(&(buf->data), 0, STREAM_BUFFER_SIZE*sizeof(void *));
 }
-
-
-/**
- * Destroy a buffer
- */
-void BufferDestroy( buffer_t *buf)
-{
-  pthread_spin_destroy( &buf->lock);
-  free(buf);
-}
-
 
 
 /**
@@ -150,35 +108,8 @@ void BufferPut( buffer_t *buf, void *item)
   buf->data[buf->pwrite] = item;
   buf->pwrite += (buf->pwrite+1 >= STREAM_BUFFER_SIZE) ?
                (1-STREAM_BUFFER_SIZE) : 1;
-
-  pthread_spin_lock( &buf->lock);
-  *buf->flag_ptr = (void *)0x1;
-  pthread_spin_unlock( &buf->lock);
 }
 
 
-/**
- * @pre only the writer calls this function
- */
-void **BufferGetWptr( buffer_t *buf)
-{
-  return &buf->data[buf->pwrite];
-}
 
-
-/**
- * @pre only the reader calls this function
- */
-void **BufferGetRptr( buffer_t *buf)
-{
-  return &buf->data[buf->pread];
-}
-
-void BufferRegisterFlag( buffer_t *buf, volatile void **flag_ptr)
-{
-  pthread_spin_lock( &buf->lock);
-  buf->flag_ptr = ( (void**)flag_ptr != NULL) ? flag_ptr : &buf->flag_stub;
-  pthread_spin_unlock( &buf->lock);
-  *buf->flag_ptr = (void *)0x1;
-}
 

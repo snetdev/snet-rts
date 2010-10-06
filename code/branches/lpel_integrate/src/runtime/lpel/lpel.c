@@ -362,6 +362,8 @@ void LpelCleanup(void)
   /* in any case, wait until the workers are finished */
   pthread_join(worker_launcher, NULL);
 
+  /*TODO join on the other created threads? */
+
   /* Cleanup scheduler */
   SchedCleanup();
 

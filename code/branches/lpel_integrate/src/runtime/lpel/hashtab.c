@@ -48,7 +48,11 @@ void HashtabDestroy( hashtab_t *ht)
 #define MOD_SIZE(size, key)    ((key) & ((size)-1)) 
 #define HASH_K_I(size,key,i)  (MOD_SIZE( (size), MOD_SIZE((size),(key)+(i))))
 
-static hashtab_entry_t *ProbeFree( hashtab_t *ht, int key)
+/**
+ * Get a hashtab entry to store key.
+ * If key exists, the entry of that key will be returned.
+ */
+static hashtab_entry_t *ProbePut( hashtab_t *ht, int key)
 {
   int pos, i;
   hashtab_entry_t *res = NULL;
@@ -57,7 +61,8 @@ static hashtab_entry_t *ProbeFree( hashtab_t *ht, int key)
   pos = key;
   for (i=0; i<ht->capacity; i++) {
     pos = HASH_K_I( ht->capacity, pos, i);
-    if (ht->table[pos].key == -1) {
+    if (ht->table[pos].key == -1 ||
+        ht->table[pos].key == key) {
       res = &ht->table[pos];
       break;
     }
@@ -69,7 +74,8 @@ static hashtab_entry_t *ProbeFree( hashtab_t *ht, int key)
 
 
 /**
- * Put a key-value pair into the hashtable
+ * Put a key-value pair into the hashtable.
+ * If key already exists, the value will be overwritten
  */
 void HashtabPut( hashtab_t *ht, int key, void *value)
 {
@@ -95,7 +101,7 @@ void HashtabPut( hashtab_t *ht, int key, void *value)
       int key = oldtab[i].key;
       if (key != -1) {
         /* get a pointer to the table entry */
-        hte = ProbeFree( ht, key);
+        hte = ProbePut( ht, key);
         assert( hte != NULL);
         /* put the item in the table */
         hte->key   = key;
@@ -107,7 +113,7 @@ void HashtabPut( hashtab_t *ht, int key, void *value)
   }
 
   /* get a pointer to the table entry */
-  hte = ProbeFree( ht, key);
+  hte = ProbePut( ht, key);
   assert( hte != NULL);
   /* put the item in the table */
   hte->key   = key;
@@ -116,7 +122,8 @@ void HashtabPut( hashtab_t *ht, int key, void *value)
 
 
 /**
- * Get value with specific key from the hashtable
+ * Get value with specific key from the hashtable.
+ * If key does not exist, NULL will be returned.
  */
 void *HashtabGet( hashtab_t *ht, int key)
 {

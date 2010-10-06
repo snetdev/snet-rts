@@ -80,8 +80,8 @@ extern snet_record_t *SNetHndGetRecord( snet_handle_t *hndl);
 
 extern void SNetHndSetRecord( snet_handle_t *hndl, snet_record_t *rec);
 
-extern stream_mh_t *SNetHndGetOutMH( snet_handle_t *hnd);
-extern void SNetHndSetOutMH( snet_handle_t *hnd, stream_mh_t *out_mh);
+extern stream_desc_t *SNetHndGetOutSD( snet_handle_t *hnd);
+extern void SNetHndSetOutSD( snet_handle_t *hnd, stream_desc_t *out_sd);
 
 extern void SNetHndSetInput( snet_handle_t *hnd, stream_t *inbuf);
 extern stream_t *SNetHndGetInput( snet_handle_t *hndl);

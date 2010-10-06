@@ -388,7 +388,7 @@ static void FilterTask( task_t *self, void *arg)
   int i,j,k;
   bool done, terminate;
   snet_handle_t *hnd = (snet_handle_t*)arg;
-  stream_mh_t *instream, *outstream;
+  stream_desc_t *instream, *outstream;
   snet_record_t *in_rec;
   snet_expr_list_t *guard_list;
   snet_typeencoding_t *out_type, *in_type;
@@ -690,7 +690,7 @@ static void NameshiftTask( task_t *self, void *arg)
 {
   bool terminate = false;
   snet_handle_t *hnd = (snet_handle_t*)arg;
-  stream_mh_t *outstream, *instream;
+  stream_desc_t *outstream, *instream;
   snet_variantencoding_t *untouched;
   snet_record_t *rec;
   int i, num, *names, offset;
