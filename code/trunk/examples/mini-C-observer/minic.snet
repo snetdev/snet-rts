@@ -1,0 +1,17 @@
+net minic 
+{
+  <metadata>
+    <boxdefault>
+      <interface value="C4SNet"/>
+    </boxdefault>
+    <box name="dec">
+    <observer />
+    <observer_interactive />
+    <observer_port value="6555" />
+    </box>
+  </metadata>
+ 
+  box init(-> (A));
+  box dec( (A) -> (A));
+} connect (init|[]) .. dec;
+
