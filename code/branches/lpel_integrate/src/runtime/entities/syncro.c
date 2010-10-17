@@ -25,6 +25,7 @@
  *****************************************************************************/
 
 
+#include <assert.h>
 
 #include "syncro.h"
 
@@ -304,7 +305,7 @@ static void SyncBoxTask( task_t *self, void *arg)
             StreamWrite( outstream, temp_record);
             /* current_state->terminated = true; */
             StreamWrite( outstream,
-                SNetRecCreate(REC_sync, instream)
+                SNetRecCreate(REC_sync, SNetHndGetInput( hnd))
                 );
 
             /* the receiver of REC_sync will destroy the outstream */
@@ -328,6 +329,7 @@ static void SyncBoxTask( task_t *self, void *arg)
 
       case REC_collect:
         /* invalid record */
+        assert(0);
         SNetRecDestroy( rec);
         break;
 
@@ -358,6 +360,7 @@ static void SyncBoxTask( task_t *self, void *arg)
         StreamWrite( outstream, rec);
         StreamClose( outstream, false);
         StreamClose( instream, true);
+        StreamClose( instream, false);
         break;
 
       default:
