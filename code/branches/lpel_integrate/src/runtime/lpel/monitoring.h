@@ -3,11 +3,9 @@
 
 #include <stdio.h>
 
-/**
- * Monitoring prints internals of a task
- */
-#include "task.h"
 
+
+#define MON_MAX_EVENTS  10
 
 #define MONITORING_TIMES        (1<<0)
 #define MONITORING_STREAMINFO   (1<<1)
@@ -20,13 +18,20 @@
 typedef struct {
   FILE *outfile;
   int   flags;
+  int   num_events;
+  char  events[MON_MAX_EVENTS][20];
 } monitoring_t;
 
+struct lpelthread;
 
-extern void MonitoringInit(monitoring_t *mon, int worker_id, int flags);
-extern void MonitoringCleanup(monitoring_t *mon);
-extern void MonitoringPrint(monitoring_t *mon, task_t *t);
-extern void MonitoringDebug(monitoring_t *mon, const char *fmt, ...);
+void MonInit( struct lpelthread *env, int flags);
+void MonCleanup( struct lpelthread *env);
+void MonDebug( struct lpelthread *env, const char *fmt, ...);
+
+struct task;
+
+void MonTaskEvent( struct task *t, const char *fmt, ...);
+void MonTaskPrint( struct lpelthread *env, struct task *t);
 
 
 

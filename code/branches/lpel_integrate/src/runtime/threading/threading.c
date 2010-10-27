@@ -17,6 +17,8 @@
 #include "threading.h"
 
 #include "lpel.h"
+#include "task.h"
+#include "scheduler.h"
 
 #if 0
 
@@ -219,7 +221,7 @@ void SNetThreadJoin( snet_thread_t *t, void **ret)
 void SNetEntitySpawn( taskfunc_t fun, void *arg, snet_entity_id_t id)
 {
   task_t *t;
-  taskattr_t tattr = {0};
+  taskattr_t tattr = {0, 0};
 
   /* monitoring */
   if (id==ENTITY_box) {
@@ -241,8 +243,11 @@ void SNetEntitySpawn( taskfunc_t fun, void *arg, snet_entity_id_t id)
   */
 
   /* create task */
-  t = TaskCreate( fun, arg, tattr);
-  /* add to LPEL system -
-     destroying the task is done by LPEL */
-  LpelTaskToWorker( t );
+  t = TaskCreate( fun, arg, &tattr);
+
+  /* TODO better assignment! */
+  {
+    int wid = t->uid % LpelNumWorkers();
+    SchedAssignTask( t, wid );
+  }
 }

@@ -32,11 +32,8 @@
  * @param interfaces Set of interfaces to use.
  * @param in_buf Buffer from where the records to output are taken.
  *
- * @return 0   Action is succesful.
- * @return -1 Error occured while starting the system.
- *
  */
-int SNetInOutputInit(FILE *file,
+void SNetInOutputInit(FILE *file,
 		     snetin_label_t *labels, 
 #ifdef DISTRIBUTED_SNET
 		     snetin_interface_t *interfaces);
@@ -49,11 +46,8 @@ int SNetInOutputInit(FILE *file,
 
 /* Wait until the end of output.
  *
- * @return 0   Action is succesful.
- * @return -1 Error occured while stopping the system.
- *
  */
-int SNetInOutputDestroy();
+void SNetInOutputDestroy();
 
 
 #endif /* OUTPUT_H_ */

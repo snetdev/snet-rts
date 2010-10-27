@@ -6,18 +6,10 @@
 
 #include "bool.h"
 #include "buffer.h"
+#include "atomic.h"
 
+/* a stream */
 typedef struct stream stream_t;
-
-
-struct stream {
-  buffer_t buffer;
-
-  pthread_spinlock_t lock;
-  volatile void **flag_ptr;
-  volatile void *flag_stub;
-};
-
 
 /** stream modifier handle */
 typedef struct stream_desc stream_desc_t;    
@@ -29,7 +21,21 @@ typedef struct stream_desc *stream_list_t;
 typedef struct stream_iter stream_iter_t;
 
 
+struct stream {
+  buffer_t buffer;
+
+  pthread_spinlock_t prod_lock;
+  int is_poll;
+  stream_desc_t *prod_sd;
+  stream_desc_t *cons_sd;
+  atomic_t n_sem;
+  atomic_t e_sem;
+};
+
+
+
 struct task;
+
 
 stream_t *StreamCreate(void);
 void StreamDestroy( stream_t *s);
@@ -39,6 +45,7 @@ void StreamReplace( stream_desc_t *sd, stream_t *snew);
 void *StreamPeek( stream_desc_t *sd);
 void *StreamRead( stream_desc_t *sd);
 void StreamWrite( stream_desc_t *sd, void *item);
+void StreamPoll( stream_list_t *list);
 
 int StreamPrintDirty( struct task *t, FILE *file);
 

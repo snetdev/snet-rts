@@ -206,9 +206,8 @@ void CollectorTask( task_t *self, void *arg)
 
     } else {
       /* readyset is not empty: continue "collecting" sort records */
-      /*TODO rotate readyset? */
       /* wait on new input */
-      TaskWaitOnAny( self);
+      StreamPoll( &readyset);
     }
 
   } /* MAIN LOOP END*/

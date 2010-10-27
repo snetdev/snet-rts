@@ -1,11 +1,14 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
-#include <pcl.h>     /* tasks are executed in user-space with help of
-                        GNU Portable Coroutine Library  */
+#include <pthread.h>
+#include <pcl.h>    /* tasks are executed in user-space with help of
+                       GNU Portable Coroutine Library  */
 
+#include "scheduler.h"
 #include "timing.h"
 #include "atomic.h"
+
 
 /**
  * If a stacksize attribute <= 0 is specified,
@@ -17,7 +20,6 @@
 
 #define TASK_ATTR_DEFAULT      (0)
 #define TASK_ATTR_MONITOR   (1<<0)
-//#define TASK_ATTR_WAITANY   (1<<1)
 #define TASK_ATTR_SYSTEM    (1<<8)
 
 
@@ -65,9 +67,13 @@ struct task {
   unsigned long uid;
   taskstate_t state;
   /* queue handling: prev, next */
-  task_t *volatile prev;
-  task_t *volatile next;
+  //task_t *volatile prev;
+  //task_t *volatile next;
+  task_t *prev, *next;
 
+  /* lock */
+  pthread_mutex_t lock;
+  
   /* attributes */
   taskattr_t attr;
 
@@ -75,14 +81,15 @@ struct task {
   taskstate_wait_t wait_on;
   struct stream *wait_s;
 
-  /* waitany-task specific stuff */
-  volatile void* wany_flag;
+  /* poll token */
+  atomic_t poll_token;
+  struct stream_desc *wakeup_sd;
 
   /* reference counter */
   atomic_t refcnt;
 
-  int owner;         /* owning worker thread TODO as place_t */
-  void *sched_info;  /* scheduling information  */
+  schedctx_t *sched_context;
+  void *sched_info;  /* scheduling information for this task */
 
   /* ACCOUNTING INFORMATION */
   /* timestamps for creation, start/stop of last dispatch */
@@ -103,14 +110,11 @@ struct task {
 
 
 
-extern task_t *TaskCreate( taskfunc_t, void *inarg, taskattr_t attr);
+extern task_t *TaskCreate( taskfunc_t, void *inarg, taskattr_t *attr);
 extern int TaskDestroy(task_t *t);
 
 
 extern void TaskCall(task_t *ct);
-extern void TaskWaitOnRead( task_t *ct, struct stream *s);
-extern void TaskWaitOnWrite( task_t *ct, struct stream *s);
-extern void TaskWaitOnAny(task_t *ct);
 extern void TaskExit(task_t *ct, void *outarg);
 extern void TaskYield(task_t *ct);
 

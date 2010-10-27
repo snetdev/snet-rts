@@ -4,7 +4,11 @@
 
 #define LPEL_USE_CAPABILITIES
 
-#include "task.h"
+
+#include <pthread.h>
+
+#include "bool.h"
+#include "monitoring.h"
 
 /**
  * Specification for configuration:
@@ -30,22 +34,34 @@ typedef struct {
 #define LPEL_FLAG_REALTIME (1<<1)
 
 
+#define LPEL_THREADNAME_MAXLEN 20
+
 typedef struct lpelthread lpelthread_t;
 
+struct lpelthread {
+  pthread_t pthread;
+  bool detached;
+  void (*func)(struct lpelthread *, void *);
+  void *arg;
+  int node;
+  char name[LPEL_THREADNAME_MAXLEN+1];
+  monitoring_t mon;
+};
+
+
 extern void LpelInit(lpelconfig_t *cfg);
-extern void LpelRun(void);
 extern void LpelCleanup(void);
 
 
 extern int LpelNumWorkers(void);
-extern int LpelWorkerTerminate(void);
 
-extern lpelthread_t *LpelThreadCreate(
-  void *(*start_routine)(void *), void *arg);
+extern lpelthread_t *LpelThreadCreate( void (*func)(lpelthread_t *, void *),
+    void *arg, bool detached, char *name);
 
-extern void LpelThreadJoin( lpelthread_t *lt, void **joinarg);
+extern void LpelThreadJoin( lpelthread_t *env);
+extern void LpelThreadAssign( lpelthread_t *env, int core);
 
-extern void LpelTaskToWorker(task_t *t);
-extern void LpelTaskRemove(task_t *t);
+//extern void LpelTaskToWorker(task_t *t);
+//extern void LpelTaskRemove(task_t *t);
 
 #endif /* _LPEL_H_ */

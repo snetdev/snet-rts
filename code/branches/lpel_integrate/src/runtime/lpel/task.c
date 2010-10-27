@@ -24,7 +24,7 @@ static void TaskStartup(void *data);
 /**
  * Create a task
  */
-task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t attr)
+task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t *attr)
 {
   task_t *t = (task_t *)malloc( sizeof(task_t) );
   t->uid = fetch_and_inc(&taskseq);
@@ -32,7 +32,7 @@ task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t attr)
   t->prev = t->next = NULL;
   
   /* task attributes */
-  t->attr = attr;
+  t->attr = *attr;
   /* fix attributes */
   if (t->attr.stacksize <= 0) {
     t->attr.stacksize = TASK_STACKSIZE_DEFAULT;
@@ -41,8 +41,9 @@ task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t attr)
   /* initialize reference counter to 1*/
   atomic_set(&t->refcnt, 1);
 
+  atomic_set(&t->poll_token, 0);
   
-  //t->owner = -1;
+  t->sched_context = NULL;
   t->sched_info = NULL;
 
   TIMESTAMP(&t->times.creat);
@@ -52,7 +53,6 @@ task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t attr)
   /* init streamset to write */
   t->dirty_list = (stream_desc_t *)-1;
   
-  t->wany_flag = NULL;
 
   t->code = func;
   /* function, argument (data), stack base address, stacksize */
@@ -61,6 +61,7 @@ task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t attr)
     /*TODO throw error!*/
     assert(0);
   }
+  pthread_mutex_init( &t->lock, NULL);
   t->inarg = inarg;
   t->outarg = NULL;
  
@@ -77,6 +78,9 @@ int TaskDestroy(task_t *t)
   /* only if nothing references the task anymore */
   /* if ( fetch_and_dec(&t->refcnt) == 1) { */
   if ( atomic_dec(&t->refcnt) == 0) {
+
+
+    pthread_mutex_destroy( &t->lock);
 
     /* delete the coroutine */
     co_delete(t->ctx);
@@ -98,85 +102,16 @@ int TaskDestroy(task_t *t)
  */
 void TaskCall(task_t *t)
 {
-  assert( t->state == TASK_READY );
+  assert( t->state != TASK_RUNNING);
   t->state = TASK_RUNNING;
+
+  /* CAUTION: a coroutine must not run simultaneously in more than one thread! */
+  /* CONTEXT SWITCH */
   co_call(t->ctx);
 }
 
 
 
-/**
- * Hidden Startup function for user specified task function
- *
- * Calls task function with proper signature
- */
-static void TaskStartup(void *data)
-{
-  task_t *t = (task_t *)data;
-  taskfunc_t func = t->code;
-  /* call the task function with inarg as parameter */
-  func(t, t->inarg);
-
-  /* if task function returns, exit properly */
-  TaskExit(t, NULL);
-}
-
-
-
-/**
- * Set Task waiting for a read event
- *
- * @pre ct->state == TASK_RUNNING
- */
-void TaskWaitOnRead( task_t *ct, stream_t *s)
-{ 
-  assert( ct->state == TASK_RUNNING );
-  
-  /* WAIT on read event*/;
-  ct->state = TASK_WAITING;
-  ct->wait_on = WAIT_ON_READ;
-  ct->wait_s = s;
-  
-  /* context switch */
-  co_resume();
-}
-
-/**
- * Set Task waiting for a read event
- *
- * @pre ct->state == TASK_RUNNING
- */
-void TaskWaitOnWrite( task_t *ct, stream_t *s)
-{
-  assert( ct->state == TASK_RUNNING );
-
-  /* WAIT on write event*/
-  ct->state = TASK_WAITING;
-  ct->wait_on = WAIT_ON_WRITE;
-  ct->wait_s = s;
-  
-  /* context switch */
-  co_resume();
-}
-
-/**
- * @pre ct->state == TASK_RUNNING
- */
-void TaskWaitOnAny( task_t *ct)
-{
-  assert( ct->state == TASK_RUNNING );
-
-  /*XXX WAIT upon any input stream setting root flag
-  ct->event_ptr = &ct->waitany_info->flagtree.buf[0];
-  */
-  /* WAIT upon any input stream setting waitany_flag */
-  ct->state = TASK_WAITING;
-  ct->wait_on = WAIT_ON_ANY;
-  ct->wait_s = NULL;
-  
-  /* context switch */
-  co_resume();
-}
 
 
 /**
@@ -202,7 +137,7 @@ void TaskExit( task_t *ct, void *outarg)
 
 
 /**
- * Yield execution back to worker thread
+ * Yield execution back to scheduler voluntarily
  *
  * @param ct  pointer to the current task
  * @pre ct->state == TASK_RUNNING
@@ -219,7 +154,19 @@ void TaskYield( task_t *ct)
 
 
 /**
- * Join with a task
+ * Hidden Startup function for user specified task function
+ *
+ * Calls task function with proper signature
  */
-/*TODO place in waiting queue with event_ptr pointing to task's outarg */
+static void TaskStartup(void *data)
+{
+  task_t *t = (task_t *)data;
+  taskfunc_t func = t->code;
+  /* call the task function with inarg as parameter */
+  func(t, t->inarg);
+
+  /* if task function returns, exit properly */
+  TaskExit(t, NULL);
+}
+
 

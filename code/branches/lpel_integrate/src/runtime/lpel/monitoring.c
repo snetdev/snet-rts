@@ -7,7 +7,10 @@
 #include "stream.h"
 
 #include "monitoring.h"
+#include "scheduler.h"
 #include "timing.h"
+#include "task.h"
+#include "lpel.h"
 
 #define IS_FLAG(v)  ( (mon->flags & (v)) == (v) )
 
@@ -27,35 +30,79 @@
 } while (0)
 
 
-
-void MonitoringInit(monitoring_t *mon, int worker_id, int flags)
+/**
+ * mon_n00_worker01.log
+ */
+void MonInit( lpelthread_t *env, int flags)
 {
-  char fname[11];
-  int cnt_written;
-  cnt_written = snprintf(fname, 11, "out%03d.log", worker_id);
-  assert(cnt_written==10);
 
+  if (env->name != NULL) {
+#   define FNAME_MAXLEN   (LPEL_THREADNAME_MAXLEN + 12)
+    char fname[FNAME_MAXLEN+1];
+
+    (void) snprintf(fname, FNAME_MAXLEN+1, "mon_n%02d_%s.log", env->node, env->name);
+    fname[FNAME_MAXLEN] = '\0';
+
+    /* open logfile */
+    env->mon.outfile = fopen(fname, "w");
+    assert( env->mon.outfile != NULL);
+  } else {
+    env->mon.outfile = NULL;
+  }
   /* copy flags */
-  mon->flags = flags;
+  env->mon.flags = flags;
 
-  /* open logfile */
-  mon->outfile = fopen(fname, "w");
-  assert( mon->outfile != NULL);
 }
 
-void MonitoringCleanup(monitoring_t *mon)
+void MonCleanup( lpelthread_t *env)
 {
-  int ret;
-  ret = fclose(mon->outfile);
-  assert(ret == 0);
+  if ( env->mon.outfile != NULL) {
+    int ret;
+    ret = fclose( env->mon.outfile);
+    assert(ret == 0);
+  }
 }
 
-void MonitoringPrint(monitoring_t *mon, task_t *t)
+
+
+void MonDebug( lpelthread_t *env, const char *fmt, ...)
 {
-  int ret;
+  timing_t ts;
   char buf[PRINT_TS_BUFLEN];
+  va_list ap;
 
-  if ( mon->flags == MONITORING_NONE ) return;
+  if ( env->mon.outfile == NULL) return;
+
+  /* print current timestamp */
+  TIMESTAMP(&ts);
+  PRINT_TS(&ts,buf);
+  fprintf( env->mon.outfile, "%s ", buf);
+
+  va_start(ap, fmt);
+  vfprintf( env->mon.outfile, fmt, ap);
+  va_end(ap);
+
+  //fflush( env->mon.outfile);
+}
+
+
+void MonTaskEvent( task_t *t, const char *fmt, ...)
+{
+  //monitoring_t *mon = &t->sched_context->env.mon;
+
+}
+
+
+
+void MonTaskPrint( lpelthread_t *env, task_t *t)
+{
+  char buf[PRINT_TS_BUFLEN];
+  monitoring_t *mon = &env->mon;
+
+  if (( env->mon.outfile == NULL) 
+      || ( mon->flags == MONITORING_NONE )) {
+    return;
+  }
 
   /* determine if task is to be monitored */
   if ( BIT_IS_SET(t->attr.flags, TASK_ATTR_MONITOR) ||
@@ -64,8 +111,8 @@ void MonitoringPrint(monitoring_t *mon, task_t *t)
     PRINT_TS(&t->times.stop, buf);
 
     fprintf( mon->outfile,
-        "%s wid %d tid %lu disp %lu st %c ",
-        buf, t->owner, t->uid, t->cnt_dispatch, t->state
+        "%s tid %lu disp %lu st %c ",
+        buf, t->uid, t->cnt_dispatch, t->state
         );
 
     switch (t->state) {
@@ -92,25 +139,6 @@ void MonitoringPrint(monitoring_t *mon, task_t *t)
     }
 
     fprintf(mon->outfile, "\n");
-    ret = fflush(mon->outfile);
-    assert(ret == 0);
+    //fflush(mon->outfile);
   } /* end if */
-}
-
-void MonitoringDebug(monitoring_t *mon, const char *fmt, ...)
-{
-  timing_t ts;
-  char buf[PRINT_TS_BUFLEN];
-  va_list ap;
-
-  /* print current timestamp */
-  TIMESTAMP(&ts);
-  PRINT_TS(&ts,buf);
-  fprintf(mon->outfile, "%s ", buf);
-
-  va_start(ap, fmt);
-  vfprintf(mon->outfile, fmt, ap);
-  va_end(ap);
-
-  fflush(mon->outfile);
 }

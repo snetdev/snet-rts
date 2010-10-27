@@ -31,7 +31,9 @@
 #include "debug.h"
 
 //LPEL
-#include "inport.h"
+#include "task.h"
+#include "stream.h"
+
 
 #ifndef YY_BUF_SIZE
 #define YY_BUF_SIZE 16384
@@ -84,10 +86,8 @@
    /* Interfaces to use with incoming fields. */
    snetin_interface_t *interface;
 
-   /* Buffer where all the parsed data should be put */
-   //LPEL
-   //snet_tl_stream_t *buffer;
-   inport_t *buffer;
+   /* Stream where all the parsed data should be written to */
+   stream_desc_t *output;
  }parser;
 
  /* Data values for record currently under parsing  */
@@ -302,9 +302,8 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 
 		if(parser.terminate != SNET_PARSE_ERROR) {
 		  if(current.record != NULL) {
-                    //LPEL
-		    //SNetTlWrite(parser.buffer, current.record);
-                    InportWrite(parser.buffer, current.record);
+                    /* write record to stream */
+                    StreamWrite( parser.output, current.record);
 
 		    current.record = NULL;
 		    current.interface = INTERFACE_UNKNOWN;
@@ -398,9 +397,8 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      yyerror("Error encountered while parsing a record. Record discarded (2)!");
 		      parser.terminate = SNET_PARSE_CONTINUE;
 		    } else {
-                      //LPEL
-                      //SNetTlWrite(parser.buffer, current.record);
-                      InportWrite(parser.buffer, current.record);
+                      /* write record to stream */
+                      StreamWrite( parser.output, current.record);
 
 		      current.record = NULL;
 		      current.interface = INTERFACE_UNKNOWN;
@@ -745,13 +743,12 @@ void yyerror(char *error)
 void SNetInParserInit(FILE *file,
 		      snetin_label_t *labels,
 		      snetin_interface_t *interfaces,
-		      /*snet_tl_stream_t *in_buf)*/
-                      inport_t *in_buf)
+                      stream_desc_t *output)
 {  
   yyin = file; 
   parser.labels = labels;
   parser.interface = interfaces;
-  parser.buffer = in_buf;
+  parser.output = output;
 
   parser.terminate = SNET_PARSE_CONTINUE;
 }  

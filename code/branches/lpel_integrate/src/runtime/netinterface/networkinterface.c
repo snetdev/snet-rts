@@ -24,16 +24,16 @@
 #include <netdb.h>
 
 #include "record.h"
-#include "parser.h"
 #include "output.h"
+#include "input.h"
 #include "observers.h"
 #include "networkinterface.h"
 
 #include "debug.h"
 
-//LPEL
 #include "lpel.h"
-#include "inport.h"
+#include "scheduler.h"
+#include "task.h"
 #include "stream.h"
 
 
@@ -156,7 +156,9 @@ static void SNetInClose(FILE *file)
 }
 
 
-
+/**
+ * Main starting entry point of the SNet program
+ */
 int SNetInRun(int argc, char *argv[],
 	      char *static_labels[], int number_of_labels, 
 	      char *static_interfaces[], int number_of_interfaces, 
@@ -166,10 +168,7 @@ int SNetInRun(int argc, char *argv[],
   FILE *output = stdout;
   int bufsize = SNET_DEFAULT_BUFSIZE;
   int i = 0;
-  //LPEL
-  //snet_tl_stream_t *in_buf = NULL;
-  stream_t *in_buf = NULL;
-  inport_t *in_buf_port = NULL;
+  stream_t *global_in = NULL;
   lpelconfig_t config;
 
   snetin_label_t *labels = NULL;
@@ -181,7 +180,7 @@ int SNetInRun(int argc, char *argv[],
 #ifdef DISTRIBUTED_SNET
   int rank;
 #else /* DISTRIBUTED_SNET */
-  stream_t *out_buf = NULL;
+  stream_t *global_out = NULL;
 #endif /* DISTRIBUTED_SNET */
 
 #ifdef DISTRIBUTED_SNET
@@ -284,78 +283,58 @@ int SNetInRun(int argc, char *argv[],
   labels     = SNetInLabelInit(static_labels, number_of_labels);
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
   
-  SNetObserverInit(labels, interfaces);
 
 
   /* Initialise LPEL */
-  //config.flags = LPEL_FLAG_AUTO;
+  config.flags = LPEL_FLAG_AUTO;
+  /*
   config.proc_workers = 2;
   config.num_workers = 2;
   config.proc_others = 0;
+  */
   LpelInit(&config);
 
-#ifdef DISTRIBUTED_SNET
+  SNetObserverInit(labels, interfaces);
 
+
+#ifdef DISTRIBUTED_SNET
   if(rank == 0) {    
     DistributionStart(fun);
   }
 
-  if(SNetInOutputInit(output, labels, interfaces) != 0){
-    /* TODO: free resources! */
-    SNetUtilDebugFatal("Could not initialize output component");
-  }
+  /* create output thread */
+  SNetInOutputInit(output, labels, interfaces);
 
-  //LPEL TODO adapt interface!
-  in_buf = DistributionWaitForInput();
-
-  if(in_buf != NULL) {
-    in_buf_port = InportCreate( in_buf);
-
-    SNetInParserInit(input, labels, interfaces, in_buf_port);
-
-    i = SNET_PARSE_CONTINUE;
-    while(i != SNET_PARSE_TERMINATE){
-      i = SNetInParserParse();
-    }
-
-    SNetInParserDestroy();
-  }
-
-  SNetInOutputDestroy();
+  /* create input thread */
+  SNetInInputInit(input, labels, interfaces);
 
 #else
-  in_buf = StreamCreate();
-  in_buf_port = InportCreate( in_buf);
+  global_in = StreamCreate();
+  global_out = fun(global_in);
 
-  out_buf = fun(in_buf);
-
-  if(SNetInOutputInit(output, labels, interfaces, out_buf) != 0){
-    /* TODO: free resources! */
-    SNetUtilDebugFatal("Could not initialize output component");
-  }
-  
-  //LPEL
-  SNetInParserInit(input, labels, interfaces, in_buf_port);
-  /* start workers */
-  LpelRun();
-
-  i = SNET_PARSE_CONTINUE;
-  while(i != SNET_PARSE_TERMINATE){
-    i = SNetInParserParse();
-  }
-  
-  SNetInOutputDestroy();
-
-  LpelCleanup();
-
-  InportDestroy( in_buf_port);
-  
-  SNetInParserDestroy();
-  
+  /* create output thread */
+  SNetInOutputInit(output, labels, interfaces, global_out);
+ 
+  /* create input thread */
+  SNetInInputInit(input, labels, interfaces, global_in);
 
 #endif /* DISTRIBUTED_SNET */ 
 
+
+  /* join on input thread */
+  SNetInInputDestroy();
+
+  /* join on output thread */
+  SNetInOutputDestroy();
+
+  /* terminate workers */
+  SchedTerminate();
+
+
   SNetObserverDestroy();
+
+  /* wait on workers, cleanup */
+  LpelCleanup();
   
   SNetInLabelDestroy(labels);
   SNetInInterfaceDestroy(interfaces);

@@ -27,15 +27,16 @@
 #include "debug.h"
 
 #include "lpel.h"
+#include "scheduler.h"
 #include "stream.h"
-#include "outport.h"
+#include "task.h"
 
 /** <!--********************************************************************-->
  *
  * @name OManager
  *
  * <!--
- * static void *OManagerThread(void *ptr) : Main loop of an output thread.
+ * static void OManagerTask( task_t *self, void *ptr) : Main loop of an output thread.
  * void SNetOManagerUpdateRoutingTable(stream_t *stream, int node, int index) : Add a new output thread
  * -->
  *
@@ -59,7 +60,7 @@ typedef struct {
 
 /** <!--********************************************************************-->
  *
- * @fn  static void *OManagerThread(void *ptr)
+ * @fn  static void OManagerTask( task_t *self, void *ptr)
  *
  *   @brief  Main loop of an output thread
  *
@@ -71,7 +72,7 @@ typedef struct {
  *
  ******************************************************************************/
 
-static void *OManagerThread(void *ptr)
+static void OManagerTask( task_t *self, void *ptr)
 {
   bool terminate = false;
 
@@ -83,7 +84,7 @@ static void *OManagerThread(void *ptr)
   int *buf;
   int buf_size;
 
-  outport_t *op = OutportCreate(data->stream);
+  stream_desc_t *instream = StreamOpen( self, data->stream, 'r');
 
   buf_size = ORIGINAL_MAX_MSG_SIZE;
   buf = SNetMemAlloc(sizeof(char) * buf_size);
@@ -92,7 +93,7 @@ static void *OManagerThread(void *ptr)
 
   while(!terminate) {
 
-    record = OutportRead( op);
+    record = StreamRead( instream);
 
     switch(SNetRecGetDescriptor(record)) {
     case REC_sync:
@@ -144,12 +145,10 @@ static void *OManagerThread(void *ptr)
 
   }
 
-  OutportDestroy( op);
+  StreamClose( instream, true);
 
   SNetMemFree(buf);
   SNetMemFree(data);
-
-  return NULL;
 }
 
 /** <!--********************************************************************-->
@@ -167,6 +166,9 @@ static void *OManagerThread(void *ptr)
 void SNetOManagerUpdateRoutingTable(stream_t *stream, int node, int index)
 {
   omanager_data_t *data;
+  task_t *outtask;
+  taskattr_t tattr = { 0,0};
+  char name[20];
 
 #ifdef DISTRIBUTED_DEBUG
   int my_rank;
@@ -182,8 +184,11 @@ void SNetOManagerUpdateRoutingTable(stream_t *stream, int node, int index)
   data->node = node;
   data->index = index;
   
-  //TODO detached
-  LpelThreadCreate( OManagerThread, (void*)data);
+  
+  /* create a detached wrapper thread */
+  (void) snprintf(name, 20, "output_n%02d_i%02d", node, index);
+  outtask = TaskCreate( OManagerOutputTask, (void*)data, &tattr);
+  (void) LpelThreadCreate( SchedWrapper, outtask, true, name);
   
   return;
 }

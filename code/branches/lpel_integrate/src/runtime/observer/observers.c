@@ -37,8 +37,10 @@
 #include "interface_functions.h"
 #include "observers.h"
 
-#include "inport.h"
-#include "outport.h"
+#include "lpel.h"
+#include "stream.h"
+#include "scheduler.h"
+#include "task.h"
 
 #include "debug.h"
 
@@ -857,30 +859,30 @@ static int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
 
 /** <!--********************************************************************-->
  *
- * @fn void *ObserverBoxThread( void *hndl) {
+ * @fn void ObserverBoxTask( task_t *self, void *arg) {
  *
- *   @brief  The main function for observer thread.
+ *   @brief  The main function for observer task.
  *
  *           Observer takes incoming records, sends them to the listener,
  *           and after that passes the record to the next entity.
  *
  *   @param hndl  Handle of the observer.
- *   @return      NULL.
  *
  ******************************************************************************/
 
-static void *ObserverBoxThread( void *arg) 
+static void ObserverBoxTask( task_t *self, void *arg) 
 {
   obs_handle_t *hnd = (obs_handle_t*)arg; 
   snet_record_t *rec = NULL;
-  bool isTerminated = false;
+  bool terminate = false;
+  stream_desc_t *instream, *outstream;
 
-  outport_t *outp = OutportCreate(hnd->inbuf);
-  inport_t *inp = InportCreate(hnd->outbuf);
+  instream  = StreamOpen( self, hnd->inbuf,  'r');
+  outstream = StreamOpen( self, hnd->outbuf, 'w');
 
   /* Do until terminate record is processed. */
-  while(!isTerminated){ 
-    rec = OutportRead( outp);
+  while(!terminate) {
+    rec = StreamRead( instream);
     if(rec != NULL) {
            
       /* Send message. */
@@ -889,24 +891,45 @@ static void *ObserverBoxThread( void *arg)
       }
       
       if(SNetRecGetDescriptor(rec) == REC_terminate){
-	isTerminated = true;
+	terminate = true;
       }
       
       /* Pass the record to next component. */
-      InportWrite( inp, rec);
+      StreamWrite( outstream, rec);
     }
   } 
 
   /* Unregister observer */
   ObserverRemove(hnd);
 
-  OutportDestroy( outp);
-  InportDestroy( inp);
+  StreamClose( instream, true);
+  StreamClose( outstream, false);
 
   SNetMemFree(hnd);
-
-  return NULL;
 }
+
+
+
+/**
+ * Create an observer task,
+ * on a wrapper thread
+ */
+static void CreateObserverTask( obs_handle_t *hnd)
+{
+  task_t *obstask;
+  taskattr_t tattr = { 0,0};
+  char name[20];
+  
+  (void) snprintf(name, 20, "observer%02d", hnd->id);
+
+  /* create a detached wrapper thread */
+  obstask = TaskCreate( ObserverBoxTask, (void*)hnd, &tattr);
+  (void) LpelThreadCreate( SchedWrapper, obstask, true, name);
+}
+
+
+
+
 
 /** <!--********************************************************************-->
  *
@@ -953,7 +976,6 @@ stream_t *SNetObserverSocketBox( stream_t *input,
 					char data_level, 
 					const char *code)
 {
-  pthread_t box_thread;
   obs_handle_t *hnd;
   stream_t *output = NULL;
   
@@ -997,8 +1019,7 @@ stream_t *SNetObserverSocketBox( stream_t *input,
     hnd->data_level = data_level;
     hnd->code = code;
 
-    pthread_create(&box_thread, NULL, ObserverBoxThread, (void*)hnd);
-    pthread_detach(box_thread);
+    CreateObserverTask( hnd);
 
     output = hnd->outbuf;
 
@@ -1050,7 +1071,6 @@ stream_t *SNetObserverFileBox(stream_t *input,
 				      char data_level, 
 				      const char *code)
 {
-  pthread_t box_thread;
   obs_handle_t *hnd;
   stream_t *output = NULL;
   
@@ -1091,8 +1111,7 @@ stream_t *SNetObserverFileBox(stream_t *input,
     hnd->data_level = data_level;
     hnd->code = code;
     
-    pthread_create(&box_thread, NULL, ObserverBoxThread, (void*)hnd);
-    pthread_detach(box_thread);
+    CreateObserverTask( hnd);
     
     output = hnd->outbuf;
 

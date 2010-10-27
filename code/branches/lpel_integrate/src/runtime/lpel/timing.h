@@ -11,14 +11,19 @@
 
 typedef struct timespec timing_t;
 
+#define DO_TIMING
 
 /**
  * Current timestamp
  * @param t   pointer to timing_t
  */
-#define TIMESTAMP(t) do { \
-  (void) clock_gettime(CLOCK_MONOTONIC, (t) ); \
-} while (0)
+#ifdef DO_TIMING
+# define TIMESTAMP(t) do { \
+    (void) clock_gettime(CLOCK_MONOTONIC, (t) ); \
+  } while (0)
+#else
+# define TIMESTAMP(t) /*NOP*/
+#endif
 
 #define TIMING_BILLION 1000000000L
 

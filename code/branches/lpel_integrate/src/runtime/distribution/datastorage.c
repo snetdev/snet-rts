@@ -412,7 +412,7 @@ static void *DataManagerThread(void *ptr)
  *
  ******************************************************************************/
 
-static void *DataManagerThread(void *ptr)
+static void DataManagerThread( lpelthread_t *env, void *ptr)
 {
   MPI_Status status;
   MPI_Datatype type = MPI_DATATYPE_NULL;
@@ -435,6 +435,9 @@ static void *DataManagerThread(void *ptr)
   void *data;
   int size;
   void *opt;
+
+  /* assign this thread as non-worker */
+  LpelThreadAssign( env, -1);
 
   result = MPI_Type_get_true_extent(storage.op_type, &true_lb, &true_extent);
 
@@ -562,7 +565,7 @@ static void *DataManagerThread(void *ptr)
 
 static void DataManagerInit()
 {
-  storage.thread = LpelThreadCreate( DataManagerThread, NULL);
+  storage.thread = LpelThreadCreate( DataManagerThread, NULL, false, "datamngr");
 }
 
 
@@ -586,7 +589,7 @@ static void DataManagerDestroy()
 
   MPI_Send(&msg, 1, storage.op_type, storage.rank, TAG_DATA_OP, storage.comm);
 
-  LpelThreadJoin( storage.thread, NULL);
+  LpelThreadJoin( storage.thread);
 }
 
 

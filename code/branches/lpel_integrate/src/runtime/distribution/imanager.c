@@ -35,8 +35,9 @@
 #include "debug.h"
 
 #include "lpel.h"
+#include "scheduler.h"
 #include "stream.h"
-#include "inport.h"
+#include "task.h"
 
 /** <!--********************************************************************-->
  *
@@ -122,7 +123,7 @@ static lpelthread_t *master_thread;
  *
  ******************************************************************************/
 
-static void *IManagerInputThread( void *ptr) 
+static void IManagerInputTask( task_t *self, void *ptr) 
 {
   bool terminate = false;
 
@@ -132,14 +133,12 @@ static void *IManagerInputThread( void *ptr)
   int count;
   void *buf;
   int buf_size;
-
+  stream_desc_t *outstream = StreamOpen( self, data->stream, 'w');
   int position;
 
   snet_record_t *record;
 
   MPI_Status status;
-
-  inport_t *iport = InportCreate( data->stream);
 
   buf_size = ORIGINAL_MAX_MSG_SIZE;
 
@@ -169,17 +168,14 @@ static void *IManagerInputThread( void *ptr)
     case REC_data:
     case REC_collect:
     case REC_sort_end:
-    case REC_probe: 
-
-      InportWrite( iport, record);
-
+      StreamWrite( outstream, record);
       break;
+
     case REC_terminate:
-
-      InportWrite( iport, record);
-
+      StreamWrite( outstream, record);
       terminate = true;
       break;
+
     case REC_sync:
       SNetUtilDebugFatal("IManager: REC_sync should not be passed between nodes!");
     break;
@@ -191,12 +187,10 @@ static void *IManagerInputThread( void *ptr)
 
   }
 
-  InportDestroy( iport);
+  StreamClose( outstream, false);
 
   SNetMemFree(buf);
   SNetMemFree(data);
-
-  return NULL;
 }
 
 /** <!--********************************************************************-->
@@ -215,15 +209,20 @@ static void *IManagerInputThread( void *ptr)
 static void IManagerCreateInput(stream_t *stream, int node, int index)
 {
   imanager_data_t *data;
-
+  task_t *intask;
+  taskattr_t tattr = { 0,0};
+  char name[20];
+  
   data = SNetMemAlloc(sizeof(imanager_data_t));
 
   data->stream = stream;
   data->node = node;
   data->index = index;
 
-  //TODO detached
-  LpelThreadCreate( IManagerInputThread, (void*)data);
+  /* create a detached wrapper thread */
+  (void) snprintf(name, 20, "input_n%02d_i%02d", node, index);
+  intask = TaskCreate( IManagerInputTask, (void*)data, &tattr);
+  (void) LpelThreadCreate( SchedWrapper, intask, true, name);
 }
 
 /** <!--********************************************************************-->
@@ -240,7 +239,7 @@ static void IManagerCreateInput(stream_t *stream, int node, int index)
  *
  ******************************************************************************/
 
-static void *IManagerCreateNetwork(void *op) 
+static void IManagerCreateNetwork( lpelthread_t *env, void *op) 
 {
   stream_t *stream;
   snet_info_t *info;
@@ -249,8 +248,11 @@ static void *IManagerCreateNetwork(void *op)
 
   msg = (snet_msg_create_network_t *)op;
 
+  /* assign as non-worker */
+  LpelThreadAssign( env, -1);
+
   SNetDistFunID2Fun(&msg->fun_id, &fun);
-  
+
   stream = StreamCreate();
 
   //SNetTlSetFlag(stream, true);
@@ -372,7 +374,7 @@ static void IOManagerPutUpdateToBuffer(snet_queue_t *queue, snet_id_t op, int no
  *
  ******************************************************************************/
 
-static void *IManagerMasterThread( void *ptr) 
+static void IManagerMasterThread( lpelthread_t *env, void *ptr) 
 {
   bool terminate = false;
 
@@ -387,7 +389,7 @@ static void *IManagerMasterThread( void *ptr)
 
   int index;
   int i;
-
+  int create_cnt = 0;
   int my_rank;
 
   snet_queue_t *update_queue;
@@ -404,6 +406,9 @@ static void *IManagerMasterThread( void *ptr)
   MPI_Status rstats[NUM_MESSAGE_TYPES];
 #else
 #endif
+  
+  /* assign as non-worker */
+  LpelAssignThread( env, -1);
   
   MPI_Comm_rank( MPI_COMM_WORLD, &my_rank );
 
@@ -503,8 +508,13 @@ static void *IManagerMasterThread( void *ptr)
 
       bufs[index] = SNetMemAlloc(true_extent);
 
-      //TODO detached
-      LpelThreadCreate( IManagerCreateNetwork, (void*)msg_create_network);
+      /* create detached CreateNetwork thread */
+      {
+        char create_name[20];
+        (void) snprintf( create_name, 20, "create_network%02d", create_cnt);
+        (void) LpelThreadCreate( IManagerCreateNetwork, (void*)msg_create_network, true, create_name);
+        create_cnt++;
+      }
       break;
     default:
       break;
@@ -546,7 +556,7 @@ static void *IManagerMasterThread( void *ptr)
 
 void SNetIManagerCreate()
 {
-  master_thread = LpelThreadCreate( IManagerMasterThread, NULL);
+  master_thread = LpelThreadCreate( IManagerMasterThread, NULL, false, "imngr_master");
 }
 
 
@@ -565,7 +575,7 @@ void SNetIManagerCreate()
 
 void SNetIManagerDestroy()
 {
-  LpelThreadJoin( master_thread, NULL);
+  LpelThreadJoin( master_thread);
 }
 
 /*@}*/

@@ -24,13 +24,13 @@
 #include "snetentities.h"
 #include "label.h"
 #include "interface.h"
-//#include "stream_layer.h"
 #include "bool.h"
 #include "debug.h"
 
 #include "lpel.h"
 #include "stream.h"
-#include "outport.h"
+#include "task.h"
+#include "scheduler.h"
 
 #ifdef DISTRIBUTED_SNET
 #include "distribution.h"
@@ -154,8 +154,10 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
   fflush(hnd->file);
 }
 
-/* This is output function for the output thread */
-static void *doOutput(void* data)
+/**
+ * This is the task doing the global output
+ */
+static void GlobOutputTask( task_t *self, void* data)
 {
   bool terminate = false;
   handle_t *hnd = (handle_t *)data;
@@ -165,15 +167,19 @@ static void *doOutput(void* data)
   hnd->buffer = DistributionWaitForOutput();
 #endif /* DISTRIBUTED_SNET */
 
-  if(hnd->buffer != NULL){
-    outport_t *op = OutportCreate( hnd->buffer);
+  if(hnd->buffer != NULL) {
+    stream_desc_t *instream = StreamOpen( self, hnd->buffer, 'r');
 
     while(!terminate){
-      rec = OutportRead(op);
+      rec = StreamRead( instream);
       if(rec != NULL) {
 	switch(SNetRecGetDescriptor(rec)) {
 	case REC_sync:
-	  hnd->buffer = SNetRecGetStream(rec);
+          {
+            stream_t *newstream = SNetRecGetStream(rec);
+            StreamReplace( instream, newstream);
+            hnd->buffer = newstream;
+          }
 	  break;
 	case REC_data:
 	case REC_collect:
@@ -199,15 +205,13 @@ static void *doOutput(void* data)
     fflush(hnd->file);
     fprintf(hnd->file, "\n");
 
-    OutportDestroy(op);
+    StreamClose( instream, true);
   }
 
   SNetMemFree(hnd);
-
-  return NULL;
 }
 
-int SNetInOutputInit(FILE *file,
+void SNetInOutputInit(FILE *file,
 		     snetin_label_t *labels, 
 #ifdef DISTRIBUTED_SNET
 		     snetin_interface_t *interfaces
@@ -218,6 +222,9 @@ int SNetInOutputInit(FILE *file,
   )
 {
   handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
+  task_t *outtask;
+  taskattr_t tattr = { 0,0};
+  char name[] = "glob_output\0";
 
   hnd->file = file;
   hnd->labels = labels;
@@ -228,26 +235,13 @@ int SNetInOutputInit(FILE *file,
   hnd->buffer = in_buf;
 #endif /* DISTRIBUTED_SNET */
 
-  /*TODO catch error
-  if(pthread_create(&thread, NULL, (void *)doOutput, (void *)hnd) == 0){
-    return 0;
-  }
-  */
-  /* error */
-  //return 1;
-  thread = LpelThreadCreate( doOutput, hnd);
+  /* create a joinable wrapper thread */
+  outtask = TaskCreate( GlobOutputTask, (void*)hnd, &tattr);
+  thread = LpelThreadCreate( SchedWrapper, outtask, false, name);
 
-  return 0;
 }
 
-int SNetInOutputDestroy()
+void SNetInOutputDestroy()
 {
-  /*
-  if(pthread_join(thread, NULL) == 0){
-    return 0;
-  }*/
-  /*TODO catch error */
-  LpelThreadJoin(thread, NULL);
-  return 0;
-  
+  LpelThreadJoin( thread);
 }
