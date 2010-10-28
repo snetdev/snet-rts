@@ -39,8 +39,11 @@ void MonInit( lpelthread_t *env, int flags)
   if (env->name != NULL) {
 #   define FNAME_MAXLEN   (LPEL_THREADNAME_MAXLEN + 12)
     char fname[FNAME_MAXLEN+1];
-
-    (void) snprintf(fname, FNAME_MAXLEN+1, "mon_n%02d_%s.log", env->node, env->name);
+    if (env->node >= 0) {
+      (void) snprintf(fname, FNAME_MAXLEN+1, "mon_n%02d_%s.log", env->node, env->name);
+    } else {
+      (void) snprintf(fname, FNAME_MAXLEN+1, "mon_%s.log", env->name);
+    }
     fname[FNAME_MAXLEN] = '\0';
 
     /* open logfile */

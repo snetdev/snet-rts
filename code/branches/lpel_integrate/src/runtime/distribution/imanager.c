@@ -276,8 +276,6 @@ static void IManagerCreateNetwork( lpelthread_t *env, void *op)
   SNetInfoDestroy(info);
 
   SNetMemFree(op);
-  
-  return NULL;
 }
 
 /* Match update message to buffered index message. */
@@ -408,7 +406,7 @@ static void IManagerMasterThread( lpelthread_t *env, void *ptr)
 #endif
   
   /* assign as non-worker */
-  LpelAssignThread( env, -1);
+  LpelThreadAssign( env, -1);
   
   MPI_Comm_rank( MPI_COMM_WORLD, &my_rank );
 
@@ -539,8 +537,6 @@ static void IManagerMasterThread( lpelthread_t *env, void *ptr)
 
   SNetQueueDestroy(update_queue);
   SNetQueueDestroy(index_queue);
-
-  return NULL;
 }
 
 /** <!--********************************************************************-->
@@ -556,7 +552,7 @@ static void IManagerMasterThread( lpelthread_t *env, void *ptr)
 
 void SNetIManagerCreate()
 {
-  master_thread = LpelThreadCreate( IManagerMasterThread, NULL, false, "imngr_master");
+  master_thread = LpelThreadCreate( IManagerMasterThread, NULL, false, NULL);
 }
 
 

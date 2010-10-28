@@ -28,6 +28,7 @@ typedef struct {
   int proc_workers;
   int proc_others;
   int flags;
+  int node;
 } lpelconfig_t;
 
 #define LPEL_FLAG_AUTO     (1<<0)

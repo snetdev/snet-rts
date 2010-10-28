@@ -168,7 +168,6 @@ int SNetInRun(int argc, char *argv[],
   FILE *output = stdout;
   int bufsize = SNET_DEFAULT_BUFSIZE;
   int i = 0;
-  stream_t *global_in = NULL;
   lpelconfig_t config;
 
   snetin_label_t *labels = NULL;
@@ -180,6 +179,7 @@ int SNetInRun(int argc, char *argv[],
 #ifdef DISTRIBUTED_SNET
   int rank;
 #else /* DISTRIBUTED_SNET */
+  stream_t *global_in = NULL;
   stream_t *global_out = NULL;
 #endif /* DISTRIBUTED_SNET */
 
@@ -284,6 +284,7 @@ int SNetInRun(int argc, char *argv[],
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
   
 
+  
 
   /* Initialise LPEL */
   config.flags = LPEL_FLAG_AUTO;
@@ -292,6 +293,14 @@ int SNetInRun(int argc, char *argv[],
   config.num_workers = 2;
   config.proc_others = 0;
   */
+
+
+#ifdef DISTRIBUTED_SNET
+  config.node = rank;
+#else
+  config.node = -1;
+#endif
+
   LpelInit(&config);
 
   SNetObserverInit(labels, interfaces);

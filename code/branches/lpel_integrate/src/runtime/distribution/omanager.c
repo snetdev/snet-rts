@@ -60,7 +60,7 @@ typedef struct {
 
 /** <!--********************************************************************-->
  *
- * @fn  static void OManagerTask( task_t *self, void *ptr)
+ * @fn  static void OManagerOutputTask( task_t *self, void *ptr)
  *
  *   @brief  Main loop of an output thread
  *
@@ -72,7 +72,7 @@ typedef struct {
  *
  ******************************************************************************/
 
-static void OManagerTask( task_t *self, void *ptr)
+static void OManagerOutputTask( task_t *self, void *ptr)
 {
   bool terminate = false;
 
@@ -105,7 +105,6 @@ static void OManagerTask( task_t *self, void *ptr)
     case REC_data:
     case REC_collect:
     case REC_sort_end:
-    case REC_probe:
       position = 0;
      
       while(SNetRecPack(record, MPI_COMM_WORLD, &position, buf, buf_size) != MPI_SUCCESS) {
