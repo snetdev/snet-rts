@@ -293,6 +293,7 @@ void StreamWrite( stream_desc_t *sd, void *item)
   /* quasi V(n_sem) */
   if ( fetch_and_inc( &sd->stream->n_sem) < 0) {
     /* n_sem was -1 */
+    assert( poll_wakeup == 0 );
     /* wakeup consumer: make ready */
     SchedWakeup( self, sd->stream->cons_sd->task);
   }
@@ -393,8 +394,8 @@ void StreamPoll( stream_list_t *list)
          * determine, if we have been woken up by another producer: 
          */
         int tok = atomic_swap( &self->poll_token, 0);
-        /* we have not been waken yet, no need for ctx switch */
         if (tok) {
+          /* we have not been waken yet, no need for ctx switch */
           do_ctx_switch = 0;
           self->wakeup_sd = sd;
         }
@@ -418,6 +419,7 @@ void StreamPoll( stream_list_t *list)
     /* set task as waiting */
     self->state = TASK_WAITING;
     self->wait_on = WAIT_ON_ANY;
+    self->wait_s = NULL;
     co_resume();
   }
 
@@ -426,7 +428,7 @@ void StreamPoll( stream_list_t *list)
    *   while the producer is in an is_poll state,
    *   as this could result in a SEGFAULT when the producer
    *   is trying to dereference sd->stream->cons_sd
-   * - a consumer closes the stream if it read
+   * - a consumer closes the stream if it reads
    *   a terminate record or a sync record, and between reading the record
    *   and closing the stream the consumer issues no StreamPoll()
    *   and no entity writes a record on the stream after these records.

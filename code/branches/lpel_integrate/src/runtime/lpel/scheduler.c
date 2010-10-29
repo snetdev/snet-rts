@@ -7,12 +7,13 @@
 #include <assert.h>
 #include <errno.h>
 
+#include "bool.h"
 #include "lpel.h"
 #include "scheduler.h"
 #include "timing.h"
 #include "monitoring.h"
 #include "atomic.h"
-#include "bqueue.h"
+#include "taskqueue.h"
 
 #include "task.h"
 #include "stream.h"
@@ -25,9 +26,12 @@ struct schedcfg {
 
 struct schedctx {
   int wid; 
-  unsigned int num_tasks;
-  lpelthread_t *env;
-  bqueue_t rq;
+  lpelthread_t    *env;
+  unsigned int     num_tasks;
+  taskqueue_t      queue;
+  pthread_mutex_t  lock;
+  pthread_cond_t   cond;
+  bool             terminate;  
 };
 
 static int num_workers = -1;
@@ -64,7 +68,11 @@ void SchedInit(int size, schedcfg_t *cfg)
     char wname[11];
     sc->wid = i;
     sc->num_tasks = 0;
-    BQueueInit( &sc->rq);
+    TaskqueueInit( &sc->queue);
+    pthread_mutex_init( &sc->lock, NULL);
+    pthread_cond_init( &sc->cond, NULL);
+    sc->terminate = false;
+
     snprintf( wname, 11, "worker%02d", i);
     /* aquire thread */ 
     sc->env = LpelThreadCreate( SchedWorker, (void*)sc, false, wname);
@@ -79,11 +87,14 @@ void SchedInit(int size, schedcfg_t *cfg)
 void SchedCleanup(void)
 {
   int i;
+  schedctx_t *sc;
 
   /* wait for the workers to finish */
   for( i=0; i<num_workers; i++) {
-    LpelThreadJoin( workers[i].env);
-    BQueueCleanup( &workers[i].rq);
+    sc = &workers[i];
+    pthread_mutex_destroy( &sc->lock);
+    pthread_cond_destroy( &sc->cond);
+    LpelThreadJoin( sc->env);
   }
 
   /* free memory for scheduler data */
@@ -97,7 +108,17 @@ void SchedWakeup( task_t *by, task_t *whom)
   /* dependent on whom, put in global or wrapper queue */
   schedctx_t *sc = whom->sched_context;
   
-  BQueuePut( &sc->rq, whom);
+  pthread_mutex_lock( &sc->lock );
+  assert( sc->num_tasks > 0 );
+  TaskqueuePushBack( &sc->queue, whom );
+  if ( 1 == sc->queue.count ) {
+    pthread_cond_signal( &sc->cond );
+  }
+  pthread_mutex_unlock( &sc->lock );
+
+  MonDebug( by->sched_context->env,
+      "worker %d: task %u has woken up task %u\n",
+      by->sched_context->wid, by->uid, whom->uid );
 }
 
 
@@ -105,8 +126,15 @@ void SchedWakeup( task_t *by, task_t *whom)
 void SchedTerminate( void)
 {
   int i;
+  schedctx_t *sc;
+
   for( i=0; i<num_workers; i++) {
-    BQueueTerm( &workers[i].rq ); 
+    sc = &workers[i];
+
+    pthread_mutex_lock( &sc->lock );
+    sc->terminate = true;
+    pthread_cond_signal( &sc->cond );
+    pthread_mutex_unlock( &sc->lock );
   }
 }
 
@@ -118,8 +146,13 @@ void SchedAssignTask( task_t *t, int wid)
 {
   schedctx_t *sc = &workers[wid];
 
+  pthread_mutex_lock( &sc->lock );
   sc->num_tasks += 1;
-  BQueuePut( &sc->rq, t);
+  TaskqueuePushBack( &sc->queue, t );
+  if ( 1 == sc->queue.count ) {
+    pthread_cond_signal( &sc->cond );
+  }
+  pthread_mutex_unlock( &sc->lock );
 }
 
 
@@ -136,12 +169,23 @@ static void SchedWorker( lpelthread_t *env, void *arg)
   task_t *t;  
 
   /* assign to core */
-  LpelThreadAssign( env, sc->wid % num_workers );
+  LpelThreadAssign( env, sc->wid );
 
   /* MAIN SCHEDULER LOOP */
   loop=0;
   do {
-    t = BQueueFetch( &sc->rq);
+    MonDebug(env, "worker %d, loop %u\n", sc->wid, loop);
+
+    pthread_mutex_lock( &sc->lock );
+    while( 0 == sc->queue.count &&
+        (sc->num_tasks > 0 || !sc->terminate) ) {
+      MonDebug( env, "worker %d waiting (queue: %u, tasks: %u, term: %d)\n",
+          sc->wid, sc->queue.count, sc->num_tasks, sc->terminate);
+      pthread_cond_wait( &sc->cond, &sc->lock);
+    }
+    /* if queue is empty, t:=NULL */
+    t = TaskqueuePopFront( &sc->queue);
+    pthread_mutex_unlock( &sc->lock );
 
     if (t != NULL) {
       /* aqiure task lock, count congestion */
@@ -163,13 +207,17 @@ static void SchedWorker( lpelthread_t *env, void *arg)
 
       /* output accounting info */
       MonTaskPrint( sc->env, t);
-      MonDebug(env, "(worker %d, loop %u)\n", sc->wid, loop);
 
+      pthread_mutex_unlock( &t->lock);
+      
       /* check state of task, place into appropriate queue */
       switch(t->state) {
         case TASK_ZOMBIE:  /* task exited by calling TaskExit() */
           TaskDestroy( t);
+
+          pthread_mutex_lock( &sc->lock );
           sc->num_tasks -= 1;
+          pthread_mutex_unlock( &sc->lock );
           break;
 
         case TASK_WAITING: /* task returned from a blocking call*/
@@ -177,12 +225,13 @@ static void SchedWorker( lpelthread_t *env, void *arg)
           break;
 
         case TASK_READY: /* task yielded execution  */
-          BQueuePut( &sc->rq, t);
+          pthread_mutex_lock( &sc->lock );
+          TaskqueuePushBack( &sc->queue, t );
+          pthread_mutex_unlock( &sc->lock );
           break;
 
         default: assert(0); /* should not be reached */
       }
-      pthread_mutex_unlock( &t->lock);
     } /* end if executed ready task */
     loop++;
   } while ( t != NULL );
@@ -190,7 +239,8 @@ static void SchedWorker( lpelthread_t *env, void *arg)
   assert( sc->num_tasks == 0);
   /* stop only if there are no more tasks in the system */
   /* MAIN SCHEDULER LOOP END */
-  MonDebug(env, "worker %d exited.\n", sc->wid);
+  MonDebug(env, "worker %d exited (queue: %u, tasks: %u, term: %d)\n",
+      sc->wid, sc->queue.count, sc->num_tasks, sc->terminate);
 }
 
 
@@ -199,7 +249,6 @@ void SchedWrapper( lpelthread_t *env, void *arg)
 {
   task_t *t = (task_t *)arg;
   unsigned int loop;
-  bool terminate = false;
   schedctx_t *sc;
 
   /* create scheduler context */
@@ -207,11 +256,14 @@ void SchedWrapper( lpelthread_t *env, void *arg)
   sc->num_tasks = 1;
   sc->wid = -1;
   sc->env = env;
-  BQueueInit( &sc->rq);
+  TaskqueueInit( &sc->queue);
+  pthread_mutex_init( &sc->lock, NULL);
+  pthread_cond_init( &sc->cond, NULL);
+  sc->terminate = false;
 
   /* assign scheduler context */
   t->sched_context = sc;
-  BQueuePut( &sc->rq, t);
+  TaskqueuePushBack( &sc->queue, t);
 
 
   /* assign to others */
@@ -220,8 +272,15 @@ void SchedWrapper( lpelthread_t *env, void *arg)
   /* MAIN SCHEDULER LOOP */
   loop=0;
   do {
-    t = BQueueFetch( &sc->rq);
+    pthread_mutex_lock( &sc->lock );
+    while( 0 == sc->queue.count ) {
+      pthread_cond_wait( &sc->cond, &sc->lock);
+    }
+    /* if queue is empty, t:=NULL */
+    t = TaskqueuePopFront( &sc->queue);
     assert(t != NULL);
+    pthread_mutex_unlock( &sc->lock );
+
     
     t->cnt_dispatch++;
 
@@ -240,7 +299,7 @@ void SchedWrapper( lpelthread_t *env, void *arg)
     /* check state of task, place into appropriate queue */
     switch(t->state) {
       case TASK_ZOMBIE:  /* task exited by calling TaskExit() */
-        terminate = true;
+        sc->terminate = true;
         sc->num_tasks -= 1;
         TaskDestroy( t);
         break;
@@ -250,13 +309,15 @@ void SchedWrapper( lpelthread_t *env, void *arg)
         break;
 
       case TASK_READY: /* task yielded execution  */
-        BQueuePut( &sc->rq, t);
+        pthread_mutex_lock( &sc->lock );
+        TaskqueuePushBack( &sc->queue, t );
+        pthread_mutex_unlock( &sc->lock );
         break;
 
       default: assert(0); /* should not be reached */
     }
     loop++;
-  } while ( !terminate );
+  } while ( !sc->terminate );
 
   assert( sc->num_tasks == 0);
   MonDebug(env, "wrapper exited.\n");

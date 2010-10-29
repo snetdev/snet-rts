@@ -43,6 +43,7 @@ static lpelconfig_t config;
 
 /* cpuset for others-threads */
 static cpu_set_t cpuset_others;
+static int proc_avail = -1;
 
 
 static void CleanupEnv( lpelthread_t *env)
@@ -139,7 +140,6 @@ static void *ThreadStartup( void *arg)
 
 static void CheckConfig( lpelconfig_t *cfg)
 {
-  int proc_avail;
 
   /* query the number of CPUs */
   proc_avail = sysconf(_SC_NPROCESSORS_ONLN);
@@ -311,7 +311,7 @@ void LpelThreadAssign( lpelthread_t *env, int core)
        core = wid % config.proc_workers;
      */
     CPU_ZERO(&cpuset);
-    CPU_SET( core, &cpuset);
+    CPU_SET( core % proc_avail, &cpuset);
     res = sched_setaffinity(tid, sizeof(cpu_set_t), &cpuset);
     assert( res == 0);
 
