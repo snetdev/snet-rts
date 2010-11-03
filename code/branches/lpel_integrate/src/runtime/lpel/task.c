@@ -39,9 +39,9 @@ task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t *attr)
   }
 
   /* initialize reference counter to 1*/
-  atomic_set(&t->refcnt, 1);
-
-  atomic_set(&t->poll_token, 0);
+  atomic_init( &t->refcnt, 1);
+  /* initialize poll token to 0 */
+  atomic_init( &t->poll_token, 0);
   
   t->sched_context = NULL;
   t->sched_info = NULL;
@@ -81,6 +81,9 @@ int TaskDestroy(task_t *t)
 
 
     pthread_mutex_destroy( &t->lock);
+
+    atomic_destroy( &t->refcnt);
+    atomic_destroy( &t->poll_token);
 
     /* delete the coroutine */
     co_delete(t->ctx);
@@ -151,7 +154,45 @@ void TaskYield( task_t *ct)
   co_resume();
 }
 
+/****************************************************************************/
+/*  Printing, for monitoring output                                         */
+/****************************************************************************/
 
+
+#define FLAGS_TEST(vec,f)   (( (vec) & (f) ) == (f) )
+
+void TaskPrint( task_t *t, FILE *file, int flags)
+{
+  /* print general info: name, disp.cnt, state */
+  fprintf( file,
+      "tid %lu disp %lu st %c%c ",
+      t->uid, t->cnt_dispatch, t->state, (t->state==TASK_WAITING)? t->wait_on : ' '
+      );
+
+  /* print times */
+  if ( FLAGS_TEST( flags, TASK_PRINT_TIMES) ) {
+    timing_t diff;
+    if ( t->state == TASK_ZOMBIE) {
+      fprintf( file, "creat ");
+      TimingPrint( &t->times.creat, file);
+    }
+    TimingDiff( &diff, &t->times.start, &t->times.stop);
+    fprintf( file, "et ");
+    TimingPrint( &diff , file);
+  }
+
+  /* print stream info */
+  if ( FLAGS_TEST( flags, TASK_PRINT_STREAMS) ) {
+    StreamPrintDirty( t, file);
+  }
+}
+
+
+
+
+/****************************************************************************/
+/* Private functions                                                        */
+/****************************************************************************/
 
 /**
  * Hidden Startup function for user specified task function

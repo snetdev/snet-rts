@@ -3,7 +3,7 @@
 
 
 #ifndef  STREAM_BUFFER_SIZE
-#define  STREAM_BUFFER_SIZE 8
+#define  STREAM_BUFFER_SIZE 10
 #endif
 
 

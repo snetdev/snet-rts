@@ -1,4 +1,9 @@
 
+#include "monitoring.h"
+
+
+#ifdef MONITORING_ENABLE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -6,28 +11,11 @@
 
 #include "stream.h"
 
-#include "monitoring.h"
 #include "scheduler.h"
 #include "timing.h"
-#include "task.h"
 #include "lpel.h"
+#include "task.h"
 
-#define IS_FLAG(v)  ( (mon->flags & (v)) == (v) )
-
-#define PRINT_TS_BUFLEN 20
-
-/**
- * Print a timestamp into a char[] buffer
- *
- * @param ts   pointer to timing_t
- * @param buf  pointer to char[]
- * @pre        buf has at least PRINT_TS_BUFLEN chars space
- */
-#define PRINT_TS(ts, buf) do {\
-  (void) snprintf((buf), PRINT_TS_BUFLEN, "%lu%09lu", \
-      (unsigned long) (ts)->tv_sec, (ts)->tv_nsec \
-      ); \
-} while (0)
 
 
 /**
@@ -71,21 +59,21 @@ void MonCleanup( lpelthread_t *env)
 void MonDebug( lpelthread_t *env, const char *fmt, ...)
 {
   timing_t ts;
-  char buf[PRINT_TS_BUFLEN];
   va_list ap;
 
   if ( env->mon.outfile == NULL) return;
 
   /* print current timestamp */
   TIMESTAMP(&ts);
-  PRINT_TS(&ts,buf);
-  fprintf( env->mon.outfile, "%s ", buf);
+  TimingPrint( &ts, env->mon.outfile);
 
   va_start(ap, fmt);
   vfprintf( env->mon.outfile, fmt, ap);
   va_end(ap);
 
-  //fflush( env->mon.outfile);
+#ifdef MON_DO_FLUSH
+  fflush( env->mon.outfile);
+#endif
 }
 
 
@@ -97,51 +85,37 @@ void MonTaskEvent( task_t *t, const char *fmt, ...)
 
 
 
-void MonTaskPrint( lpelthread_t *env, task_t *t)
+void MonTaskPrint( monitoring_t *mon, struct schedctx *sc, struct task *t)
 {
-  char buf[PRINT_TS_BUFLEN];
-  monitoring_t *mon = &env->mon;
+# define IS_FLAG(v)  ( (mon->flags & (v)) == (v) )
+  timing_t ts;
+  int flags = 0;
+  FILE *file = mon->outfile;
 
-  if (( env->mon.outfile == NULL) 
+  if (( file == NULL) 
       || ( mon->flags == MONITORING_NONE )) {
     return;
   }
 
-  /* determine if task is to be monitored */
-  if ( BIT_IS_SET(t->attr.flags, TASK_ATTR_MONITOR) ||
-      IS_FLAG(MONITORING_ALLTASKS) ) {
+  /* get task stop time */
+  ts = t->times.stop;
+  TimingPrint( &ts, file);
 
-    PRINT_TS(&t->times.stop, buf);
+  //TODO check a flag
+  //SchedPrintContext( sc, file);
 
-    fprintf( mon->outfile,
-        "%s tid %lu disp %lu st %c ",
-        buf, t->uid, t->cnt_dispatch, t->state
-        );
+  if ( IS_FLAG( MONITORING_TIMES ) ) {
+    flags |= TASK_PRINT_TIMES;
+  }
+  if ( IS_FLAG( MONITORING_STREAMINFO ) ) {
+    flags |= TASK_PRINT_STREAMS;
+  }
+  TaskPrint( t, file, flags );
 
-    switch (t->state) {
-      case TASK_WAITING:
-        fprintf( mon->outfile, "on %c:%p ", t->wait_on, t->wait_s );
-        break;
-      case TASK_ZOMBIE:
-        PRINT_TS(&t->times.creat, buf);
-        fprintf( mon->outfile, "creat %s ", buf );
-        break;
-      default: /*NOP*/;
-    }
-
-    if ( IS_FLAG( MONITORING_TIMES ) ) {
-      /* stop time was used for timestamp output */
-      /* fprintf( mon->outfile, "stop %s ", buf ); */
-      /* start time */
-      PRINT_TS(&t->times.start, buf);
-      fprintf( mon->outfile, "start %s ", buf );
-    }
-
-    if ( IS_FLAG( MONITORING_STREAMINFO ) ) {
-      StreamPrintDirty( t, mon->outfile);
-    }
-
-    fprintf(mon->outfile, "\n");
-    //fflush(mon->outfile);
-  } /* end if */
+  fprintf( file, "\n");
+#ifdef MON_DO_FLUSH
+  fflush( file);
+#endif
 }
+
+#endif /* MONITORING_ENABLE */

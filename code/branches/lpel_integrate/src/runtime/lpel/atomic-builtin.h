@@ -2,6 +2,46 @@
  * THIS FILE MUST NOT BE INCLUDED DIRECTLY
  */
 
+/**
+ * Atomic variables and
+ * TODO pointer swap and membars
+ *
+ */
+
+
+typedef struct {
+  volatile int counter;
+} atomic_t;
+
+#define ATOMIC_INIT(i) { (i) }
+
+/**
+ * Initialize atomic variable dynamically
+ */
+#define atomic_init(v,i)  atomic_set((v),(i))
+
+/**
+ * Destroy atomic variable
+ */
+#define atomic_destroy(v)  /*NOP*/
+
+/**
+ * Read atomic variable
+ * @param v pointer of type atomic_t
+ *
+ * Atomically reads the value of @v.
+ */
+#define atomic_read(v) ((v)->counter)
+
+
+/**
+ * Set atomic variable
+ * @param v pointer of type atomic_t
+ * @param i required value
+ */
+#define atomic_set(v,i) (((v)->counter) = (i))
+
+
 static inline void atomic_inc( atomic_t *v )
 {
   (void)__sync_fetch_and_add(&v->counter, 1);

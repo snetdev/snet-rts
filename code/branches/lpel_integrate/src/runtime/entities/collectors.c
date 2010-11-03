@@ -136,6 +136,7 @@ void CollectorTask( task_t *self, void *arg)
                 /* else do nothing */
               }
             }
+
             /* finally, add new stream to ready set */
             {
               /* new stream */

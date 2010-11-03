@@ -20,4 +20,9 @@ extern void SchedWrapper( struct lpelthread *env, void *arg);
 extern void SchedWakeup( struct task *by, struct task *whom);
 extern void SchedTerminate( void);
 
+
+#include <stdio.h>
+
+extern void SchedPrintContext( schedctx_t *sc, FILE *file);
+
 #endif /* _SCHEDULER_H_ */

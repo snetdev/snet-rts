@@ -1,9 +1,6 @@
 
 TODO
 ====
- * implement cooperative event-based task activation
-   * therefore implement special 2-task semaphore primitives
- * implement StreamPoll() protocol
  * aggregate modules into libraries with clear interface
  * doxygenify comments
  * write more test settings

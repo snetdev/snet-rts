@@ -32,7 +32,6 @@
 #include <string.h>
 #include <assert.h>
 #include <pthread.h>
-#include <pcl.h>
 
 #include "stream.h"
 #include "buffer.h"
@@ -46,6 +45,7 @@ struct stream_desc {
   char mode;
   char state;
   unsigned long counter;
+  int event_flags;
   struct stream_desc *next;   /* for organizing in lists */
   struct stream_desc *dirty;  /* for maintaining a list of 'dirty' elements */
 };
@@ -58,29 +58,20 @@ struct stream_iter {
 
 
 
-#define STDESC_OPEN     'O'
+#define STDESC_INUSE    'I'
+#define STDESC_OPENED   'O'
 #define STDESC_CLOSED   'C'
 #define STDESC_REPLACED 'R'
+
+
+#define STDESC_MOVED    (1<<0)
+#define STDESC_WOKEUP   (1<<1)
+#define STDESC_WAITON   (1<<2)
 
 #define DIRTY_END   ((stream_desc_t *)-1)
 
 
-
-static inline void MarkDirty( stream_desc_t *sd)
-{
-
-  /* only add if not dirty yet */
-  if (sd->dirty == NULL) {
-    /*
-     * Set the dirty ptr of sd to the dirty_list ptr of the task
-     * and the dirty_list ptr of the task to sd, i.e.,
-     * insert the sd at the front of the dirty_list.
-     * Initially, dirty_list of the tab is empty DIRTY_END (!= NULL)
-     */
-    sd->dirty = sd->task->dirty_list;
-    sd->task->dirty_list = sd;
-  }
-}
+static inline void MarkDirty( stream_desc_t *sd);
 
 
 /**
@@ -90,9 +81,13 @@ stream_t *StreamCreate(void)
 {
   stream_t *s = (stream_t *) malloc( sizeof( stream_t));
   BufferReset( &s->buffer);
+#ifdef STREAM_POLL_SPINLOCK
   pthread_spin_init( &s->prod_lock, PTHREAD_PROCESS_PRIVATE);
-  atomic_set( &s->n_sem, 0);
-  atomic_set( &s->e_sem, STREAM_BUFFER_SIZE);
+#else
+  pthread_mutex_init( &s->prod_lock, NULL);
+#endif
+  atomic_init( &s->n_sem, 0);
+  atomic_init( &s->e_sem, STREAM_BUFFER_SIZE);
   s->is_poll = 0;
   s->prod_sd = NULL;
   s->cons_sd = NULL;
@@ -105,7 +100,13 @@ stream_t *StreamCreate(void)
  */
 void StreamDestroy( stream_t *s)
 {
+#ifdef STREAM_POLL_SPINLOCK
   pthread_spin_destroy( &s->prod_lock);
+#else
+  pthread_mutex_destroy( &s->prod_lock);
+#endif
+  atomic_destroy( &s->n_sem);
+  atomic_destroy( &s->e_sem);
   free( s);
 }
 
@@ -127,8 +128,9 @@ stream_desc_t *StreamOpen( task_t *ct, stream_t *s, char mode)
   sd->task = ct;
   sd->stream = s;
   sd->mode = mode;
-  sd->state = STDESC_OPEN;
+  sd->state = STDESC_OPENED;
   sd->counter = 0;
+  sd->event_flags = 0;
   sd->next  = NULL;
   sd->dirty = NULL;
   MarkDirty( sd);
@@ -211,7 +213,9 @@ void *StreamRead( stream_desc_t *sd)
     /* wait on write */
     self->state = TASK_WAITING;
     self->wait_on = WAIT_ON_WRITE;
-    self->wait_s = sd->stream;
+    /* wait on stream: */
+    sd->event_flags |= STDESC_WAITON;
+    MarkDirty( sd);
     /* context switch */
     co_resume();
   }
@@ -227,12 +231,15 @@ void *StreamRead( stream_desc_t *sd)
   /* quasi V(e_sem) */
   if ( fetch_and_inc( &sd->stream->e_sem) < 0) {
     /* e_sem was -1 */
+    task_t *prod = sd->stream->prod_sd->task;
     /* wakeup producer: make ready */
-    SchedWakeup( self, sd->stream->prod_sd->task);
+    SchedWakeup( self, prod);
+    sd->event_flags |= STDESC_WOKEUP;
   }
 
   /* for monitoring */
   sd->counter++;
+  sd->event_flags |= STDESC_MOVED;
   /* mark dirty */
   MarkDirty( sd);
 
@@ -258,17 +265,23 @@ void StreamWrite( stream_desc_t *sd, void *item)
   assert( item != NULL );
 
   /* quasi P(e_sem) */
-  if ( fetch_and_dec( &sd->stream->e_sem) == 0) {
+  if ( fetch_and_dec( &sd->stream->e_sem)== 0) {
     /* wait on write */
     self->state = TASK_WAITING;
     self->wait_on = WAIT_ON_READ;
-    self->wait_s = sd->stream;
+    /* wait on stream: */
+    sd->event_flags |= STDESC_WAITON;
+    MarkDirty( sd);
     /* context switch */
     co_resume();
   }
 
   /* writing to the buffer and checking if consumer polls must be atomic */
+#ifdef STREAM_POLL_SPINLOCK
   pthread_spin_lock( &sd->stream->prod_lock);
+#else
+  pthread_mutex_lock( &sd->stream->prod_lock);
+#endif
   {
     /* there must be space now in buffer */
     assert( BufferIsSpace( &sd->stream->buffer) );
@@ -281,85 +294,39 @@ void StreamWrite( stream_desc_t *sd, void *item)
       sd->stream->is_poll = 0;
     }
   }
+#ifdef STREAM_POLL_SPINLOCK
   pthread_spin_unlock( &sd->stream->prod_lock);
+#else
+  pthread_mutex_unlock( &sd->stream->prod_lock);
+#endif
 
-  /* we are the sole producer task waking the polling consumer up */
-  if (poll_wakeup) {
-    sd->stream->cons_sd->task->wakeup_sd = sd->stream->cons_sd;
-    SchedWakeup( self, sd->stream->cons_sd->task);
-  }
 
 
   /* quasi V(n_sem) */
   if ( fetch_and_inc( &sd->stream->n_sem) < 0) {
     /* n_sem was -1 */
-    assert( poll_wakeup == 0 );
+    task_t *cons = sd->stream->cons_sd->task;
     /* wakeup consumer: make ready */
-    SchedWakeup( self, sd->stream->cons_sd->task);
+    SchedWakeup( self, cons);
+    sd->event_flags |= STDESC_WOKEUP;
+  } else {
+    /* we are the sole producer task waking the polling consumer up */
+    if (poll_wakeup) {
+      task_t *cons = sd->stream->cons_sd->task;
+      cons->wakeup_sd = sd->stream->cons_sd;
+      
+      SchedWakeup( self, cons);
+      sd->event_flags |= STDESC_WOKEUP;
+    }
   }
 
   /* for monitoring */
   sd->counter++;
+  sd->event_flags |= STDESC_MOVED;
   /* mark dirty */
   MarkDirty( sd);
 }
 
-
-
-/**
- * @pre   if file != NULL, it must be open for writing
- */
-int StreamPrintDirty( task_t *t, FILE *file)
-{
-  stream_desc_t *sd, *next;
-  int close_cnt = 0;
-
-  assert( t != NULL);
-  sd = t->dirty_list;
-
-  if (file!=NULL) {
-    fprintf( file,"[" );
-  }
-
-  while (sd != DIRTY_END) {
-    /* all elements in the dirty list must belong to same task */
-    assert( sd->task == t );
-
-    /* print sd */
-    if (file!=NULL) {
-      fprintf( file,
-          "%p,%c,%c,%lu;",
-          sd->stream, sd->mode, sd->state, sd->counter
-          );
-    }
-
-    /* get the next dirty entry, and clear the link in the current entry */
-    next = sd->dirty;
-    
-    /* update states */
-    if (sd->state == STDESC_REPLACED) { 
-      sd->state = STDESC_OPEN;
-    }
-    if (sd->state == STDESC_CLOSED) {
-      close_cnt++;
-      free( sd);
-    } else {
-      sd->dirty = NULL;
-    }
-    sd = next;
-  }
-  if (file!=NULL) {
-    fprintf( file,"] " );
-  }
-  /* */
-  t->dirty_list = DIRTY_END;
-  return close_cnt;
-}
-
-
-/****************************************************************************/
-/*  Functions to support polling on a stream descriptor list                */
-/****************************************************************************/
 
 
 /**
@@ -386,7 +353,11 @@ void StreamPoll( stream_list_t *list)
   while( StreamIterHasNext( iter)) {
     stream_desc_t *sd = StreamIterNext( iter);
     /* lock stream (prod-side) */
+#ifdef STREAM_POLL_SPINLOCK
     pthread_spin_lock( &sd->stream->prod_lock);
+#else
+    pthread_mutex_lock( &sd->stream->prod_lock);
+#endif
     { /* CS BEGIN */
       /* check if there is something in the buffer */
       if ( BufferTop( &sd->stream->buffer) != NULL) {
@@ -399,19 +370,31 @@ void StreamPoll( stream_list_t *list)
           do_ctx_switch = 0;
           self->wakeup_sd = sd;
         }
-
         /* unlock stream */
+#ifdef STREAM_POLL_SPINLOCK
         pthread_spin_unlock( &sd->stream->prod_lock);
+#else
+        pthread_mutex_unlock( &sd->stream->prod_lock);
+#endif
         /* exit loop */
         break;
 
       } else {
         /* nothing in the buffer, register stream as activator */
         sd->stream->is_poll = 1;
+        sd->event_flags |= STDESC_WAITON;
+        /* TODO marking all streams does flood the log-files
+           - is it desired to have anyway?
+        MarkDirty( sd);
+        */
       }
     } /* CS END */
     /* unlock stream */
+#ifdef STREAM_POLL_SPINLOCK
     pthread_spin_unlock( &sd->stream->prod_lock);
+#else
+    pthread_mutex_unlock( &sd->stream->prod_lock);
+#endif
   } /* end for each stream */
 
   /* context switch */
@@ -419,7 +402,6 @@ void StreamPoll( stream_list_t *list)
     /* set task as waiting */
     self->state = TASK_WAITING;
     self->wait_on = WAIT_ON_ANY;
-    self->wait_s = NULL;
     co_resume();
   }
 
@@ -445,10 +427,94 @@ void StreamPoll( stream_list_t *list)
 
   /* 'rotate' list to stream descriptor for non-empty buffer */
   *list = self->wakeup_sd;
-  
-  return;
 }
 
+
+
+/****************************************************************************/
+/*  Printing, for monitoring output                                         */
+/****************************************************************************/
+
+#define IS_FLAGS(vec,b) ( ((vec)&(b)) == (b))
+
+/**
+ * @pre   if file != NULL, it must be open for writing
+ */
+int StreamPrintDirty( task_t *t, FILE *file)
+{
+  stream_desc_t *sd, *next;
+  int close_cnt = 0;
+
+  assert( t != NULL);
+  sd = t->dirty_list;
+
+  if (file!=NULL) {
+    fprintf( file,"[" );
+  }
+
+  while (sd != DIRTY_END) {
+    /* all elements in the dirty list must belong to same task */
+    assert( sd->task == t );
+
+    /* print sd */
+    if (file!=NULL) {
+      fprintf( file,
+          "%p,%c,%c,%lu,%c%c%c;",
+          sd->stream, sd->mode, sd->state, sd->counter,
+          IS_FLAGS( sd->event_flags, STDESC_WAITON) ? '?':'-',
+          IS_FLAGS( sd->event_flags, STDESC_WOKEUP) ? '!':'-',
+          IS_FLAGS( sd->event_flags, STDESC_MOVED ) ? '*':'-'
+          );
+    }
+
+    /* get the next dirty entry, and clear the link in the current entry */
+    next = sd->dirty;
+    
+    /* update states */
+    switch (sd->state) {
+      case STDESC_OPENED:
+      case STDESC_REPLACED:
+        sd->state = STDESC_INUSE;
+      case STDESC_INUSE:
+        sd->dirty = NULL;
+        sd->event_flags = 0;
+        break;
+      case STDESC_CLOSED:
+        close_cnt++;
+        free( sd);
+        break;
+      default: assert(0);
+    }
+    sd = next;
+  }
+  if (file!=NULL) {
+    fprintf( file,"] " );
+  }
+  /* */
+  t->dirty_list = DIRTY_END;
+  return close_cnt;
+}
+
+
+/****************************************************************************/
+/* Private functions                                                        */
+/****************************************************************************/
+
+static inline void MarkDirty( stream_desc_t *sd)
+{
+
+  /* only add if not dirty yet */
+  if (sd->dirty == NULL) {
+    /*
+     * Set the dirty ptr of sd to the dirty_list ptr of the task
+     * and the dirty_list ptr of the task to sd, i.e.,
+     * insert the sd at the front of the dirty_list.
+     * Initially, dirty_list of the tab is empty DIRTY_END (!= NULL)
+     */
+    sd->dirty = sd->task->dirty_list;
+    sd->task->dirty_list = sd;
+  }
+}
 
 
 
@@ -457,7 +523,6 @@ void StreamPoll( stream_list_t *list)
 /****************************************************************************/
 /* Functions for maintaining a list of stream descriptors                   */
 /****************************************************************************/
-
 
 
 

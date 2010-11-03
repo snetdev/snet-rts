@@ -11,8 +11,8 @@ all: $(TARGET)
 
 
 $(TARGET):  $(TARGET).snet $(BOXES) $(SNETLIBS)
-	snetc $(INCLUDES) $(LIBRARIES) $(TARGET).snet -o $(TARGET)
+	snetc $(SNETCFLAGS) $(INCLUDES) $(LIBRARIES) $(TARGET).snet -o $(TARGET)
 
 
 clean:
-	rm -f $(TARGET) $(TARGET).o $(TARGET).c $(TARGET).h $(BOXES) *.log
+	rm -f $(TARGET) $(TARGET).o $(TARGET).c $(TARGET).h $(BOXES) mon_*.log

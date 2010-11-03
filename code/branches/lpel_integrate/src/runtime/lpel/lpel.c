@@ -33,8 +33,6 @@
 
 #include "task.h"
 #include "scheduler.h"
-#include "monitoring.h"
-
 
 
 
@@ -111,8 +109,9 @@ static void *ThreadStartup( void *arg)
   co_thread_init();
 
   /* initialize monitoring */
+#ifdef MONITORING_ENABLE
   MonInit( env, MONITORING_ALL);
-
+#endif
 
   /* call the function */
   env->func( env, env->arg);
@@ -124,8 +123,10 @@ static void *ThreadStartup( void *arg)
   }
 
   /* cleanup monitoring */
+#ifdef MONITORING_ENABLE
   MonCleanup( env);
-  
+#endif
+
   /* Cleanup libPCL */
   co_thread_cleanup();
 

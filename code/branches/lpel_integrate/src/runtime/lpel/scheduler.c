@@ -11,7 +11,9 @@
 #include "lpel.h"
 #include "scheduler.h"
 #include "timing.h"
+
 #include "monitoring.h"
+
 #include "atomic.h"
 #include "taskqueue.h"
 
@@ -28,6 +30,7 @@ struct schedctx {
   int wid; 
   lpelthread_t    *env;
   unsigned int     num_tasks;
+  unsigned int     loop;
   taskqueue_t      queue;
   pthread_mutex_t  lock;
   pthread_cond_t   cond;
@@ -115,10 +118,6 @@ void SchedWakeup( task_t *by, task_t *whom)
     pthread_cond_signal( &sc->cond );
   }
   pthread_mutex_unlock( &sc->lock );
-
-  MonDebug( by->sched_context->env,
-      "worker %d: task %u has woken up task %u\n",
-      by->sched_context->wid, by->uid, whom->uid );
 }
 
 
@@ -165,22 +164,25 @@ void SchedAssignTask( task_t *t, int wid)
 static void SchedWorker( lpelthread_t *env, void *arg)
 {
   schedctx_t *sc = (schedctx_t *)arg;
-  unsigned int loop, delayed;
+  unsigned int delayed;
   task_t *t;  
 
   /* assign to core */
   LpelThreadAssign( env, sc->wid );
 
   /* MAIN SCHEDULER LOOP */
-  loop=0;
+  sc->loop=0;
   do {
-    MonDebug(env, "worker %d, loop %u\n", sc->wid, loop);
-
     pthread_mutex_lock( &sc->lock );
     while( 0 == sc->queue.count &&
         (sc->num_tasks > 0 || !sc->terminate) ) {
-      MonDebug( env, "worker %d waiting (queue: %u, tasks: %u, term: %d)\n",
+#ifdef MONITORING_ENABLE
+      /* TODO only on flag */
+      /*
+      MonDebug( env, "wid %d waiting (queue: %u, tasks: %u, term: %d)\n",
           sc->wid, sc->queue.count, sc->num_tasks, sc->terminate);
+      */
+#endif
       pthread_cond_wait( &sc->cond, &sc->lock);
     }
     /* if queue is empty, t:=NULL */
@@ -206,7 +208,9 @@ static void SchedWorker( lpelthread_t *env, void *arg)
       assert( t->state != TASK_RUNNING);
 
       /* output accounting info */
-      MonTaskPrint( sc->env, t);
+#ifdef MONITORING_ENABLE
+      MonTaskPrint( &sc->env->mon, sc, t);
+#endif
 
       pthread_mutex_unlock( &t->lock);
       
@@ -233,14 +237,18 @@ static void SchedWorker( lpelthread_t *env, void *arg)
         default: assert(0); /* should not be reached */
       }
     } /* end if executed ready task */
-    loop++;
+    sc->loop++;
   } while ( t != NULL );
 
   assert( sc->num_tasks == 0);
   /* stop only if there are no more tasks in the system */
   /* MAIN SCHEDULER LOOP END */
+#ifdef MONITORING_ENABLE
+  /*
   MonDebug(env, "worker %d exited (queue: %u, tasks: %u, term: %d)\n",
       sc->wid, sc->queue.count, sc->num_tasks, sc->terminate);
+  */
+#endif
 }
 
 
@@ -248,7 +256,6 @@ static void SchedWorker( lpelthread_t *env, void *arg)
 void SchedWrapper( lpelthread_t *env, void *arg)
 {
   task_t *t = (task_t *)arg;
-  unsigned int loop;
   schedctx_t *sc;
 
   /* create scheduler context */
@@ -270,7 +277,7 @@ void SchedWrapper( lpelthread_t *env, void *arg)
   LpelThreadAssign( env, -1 );
 
   /* MAIN SCHEDULER LOOP */
-  loop=0;
+  sc->loop=0;
   do {
     pthread_mutex_lock( &sc->lock );
     while( 0 == sc->queue.count ) {
@@ -293,8 +300,9 @@ void SchedWrapper( lpelthread_t *env, void *arg)
     assert( t->state != TASK_RUNNING);
 
     /* output accounting info */
-    MonTaskPrint( sc->env, t);
-    MonDebug(env, "(loop %u)\n", loop);
+#ifdef MONITORING_ENABLE
+    MonTaskPrint( &sc->env->mon, sc, t);
+#endif
 
     /* check state of task, place into appropriate queue */
     switch(t->state) {
@@ -316,16 +324,33 @@ void SchedWrapper( lpelthread_t *env, void *arg)
 
       default: assert(0); /* should not be reached */
     }
-    loop++;
+    sc->loop++;
   } while ( !sc->terminate );
 
   assert( sc->num_tasks == 0);
+#ifdef MONITORING_ENABLE
+  /*
   MonDebug(env, "wrapper exited.\n");
+  */
+#endif
   
   /* free the scheduler context */
   free( sc);
 }
 
 
-/** PRIVATE FUNCTIONS *******************************************************/
+
+
+/****************************************************************************/
+/*  Printing, for monitoring output                                         */
+/****************************************************************************/
+
+void SchedPrintContext( schedctx_t *sc, FILE *file)
+{
+  if ( sc->wid < 0) {
+    (void) fprintf(file, "loop %u ", sc->loop);
+  } else {
+    (void) fprintf(file, "wid %d loop %u ", sc->wid, sc->loop);
+  }
+}
 

@@ -1,6 +1,7 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
+#include <stdio.h>
 #include <pthread.h>
 #include <pcl.h>    /* tasks are executed in user-space with help of
                        GNU Portable Coroutine Library  */
@@ -23,7 +24,9 @@
 #define TASK_ATTR_SYSTEM    (1<<8)
 
 
-#define BIT_IS_SET(vec,b)   (( (vec) & (b) ) != 0 )
+#define TASK_PRINT_TIMES    (1<<0)
+#define TASK_PRINT_STREAMS  (1<<1)
+
 
 /**
  * Check if a task is a waitany-task
@@ -79,7 +82,6 @@ struct task {
 
   /* data to indicate on which event the task is waiting */
   taskstate_wait_t wait_on;
-  struct stream *wait_s;
 
   /* poll token */
   atomic_t poll_token;
@@ -113,12 +115,11 @@ struct task {
 extern task_t *TaskCreate( taskfunc_t, void *inarg, taskattr_t *attr);
 extern int TaskDestroy(task_t *t);
 
-
 extern void TaskCall(task_t *ct);
 extern void TaskExit(task_t *ct, void *outarg);
 extern void TaskYield(task_t *ct);
 
 
-
+extern void TaskPrint( task_t *t, FILE *file, int flags);
 
 #endif /* _TASK_H_ */

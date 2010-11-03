@@ -8,6 +8,7 @@
 #include <pthread.h>
 
 #include "bool.h"
+
 #include "monitoring.h"
 
 /**
@@ -46,7 +47,9 @@ struct lpelthread {
   void *arg;
   int node;
   char name[LPEL_THREADNAME_MAXLEN+1];
+#ifdef MONITORING_ENABLE
   monitoring_t mon;
+#endif
 };
 
 
@@ -62,7 +65,5 @@ extern lpelthread_t *LpelThreadCreate( void (*func)(lpelthread_t *, void *),
 extern void LpelThreadJoin( lpelthread_t *env);
 extern void LpelThreadAssign( lpelthread_t *env, int core);
 
-//extern void LpelTaskToWorker(task_t *t);
-//extern void LpelTaskRemove(task_t *t);
 
 #endif /* _LPEL_H_ */

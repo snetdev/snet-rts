@@ -287,12 +287,12 @@ int SNetInRun(int argc, char *argv[],
   
 
   /* Initialise LPEL */
-  config.flags = LPEL_FLAG_AUTO;
-  /*
+  //config.flags = LPEL_FLAG_AUTO;
+  
   config.proc_workers = 2;
   config.num_workers = 2;
   config.proc_others = 0;
-  */
+  
 
 
 #ifdef DISTRIBUTED_SNET

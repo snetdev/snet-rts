@@ -8,6 +8,9 @@
 #include "buffer.h"
 #include "atomic.h"
 
+
+//#define STREAM_POLL_SPINLOCK
+
 /* a stream */
 typedef struct stream stream_t;
 
@@ -24,7 +27,11 @@ typedef struct stream_iter stream_iter_t;
 struct stream {
   buffer_t buffer;
 
+#ifdef STREAM_POLL_SPINLOCK
   pthread_spinlock_t prod_lock;
+#else
+  pthread_mutex_t prod_lock;
+#endif
   int is_poll;
   stream_desc_t *prod_sd;
   stream_desc_t *cons_sd;
