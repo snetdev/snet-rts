@@ -583,7 +583,7 @@ void StreamIterDestroy( stream_iter_t *iter)
  */
 void StreamIterReset( stream_list_t *lst, stream_iter_t *iter)
 {
-  assert(*lst != NULL);
+  assert( lst != NULL);
   iter->prev = *lst;
   iter->list = lst;
   iter->cur = NULL;
