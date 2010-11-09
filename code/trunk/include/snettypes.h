@@ -6,7 +6,7 @@
 #include "filter.h"
 #include "handle.h"
 #include "record.h"
-
+#include "info.h"
 
 
 /* runtime specific implementation */
