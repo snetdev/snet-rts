@@ -22,7 +22,6 @@
 #include "snettypes.h"
 #include "label.h"
 #include "interface.h"
-#include "stream_layer.h"
 /* Init SNet and start network interface.
  *
  * @notice This call does not initialize any language interfaces!

@@ -2,8 +2,8 @@
 
 #include "collectors.h"
 #include "memfun.h"
-#include "handle.h"
-#include "record.h"
+#include "handle_p.h"
+#include "record_p.h"
 #include "bool.h"
 #include "list.h"
 #include "debug.h"

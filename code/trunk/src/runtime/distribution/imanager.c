@@ -27,7 +27,7 @@
 #include "routing.h"
 #include "message.h"
 #include "memfun.h"
-#include "record.h"
+#include "record_p.h"
 #include "interface_functions.h"
 #include "stream_layer.h"
 #include "fun.h"

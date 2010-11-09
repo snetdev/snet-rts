@@ -26,6 +26,7 @@
 #include "interface.h"
 #include "memfun.h"
 #include "snetentities.h"
+#include "record_p.h"
 #include "stream_layer.h"
 #include "constants.h"
 #include "debug.h"

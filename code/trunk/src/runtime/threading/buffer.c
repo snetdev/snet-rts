@@ -11,7 +11,7 @@
 #include <buffer.h>
 #include <bool.h>
 #include <memfun.h>
-#include <record.h>
+#include <record_p.h>
 #include <pthread.h>
 #include "debug.h"
 

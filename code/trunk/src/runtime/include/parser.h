@@ -25,7 +25,7 @@
 extern void SNetInParserInit(FILE *file,
 			     snetin_label_t *labels,
 			     snetin_interface_t *interfaces,
-			     snet_tl_stream_t *in_buf);
+			     struct stream *in_buf);
 
 
 /* Parse the next data element from standard input stream 

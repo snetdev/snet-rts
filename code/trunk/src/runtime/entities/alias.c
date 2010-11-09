@@ -1,4 +1,4 @@
-#include "alias.h"
+#include "snetentities.h"
 #include "stream_layer.h"
 
 /* ------------------------------------------------------------------------- */

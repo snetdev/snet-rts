@@ -9,9 +9,10 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include <expression.h>
+#include "expression.h"
+#include "record_p.h"
 
-#include <memfun.h>
+#include "memfun.h"
 
 
 

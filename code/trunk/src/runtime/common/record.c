@@ -9,7 +9,7 @@
 #include <stdarg.h>
 
 #include "memfun.h"
-#include "record.h"
+#include "record_p.h"
 
 #include "snetentities.h"
 #include "stream_layer.h"

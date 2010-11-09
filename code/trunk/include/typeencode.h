@@ -6,7 +6,7 @@
 #ifndef TYPEENCODE_H
 #define TYPEENCODE_H
 
-#include <bool.h>
+#include "bool.h"
 
 typedef enum {
   field, tag, btag

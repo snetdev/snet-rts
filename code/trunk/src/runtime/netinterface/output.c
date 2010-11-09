@@ -24,6 +24,7 @@
 #include "snetentities.h"
 #include "label.h"
 #include "interface.h"
+#include "record_p.h"
 #include "stream_layer.h"
 #include "bool.h"
 #include "debug.h"

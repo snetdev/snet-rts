@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: feedbackbuffer.h 2063 2008-08-19 13:56:24Z hkr $
  */
 
 /*  

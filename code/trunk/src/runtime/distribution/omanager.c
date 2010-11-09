@@ -21,7 +21,7 @@
 #include "unistd.h"
 
 #include "omanager.h"
-#include "record.h"
+#include "record_p.h"
 #include "stream_layer.h"
 #include "memfun.h"
 #include "message.h"

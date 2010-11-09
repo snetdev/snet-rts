@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: stream_layer.h 2351 2009-04-27 06:19:21Z jju $
  */
 #ifndef _SNET_STREAM_LAYER_H_
 #define _SNET_STREAM_LAYER_H_

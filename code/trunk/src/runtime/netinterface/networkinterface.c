@@ -16,6 +16,7 @@
  *******************************************************************************/
 
 #include <unistd.h>
+#include <string.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -23,7 +24,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include "record.h"
+#include "record_p.h"
 #include "parser.h"
 #include "output.h"
 #include "observers.h"

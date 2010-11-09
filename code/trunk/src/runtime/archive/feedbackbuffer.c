@@ -15,7 +15,7 @@
 #include "feedbackbuffer.h"
 #include "bool.h"
 #include "memfun.h"
-#include "record.h"
+#include "record_p.h"
 #include "list.h"
 #include "bool.h"
 #include "extended_semaphore.h"

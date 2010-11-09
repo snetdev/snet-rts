@@ -3,7 +3,7 @@
 
 /*******************************************************************************
  *
- * $Id$
+ * $Id: observers.h 2491 2009-07-31 07:25:17Z jju $
  *
  * Author: Jukka Julku, VTT Technical Research Centre of Finland
  * -------

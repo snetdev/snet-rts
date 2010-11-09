@@ -2,10 +2,15 @@
 #define INTERFACE_FUNCTIONS_HEADER
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
 #include "bool.h"
-#include "stdlib.h"
-#include "pthread.h"
-#include "record.h"
+
+
+//#include "record.h"
+/* forward declaration */
+struct record;
 
 #ifdef DISTRIBUTED_SNET
 #include <mpi.h>
@@ -175,12 +180,12 @@ void SNetGlobalSetDecodingFun(snet_global_interface_functions_t *f,
 
 snet_decode_fun_t SNetGlobalGetDecodingFun(snet_global_interface_functions_t *f);
 
-snet_free_fun_t SNetGetFreeFunFromRec(snet_record_t *rec);
-snet_copy_fun_t SNetGetCopyFunFromRec(snet_record_t *rec);
-snet_serialise_fun_t SNetGetSerializationFunFromRec(snet_record_t *rec);
-snet_deserialise_fun_t SNetGetDeserializationFunFromRec(snet_record_t *rec);
-snet_encode_fun_t SNetGetEncodingFunFromRec(snet_record_t *rec);
-snet_decode_fun_t SNetGetDecodingFunFromRec(snet_record_t *rec);
+snet_free_fun_t SNetGetFreeFunFromRec(struct record *rec);
+snet_copy_fun_t SNetGetCopyFunFromRec(struct record *rec);
+snet_serialise_fun_t SNetGetSerializationFunFromRec(struct record *rec);
+snet_deserialise_fun_t SNetGetDeserializationFunFromRec(struct record *rec);
+snet_encode_fun_t SNetGetEncodingFunFromRec(struct record *rec);
+snet_decode_fun_t SNetGetDecodingFunFromRec(struct record *rec);
 
 void SNetGlobalSetId(snet_global_interface_functions_t *f, int id);
 int SNetGlobalGetId(snet_global_interface_functions_t *f);
@@ -199,34 +204,34 @@ snet_encode_fun_t SNetGetEncodingFun(int id);
 snet_decode_fun_t SNetGetDecodingFun(int id);
 
 snet_interface_support_level_t SNetGlobalGetInterfaceSupportLevel(snet_global_interface_functions_t *f);
-snet_interface_support_level_t SNetGetInterfaceSupportLevelFromRec(snet_record_t *rec);
+snet_interface_support_level_t SNetGetInterfaceSupportLevelFromRec(struct record *rec);
 snet_interface_support_level_t SNetGetInterfaceSupportLevel(int id);
 
 #ifdef DISTRIBUTED_SNET
 
 void SNetGlobalSetSerializeTypeFun(snet_global_interface_functions_t *f, snet_mpi_serialize_type_fun_t serialize_type_fun);
 snet_mpi_serialize_type_fun_t SNetGlobalGetSerializeTypeFun(snet_global_interface_functions_t *f);
-snet_mpi_serialize_type_fun_t SNetGetSerializeTypeFunFromRec(snet_record_t *rec);
+snet_mpi_serialize_type_fun_t SNetGetSerializeTypeFunFromRec(struct record *rec);
 snet_mpi_serialize_type_fun_t SNetGetSerializeTypeFun(int id);
 
 void SNetGlobalSetDeserializeTypeFun(snet_global_interface_functions_t *f, snet_mpi_deserialize_type_fun_t desrialize_type_fun);
 snet_mpi_deserialize_type_fun_t SNetGlobalGetDeserializeTypeFun(snet_global_interface_functions_t *f);
-snet_mpi_deserialize_type_fun_t SNetGetDeserializeTypeFunFromRec(snet_record_t *rec);
+snet_mpi_deserialize_type_fun_t SNetGetDeserializeTypeFunFromRec(struct record *rec);
 snet_mpi_deserialize_type_fun_t SNetGetDeserializeTypeFun(int id);
 
 void SNetGlobalSetPackFun(snet_global_interface_functions_t *f, snet_mpi_pack_fun_t packfun);
 snet_mpi_pack_fun_t SNetGlobalGetPackFun(snet_global_interface_functions_t *f);
-snet_mpi_pack_fun_t SNetGetPackFunFromRec(snet_record_t *rec);
+snet_mpi_pack_fun_t SNetGetPackFunFromRec(struct record *rec);
 snet_mpi_pack_fun_t SNetGetPackFun(int id);
 
 void SNetGlobalSetUnpackFun(snet_global_interface_functions_t *f, snet_mpi_unpack_fun_t unpackfun);
 snet_mpi_unpack_fun_t SNetGlobalGetUnpackFun(snet_global_interface_functions_t *f);
-snet_mpi_unpack_fun_t SNetGetUnpackFunFromRec(snet_record_t *rec);
+snet_mpi_unpack_fun_t SNetGetUnpackFunFromRec(struct record *rec);
 snet_mpi_unpack_fun_t SNetGetUnpackFun(int id);
 
 void SNetGlobalSetCleanupFun(snet_global_interface_functions_t *f, snet_mpi_cleanup_fun_t cleanupfun);
 snet_mpi_cleanup_fun_t SNetGlobalGetCleanupFun(snet_global_interface_functions_t *f);
-snet_mpi_cleanup_fun_t SNetGetCleanupFunFromRec(snet_record_t *rec);
+snet_mpi_cleanup_fun_t SNetGetCleanupFunFromRec(struct record *rec);
 snet_mpi_cleanup_fun_t SNetGetCleanupFun(int id);
 
 #endif /* DISTRIBUTED_SNET */

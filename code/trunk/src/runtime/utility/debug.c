@@ -1,6 +1,6 @@
 #include "debug.h"
 #include "pthread.h"
-#include "record.h"
+#include "record_p.h"
 #include "memfun.h"
 #include <string.h>
 

@@ -11,6 +11,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef DISTRIBUTED_SNET
 #include <mpi.h>
@@ -19,6 +20,7 @@
 
 #include "C4SNet.h"
 #include "memfun.h"
+#include "snettypes.h"
 #include "typeencode.h"
 #include "interface_functions.h"
 #include "out.h"
@@ -36,7 +38,7 @@ static int interface_id;
 
 /* Container for returning the result. */
 struct container {
-  snet_handle_t *hnd;
+  struct handle *hnd;
   int variant;
   
   int *counter;
@@ -176,7 +178,7 @@ void C4SNetOut( void *hnd, int variant, ...)
   va_list args;
  
   va_start( args, variant);
-  SNetOutRawV( (snet_handle_t *)hnd, interface_id, variant, args);
+  SNetOutRawV( (struct handle *)hnd, interface_id, variant, args);
   va_end( args);
 }
 
@@ -1228,7 +1230,7 @@ c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant)
   }
 
   v = SNetTencGetVariant( 
-        SNetTencBoxSignGetType( SNetHndGetBoxSign( (snet_handle_t *)hnd)), variant);
+        SNetTencBoxSignGetType( SNetHndGetBoxSign( (struct handle *)hnd)), variant);
 
   c = (c4snet_container_t *)SNetMemAlloc( sizeof( c4snet_container_t));
   c->counter = (int *)SNetMemAlloc( 3 * sizeof( int));
@@ -1236,7 +1238,7 @@ c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant)
   c->fields = (void **)SNetMemAlloc( SNetTencGetNumFields( v) * sizeof( void*));
   c->tags = (int *)SNetMemAlloc( SNetTencGetNumTags( v) * sizeof( int));
   c->btags = (int *)SNetMemAlloc( SNetTencGetNumBTags( v) * sizeof( int));
-  c->hnd = (snet_handle_t *)hnd;
+  c->hnd = (struct handle *)hnd;
   c->variant = variant;
 
   for( i=0; i<3; i++) {

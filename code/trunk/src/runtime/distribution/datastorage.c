@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "datastorage.h"
+#include "threading.h"
 #include "bitmap.h"
 #include "memfun.h"
 #include "hashtable.h"

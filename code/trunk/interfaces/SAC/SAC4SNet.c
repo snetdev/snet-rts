@@ -93,7 +93,7 @@ extern void *SACARGcopy( void*);
 
 
 struct container {
-  snet_handle_t *hnd;
+  struct handle *hnd;
   int variant;
   
   int *counter;
@@ -547,7 +547,7 @@ static void* SAC4SNetUnpack(MPI_Comm comm, void *buf, MPI_Datatype type, int cou
 
 /******************************************************************************/
 
-sac4snet_container_t *SAC4SNet_containerCreate( void *hnd, int var_num) 
+sac4snet_container_t *SAC4SNet_containerCreate( struct handle *hnd, snet_typeencoding_t *type, int var_num) 
 {
   
   int i;
@@ -555,7 +555,7 @@ sac4snet_container_t *SAC4SNet_containerCreate( void *hnd, int var_num)
   snet_variantencoding_t *v;
 
 
-  v = SNetTencGetVariant( SNetHndGetType( hnd), var_num);
+  v = SNetTencGetVariant( type, var_num);
 
   c = SNetMemAlloc( sizeof( sac4snet_container_t));
   c->counter = SNetMemAlloc( 3 * sizeof( int));

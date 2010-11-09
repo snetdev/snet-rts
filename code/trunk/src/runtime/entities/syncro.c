@@ -26,13 +26,13 @@
 
 
 
-#include "syncro.h"
+#include "snetentities.h"
 
 #include "bool.h"
-#include "record.h"
+#include "record_p.h"
 #include "buffer.h"
 #include "memfun.h"
-#include "handle.h"
+#include "handle_p.h"
 #include "debug.h"
 #include "threading.h"
 #include "tree.h"

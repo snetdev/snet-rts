@@ -1,10 +1,11 @@
 #include "out.h"
 #include "debug.h"
-#include "handle.h"
-#include "record.h"
+#include "handle_p.h"
+#include "record_p.h"
 #include "typeencode.h"
 #include "memfun.h"
 #include "interface_functions.h"
+#include "stream_layer.h"
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
 #include <time.h>
 #endif

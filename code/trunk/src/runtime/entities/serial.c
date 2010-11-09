@@ -1,4 +1,4 @@
-#include "serial.h"
+#include "snetentities.h"
 #include "buffer.h"
 #include "debug.h"
 

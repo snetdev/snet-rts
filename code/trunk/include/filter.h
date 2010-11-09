@@ -1,41 +1,42 @@
-#ifndef FILTER_HEADER
-#define FILTER_HEADER
+#ifndef _FILTER_H_
+#define _FILTER_H_
 
 #include "snettypes.h"
-#include "handle.h"
-#include "stream_layer.h"
 
-extern snet_filter_instruction_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...);
-extern void SNetDestroyFilterInstruction( snet_filter_instruction_t *instr);
-extern snet_filter_instruction_set_t *SNetCreateFilterInstructionSet( int num, ...);
-extern int SNetFilterGetNumInstructions( snet_filter_instruction_set_t *set);
-extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionSetList( int num, ...);
+typedef enum filter_opcode {
+	snet_tag,
+	snet_btag,
+	snet_field,
+	create_record
+} snet_filter_opcode_t;
 
-extern void SNetDestroyFilterInstructionSetList( snet_filter_instruction_set_list_t *list);
+typedef struct filter_instruction {
+  snet_filter_opcode_t opcode;
+  int *data;
+  snet_expr_t *expr;
+} snet_filter_instruction_t;
 
-extern snet_tl_stream_t *SNetFilter( snet_tl_stream_t *inbuf,
-#ifdef DISTRIBUTED_SNET
-				     snet_info_t *info, 
-				     int location,
-#endif /* DISTRIBUTED_SNET */
-				     snet_typeencoding_t *in_type,
-				     snet_expr_list_t *guards, ... );
+typedef struct filter_instruction_set {
+  int num;
+  snet_filter_instruction_t **instructions;
+} snet_filter_instruction_set_t;
+
+typedef struct filter_instruction_set_list {
+  int num;
+  snet_filter_instruction_set_t **lst;
+} snet_filter_instruction_set_list_t;
 
 
-extern snet_tl_stream_t *SNetTranslate( snet_tl_stream_t *inbuf,
-#ifdef DISTRIBUTED_SNET
-					snet_info_t *info, 
-					int location,
-#endif /* DISTRIBUTED_SNET */
-					snet_typeencoding_t *in_type,
-					snet_expr_list_t *guards, ... );
+extern struct filter_instruction *SNetCreateFilterInstruction( enum filter_opcode opcode, ...);
+extern void SNetDestroyFilterInstruction( struct filter_instruction *instr);
+extern struct filter_instruction_set *SNetCreateFilterInstructionSet( int num, ...);
+extern int SNetFilterGetNumInstructions( struct filter_instruction_set *set);
+extern struct filter_instruction_set_list *SNetCreateFilterInstructionSetList( int num, ...);
 
-extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *inbuf,
-#ifdef DISTRIBUTED_SNET
-					snet_info_t *info, 
-					int location,
-#endif /* DISTRIBUTED_SNET */
-					int offset,
-					snet_variantencoding_t *untouched);
+extern void SNetDestroyFilterInstructionSetList( struct filter_instruction_set_list *list);
 
-#endif
+
+extern snet_filter_instruction_set_list_t *SNetCreateFilterInstructionList( int num, ...);
+extern int SNetFilterInstructionsGetNumSets( snet_filter_instruction_set_list_t *lst);
+extern snet_filter_instruction_set_t **SNetFilterInstructionsGetSets( snet_filter_instruction_set_list_t *lst);
+#endif /* _FILTER_H_ */

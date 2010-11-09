@@ -7,6 +7,7 @@
 #include "bool.h"
 #include "memfun.h"
 #include "extended_semaphore.h"
+#include "stream_layer.h"
 #include "debug.h"
 
 struct snet_ubuffer  {

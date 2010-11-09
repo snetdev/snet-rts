@@ -30,7 +30,7 @@
 
 #include "bool.h"
 #include "constants.h"
-#include "record.h"
+#include "record_p.h"
 #include "typeencode.h"
 #include "stream_layer.h"
 #include "memfun.h"

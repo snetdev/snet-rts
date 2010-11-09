@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: buffer.h 2351 2009-04-27 06:19:21Z jju $
  */
 
 #ifndef _SNET_BUFFER_H_

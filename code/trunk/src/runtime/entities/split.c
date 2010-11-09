@@ -1,10 +1,11 @@
 #include <stdlib.h>
 
-#include "split.h"
+#include "snetentities.h"
 
 #include "memfun.h"
 #include "buffer.h"
-#include "handle.h"
+#include "handle_p.h"
+#include "record_p.h"
 #include "debug.h"
 #include "collectors.h"
 #include "threading.h"
@@ -19,6 +20,12 @@
 /* ------------------------------------------------------------------------- */
 /*  SNetSplit                                                                */
 /* ------------------------------------------------------------------------- */
+
+
+typedef struct {
+  snet_tl_stream_t *stream;
+  int num;
+} snet_blist_elem_t;
 
 
 

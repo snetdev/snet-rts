@@ -24,9 +24,9 @@
  * 
  *****************************************************************************/
 
-#include "parallel.h"
-#include "handle.h"
-#include "record.h"
+#include "snetentities.h"
+#include "handle_p.h"
+#include "record_p.h"
 #include "typeencode.h"
 #include "collectors.h"
 #include "memfun.h"
@@ -39,6 +39,13 @@
 #endif /* DISTRIBUTED_SNET */
 
 //#define PARALLEL_DEBUG
+
+#define MC_ISMATCH( name) name->is_match
+#define MC_COUNT( name) name->match_count
+typedef struct { 
+  bool is_match;
+  int match_count;
+} match_count_t;
 
 static bool ContainsName( int name, int *names, int num) {  
   int i;
