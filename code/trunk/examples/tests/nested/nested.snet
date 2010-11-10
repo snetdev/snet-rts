@@ -1,0 +1,18 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+ 
+
+net nested {
+  
+  net inner {
+    box dec((A) -> (A));
+    box inc((B) -> (B));
+  } connect (dec | inc);
+
+  box ident((C) -> (C));
+
+} connect (inner || ident);
+

@@ -1,0 +1,10 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+ 
+
+net synchro {
+  box dec((A,B) -> (A));
+} connect [|{A},{B}|] .. dec;
