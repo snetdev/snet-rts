@@ -249,15 +249,26 @@ if test "$GCC" = yes; then
 fi
 
 AC_SEARCH_LIBS(socket,,
-   AC_SUBST( LIB_SOCKET, ""),
-   AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),)
+    AC_SUBST( LIB_SOCKET, ""),
+    AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),
+    )
 AC_SEARCH_LIBS(sem_open,,
-   AC_SUBST( LIB_RT, ""),
-   AC_CHECK_LIB( rt, sem_open,
+    AC_SUBST( LIB_RT, ""),
+    AC_CHECK_LIB( rt, sem_open,
       AC_SUBST( LIB_RT, "-lrt"),
-      AC_MSG_ERROR( "Cannot find library for semaphores."),))
+      AC_MSG_ERROR( "Cannot find library for semaphores."),)
+    )
 
-
+dnl additionally for LPEL
+AC_SEARCH_LIBS([cap_get_proc],[cap],
+    AC_SUBST( LIB_CAP, "-lcap"),
+    AC_SUBST( LIB_CAP, ""),
+    )
+AC_CHECK_LIB([pcl],[co_create],
+    AC_SUBST( LIB_PCL, "-lpcl"),
+    AC_MSG_ERROR( "Cannot find libpcl (GNU Portable Coroutine Library)."),
+    [-lpthread]
+    )
 
 dnl test for compiler flags
 dnl for sac2crc
@@ -356,7 +367,8 @@ case "$target_os" in
     AC_MSG_RESULT([solaris settings])
     ;;
   *linux*)      
-    OSFLAGS=["-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint"]
+dnl OSFLAGS=["-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint"]
+    OSFLAGS=["-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint -D_POSIX_C_SOURCE=200112L"]
     LD_DYNAMIC=["-dy -shared -allow-shlib-undefined"]
     LD_PATH=["-Wl,-rpath,"]
     LD_FLAGS="-Wl,-allow-shlib-undefined"

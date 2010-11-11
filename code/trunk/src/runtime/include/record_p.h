@@ -2,7 +2,7 @@
 #define _RECORD_P_H_
 
 #include "record.h"
-
+#include "stack.h"
 
 enum record_descr {
   REC_data,
@@ -19,6 +19,9 @@ enum record_mode {
   MODE_textual,
   MODE_binary,
 };
+
+extern snet_util_stack_t *SNetRecGetIterationStack(snet_record_t *rec);
+extern void SNetRecCopyIterations(snet_record_t *source, snet_record_t *target);
 
 
 #endif /* _RECORD_P_H_ */

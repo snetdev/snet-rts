@@ -81,10 +81,15 @@ default devel prod: checks
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/runtime_lpel  DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
 ifeq ($(MAKEDISTR),yes)
 	$(HIDE) $(MAKE) -C src/runtime clean_no_targetdir
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
 			PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" DISTRIBUTED=yes
+	$(HIDE) $(MAKE) -C src/runtime_lpel clean_no_targetdir
+	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+			PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" DISTRIBUTED=yes
 endif
 	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
@@ -111,9 +116,13 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
 ifeq ($(MAKEDISTR),yes)
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@ DISTRIBUTED=yes
+	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@ DISTRIBUTED=yes
 endif
 	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
