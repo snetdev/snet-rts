@@ -1,9 +1,0 @@
-
-
-
-net sudokusolve {
-
-	box computeOpts( (board) -> (board,opts));
-	box solver( (board, opts,<N> ) -> (board, opts, <N>) | (board, <done>) );
-
-} connect computeOpts .. ( solver)*{<done>};

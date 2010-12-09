@@ -1,8 +1,0 @@
-<record type="data" mode="textual">
-<field label="params" interface="SAC4SNetMPI">
-:::SACFIBRE: double 1 3 :::
-simple-1.fibre 
-</field>
-<tag label="tasks">2</tag>
-<tag label="nodes">2</tag>
-</record> 

@@ -1,5 +1,0 @@
-# = = = = = = = = = = = = = = = = = = = =
-TARGET    = mandelbrot_split
-# = = = = = = = = = = = = = = = = = = = =
-
-include Makefile.tpl

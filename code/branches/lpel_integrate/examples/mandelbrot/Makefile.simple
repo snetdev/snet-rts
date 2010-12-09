@@ -1,5 +1,0 @@
-# = = = = = = = = = = = = = = = = = = = =
-TARGET    = mandelbrot_simple
-# = = = = = = = = = = = = = = = = = = = =
-
-include Makefile.tpl

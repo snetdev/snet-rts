@@ -1,9 +1,0 @@
-# Project list
-
-commonlib:common
-utestslib:unit
-snetslib:snets
-
-runner
-sane
-

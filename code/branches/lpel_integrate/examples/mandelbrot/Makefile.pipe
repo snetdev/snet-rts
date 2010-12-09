@@ -1,5 +1,0 @@
-# = = = = = = = = = = = = = = = = = = = =
-TARGET    = mandelbrot_pipe
-# = = = = = = = = = = = = = = = = = = = =
-
-include Makefile.tpl
