@@ -1,0 +1,84 @@
+#
+# $Id:$
+#
+#
+
+
+###############################################################################
+#
+# Collection of targets
+#
+
+ifeq ($(DISTRIBUTED),yes)
+targets_runtime_lpel_devel     := libsnetlpelmpi.so 
+targets_runtime_lpel_prod      := libsnetlpelmpi.prod.so 
+targets_runtime_lpel_default   := $(targets_runtime_lpel_devel)
+else
+targets_runtime_lpel_devel     := libsnetlpel.so 
+targets_runtime_lpel_prod      := libsnetlpel.prod.so 
+targets_runtime_lpel_default   := $(targets_runtime_lpel_devel)
+endif
+
+###############################################################################
+#
+# Collection of target directories
+#
+
+targetdir_runtime_lpel         := lib
+
+
+###############################################################################
+#
+# Collection of additional files to be cleaned
+#
+
+clean_runtime_lpel             :=
+clean_runtime_lpel_devel       :=
+clean_runtime_lpel_prod        :=
+
+
+###############################################################################
+#
+# Collection of source directories
+#
+
+ifeq ($(DISTRIBUTED),yes)
+runtime_lpel          = common entities netinterface observer utility threading \
+                        interfacing distribution lpel
+else
+runtime_lpel          = common entities netinterface observer utility threading \
+                        interfacing lpel
+endif
+
+
+
+###############################################################################
+#
+# Collection of runtime object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+common          = handle.o record.o expression.o info.o
+
+entities        = filter.o syncro.o out.o box.o alias.o\
+                  serial.o collector.o parallel.o star.o split.o
+
+utility		= debug.o bitmap.o hashtable.o queue.o \
+                  debugtime.o debugcounters.o
+
+threading       = threading.o assignment.o
+
+interfacing     = interface_functions.o
+
+netinterface	= label.o parser.tab.o parser.lex.o interface.o\
+                  networkinterface.o output.o input.o 
+
+observer	= observers.o
+
+distribution    = distribution.o datastorage.o message.o fun.o imanager.o \
+                  id.o omanager.o routing.o reference.o 
+
+lpel            = lpel.o scheduler.o stream.o buffer.o task.o taskqueue.o \
+                  monitoring.o hashtab.o
+                  
