@@ -29,6 +29,7 @@
 #include "input.h"
 #include "observers.h"
 #include "networkinterface.h"
+#include "assignment.h"
 
 #include "debug.h"
 
@@ -170,7 +171,7 @@ int SNetInRun(int argc, char *argv[],
   int bufsize = SNET_DEFAULT_BUFSIZE;
   int i = 0;
   lpelconfig_t config;
-
+  snet_info_t *info;
   snetin_label_t *labels = NULL;
   snetin_interface_t *interfaces = NULL;
   char *brk;
@@ -288,7 +289,7 @@ int SNetInRun(int argc, char *argv[],
   
 
   /* Initialise LPEL */
-  config.flags = LPEL_FLAG_AUTO;
+  config.flags = LPEL_FLAG_AUTO2;
   /*
   config.proc_workers = 2;
   config.num_workers = 2;
@@ -303,12 +304,14 @@ int SNetInRun(int argc, char *argv[],
 #endif
 
   LpelInit(&config);
+  AssignmentInit( LpelNumWorkers());
 
   SNetObserverInit(labels, interfaces);
 
+  info = SNetInfoInit();
 
 #ifdef DISTRIBUTED_SNET
-  DistributionStart(fun);
+  DistributionStart(fun, info);
 
   /* create output thread */
   SNetInOutputInit(output, labels, interfaces);
@@ -318,7 +321,7 @@ int SNetInRun(int argc, char *argv[],
 
 #else
   global_in = StreamCreate();
-  global_out = fun(global_in);
+  global_out = fun(global_in, info);
 
   /* create output thread */
   SNetInOutputInit(output, labels, interfaces, global_out);
@@ -328,6 +331,7 @@ int SNetInRun(int argc, char *argv[],
 
 #endif /* DISTRIBUTED_SNET */ 
 
+  SNetInfoDestroy(info);
 
   /* join on input thread */
   SNetInInputDestroy();

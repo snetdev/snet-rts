@@ -33,7 +33,8 @@ typedef struct {
 } lpelconfig_t;
 
 #define LPEL_FLAG_AUTO     (1<<0)
-#define LPEL_FLAG_REALTIME (1<<1)
+#define LPEL_FLAG_AUTO2    (1<<1)
+#define LPEL_FLAG_REALTIME (1<<4)
 
 
 #define LPEL_THREADNAME_MAXLEN 20

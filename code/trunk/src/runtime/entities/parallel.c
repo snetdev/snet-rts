@@ -357,8 +357,8 @@ static void *ParallelBoxThread( void *hndl) {
 
 
 static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
-#ifdef DISTRIBUTED_SNET
 					      snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 					      int location,
 #endif /* DISTRIBUTED_SNET */
 					      snet_typeencoding_list_t *types,
@@ -411,7 +411,7 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
 
     SNetRoutingContextDestroy(new_context);
 #else
-    outstreams[0] = (*fun)( transits[0]);
+    outstreams[0] = (*fun)( transits[0], info);
 #endif /* DISTRIBUTED_SNET */
     
     outstream = CreateDetCollector( outstreams[0]);
@@ -439,7 +439,7 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
       SNetRoutingContextDestroy(new_context);
 
 #else
-      outstreams[i] = (*fun)( transits[i]);
+      outstreams[i] = (*fun)( transits[i], info);
 #endif /* DISTRIBUTED_SNET */
       
       SNetTlWrite( outstreams[0], SNetRecCreate( REC_collect, outstreams[i]));
@@ -503,8 +503,8 @@ static snet_tl_stream_t *SNetParallelStartup( snet_tl_stream_t *instream,
 
 
 extern snet_tl_stream_t *SNetParallel( snet_tl_stream_t *instream,
-#ifdef DISTRIBUTED_SNET
 				       snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 				       int location,
 #endif /* DISTRIBUTED_SNET */
 				       snet_typeencoding_list_t *types,
@@ -529,14 +529,14 @@ extern snet_tl_stream_t *SNetParallel( snet_tl_stream_t *instream,
 #ifdef DISTRIBUTED_SNET
   return( SNetParallelStartup( instream, info, location, types, funs, false));
 #else
-  return( SNetParallelStartup( instream, types, funs, false));
+  return( SNetParallelStartup( instream, info, types, funs, false));
 #endif /* DISTRIBUTED_SNET */
 
 }
 
 extern snet_tl_stream_t *SNetParallelDet( snet_tl_stream_t *inbuf,
-#ifdef DISTRIBUTED_SNET
 					  snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 					  int location,
 #endif /* DISTRIBUTED_SNET */
 					  snet_typeencoding_list_t *types,
@@ -562,7 +562,7 @@ extern snet_tl_stream_t *SNetParallelDet( snet_tl_stream_t *inbuf,
 #ifdef DISTRIBUTED_SNET
   return( SNetParallelStartup( inbuf, info, location, types, funs, true));
 #else
-  return( SNetParallelStartup( inbuf, types, funs, true));
+  return( SNetParallelStartup( inbuf, info, types, funs, true));
 #endif /* DISTRIBUTED_SNET */
 }
 

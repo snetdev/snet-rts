@@ -274,7 +274,6 @@ static void ParallelBoxTask( task_t *self, void *arg)
         for( i=0; i<num; i++) {
           CheckMatch( rec, SNetTencGetTypeEncoding( parg->types, i), matchcounter[i]);
         }
-
         stream_index = BestMatch( matchcounter, num);
         PutToBuffers( outstreams, num, stream_index, rec, (parg->is_det)? &counter : NULL);
         break;
@@ -343,9 +342,19 @@ static void ParallelBoxTask( task_t *self, void *arg)
 
 
 
-static stream_t *SNetParallelStartup( stream_t *instream,
-#ifdef DISTRIBUTED_SNET
+
+
+/*****************************************************************************/
+/* CREATION FUNCTIONS                                                        */
+/*****************************************************************************/
+
+
+/**
+ * Convenience function for creating parallel entities
+ */
+static stream_t *CreateParallel( stream_t *instream,
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_typeencoding_list_t *types,
@@ -372,11 +381,9 @@ static stream_t *SNetParallelStartup( stream_t *instream,
 #endif /* DISTRIBUTED_DEBUG */
 #endif /* DISTRIBUTED_SNET */
 
-
     num = SNetTencGetNumTypes( types);
     collstreams = SNetMemAlloc( num * sizeof( stream_t*));
     transits = SNetMemAlloc( num * sizeof( stream_t*));
-
 
     /* create all branches */
     for( i=0; i<num; i++) {
@@ -392,12 +399,12 @@ static stream_t *SNetParallelStartup( stream_t *instream,
       collstreams[i] = SNetRoutingContextEnd(new_context, collstreams[i]);
       SNetRoutingContextDestroy(new_context);
 #else
-      collstreams[i] = (*fun)( transits[i]);
+      collstreams[i] = (*fun)( transits[i], info);
 #endif /* DISTRIBUTED_SNET */
       
     }
     /* create collector with outstreams */
-    outstream = CollectorCreate(num, collstreams);
+    outstream = CollectorCreate(num, collstreams, info);
 
     parg = SNetMemAlloc( sizeof(parallel_arg_t));
     parg->input = instream;
@@ -407,11 +414,9 @@ static stream_t *SNetParallelStartup( stream_t *instream,
     SNetEntitySpawn( ParallelBoxTask, (void*)parg,
         (is_det)? ENTITY_parallel_det: ENTITY_parallel_nondet
         );
-    
-    
+        
 #ifdef DISTRIBUTED_SNET
   } else { 
-
     num = SNetTencGetNumTypes( types); 
     for(i = 0; i < num; i++) { 
       fun = funs[i];
@@ -426,7 +431,6 @@ static stream_t *SNetParallelStartup( stream_t *instream,
     SNetTencDestroyTypeEncodingList( types);
     outstream  = instream; 
   }
-
   SNetInfoSetRoutingContext(info, context);
 #endif /* DISTRIBUTED_SNET */
   
@@ -434,12 +438,16 @@ static stream_t *SNetParallelStartup( stream_t *instream,
   return( outstream);
 }
 
+
+
+
+
 /**
  * Parallel creation function
  */
 stream_t *SNetParallel( stream_t *instream,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_typeencoding_list_t *types,
@@ -458,22 +466,20 @@ stream_t *SNetParallel( stream_t *instream,
   va_end( args);
 
 #ifdef DISTRIBUTED_SNET
-  return( SNetParallelStartup( instream, info, location, types, funs, false));
+  return CreateParallel( instream, info, location, types, funs, false);
 #else
-  return( SNetParallelStartup( instream, types, funs, false));
+  return CreateParallel( instream, info, types, funs, false);
 #endif /* DISTRIBUTED_SNET */
 
 }
-
-
 
 
 /**
  * Det Parallel creation function
  */
 stream_t *SNetParallelDet( stream_t *inbuf,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_typeencoding_list_t *types,
@@ -492,9 +498,9 @@ stream_t *SNetParallelDet( stream_t *inbuf,
   va_end( args);
 
 #ifdef DISTRIBUTED_SNET
-  return( SNetParallelStartup( inbuf, info, location, types, funs, true));
+  return CreateParallel( inbuf, info, location, types, funs, true);
 #else
-  return( SNetParallelStartup( inbuf, types, funs, true));
+  return CreateParallel( inbuf, info, types, funs, true);
 #endif /* DISTRIBUTED_SNET */
 }
 

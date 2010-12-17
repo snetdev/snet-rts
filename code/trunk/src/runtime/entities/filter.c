@@ -521,8 +521,8 @@ static void *FilterThread( void *hnd)
 
 
 extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
-#ifdef DISTRIBUTED_SNET
 				     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 				     int location,
 #endif /* DISTRIBUTED_SNET */
 				     snet_typeencoding_t *in_type,
@@ -605,8 +605,8 @@ extern snet_tl_stream_t* SNetFilter( snet_tl_stream_t *instream,
 
 
 extern snet_tl_stream_t* SNetTranslate( snet_tl_stream_t *instream,
-#ifdef DISTRIBUTED_SNET
 					snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 					int location,
 #endif /* DISTRIBUTED_SNET */
 					snet_typeencoding_t *in_type,
@@ -774,8 +774,8 @@ static void *NameshiftThread( void *h)
 
 
 extern snet_tl_stream_t *SNetNameShift( snet_tl_stream_t *instream,
-#ifdef DISTRIBUTED_SNET
 					snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 					int location,
 #endif /* DISTRIBUTED_SNET */
 					int offset,

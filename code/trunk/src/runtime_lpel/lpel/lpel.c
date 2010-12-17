@@ -148,7 +148,13 @@ static void CheckConfig( lpelconfig_t *cfg)
     /*TODO _SC_NPROCESSORS_ONLN not available! */
   }
 
-  if ( LPEL_ICFG( LPEL_FLAG_AUTO ) ) {
+  if ( LPEL_ICFG( LPEL_FLAG_AUTO2 ) ) {
+      /* as many workers as processors */
+      cfg->num_workers = cfg->proc_workers = proc_avail;
+      cfg->proc_others = 0;
+
+
+  } else if ( LPEL_ICFG( LPEL_FLAG_AUTO ) ) {
 
     /* default values */
     if (proc_avail > 1) {
@@ -226,6 +232,9 @@ static void CreateCpusetOthers( lpelconfig_t *cfg)
  *
  * If FLAG_AUTO is set, values set for num_workers, proc_workers and
  * proc_others are ignored and set for default as follows:
+ *
+ * AUTO2: proc_workers = num_workers = #proc_avail
+ *        proc_others = 0
  *
  * AUTO: if #proc_avail > 1:
  *         num_workers = proc_workers = #proc_avail - 1

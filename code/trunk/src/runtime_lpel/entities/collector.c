@@ -232,7 +232,7 @@ void CollectorTask( task_t *self, void *arg)
  * Collector creation function
  * @pre num >= 1
  */
-stream_t *CollectorCreate( int num, stream_t **instreams)
+stream_t *CollectorCreate( int num, stream_t **instreams, snet_info_t *info)
 {
   stream_t *outstream;
   coll_arg_t *carg;

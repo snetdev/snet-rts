@@ -451,6 +451,10 @@ static void FilterArgDestroy( filter_arg_t *farg)
 }
 
 
+
+
+
+
 /**
  * Filter task
  */
@@ -593,8 +597,8 @@ static void FilterTask( task_t *self, void *arg)
  * Filter creation function
  */
 stream_t* SNetFilter( stream_t *instream,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *in_type,
@@ -675,8 +679,8 @@ stream_t* SNetFilter( stream_t *instream,
  * Translate creation function
  */
 stream_t* SNetTranslate( stream_t *instream,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *in_type,
@@ -850,8 +854,8 @@ static void NameshiftTask( task_t *self, void *arg)
  * Nameshift creation function
  */
 stream_t *SNetNameShift( stream_t *instream,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     int offset,

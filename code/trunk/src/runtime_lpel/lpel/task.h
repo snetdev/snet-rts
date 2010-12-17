@@ -21,18 +21,9 @@
 
 #define TASK_ATTR_DEFAULT      (0)
 #define TASK_ATTR_MONITOR   (1<<0)
-#define TASK_ATTR_SYSTEM    (1<<8)
-
 
 #define TASK_PRINT_TIMES    (1<<0)
 #define TASK_PRINT_STREAMS  (1<<1)
-
-
-/**
- * Check if a task is a waitany-task
- * @param t   pointer to task_t
- */
-#define TASK_IS_WAITANY(t)  (BIT_IS_SET((t)->attr.flags, TASK_ATTR_WAITANY))
 
 
 struct stream_desc;
@@ -40,10 +31,9 @@ struct stream;
 
 
 typedef enum {
-  TASK_INIT    = 'I',
   TASK_RUNNING = 'U',
   TASK_READY   = 'R',
-  TASK_WAITING = 'W',
+  TASK_BLOCKED = 'B',
   TASK_ZOMBIE  = 'Z'
 } taskstate_t;
 
@@ -67,34 +57,27 @@ typedef struct {
  * TASK CONTROL BLOCK
  */
 struct task {
-  unsigned long uid;
-  taskstate_t state;
-  /* queue handling: prev, next */
-  //task_t *volatile prev;
-  //task_t *volatile next;
-  task_t *prev, *next;
-
-  /* lock */
+  task_t *prev, *next;  /** intrinsic pointers for organizing tasks in a list*/
+  /*task_t *volatile prev;*/
+  /*task_t *volatile next;*/
+  unsigned long uid;    /** unique identifier */
+  taskattr_t attr;      /** attributes */
+  taskstate_t state;    /** state */
+  taskstate_wait_t wait_on; /** on which event the task is waiting */
+  /**
+   * lock to protect a task from concurrent execution and manipulation
+   */
   pthread_mutex_t lock;
-  
-  /* attributes */
-  taskattr_t attr;
-
-  /* data to indicate on which event the task is waiting */
-  taskstate_wait_t wait_on;
-
-  /* poll token */
-  atomic_t poll_token;
+  schedctx_t *sched_context;  /** scheduling context for this task */
+  /**
+   * indicates the SD which points to the stream which has new data
+   * and caused this task to be woken up
+   */
   struct stream_desc *wakeup_sd;
-
-  /* reference counter */
-  atomic_t refcnt;
-
-  schedctx_t *sched_context;
-  void *sched_info;  /* scheduling information for this task */
+  atomic_t poll_token;        /** poll token, accessed concurrently */
 
   /* ACCOUNTING INFORMATION */
-  /* timestamps for creation, start/stop of last dispatch */
+  /** timestamps for creation, start/stop of last dispatch */
   struct {
     timing_t creat, start, stop;
   } times;
@@ -107,18 +90,18 @@ struct task {
   coroutine_t ctx;
   taskfunc_t code;
   void *inarg;  /* input argument  */
-  void *outarg; /* output argument */
 };
 
 
 
 extern task_t *TaskCreate( taskfunc_t, void *inarg, taskattr_t *attr);
-extern int TaskDestroy(task_t *t);
 
 extern void TaskCall(task_t *ct);
-extern void TaskExit(task_t *ct, void *outarg);
+extern void TaskExit(task_t *ct);
 extern void TaskYield(task_t *ct);
 
+
+extern void TaskDestroy(task_t *t);
 
 extern void TaskPrint( task_t *t, FILE *file, int flags);
 

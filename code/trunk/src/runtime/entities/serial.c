@@ -13,8 +13,8 @@
 /* ------------------------------------------------------------------------- */
 
 extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input, 
-#ifdef DISTRIBUTED_SNET
 				    snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 				    int location,
 #endif /* DISTRIBUTED_SNET */
 				    snet_startup_fun_t box_a,
@@ -41,7 +41,7 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
   internal_stream = (*box_a)(input, info, location);
 #else
-  internal_stream = (*box_a)(input);
+  internal_stream = (*box_a)(input, info);
 #endif /* DISTRIBUTED_SNET */
 
 #ifdef SERIAL_DEBUG
@@ -51,7 +51,7 @@ extern snet_tl_stream_t* SNetSerial(snet_tl_stream_t *input,
 #ifdef DISTRIBUTED_SNET
   output = (*box_b)(internal_stream, info, location);
 #else
-  output = (*box_b)(internal_stream);
+  output = (*box_b)(internal_stream, info);
 #endif /* DISTRIBUTED_SNET */
 
 #ifdef SERIAL_DEBUG

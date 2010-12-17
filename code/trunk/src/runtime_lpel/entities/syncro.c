@@ -346,8 +346,8 @@ static void SyncBoxTask( task_t *self, void *arg)
  * Synchro-Box creation function
  */
 stream_t *SNetSync( stream_t *input,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *outtype,

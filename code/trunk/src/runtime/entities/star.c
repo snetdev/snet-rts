@@ -62,11 +62,11 @@ static void *StarBoxThread( void *hndl)
   snet_typeencoding_t *exit_tags;
   snet_record_t *rec, *current_sort_rec = NULL;
   snet_expr_list_t *guards;
+  snet_info_t *info;
 
 #ifdef DISTRIBUTED_SNET
   int node_id;
   snet_fun_id_t fun_id;
-  snet_info_t *info;
 #endif /* DISTRIBUTED_SNET */
 
 #ifdef STAR_DEBUG
@@ -127,8 +127,8 @@ static void *StarBoxThread( void *hndl)
 #endif
             // register new buffer with dispatcher,
             // starstream is returned by self, which is SNetStarIncarnate
-#ifdef DISTRIBUTED_SNET
 	    info = SNetInfoInit();
+#ifdef DISTRIBUTED_SNET
 
 	    SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
 
@@ -136,15 +136,15 @@ static void *StarBoxThread( void *hndl)
 	      
 	    starstream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), starstream);
 
-	    SNetInfoDestroy(info);
 #else
-            starstream = SNetSerial(our_outstream, box, self);
+            starstream = SNetSerial(our_outstream, info, box, self);
 
 #ifdef STAR_DEBUG
             SNetUtilDebugNotice("STAR %p has created a new instance",
                                 real_outstream);
 #endif
 #endif /* DISTRIBUTED_SNET */
+	    SNetInfoDestroy(info);
 	    SNetTlWrite(real_outstream, SNetRecCreate(REC_collect, starstream));
 
 /*            if( current_sort_rec != NULL) {
@@ -227,8 +227,8 @@ static void *StarBoxThread( void *hndl)
 }
 
 extern snet_tl_stream_t *SNetStar( snet_tl_stream_t *input,
-#ifdef DISTRIBUTED_SNET
 				   snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 				   int location,
 #endif /* DISTRIBUTED_SNET */
                                    snet_typeencoding_t *type,
@@ -275,8 +275,8 @@ extern snet_tl_stream_t *SNetStar( snet_tl_stream_t *input,
 }
 
 extern snet_tl_stream_t *SNetStarIncarnate(snet_tl_stream_t *input,
-#ifdef DISTRIBUTED_SNET
 					   snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 					   int location,
 #endif /* DISTRIBUTED_SNET */
 					   snet_typeencoding_t *type,
@@ -340,11 +340,11 @@ static void *DetStarBoxThread( void *hndl) {
  
   snet_record_t *sort_begin = NULL, *sort_end = NULL;
   int counter = 0;
+  snet_info_t *info;
 
 #ifdef DISTRIBUTED_SNET
   int node_id;
   snet_fun_id_t fun_id;
-  snet_info_t *info;
 #endif /* DISTRIBUTED_SNET */
 
   real_output = SNetHndGetOutput( hnd);
@@ -389,8 +389,8 @@ static void *DetStarBoxThread( void *hndl) {
           }
           else {
             if(starstream == NULL) {
-#ifdef DISTRIBUTED_SNET
 	      info = SNetInfoInit();
+#ifdef DISTRIBUTED_SNET
 
 	      SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
 
@@ -398,11 +398,11 @@ static void *DetStarBoxThread( void *hndl) {
 	      
 	      starstream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), starstream);
 
-	      SNetInfoDestroy(info);
 #else
-	      starstream = SNetSerial(our_output, box, self);
+	      starstream = SNetSerial(our_output, info, box, self);
 
 #endif /* DISTRIBUTED_SNET */  	      
+	      SNetInfoDestroy(info);
 	      SNetTlWrite(real_output, SNetRecCreate(REC_collect,starstream));
 	      
             }
@@ -430,8 +430,8 @@ static void *DetStarBoxThread( void *hndl) {
              // register new buffer with dispatcher,
              // starstream is returned by self, which is SNetStarIncarnate
 
-#ifdef DISTRIBUTED_SNET
 	     info = SNetInfoInit();
+#ifdef DISTRIBUTED_SNET
 
 	     SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
 	     
@@ -439,10 +439,10 @@ static void *DetStarBoxThread( void *hndl) {
 	     
 	     starstream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), starstream);
 	     
-	     SNetInfoDestroy(info);
 #else
-	     starstream = SNetSerial(our_output, box, self);
+	     starstream = SNetSerial(our_output, info, box, self);
 #endif /* DISTRIBUTED_SNET */      
+	     SNetInfoDestroy(info);
      
              SNetTlWrite(real_output, SNetRecCreate(REC_collect, starstream));
 //           SNetTlWrite( our_output, sort_begin); /* sort_begin is set in "case REC_sort_xxx" */
@@ -520,8 +520,8 @@ static void *DetStarBoxThread( void *hndl) {
 }
 
 extern snet_tl_stream_t *SNetStarDet(snet_tl_stream_t *input,
-#ifdef DISTRIBUTED_SNET
 				     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 				     int location,
 #endif /* DISTRIBUTED_SNET */
 				     snet_typeencoding_t *type,
@@ -577,8 +577,8 @@ extern snet_tl_stream_t *SNetStarDet(snet_tl_stream_t *input,
 }
 
 extern snet_tl_stream_t *SNetStarDetIncarnate(snet_tl_stream_t *input,
-#ifdef DISTRIBUTED_SNET
 				       snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 				       int location,
 #endif /* DISTRIBUTED_SNET */
 				       snet_typeencoding_t *type,

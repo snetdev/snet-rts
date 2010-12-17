@@ -209,7 +209,9 @@ static void SchedWorker( lpelthread_t *env, void *arg)
 
       /* output accounting info */
 #ifdef MONITORING_ENABLE
-      MonTaskPrint( &sc->env->mon, sc, t);
+      if ( t->attr.flags & TASK_ATTR_MONITOR ) {
+        MonTaskPrint( &sc->env->mon, sc, t);
+      }
 #endif
 
       pthread_mutex_unlock( &t->lock);
@@ -224,7 +226,7 @@ static void SchedWorker( lpelthread_t *env, void *arg)
           pthread_mutex_unlock( &sc->lock );
           break;
 
-        case TASK_WAITING: /* task returned from a blocking call*/
+        case TASK_BLOCKED: /* task returned from a blocking call*/
           /* do nothing */
           break;
 
@@ -301,7 +303,9 @@ void SchedWrapper( lpelthread_t *env, void *arg)
 
     /* output accounting info */
 #ifdef MONITORING_ENABLE
-    MonTaskPrint( &sc->env->mon, sc, t);
+      if ( t->attr.flags & TASK_ATTR_MONITOR ) {
+        MonTaskPrint( &sc->env->mon, sc, t);
+      }
 #endif
 
     /* check state of task, place into appropriate queue */
@@ -312,7 +316,7 @@ void SchedWrapper( lpelthread_t *env, void *arg)
         TaskDestroy( t);
         break;
 
-      case TASK_WAITING: /* task returned from a blocking call*/
+      case TASK_BLOCKED: /* task returned from a blocking call*/
         /* do nothing */
         break;
 

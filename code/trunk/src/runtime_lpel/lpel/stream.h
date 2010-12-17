@@ -5,8 +5,6 @@
 #include <pthread.h>
 
 #include "bool.h"
-#include "buffer.h"
-#include "atomic.h"
 
 
 //#define STREAM_POLL_SPINLOCK
@@ -14,35 +12,17 @@
 /* a stream */
 typedef struct stream stream_t;
 
-/** stream modifier handle */
+/** stream descriptor */
 typedef struct stream_desc stream_desc_t;    
 
-/** a handle to the list */
+/** a handle to a stream descriptor list */
 typedef struct stream_desc *stream_list_t;
 
-/** a list iterator */
+/** an iterator for a stream descriptor list */
 typedef struct stream_iter stream_iter_t;
 
 
-struct stream {
-  buffer_t buffer;
-
-#ifdef STREAM_POLL_SPINLOCK
-  pthread_spinlock_t prod_lock;
-#else
-  pthread_mutex_t prod_lock;
-#endif
-  int is_poll;
-  stream_desc_t *prod_sd;
-  stream_desc_t *cons_sd;
-  atomic_t n_sem;
-  atomic_t e_sem;
-};
-
-
-
 struct task;
-
 
 stream_t *StreamCreate(void);
 void StreamDestroy( stream_t *s);
@@ -55,8 +35,6 @@ void StreamWrite( stream_desc_t *sd, void *item);
 void StreamPoll( stream_list_t *list);
 
 int StreamPrintDirty( struct task *t, FILE *file);
-
-
 
 
 void StreamListAppend( stream_list_t *lst, stream_desc_t *node);

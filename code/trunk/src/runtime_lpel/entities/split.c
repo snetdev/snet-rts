@@ -95,11 +95,10 @@ static void SplitBoxTask( task_t *self, void *arg)
             HashtabPut( repos_tab, i, outstream);
             /* add to list */
             StreamListAppend( &repos_list, outstream);
-#ifdef DISTRIBUTED_SNET
             {
-              snet_info_t *info;
+              snet_info_t *info = SNetInfoInit();
+#ifdef DISTRIBUTED_SNET
               stream_t *temp_stream;
-              info = SNetInfoInit();
               if( sarg->is_byloc) {
                 SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, i));    
                 temp_stream = sarg->boxfun(newstream_addr, info, i);    
@@ -114,13 +113,13 @@ static void SplitBoxTask( task_t *self, void *arg)
                 StreamWrite( initial,
                     SNetRecCreate( REC_collect, temp_stream));
               }
+#else
+              /* notify collector about the new instance via initial */
+              StreamWrite( initial, 
+                  SNetRecCreate( REC_collect, sarg->boxfun( newstream_addr, info)));
+#endif /* DISTRIBUTED_SNET */
               SNetInfoDestroy(info);
             }
-#else
-            /* notify collector about the new instance via initial */
-            StreamWrite( initial, 
-                SNetRecCreate( REC_collect, sarg->boxfun( newstream_addr)));
-#endif /* DISTRIBUTED_SNET */
           } /* end if (outstream==NULL) */
 
           /* multicast the record */
@@ -225,17 +224,27 @@ static void SplitBoxTask( task_t *self, void *arg)
 
 
 
+
+/*****************************************************************************/
+/* CREATION FUNCTIONS                                                        */
+/*****************************************************************************/
+
+
 /**
- * Non-det Split creation function
- *
+ * Convenience function for creating
+ * Split, DetSplit, LocSplit or LocSplitDet,
+ * dependent on parameters is_byloc and is_det
  */
-stream_t *SNetSplit( stream_t *input,
-#ifdef DISTRIBUTED_SNET
+stream_t *CreateSplit( stream_t *input,
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_startup_fun_t box_a,
-    int ltag, int utag) 
+    int ltag, int utag,
+    bool is_byloc,
+    bool is_det
+    ) 
 {
   stream_t **initial, *output;
   split_arg_t *sarg;
@@ -244,7 +253,11 @@ stream_t *SNetSplit( stream_t *input,
   input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
   if(location == SNetIDServiceGetNodeID()) {
 #ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Split created");
+    if (is_byloc) {
+      SNetUtilDebugNotice( (is_det) ? "DetLocSplit created" : "LocSplit created");
+    } else {
+      SNetUtilDebugNotice( (is_det) ? "DetSplit created" : "Split created");
+    }
 #endif /* DISTRIBUTED_DEBUG */
 #endif /* DISTRIBUTED_SNET */
     
@@ -256,11 +269,13 @@ stream_t *SNetSplit( stream_t *input,
     sarg->boxfun = box_a;
     sarg->ltag = ltag;
     sarg->utag = utag;
-    sarg->is_det = false;
-    sarg->is_byloc = false;
+    sarg->is_det = is_det;
+    sarg->is_byloc = is_byloc;
 
-    output = CollectorCreate( 1, initial);
-    SNetEntitySpawn( SplitBoxTask, (void*)sarg, ENTITY_split_nondet);
+    output = CollectorCreate( 1, initial, info);
+    SNetEntitySpawn( SplitBoxTask, (void*)sarg,
+        (is_det) ? ENTITY_split_det : ENTITY_split_nondet
+        );
     
 #ifdef DISTRIBUTED_SNET
   } else { 
@@ -271,6 +286,53 @@ stream_t *SNetSplit( stream_t *input,
 }
 
 
+
+
+/**
+ * Non-det Split creation function
+ *
+ */
+stream_t *SNetSplit( stream_t *input,
+    snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
+    int location,
+#endif /* DISTRIBUTED_SNET */
+    snet_startup_fun_t box_a,
+    int ltag, int utag) 
+{
+  return CreateSplit( input, info,
+#ifdef DISTRIBUTED_SNET
+      location,
+#endif /* DISTRIBUTED_SNET */
+      box_a, ltag, utag,
+      false, /* not by location */
+      false  /* not det */
+      );
+}
+
+
+
+/**
+ * Det Split creation function
+ *
+ */
+stream_t *SNetSplitDet( stream_t *input, 
+    snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
+    int location,
+#endif /* DISTRIBUTED_SNET */
+    snet_startup_fun_t box_a,
+    int ltag, int utag) 
+{
+  return CreateSplit( input, info,
+#ifdef DISTRIBUTED_SNET
+      location,
+#endif /* DISTRIBUTED_SNET */
+      box_a, ltag, utag,
+      false, /* not by location */
+      true   /* is det */
+      );
+}
 
 
 
@@ -285,123 +347,28 @@ stream_t *SNetLocSplit( stream_t *input,
     snet_startup_fun_t box_a,
     int ltag, int utag)
 {
-  stream_t **initial, *output;
-  split_arg_t *sarg;
-
-  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("LocSplit created");
-#endif /* DISTRIBUTED_DEBUG */
-
-    initial = (stream_t **) SNetMemAlloc(sizeof(stream_t *));
-    initial[0] = StreamCreate();
-    sarg = (split_arg_t *) SNetMemAlloc( sizeof( split_arg_t));
-    sarg->input = input;
-    sarg->output = initial[0];
-    sarg->boxfun = box_a;
-    sarg->ltag = ltag;
-    sarg->utag = utag;
-    sarg->is_det = false;
-    sarg->is_byloc = true;
-
-    output = CollectorCreate( 1, initial);
-    SNetEntitySpawn( SplitBoxTask, (void*)sarg, ENTITY_split_nondet);
-  } else { 
-    output = input; 
-  }
-  return( output);
+  return CreateLocSplit( input, info,
+      location, box_a, ltag, utag,
+      true, /* is by location */
+      false /* not det */
+      );
 }
-#endif /* DISTRIBUTED_SNET */
-
-
-
-
-/**
- * Det Split creation function
- *
- */
-stream_t *SNetSplitDet( stream_t *input, 
-#ifdef DISTRIBUTED_SNET
-    snet_info_t *info, 
-    int location,
-#endif /* DISTRIBUTED_SNET */
-    snet_startup_fun_t box_a,
-    int ltag, int utag) 
-{
-  stream_t **initial, *output;
-  split_arg_t *sarg;
-
-#ifdef DISTRIBUTED_SNET
-  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("DetSplit created");
-#endif /* DISTRIBUTED_DEBUG */
-#endif /* DISTRIBUTED_SNET */
-    
-    initial = (stream_t **) SNetMemAlloc(sizeof(stream_t *));
-    initial[0] = StreamCreate();
-    sarg = (split_arg_t *) SNetMemAlloc( sizeof( split_arg_t));
-    sarg->input = input;
-    sarg->output = initial[0];
-    sarg->boxfun = box_a;
-    sarg->ltag = ltag;
-    sarg->utag = utag;
-    sarg->is_det = true;
-    sarg->is_byloc = false;
-
-    output = CollectorCreate( 1, initial);
-    SNetEntitySpawn( SplitBoxTask, (void*)sarg, ENTITY_split_det);
-
-#ifdef DISTRIBUTED_SNET
-  } else { 
-    output = input; 
-  }
-#endif /* DISTRIBUTED_SNET */
-  return( output);
-}
-
-
-
 
 /**
  * Det Location Split creation function
  *
  */
-#ifdef DISTRIBUTED_SNET
 stream_t *SNetLocSplitDet( stream_t *input,
     snet_info_t *info, 
     int location,
     snet_startup_fun_t box_a,
     int ltag, int utag)
 {
-  stream_t **initial, *output;
-  split_arg_t *sarg;
-
-  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 							  
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("DetLocSplit created");
-#endif /* DISTRIBUTED_DEBUG */
-
-    initial = (stream_t **) SNetMemAlloc(sizeof(stream_t *));
-    initial[0] = StreamCreate();
-    sarg = (split_arg_t *) SNetMemAlloc( sizeof( split_arg_t));
-    sarg->input = input;
-    sarg->output = initial[0];
-    sarg->boxfun = box_a;
-    sarg->ltag = ltag;
-    sarg->utag = utag;
-    sarg->is_det = true;
-    sarg->is_byloc = true;
-
-    output = CollectorCreate( 1, initial);
-    SNetEntitySpawn( SplitBoxTask, (void*)sarg, ENTITY_split_det);
-  } else { 
-    output = input; 
-  }
-  return( output);
-}
+  return CreateLocSplit( input, info,
+      location, box_a, ltag, utag,
+      true, /* is by location */
+      true  /* is det */
+      );
+} 
 #endif /* DISTRIBUTED_SNET */
- 
+

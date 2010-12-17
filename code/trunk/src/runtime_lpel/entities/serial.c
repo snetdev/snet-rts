@@ -18,8 +18,8 @@
  * Serial connector creation function
  */
 stream_t *SNetSerial(stream_t *input, 
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_startup_fun_t box_a,
@@ -42,8 +42,8 @@ stream_t *SNetSerial(stream_t *input,
   internal_stream = (*box_a)(input, info, location);
   output = (*box_b)(internal_stream, info, location);
 #else
-  internal_stream = (*box_a)(input);
-  output = (*box_b)(internal_stream);
+  internal_stream = (*box_a)(input, info);
+  output = (*box_b)(internal_stream, info);
 #endif /* DISTRIBUTED_SNET */
 
 

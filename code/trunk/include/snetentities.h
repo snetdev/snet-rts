@@ -17,8 +17,8 @@
 /* Alias                                                                    */
 /****************************************************************************/
 struct stream *SNetAlias( struct stream *instream,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     snet_startup_fun_t net);
@@ -29,8 +29,8 @@ struct stream *SNetAlias( struct stream *instream,
 /* Box                                                                      */
 /****************************************************************************/
 struct stream *SNetBox(struct stream *instream,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     const char *boxname,
@@ -42,8 +42,8 @@ struct stream *SNetBox(struct stream *instream,
 /* Synchrocell                                                              */
 /****************************************************************************/
 struct stream *SNetSync( struct stream *input, 
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *outtype,
@@ -55,24 +55,24 @@ struct stream *SNetSync( struct stream *input,
 /* Filter                                                                   */
 /****************************************************************************/
 struct stream *SNetFilter( struct stream *inbuf,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *in_type,
     snet_expr_list_t *guards, ... );
 
 struct stream *SNetTranslate( struct stream *inbuf,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *in_type,
     snet_expr_list_t *guards, ... );
 
 struct stream *SNetNameShift( struct stream *inbuf,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     int offset,
@@ -83,8 +83,8 @@ struct stream *SNetNameShift( struct stream *inbuf,
 /* Serial                                                                   */
 /****************************************************************************/
 struct stream *SNetSerial(struct stream *instream,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     snet_startup_fun_t box_a,
@@ -95,16 +95,16 @@ struct stream *SNetSerial(struct stream *instream,
 /* Parallel                                                                 */
 /****************************************************************************/
 struct stream *SNetParallel( struct stream *instream,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     snet_typeencoding_list_t *types,
     ...);
 
 struct stream *SNetParallelDet( struct stream *instream,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     snet_typeencoding_list_t *types,
@@ -115,8 +115,8 @@ struct stream *SNetParallelDet( struct stream *instream,
 /* Star                                                                     */
 /****************************************************************************/
 struct stream *SNetStar( struct stream *inbuf,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     snet_typeencoding_t *type,
@@ -125,8 +125,8 @@ struct stream *SNetStar( struct stream *inbuf,
     snet_startup_fun_t box_b);
 
 struct stream *SNetStarIncarnate( struct stream *inbuf,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     snet_typeencoding_t *type,
@@ -135,8 +135,8 @@ struct stream *SNetStarIncarnate( struct stream *inbuf,
     snet_startup_fun_t box_b);
 
 struct stream *SNetStarDet( struct stream *inbuf,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     snet_typeencoding_t *type,
@@ -145,8 +145,8 @@ struct stream *SNetStarDet( struct stream *inbuf,
     snet_startup_fun_t box_b);
 
 struct stream *SNetStarDetIncarnate( struct stream *inbuf,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     snet_typeencoding_t *type,
@@ -159,8 +159,8 @@ struct stream *SNetStarDetIncarnate( struct stream *inbuf,
 /* Split                                                                    */
 /****************************************************************************/
 struct stream *SNetSplit( struct stream *inbuf,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_startup_fun_t box_a,
@@ -168,8 +168,8 @@ struct stream *SNetSplit( struct stream *inbuf,
     int utag);
 
 struct stream *SNetSplitDet( struct stream *inbuf, 
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */
     snet_startup_fun_t box_a,

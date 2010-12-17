@@ -32,6 +32,7 @@ typedef struct {
   stream_t *input, *output;
   void (*boxfun)( snet_handle_t*);
   snet_box_sign_t *out_signs;
+  const char *boxname;
 } box_arg_t;
 
 /**
@@ -152,8 +153,8 @@ static void BoxTask(task_t *self, void *arg)
  * Box creation function
  */
 stream_t *SNetBox( stream_t *input,
-#ifdef DISTRIBUTED_SNET
     snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
     int location,
 #endif /* DISTRIBUTED_SNET */ 
     const char *boxname,
@@ -178,6 +179,7 @@ stream_t *SNetBox( stream_t *input,
     barg->output = output;
     barg->boxfun = boxfun;
     barg->out_signs = out_signs;
+    barg->boxname = boxname;
 
     SNetEntitySpawn( BoxTask, (void*)barg, ENTITY_box);
     

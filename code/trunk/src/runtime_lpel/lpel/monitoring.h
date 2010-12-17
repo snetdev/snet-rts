@@ -12,12 +12,10 @@
 
 //#define MON_DO_FLUSH
 
-#define MON_MAX_EVENTS  10
+//#define MON_MAX_EVENTS  10
 
 #define MONITORING_TIMES        (1<<0)
 #define MONITORING_STREAMINFO   (1<<1)
-
-#define MONITORING_ALLTASKS     (1<<8)
 
 #define MONITORING_NONE           ( 0)
 #define MONITORING_ALL            (-1)
@@ -28,8 +26,8 @@
 typedef struct {
   FILE *outfile;
   int   flags;
-  int   num_events;
-  char  events[MON_MAX_EVENTS][20];
+//  int   num_events;
+//  char  events[MON_MAX_EVENTS][20];
 } monitoring_t;
 
 struct lpelthread;
@@ -41,7 +39,7 @@ void MonDebug( struct lpelthread *env, const char *fmt, ...);
 
 struct task;
 
-void MonTaskEvent( struct task *t, const char *fmt, ...);
+//void MonTaskEvent( struct task *t, const char *fmt, ...);
 void MonTaskPrint( monitoring_t *mon, struct schedctx *sc, struct task *t);
 
 

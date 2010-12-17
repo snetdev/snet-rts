@@ -111,8 +111,8 @@ static void *BoxThread( void *hndl) {
 }
 
 extern snet_tl_stream_t *SNetBox( snet_tl_stream_t *input,
-#ifdef DISTRIBUTED_SNET
 				  snet_info_t *info, 
+#ifdef DISTRIBUTED_SNET
 				  int location,
 #endif /* DISTRIBUTED_SNET */ 
                                   const char *boxname,

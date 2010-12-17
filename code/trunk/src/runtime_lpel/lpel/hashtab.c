@@ -1,3 +1,24 @@
+/**
+ * File: hashtab.c
+ * Auth: Daniel Prokesch
+ * Date: 2010/09/15
+ * Desc:
+ *
+ * An open-addressed hashtable implementation using quadratic probing
+ * and a hashtable size (capacity) of m = 2^n.
+ * The keys are integers, the values unspecified pointers (void*).
+ *
+ * The hash-function simply is h(k) = k % m.
+ * The probing function is h(k,i) = (h(k,i-1) + i) % m  with h(k,0) = h(k).
+ * A nice property thereof is, that the values h(k,i) for i in [0,m − 1] are
+ * all distinct, meaning that all buckets are probed.
+ *
+ * Upon a load > 0.75, which is particulary easy to compute for
+ * table size >= 2^2, the capacity is doubled and each element is rehashed.
+ *
+ * There are functions for putting values into and retrieving values from
+ * the table, no function for deleting is provided.
+ */
 
 #include <stdlib.h>
 #include <assert.h>
@@ -18,6 +39,11 @@ struct hashtab {
 
 /**
  * Create a hashtable
+ *
+ * @param init_cap2   the initial capacity of the hashtable, specified as
+ *                    power of two (the capacity will be 2^init_cap2)
+ * @pre   init_cap2 >= 2
+ * @return a newly allocated hashtable
  */
 hashtab_t *HashtabCreate( int init_cap2)
 {
@@ -37,6 +63,8 @@ hashtab_t *HashtabCreate( int init_cap2)
 
 /**
  * Destroy a hashtable
+ *
+ * @param ht    the hashtable to desrtoy, the memory will be freed
  */
 void HashtabDestroy( hashtab_t *ht)
 {
@@ -45,8 +73,10 @@ void HashtabDestroy( hashtab_t *ht)
 }
 
 
-#define MOD_SIZE(size, key)    ((key) & ((size)-1)) 
-#define HASH_K_I(size,key,i)  (MOD_SIZE( (size), MOD_SIZE((size),(key)+(i))))
+/* assuming size is a power of two */
+#define MOD_SIZE(size, key)    ((key) & ((size)-1))
+/* computes the key for the i-th probe, assuming the key of the (i-1)-th probe */
+#define HASH_K_I(size,key,i)  (MOD_SIZE((size),(key)+(i)))
 
 /**
  * Get a hashtab entry to store key.
@@ -75,7 +105,12 @@ static hashtab_entry_t *ProbePut( hashtab_t *ht, int key)
 
 /**
  * Put a key-value pair into the hashtable.
- * If key already exists, the value will be overwritten
+ * If key already exists, the value will be overwritten.
+ *
+ * @param ht    pointer to the hashtable
+ * @param key   key >= 0
+ * @param value value != NULL
+ * @pre   (key >= 0) && (value != NULL)
  */
 void HashtabPut( hashtab_t *ht, int key, void *value)
 {
@@ -124,6 +159,10 @@ void HashtabPut( hashtab_t *ht, int key, void *value)
 /**
  * Get value with specific key from the hashtable.
  * If key does not exist, NULL will be returned.
+ *
+ * @param ht  pointer to hashtable
+ * @param key key for which the value should be retrieved
+ * @return  the value stored for the key, or NULL if key does not exist
  */
 void *HashtabGet( hashtab_t *ht, int key)
 {
@@ -146,6 +185,14 @@ void *HashtabGet( hashtab_t *ht, int key)
 }
 
 #ifdef DEBUG
+/**
+ * Print the contents of the hashtable to a file,
+ * for debugging purposes.
+ *
+ * @param ht    pointer to hashtable
+ * @param outf  file to which the contents are written to
+ * @pre   file must be open for writing
+ */
 void HashtabPrintDebug( hashtab_t *ht, FILE *outf)
 {
   int i;

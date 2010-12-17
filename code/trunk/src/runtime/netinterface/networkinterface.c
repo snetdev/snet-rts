@@ -306,7 +306,7 @@ int SNetInRun(int argc, char *argv[],
 #else
   in_buf = SNetTlCreateStream(bufsize);
 
-  out_buf = fun(in_buf);
+  out_buf = fun(in_buf, NULL);
 
   if(SNetInOutputInit(output, labels, interfaces, out_buf) != 0){
     /* TODO: free resources! */

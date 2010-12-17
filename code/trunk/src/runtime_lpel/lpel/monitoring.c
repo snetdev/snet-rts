@@ -77,12 +77,12 @@ void MonDebug( lpelthread_t *env, const char *fmt, ...)
 }
 
 
+/*
 void MonTaskEvent( task_t *t, const char *fmt, ...)
 {
   //monitoring_t *mon = &t->sched_context->env.mon;
-
 }
-
+*/
 
 
 void MonTaskPrint( monitoring_t *mon, struct schedctx *sc, struct task *t)
