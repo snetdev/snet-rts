@@ -29,10 +29,5 @@ void SNetInInputInit(FILE *file,
            
 
 
-/* Wait until the end of input.
- *
- */
-void SNetInInputDestroy();
-
 
 #endif /* _INPUT_H_ */

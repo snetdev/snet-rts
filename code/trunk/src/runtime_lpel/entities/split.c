@@ -6,7 +6,7 @@
 
 #include "memfun.h"
 #include "collector.h"
-#include "threading.h"
+#include "spawn.h"
 
 #include "stream.h"
 #include "task.h"
@@ -273,7 +273,7 @@ stream_t *CreateSplit( stream_t *input,
     sarg->is_byloc = is_byloc;
 
     output = CollectorCreate( 1, initial, info);
-    SNetEntitySpawn( SplitBoxTask, (void*)sarg,
+    SNetSpawnEntity( SplitBoxTask, (void*)sarg,
         (is_det) ? ENTITY_split_det : ENTITY_split_nondet
         );
     
@@ -347,7 +347,7 @@ stream_t *SNetLocSplit( stream_t *input,
     snet_startup_fun_t box_a,
     int ltag, int utag)
 {
-  return CreateLocSplit( input, info,
+  return CreateSplit( input, info,
       location, box_a, ltag, utag,
       true, /* is by location */
       false /* not det */
@@ -364,7 +364,7 @@ stream_t *SNetLocSplitDet( stream_t *input,
     snet_startup_fun_t box_a,
     int ltag, int utag)
 {
-  return CreateLocSplit( input, info,
+  return CreateSplit( input, info,
       location, box_a, ltag, utag,
       true, /* is by location */
       true  /* is det */

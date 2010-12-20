@@ -14,7 +14,8 @@
 #include "memfun.h"
 #include "snetentities.h"
 #include "debug.h"
-#include "threading.h"
+
+#include "spawn.h"
 #include "assignment.h"
 
 #include "lpel.h"
@@ -22,17 +23,31 @@
 #include "scheduler.h"
 
 
+/**
+ * Create a task on a scheduler wrapper thread
+ */
+void SNetSpawnWrapper( taskfunc_t taskfunc, void *arg,
+    char *name)
+{
+  task_t *t;
+  taskattr_t attr = {TASK_ATTR_MONITOR_OUTPUT, 0};
 
-void SNetEntitySpawn( taskfunc_t fun, void *arg, snet_entity_id_t id)
+  t = TaskCreate(taskfunc, arg, &attr);
+  return SchedWrapper( t, name);
+}
+
+
+
+void SNetSpawnEntity( taskfunc_t fun, void *arg, snet_entity_id_t id)
 {
   task_t *t;
   taskattr_t tattr = {0, 0};
+  int wid;
 
   /* monitoring */
   if (id==ENTITY_box) {
-    tattr.flags |= TASK_ATTR_MONITOR;
+    tattr.flags |= TASK_ATTR_MONITOR_OUTPUT;
   }
-  //tattr.flags |= TASK_ATTR_MONITOR;
 
   /* stacksize */
   if (id==ENTITY_box || id==ENTITY_none) {
@@ -44,8 +59,11 @@ void SNetEntitySpawn( taskfunc_t fun, void *arg, snet_entity_id_t id)
   /* create task */
   t = TaskCreate( fun, arg, &tattr);
 
-  /* Call assignment */
-  AssignmentAssign(t, id==ENTITY_box);
+  /* Query assignment module */
+  wid = AssignmentGetWID(t, id==ENTITY_box);
+  
+  /* call scheduler assignment */
+  SchedAssignTask( t, wid);
 }
 
 

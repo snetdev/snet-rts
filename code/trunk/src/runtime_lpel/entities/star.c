@@ -4,7 +4,7 @@
 
 #include "record_p.h"
 #include "typeencode.h"
-#include "threading.h"
+#include "spawn.h"
 #include "expression.h"
 #include "memfun.h"
 #include "collector.h"
@@ -270,7 +270,7 @@ static stream_t *CreateStar( stream_t *input,
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
 
-    SNetEntitySpawn( StarBoxTask, (void*)sarg,
+    SNetSpawnEntity( StarBoxTask, (void*)sarg,
         (is_det) ? ENTITY_star_det : ENTITY_star_nondet
         );
 

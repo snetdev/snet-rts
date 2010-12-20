@@ -132,7 +132,7 @@ int DistributionInit(int argc, char *argv[])
  *
  ******************************************************************************/
 
-void DistributionStart(snet_startup_fun_t fun)
+void DistributionStart(snet_startup_fun_t fun, snet_info_t *info)
 {
   int my_rank;
   snet_tl_stream_t *ret_stream, *input;

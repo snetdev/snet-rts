@@ -33,7 +33,7 @@
 #include "record_p.h"
 #include "memfun.h"
 
-#include "threading.h"
+#include "spawn.h"
 
 #include "stream.h"
 #include "task.h"
@@ -372,7 +372,7 @@ stream_t *SNetSync( stream_t *input,
     sarg->patterns = patterns;
     sarg->guards = guards;
 
-    SNetEntitySpawn( SyncBoxTask, (void*)sarg, ENTITY_sync);
+    SNetSpawnEntity( SyncBoxTask, (void*)sarg, ENTITY_sync);
 
 #ifdef DISTRIBUTED_SNET
   } else {

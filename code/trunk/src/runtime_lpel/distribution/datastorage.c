@@ -159,7 +159,7 @@ typedef struct snet_fetch_request {
  *
  ******************************************************************************/
 
-static void DataManagerThread( lpelthread_t *env, void *ptr)
+static void DataManagerThread( void *ptr)
 {
   MPI_Status status;
   MPI_Aint true_lb;
@@ -188,9 +188,6 @@ static void DataManagerThread( lpelthread_t *env, void *ptr)
 #ifdef SOME_NOT_ANY
   int  rj, rcount, rlist[MAX_REQUESTS+1]; 
 #endif
-
-  /* assign this thread as non-worker */
-  LpelThreadAssign( env, -1);
 
   map = SNetUtilBitmapCreate(MAX_REQUESTS);
 
@@ -565,7 +562,7 @@ static void DataManagerThread( lpelthread_t *env, void *ptr)
 
 static void DataManagerInit()
 {
-  storage.thread = LpelThreadCreate( DataManagerThread, NULL, false, NULL);
+  storage.thread = LpelThreadCreate( DataManagerThread, NULL, false);
 }
 
 

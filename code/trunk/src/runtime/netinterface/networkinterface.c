@@ -279,7 +279,7 @@ int SNetInRun(int argc, char *argv[],
 #ifdef DISTRIBUTED_SNET
 
   if(rank == 0) {    
-    DistributionStart(fun);
+    DistributionStart(fun, NULL);
   }
 
   if(SNetInOutputInit(output, labels, interfaces) != 0){

@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "memfun.h"
 
-#include "threading.h"
+#include "spawn.h"
 
 #include "stream.h"
 #include "task.h"
@@ -105,6 +105,9 @@ static void BoxTask(task_t *self, void *arg)
 	SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
 #endif /* SNET_DEBUG_COUNTERS */
         SNetRecDestroy( rec);
+
+        /* restrict to one data record per execution */
+        //TODO TaskYield( self);
         break;
 
       case REC_sync:
@@ -181,7 +184,7 @@ stream_t *SNetBox( stream_t *input,
     barg->out_signs = out_signs;
     barg->boxname = boxname;
 
-    SNetEntitySpawn( BoxTask, (void*)barg, ENTITY_box);
+    SNetSpawnEntity( BoxTask, (void*)barg, ENTITY_box);
     
 #ifdef DISTRIBUTED_SNET
   } else {

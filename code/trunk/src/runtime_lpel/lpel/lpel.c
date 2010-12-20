@@ -50,6 +50,7 @@ static void CleanupEnv( lpelthread_t *env)
   free( env);
 }
 
+
 static int CanSetRealtime(void)
 {
 #ifdef LPEL_USE_CAPABILITIES
@@ -69,33 +70,6 @@ static int CanSetRealtime(void)
 }
 
 
-#if 0
-  /* initialise monitoring */
-  MonitoringInit(&mon_info, wid, MONITORING_ALL);
-
-  MonitoringDebug(&mon_info, "worker %d started\n", wid);
-
-  /* set affinity to id % config->proc_workers */
-  res = AssignWorkerToCore( wid, &core);
-  if ( res == 0) {
-    MonitoringDebug(&mon_info, "worker %d assigned to core %d\n", wid, core);
-  } else {
-    /*TODO warning, check errno=res */
-  }
-  
-  /* set worker as realtime thread, if set so */
-  res = AssignWorkerRealtime( wid);
-  if (res == 0) {
-    MonitoringDebug(&mon_info, "worker %d set realtime priority\n", wid);
-  } else {
-    /*TODO warning, check errno? */
-  }
-
-  MonitoringDebug(&mon_info, "worker %d exiting\n", wid);
-  /* cleanup monitoring */ 
-  MonitoringCleanup(&mon_info);
-#endif
-
 
 
 /**
@@ -105,27 +79,19 @@ static void *ThreadStartup( void *arg)
 {
   lpelthread_t *env = (lpelthread_t *)arg;
 
+  LpelThreadAssign(-1);
+
   /* Init libPCL */
   co_thread_init();
 
-  /* initialize monitoring */
-#ifdef MONITORING_ENABLE
-  MonInit( env, MONITORING_ALL);
-#endif
-
   /* call the function */
-  env->func( env, env->arg);
+  env->func( env->arg);
 
   /* if detached, cleanup the env now,
      otherwise it will be done on join */
   if (env->detached) {
     CleanupEnv( env);
   }
-
-  /* cleanup monitoring */
-#ifdef MONITORING_ENABLE
-  MonCleanup( env);
-#endif
 
   /* Cleanup libPCL */
   co_thread_cleanup();
@@ -138,7 +104,6 @@ static void *ThreadStartup( void *arg)
 
 /* test only for a single flag in CheckConfig */
 #define LPEL_ICFG(f)   (( cfg->flags & (f) ) != 0 )
-
 static void CheckConfig( lpelconfig_t *cfg)
 {
 
@@ -284,7 +249,6 @@ void LpelInit(lpelconfig_t *cfg)
  */
 void LpelCleanup(void)
 {
-
   /* Cleanup scheduler */
   SchedCleanup();
 
@@ -298,7 +262,7 @@ void LpelCleanup(void)
 /**
  * @pre core in [0, procs_avail] or -1
  */
-void LpelThreadAssign( lpelthread_t *env, int core)
+void LpelThreadAssign( int core)
 {
   int res;
   pid_t tid;
@@ -315,11 +279,6 @@ void LpelThreadAssign( lpelthread_t *env, int core)
     /* assign to specified core */
     cpu_set_t cpuset;
 
-    /*
-       assert( (env->worker >= 0) && (env->worker < config.num_workers) );
-
-       core = wid % config.proc_workers;
-     */
     CPU_ZERO(&cpuset);
     CPU_SET( core % proc_avail, &cpuset);
     res = sched_setaffinity(tid, sizeof(cpu_set_t), &cpuset);
@@ -335,11 +294,14 @@ void LpelThreadAssign( lpelthread_t *env, int core)
   }
 }
 
+
+
+
 /**
  * Aquire a thread from the LPEL
  */
-lpelthread_t *LpelThreadCreate( void (*func)(lpelthread_t *, void *),
-    void *arg, bool detached, char *name)
+lpelthread_t *LpelThreadCreate( void (*func)(void *),
+    void *arg, bool detached)
 {
   int res;
   pthread_attr_t attr;
@@ -349,13 +311,7 @@ lpelthread_t *LpelThreadCreate( void (*func)(lpelthread_t *, void *),
   env->func = func;
   env->arg = arg;
   env->detached = detached;
-  env->node = config.node;
-  if (name != NULL) {
-    strncpy( env->name, name, LPEL_THREADNAME_MAXLEN+1);
-    env->name[LPEL_THREADNAME_MAXLEN]= '\0';
-  } else {
-    memset( &env->name, '\0', LPEL_THREADNAME_MAXLEN+1);
-  }
+
 
   /* create attributes for joinable/detached*/
   pthread_attr_init( &attr);

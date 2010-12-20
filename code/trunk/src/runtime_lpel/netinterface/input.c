@@ -28,7 +28,7 @@
 #include "debug.h"
 #include "parser.h"
 
-#include "lpel.h"
+#include "spawn.h"
 #include "stream.h"
 #include "task.h"
 #include "scheduler.h"
@@ -37,8 +37,6 @@
 #include "distribution.h"
 #endif /* DISTRIBUTED_SNET */
 
-/* Thread to do the input */
-static lpelthread_t *thread; 
 
 typedef struct { 
   FILE *file;
@@ -88,9 +86,6 @@ void SNetInInputInit(FILE *file,
   )
 {
   handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
-  task_t *intask;
-  taskattr_t tattr = { 0,0};
-  char name[] = "glob_input\0";
 
   hnd->file = file;
   hnd->labels = labels;
@@ -102,11 +97,5 @@ void SNetInInputInit(FILE *file,
 #endif /* DISTRIBUTED_SNET */
 
   /* create a joinable wrapper thread */
-  intask = TaskCreate( GlobInputTask, (void*)hnd, &tattr);
-  thread = LpelThreadCreate( SchedWrapper, intask, false, name);
-}
-
-void SNetInInputDestroy()
-{
-  LpelThreadJoin( thread);
+  SNetSpawnWrapper( GlobInputTask, (void*)hnd, "glob_input");
 }

@@ -26,7 +26,7 @@
 #include "message.h"
 #include "debug.h"
 
-#include "lpel.h"
+#include "spawn.h"
 #include "scheduler.h"
 #include "stream.h"
 #include "task.h"
@@ -165,8 +165,6 @@ static void OManagerOutputTask( task_t *self, void *ptr)
 void SNetOManagerUpdateRoutingTable(stream_t *stream, int node, int index)
 {
   omanager_data_t *data;
-  task_t *outtask;
-  taskattr_t tattr = { 0,0};
   char name[20];
 
 #ifdef DISTRIBUTED_DEBUG
@@ -186,8 +184,7 @@ void SNetOManagerUpdateRoutingTable(stream_t *stream, int node, int index)
   
   /* create a detached wrapper thread */
   (void) snprintf(name, 20, "output_n%02d_i%02d", node, index);
-  outtask = TaskCreate( OManagerOutputTask, (void*)data, &tattr);
-  (void) LpelThreadCreate( SchedWrapper, outtask, true, name);
+  SNetSpawnWrapper( OManagerOutputTask, (void*)data, name);
   
   return;
 }

@@ -43,7 +43,6 @@
 #include "distribution.h"
 #endif /* DISTRIBUTED_SNET */
 
-#define SNET_DEFAULT_BUFSIZE 10
 
 static FILE *SNetInOpenFile(const char *file, const char *args)
 {
@@ -168,7 +167,6 @@ int SNetInRun(int argc, char *argv[],
 {
   FILE *input = stdin;
   FILE *output = stdout;
-  int bufsize = SNET_DEFAULT_BUFSIZE;
   int i = 0;
   lpelconfig_t config;
   snet_info_t *info;
@@ -176,6 +174,7 @@ int SNetInRun(int argc, char *argv[],
   snetin_interface_t *interfaces = NULL;
   char *brk;
   char addr[256];
+  char *mon_cfg = NULL;
   int len;
   int port;
 #ifdef DISTRIBUTED_SNET
@@ -195,7 +194,7 @@ int SNetInRun(int argc, char *argv[],
       /* Help */
       printf("usage: <executable name> [options]\n");
       printf("\nOptions:\n");
-      printf("\t-b <buffer size>\tSet buffer size.\n");
+      printf("\t-m <mon_cfg>\t\tSet monitoring configuration.\n");
       printf("\t-i <filename>\t\tInput from file.\n");
       printf("\t-I <port>\t\tInput from socket.\n");
       printf("\t-h \t\t\tDisplay this help text.\n");
@@ -213,10 +212,10 @@ int SNetInRun(int argc, char *argv[],
 
       return 0;
 
-    } else if(strcmp(argv[i], "-b") == 0 && i + 1 <= argc) {
-      /* Buffer size */
+    } else if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
+      /* Monitoring configuration */
       i = i + 1;
-      bufsize = atoi(argv[i]);
+      mon_cfg = argv[i];
     }else if(strcmp(argv[i], "-i") == 0 && input == stdin && i + 1 <= argc) {
       /* Input from file */
       i = i + 1;
@@ -267,18 +266,7 @@ int SNetInRun(int argc, char *argv[],
     SNetUtilDebugFatal("");
   }
 
-  if(bufsize <= 0) {
-
-    if(input != stdin) {
-      SNetInClose(input);
-    }  
-    if(output != stdout) {
-      SNetInClose(output);
-    }
-
-    SNetUtilDebugFatal("Negative or zero buffer size");
-  }
-  
+  /*TODO something with LPEL configuration */
 
   /* Actual SNet network interface main: */
 
@@ -333,20 +321,11 @@ int SNetInRun(int argc, char *argv[],
 
   SNetInfoDestroy(info);
 
-  /* join on input thread */
-  SNetInInputDestroy();
-
-  /* join on output thread */
-  SNetInOutputDestroy();
-
-  /* terminate workers */
-  SchedTerminate();
-
-
-  SNetObserverDestroy();
-
   /* wait on workers, cleanup */
   LpelCleanup();
+
+  /* destroy observers */
+  SNetObserverDestroy();
   
   SNetInLabelDestroy(labels);
   SNetInInterfaceDestroy(interfaces);

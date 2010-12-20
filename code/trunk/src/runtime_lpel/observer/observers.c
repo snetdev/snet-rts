@@ -37,7 +37,7 @@
 #include "interface_functions.h"
 #include "observers.h"
 
-#include "lpel.h"
+#include "spawn.h"
 #include "stream.h"
 #include "scheduler.h"
 #include "task.h"
@@ -916,15 +916,11 @@ static void ObserverBoxTask( task_t *self, void *arg)
  */
 static void CreateObserverTask( obs_handle_t *hnd)
 {
-  task_t *obstask;
-  taskattr_t tattr = { 0,0};
   char name[20];
-  
   (void) snprintf(name, 20, "observer%02d", hnd->id);
 
   /* create a detached wrapper thread */
-  obstask = TaskCreate( ObserverBoxTask, (void*)hnd, &tattr);
-  (void) LpelThreadCreate( SchedWrapper, obstask, true, name);
+  SNetSpawnWrapper( ObserverBoxTask, (void*)hnd, name);
 }
 
 

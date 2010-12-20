@@ -44,13 +44,8 @@ typedef struct lpelthread lpelthread_t;
 struct lpelthread {
   pthread_t pthread;
   bool detached;
-  void (*func)(struct lpelthread *, void *);
+  void (*func)(void *);
   void *arg;
-  int node;
-  char name[LPEL_THREADNAME_MAXLEN+1];
-#ifdef MONITORING_ENABLE
-  monitoring_t mon;
-#endif
 };
 
 
@@ -60,11 +55,12 @@ extern void LpelCleanup(void);
 
 extern int LpelNumWorkers(void);
 
-extern lpelthread_t *LpelThreadCreate( void (*func)(lpelthread_t *, void *),
-    void *arg, bool detached, char *name);
+
+extern lpelthread_t *LpelThreadCreate( void (*func)(void *),
+    void *arg, bool detached);
 
 extern void LpelThreadJoin( lpelthread_t *env);
-extern void LpelThreadAssign( lpelthread_t *env, int core);
+extern void LpelThreadAssign( int core);
 
 
 #endif /* _LPEL_H_ */

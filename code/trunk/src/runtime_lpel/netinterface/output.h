@@ -44,10 +44,5 @@ void SNetInOutputInit(FILE *file,
            
 
 
-/* Wait until the end of output.
- *
- */
-void SNetInOutputDestroy();
-
 
 #endif /* OUTPUT_H_ */

@@ -7,7 +7,8 @@
 #include "debug.h"
 #include "interface_functions.h"
 #include "typeencode.h"
-#include "threading.h" /* for enumeration */
+
+#include "spawn.h" /* for enumeration */
 
 #include "stream.h"
 #include "task.h"
@@ -649,7 +650,7 @@ stream_t* SNetFilter( stream_t *instream,
     farg->guard_list = guard_expr;
     farg->instr_lst = instr_list;
     
-    SNetEntitySpawn( FilterTask, (void*)farg, ENTITY_filter);
+    SNetSpawnEntity( FilterTask, (void*)farg, ENTITY_filter);
     
 #ifdef DISTRIBUTED_SNET
   } else {
@@ -727,7 +728,7 @@ stream_t* SNetTranslate( stream_t *instream,
     farg->guard_list = guard_expr;
     farg->instr_lst = instr_list;
 
-    SNetEntitySpawn( FilterTask, (void*)farg, ENTITY_filter);
+    SNetSpawnEntity( FilterTask, (void*)farg, ENTITY_filter);
   
 #ifdef DISTRIBUTED_SNET
   } else {
@@ -882,7 +883,7 @@ stream_t *SNetNameShift( stream_t *instream,
     farg->guard_list = SNetEcreateList( 1, SNetEconsti( offset));
     farg->instr_lst = NULL; /* instructions */
     
-    SNetEntitySpawn( NameshiftTask, (void*)farg, ENTITY_filter);
+    SNetSpawnEntity( NameshiftTask, (void*)farg, ENTITY_filter);
   
 #ifdef DISTRIBUTED_SNET
   } else {

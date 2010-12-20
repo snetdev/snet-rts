@@ -31,7 +31,7 @@
 #include "memfun.h"
 #include "debug.h"
 
-#include "threading.h"
+#include "spawn.h"
 
 #include "task.h"
 
@@ -411,7 +411,7 @@ static stream_t *CreateParallel( stream_t *instream,
     parg->outputs = transits;
     parg->types = types;
     parg->is_det = is_det;
-    SNetEntitySpawn( ParallelBoxTask, (void*)parg,
+    SNetSpawnEntity( ParallelBoxTask, (void*)parg,
         (is_det)? ENTITY_parallel_det: ENTITY_parallel_nondet
         );
         

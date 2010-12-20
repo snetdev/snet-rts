@@ -282,13 +282,10 @@ void *StreamRead( stream_desc_t *sd)
 
   /* quasi P(n_sem) */
   if ( fetch_and_dec( &sd->stream->n_sem) == 0) {
-    self->state = TASK_BLOCKED;
-    self->wait_on = WAIT_ON_WRITE;
     /* wait on stream: */
     sd->event_flags |= STDESC_WAITON;
     MarkDirty( sd);
-    /* context switch */
-    co_resume();
+    TaskBlock( self, WAIT_ON_WRITE);
   }
 
 
@@ -341,13 +338,10 @@ void StreamWrite( stream_desc_t *sd, void *item)
 
   /* quasi P(e_sem) */
   if ( fetch_and_dec( &sd->stream->e_sem)== 0) {
-    self->state = TASK_BLOCKED;
-    self->wait_on = WAIT_ON_READ;
     /* wait on stream: */
     sd->event_flags |= STDESC_WAITON;
     MarkDirty( sd);
-    /* context switch */
-    co_resume();
+    TaskBlock( self, WAIT_ON_READ);
   }
 
   /* writing to the buffer and checking if consumer polls must be atomic */
@@ -483,9 +477,7 @@ void StreamPoll( stream_list_t *list)
   /* context switch */
   if (do_ctx_switch) {
     /* set task as blocked */
-    self->state = TASK_BLOCKED;
-    self->wait_on = WAIT_ON_ANY;
-    co_resume();
+    TaskBlock( self, WAIT_ON_ANY);
   }
 
   /* unregister activators
@@ -600,17 +592,20 @@ int StreamPrintDirty( task_t *t, FILE *file)
  */
 static inline void MarkDirty( stream_desc_t *sd)
 {
-
-  /* only add if not dirty yet */
-  if (sd->dirty == NULL) {
+  task_t *t = sd->task;
+  /*
+   * only if task wants to collect stream info and
+   * only add if not dirty yet
+   */
+  if ( (t->attr.flags & TASK_ATTR_COLLECT_STREAMS) && (sd->dirty == NULL) ) {
     /*
      * Set the dirty ptr of sd to the dirty_list ptr of the task
      * and the dirty_list ptr of the task to sd, i.e.,
      * insert the sd at the front of the dirty_list.
      * Initially, dirty_list of the tab is empty DIRTY_END (!= NULL)
      */
-    sd->dirty = sd->task->dirty_list;
-    sd->task->dirty_list = sd;
+    sd->dirty =t->dirty_list;
+    t->dirty_list = sd;
   }
 }
 

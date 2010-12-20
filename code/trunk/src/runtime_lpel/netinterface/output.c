@@ -28,7 +28,7 @@
 #include "bool.h"
 #include "debug.h"
 
-#include "lpel.h"
+#include "spawn.h"
 #include "stream.h"
 #include "task.h"
 #include "scheduler.h"
@@ -37,8 +37,6 @@
 #include "distribution.h"
 #endif /* DISTRIBUTED_SNET */
 
-/* Thread to do the output */
-static lpelthread_t *thread; 
 
 typedef struct { 
   FILE *file;
@@ -211,8 +209,10 @@ static void GlobOutputTask( task_t *self, void* data)
 
     StreamClose( instream, true);
   }
-
   SNetMemFree(hnd);
+
+  /* signal termination to workers */
+  SchedTerminate();
 }
 
 void SNetInOutputInit(FILE *file,
@@ -226,9 +226,6 @@ void SNetInOutputInit(FILE *file,
   )
 {
   handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
-  task_t *outtask;
-  taskattr_t tattr = { 0,0};
-  char name[] = "glob_output\0";
 
   hnd->file = file;
   hnd->labels = labels;
@@ -240,12 +237,6 @@ void SNetInOutputInit(FILE *file,
 #endif /* DISTRIBUTED_SNET */
 
   /* create a joinable wrapper thread */
-  outtask = TaskCreate( GlobOutputTask, (void*)hnd, &tattr);
-  thread = LpelThreadCreate( SchedWrapper, outtask, false, name);
-
+  SNetSpawnWrapper( GlobOutputTask, (void*)hnd, "glob_output");
 }
 
-void SNetInOutputDestroy()
-{
-  LpelThreadJoin( thread);
-}

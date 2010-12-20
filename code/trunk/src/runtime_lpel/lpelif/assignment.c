@@ -24,9 +24,9 @@ void AssignmentInit(int lpel_num_workers)
 }
 
 /**
- * Assign a task to a worker
+ * Get the worker id to assign a task to
  */
-void AssignmentAssign(task_t *t, bool is_box)
+int AssignmentGetWID(task_t *t, bool is_box)
 {
   int target;
 
@@ -41,6 +41,6 @@ void AssignmentAssign(task_t *t, bool is_box)
   pthread_mutex_unlock( &lock);
 
   if (target == -1) target = 0;
-
-  SchedAssignTask( t, target);
+  
+  return target;
 }

@@ -2,11 +2,12 @@
 #define _SNET_DISTRIBUTION_H_
 
 #include "snettypes.h"
+#include "info.h"
 #include "fun.h"
 
 int DistributionInit(int argc, char *argv[]);
 
-void DistributionStart(snet_startup_fun_t fun);
+void DistributionStart(snet_startup_fun_t fun, snet_info_t *info);
 void DistributionStop();
 void DistributionDestroy();
 

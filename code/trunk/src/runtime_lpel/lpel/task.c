@@ -36,16 +36,17 @@ task_t *TaskCreate( taskfunc_t func, void *inarg, taskattr_t *attr)
   t->attr = *attr;
   /* fix attributes */
   if (t->attr.stacksize <= 0) {
-    t->attr.stacksize = TASK_STACKSIZE_DEFAULT;
+    t->attr.stacksize = TASK_ATTR_STACKSIZE_DEFAULT;
   }
 
   /* initialize poll token to 0 */
   atomic_init( &t->poll_token, 0);
   
   t->sched_context = NULL;
-
-  TIMESTAMP(&t->times.creat);
-
+  
+  if (t->attr.flags & TASK_ATTR_COLLECT_TIMES) {
+    TIMESTAMP(&t->times.creat);
+  }
   t->cnt_dispatch = 0;
 
   /* init streamset to write */
@@ -86,13 +87,53 @@ void TaskDestroy(task_t *t)
  *
  * @pre t->state == TASK_READY
  */
-void TaskCall(task_t *t)
+void TaskCall( task_t *t, schedctx_t *sc)
 {
+  /* aqiure TCB lock */
+  pthread_mutex_lock( &t->lock);
+
   assert( t->state != TASK_RUNNING);
+  
+  t->sched_context = sc;
+  t->cnt_dispatch++;
   t->state = TASK_RUNNING;
-  /* CAUTION: a coroutine must not run simultaneously in more than one thread! */
+      
+  if (t->attr.flags & TASK_ATTR_COLLECT_TIMES) {
+    TIMESTAMP(&t->times.start);
+  }
+
+  /*
+   * CAUTION: A coroutine must not run simultaneously in more than one thread!
+   *          Therefore the whole call is protected by a lock.
+   */
   /* CONTEXT SWITCH */
-  co_call(t->ctx);
+  co_call( t->ctx);
+
+  /* task returns in every case in a different state */
+  assert( t->state != TASK_RUNNING);
+
+  /* output accounting info */
+#ifdef MONITORING_ENABLE
+  if (t->attr.flags & TASK_ATTR_MONITOR_OUTPUT) {
+    TIMESTAMP( &t->times.stop);
+    SchedTaskPrint( t);
+  }
+#endif
+  
+  /* unlock TCB */
+  pthread_mutex_unlock( &t->lock);
+}
+
+
+/**
+ * Block a task
+ */
+void TaskBlock( task_t *ct, int wait_on)
+{
+  ct->state = TASK_BLOCKED;
+  ct->wait_on = wait_on;
+  /* context switch */
+  co_resume();
 }
 
 
@@ -134,8 +175,11 @@ void TaskYield( task_t *ct)
 
 #define FLAGS_TEST(vec,f)   (( (vec) & (f) ) == (f) )
 
-void TaskPrint( task_t *t, FILE *file, int flags)
+void TaskPrint( task_t *t, FILE *file)
 {
+  /* early exit */
+  if ( !FLAGS_TEST( t->attr.flags, TASK_ATTR_MONITOR_OUTPUT) ) return;
+
   /* print general info: name, disp.cnt, state */
   fprintf( file,
       "tid %lu disp %lu st %c%c ",
@@ -144,7 +188,7 @@ void TaskPrint( task_t *t, FILE *file, int flags)
       );
 
   /* print times */
-  if ( FLAGS_TEST( flags, TASK_PRINT_TIMES) ) {
+  if ( FLAGS_TEST( t->attr.flags, TASK_ATTR_COLLECT_TIMES) ) {
     timing_t diff;
     if ( t->state == TASK_ZOMBIE) {
       fprintf( file, "creat ");
@@ -156,7 +200,7 @@ void TaskPrint( task_t *t, FILE *file, int flags)
   }
 
   /* print stream info */
-  if ( FLAGS_TEST( flags, TASK_PRINT_STREAMS) ) {
+  if ( FLAGS_TEST( t->attr.flags, TASK_ATTR_COLLECT_STREAMS) ) {
     StreamPrintDirty( t, file);
   }
 }

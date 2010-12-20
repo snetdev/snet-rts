@@ -8,7 +8,7 @@
 #include "bool.h"
 #include "debug.h"
 
-#include "threading.h"
+#include "spawn.h"
 
 #include "stream.h"
 #include "task.h"
@@ -247,7 +247,7 @@ stream_t *CollectorCreate( int num, stream_t **instreams, snet_info_t *info)
   carg->num = num;
 
   /* spawn collector task */
-  SNetEntitySpawn( CollectorTask, (void *)carg, ENTITY_collect);
+  SNetSpawnEntity( CollectorTask, (void *)carg, ENTITY_collect);
   return outstream;
 }
 
