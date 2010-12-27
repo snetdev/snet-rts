@@ -11,7 +11,7 @@ all: $(TARGET)
 
 
 $(TARGET):  $(TARGET).snet $(BOXES) $(SNETLIBS)
-	snetc $(SNETCFLAGS) $(INCLUDES) $(LIBRARIES) $(TARGET).snet -o $(TARGET)
+	snetc $(SNETCFLAGS) $(INCLUDES) $(LIBRARIES) $(TARGET).snet -o $(TARGET) -lpel # -distributed
 
 
 clean:
