@@ -486,7 +486,7 @@ extern int SNetRecGetInterfaceId( snet_record_t *rec)
   return( result);
 }
 
-extern snet_tl_stream_t *SNetRecGetStream( snet_record_t *rec)
+extern snet_stream_t *SNetRecGetStream( snet_record_t *rec)
 {
   snet_tl_stream_t *result;
 

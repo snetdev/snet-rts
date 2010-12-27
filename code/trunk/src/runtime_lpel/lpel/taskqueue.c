@@ -4,7 +4,7 @@
 
 
 #include "taskqueue.h"
-
+#include "task.h"
 
 /**
  * A simple doubly linked list for task queues
@@ -33,7 +33,7 @@ void TaskqueueInit(taskqueue_t *tq)
  * Enqueue a task at the tail
  *
  */
-void TaskqueuePushBack(taskqueue_t *tq, task_t *t)
+void TaskqueuePushBack(taskqueue_t *tq, lpel_task_t *t)
 {
   assert( t->prev==NULL && t->next==NULL );
 
@@ -57,7 +57,7 @@ void TaskqueuePushBack(taskqueue_t *tq, task_t *t)
  * Enqueue a task at the head
  *
  */
-void TaskqueuePushFront(taskqueue_t *tq, task_t *t)
+void TaskqueuePushFront(taskqueue_t *tq, lpel_task_t *t)
 {
   assert( t->prev==NULL && t->next==NULL );
 
@@ -82,9 +82,9 @@ void TaskqueuePushFront(taskqueue_t *tq, task_t *t)
  *
  * @return NULL if taskqueue is empty
  */
-task_t *TaskqueuePopFront(taskqueue_t *tq)
+lpel_task_t *TaskqueuePopFront(taskqueue_t *tq)
 {
-  task_t *t;
+  lpel_task_t *t;
 
   if ( tq->head == NULL ) return NULL;
   
@@ -111,9 +111,9 @@ task_t *TaskqueuePopFront(taskqueue_t *tq)
  *
  * @return NULL if taskqueue is empty
  */
-task_t *TaskqueuePopBack(taskqueue_t *tq)
+lpel_task_t *TaskqueuePopBack(taskqueue_t *tq)
 {
-  task_t *t;
+  lpel_task_t *t;
 
   if ( tq->tail == NULL ) return NULL;
   
@@ -135,17 +135,6 @@ task_t *TaskqueuePopBack(taskqueue_t *tq)
 }
 
 
-/** for convenience */
-void TaskqueueEnqueue(taskqueue_t *tq, task_t *t)
-{
-  TaskqueuePushBack(tq, t);
-}
-
-
-/** for convenience */
-task_t *TaskqueueDequeue(taskqueue_t *tq) {
-  return TaskqueuePopFront(tq);
-}
 
 
 /**
@@ -161,14 +150,14 @@ task_t *TaskqueueDequeue(taskqueue_t *tq) {
  * @param arg     argument (context) for the callback functions
  */
 int TaskqueueIterateRemove(taskqueue_t *tq, 
-  bool (*cond)(task_t*, void*), void (*action)(task_t*, void*), void *arg )
+  bool (*cond)(lpel_task_t*, void*), void (*action)(lpel_task_t*, void*), void *arg )
 {
   int cnt_removed = 0;
-  task_t *cur = tq->head;
+  lpel_task_t *cur = tq->head;
   while (cur != NULL) {
     /* check condition */
     if ( cond(cur, arg) ) {
-      task_t *p = cur;
+      lpel_task_t *p = cur;
 
       /* relink the queue */
       if (cur->prev != NULL) {

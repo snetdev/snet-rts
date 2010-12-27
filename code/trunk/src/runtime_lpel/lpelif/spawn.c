@@ -19,34 +19,32 @@
 #include "assignment.h"
 
 #include "lpel.h"
-#include "task.h"
-#include "scheduler.h"
 
 
 /**
  * Create a task on a scheduler wrapper thread
  */
-void SNetSpawnWrapper( taskfunc_t taskfunc, void *arg,
+void SNetSpawnWrapper( lpel_taskfunc_t taskfunc, void *arg,
     char *name)
 {
-  task_t *t;
-  taskattr_t attr = {TASK_ATTR_MONITOR_OUTPUT, 0};
+  lpel_task_t *t;
+  lpel_taskattr_t attr = { LPEL_TASK_ATTR_ALL, 0};
 
-  t = TaskCreate(taskfunc, arg, &attr);
-  return SchedWrapper( t, name);
+  t = LpelTaskCreate(taskfunc, arg, &attr);
+  return _LpelWorkerWrapperCreate( t, name);
 }
 
 
 
-void SNetSpawnEntity( taskfunc_t fun, void *arg, snet_entity_id_t id)
+void SNetSpawnEntity( lpel_taskfunc_t fun, void *arg, snet_entity_id_t id)
 {
-  task_t *t;
-  taskattr_t tattr = {0, 0};
+  lpel_task_t *t;
+  lpel_taskattr_t tattr = { LPEL_TASK_ATTR_ALL, 0};
   int wid;
 
   /* monitoring */
-  if (id==ENTITY_box) {
-    tattr.flags |= TASK_ATTR_MONITOR_OUTPUT;
+  if (id!=ENTITY_box) {
+    tattr.flags &= ~LPEL_TASK_ATTR_MONITOR_OUTPUT;
   }
 
   /* stacksize */
@@ -57,13 +55,13 @@ void SNetSpawnEntity( taskfunc_t fun, void *arg, snet_entity_id_t id)
   }
 
   /* create task */
-  t = TaskCreate( fun, arg, &tattr);
+  t = LpelTaskCreate( fun, arg, &tattr);
 
   /* Query assignment module */
   wid = AssignmentGetWID(t, id==ENTITY_box);
   
-  /* call scheduler assignment */
-  SchedAssignTask( t, wid);
+  /* call worker assignment */
+  _LpelWorkerTaskAssign( t, wid);
 }
 
 

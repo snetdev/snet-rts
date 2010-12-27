@@ -43,11 +43,10 @@ clean_runtime_lpel_prod        :=
 #
 
 ifeq ($(DISTRIBUTED),yes)
-runtime_lpel          = common entities netinterface observer utility lpelif \
-                        interfacing distribution lpel
+runtime_lpel          = shared entity utils langif netif lpelif observer lpel \
+                        distrib
 else
-runtime_lpel          = common entities netinterface observer utility lpelif \
-                        interfacing lpel
+runtime_lpel          = shared entity utils langif netif lpelif observer lpel
 endif
 
 
@@ -59,26 +58,26 @@ endif
 # Note that the variable names must coincide with the directory names above.
 #
 
-common          = handle.o record.o expression.o info.o
+shared          = handle.o record.o expression.o info.o
 
-entities        = filter.o syncro.o out.o box.o alias.o\
+entity          = filter.o syncro.o out.o box.o alias.o \
                   serial.o collector.o parallel.o star.o split.o
 
-utility		= debug.o bitmap.o hashtable.o queue.o \
+utils		= debug.o bitmap.o hashtable.o queue.o \
                   debugtime.o debugcounters.o hashtab.o
+
+langif          = interface_functions.o
+
+netif   	= label.o parser.tab.o parser.lex.o interface.o \
+                  networkinterface.o output.o input.o 
 
 lpelif          = spawn.o assignment.o
 
-interfacing     = interface_functions.o
-
-netinterface	= label.o parser.tab.o parser.lex.o interface.o\
-                  networkinterface.o output.o input.o 
-
 observer	= observers.o
 
-distribution    = distribution.o datastorage.o message.o fun.o imanager.o \
+distrib         = distribution.o datastorage.o message.o fun.o imanager.o \
                   id.o omanager.o routing.o reference.o 
 
-lpel            = lpel.o scheduler.o stream.o buffer.o task.o taskqueue.o \
-                  monitoring.o 
+lpel            = threading.o scheduler.o stream.o buffer.o task.o taskqueue.o \
+                  worker.o mailbox.o monitoring.o stream_list.o
                   

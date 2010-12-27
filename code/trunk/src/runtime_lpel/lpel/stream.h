@@ -1,52 +1,64 @@
 #ifndef _STREAM_H_
 #define _STREAM_H_
 
-#include <stdio.h>
-#include <pthread.h>
+#include "lpel.h"
 
-#include "bool.h"
 
 
 //#define STREAM_POLL_SPINLOCK
 
-/* a stream */
-typedef struct stream stream_t;
-
-/** stream descriptor */
-typedef struct stream_desc stream_desc_t;    
-
-/** a handle to a stream descriptor list */
-typedef struct stream_desc *stream_list_t;
-
-/** an iterator for a stream descriptor list */
-typedef struct stream_iter stream_iter_t;
 
 
-struct task;
+/**
+ * A stream descriptor
+ *
+ * A producer/consumer must open a stream before using it, and by opening
+ * a stream, a stream descriptor is created and returned. 
+ */
+struct lpel_stream_desc_t {
+  lpel_task_t   *task;        /** the task which opened the stream */
+  lpel_stream_t *stream;      /** pointer to the stream */
+  char mode;                  /** either 'r' or 'w' */
+  char state;                 /** one of IOCR, for monitoring */
+  unsigned long counter;      /** counts the number of items transmitted
+                                  over the stream descriptor */
+  int event_flags;            /** which events happened on that stream */
+  /** for organizing in stream lists */
+  struct lpel_stream_desc_t *next; 
+  /** for maintaining a list of 'dirty' items */
+  struct lpel_stream_desc_t *dirty;
+};
 
-stream_t *StreamCreate(void);
-void StreamDestroy( stream_t *s);
-stream_desc_t *StreamOpen( struct task *ct, stream_t *s, char mode);
-void StreamClose( stream_desc_t *sd, bool destroy_s);
-void StreamReplace( stream_desc_t *sd, stream_t *snew);
-void *StreamPeek( stream_desc_t *sd);
-void *StreamRead( stream_desc_t *sd);
-void StreamWrite( stream_desc_t *sd, void *item);
-void StreamPoll( stream_list_t *list);
-
-int StreamPrintDirty( struct task *t, FILE *file);
 
 
-void StreamListAppend( stream_list_t *lst, stream_desc_t *node);
-int StreamListIsEmpty( stream_list_t *lst);
+/**
+ * The state of a stream descriptor
+ */
+#define STDESC_INUSE    'I'
+#define STDESC_OPENED   'O'
+#define STDESC_CLOSED   'C'
+#define STDESC_REPLACED 'R'
 
-stream_iter_t *StreamIterCreate( stream_list_t *lst);
-void StreamIterDestroy( stream_iter_t *iter);
-void StreamIterReset( stream_list_t *lst, stream_iter_t *iter);
-int StreamIterHasNext( stream_iter_t *iter);
-stream_desc_t *StreamIterNext( stream_iter_t *iter);
-void StreamIterAppend( stream_iter_t *iter, stream_desc_t *node);
-void StreamIterRemove( stream_iter_t *iter);
+/**
+ * The event_flags of a stream descriptor
+ */
+#define STDESC_MOVED    (1<<0)
+#define STDESC_WOKEUP   (1<<1)
+#define STDESC_WAITON   (1<<2)
+
+/**
+ * This special value indicates the end of the dirty list chain.
+ * NULL cannot be used as NULL indicates that the SD is not dirty.
+ */
+#define STDESC_DIRTY_END   ((lpel_stream_desc_t *)-1)
+
+
+
+
+
+int _LpelStreamResetDirty( lpel_task_t *t,
+    void (*callback)(lpel_stream_desc_t *, void*), void *arg);
+
 
 
 

@@ -4,7 +4,7 @@
 #ifndef _SNET_STREAM_LAYER_H_
 #define _SNET_STREAM_LAYER_H_
 
-typedef struct stream snet_tl_stream_t;
+typedef struct snet_stream_t snet_tl_stream_t;
 typedef struct streamset snet_tl_streamset_t;
 typedef struct component snet_tl_component_t;
 

@@ -3,6 +3,9 @@
 #ifndef _SPAWN_H_
 #define _SPAWN_H_
 
+#include "lpel.h"
+
+
 
 /**
  * snet_entity_id_t type
@@ -24,12 +27,11 @@ typedef enum {
  
 
 
-struct task;
 
-extern void SNetSpawnEntity( void (*fun)(struct task *t, void *arg),
+extern void SNetSpawnEntity( void (*fun)(lpel_task_t *t, void *arg),
     void *arg, snet_entity_id_t id);
 
-extern void SNetSpawnWrapper( void (*func)(struct task *, void*),
+extern void SNetSpawnWrapper( void (*func)(lpel_task_t *, void*),
     void *arg, char *name);
 
 #endif /* _SPAWN_H_ */					 

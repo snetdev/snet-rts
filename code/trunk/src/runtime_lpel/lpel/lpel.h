@@ -1,15 +1,19 @@
-
+/**
+ * MAIN LPEL INTERFACE
+ */
 #ifndef _LPEL_H_
 #define _LPEL_H_
 
-#define LPEL_USE_CAPABILITIES
 
 
-#include <pthread.h>
+/******************************************************************************/
+/*  RETURN TYPES OF LPEL FUNCTIONS                                            */
+/******************************************************************************/
 
-#include "bool.h"
 
-#include "monitoring.h"
+/******************************************************************************/
+/*  GENERAL CONFIGURATION AND SETUP                                           */
+/******************************************************************************/
 
 /**
  * Specification for configuration:
@@ -30,37 +34,134 @@ typedef struct {
   int proc_others;
   int flags;
   int node;
-} lpelconfig_t;
+} lpel_config_t;
 
 #define LPEL_FLAG_AUTO     (1<<0)
 #define LPEL_FLAG_AUTO2    (1<<1)
 #define LPEL_FLAG_REALTIME (1<<4)
 
 
-#define LPEL_THREADNAME_MAXLEN 20
 
-typedef struct lpelthread lpelthread_t;
-
-struct lpelthread {
-  pthread_t pthread;
-  bool detached;
-  void (*func)(void *);
-  void *arg;
-};
+typedef struct lpel_thread_t    lpel_thread_t;
 
 
-extern void LpelInit(lpelconfig_t *cfg);
-extern void LpelCleanup(void);
+void LpelInit(    lpel_config_t *cfg);
+void LpelCleanup( void);
 
 
-extern int LpelNumWorkers(void);
+int LpelNumWorkers(void);
 
 
-extern lpelthread_t *LpelThreadCreate( void (*func)(void *),
-    void *arg, bool detached);
+/**
+ * Aquire a thread from the LPEL
+ */
+lpel_thread_t *LpelThreadCreate( void (*func)(void *),
+    void *arg, int detached);
 
-extern void LpelThreadJoin( lpelthread_t *env);
-extern void LpelThreadAssign( int core);
+void LpelThreadJoin( lpel_thread_t *env);
+
+
+/******************************************************************************/
+/*  DATATYPES                                                                 */
+/******************************************************************************/
+
+/* task types */
+
+typedef struct lpel_task_t lpel_task_t;
+
+typedef void (*lpel_taskfunc_t)( lpel_task_t *self, void *inarg);
+
+typedef struct {
+  int flags;
+  int stacksize;
+} lpel_taskattr_t;
+
+#define LPEL_TASK_ATTR_NONE             (   0)
+#define LPEL_TASK_ATTR_ALL              (  -1)
+#define LPEL_TASK_ATTR_MONITOR_OUTPUT   (1<<0)
+#define LPEL_TASK_ATTR_COLLECT_TIMES    (1<<1)
+#define LPEL_TASK_ATTR_COLLECT_STREAMS  (1<<2)
+
+
+
+
+/* stream types */
+
+typedef struct lpel_stream_t         lpel_stream_t;
+
+typedef struct lpel_stream_desc_t    lpel_stream_desc_t;    
+
+typedef lpel_stream_desc_t          *lpel_stream_list_t;
+
+typedef struct lpel_stream_iter_t    lpel_stream_iter_t;
+
+
+
+/******************************************************************************/
+/*  TASK FUNCTIONS                                                            */
+/******************************************************************************/
+
+lpel_task_t *LpelTaskCreate( lpel_taskfunc_t,
+    void *inarg, lpel_taskattr_t *attr);
+
+void LpelTaskExit(  lpel_task_t *ct);
+void LpelTaskYield( lpel_task_t *ct);
+
+
+/* TODO refactor */
+
+void _LpelWorkerTaskAssign( lpel_task_t *t, int wid);
+void _LpelWorkerWrapperCreate( lpel_task_t *t, char *name);
+void _LpelWorkerTerminate( void);
+
+
+
+/******************************************************************************/
+/*  STREAM FUNCTIONS                                                          */
+/******************************************************************************/
+
+lpel_stream_t *LpelStreamCreate( void);
+void LpelStreamDestroy( lpel_stream_t *s);
+
+lpel_stream_desc_t *
+LpelStreamOpen( lpel_task_t *t, lpel_stream_t *s, char mode);
+
+void  LpelStreamClose(   lpel_stream_desc_t *sd, int destroy_s);
+void  LpelStreamReplace( lpel_stream_desc_t *sd, lpel_stream_t *snew);
+void *LpelStreamPeek(    lpel_stream_desc_t *sd);
+void *LpelStreamRead(    lpel_stream_desc_t *sd);
+void  LpelStreamWrite(   lpel_stream_desc_t *sd, void *item);
+void  LpelStreamPoll(    lpel_stream_list_t *list);
+
+
+
+void LpelStreamListAppend(  lpel_stream_list_t *lst, lpel_stream_desc_t *node);
+int  LpelStreamListIsEmpty( lpel_stream_list_t *lst);
+
+
+
+lpel_stream_iter_t *LpelStreamIterCreate( lpel_stream_list_t *lst);
+void LpelStreamIterDestroy( lpel_stream_iter_t *iter);
+
+void LpelStreamIterReset(   lpel_stream_list_t *lst, lpel_stream_iter_t *iter);
+int  LpelStreamIterHasNext( lpel_stream_iter_t *iter);
+lpel_stream_desc_t *LpelStreamIterNext( lpel_stream_iter_t *iter);
+void LpelStreamIterAppend(  lpel_stream_iter_t *iter, lpel_stream_desc_t *node);
+void LpelStreamIterRemove(  lpel_stream_iter_t *iter);
+
+
+
+
+/******************************************************************************/
+/*  THREADING FUNCTIONS                                                       */
+/******************************************************************************/
+
+extern lpel_thread_t *LpelThreadCreate( void (*func)(void *),
+    void *arg, int detached);
+extern void LpelThreadJoin( lpel_thread_t *env);
+
+
+
 
 
 #endif /* _LPEL_H_ */

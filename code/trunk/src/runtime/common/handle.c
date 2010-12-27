@@ -51,8 +51,8 @@ typedef struct {
 } name_mapping_t;
 
 typedef struct {
-  snet_tl_stream_t *input;
-  snet_tl_stream_t *output_a;
+  snet_stream_t *input;
+  snet_stream_t *output_a;
   snet_record_t *rec;
   snet_box_fun_t boxfun_a;
   snet_box_sign_t *sign;
@@ -60,15 +60,15 @@ typedef struct {
 } box_handle_t;
 
 typedef struct {
-  snet_tl_stream_t *input;
-  snet_tl_stream_t **outputs;
+  snet_stream_t *input;
+  snet_stream_t **outputs;
   snet_typeencoding_list_t *type;
   bool is_det;
 } parallel_handle_t;
 
 typedef struct {
-  snet_tl_stream_t *input;
-  snet_tl_stream_t *output_a;
+  snet_stream_t *input;
+  snet_stream_t *output_a;
   snet_box_fun_t boxfun_a;
   snet_box_fun_t boxfun_b;
   snet_typeencoding_t *type;
@@ -77,16 +77,16 @@ typedef struct {
 } star_handle_t;
 
 typedef struct {
-  snet_tl_stream_t *input;
-  snet_tl_stream_t *output_a;
+  snet_stream_t *input;
+  snet_stream_t *output_a;
   snet_typeencoding_t *patterns;
   snet_typeencoding_t *type;
   snet_expr_list_t *guard_list;
 } sync_handle_t;
 
 typedef struct {
-  snet_tl_stream_t *input;
-  snet_tl_stream_t *output_a;
+  snet_stream_t *input;
+  snet_stream_t *output_a;
   snet_box_fun_t boxfun_a;
   int tag_a;
   int tag_b;
@@ -97,8 +97,8 @@ typedef struct {
 
 
 typedef struct {
-  snet_tl_stream_t *input;
-  snet_tl_stream_t *output_a;
+  snet_stream_t *input;
+  snet_stream_t *output_a;
   snet_typeencoding_t *in_type;
   snet_typeencoding_list_t *out_types;
   snet_expr_list_t *guard_list;
@@ -170,8 +170,8 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 
     case HND_box: {
             HANDLE( box_hnd) = SNetMemAlloc( sizeof( box_handle_t));
-            BOX_HND( input) = va_arg( args, snet_tl_stream_t*);
-            BOX_HND( output_a) = va_arg( args, snet_tl_stream_t*);
+            BOX_HND( input) = va_arg( args, snet_stream_t*);
+            BOX_HND( output_a) = va_arg( args, snet_stream_t*);
             BOX_HND( rec) = va_arg( args, snet_record_t*);
             BOX_HND( boxfun_a) = va_arg( args, void*);
             BOX_HND( sign) = va_arg( args, snet_box_sign_t*);
@@ -181,8 +181,8 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
     case HND_parallel: {
 
             HANDLE( parallel_hnd) = SNetMemAlloc( sizeof( parallel_handle_t));
-            PAR_HND( input) = va_arg( args, snet_tl_stream_t*);
-            PAR_HND( outputs) = va_arg( args, snet_tl_stream_t**);
+            PAR_HND( input) = va_arg( args, snet_stream_t*);
+            PAR_HND( outputs) = va_arg( args, snet_stream_t**);
             PAR_HND( type) = va_arg( args, snet_typeencoding_list_t*);
             PAR_HND( is_det) = va_arg( args, bool);
             break;
@@ -191,8 +191,8 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
     case HND_star: {
 
             HANDLE( star_hnd) = SNetMemAlloc( sizeof( star_handle_t));
-            STAR_HND( input) = va_arg( args, snet_tl_stream_t*);
-            STAR_HND( output_a) = va_arg( args, snet_tl_stream_t*);
+            STAR_HND( input) = va_arg( args, snet_stream_t*);
+            STAR_HND( output_a) = va_arg( args, snet_stream_t*);
             STAR_HND( boxfun_a) = va_arg( args, void*);
             STAR_HND( boxfun_b) = va_arg( args, void*);
             STAR_HND( type) = va_arg( args, snet_typeencoding_t*);
@@ -205,8 +205,8 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
     case HND_sync: {
 
             HANDLE( sync_hnd) = SNetMemAlloc( sizeof( sync_handle_t));
-            SYNC_HND( input) = va_arg( args, snet_tl_stream_t*);
-            SYNC_HND( output_a) = va_arg( args, snet_tl_stream_t*);
+            SYNC_HND( input) = va_arg( args, snet_stream_t*);
+            SYNC_HND( output_a) = va_arg( args, snet_stream_t*);
             SYNC_HND( type) = va_arg( args, snet_typeencoding_t*);
             SYNC_HND( patterns) = va_arg( args, snet_typeencoding_t*);
             SYNC_HND( guard_list) = va_arg( args, snet_expr_list_t*);
@@ -216,8 +216,8 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
     case HND_split: {
 
             HANDLE( split_hnd) = SNetMemAlloc( sizeof( split_handle_t));
-            SPLIT_HND( input) = va_arg( args, snet_tl_stream_t*);
-            SPLIT_HND( output_a) = va_arg( args, snet_tl_stream_t*);
+            SPLIT_HND( input) = va_arg( args, snet_stream_t*);
+            SPLIT_HND( output_a) = va_arg( args, snet_stream_t*);
             SPLIT_HND( boxfun_a) = va_arg( args, void*);
             SPLIT_HND( tag_a) = va_arg( args, int);
             SPLIT_HND( tag_b) = va_arg( args, int);
@@ -229,8 +229,8 @@ extern snet_handle_t *SNetHndCreate( snet_handledescriptor_t desc, ...) {
 
     case HND_filter:
       HANDLE( filter_hnd) = SNetMemAlloc( sizeof( filter_handle_t));
-      FILTER_HND( input) = va_arg( args, snet_tl_stream_t*);
-      FILTER_HND( output_a) = va_arg( args, snet_tl_stream_t*);
+      FILTER_HND( input) = va_arg( args, snet_stream_t*);
+      FILTER_HND( output_a) = va_arg( args, snet_stream_t*);
       FILTER_HND( in_type) = va_arg( args, snet_typeencoding_t*);
       FILTER_HND( out_types) = va_arg( args, snet_typeencoding_list_t*);
       FILTER_HND( guard_list) = va_arg( args, snet_expr_list_t*);
@@ -335,7 +335,7 @@ extern void SNetHndSetRecord( snet_handle_t *hnd, snet_record_t *rec) {
 }
 
 
-extern void SNetHndSetInput(snet_handle_t *hnd, snet_tl_stream_t *input) {
+extern void SNetHndSetInput(snet_handle_t *hnd, snet_stream_t *input) {
   switch( hnd->descr) {
     case HND_box:
       BOX_HND( input) = input;
@@ -359,8 +359,8 @@ extern void SNetHndSetInput(snet_handle_t *hnd, snet_tl_stream_t *input) {
   }
 }
 
-extern snet_tl_stream_t *SNetHndGetInput( snet_handle_t *hnd) {
-  snet_tl_stream_t *result;
+extern snet_stream_t *SNetHndGetInput( snet_handle_t *hnd) {
+  snet_stream_t *result;
 
   switch( hnd->descr) {
     case HND_box:
@@ -388,9 +388,9 @@ extern snet_tl_stream_t *SNetHndGetInput( snet_handle_t *hnd) {
 }
 
 
-extern snet_tl_stream_t *SNetHndGetOutput( snet_handle_t *hnd){
+extern snet_stream_t *SNetHndGetOutput( snet_handle_t *hnd){
 
-  snet_tl_stream_t *result;
+  snet_stream_t *result;
 
   switch( hnd->descr) {
     case HND_box:
@@ -414,9 +414,9 @@ extern snet_tl_stream_t *SNetHndGetOutput( snet_handle_t *hnd){
   return( result);
 }
 
-extern snet_tl_stream_t **SNetHndGetOutputs( snet_handle_t *hnd){
+extern snet_stream_t **SNetHndGetOutputs( snet_handle_t *hnd){
 
-  snet_tl_stream_t **result;
+  snet_stream_t **result;
   switch( hnd->descr) {
     case HND_parallel:
       result = PAR_HND( outputs);

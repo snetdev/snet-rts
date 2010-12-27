@@ -6,13 +6,8 @@
 include $(PROJECT_ROOT)/src/makefiles/targets_commonlib.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_maketools.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_compiler.mkf
-# *grml* the variables that are named same as the subdirectories are overwritten
-#ifeq ( $(notdir $(CURDIR)),runtime_lpel)
-#  include $(PROJECT_ROOT)/src/makefiles/targets_runtime_lpel.mkf
-#else
-#  $(info $(notdir $(CURDIR)) -- $(TARGETDIR))
-  include $(PROJECT_ROOT)/src/makefiles/targets_runtime.mkf
-#endif
+include $(PROJECT_ROOT)/src/makefiles/targets_runtime_lpel.mkf
+include $(PROJECT_ROOT)/src/makefiles/targets_runtime.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_util.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_tools.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_demo.mkf

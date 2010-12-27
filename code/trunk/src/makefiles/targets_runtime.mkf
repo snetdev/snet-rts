@@ -43,10 +43,10 @@ clean_runtime_prod        :=
 #
 
 ifeq ($(DISTRIBUTED),yes)
-runtime         = common entities netinterface observer utility threading \
+runtime         = common entities netinterface observers utility threading \
                     interfacing distribution
 else
-runtime         = common entities netinterface observer utility threading \
+runtime         = common entities netinterface observers utility threading \
                     interfacing
 endif
 
@@ -75,7 +75,7 @@ interfacing     = interface_functions.o
 netinterface	= label.o output.o parser.tab.o parser.lex.o interface.o\
                   networkinterface.o
 
-observer	= observers.o
+observers	= observers.o
 
 distribution    = distribution.o datastorage.o message.o fun.o imanager.o \
                   id.o omanager.o routing.o reference.o 

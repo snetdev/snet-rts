@@ -59,7 +59,7 @@ struct streamset {
   snet_ex_sem_t *record_counter; /* This semaphore is used to count the records */
 };
 
-struct stream {
+struct snet_stream_t {
   pthread_mutex_t access;      /* Mutex to guard access to the stream */
 
   union buffers {

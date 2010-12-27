@@ -13,7 +13,7 @@
 #include "record.h"
 #include "expression.h"
 
-struct stream;
+struct snet_stream_t;
 
 typedef enum {
 	HND_box      = (1<<0),
@@ -45,11 +45,11 @@ extern snet_record_t *SNetHndGetRecord( snet_handle_t *hndl);
 
 extern void SNetHndSetRecord( snet_handle_t *hndl, snet_record_t *rec);
 
-extern void SNetHndSetInput( snet_handle_t *hnd, struct stream *inbuf);
-extern struct stream *SNetHndGetInput( snet_handle_t *hndl);
+extern void SNetHndSetInput( snet_handle_t *hnd, struct snet_stream_t *inbuf);
+extern struct snet_stream_t *SNetHndGetInput( snet_handle_t *hndl);
 
-extern struct stream *SNetHndGetOutput( snet_handle_t *hndl);
-extern struct stream **SNetHndGetOutputs( snet_handle_t *hndl);
+extern struct snet_stream_t *SNetHndGetOutput( snet_handle_t *hndl);
+extern struct snet_stream_t **SNetHndGetOutputs( snet_handle_t *hndl);
 
 extern void *SNetHndGetBoxfun( snet_handle_t *handle);
 extern void *SNetHndGetBoxfunA( snet_handle_t *handle);

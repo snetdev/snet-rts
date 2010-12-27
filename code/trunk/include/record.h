@@ -49,7 +49,7 @@ extern snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...);
 
 extern snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec);
 
-extern struct stream *SNetRecGetStream( snet_record_t *rec);
+extern snet_stream_t *SNetRecGetStream( snet_record_t *rec);
 
 
 /*

@@ -22,7 +22,7 @@
 /**
  * Reset a buffer
  */
-void BufferReset( buffer_t *buf)
+void _LpelBufferReset( buffer_t *buf)
 {
   buf->pread = 0;
   buf->pwrite = 0;
@@ -38,7 +38,7 @@ void BufferReset( buffer_t *buf)
  * @param buf   buffer to read from
  * @return      NULL if buffer is empty
  */
-void *BufferTop( buffer_t *buf)
+void *_LpelBufferTop( buffer_t *buf)
 { 
   /* if the buffer is empty, data[pread]==NULL */
   return buf->data[buf->pread];  
@@ -54,7 +54,7 @@ void *BufferTop( buffer_t *buf)
  * @pre         no concurrent reads
  * @param buf   buffer to read from
  */
-void BufferPop( buffer_t *buf)
+void _LpelBufferPop( buffer_t *buf)
 {
   /* clear, and advance pread */
   buf->data[buf->pread]=NULL;
@@ -69,7 +69,7 @@ void BufferPop( buffer_t *buf)
  * @param buf   buffer to check
  * @pre         no concurrent calls
  */
-int BufferIsSpace( buffer_t *buf)
+int _LpelBufferIsSpace( buffer_t *buf)
 {
   /* if there is space in the buffer, the location at pwrite holds NULL */
   return ( buf->data[buf->pwrite] == NULL );
@@ -91,10 +91,10 @@ int BufferIsSpace( buffer_t *buf)
  * @pre         there has to be space in the buffer
  *              (check with BufferIsSpace)
  */
-void BufferPut( buffer_t *buf, void *item)
+void _LpelBufferPut( buffer_t *buf, void *item)
 {
   assert( item != NULL );
-  assert( BufferIsSpace(buf) );
+  assert( _LpelBufferIsSpace(buf) );
 
   /* WRITE TO BUFFER */
   /* Write Memory Barrier: ensure all previous memory write 

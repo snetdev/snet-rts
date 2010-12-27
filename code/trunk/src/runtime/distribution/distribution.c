@@ -136,7 +136,6 @@ void DistributionStart(snet_startup_fun_t fun, snet_info_t *info)
 {
   int my_rank;
   snet_tl_stream_t *ret_stream, *input;
-  snet_info_t *info;
   snet_fun_id_t fun_id;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
