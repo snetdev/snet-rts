@@ -5,8 +5,6 @@
 #include "bool.h"
 
 #include "lpel.h"
-#include "worker.h"
-#include "task.h"
 
 
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;

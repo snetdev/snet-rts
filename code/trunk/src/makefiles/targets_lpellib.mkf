@@ -1,0 +1,53 @@
+#
+# $Id$
+#
+#
+
+
+###############################################################################
+#
+# Collection of targets
+#
+
+targets_lpellib_devel     	  := liblpel.so
+targets_lpellib_prod      	  := liblpel.prod.so 
+targets_lpellib_default   	  := $(targets_lpellib_devel)
+
+
+###############################################################################
+#
+# Collection of target directories
+#
+
+targetdir_lpellib	          := lib
+
+
+###############################################################################
+#
+# Collection of additional files to be cleaned
+#
+
+clean_lpellib         	  :=
+clean_lpellib_devel    	  :=
+clean_lpellib_prod        :=
+
+
+###############################################################################
+#
+# Collection of source directories
+#
+
+lpellib		= lpel
+
+
+###############################################################################
+#
+# Collection of util object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+lpel      = threading.o scheduler.o stream.o buffer.o task.o taskqueue.o \
+            worker.o mailbox.o monitoring.o stream_list.o
+                  
+

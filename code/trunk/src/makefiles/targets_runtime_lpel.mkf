@@ -43,10 +43,10 @@ clean_runtime_lpel_prod        :=
 #
 
 ifeq ($(DISTRIBUTED),yes)
-runtime_lpel          = shared entity utils langif netif lpelif observer lpel \
+runtime_lpel          = shared entity utils langif netif lpelif observer \
                         distrib
 else
-runtime_lpel          = shared entity utils langif netif lpelif observer lpel
+runtime_lpel          = shared entity utils langif netif lpelif observer
 endif
 
 
@@ -78,6 +78,3 @@ observer	= observers.o
 distrib         = distribution.o datastorage.o message.o fun.o imanager.o \
                   id.o omanager.o routing.o reference.o 
 
-lpel            = threading.o scheduler.o stream.o buffer.o task.o taskqueue.o \
-                  worker.o mailbox.o monitoring.o stream_list.o
-                  

@@ -2,7 +2,7 @@
 #define _ASSIGNMENT_H_
 
 #include "bool.h"
-#include "task.h"
+#include "lpel.h"
 
 void AssignmentInit(int lpel_num_workers);
 int  AssignmentGetWID(lpel_task_t *t, bool is_box);

@@ -58,13 +58,18 @@ RUNTIMEINCS := -I$(PROJECT_ROOT)/include \
                $(patsubst %,-I%,$(SUBPROJECT_DIRS))/../include \
                $(GTKFLAGS) $(MPIFLAGS)
 
+LPELLIB       := -L$(PROJECT_ROOT)/lib
+LPELLIB_DEPS  := -lpthread -lpcl -lrt -lcap
+
 
 RUNTIMELIB_DEPS      := -lpthread
 RUNTIMELIB_DEPS_MPI  := -lmpi
-RUNTIMELIB_DEPS_LPEL := -lpcl -lrt -lcap
+RUNTIMELIB_DEPS_LPEL := -llpel
 
 UTILLIB  := -L$(PROJECT_ROOT)/lib
 UTILINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
+
+
 
 XML_DIR     = $(PROJECT_ROOT)/src/compiler/xml
 XML_COMMONS = $(wildcard $(XML_DIR)/common_*.xsl)
@@ -223,6 +228,26 @@ $(PROJECT_ROOT)/lib/libsnetmpi.prod.so:  $(TARGETDIRS_PROD)
 	@$(CLOCK_SKEW_ELIMINATION)
 
 
+
+#
+# LPEL LIBRARY
+#
+$(PROJECT_ROOT)/lib/liblpel.so: $(TARGETDIRS_DEVEL) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/liblpel.so (developer version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB_DEPS)
+	@$(RM) .make_track
+	@$(TOUCH) .done
+	@$(CLOCK_SKEW_ELIMINATION)  
+
+$(PROJECT_ROOT)/lib/liblpel.prod.so:  $(TARGETDIRS_PROD) 
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/liblpel.prod.so (product version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB_DEPS)
+	@$(RM) .make_track
+	@$(TOUCH) .done
+	@$(CLOCK_SKEW_ELIMINATION)  
+
 #
 # SNET + LPEL
 #
@@ -230,7 +255,7 @@ $(PROJECT_ROOT)/lib/libsnetlpel.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
 	@$(ECHO "$(TARGETDIRS_DEVEL)"
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpel.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL)
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -238,7 +263,7 @@ $(PROJECT_ROOT)/lib/libsnetlpel.so: $(TARGETDIRS_DEVEL)
 $(PROJECT_ROOT)/lib/libsnetlpel.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpel.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL)
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -249,7 +274,7 @@ $(PROJECT_ROOT)/lib/libsnetlpel.prod.so:  $(TARGETDIRS_PROD)
 $(PROJECT_ROOT)/lib/libsnetlpelmpi.so: $(TARGETDIRS_DEVEL) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpelmpi.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL) $(RUNTIMELIB_DEPS_MPI)
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL) $(RUNTIMELIB_DEPS_MPI)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -257,13 +282,16 @@ $(PROJECT_ROOT)/lib/libsnetlpelmpi.so: $(TARGETDIRS_DEVEL)
 $(PROJECT_ROOT)/lib/libsnetlpelmpi.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpelmpi.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL) $(RUNTIMELIB_DEPS_MPI)
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL) $(RUNTIMELIB_DEPS_MPI)
 	@$(RM) .make_track
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)
 
 
+#
+# SNET UTIL
+#
 $(PROJECT_ROOT)/lib/libsnetutil.so: $(TARGETDIRS_DEVEL) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetutil.so (developer version)"
@@ -279,6 +307,8 @@ $(PROJECT_ROOT)/lib/libsnetutil.prod.so:  $(TARGETDIRS_PROD)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
+
+
 
 $(PROJECT_ROOT)/bin/%.devel: $(TARGETDIRS_DEVEL) 
 	@$(ECHO) ""
