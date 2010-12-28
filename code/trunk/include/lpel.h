@@ -107,6 +107,8 @@ lpel_task_t *LpelTaskCreate( lpel_taskfunc_t,
 void LpelTaskExit(  lpel_task_t *ct);
 void LpelTaskYield( lpel_task_t *ct);
 
+unsigned int LpelTaskGetUID( lpel_task_t *t);
+
 
 /* TODO refactor */
 

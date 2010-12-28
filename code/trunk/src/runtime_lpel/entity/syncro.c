@@ -370,7 +370,7 @@ snet_stream_t *SNetSync( snet_stream_t *input,
     sarg->patterns = patterns;
     sarg->guards = guards;
 
-    SNetSpawnEntity( SyncBoxTask, (void*)sarg, ENTITY_sync);
+    SNetSpawnEntity( SyncBoxTask, (void*)sarg, ENTITY_sync, NULL);
 
 #ifdef DISTRIBUTED_SNET
   } else {

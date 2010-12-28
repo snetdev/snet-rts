@@ -245,7 +245,7 @@ snet_stream_t *CollectorCreate( int num, snet_stream_t **instreams, snet_info_t 
   carg->num = num;
 
   /* spawn collector task */
-  SNetSpawnEntity( CollectorTask, (void *)carg, ENTITY_collect);
+  SNetSpawnEntity( CollectorTask, (void *)carg, ENTITY_collect, NULL);
   return outstream;
 }
 

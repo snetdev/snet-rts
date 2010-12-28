@@ -70,9 +70,6 @@ void _LpelMonitoringDestroy( monitoring_t *mon)
 
 
 
-
-
-
 /**
  * Print a time in nsec
  */
@@ -92,8 +89,8 @@ static void DirtySDPrint( lpel_stream_desc_t *sd, void *arg)
   FILE *file = (FILE *)arg;
 
   (void) fprintf( file,
-      "%p,%c,%c,%lu,%c%c%c;",
-      sd->stream, sd->mode, sd->state, sd->counter,
+      "%u,%c,%c,%lu,%c%c%c;",
+      sd->sid, sd->mode, sd->state, sd->counter,
       ( sd->event_flags & STDESC_WAITON) ? '?':'-',
       ( sd->event_flags & STDESC_WOKEUP) ? '!':'-',
       ( sd->event_flags & STDESC_MOVED ) ? '*':'-'
@@ -155,9 +152,9 @@ void _LpelMonitoringOutput( monitoring_t *mon, lpel_task_t *t)
 
   /* print general info: name, disp.cnt, state */
   fprintf( file,
-      "tid %lu disp %lu st %c%c ",
+      "tid %u disp %lu st %c%c ",
       t->uid, t->cnt_dispatch, t->state,
-      (t->state==TASK_BLOCKED)? t->wait_on : ' '
+      (t->state==TASK_BLOCKED)? t->blocked_on : ' '
       );
 
   /* print times */

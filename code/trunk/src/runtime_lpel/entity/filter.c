@@ -649,7 +649,7 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
     farg->guard_list = guard_expr;
     farg->instr_lst = instr_list;
     
-    SNetSpawnEntity( FilterTask, (void*)farg, ENTITY_filter);
+    SNetSpawnEntity( FilterTask, (void*)farg, ENTITY_filter, NULL);
     
 #ifdef DISTRIBUTED_SNET
   } else {
@@ -727,7 +727,7 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
     farg->guard_list = guard_expr;
     farg->instr_lst = instr_list;
 
-    SNetSpawnEntity( FilterTask, (void*)farg, ENTITY_filter);
+    SNetSpawnEntity( FilterTask, (void*)farg, ENTITY_filter, NULL);
   
 #ifdef DISTRIBUTED_SNET
   } else {
@@ -882,7 +882,7 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
     farg->guard_list = SNetEcreateList( 1, SNetEconsti( offset));
     farg->instr_lst = NULL; /* instructions */
     
-    SNetSpawnEntity( NameshiftTask, (void*)farg, ENTITY_filter);
+    SNetSpawnEntity( NameshiftTask, (void*)farg, ENTITY_filter, NULL);
   
 #ifdef DISTRIBUTED_SNET
   } else {

@@ -101,6 +101,10 @@ void LpelTaskYield( lpel_task_t *ct)
   co_resume();
 }
 
+unsigned int LpelTaskGetUID( lpel_task_t *t)
+{
+  return t->uid;
+}
 
 
 
@@ -166,10 +170,10 @@ void _LpelTaskCall( lpel_task_t *t)
 /**
  * Block a task
  */
-void _LpelTaskBlock( lpel_task_t *ct, int wait_on)
+void _LpelTaskBlock(lpel_task_t *ct, taskstate_blocked_t block_on)
 {
   ct->state = TASK_BLOCKED;
-  ct->wait_on = wait_on;
+  ct->blocked_on = block_on;
   /* context switch */
   co_resume();
 }

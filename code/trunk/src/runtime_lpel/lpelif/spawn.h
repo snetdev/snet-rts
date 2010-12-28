@@ -21,15 +21,15 @@ typedef enum {
   ENTITY_sync,
   ENTITY_filter,
   ENTITY_collect,
-  ENTITY_dist,
-  ENTITY_none
 } snet_entity_id_t;
  
 
+extern void SNetSpawnInit( int node);
 
+extern void SNetSpawnDestroy( void);
 
 extern void SNetSpawnEntity( void (*fun)(lpel_task_t *t, void *arg),
-    void *arg, snet_entity_id_t id);
+    void *arg, snet_entity_id_t id, char *label);
 
 extern void SNetSpawnWrapper( void (*func)(lpel_task_t *, void*),
     void *arg, char *name);

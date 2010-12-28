@@ -411,7 +411,8 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     parg->types = types;
     parg->is_det = is_det;
     SNetSpawnEntity( ParallelBoxTask, (void*)parg,
-        (is_det)? ENTITY_parallel_det: ENTITY_parallel_nondet
+        (is_det)? ENTITY_parallel_det: ENTITY_parallel_nondet,
+        NULL
         );
         
 #ifdef DISTRIBUTED_SNET

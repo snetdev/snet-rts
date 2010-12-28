@@ -29,7 +29,9 @@
 #include "input.h"
 #include "observers.h"
 #include "networkinterface.h"
+
 #include "assignment.h"
+#include "spawn.h"
 
 #include "debug.h"
 
@@ -289,7 +291,9 @@ int SNetInRun(int argc, char *argv[],
 #endif
 
   LpelInit(&config);
+  
   AssignmentInit( LpelNumWorkers());
+  SNetSpawnInit( config.node);
 
   SNetObserverInit(labels, interfaces);
 
@@ -323,6 +327,8 @@ int SNetInRun(int argc, char *argv[],
 
   /* destroy observers */
   SNetObserverDestroy();
+
+  SNetSpawnDestroy();
   
   SNetInLabelDestroy(labels);
   SNetInInterfaceDestroy(interfaces);

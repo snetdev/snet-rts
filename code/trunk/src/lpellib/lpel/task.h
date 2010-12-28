@@ -30,10 +30,10 @@ typedef enum {
 } taskstate_t;
 
 typedef enum {
-  WAIT_ON_READ  = 'r',
-  WAIT_ON_WRITE = 'w',
-  WAIT_ON_ANY   = 'a'
-} taskstate_wait_t;
+  BLOCKED_ON_INPUT  = 'i',
+  BLOCKED_ON_OUTPUT = 'o',
+  BLOCKED_ON_ANYIN  = 'a'
+} taskstate_blocked_t;
 
 
 
@@ -43,10 +43,10 @@ typedef enum {
 struct lpel_task_t {
   /** intrinsic pointers for organizing tasks in a list*/
   lpel_task_t *prev, *next;
-  unsigned long uid;        /** unique identifier */
+  unsigned int uid;         /** unique identifier */
   lpel_taskattr_t attr;     /** attributes */
   taskstate_t state;        /** state */
-  taskstate_wait_t wait_on; /** on which event the task is waiting */
+  taskstate_blocked_t blocked_on; /** on which event the task is waiting */
 
   workerctx_t *worker_context;  /** worker context for this task */
 
@@ -77,7 +77,7 @@ struct lpel_task_t {
 
 
 void _LpelTaskCall(    lpel_task_t *ct);
-void _LpelTaskBlock(   lpel_task_t *ct, int wait_on);
+void _LpelTaskBlock(   lpel_task_t *ct, taskstate_blocked_t block_on);
 void _LpelTaskDestroy( lpel_task_t *t);
 
 

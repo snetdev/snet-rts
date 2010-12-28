@@ -15,4 +15,4 @@ $(TARGET):  $(TARGET).snet $(BOXES) $(SNETLIBS)
 
 
 clean:
-	rm -f $(TARGET) $(TARGET).o $(TARGET).c $(TARGET).h $(BOXES) mon_*.log
+	rm -f $(TARGET) $(TARGET).o $(TARGET).c $(TARGET).h $(BOXES) mon_*.log *tasks.map

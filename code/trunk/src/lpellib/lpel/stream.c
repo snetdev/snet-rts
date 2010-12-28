@@ -44,19 +44,20 @@
 #include <pthread.h>
 
 #include "arch/atomic.h"
-
 #include "buffer.h"
+
 #include "task.h"
 #include "worker.h"
 
-
 #include "stream.h"
+
 
 /**
  * A stream which is shared between a
  * (single) producer and a (single) consumer.
  */
 struct lpel_stream_t {
+  unsigned int uid;         /** unique sequence number */
   buffer_t buffer;          /** buffer holding the actual data */
 #ifdef STREAM_POLL_SPINLOCK /** to support polling a lock is needed */
   pthread_spinlock_t prod_lock;
@@ -71,7 +72,7 @@ struct lpel_stream_t {
   atomic_t e_sem;           /** counter for empty space in the stream */
 };
 
-
+static atomic_t stream_seq = ATOMIC_INIT(0);
 
 
 
@@ -89,6 +90,7 @@ static inline void MarkDirty( lpel_stream_desc_t *sd);
 lpel_stream_t *LpelStreamCreate(void)
 {
   lpel_stream_t *s = (lpel_stream_t *) malloc( sizeof( lpel_stream_t));
+  s->uid = fetch_and_inc( &stream_seq);
   _LpelBufferReset( &s->buffer);
 #ifdef STREAM_POLL_SPINLOCK
   pthread_spin_init( &s->prod_lock, PTHREAD_PROCESS_PRIVATE);
@@ -137,13 +139,14 @@ void LpelStreamDestroy( lpel_stream_t *s)
  */
 lpel_stream_desc_t *LpelStreamOpen( lpel_task_t *ct, lpel_stream_t *s, char mode)
 {
- lpel_stream_desc_t *sd;
+  lpel_stream_desc_t *sd;
 
   assert( mode == 'r' || mode == 'w' );
 
   sd = (lpel_stream_desc_t *) malloc( sizeof( lpel_stream_desc_t));
   sd->task = ct;
   sd->stream = s;
+  sd->sid = s->uid;
   sd->mode = mode;
   sd->state = STDESC_OPENED;
   sd->counter = 0;
@@ -195,6 +198,7 @@ void LpelStreamReplace( lpel_stream_desc_t *sd, lpel_stream_t *snew)
   LpelStreamDestroy( sd->stream);
   /* assign new stream */
   sd->stream = snew;
+  sd->sid = snew->uid;
   /* new consumer sd of stream */
   sd->stream->cons_sd = sd;
 
@@ -239,7 +243,7 @@ void *LpelStreamRead( lpel_stream_desc_t *sd)
     /* wait on stream: */
     sd->event_flags |= STDESC_WAITON;
     MarkDirty( sd);
-    _LpelTaskBlock( self, WAIT_ON_WRITE);
+    _LpelTaskBlock( self, BLOCKED_ON_INPUT);
   }
 
 
@@ -295,7 +299,7 @@ void LpelStreamWrite( lpel_stream_desc_t *sd, void *item)
     /* wait on stream: */
     sd->event_flags |= STDESC_WAITON;
     MarkDirty( sd);
-    _LpelTaskBlock( self, WAIT_ON_READ);
+    _LpelTaskBlock( self, BLOCKED_ON_OUTPUT);
   }
 
   /* writing to the buffer and checking if consumer polls must be atomic */
@@ -431,7 +435,7 @@ void LpelStreamPoll( lpel_stream_list_t *list)
   /* context switch */
   if (do_ctx_switch) {
     /* set task as blocked */
-    _LpelTaskBlock( self, WAIT_ON_ANY);
+    _LpelTaskBlock( self, BLOCKED_ON_ANYIN);
   }
 
   /* unregister activators

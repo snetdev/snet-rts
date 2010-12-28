@@ -272,7 +272,8 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->is_det = is_det;
 
     SNetSpawnEntity( StarBoxTask, (void*)sarg,
-        (is_det) ? ENTITY_star_det : ENTITY_star_nondet
+        (is_det) ? ENTITY_star_det : ENTITY_star_nondet,
+        NULL
         );
 
 #ifdef DISTRIBUTED_SNET

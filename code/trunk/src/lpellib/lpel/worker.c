@@ -138,7 +138,12 @@ void _LpelWorkerWrapperCreate(lpel_task_t *t, char *name)
 
   wc->sched = SchedCreate( -1);
 
-  wc->mon = _LpelMonitoringCreate( config.node, name);
+  
+  if (t->attr.flags & LPEL_TASK_ATTR_MONITOR_OUTPUT) {
+    wc->mon = _LpelMonitoringCreate( config.node, name);
+  } else {
+    wc->mon = NULL;
+  }
 
   /* mailbox */
   MailboxInit( &wc->mailbox);
@@ -333,7 +338,7 @@ static void *WorkerThread( void *arg)
   WorkerLoop( wc);
   
   /* cleanup monitoring */
-  _LpelMonitoringDestroy( wc->mon);
+  if (wc->mon) _LpelMonitoringDestroy( wc->mon);
   
   SchedDestroy( wc->sched);
 

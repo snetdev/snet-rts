@@ -81,6 +81,8 @@ default devel prod: checks
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/lpellib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/lpellib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime_lpel  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
 ifeq ($(MAKEDISTR),yes)
@@ -116,6 +118,8 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/lpellib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/lpellib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
 ifeq ($(MAKEDISTR),yes)

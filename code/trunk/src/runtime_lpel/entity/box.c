@@ -182,7 +182,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->out_signs = out_signs;
     barg->boxname = boxname;
 
-    SNetSpawnEntity( BoxTask, (void*)barg, ENTITY_box);
+    SNetSpawnEntity( BoxTask, (void*)barg, ENTITY_box, (char*) boxname);
     
 #ifdef DISTRIBUTED_SNET
   } else {

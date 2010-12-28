@@ -272,7 +272,8 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
 
     output = CollectorCreate( 1, initial, info);
     SNetSpawnEntity( SplitBoxTask, (void*)sarg,
-        (is_det) ? ENTITY_split_det : ENTITY_split_nondet
+        (is_det) ? ENTITY_split_det : ENTITY_split_nondet,
+        NULL
         );
     
 #ifdef DISTRIBUTED_SNET

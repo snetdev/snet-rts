@@ -1,12 +1,14 @@
 #ifndef _STREAM_H_
 #define _STREAM_H_
 
+
+
 #include "lpel.h"
 
 
 
-//#define STREAM_POLL_SPINLOCK
 
+//#define STREAM_POLL_SPINLOCK
 
 
 /**
@@ -18,6 +20,7 @@
 struct lpel_stream_desc_t {
   lpel_task_t   *task;        /** the task which opened the stream */
   lpel_stream_t *stream;      /** pointer to the stream */
+  unsigned int sid;           /** copy of the stream uid */
   char mode;                  /** either 'r' or 'w' */
   char state;                 /** one of IOCR, for monitoring */
   unsigned long counter;      /** counts the number of items transmitted
