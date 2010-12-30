@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "scheduler.h"
 
@@ -10,24 +11,14 @@
 
 struct schedctx {
   taskqueue_t queue;
+  pthread_mutex_t lock;
 };
-
-
-
-void SchedInit( int num_workers)
-{
-  /* NOP */
-}
-
-void SchedCleanup( void)
-{
-  /* NOP */
-}
 
 
 schedctx_t *SchedCreate( int wid)
 {
   schedctx_t *sc = (schedctx_t *) malloc( sizeof(schedctx_t));
+  pthread_mutex_init( &sc->lock, NULL);
   TaskqueueInit( &sc->queue);
   return sc;
 }
@@ -36,19 +27,37 @@ schedctx_t *SchedCreate( int wid)
 void SchedDestroy( schedctx_t *sc)
 {
   assert( sc->queue.count == 0);
+  pthread_mutex_destroy( &sc->lock);
   free( sc);
 }
 
 
 
-void SchedMakeReady( schedctx_t* sc, lpel_task_t *t)
+int SchedMakeReady( schedctx_t* sc, lpel_task_t *t)
 {
-  TaskqueueEnqueue( &sc->queue, t);
+  int was_empty;
+
+  pthread_mutex_lock( &sc->lock);
+  was_empty = (sc->queue.count == 0);
+#ifdef SCHED_LIFO
+  TaskqueuePushFront( &sc->queue, t);
+#else
+  TaskqueuePushBack( &sc->queue, t);
+#endif
+  pthread_mutex_unlock( &sc->lock);
+
+  return was_empty;
 }
 
 
 lpel_task_t *SchedFetchReady( schedctx_t *sc)
 {
-  return TaskqueueDequeue( &sc->queue);
+  lpel_task_t *t;
+  
+  pthread_mutex_lock( &sc->lock);
+  t = TaskqueuePopFront( &sc->queue);
+  pthread_mutex_unlock( &sc->lock);
+
+  return t;
 }
 

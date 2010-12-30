@@ -21,7 +21,7 @@ struct lpel_thread_t {
 };
 
 
-void _LpelThreadAssign( int core);
+int _LpelThreadAssign( int core);
 
 
 #endif /* _THREADING_H_ */

@@ -42,7 +42,6 @@ static void PutFree( mailbox_t *mbox, mailbox_node_t *node)
 
 
 
-
 /******************************************************************************/
 /* Public functions                                                           */
 /******************************************************************************/
@@ -61,10 +60,25 @@ void MailboxInit( mailbox_t *mbox)
 
 void MailboxCleanup( mailbox_t *mbox)
 {
+  mailbox_node_t *node;
+  
+  assert( mbox->list_inbox == NULL);
+
+  /* free all free nodes */
+  pthread_mutex_lock( &mbox->lock_free);
+  while (mbox->list_free != NULL) {
+    /* pop free node off */
+    node = mbox->list_free;
+    mbox->list_free = node->next; /* can be NULL */
+    /* free the memory for the node */
+    free( node);
+  }
+  pthread_mutex_unlock( &mbox->lock_free);
+
+  /* destroy sync primitives */
   pthread_mutex_destroy( &mbox->lock_free);
   pthread_mutex_destroy( &mbox->lock_inbox);
   pthread_cond_destroy(  &mbox->notempty);
-  assert( mbox->list_inbox == NULL);
 }
 
 void MailboxSend( mailbox_t *mbox, workermsg_t *msg)

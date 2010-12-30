@@ -160,13 +160,13 @@ void _LpelMonitoringOutput( monitoring_t *mon, lpel_task_t *t)
   /* print times */
   if ( FLAGS_TEST( t->attr.flags, LPEL_TASK_ATTR_COLLECT_TIMES) ) {
     timing_t diff;
+    TimingDiff( &diff, &t->times.start, &t->times.stop);
+    fprintf( file, "et ");
+    PrintTiming( &diff , file);
     if ( t->state == TASK_ZOMBIE) {
       fprintf( file, "creat ");
       PrintTiming( &t->times.creat, file);
     }
-    TimingDiff( &diff, &t->times.start, &t->times.stop);
-    fprintf( file, "et ");
-    PrintTiming( &diff , file);
   }
 
   /* print stream info */

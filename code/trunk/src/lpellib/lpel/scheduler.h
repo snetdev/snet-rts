@@ -4,15 +4,14 @@
 
 #include "lpel.h"
 
+//#define SCHED_LIFO
 
 typedef struct schedctx schedctx_t;
 
-void SchedInit( int num_workers);
-void SchedCleanup( void);
 schedctx_t *SchedCreate( int wid);
 void SchedDestroy( schedctx_t *sc);
 
-void SchedMakeReady( schedctx_t* sc, lpel_task_t *t);
+int SchedMakeReady( schedctx_t* sc, lpel_task_t *t);
 lpel_task_t *SchedFetchReady( schedctx_t *sc);
 
 

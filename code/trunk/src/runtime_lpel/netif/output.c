@@ -209,7 +209,7 @@ static void GlobOutputTask( lpel_task_t *self, void* data)
   SNetMemFree(hnd);
 
   /* signal termination to workers */
-  _LpelWorkerTerminate();
+  LpelWorkerTerminate();
 }
 
 void SNetInOutputInit(FILE *file,

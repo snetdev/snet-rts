@@ -16,9 +16,9 @@
    between core's private cache */
 typedef struct {
   volatile unsigned long pread;
-  long padding1[longxCacheLine-1];
+//  long padding1[longxCacheLine-1];
   volatile unsigned long pwrite;
-  long padding2[longxCacheLine-1];
+//  long padding2[longxCacheLine-1];
   void *data[STREAM_BUFFER_SIZE];
 } buffer_t;
 

@@ -5,7 +5,7 @@
 #include "lpel.h"
 
 void AssignmentInit(int lpel_num_workers);
-int  AssignmentGetWID(lpel_task_t *t, bool is_box);
+int  AssignmentGetWID(lpel_taskreq_t *t, bool is_box);
 
 
 #endif /* _ASSIGNMENT_H_ */

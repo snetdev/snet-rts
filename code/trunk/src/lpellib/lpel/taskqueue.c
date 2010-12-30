@@ -102,6 +102,7 @@ lpel_task_t *TaskqueuePopFront(taskqueue_t *tq)
   }
   /* decrement task count */
   tq->count--;
+  assert( t!=NULL || tq->count==0);
   return t;
 }
 
@@ -131,6 +132,7 @@ lpel_task_t *TaskqueuePopBack(taskqueue_t *tq)
   }
   /* decrement task count */
   tq->count--;
+  assert( t!=NULL || tq->count==0);
   return t;
 }
 

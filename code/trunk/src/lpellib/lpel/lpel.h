@@ -7,8 +7,15 @@
 
 
 /******************************************************************************/
-/*  RETURN TYPES OF LPEL FUNCTIONS                                            */
+/*  RETURN VALUES OF LPEL FUNCTIONS                                           */
 /******************************************************************************/
+
+#define LPEL_ERR_SUCCESS     0
+#define LPEL_ERR_FAIL       -1
+
+#define LPEL_ERR_INVAL       1 /* Invalid argument */
+#define LPEL_ERR_ASSIGN      2 /* Cannot assign thread to processors */
+#define LPEL_ERR_EXCL        3 /* Cannot assign core exclusively */
 
 
 /******************************************************************************/
@@ -18,8 +25,8 @@
 /**
  * Specification for configuration:
  *
+ * num_workers defines the number of worker threads (PThreads) spawned.
  * proc_workers is the number of processors used for workers.
- * num_workers must be a multiple of proc_workers.
  * proc_others is the number of processors assigned to other than
  *   worker threads.
  * flags:
@@ -36,20 +43,22 @@ typedef struct {
   int node;
 } lpel_config_t;
 
-#define LPEL_FLAG_AUTO     (1<<0)
-#define LPEL_FLAG_AUTO2    (1<<1)
-#define LPEL_FLAG_REALTIME (1<<4)
+#define LPEL_FLAG_NONE           (0)
+#define LPEL_FLAG_PINNED      (1<<0)
+#define LPEL_FLAG_EXCLUSIVE   (1<<1)
 
 
 
 typedef struct lpel_thread_t    lpel_thread_t;
 
 
-void LpelInit(    lpel_config_t *cfg);
+int LpelInit( lpel_config_t *cfg);
 void LpelCleanup( void);
 
 
-int LpelNumWorkers(void);
+int LpelGetNumCores( int *result);
+int LpelCanSetExclusive( int *result);
+
 
 
 /**
@@ -67,14 +76,15 @@ void LpelThreadJoin( lpel_thread_t *env);
 
 /* task types */
 
+/* the running task */
 typedef struct lpel_task_t lpel_task_t;
 
+/* a task request */
+typedef struct lpel_taskreq_t lpel_taskreq_t;
+
+/* task function signature */
 typedef void (*lpel_taskfunc_t)( lpel_task_t *self, void *inarg);
 
-typedef struct {
-  int flags;
-  int stacksize;
-} lpel_taskattr_t;
 
 #define LPEL_TASK_ATTR_NONE             (   0)
 #define LPEL_TASK_ATTR_ALL              (  -1)
@@ -101,20 +111,24 @@ typedef struct lpel_stream_iter_t    lpel_stream_iter_t;
 /*  TASK FUNCTIONS                                                            */
 /******************************************************************************/
 
-lpel_task_t *LpelTaskCreate( lpel_taskfunc_t,
-    void *inarg, lpel_taskattr_t *attr);
+lpel_taskreq_t *LpelTaskRequest( lpel_taskfunc_t,
+    void *inarg, int flags, int stacksize);
+
 
 void LpelTaskExit(  lpel_task_t *ct);
 void LpelTaskYield( lpel_task_t *ct);
 
 unsigned int LpelTaskGetUID( lpel_task_t *t);
+unsigned int LpelTaskReqGetUID( lpel_taskreq_t *t);
 
 
-/* TODO refactor */
+/******************************************************************************/
+/*  WORKER FUNCTIONS                                                          */
+/******************************************************************************/
 
-void _LpelWorkerTaskAssign( lpel_task_t *t, int wid);
-void _LpelWorkerWrapperCreate( lpel_task_t *t, char *name);
-void _LpelWorkerTerminate( void);
+void LpelWorkerTaskAssign( lpel_taskreq_t *t, int wid);
+void LpelWorkerWrapperCreate( lpel_taskreq_t *t, char *name);
+void LpelWorkerTerminate( void);
 
 
 

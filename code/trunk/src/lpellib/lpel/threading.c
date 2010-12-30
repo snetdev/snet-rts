@@ -31,17 +31,25 @@
 #define gettid() syscall( __NR_gettid )
 
 
-#include "task.h"
 #include "worker.h"
 
 
 
 /* Keep copy of the (checked) configuration provided at LpelInit() */
-static lpel_config_t config;
+static lpel_config_t    _lpel_global_config;
+
+/* test if flags are set in lpel config */
+#define LPEL_ICFG(f)   ( (_lpel_global_config.flags & (f)) == (f) )
 
 /* cpuset for others-threads */
 static cpu_set_t cpuset_others;
-static int proc_avail = -1;
+
+/*
+ * cpuset for workers = [0,proc_workers-1]
+ * is only used if not FLAG_PINNED is set
+ */
+static cpu_set_t cpuset_workers;
+
 
 
 static void CleanupEnv( lpel_thread_t *env)
@@ -51,7 +59,27 @@ static void CleanupEnv( lpel_thread_t *env)
 }
 
 
-static int CanSetRealtime(void)
+
+
+
+
+/**
+ * Get the number of available cores
+ */
+int LpelGetNumCores( int *result)
+{
+  int proc_avail = -1;
+  /* query the number of CPUs */
+  proc_avail = sysconf(_SC_NPROCESSORS_ONLN);
+  if (proc_avail == -1) {
+    /* _SC_NPROCESSORS_ONLN not available! */
+    return LPEL_ERR_FAIL;
+  }
+  *result = proc_avail;
+  return 0;
+}
+
+int LpelCanSetExclusive( int *result)
 {
 #ifdef LPEL_USE_CAPABILITIES
   cap_t caps;
@@ -59,120 +87,75 @@ static int CanSetRealtime(void)
   /* obtain caps of process */
   caps = cap_get_proc();
   if (caps == NULL) {
-    /*TODO error msg*/
-    return 0;
+    return LPEL_ERR_FAIL;
   }
   cap_get_flag(caps, CAP_SYS_NICE, CAP_EFFECTIVE, &cap);
-  return (cap == CAP_SET);
-#else
+  *result = (cap == CAP_SET);
   return 0;
+#else
+  return LPEL_ERR_FAIL;
 #endif
 }
 
 
 
 
-/**
- * Startup a lpel thread
- */
-static void *ThreadStartup( void *arg)
+
+static int CheckConfig( void)
 {
-  lpel_thread_t *env = (lpel_thread_t *)arg;
+  lpel_config_t *cfg = &_lpel_global_config;
+  int proc_avail;
 
-  _LpelThreadAssign(-1);
-
-  /* Init libPCL */
-  co_thread_init();
-
-  /* call the function */
-  env->func( env->arg);
-
-  /* if detached, cleanup the env now,
-     otherwise it will be done on join */
-  if (env->detached) {
-    CleanupEnv( env);
+  /* input sanity checks */
+  if ( cfg->num_workers <= 0 ||  cfg->proc_workers <= 0 ) {
+    return LPEL_ERR_INVAL;
+  }
+  if ( cfg->proc_others < 0 ) {
+    return LPEL_ERR_INVAL;
   }
 
-  /* Cleanup libPCL */
-  co_thread_cleanup();
+  /* check if there are enough processors (if we can check) */
+  if (0 == LpelGetNumCores( &proc_avail)) {
+    if (cfg->proc_workers + cfg->proc_others > proc_avail) {
+      return LPEL_ERR_INVAL;
+    }
+    /* check exclusive flag sanity */
+    if ( LPEL_ICFG( LPEL_FLAG_EXCLUSIVE) ) {
+      /* check if we can do a 1-1 mapping */
+      if ( (cfg->proc_others== 0) || (cfg->num_workers!=cfg->proc_workers) ) {
+        return LPEL_ERR_INVAL;
+      }
+    }
+  }
 
-  return NULL;
+  /* additional flags for exclusive flag */
+  if ( LPEL_ICFG( LPEL_FLAG_EXCLUSIVE) ) {
+    int can_rt;
+    /* pinned flag must also be set */
+    if ( !LPEL_ICFG( LPEL_FLAG_PINNED) ) {
+      return LPEL_ERR_INVAL;
+    }
+    /* check permissions to set exclusive (if we can check) */
+    if ( 0==LpelCanSetExclusive(&can_rt) && !can_rt ) {
+      return LPEL_ERR_EXCL;
+    }
+  }
+
+  return 0;
 }
 
 
-
-
-/* test only for a single flag in CheckConfig */
-#define LPEL_ICFG(f)   (( cfg->flags & (f) ) != 0 )
-static void CheckConfig( lpel_config_t *cfg)
+static void CreateCpusets( void)
 {
-
-  /* query the number of CPUs */
-  proc_avail = sysconf(_SC_NPROCESSORS_ONLN);
-  if (proc_avail == -1) {
-    /*TODO _SC_NPROCESSORS_ONLN not available! */
-  }
-
-  if ( LPEL_ICFG( LPEL_FLAG_AUTO2 ) ) {
-      /* as many workers as processors */
-      cfg->num_workers = cfg->proc_workers = proc_avail;
-      cfg->proc_others = 0;
-
-
-  } else if ( LPEL_ICFG( LPEL_FLAG_AUTO ) ) {
-
-    /* default values */
-    if (proc_avail > 1) {
-      /* multiprocessor */
-      cfg->num_workers = cfg->proc_workers = (proc_avail-1);
-      cfg->proc_others = 1;
-    } else {
-      /* uniprocessor */
-      cfg->num_workers = cfg->proc_workers = 1;
-      cfg->proc_others = 0;
-    }
-  } else {
-
-    /* sanity checks */
-    if ( cfg->num_workers <= 0 ||  cfg->proc_workers <= 0 ) {
-      /* TODO error */
-      assert(0);
-    }
-    if ( cfg->proc_others < 0 ) {
-      /* TODO error */
-      assert(0);
-    }
-    if ( (cfg->num_workers % cfg->proc_workers) != 0 ) {
-      /* TODO error */
-      assert(0);
-    }
-  }
-
-  /* check realtime flag sanity */
-  if ( LPEL_ICFG( LPEL_FLAG_REALTIME ) ) {
-    /* check for validity */
-    if (
-        (proc_avail < cfg->proc_workers + cfg->proc_others) ||
-        ( cfg->proc_others == 0 ) ||
-        ( cfg->num_workers != cfg->proc_workers )
-       ) {
-      /*TODO warning */
-      /* clear flag */
-      cfg->flags &= ~(LPEL_FLAG_REALTIME);
-    }
-    /* check for privileges needed for setting realtime */
-    if ( CanSetRealtime()==0 ) {
-      /*TODO warning */
-      /* clear flag */
-      cfg->flags &= ~(LPEL_FLAG_REALTIME);
-    }
-  }
-}
-
-
-static void CreateCpusetOthers( lpel_config_t *cfg)
-{
+  lpel_config_t *cfg = &_lpel_global_config;
   int  i;
+
+  /* create the cpu_set for worker threads */
+  CPU_ZERO( &cpuset_workers );
+  for (i=0; i<cfg->proc_workers; i++) {
+    CPU_SET(i, &cpuset_workers);
+  }
+
   /* create the cpu_set for other threads */
   CPU_ZERO( &cpuset_others );
   if (cfg->proc_others == 0) {
@@ -188,6 +171,7 @@ static void CreateCpusetOthers( lpel_config_t *cfg)
       CPU_SET(i, &cpuset_others);
     }
   }
+
 }
 
 
@@ -195,54 +179,39 @@ static void CreateCpusetOthers( lpel_config_t *cfg)
 /**
  * Initialise the LPEL
  *
- * If FLAG_AUTO is set, values set for num_workers, proc_workers and
- * proc_others are ignored and set for default as follows:
- *
- * AUTO2: proc_workers = num_workers = #proc_avail
- *        proc_others = 0
- *
- * AUTO: if #proc_avail > 1:
- *         num_workers = proc_workers = #proc_avail - 1
- *         proc_others = 1
- *       else
- *         proc_workers = num_workers = 1,
- *         proc_others = 0
- *
- * otherwise, following sanity checks are performed:
- *
  *  num_workers, proc_workers > 0
  *  proc_others >= 0
- *  num_workers = i*proc_workers, i>0
  *
- * If the realtime flag is invalid or the process has not
- * the appropriate privileges, it is ignored and a warning
- * will be displayed
  *
- * REALTIME: only valid, if
+ * EXCLUSIVE: only valid, if
  *       #proc_avail >= proc_workers + proc_others &&
  *       proc_others != 0 &&
  *       num_workers == proc_workers 
  *
  */
-void LpelInit(lpel_config_t *cfg)
+int LpelInit( lpel_config_t *cfg)
 {
   workercfg_t worker_config;
+  int res;
 
   /* store a local copy of cfg */
-  config = *cfg;
+  _lpel_global_config = *cfg;
   
-  /* check (and correct) the config */
-  CheckConfig( &config);
-  /* create the cpu affinity set for non-worker threads */
-  CreateCpusetOthers( &config);
+  /* check the config */
+  res = CheckConfig();
+  if (res!=0) return res;
+
+  /* create the cpu affinity set for used threads */
+  CreateCpusets();
 
   /* Init libPCL */
   co_thread_init();
  
-  worker_config.node = config.node;
+  worker_config.node = _lpel_global_config.node;
   /* initialise workers */
-  _LpelWorkerInit( config.num_workers, &worker_config);
+  _LpelWorkerInit( _lpel_global_config.num_workers, &worker_config);
 
+  return 0;
 }
 
 /**
@@ -263,38 +232,86 @@ void LpelCleanup(void)
 
 
 /**
- * @pre core in [0, procs_avail] or -1
+ * @pre core in [0, num_workers] or -1
  */
-void _LpelThreadAssign( int core)
+int _LpelThreadAssign( int core)
 {
-  int res;
+  lpel_config_t *cfg = &_lpel_global_config;
   pid_t tid;
+  int res;
 
   /* get thread id */
   tid = gettid();
 
   if ( core == -1) {
-    /* assign to others cpuset */
+    /* assign an others thread to others cpuset */
     res = sched_setaffinity(tid, sizeof(cpu_set_t), &cpuset_others);
-    assert( res == 0);
+    if( res != 0) return LPEL_ERR_ASSIGN;
 
   } else {
-    /* assign to specified core */
-    cpu_set_t cpuset;
+    /* assign a worker thread */
+    assert( 0<=core && core<cfg->num_workers );
 
-    CPU_ZERO(&cpuset);
-    CPU_SET( core % proc_avail, &cpuset);
-    res = sched_setaffinity(tid, sizeof(cpu_set_t), &cpuset);
-    assert( res == 0);
+    if ( LPEL_ICFG(LPEL_FLAG_PINNED)) {
+      /* assign to specified core */
+      cpu_set_t cpuset;
 
-    /* make non-preemptible */
-    if ( (config.flags & LPEL_FLAG_REALTIME) != 0 ) {
-      struct sched_param param;
-      param.sched_priority = 1; /* lowest real-time, TODO other? */
-      res = sched_setscheduler(tid, SCHED_FIFO, &param);
-      assert( res == 0);
+      CPU_ZERO(&cpuset);
+      CPU_SET( core % cfg->proc_workers, &cpuset);
+      res = sched_setaffinity(tid, sizeof(cpu_set_t), &cpuset);
+      if( res != 0) return LPEL_ERR_ASSIGN;
+
+      /* make non-preemptible */
+      if ( LPEL_ICFG(cfg->flags & LPEL_FLAG_EXCLUSIVE)) {
+        struct sched_param param;
+        param.sched_priority = 1; /* lowest real-time, TODO other? */
+        if (0!=sched_setscheduler(tid, SCHED_FIFO, &param)) {
+          /* we do best effort at this point */
+          //return LPEL_ERR_EXCL;
+        }
+      }
+    } else {
+      /* assign along all workers */
+      res = sched_setaffinity(tid, sizeof(cpu_set_t), &cpuset_workers);
+      if( res != 0) return LPEL_ERR_ASSIGN;
     }
   }
+
+  return 0;
+}
+
+
+
+
+
+
+
+
+/**
+ * Startup a lpel thread, assigned to cpuset_others
+ */
+static void *ThreadStartup( void *arg)
+{
+  lpel_thread_t *env = (lpel_thread_t *)arg;
+
+  (void) _LpelThreadAssign(-1);
+
+  /* Init libPCL */
+  co_thread_init();
+
+  /* call the function */
+  env->func( env->arg);
+
+  /* if detached, cleanup the env now,
+     otherwise it will be done on join */
+  if (env->detached) {
+    CleanupEnv( env);
+  }
+
+  /* Cleanup libPCL */
+  co_thread_cleanup();
+
+  return NULL;
 }
 
 
@@ -344,13 +361,5 @@ void LpelThreadJoin( lpel_thread_t *env)
 
   /* cleanup */
   CleanupEnv( env);
-}
-
-/**
- * Get the number of workers
- */
-int LpelNumWorkers(void)
-{
-  return config.num_workers;
 }
 

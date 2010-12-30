@@ -167,7 +167,6 @@ int SNetInRun(int argc, char *argv[],
   FILE *input = stdin;
   FILE *output = stdout;
   int i = 0;
-  lpel_config_t config;
   snet_info_t *info;
   snetin_label_t *labels = NULL;
   snetin_interface_t *interfaces = NULL;
@@ -176,6 +175,8 @@ int SNetInRun(int argc, char *argv[],
   char *mon_cfg = NULL;
   int len;
   int port;
+
+  int num_workers = 0;
 #ifdef DISTRIBUTED_SNET
   int rank;
 #else /* DISTRIBUTED_SNET */
@@ -193,12 +194,13 @@ int SNetInRun(int argc, char *argv[],
       /* Help */
       printf("usage: <executable name> [options]\n");
       printf("\nOptions:\n");
-      printf("\t-m <mon_cfg>\t\tSet monitoring configuration.\n");
       printf("\t-i <filename>\t\tInput from file.\n");
       printf("\t-I <port>\t\tInput from socket.\n");
       printf("\t-h \t\t\tDisplay this help text.\n");
       printf("\t-o <filename>\t\tOutput to file.\n");
       printf("\t-O <address:port>\tOutput to socket.\n");
+      printf("\t-m <mon_cfg>\t\tSet monitoring configuration.\n");
+      printf("\t-w <workers>\t\tSet number of workers.\n");
       printf("\n");
 
       if(input != stdin && input != NULL) {
@@ -215,6 +217,10 @@ int SNetInRun(int argc, char *argv[],
       /* Monitoring configuration */
       i = i + 1;
       mon_cfg = argv[i];
+    } else if(strcmp(argv[i], "-w") == 0 && input == stdin && i + 1 <= argc) {
+      /* Number of workers */
+      i = i + 1;
+      num_workers = atoi(argv[i]);
     }else if(strcmp(argv[i], "-i") == 0 && input == stdin && i + 1 <= argc) {
       /* Input from file */
       i = i + 1;
@@ -275,25 +281,39 @@ int SNetInRun(int argc, char *argv[],
 
   
 
-  /* Initialise LPEL */
-  config.flags = LPEL_FLAG_AUTO2;
-  /*
-  config.proc_workers = 2;
-  config.num_workers = 2;
-  config.proc_others = 0;
-  */
+  /* Initialise LPEL and its interfacing modules */
+  {
+    lpel_config_t config;
+    int num_cpus;
 
+
+    /* determine number of cpus */
+    if ( 0 != LpelGetNumCores( &num_cpus) ) {
+	SNetUtilDebugFatal("Could not determine number of cores!\n");
+    }
+
+    if (num_workers == 0) {
+      config.flags = LPEL_FLAG_PINNED;
+      config.proc_workers = num_cpus;
+      config.num_workers = num_cpus;
+      config.proc_others = 0;
+    } else {
+      config.flags = LPEL_FLAG_NONE;
+      config.proc_workers = num_cpus;
+      config.num_workers = num_workers;
+      config.proc_others = 0;
+    }
 
 #ifdef DISTRIBUTED_SNET
-  config.node = rank;
+    config.node = rank;
 #else
-  config.node = -1;
+    config.node = -1;
 #endif
+    LpelInit(&config);
 
-  LpelInit(&config);
-  
-  AssignmentInit( LpelNumWorkers());
-  SNetSpawnInit( config.node);
+    AssignmentInit( config.num_workers);
+    SNetSpawnInit( config.node);
+  }
 
   SNetObserverInit(labels, interfaces);
 

@@ -24,7 +24,7 @@ void AssignmentInit(int lpel_num_workers)
 /**
  * Get the worker id to assign a task to
  */
-int AssignmentGetWID(lpel_task_t *t, bool is_box)
+int AssignmentGetWID(lpel_taskreq_t *t, bool is_box)
 {
   int target;
 

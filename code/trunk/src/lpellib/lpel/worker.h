@@ -9,7 +9,7 @@
 #include "scheduler.h"
 #include "monitoring.h"
 #include "mailbox.h"
-
+#include "taskqueue.h"
 
 
 
@@ -25,7 +25,8 @@ typedef struct {
   pthread_t     thread;
   unsigned int  num_tasks;
   unsigned int  loop;
-  bool          terminate;  
+  bool          terminate;
+  taskqueue_t   free_tasks;
   mailbox_t     mailbox;
   schedctx_t   *sched;
   monitoring_t *mon;

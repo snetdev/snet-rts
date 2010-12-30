@@ -23,51 +23,19 @@ static atomic_t taskseq = ATOMIC_INIT(0);
 static void TaskStartup(void *data);
 
 
-/**
- * Create a task
- */
-lpel_task_t *LpelTaskCreate( lpel_taskfunc_t func,
-    void *inarg, lpel_taskattr_t *attr)
+lpel_taskreq_t *LpelTaskRequest( lpel_taskfunc_t func,
+    void *inarg, int flags, int stacksize)
 {
-  lpel_task_t *t = (lpel_task_t *) malloc( sizeof( lpel_task_t));
-
-  t->uid = fetch_and_inc( &taskseq);
-  t->state = TASK_READY;
-  t->prev = t->next = NULL;
+  lpel_taskreq_t *req = (lpel_taskreq_t *) malloc( sizeof(lpel_taskreq_t));
   
-  /* copy task attributes */
-  t->attr = *attr;
-  /* fix attributes */
-  if (t->attr.stacksize <= 0) {
-    t->attr.stacksize = TASK_ATTR_STACKSIZE_DEFAULT;
-  }
-
-  /* initialize poll token to 0 */
-  atomic_init( &t->poll_token, 0);
-  
-  t->worker_context = NULL;
-  
-  if (t->attr.flags & LPEL_TASK_ATTR_COLLECT_TIMES) {
-    TIMESTAMP(&t->times.creat);
-  }
-  t->cnt_dispatch = 0;
-
-  /* empty dirty list */
-  t->dirty_list = STDESC_DIRTY_END;
-  
-
-  t->code  = func;
-  t->inarg = inarg;
-  /* function, argument (data), stack base address, stacksize */
-  t->ctx = co_create( TaskStartup, (void *)t, NULL, t->attr.stacksize);
-  if (t->ctx == NULL) {
-    /*TODO throw error!*/
-    assert(0);
-  }
- 
-  return t;
+  req->uid = fetch_and_inc( &taskseq);
+  req->func = func;
+  req->inarg = inarg;
+  req->attr.flags = flags;
+  req->attr.stacksize = stacksize;
+  /*TODO joinable: atomic init refcount */
+  return req;
 }
-
 
 
 /**
@@ -106,6 +74,10 @@ unsigned int LpelTaskGetUID( lpel_task_t *t)
   return t->uid;
 }
 
+unsigned int LpelTaskReqGetUID( lpel_taskreq_t *t)
+{
+  return t->uid;
+}
 
 
 /******************************************************************************/
@@ -113,28 +85,104 @@ unsigned int LpelTaskGetUID( lpel_task_t *t)
 /******************************************************************************/
 
 /**
+ * Create a task
+ */
+lpel_task_t *_LpelTaskCreate( void)
+{
+  lpel_task_t *t = (lpel_task_t *) malloc( sizeof( lpel_task_t));
+  pthread_mutex_init( &t->lock, NULL);
+  
+  /* initialize poll token to 0 */
+  atomic_init( &t->poll_token, 0);
+  t->state = TASK_CREATED;
+
+  return t;
+}
+
+
+/**
+ * Reset a task
+ *
+ */
+void _LpelTaskReset( lpel_task_t *t, lpel_taskreq_t *req)
+{
+  assert( t->state == TASK_CREATED);
+
+  /* copy request data */
+  t->uid =   req->uid;
+  t->code  = req->func;
+  t->inarg = req->inarg;
+  t->attr =  req->attr;
+
+
+  t->prev = t->next = NULL;
+  /* fix attributes */
+  if (t->attr.stacksize <= 0) {
+    t->attr.stacksize = TASK_ATTR_STACKSIZE_DEFAULT;
+  }
+
+  /*TODO if (JOINABLE) set t->request = req, else:*/
+  {
+    t->request = NULL;
+    free( req);
+  }
+
+  if (t->attr.flags & LPEL_TASK_ATTR_COLLECT_TIMES) {
+    TIMESTAMP(&t->times.creat);
+  }
+  t->cnt_dispatch = 0;
+  t->dirty_list = STDESC_DIRTY_END; /* empty dirty list */
+  atomic_set( &t->poll_token, 0); /* reset poll token to 0 */
+  
+  /* function, argument (data), stack base address, stacksize */
+  t->ctx = co_create( TaskStartup, (void *)t, NULL, t->attr.stacksize);
+  if (t->ctx == NULL) {
+    /*TODO throw error!*/
+    assert(0);
+  }
+
+  t->state = TASK_READY;
+}
+
+
+/**
+ * Unset the task after exiting on a worker
+ */
+void _LpelTaskUnset( lpel_task_t *t)
+{
+  assert( t->state == TASK_ZOMBIE);
+  /* delete the coroutine */
+  co_delete(t->ctx);
+  t->state = TASK_CREATED;
+}
+
+
+
+/**
  * Destroy a task
+ * - completely free the memory for that task
  */
 void _LpelTaskDestroy( lpel_task_t *t)
 {
+  assert( t->state == TASK_ZOMBIE);
   atomic_destroy( &t->poll_token);
-  /* delete the coroutine */
-  co_delete(t->ctx);
+  /* destroy lock */
+  pthread_mutex_destroy( &t->lock);
   /* free the TCB itself*/
   free(t);
 }
 
 
 
+
+
 /**
  * Call a task (context switch to a task)
  *
- * @pre t->state == TASK_READY
  */
 void _LpelTaskCall( lpel_task_t *t)
 {
-  assert( t->state == TASK_READY);
-  
+  pthread_mutex_lock( &t->lock);
   t->cnt_dispatch++;
   t->state = TASK_RUNNING;
       
@@ -164,6 +212,7 @@ void _LpelTaskCall( lpel_task_t *t)
     _LpelMonitoringOutput( t->worker_context->mon, t);
   }
 #endif
+  pthread_mutex_unlock( &t->lock);
 }
 
 
@@ -172,6 +221,7 @@ void _LpelTaskCall( lpel_task_t *t)
  */
 void _LpelTaskBlock(lpel_task_t *ct, taskstate_blocked_t block_on)
 {
+  assert( ct->state == TASK_RUNNING);
   ct->state = TASK_BLOCKED;
   ct->blocked_on = block_on;
   /* context switch */

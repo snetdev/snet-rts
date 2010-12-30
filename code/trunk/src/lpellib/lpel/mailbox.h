@@ -19,7 +19,10 @@ typedef enum {
 
 typedef struct {
   workermsg_type_t  type;
-  lpel_task_t      *task;
+  union {
+    lpel_taskreq_t *treq;
+    lpel_task_t    *task;
+  } m;
 } workermsg_t;
 
 

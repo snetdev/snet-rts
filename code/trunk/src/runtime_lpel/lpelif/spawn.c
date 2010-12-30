@@ -42,11 +42,12 @@ void SNetSpawnDestroy( void)
 void SNetSpawnWrapper( lpel_taskfunc_t taskfunc, void *arg,
     char *name)
 {
-  lpel_task_t *t;
-  lpel_taskattr_t attr = { LPEL_TASK_ATTR_NONE, 0};
+  lpel_taskreq_t *t;
+  int flags = LPEL_TASK_ATTR_NONE;
+  int stacksize = 0;
 
-  t = LpelTaskCreate(taskfunc, arg, &attr);
-  return _LpelWorkerWrapperCreate( t, name);
+  t = LpelTaskRequest(taskfunc, arg, flags, stacksize);
+  return LpelWorkerWrapperCreate( t, name);
 }
 
 
@@ -54,26 +55,27 @@ void SNetSpawnWrapper( lpel_taskfunc_t taskfunc, void *arg,
 void SNetSpawnEntity( lpel_taskfunc_t fun, void *arg,
   snet_entity_id_t id, char *label)
 {
-  lpel_task_t *t;
-  lpel_taskattr_t tattr = { LPEL_TASK_ATTR_ALL, 0};
+  lpel_taskreq_t *t;
+  int flags = LPEL_TASK_ATTR_NONE;
+  int stacksize = 0;
   int wid;
   unsigned int tid;
 
   /* monitoring */
   if (id!=ENTITY_box) {
-    tattr.flags &= ~LPEL_TASK_ATTR_MONITOR_OUTPUT;
+    flags &= ~LPEL_TASK_ATTR_MONITOR_OUTPUT;
   }
 
   /* stacksize */
   if (id==ENTITY_box) {
-    tattr.stacksize = 8*1024*1024; /* 8 MB */
+    stacksize = 8*1024*1024; /* 8 MB */
   } else {
-    tattr.stacksize = 256*1024; /* 256 kB */
+    stacksize = 256*1024; /* 256 kB */
   }
 
   /* create task */
-  t = LpelTaskCreate( fun, arg, &tattr);
-  tid = LpelTaskGetUID( t);
+  t = LpelTaskRequest( fun, arg, flags, stacksize);
+  tid = LpelTaskReqGetUID( t);
 
   
   switch(id) {
@@ -97,7 +99,7 @@ void SNetSpawnEntity( lpel_taskfunc_t fun, void *arg,
       break;
   }
 
-  if (tattr.flags & LPEL_TASK_ATTR_MONITOR_OUTPUT) {
+  if (flags & LPEL_TASK_ATTR_MONITOR_OUTPUT) {
     (void) fprintf(mapfile, "%u: %s\n", tid, label);
   }
 
@@ -105,7 +107,7 @@ void SNetSpawnEntity( lpel_taskfunc_t fun, void *arg,
   wid = AssignmentGetWID(t, id==ENTITY_box);
   
   /* call worker assignment */
-  _LpelWorkerTaskAssign( t, wid);
+  LpelWorkerTaskAssign( t, wid);
 }
 
 
