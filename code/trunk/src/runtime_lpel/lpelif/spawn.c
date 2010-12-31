@@ -62,8 +62,8 @@ void SNetSpawnEntity( lpel_taskfunc_t fun, void *arg,
   unsigned int tid;
 
   /* monitoring */
-  if (id!=ENTITY_box) {
-    flags &= ~LPEL_TASK_ATTR_MONITOR_OUTPUT;
+  if (id==ENTITY_box) {
+    flags |= LPEL_TASK_ATTR_MONITOR_ALL;
   }
 
   /* stacksize */

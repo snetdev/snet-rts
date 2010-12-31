@@ -86,12 +86,24 @@ typedef struct lpel_taskreq_t lpel_taskreq_t;
 typedef void (*lpel_taskfunc_t)( lpel_task_t *self, void *inarg);
 
 
-#define LPEL_TASK_ATTR_NONE             (   0)
-#define LPEL_TASK_ATTR_ALL              (  -1)
-#define LPEL_TASK_ATTR_MONITOR_OUTPUT   (1<<0)
-#define LPEL_TASK_ATTR_COLLECT_TIMES    (1<<1)
-#define LPEL_TASK_ATTR_COLLECT_STREAMS  (1<<2)
+#define LPEL_TASK_ATTR_NONE                (0)
 
+#define LPEL_TASK_ATTR_JOINABLE         (1<<0)
+
+#define LPEL_TASK_ATTR_MONITOR_OUTPUT   (1<<4)
+#define LPEL_TASK_ATTR_MONITOR_TIMES    (1<<5)
+#define LPEL_TASK_ATTR_MONITOR_STREAMS  (1<<6)
+
+#define LPEL_TASK_ATTR_MONITOR_ALL  \
+  ( LPEL_TASK_ATTR_MONITOR_OUTPUT  |\
+    LPEL_TASK_ATTR_MONITOR_TIMES   |\
+    LPEL_TASK_ATTR_MONITOR_STREAMS )
+
+/**
+ * If a stacksize <= 0 is specified,
+ * use the default stacksize
+ */
+#define LPEL_TASK_ATTR_STACKSIZE_DEFAULT  8192  /* 8k stacksize*/
 
 
 
@@ -115,8 +127,9 @@ lpel_taskreq_t *LpelTaskRequest( lpel_taskfunc_t,
     void *inarg, int flags, int stacksize);
 
 
-void LpelTaskExit(  lpel_task_t *ct);
-void LpelTaskYield( lpel_task_t *ct);
+void  LpelTaskExit(  lpel_task_t *ct, void* joinarg);
+void  LpelTaskYield( lpel_task_t *ct);
+void* LpelTaskJoin( lpel_task_t *ct, lpel_taskreq_t *child);
 
 unsigned int LpelTaskGetUID( lpel_task_t *t);
 unsigned int LpelTaskReqGetUID( lpel_taskreq_t *t);

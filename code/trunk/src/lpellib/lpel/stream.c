@@ -541,7 +541,7 @@ static inline void MarkDirty( lpel_stream_desc_t *sd)
    * only if task wants to collect stream info and
    * only add if not dirty yet
    */
-  if ( (t->attr.flags & LPEL_TASK_ATTR_COLLECT_STREAMS)
+  if ( TASK_FLAGS(t, LPEL_TASK_ATTR_MONITOR_STREAMS)
       && (sd->dirty == NULL) ) {
     /*
      * Set the dirty ptr of sd to the dirty_list ptr of the task

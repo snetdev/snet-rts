@@ -1,7 +1,6 @@
 
 #include "monitoring.h"
 
-#ifdef MONITORING_ENABLE
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -23,7 +22,6 @@ struct monitoring_t {
 };
 
 
-#define FLAGS_TEST(vec,f)   (( (vec) & (f) ) == (f) )
 
 
 #define _MON_FNAME_MAXLEN   (MON_NAME_MAXLEN + 12)
@@ -138,9 +136,6 @@ void _LpelMonitoringOutput( monitoring_t *mon, lpel_task_t *t)
   FILE *file = mon->outfile;
 
   if ( file == NULL) return;
-  /*
-  if ( !FLAGS_TEST( t->attr.flags, TASK_ATTR_MONITOR_OUTPUT) ) return;
-  */
 
   /* timestamp with task stop time */
   PrintTiming( &t->times.stop, file);
@@ -158,7 +153,7 @@ void _LpelMonitoringOutput( monitoring_t *mon, lpel_task_t *t)
       );
 
   /* print times */
-  if ( FLAGS_TEST( t->attr.flags, LPEL_TASK_ATTR_COLLECT_TIMES) ) {
+  if ( TASK_FLAGS( t, LPEL_TASK_ATTR_MONITOR_TIMES) ) {
     timing_t diff;
     TimingDiff( &diff, &t->times.start, &t->times.stop);
     fprintf( file, "et ");
@@ -170,7 +165,7 @@ void _LpelMonitoringOutput( monitoring_t *mon, lpel_task_t *t)
   }
 
   /* print stream info */
-  if ( FLAGS_TEST( t->attr.flags, LPEL_TASK_ATTR_COLLECT_STREAMS) ) {
+  if ( TASK_FLAGS( t, LPEL_TASK_ATTR_MONITOR_STREAMS) ) {
     fprintf( file,"[" );
     _LpelStreamResetDirty( t, DirtySDPrint, file);
     fprintf( file,"] " );
@@ -179,7 +174,3 @@ void _LpelMonitoringOutput( monitoring_t *mon, lpel_task_t *t)
   fprintf( file, "\n");
 }
 
-
-
-
-#endif /* MONITORING_ENABLE */

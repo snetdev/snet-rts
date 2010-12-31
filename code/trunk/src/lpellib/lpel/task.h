@@ -2,7 +2,6 @@
 #define _TASK_H_
 
 
-#include <pthread.h>
 #include <pcl.h>    /* tasks are executed in user-space with help of
                        GNU Portable Coroutine Library  */
 
@@ -13,13 +12,8 @@
 #include "worker.h"
 
 
-/**
- * If a stacksize attribute <= 0 is specified,
- * use the default stacksize
- */
-#define TASK_ATTR_STACKSIZE_DEFAULT  8192  /* 8k stacksize*/
 
-
+#define TASK_FLAGS(t, f)  (((t)->flags & (f)) == (f))
 
 
 typedef enum {
@@ -33,27 +27,25 @@ typedef enum {
 typedef enum {
   BLOCKED_ON_INPUT  = 'i',
   BLOCKED_ON_OUTPUT = 'o',
-  BLOCKED_ON_ANYIN  = 'a'
+  BLOCKED_ON_ANYIN  = 'a',
+  BLOCKED_ON_CHILD  = 'c'
 } taskstate_blocked_t;
 
 
-typedef struct {
-  int flags;
-  int stacksize;
-} taskattr_t;
-
-
 struct lpel_taskreq_t {
-  unsigned int    uid;
-  lpel_taskfunc_t func;
-  void *          inarg;
-  taskattr_t      attr;
+  unsigned int uid;
+  struct {
+    lpel_taskfunc_t func;
+    void *arg;
+    int   flags;
+    int   stacksize;
+  } in;
   /* for joining: */
-  /*
-  atomic_t refcnt;
-  task_t *waiter;
-  void **joinval;
-  */
+  struct {
+    atomic_t     refcnt;
+    void        *arg;
+    lpel_task_t *parent;
+  } join;
 };
 
 
@@ -65,7 +57,8 @@ struct lpel_task_t {
   /** intrinsic pointers for organizing tasks in a list*/
   lpel_task_t *prev, *next;
   unsigned int uid;    /** unique identifier */
-  taskattr_t attr;     /** attributes */
+  int flags;           /** flags */
+  int stacksize;       /** stacksize */
   taskstate_t state;   /** state */
   taskstate_blocked_t blocked_on; /** on which event the task is waiting */
 
@@ -90,7 +83,6 @@ struct lpel_task_t {
   lpel_stream_desc_t *dirty_list;
 
   /* CODE */
-  pthread_mutex_t lock; /** context of the task*/
   coroutine_t ctx;      /** context of the task*/
   lpel_taskfunc_t code; /** function of the task */
   void *inarg;          /** input argument  */

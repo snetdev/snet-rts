@@ -29,11 +29,15 @@ lpel_taskreq_t *LpelTaskRequest( lpel_taskfunc_t func,
   lpel_taskreq_t *req = (lpel_taskreq_t *) malloc( sizeof(lpel_taskreq_t));
   
   req->uid = fetch_and_inc( &taskseq);
-  req->func = func;
-  req->inarg = inarg;
-  req->attr.flags = flags;
-  req->attr.stacksize = stacksize;
-  /*TODO joinable: atomic init refcount */
+  req->in.func = func;
+  req->in.arg = inarg;
+  req->in.flags = flags;
+  req->in.stacksize = stacksize;
+
+  if (req->in.flags & LPEL_TASK_ATTR_JOINABLE) {
+    atomic_init( &req->join.refcnt, 2);
+  }
+
   return req;
 }
 
@@ -44,9 +48,20 @@ lpel_taskreq_t *LpelTaskRequest( lpel_taskfunc_t func,
  * @param ct  pointer to the current task
  * @pre ct->state == TASK_RUNNING
  */
-void LpelTaskExit( lpel_task_t *ct)
+void LpelTaskExit( lpel_task_t *ct, void *joinarg)
 {
   assert( ct->state == TASK_RUNNING );
+
+  /* handle joining */
+  if ( TASK_FLAGS( ct, LPEL_TASK_ATTR_JOINABLE)) {
+    ct->request->join.arg = joinarg;
+    //WMB();
+    if ( 1 == fetch_and_dec( &ct->request->join.refcnt)) {
+      lpel_task_t *whom = ct->request->join.parent;
+      assert( whom != NULL);
+      _LpelWorkerTaskWakeup( ct, whom);
+    }
+  }
   ct->state = TASK_ZOMBIE;
   /* context switch */
   co_resume();
@@ -54,6 +69,31 @@ void LpelTaskExit( lpel_task_t *ct)
   assert(0);
 }
 
+/**
+ * Join with child
+ */
+void* LpelTaskJoin( lpel_task_t *ct, lpel_taskreq_t *child)
+{
+  void* joinarg;
+
+  assert( ct->state == TASK_RUNNING );
+
+  /* NOTE: cannot check if child is joinable, because
+   * if it is not, it might already have been freed
+   */
+  child->join.parent = ct;
+  //WMB();
+  if ( 1 != fetch_and_dec( &child->join.refcnt)) {
+    _LpelTaskBlock( ct, BLOCKED_ON_CHILD);
+  }
+  /* store joinarg */
+  joinarg = child->join.arg;
+  /* joining on a non-joinable task will result in a double-free */
+  atomic_destroy( &req->join.refcnt);
+  free( child);
+
+  return joinarg; 
+}
 
 /**
  * Yield execution back to scheduler voluntarily
@@ -90,7 +130,6 @@ unsigned int LpelTaskReqGetUID( lpel_taskreq_t *t)
 lpel_task_t *_LpelTaskCreate( void)
 {
   lpel_task_t *t = (lpel_task_t *) malloc( sizeof( lpel_task_t));
-  pthread_mutex_init( &t->lock, NULL);
   
   /* initialize poll token to 0 */
   atomic_init( &t->poll_token, 0);
@@ -109,25 +148,30 @@ void _LpelTaskReset( lpel_task_t *t, lpel_taskreq_t *req)
   assert( t->state == TASK_CREATED);
 
   /* copy request data */
-  t->uid =   req->uid;
-  t->code  = req->func;
-  t->inarg = req->inarg;
-  t->attr =  req->attr;
+  t->uid       =  req->uid;
 
+  t->code      =  req->in.func;
+  t->inarg     =  req->in.arg;
+  t->flags     =  req->in.flags;
+  t->stacksize =  req->in.stacksize;
 
-  t->prev = t->next = NULL;
-  /* fix attributes */
-  if (t->attr.stacksize <= 0) {
-    t->attr.stacksize = TASK_ATTR_STACKSIZE_DEFAULT;
+  if (t->stacksize <= 0) {
+    t->stacksize = LPEL_TASK_ATTR_STACKSIZE_DEFAULT;
   }
 
-  /*TODO if (JOINABLE) set t->request = req, else:*/
-  {
+  if ( TASK_FLAGS( t, LPEL_TASK_ATTR_JOINABLE)) {
+    t->request = req;
+  } else {
+    /* request is not needed anymore and that's
+     * the earliest possible point to free it
+     */
     t->request = NULL;
+    atomic_destroy( &req->join.refcnt);
     free( req);
   }
 
-  if (t->attr.flags & LPEL_TASK_ATTR_COLLECT_TIMES) {
+  t->prev = t->next = NULL;
+  if ( TASK_FLAGS( t, LPEL_TASK_ATTR_MONITOR_TIMES)) {
     TIMESTAMP(&t->times.creat);
   }
   t->cnt_dispatch = 0;
@@ -135,7 +179,7 @@ void _LpelTaskReset( lpel_task_t *t, lpel_taskreq_t *req)
   atomic_set( &t->poll_token, 0); /* reset poll token to 0 */
   
   /* function, argument (data), stack base address, stacksize */
-  t->ctx = co_create( TaskStartup, (void *)t, NULL, t->attr.stacksize);
+  t->ctx = co_create( TaskStartup, (void *)t, NULL, t->stacksize);
   if (t->ctx == NULL) {
     /*TODO throw error!*/
     assert(0);
@@ -166,8 +210,6 @@ void _LpelTaskDestroy( lpel_task_t *t)
 {
   assert( t->state == TASK_ZOMBIE);
   atomic_destroy( &t->poll_token);
-  /* destroy lock */
-  pthread_mutex_destroy( &t->lock);
   /* free the TCB itself*/
   free(t);
 }
@@ -182,11 +224,10 @@ void _LpelTaskDestroy( lpel_task_t *t)
  */
 void _LpelTaskCall( lpel_task_t *t)
 {
-  pthread_mutex_lock( &t->lock);
   t->cnt_dispatch++;
   t->state = TASK_RUNNING;
       
-  if (t->attr.flags & LPEL_TASK_ATTR_COLLECT_TIMES) {
+  if ( TASK_FLAGS( t, LPEL_TASK_ATTR_MONITOR_TIMES)) {
     TIMESTAMP( &t->times.start);
   }
 
@@ -200,19 +241,12 @@ void _LpelTaskCall( lpel_task_t *t)
   /* task returns in every case in a different state */
   assert( t->state != TASK_RUNNING);
 
-  if (t->attr.flags & 
-      (LPEL_TASK_ATTR_MONITOR_OUTPUT | LPEL_TASK_ATTR_COLLECT_TIMES)) {
+  if ( TASK_FLAGS( t, 
+      LPEL_TASK_ATTR_MONITOR_OUTPUT | LPEL_TASK_ATTR_MONITOR_TIMES) ) {
     /* if monitor output, we need a timestamp */
     TIMESTAMP( &t->times.stop);
   }
 
-#ifdef MONITORING_ENABLE
-  /* output accounting info */
-  if (t->attr.flags & LPEL_TASK_ATTR_MONITOR_OUTPUT) {
-    _LpelMonitoringOutput( t->worker_context->mon, t);
-  }
-#endif
-  pthread_mutex_unlock( &t->lock);
 }
 
 
@@ -247,7 +281,7 @@ static void TaskStartup( void *data)
   /* call the task function with inarg as parameter */
   func(t, t->inarg);
   /* if task function returns, exit properly */
-  LpelTaskExit(t);
+  LpelTaskExit(t, NULL);
 }
 
 

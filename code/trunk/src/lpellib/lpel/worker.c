@@ -95,7 +95,7 @@ void LpelWorkerWrapperCreate( lpel_taskreq_t *t, char *name)
   wc->sched = SchedCreate( -1);
 
   
-  if (t->attr.flags & LPEL_TASK_ATTR_MONITOR_OUTPUT) {
+  if (t->in.flags & LPEL_TASK_ATTR_MONITOR_OUTPUT) {
     wc->mon = _LpelMonitoringCreate( config.node, name);
   } else {
     wc->mon = NULL;
@@ -360,6 +360,11 @@ static void WorkerLoop( workerctx_t *wc)
 
       /* execute task */
       _LpelTaskCall( t);
+
+      /* output accounting info */
+      if ( TASK_FLAGS(t, LPEL_TASK_ATTR_MONITOR_OUTPUT)) {
+        _LpelMonitoringOutput( t->worker_context->mon, t);
+      }
       
       RescheduleTask( t);
     } else {
