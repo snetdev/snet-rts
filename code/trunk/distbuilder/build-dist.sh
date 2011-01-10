@@ -21,7 +21,7 @@ EXAMPLE_DIR=$DESTDIR/examples
 CPY_FROM_EXAMPLES="crypto des factorial mandelbrot mini-C mini-SAC sudoku"
 
 # misc
-URL="svn+ssh://svn@obelix.stca.herts.ac.uk/home/svn/repositories/snet/code/trunk"
+URL="svn+ssh://svn@svn.snet-home.org/repositories/snet/code/trunk"
 VERSION=`svn info $URL | grep Revision | awk '{print $2}'`
 OS=`uname -s`
 ARCH=`uname -p`
@@ -58,18 +58,19 @@ else
 
   echo "Configuring sources..."; 
   cd $CDIR;
-  SNETBASE=$CDIR ./configure > /dev/null;
+  SNETBASE=$CDIR MPIROOT= ./configure > /dev/null;
   echo "done";
   echo;
 
   echo "Building Compiler & Runtime...";
   NDSFLAGS=`cat $CDIR/src/makefiles/config.mkf | grep -m 1 CCFLAGS | awk -F':=' '{print $2}' | sed 's/-g//g'`;
-  cd $CDIR; $MAKE CCFLAGS="$NDSFLAGS" > /dev/null;
+  cp $CDIR/src/lpellib/lpel/lpel.h $CDIR/include
+  cd $CDIR; $MAKE CCFLAGS="$NDSFLAGS -march=i686";
   cd $CDIR/interfaces/C; SNETBASE=$CDIR $MAKE > /dev/null; 
   echo "done";
   echo;
 
-  echo "Constructing Distribution...";
+  echo "Packaging Distribution...";
   rm -rf `find $CDIR -type d -name ".svn"`
   rm -rf `find $CDIR -name "*.o"`
   for f in $CPY_FROM_ROOT; do
