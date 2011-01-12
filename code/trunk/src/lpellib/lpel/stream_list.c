@@ -30,7 +30,7 @@ struct lpel_stream_iter_t {
  *        be appended while the list is iterated through, StreamIterAppend()
  *        must be used.
  */
-void LpelStreamListAppend( lpel_stream_list_t *lst,lpel_stream_desc_t *node)
+void LpelStreamListAppend( lpel_stream_list_t *lst, lpel_stream_desc_t *node)
 {
   if (*lst  == NULL) {
     /* list is empty */
@@ -43,6 +43,40 @@ void LpelStreamListAppend( lpel_stream_list_t *lst,lpel_stream_desc_t *node)
     (*lst)->next = node;
     *lst = node;
   }
+}
+
+
+/**
+ * Remove a stream descriptor from a stream descriptor list
+ *
+ * @return 0 on success, -1 if node is not contained in the list
+ * @note  O(n) operation
+ */
+int LpelStreamListRemove( lpel_stream_list_t *lst, lpel_stream_desc_t *node)
+{
+  lpel_stream_desc_t *prev, *cur;
+  assert( *lst != NULL);
+
+  prev = *lst;
+  do {
+    cur = prev->next;
+    prev = cur;
+  } while (cur != node && prev != *lst);
+
+  if (cur != node) return -1;
+
+  if ( prev == cur) {
+    /* self-loop */
+    *lst = NULL;
+  } else {
+    prev->next = cur->next;
+    cur->next = NULL;
+    /* fix list handle if necessary */
+    if (*lst == cur) {
+      *lst = prev;
+    }
+  }
+  return 0;
 }
 
 

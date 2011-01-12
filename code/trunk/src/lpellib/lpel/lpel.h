@@ -160,11 +160,13 @@ void  LpelStreamReplace( lpel_stream_desc_t *sd, lpel_stream_t *snew);
 void *LpelStreamPeek(    lpel_stream_desc_t *sd);
 void *LpelStreamRead(    lpel_stream_desc_t *sd);
 void  LpelStreamWrite(   lpel_stream_desc_t *sd, void *item);
-void  LpelStreamPoll(    lpel_stream_list_t *list);
+
+lpel_stream_desc_t *LpelStreamPoll(    lpel_stream_list_t *list);
 
 
 
 void LpelStreamListAppend(  lpel_stream_list_t *lst, lpel_stream_desc_t *node);
+int  LpelStreamListRemove( lpel_stream_list_t *lst, lpel_stream_desc_t *node);
 int  LpelStreamListIsEmpty( lpel_stream_list_t *lst);
 
 

@@ -11,7 +11,7 @@
  *      for more details on the FastForward queue.
  */
 
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 

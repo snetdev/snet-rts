@@ -29,7 +29,6 @@
  * and a consumer can use LpelStreamPoll() to wait for the arrival of data
  * on any of the streams specified in a list.
  *
- *TODO describe stream descriptor lists, iterators
  *
  * @see http://www.cs.colorado.edu/department/publications/reports/docs/CU-CS-1023-07.pdf
  *      accessed Aug 26, 2010
@@ -38,7 +37,7 @@
  * 
  */
 
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <pthread.h>
@@ -366,10 +365,11 @@ void LpelStreamWrite( lpel_stream_desc_t *sd, void *item)
  * @pre           list must not be empty (*list != NULL)
  *
  * @post          The first element when iterating through the list after
- *                LpelStreamPoll() will be the one which caused the task to
- *                wakeup, i.e., the first stream where data arrived.
+ *                LpelStreamPoll() will be the one after the one which
+ *                caused the task to wakeup,
+ *                i.e., the first stream where data arrived.
  */
-void LpelStreamPoll( lpel_stream_list_t *list)
+lpel_stream_desc_t *LpelStreamPoll( lpel_stream_list_t *list)
 {
   lpel_task_t *self;
   lpel_stream_iter_t *iter;
@@ -460,6 +460,8 @@ void LpelStreamPoll( lpel_stream_list_t *list)
 
   /* 'rotate' list to stream descriptor for non-empty buffer */
   *list = self->wakeup_sd;
+
+  return self->wakeup_sd;
 }
 
 

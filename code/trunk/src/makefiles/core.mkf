@@ -63,7 +63,7 @@ LPELLIB_DEPS  := -lpthread -lpcl -lrt -lcap
 
 
 RUNTIMELIB_DEPS      := -lpthread
-RUNTIMELIB_DEPS_MPI  := -lmpi
+RUNTIMELIB_DEPS_MPI  := #-lmpi
 RUNTIMELIB_DEPS_LPEL := -llpel
 
 UTILLIB  := -L$(PROJECT_ROOT)/lib
@@ -236,7 +236,7 @@ $(PROJECT_ROOT)/lib/liblpel.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/liblpel.so (developer version)"
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB_DEPS)
-	$(HIDE) cp $(SNETBASE)/src/lpellib/lpel/lpel.h $(SNETBASE)/include/
+	#$(HIDE) cp $(SNETBASE)/src/lpellib/lpel/lpel.h $(SNETBASE)/include/
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -245,7 +245,7 @@ $(PROJECT_ROOT)/lib/liblpel.prod.so:  $(TARGETDIRS_PROD)
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/liblpel.prod.so (product version)"
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB_DEPS)
-	$(HIDE) cp $(SNETBASE)/src/lpellib/lpel/lpel.h $(SNETBASE)/include/
+	#$(HIDE) cp $(SNETBASE)/src/lpellib/lpel/lpel.h $(SNETBASE)/include/
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
