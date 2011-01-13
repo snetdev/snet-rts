@@ -266,7 +266,7 @@ AC_SEARCH_LIBS([cap_get_proc],[cap],
     )
 AC_CHECK_LIB([pcl],[co_create],
     AC_SUBST( LIB_PCL, "-lpcl"),
-    AC_MSG_ERROR( "Cannot find libpcl (GNU Portable Coroutine Library)."),
+    AC_MSG_WARN( "Cannot find libpcl (GNU Portable Coroutine Library)."),
     [-lpthread]
     )
 

@@ -5263,7 +5263,8 @@ if test "x$ac_cv_lib_pcl_co_create" = x""yes; then :
   LIB_PCL="-lpcl"
 
 else
-  as_fn_error "\"Cannot find libpcl (GNU Portable Coroutine Library).\"" "$LINENO" 5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"Cannot find libpcl (GNU Portable Coroutine Library).\"" >&5
+$as_echo "$as_me: WARNING: \"Cannot find libpcl (GNU Portable Coroutine Library).\"" >&2;}
 fi
 
 
