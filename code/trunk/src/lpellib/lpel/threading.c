@@ -13,8 +13,7 @@
 #include <sched.h>
 #include <unistd.h>  /* sysconf() */
 #include <sys/types.h> /* pid_t */
-#include <linux/unistd.h>
-#include <sys/syscall.h> 
+#include <sys/syscall.h>
 
 #include <pthread.h> /* worker threads are OS threads */
 #include <pcl.h>     /* tasks are executed in user-space with help of
@@ -23,7 +22,7 @@
 #include "threading.h"
 
 /*!! link with -lcap */
-#ifdef LPEL_USE_CAPABILITIES
+#ifdef __LINUX__ && LPEL_USE_CAPABILITIES
 #  include <sys/capability.h>
 #endif
 
@@ -41,6 +40,7 @@ static lpel_config_t    _lpel_global_config;
 /* test if flags are set in lpel config */
 #define LPEL_ICFG(f)   ( (_lpel_global_config.flags & (f)) == (f) )
 
+#ifdef __LINUX__
 /* cpuset for others-threads */
 static cpu_set_t cpuset_others;
 
@@ -49,6 +49,7 @@ static cpu_set_t cpuset_others;
  * is only used if not FLAG_PINNED is set
  */
 static cpu_set_t cpuset_workers;
+#endif /* __LINUX__ */
 
 
 
@@ -81,7 +82,7 @@ int LpelGetNumCores( int *result)
 
 int LpelCanSetExclusive( int *result)
 {
-#ifdef LPEL_USE_CAPABILITIES
+#ifdef __LINUX__ && LPEL_USE_CAPABILITIES
   cap_t caps;
   cap_flag_value_t cap;
   /* obtain caps of process */
@@ -147,6 +148,7 @@ static int CheckConfig( void)
 
 static void CreateCpusets( void)
 {
+  #ifdef __LINUX__
   lpel_config_t *cfg = &_lpel_global_config;
   int  i;
 
@@ -171,7 +173,7 @@ static void CreateCpusets( void)
       CPU_SET(i, &cpuset_others);
     }
   }
-
+  #endif /* __LINUX__ */
 }
 
 
@@ -236,6 +238,7 @@ void LpelCleanup(void)
  */
 int _LpelThreadAssign( int core)
 {
+  #ifdef __LINUX__
   lpel_config_t *cfg = &_lpel_global_config;
   pid_t tid;
   int res;
@@ -277,6 +280,7 @@ int _LpelThreadAssign( int core)
     }
   }
 
+  #endif /* __LINUX__ */
   return 0;
 }
 

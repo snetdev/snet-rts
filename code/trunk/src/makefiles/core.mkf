@@ -59,7 +59,11 @@ RUNTIMEINCS := -I$(PROJECT_ROOT)/include \
                $(GTKFLAGS) $(MPIFLAGS)
 
 LPELLIB       := -L$(PROJECT_ROOT)/lib
+ifeq ($(OS),linux-gnu)
 LPELLIB_DEPS  := -lpthread -lpcl -lrt -lcap
+else
+LPELLIB_DEPS  := -lpthread -lpcl
+endif
 
 
 RUNTIMELIB_DEPS      := -lpthread

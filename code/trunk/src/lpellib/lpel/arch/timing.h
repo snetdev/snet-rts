@@ -18,7 +18,7 @@ typedef struct timespec timing_t;
  * Current timestamp
  * @param t   pointer to timing_t
  */
-#ifdef DO_TIMING
+#ifdef __LINUX__ && DO_TIMING
 # define TIMESTAMP(t) do { \
     /*TODO check if CLOCK_MONOTONIC is available */ \
     (void) clock_gettime(CLOCK_MONOTONIC, (t) ); \
