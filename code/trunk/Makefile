@@ -71,6 +71,7 @@ default devel prod: checks
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Building S-Net"
 	@$(ECHO) "************************************************************"
+	$(HIDE) mkdir -p lib src/bin src/lib
 	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/commonlib/" PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" \
