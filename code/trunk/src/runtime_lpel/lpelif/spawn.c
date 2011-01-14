@@ -43,7 +43,8 @@ void SNetSpawnWrapper( lpel_taskfunc_t taskfunc, void *arg,
     char *name)
 {
   lpel_taskreq_t *t;
-  int flags = LPEL_TASK_ATTR_NONE;
+  //int flags = LPEL_TASK_ATTR_NONE;
+  int flags = LPEL_TASK_ATTR_MONITOR_ALL;
   int stacksize = 0;
 
   t = LpelTaskRequest(taskfunc, arg, flags, stacksize);
@@ -56,7 +57,8 @@ void SNetSpawnEntity( lpel_taskfunc_t fun, void *arg,
   snet_entity_id_t id, char *label)
 {
   lpel_taskreq_t *t;
-  int flags = LPEL_TASK_ATTR_NONE;
+  //int flags = LPEL_TASK_ATTR_NONE;
+  int flags = LPEL_TASK_ATTR_MONITOR_ALL;
   int stacksize = 0;
   int wid;
   unsigned int tid;

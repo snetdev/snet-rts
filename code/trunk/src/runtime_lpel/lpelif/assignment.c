@@ -9,7 +9,7 @@
 
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static int num_workers;
-static int box_last;
+static int box_next;
 
 
 /**
@@ -18,7 +18,7 @@ static int box_last;
 void AssignmentInit(int lpel_num_workers)
 {
   num_workers = lpel_num_workers;
-  box_last = -1;
+  box_next = 0;
 }
 
 /**
@@ -26,19 +26,17 @@ void AssignmentInit(int lpel_num_workers)
  */
 int AssignmentGetWID(lpel_taskreq_t *t, bool is_box)
 {
-  int target;
+  int target = 0;
 
   pthread_mutex_lock( &lock);
   {
+    target = box_next;
     if (is_box) {
-      box_last += 1;
-      if (box_last == num_workers) box_last = 0;
+      box_next += 1;
+      if (box_next == num_workers) box_next = 0;
     }
-    target = box_last;
   }
   pthread_mutex_unlock( &lock);
 
-  if (target == -1) target = 0;
-  
   return target;
 }
