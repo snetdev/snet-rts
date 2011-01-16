@@ -10,17 +10,17 @@
 # 
 MAINLIB := simpleDesboxes
 EXCLUDE := Boxes
-S2SLIB  := $(SNETBASE)/demos/interfaces/SAC
+S2SLIB  := $(SNETBASE)/lib
 
 # usually there is no need to change anything below this line
 #
 LIBOUT := libs
 INCOUT := include
 SAC2C := sac2c 
-SAC2CFLAGS := -nophm  -L $(LIBOUT) -L $(S2SLIB)
+SAC2CFLAGS := -nophm  -L$(LIBOUT) -L$(S2SLIB)
 
 SAC4C := sac4c
-SAC4CFLAGS := -L $(LIBOUT) -L $(S2SLIB) -incdir $(INCOUT) -libdir $(LIBOUT) 
+SAC4CFLAGS := -L$(LIBOUT) -L$(S2SLIB) -incdir$(INCOUT) -libdir $(LIBOUT) 
 
 LIBS := $(filter-out $(MAINLIB) $(EXCLUDE), $(patsubst %.sac,%, $(wildcard *.sac)))
 
