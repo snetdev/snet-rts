@@ -22,7 +22,7 @@
 #include "threading.h"
 
 /*!! link with -lcap */
-#ifdef __LINUX__ && LPEL_USE_CAPABILITIES
+#if defined(__LINUX__) && defined(LPEL_USE_CAPABILITIES)
 #  include <sys/capability.h>
 #endif
 
@@ -82,7 +82,7 @@ int LpelGetNumCores( int *result)
 
 int LpelCanSetExclusive( int *result)
 {
-#ifdef __LINUX__ && LPEL_USE_CAPABILITIES
+#if defined(__LINUX__) && defined(LPEL_USE_CAPABILITIES)
   cap_t caps;
   cap_flag_value_t cap;
   /* obtain caps of process */

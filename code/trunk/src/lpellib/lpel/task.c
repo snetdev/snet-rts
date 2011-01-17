@@ -64,7 +64,7 @@ void LpelTaskExit( lpel_task_t *ct, void *joinarg)
   }
   ct->state = TASK_ZOMBIE;
   /* context switch */
-  co_resume();
+  co_call( ct->worker_context->mctx);
   /* execution never comes back here */
   assert(0);
 }
@@ -106,7 +106,7 @@ void LpelTaskYield( lpel_task_t *ct)
   assert( ct->state == TASK_RUNNING );
   ct->state = TASK_READY;
   /* context switch */
-  co_resume();
+  co_call( ct->worker_context->mctx);
 }
 
 unsigned int LpelTaskGetUID( lpel_task_t *t)
@@ -231,6 +231,7 @@ void _LpelTaskCall( lpel_task_t *t)
     TIMESTAMP( &t->times.start);
   }
 
+
   /*
    * CONTEXT SWITCH
    *
@@ -259,7 +260,7 @@ void _LpelTaskBlock(lpel_task_t *ct, taskstate_blocked_t block_on)
   ct->state = TASK_BLOCKED;
   ct->blocked_on = block_on;
   /* context switch */
-  co_resume();
+  co_call( ct->worker_context->mctx);
 }
 
 

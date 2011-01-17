@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <errno.h>
 
-#include "arch/timing.h"
 #include "arch/atomic.h"
 
 #include "worker.h"
@@ -44,11 +43,12 @@ static inline void SendTerminate( workerctx_t *target)
   MailboxSend( &target->mailbox, &msg);
 }
 
-static inline void SendWakeup( workerctx_t *target)
+static inline void SendWakeup( workerctx_t *target, lpel_task_t *t)
 {
   workermsg_t msg;
   /* compose a task wakeup message */
   msg.type = WORKER_MSG_WAKEUP;
+  msg.body.task = t;
   /* send */
   MailboxSend( &target->mailbox, &msg);
 }
@@ -58,11 +58,30 @@ static inline void SendAssign( workerctx_t *target, lpel_taskreq_t *req)
   workermsg_t msg;
   /* compose a task assign message */
   msg.type = WORKER_MSG_ASSIGN;
-  msg.m.treq = req;
+  msg.body.treq = req;
   /* send */
   MailboxSend( &target->mailbox, &msg);
 }
 
+static inline void SendRequestTask( workerctx_t *target, workerctx_t *from)
+{
+  workermsg_t msg;
+  /* compose a request task message */
+  msg.type = WORKER_MSG_REQUEST;
+  msg.body.from_worker = from->wid;
+  /* send */
+  MailboxSend( &target->mailbox, &msg);
+}
+
+static inline void SendTaskMigrate( workerctx_t *target, lpel_task_t *t)
+{
+  workermsg_t msg;
+  /* compose a task migrate message */
+  msg.type = WORKER_MSG_TASKMIG;
+  msg.body.task = t;
+  /* send */
+  MailboxSend( &target->mailbox, &msg);
+}
 
 /******************************************************************************/
 /*  PUBLIC FUNCTIONS                                                          */
@@ -91,6 +110,9 @@ void LpelWorkerWrapperCreate( lpel_taskreq_t *t, char *name)
   wc->wid = -1;
   wc->num_tasks = 0;
   wc->terminate = false;
+
+  wc->wait_cnt = 0;
+  TimingZero( &wc->wait_time);
 
   wc->sched = SchedCreate( -1);
 
@@ -169,12 +191,17 @@ void _LpelWorkerInit(int size, workercfg_t *cfg)
   /* allocate the array of worker contexts */
   workers = (workerctx_t *) malloc( num_workers * sizeof(workerctx_t) );
 
-  /* create worker threads */
+  /* prepare data structures */
   for( i=0; i<num_workers; i++) {
     workerctx_t *wc = &workers[i];
     char wname[11];
     wc->wid = i;
     wc->num_tasks = 0;
+
+    wc->wait_cnt = 0;
+    TimingZero( &wc->wait_time);
+    wc->req_pending = 0;
+
     wc->terminate = false;
 
     wc->sched = SchedCreate( i);
@@ -187,7 +214,11 @@ void _LpelWorkerInit(int size, workercfg_t *cfg)
 
     /* mailbox */
     MailboxInit( &wc->mailbox);
+  }
 
+  /* create worker threads */
+  for( i=0; i<num_workers; i++) {
+    workerctx_t *wc = &workers[i];
     /* spawn joinable thread */
     (void) pthread_create( &wc->thread, NULL, WorkerThread, wc);
   }
@@ -230,10 +261,16 @@ void _LpelWorkerCleanup(void)
  */
 void _LpelWorkerTaskWakeup( lpel_task_t *by, lpel_task_t *whom)
 {
-  int was_empty;
   /* worker context of the task to be woken up */
   workerctx_t *wc = whom->worker_context;
 
+  if (  !by || (wc != by->worker_context)) {
+    SendWakeup( wc, whom);
+  } else {
+    assert( wc == by->worker_context);
+    SchedMakeReady( wc->sched, whom);
+  }
+#if 0
   /* NOTE: do NEVER whom->state = TASK_READY;
    * as the state is private to that task, and only needed for Reschedule()
    * to determine what to do with it. It can happen that the task has not
@@ -241,14 +278,17 @@ void _LpelWorkerTaskWakeup( lpel_task_t *by, lpel_task_t *whom)
    * then TASK_READY and effectively we end up trying to put the task in
    * in the sched structure twice.
    */
-  was_empty = SchedMakeReady( wc->sched, whom);
+  int was_empty = SchedMakeReady( wc->sched, whom);
   /*
    * if the runqueue (sched) was empty AND
    * the task to be woken belongs to a different thread
    */
   if ( was_empty && ( !by || (wc != by->worker_context))) {
-    SendWakeup( wc);
+    SendWakeup( wc, whom);
+    //TODO this happens within a task!
+    //_LpelMonitoringDebug( wc->mon, "worker wokeup %d\n", wc->wid);
   }
+#endif
 }
 
 
@@ -275,6 +315,7 @@ static lpel_task_t *AssignTask( workerctx_t *wc, lpel_taskreq_t *req)
   _LpelTaskReset( task, req);
   /* assign worker_context */
   task->worker_context = wc;
+
   return task;
 }
 
@@ -309,6 +350,34 @@ static void RescheduleTask( lpel_task_t *t)
   }
 }
 
+static void RequestTask( workerctx_t *wc)
+{
+  unsigned int i;
+  timing_t min_wt = wc->wait_time;
+  workerctx_t *wc_min_wt = wc;
+
+  /* find worker with lowest wait_time */
+  for( i=0; i<num_workers; i++) {
+    workerctx_t *wo = &workers[i];
+    if ( wo->wait_time.tv_sec  < min_wt.tv_sec ||
+         (wo->wait_time.tv_sec == min_wt.tv_sec && 
+          wo->wait_time.tv_nsec < min_wt.tv_nsec   )) {
+      min_wt = wo->wait_time;
+      wc_min_wt = wo;
+    }
+  }
+
+  if (wc_min_wt != wc && !wc_min_wt->terminate) {
+    _LpelMonitoringDebug( wc->mon,
+        "worker %d requesting task from worker %d\n",
+        wc->wid, wc_min_wt->wid
+        );
+    /* send the message: to worker with minimal wait_time, from self=wc */
+    SendRequestTask( wc_min_wt, wc);
+    wc->req_pending = 1;
+  }
+}
+
 
 static void ProcessMessage( workerctx_t *wc, workermsg_t *msg)
 {
@@ -319,6 +388,8 @@ static void ProcessMessage( workerctx_t *wc, workermsg_t *msg)
       /* worker has new ready tasks,
        * just wakeup to continue loop
        */
+      task = msg->body.task;
+      (void) SchedMakeReady( wc->sched, task);
       break;
     case WORKER_MSG_TERMINATE:
       wc->terminate = true;
@@ -326,8 +397,41 @@ static void ProcessMessage( workerctx_t *wc, workermsg_t *msg)
     case WORKER_MSG_ASSIGN:
       wc->num_tasks += 1;
       /* assign task to worker */
-      task = AssignTask( wc, msg->m.treq);
+      task = AssignTask( wc, msg->body.treq);
       (void) SchedMakeReady( wc->sched, task);
+      break;
+    case WORKER_MSG_TASKMIG:
+      wc->req_pending = 0;
+      task = msg->body.task;
+      if (task != NULL) {
+        assert( task->state != TASK_RUNNING);
+        wc->num_tasks += 1;
+        /* reassign new worker_context */
+        task->worker_context = wc;
+        (void) SchedMakeReady( wc->sched, task);
+        _LpelMonitoringDebug( wc->mon,
+            "worker %d received task %u\n",
+            wc->wid, task->uid
+            );
+      }
+      break;
+    case WORKER_MSG_REQUEST:
+      task = SchedFetchReady( wc->sched);
+      if (task != NULL) {
+        assert( task->state != TASK_RUNNING);
+        wc->num_tasks -= 1;
+        _LpelMonitoringDebug( wc->mon,
+            "worker %d sending task %u to worker %d\n",
+            wc->wid, task->uid, msg->body.from_worker
+            );
+      } else {
+        _LpelMonitoringDebug( wc->mon,
+            "worker %d sending no task to worker %d\n",
+            wc->wid, msg->body.from_worker
+            );
+      }
+      /* send a task to requesting worker */
+      SendTaskMigrate( &workers[msg->body.from_worker], task);
       break;
     default: assert(0);
   }
@@ -350,6 +454,8 @@ static void FetchAllMessages( workerctx_t *wc)
 static void WorkerLoop( workerctx_t *wc)
 {
   lpel_task_t *t;
+  
+  _LpelMonitoringDebug( wc->mon, "Worker %d started.\n", wc->wid);
 
   wc->loop = 0;
   do {
@@ -368,16 +474,41 @@ static void WorkerLoop( workerctx_t *wc)
       
       RescheduleTask( t);
     } else {
-      /* wait for a new message and process */
+      /* no ready tasks */
       workermsg_t msg;
+      timing_t wtm;
+//XXX XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      /*
+       * Very experimental: work-requesting.
+       * Investigate, why #VCSes rockets to sky.
+       */
+      /* request a task if a real worker (no wrapper)*/
+      //if ( wc->wid >= 0 && !wc->req_pending ) RequestTask( wc);
+//XXX XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      /* wait for a new message and process */
+      wc->wait_cnt += 1;
+      TimingStart( &wtm);
       MailboxRecv( &wc->mailbox, &msg);
+      TimingEnd( &wtm);
+      _LpelMonitoringDebug( wc->mon,
+          "worker %d waited (%u) for %lu.%09lu\n",
+          wc->wid,
+          wc->wait_cnt,
+          (unsigned long) wtm.tv_sec, wtm.tv_nsec
+          );
+      TimingAdd( &wc->wait_time, &wtm);
       ProcessMessage( wc, &msg);
     }
     /* fetch (remaining) messages */
     FetchAllMessages( wc);
   } while ( !(wc->num_tasks==0 && wc->terminate) );
 
-  //_LpelMonitoringDebug( wc->mon, "Worker exited.\n");
+  _LpelMonitoringDebug( wc->mon,
+    "Worker %d exited. wait_cnt %u, wait_time %lu.%09lu\n",
+    wc->wid,
+    wc->wait_cnt, 
+    (unsigned long) wc->wait_time.tv_sec, wc->wait_time.tv_nsec
+    );
 }
 
 
@@ -391,6 +522,7 @@ static void *WorkerThread( void *arg)
   
   /* Init libPCL */
   co_thread_init();
+  wc->mctx = co_current();
 
   /* assign to cores */
   _LpelThreadAssign( wc->wid);

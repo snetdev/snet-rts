@@ -66,3 +66,9 @@ static inline int fetch_and_dec( atomic_t *v )
 {
   return __sync_fetch_and_sub(&v->counter, 1);
 }
+
+static inline int compare_and_swap( void**ptr, void* oldval, void* newval)
+{
+  return __sync_bool_compare_and_swap (ptr, oldval, newval);
+}
+

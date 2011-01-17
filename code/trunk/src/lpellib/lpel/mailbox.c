@@ -63,6 +63,17 @@ void MailboxCleanup( mailbox_t *mbox)
   mailbox_node_t *node;
   
   assert( mbox->list_inbox == NULL);
+  #if 0
+  pthread_mutex_lock( &mbox->lock_inbox);
+  while (mbox->list_inbox != NULL) {
+    /* pop node off */
+    node = mbox->list_inbox;
+    mbox->list_inbox = node->next; /* can be NULL */
+    /* free the memory for the node */
+    free( node);
+  }
+  pthread_mutex_unlock( &mbox->lock_inbox);
+  #endif
 
   /* free all free nodes */
   pthread_mutex_lock( &mbox->lock_free);
@@ -86,8 +97,8 @@ void MailboxSend( mailbox_t *mbox, workermsg_t *msg)
   /* get a free node from recepient */
   mailbox_node_t *node = GetFree( mbox);
 
-  /* copy the message body */
-  node->body = *msg;
+  /* copy the message */
+  node->msg = *msg;
 
   /* put node into inbox */
   pthread_mutex_lock( &mbox->lock_inbox);
@@ -131,8 +142,8 @@ void MailboxRecv( mailbox_t *mbox, workermsg_t *msg)
   }
   pthread_mutex_unlock( &mbox->lock_inbox);
 
-  /* copy the message body */
-  *msg = node->body;
+  /* copy the message */
+  *msg = node->msg;
 
   /* put node into free pool */
   PutFree( mbox, node);

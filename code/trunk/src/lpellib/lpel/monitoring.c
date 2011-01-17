@@ -116,15 +116,16 @@ void _LpelMonitoringDebug( monitoring_t *mon, const char *fmt, ...)
   timing_t ts;
   va_list ap;
 
-  if ( mon->outfile == NULL) return;
+  if ( !mon || mon->outfile == NULL) return;
 
   /* print current timestamp */
   TIMESTAMP(&ts);
   PrintTiming( &ts, mon->outfile);
+  fprintf( mon->outfile, "*** ");
 
   va_start(ap, fmt);
   vfprintf( mon->outfile, fmt, ap);
-  fflush(mon->outfile);
+  //fflush(mon->outfile);
   va_end(ap);
 }
 

@@ -2,10 +2,12 @@
 #define _MAILBOX_H_
 
 #include <pthread.h>
+#include <semaphore.h>
 
 #include "lpel.h"
 
 #include "bool.h"
+#include "arch/atomic.h"
 
 
 /*
@@ -33,16 +35,17 @@ typedef struct {
 /* mailbox structures */
 
 typedef struct mailbox_node_t {
-  struct mailbox_node_t *next;
+  struct mailbox_node_t * volatile next;
   workermsg_t msg;
 } mailbox_node_t;
 
 typedef struct {
-  pthread_mutex_t  lock_free;
   pthread_mutex_t  lock_inbox;
-  pthread_cond_t   notempty;
-  mailbox_node_t  *list_free;
-  mailbox_node_t  *list_inbox;
+  sem_t            counter;
+  mailbox_node_t  *volatile list_free;
+  mailbox_node_t  *volatile in_head;
+  mailbox_node_t  *volatile in_tail;
+  atomic_t         in_count;
 } mailbox_t;
 
 
