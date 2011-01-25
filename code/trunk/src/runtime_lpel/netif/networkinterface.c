@@ -31,7 +31,7 @@
 #include "networkinterface.h"
 
 #include "assignment.h"
-#include "spawn.h"
+#include "lpelif.h"
 
 #include "debug.h"
 
@@ -172,14 +172,14 @@ int SNetInRun(int argc, char *argv[],
   snetin_interface_t *interfaces = NULL;
   char *brk;
   char addr[256];
-  char *mon_cfg = NULL;
   int len;
   int port;
 
   int num_workers = 0;
-#ifdef DISTRIBUTED_SNET
-  int rank;
-#else /* DISTRIBUTED_SNET */
+  int mon_level = 0;
+  int do_excl = 0;
+  int rank = -1;
+#ifndef DISTRIBUTED_SNET
   snet_stream_t *global_in = NULL;
   snet_stream_t *global_out = NULL;
 #endif /* DISTRIBUTED_SNET */
@@ -199,7 +199,7 @@ int SNetInRun(int argc, char *argv[],
       printf("\t-h \t\t\tDisplay this help text.\n");
       printf("\t-o <filename>\t\tOutput to file.\n");
       printf("\t-O <address:port>\tOutput to socket.\n");
-      printf("\t-m <mon_cfg>\t\tSet monitoring configuration.\n");
+      printf("\t-m <mon_level>\tSet monitoring level.\n");
       printf("\t-w <workers>\t\tSet number of workers.\n");
       printf("\n");
 
@@ -216,12 +216,15 @@ int SNetInRun(int argc, char *argv[],
     } else if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
       /* Monitoring configuration */
       i = i + 1;
-      mon_cfg = argv[i];
-    } else if(strcmp(argv[i], "-w") == 0 && input == stdin && i + 1 <= argc) {
+      mon_level = atoi(argv[i]);
+    } else if(strcmp(argv[i], "-excl") == 0 ) {
+      /* Assign realtime priority to workers*/
+      do_excl = true;
+    } else if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
       /* Number of workers */
       i = i + 1;
       num_workers = atoi(argv[i]);
-    }else if(strcmp(argv[i], "-i") == 0 && input == stdin && i + 1 <= argc) {
+    } else if(strcmp(argv[i], "-i") == 0 && input == stdin && i + 1 <= argc) {
       /* Input from file */
       i = i + 1;
       input =  SNetInOpenFile(argv[i], "r");
@@ -280,40 +283,8 @@ int SNetInRun(int argc, char *argv[],
   
 
   
-
   /* Initialise LPEL and its interfacing modules */
-  {
-    lpel_config_t config;
-    int num_cpus;
-
-
-    /* determine number of cpus */
-    if ( 0 != LpelGetNumCores( &num_cpus) ) {
-	SNetUtilDebugFatal("Could not determine number of cores!\n");
-    }
-
-    if (num_workers == 0) {
-      config.flags = LPEL_FLAG_PINNED;
-      config.proc_workers = num_cpus;
-      config.num_workers = num_cpus;
-      config.proc_others = 0;
-    } else {
-      config.flags = LPEL_FLAG_NONE;
-      config.proc_workers = num_cpus;
-      config.num_workers = num_workers;
-      config.proc_others = 0;
-    }
-
-#ifdef DISTRIBUTED_SNET
-    config.node = rank;
-#else
-    config.node = -1;
-#endif
-    LpelInit(&config);
-
-    AssignmentInit( config.num_workers);
-    SNetSpawnInit( config.node);
-  }
+  SNetLpelIfInit( rank, num_workers, do_excl, mon_level);
 
   SNetObserverInit(labels, interfaces);
 
@@ -342,13 +313,13 @@ int SNetInRun(int argc, char *argv[],
 
   SNetInfoDestroy(info);
 
-  /* wait on workers, cleanup */
-  LpelCleanup();
-
   /* destroy observers */
   SNetObserverDestroy();
 
-  SNetSpawnDestroy();
+  /* wait on workers, cleanup LPEL */
+  SNetLpelIfDestroy();
+
+
   
   SNetInLabelDestroy(labels);
   SNetInInterfaceDestroy(interfaces);

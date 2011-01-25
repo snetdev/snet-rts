@@ -34,8 +34,7 @@
 #include "queue.h"
 #include "debug.h"
 
-#include "lpel.h"
-#include "spawn.h"
+#include "lpelif.h"
 
 /** <!--********************************************************************-->
  *
@@ -217,7 +216,7 @@ static void IManagerCreateInput( snet_stream_t *stream, int node, int index)
 
   /* create a detached wrapper thread */
   (void) snprintf(name, 20, "input_n%02d_i%02d", node, index);
-  SNetSpawnWrapper( IManagerInputTask, (void*)data, name);
+  SNetLpelIfSpawnWrapper( IManagerInputTask, (void*)data, name);
 }
 
 /** <!--********************************************************************-->

@@ -31,7 +31,7 @@
 #include "memfun.h"
 #include "debug.h"
 
-#include "spawn.h"
+#include "lpelif.h"
 #include "lpel.h"
 
 #ifdef DISTRIBUTED_SNET
@@ -410,7 +410,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     parg->outputs = (lpel_stream_t**) transits;
     parg->types = types;
     parg->is_det = is_det;
-    SNetSpawnEntity( ParallelBoxTask, (void*)parg,
+    SNetLpelIfSpawnEntity( ParallelBoxTask, (void*)parg,
         (is_det)? ENTITY_parallel_det: ENTITY_parallel_nondet,
         NULL
         );

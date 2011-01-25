@@ -8,7 +8,7 @@
 #include "memfun.h"
 #include "collector.h"
 
-#include "spawn.h"
+#include "lpelif.h"
 #include "lpel.h"
 
 #ifdef DISTRIBUTED_SNET
@@ -271,7 +271,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
 
-    SNetSpawnEntity( StarBoxTask, (void*)sarg,
+    SNetLpelIfSpawnEntity( StarBoxTask, (void*)sarg,
         (is_det) ? ENTITY_star_det : ENTITY_star_nondet,
         NULL
         );

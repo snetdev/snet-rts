@@ -37,7 +37,7 @@
 #include "interface_functions.h"
 #include "observers.h"
 
-#include "spawn.h"
+#include "lpelif.h"
 #include "lpel.h"
 
 #include "debug.h"
@@ -918,7 +918,7 @@ static void CreateObserverTask( obs_handle_t *hnd)
   (void) snprintf(name, 20, "observer%02d", hnd->id);
 
   /* create a detached wrapper thread */
-  SNetSpawnWrapper( ObserverBoxTask, (void*)hnd, name);
+  SNetLpelIfSpawnWrapper( ObserverBoxTask, (void*)hnd, name);
 }
 
 

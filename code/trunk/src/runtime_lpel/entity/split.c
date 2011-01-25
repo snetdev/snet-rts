@@ -7,7 +7,7 @@
 #include "memfun.h"
 #include "hashtab.h"
 #include "collector.h"
-#include "spawn.h"
+#include "lpelif.h"
 #include "lpel.h"
 
 #ifdef DISTRIBUTED_SNET
@@ -271,7 +271,7 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->is_byloc = is_byloc;
 
     output = CollectorCreate( 1, initial, info);
-    SNetSpawnEntity( SplitBoxTask, (void*)sarg,
+    SNetLpelIfSpawnEntity( SplitBoxTask, (void*)sarg,
         (is_det) ? ENTITY_split_det : ENTITY_split_nondet,
         NULL
         );

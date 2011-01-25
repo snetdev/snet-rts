@@ -28,7 +28,7 @@
 #include "debug.h"
 #include "parser.h"
 
-#include "spawn.h"
+#include "lpelif.h"
 
 #ifdef DISTRIBUTED_SNET
 #include "distribution.h"
@@ -94,5 +94,5 @@ void SNetInInputInit(FILE *file,
 #endif /* DISTRIBUTED_SNET */
 
   /* create a joinable wrapper thread */
-  SNetSpawnWrapper( GlobInputTask, (void*)hnd, "glob_input");
+  SNetLpelIfSpawnWrapper( GlobInputTask, (void*)hnd, "glob_input");
 }

@@ -28,7 +28,7 @@
 #include "bool.h"
 #include "debug.h"
 
-#include "spawn.h"
+#include "lpelif.h"
 
 #ifdef DISTRIBUTED_SNET
 #include "distribution.h"
@@ -234,6 +234,6 @@ void SNetInOutputInit(FILE *file,
 #endif /* DISTRIBUTED_SNET */
 
   /* create a joinable wrapper thread */
-  SNetSpawnWrapper( GlobOutputTask, (void*)hnd, "glob_output");
+  SNetLpelIfSpawnWrapper( GlobOutputTask, (void*)hnd, "glob_output");
 }
 

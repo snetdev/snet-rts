@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "memfun.h"
 
-#include "spawn.h"
+#include "lpelif.h"
 #include "lpel.h"
 
 #include "handle_p.h"
@@ -105,7 +105,7 @@ static void BoxTask(lpel_task_t *self, void *arg)
         SNetRecDestroy( rec);
 
         /* restrict to one data record per execution */
-        //TODO TaskYield( self);
+        //LpelTaskYield( self);
         break;
 
       case REC_sync:
@@ -182,7 +182,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->out_signs = out_signs;
     barg->boxname = boxname;
 
-    SNetSpawnEntity( BoxTask, (void*)barg, ENTITY_box, (char*) boxname);
+    SNetLpelIfSpawnEntity( BoxTask, (void*)barg, ENTITY_box, (char*) boxname);
     
 #ifdef DISTRIBUTED_SNET
   } else {

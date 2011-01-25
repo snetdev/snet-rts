@@ -33,7 +33,7 @@
 #include "record_p.h"
 #include "memfun.h"
 
-#include "spawn.h"
+#include "lpelif.h"
 #include "lpel.h"
 
 #ifdef DISTRIBUTED_SNET
@@ -370,7 +370,7 @@ snet_stream_t *SNetSync( snet_stream_t *input,
     sarg->patterns = patterns;
     sarg->guards = guards;
 
-    SNetSpawnEntity( SyncBoxTask, (void*)sarg, ENTITY_sync, NULL);
+    SNetLpelIfSpawnEntity( SyncBoxTask, (void*)sarg, ENTITY_sync, NULL);
 
 #ifdef DISTRIBUTED_SNET
   } else {
