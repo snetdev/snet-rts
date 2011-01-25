@@ -72,3 +72,21 @@ static inline int compare_and_swap( void**ptr, void* oldval, void* newval)
   return __sync_bool_compare_and_swap (ptr, oldval, newval);
 }
 
+
+static inline char CAS2 (volatile void * addr, volatile void * v1, volatile long v2, void * n1, long n2) 
+{
+        register char ret;
+        __asm__ __volatile__ (
+                "# CAS2 \n\t"
+#ifdef __x86_64__
+                "lock; cmpxchg16b (%1) \n\t"
+#else
+                "lock; cmpxchg8b (%1) \n\t"
+#endif
+                "sete %0               \n\t"
+                :"=a" (ret)
+                :"D" (addr), "d" (v2), "a" (v1), "b" (n1), "c" (n2)
+        );
+        return ret;
+}
+

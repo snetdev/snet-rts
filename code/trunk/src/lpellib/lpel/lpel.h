@@ -124,7 +124,7 @@ typedef struct lpel_stream_iter_t    lpel_stream_iter_t;
 /******************************************************************************/
 
 lpel_taskreq_t *LpelTaskRequest( lpel_taskfunc_t,
-    void *inarg, int flags, int stacksize);
+    void *inarg, int flags, int stacksize, int prio);
 
 
 void  LpelTaskExit(  lpel_task_t *ct, void* joinarg);

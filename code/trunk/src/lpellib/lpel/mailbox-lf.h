@@ -7,8 +7,9 @@
 #include "lpel.h"
 
 #include "bool.h"
-#include "arch/atomic.h"
+#include "taskqueue.h"
 
+#define MAILBOX_USE_SPINLOCK
 
 /*
  * worker msg body
@@ -26,7 +27,8 @@ typedef struct {
   union {
     lpel_taskreq_t *treq;
     lpel_task_t    *task;
-    int            from_worker;
+    taskqueue_t     tqueue;
+    int             from_worker;
   } body;
 } workermsg_t;
 
@@ -40,20 +42,31 @@ typedef struct mailbox_node_t {
 } mailbox_node_t;
 
 typedef struct {
+#ifdef MAILBOX_USE_SPINLOCK
+  pthread_spinlock_t
+                   lock_inbox;
+#else
   pthread_mutex_t  lock_inbox;
+#endif
   sem_t            counter;
+  mailbox_node_t  *in_head;
+  mailbox_node_t  *in_tail;
   mailbox_node_t  *volatile list_free;
-  mailbox_node_t  *volatile in_head;
-  mailbox_node_t  *volatile in_tail;
-  atomic_t         in_count;
+  unsigned long    volatile out_cnt;
 } mailbox_t;
 
 
 void MailboxInit( mailbox_t *mbox);
 void MailboxCleanup( mailbox_t *mbox);
-void MailboxSend( mailbox_t *mbox, workermsg_t *msg);
+
+mailbox_node_t *MailboxGetFree( mailbox_t *mbox);
+mailbox_node_t *MailboxAllocateNode( void);
+void MailboxSend( mailbox_t *mbox, mailbox_node_t *node);
+
 void MailboxRecv( mailbox_t *mbox, workermsg_t *msg);
+
 bool MailboxHasIncoming( mailbox_t *mbox);
+
 
 
 #endif /* _MAILBOX_H_ */

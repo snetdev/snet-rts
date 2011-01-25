@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "arch/atomic.h"
 #include "mailbox-lf.h"
 
 
@@ -11,25 +12,31 @@
 /* Free node pool management functions                                        */
 /******************************************************************************/
 
-static mailbox_node_t *GetFree( mailbox_t *mbox)
+mailbox_node_t *MailboxGetFree( mailbox_t *mbox)
 {
   mailbox_node_t * volatile top;
+  volatile unsigned long ocnt;
   do {
+    ocnt = mbox->out_cnt;
     top = mbox->list_free;
-    if (!top) break;
-  } while( !compare_and_swap( (void**) &mbox->list_free, top, top->next));
-
-  if (!top) {
-    /* allocate new node */
-    top = (mailbox_node_t *)malloc( sizeof( mailbox_node_t));
-  }
+    if (!top) return NULL;
+  } while( !CAS2( (void**) &mbox->list_free, top, ocnt, top->next, ocnt+1));
+  
   top->next = NULL;
   return top;
 }
 
-static void PutFree( mailbox_t *mbox, mailbox_node_t *node)
+mailbox_node_t *MailboxAllocateNode( void)
 {
-  mailbox_node_t * volatile  top;
+  /* allocate new node */
+  mailbox_node_t *n = (mailbox_node_t *)malloc( sizeof( mailbox_node_t));
+  n->next = NULL;
+  return n;
+}
+
+void MailboxPutFree( mailbox_t *mbox, mailbox_node_t *node)
+{
+  mailbox_node_t * volatile top;
   do {
     top = mbox->list_free;
     node->next = top;
@@ -45,12 +52,18 @@ static void PutFree( mailbox_t *mbox, mailbox_node_t *node)
 
 void MailboxInit( mailbox_t *mbox)
 {
-  mailbox_node_t * volatile n;
+  mailbox_node_t *n;
   int i;
 
+#ifdef MAILBOX_USE_SPINLOCK
+  (void) pthread_spin_init( &mbox->lock_inbox, PTHREAD_PROCESS_PRIVATE);
+#else
   (void) pthread_mutex_init( &mbox->lock_inbox, NULL);
+#endif
   (void) sem_init( &mbox->counter, 0, 0);
+
   mbox->list_free  = NULL;
+  mbox->out_cnt = 0;
 
   /* pre-create free nodes */
   for (i=0; i<100; i++) {
@@ -58,15 +71,12 @@ void MailboxInit( mailbox_t *mbox)
     n->next = mbox->list_free;
     mbox->list_free = n;
   }
-  
+
   /* dummy node */
-  n = GetFree( mbox);
-  n->next = NULL;
+  n = MailboxAllocateNode();
     
   mbox->in_head = n;
   mbox->in_tail = n;
-  atomic_init( &mbox->in_count, 0);
-
 }
 
 
@@ -81,11 +91,10 @@ void MailboxCleanup( mailbox_t *mbox)
   }
   /* inbox  empty */
   assert( mbox->in_head->next == NULL );
-  //assert( atomic_read( &mbox->in_count) == 0);
-  /* free dummy */
-  PutFree( mbox, mbox->in_head);
-  
 
+  /* free dummy */
+  MailboxPutFree( mbox, mbox->in_head);
+  
   /* free list_free */
   do {
     do {
@@ -97,7 +106,11 @@ void MailboxCleanup( mailbox_t *mbox)
   } while(top);
 
   /* destroy sync primitives */
+#ifdef MAILBOX_USE_SPINLOCK
+  (void) pthread_spin_destroy( &mbox->lock_inbox);
+#else
   (void) pthread_mutex_destroy( &mbox->lock_inbox);
+#endif
   (void) sem_destroy( &mbox->counter);
 }
 
@@ -105,34 +118,34 @@ void MailboxCleanup( mailbox_t *mbox)
 
 
 
-
-void MailboxSend( mailbox_t *mbox, workermsg_t *msg)
+void MailboxSend( mailbox_t *mbox, mailbox_node_t *node)
 {
-  /* get a free node from recepient */
-  mailbox_node_t *node = GetFree( mbox);
-  /* copy the message */
-  node->msg = *msg;
+  assert( node != NULL);
 
   /* aquire tail lock */
+#ifdef MAILBOX_USE_SPINLOCK
+  pthread_spin_lock( &mbox->lock_inbox);
+#else
   pthread_mutex_lock( &mbox->lock_inbox);
+#endif
   /* link node at the end of the linked list */
   mbox->in_tail->next = node;
   /* swing tail to node */
   mbox->in_tail = node;
   /* release tail lock */
+#ifdef MAILBOX_USE_SPINLOCK
+  pthread_spin_unlock( &mbox->lock_inbox);
+#else
   pthread_mutex_unlock( &mbox->lock_inbox);
+#endif
 
   /* signal semaphore */
   (void) sem_post( &mbox->counter);
-
-  /* update counter */
-  atomic_inc( &mbox->in_count);
 }
 
 
 void MailboxRecv( mailbox_t *mbox, workermsg_t *msg)
 {
-  //mailbox_node_t *volatile node, *volatile new_head;
   mailbox_node_t *node, *new_head;
 
   /* wait semaphore */
@@ -153,13 +166,12 @@ void MailboxRecv( mailbox_t *mbox, workermsg_t *msg)
 
   /* queue is not empty, copy message */
   *msg = new_head->msg;
-  atomic_dec( &mbox->in_count);
 
   /* swing head to next node (becomes new dummy) */
   mbox->in_head = new_head;
 
   /* put node into free pool */
-  PutFree( mbox, node);
+  MailboxPutFree( mbox, node);
 }
 
 /**
@@ -168,5 +180,5 @@ void MailboxRecv( mailbox_t *mbox, workermsg_t *msg)
  */
 bool MailboxHasIncoming( mailbox_t *mbox)
 {
-  return ( atomic_read( &mbox->in_count) > 0 );
+  return ( mbox->in_head->next != NULL );
 }

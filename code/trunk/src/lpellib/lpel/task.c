@@ -24,7 +24,7 @@ static void TaskStartup(void *data);
 
 
 lpel_taskreq_t *LpelTaskRequest( lpel_taskfunc_t func,
-    void *inarg, int flags, int stacksize)
+    void *inarg, int flags, int stacksize, int prio)
 {
   lpel_taskreq_t *req = (lpel_taskreq_t *) malloc( sizeof(lpel_taskreq_t));
   
@@ -33,6 +33,7 @@ lpel_taskreq_t *LpelTaskRequest( lpel_taskfunc_t func,
   req->in.arg = inarg;
   req->in.flags = flags;
   req->in.stacksize = stacksize;
+  req->in.prio = prio;
 
   if (req->in.flags & LPEL_TASK_ATTR_JOINABLE) {
     atomic_init( &req->join.refcnt, 2);
@@ -155,6 +156,8 @@ void _LpelTaskReset( lpel_task_t *t, lpel_taskreq_t *req)
   t->flags     =  req->in.flags;
   t->stacksize =  req->in.stacksize;
 
+  t->sched_info.prio = req->in.prio;
+
   if (t->stacksize <= 0) {
     t->stacksize = LPEL_TASK_ATTR_STACKSIZE_DEFAULT;
   }
@@ -171,6 +174,8 @@ void _LpelTaskReset( lpel_task_t *t, lpel_taskreq_t *req)
   }
 
   t->prev = t->next = NULL;
+
+
   if ( TASK_FLAGS( t, LPEL_TASK_ATTR_MONITOR_TIMES)) {
     TIMESTAMP(&t->times.creat);
   }

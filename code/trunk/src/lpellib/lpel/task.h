@@ -10,6 +10,7 @@
 
 #include "lpel.h"
 #include "worker.h"
+#include "scheduler.h"
 
 
 
@@ -39,6 +40,7 @@ struct lpel_taskreq_t {
     void *arg;
     int   flags;
     int   stacksize;
+    int   prio;
   } in;
   /* for joining: */
   struct {
@@ -64,6 +66,8 @@ struct lpel_task_t {
 
   lpel_taskreq_t *request;      /** task request that created this task */
   workerctx_t *worker_context;  /** worker context for this task */
+
+  sched_task_t sched_info;
 
   /**
    * indicates the SD which points to the stream which has new data

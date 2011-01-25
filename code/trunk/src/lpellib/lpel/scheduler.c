@@ -1,62 +1,66 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <pthread.h>
 
 #include "scheduler.h"
 
 
 #include "taskqueue.h"
+#include "task.h"
 
 
 struct schedctx {
-  taskqueue_t queue;
-  pthread_mutex_t lock;
+  taskqueue_t queue[SCHED_NUM_PRIO];
 };
 
 
 schedctx_t *SchedCreate( int wid)
 {
+  int i;
   schedctx_t *sc = (schedctx_t *) malloc( sizeof(schedctx_t));
-  pthread_mutex_init( &sc->lock, NULL);
-  TaskqueueInit( &sc->queue);
+  for (i=0; i<SCHED_NUM_PRIO; i++) {
+    TaskqueueInit( &sc->queue[i]);
+  }
   return sc;
 }
 
 
 void SchedDestroy( schedctx_t *sc)
 {
-  assert( sc->queue.count == 0);
-  pthread_mutex_destroy( &sc->lock);
+  int i;
+  for (i=0; i<SCHED_NUM_PRIO; i++) {
+    assert( sc->queue[i].count == 0);
+  }
   free( sc);
 }
 
 
 
-int SchedMakeReady( schedctx_t* sc, lpel_task_t *t)
+void SchedMakeReady( schedctx_t* sc, lpel_task_t *t)
 {
-  int was_empty;
+  int prio = t->sched_info.prio;
 
-  pthread_mutex_lock( &sc->lock);
-  was_empty = (sc->queue.count == 0);
+  if (prio < 0) prio = 0;
+  if (prio >= SCHED_NUM_PRIO) prio = SCHED_NUM_PRIO-1;
 #ifdef SCHED_LIFO
-  TaskqueuePushFront( &sc->queue, t);
+  TaskqueuePushBack( &sc->queue[prio], t);
 #else
-  TaskqueuePushBack( &sc->queue, t);
+  TaskqueuePushBack( &sc->queue[prio], t);
 #endif
-  pthread_mutex_unlock( &sc->lock);
 
-  return was_empty;
 }
 
 
 lpel_task_t *SchedFetchReady( schedctx_t *sc)
 {
-  lpel_task_t *t;
-  
-  pthread_mutex_lock( &sc->lock);
-  t = TaskqueuePopFront( &sc->queue);
-  pthread_mutex_unlock( &sc->lock);
+  lpel_task_t *t = NULL;
+  int i;
+  for (i=SCHED_NUM_PRIO-1; i>=0; i--) {
+    if (sc->queue[i].count > 0) {
+      t = TaskqueuePopFront( &sc->queue[i]);
+      break;
+    }
+  }
 
   return t;
 }

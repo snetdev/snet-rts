@@ -437,6 +437,7 @@ lpel_stream_desc_t *LpelStreamPoll( lpel_stream_list_t *list)
     /* set task as blocked */
     _LpelTaskBlock( self, BLOCKED_ON_ANYIN);
   }
+  assert( atomic_read( &self->poll_token) == 0);
 
   /* unregister activators
    * - would only be necessary, if the consumer task closes the stream

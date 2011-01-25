@@ -148,10 +148,15 @@ void _LpelMonitoringOutput( monitoring_t *mon, lpel_task_t *t)
 
   /* print general info: name, disp.cnt, state */
   fprintf( file,
-      "tid %u disp %lu st %c%c ",
-      t->uid, t->cnt_dispatch, t->state,
-      (t->state==TASK_BLOCKED)? t->blocked_on : ' '
+      "tid %u disp %lu ",
+      t->uid, t->cnt_dispatch
       );
+
+  if ( t->state==TASK_BLOCKED) {
+    fprintf( file, "st B%c ", t->blocked_on);
+  } else {
+    fprintf( file, "st %c ", t->state);
+  }
 
   /* print times */
   if ( TASK_FLAGS( t, LPEL_TASK_ATTR_MONITOR_TIMES) ) {
@@ -173,5 +178,6 @@ void _LpelMonitoringOutput( monitoring_t *mon, lpel_task_t *t)
   }
 
   fprintf( file, "\n");
+  //fflush( file);
 }
 
