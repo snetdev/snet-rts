@@ -29,6 +29,9 @@ void SNetLpelIfInit( int rank, int num_workers, bool do_excl, int mon_level)
 
   config.node = rank;
 
+  config.worker_dbg = (_mon_lvl >= 5)? 1 : 0;
+
+  
   if ( _mon_lvl > 0) {
     if (rank < 0) {
       snprintf(fname, 20, "tasks.map");
@@ -131,6 +134,7 @@ void SNetLpelIfSpawnEntity( lpel_taskfunc_t fun, void *arg,
 
   /* priority */
   if (id != ENTITY_box) prio = 1;
+
   /* create task */
   t = LpelTaskRequest( fun, arg, flags, stacksize, prio);
   tid = LpelTaskReqGetUID( t);

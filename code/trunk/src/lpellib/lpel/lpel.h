@@ -41,6 +41,7 @@ typedef struct {
   int proc_others;
   int flags;
   int node;
+  int worker_dbg;
 } lpel_config_t;
 
 #define LPEL_FLAG_NONE           (0)

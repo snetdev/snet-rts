@@ -35,7 +35,7 @@
 
 
 /* Keep copy of the (checked) configuration provided at LpelInit() */
-static lpel_config_t    _lpel_global_config;
+lpel_config_t    _lpel_global_config;
 
 /* test if flags are set in lpel config */
 #define LPEL_ICFG(f)   ( (_lpel_global_config.flags & (f)) == (f) )

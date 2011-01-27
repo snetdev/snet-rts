@@ -9,6 +9,7 @@
 
 #include "arch/timing.h"
 
+#include "threading.h"
 #include "worker.h"
 #include "task.h"
 #include "stream.h"
@@ -116,7 +117,7 @@ void _LpelMonitoringDebug( monitoring_t *mon, const char *fmt, ...)
   timing_t ts;
   va_list ap;
 
-  if ( !mon || mon->outfile == NULL) return;
+  if ( (_lpel_global_config.worker_dbg != 1) || !mon || mon->outfile == NULL) return;
 
   /* print current timestamp */
   TIMESTAMP(&ts);

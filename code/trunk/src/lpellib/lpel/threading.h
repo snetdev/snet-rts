@@ -23,5 +23,6 @@ struct lpel_thread_t {
 
 int _LpelThreadAssign( int core);
 
+extern lpel_config_t    _lpel_global_config;
 
 #endif /* _THREADING_H_ */

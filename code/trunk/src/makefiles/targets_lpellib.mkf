@@ -48,6 +48,6 @@ lpellib		= lpel
 #
 
 lpel      = threading.o scheduler.o stream.o buffer.o task.o taskqueue.o \
-            worker.o mailbox.o monitoring.o stream_list.o
+            worker.o mailbox-lf.o monitoring.o stream_list.o
                   
 
