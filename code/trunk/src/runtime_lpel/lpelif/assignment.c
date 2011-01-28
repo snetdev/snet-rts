@@ -14,6 +14,8 @@ static int box_next;
 static int non_box;
 static int *boxcnt;
 
+static int blockcnt = 0;
+
 typedef struct nameround {
   struct nameround *next;
   char *boxname;
@@ -64,8 +66,14 @@ int AssignmentGetWID(lpel_taskreq_t *t, bool is_box, char *boxname)
   {
     target = box_next;
     if (is_box) {
-      box_next += 1;
-      if (box_next == num_workers) box_next = 0;
+//      blockcnt++;
+//      if (blockcnt == 100) {
+//        blockcnt = 0;
+        {
+          box_next += 1;
+          if (box_next == num_workers) box_next = 0;
+        }
+//      }
     }
   }
   pthread_mutex_unlock( &lock);
