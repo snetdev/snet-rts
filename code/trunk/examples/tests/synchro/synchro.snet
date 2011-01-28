@@ -6,5 +6,5 @@
  
 
 net synchro {
-  box dec((A,B) -> (A));
-} connect [|{A},{B}|] .. dec;
+  box dec((A,B) -> (A,B));
+} connect [|{A},{B}|]*{A,B} .. dec;
