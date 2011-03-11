@@ -8,7 +8,7 @@ AR        = ar
 DISTFLAGS = -distributed
 INCDIRS   = -I. -I$(SNETBASE)/include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib 
-LIBS      = -lpthread -lC4SNet -lsnet -lsnetutil $(SOCKETLIBS) $(RPATH)
+LIBS      = -lpthread -lC4SNet -lsnetlpel -lsnetutil $(SOCKETLIBS) $(RPATH)
 FILES     = condif.c leq1.c mult.c sub.c
 
 # = = = = = = = = = = = = = = = = = = = =
@@ -24,11 +24,6 @@ net:
 	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h
 	$(CC) $(CCFLAGS) $(INCDIRS) -c $(FILES)
 	$(SNETC) $(INCDIRS) $(LIBDIRS) -m $(TARGET).md -o $(TARGET) $(TARGET).snet 
-
-netmpi: 
-	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h
-	$(CC) $(CCFLAGS) $(INCDIRS) -c $(FILES)
-	$(SNETC) $(DISTFLAGS) $(INCDIRS) $(LIBDIRS) -m $(TARGET).md -o $(TARGET) $(TARGET).snet 
 
 clean:
 	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h
