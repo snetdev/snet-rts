@@ -9,15 +9,9 @@
 # Collection of targets
 #
 
-ifeq ($(DISTRIBUTED),yes)
-targets_runtime_lpel_devel     := libsnetlpelmpi.so 
-targets_runtime_lpel_prod      := libsnetlpelmpi.prod.so 
-targets_runtime_lpel_default   := $(targets_runtime_lpel_devel)
-else
 targets_runtime_lpel_devel     := libsnetlpel.so 
 targets_runtime_lpel_prod      := libsnetlpel.prod.so 
 targets_runtime_lpel_default   := $(targets_runtime_lpel_devel)
-endif
 
 ###############################################################################
 #
@@ -42,13 +36,7 @@ clean_runtime_lpel_prod        :=
 # Collection of source directories
 #
 
-ifeq ($(DISTRIBUTED),yes)
-runtime_lpel          = shared entity utils langif netif lpelif observer \
-                        distrib
-else
 runtime_lpel          = shared entity utils langif netif lpelif observer
-endif
-
 
 
 ###############################################################################
@@ -64,7 +52,7 @@ entity          = filter.o syncro.o out.o box.o alias.o \
                   serial.o collector.o parallel.o star.o split.o
 
 utils		= debug.o bitmap.o hashtable.o queue.o \
-                  debugtime.o debugcounters.o hashtab.o
+                  debugcounters.o hashtab.o
 
 langif          = interface_functions.o
 
@@ -74,7 +62,3 @@ netif   	= label.o parser.tab.o parser.lex.o interface.o \
 lpelif          = lpelif.o assignment.o
 
 observer	= observers.o
-
-distrib         = distribution.o datastorage.o message.o fun.o imanager.o \
-                  id.o omanager.o routing.o reference.o 
-

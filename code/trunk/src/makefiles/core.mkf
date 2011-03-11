@@ -3,24 +3,24 @@
 # $Id$
 #
 
-#######################################################################################
+###############################################################################
 #
 # Comment:
 #
-# This makefile is never called directly by the user nor is it included by other 
-# makefiles. Instead, it is used in recursive calls to make by both the top-level
-# makefile and the local src directory makefile.
+# This makefile is never called directly by the user nor is it included by
+# other makefiles. Instead, it is used in recursive calls to make by both the
+# top-level makefile and the local src directory makefile.
 #
 # Hence, we can expect variables to be preset from the outside:
 #
-#  TARGETDIR : The compilation target directory. These are either all src directories
-#           when called by the top-level directory or just the one directory itself
-#           when called locally.
+#  TARGETDIR : The compilation target directory. These are either all src
+#  directories when called by the top-level directory or just the one directory
+#  itself when called locally.
 #
 #
 
 
-#######################################################################################
+###############################################################################
 #
 # general setup:
 #
@@ -56,7 +56,7 @@ RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS)
 RUNTIMEINCS := -I$(PROJECT_ROOT)/include \
                $(patsubst %,-I%,$(SUBPROJECT_DIRS)) \
                $(patsubst %,-I%,$(SUBPROJECT_DIRS))/../include \
-               $(GTKFLAGS) $(MPIFLAGS)
+               $(GTKFLAGS)
 
 LPELLIB       := -L$(PROJECT_ROOT)/lib
 ifeq ($(OS),linux-gnu)
@@ -67,13 +67,10 @@ endif
 
 
 RUNTIMELIB_DEPS      := -lpthread
-RUNTIMELIB_DEPS_MPI  := #-lmpi
 RUNTIMELIB_DEPS_LPEL := -llpel
 
 UTILLIB  := -L$(PROJECT_ROOT)/lib
 UTILINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
-
-
 
 XML_DIR     = $(PROJECT_ROOT)/src/compiler/xml
 XML_COMMONS = $(wildcard $(XML_DIR)/common_*.xsl)
@@ -92,7 +89,6 @@ DEPENDENCY_FILES = $(patsubst %.o,%.d,$(TARGETDIRS_DEVEL))
 DEPENDENCIES = $(foreach file,$(DEPENDENCY_FILES),$(dir $(file)).$(notdir $(file)))
 
 
-  
 ###############################################################################
 #
 # Dummy rules
@@ -213,27 +209,6 @@ $(PROJECT_ROOT)/lib/libsnet.prod.so:  $(TARGETDIRS_PROD)
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 #
-# DISTRIBUTED SNET
-#
-$(PROJECT_ROOT)/lib/libsnetmpi.so: $(TARGETDIRS_DEVEL) 
-	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetmpi.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_MPI)
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
-
-$(PROJECT_ROOT)/lib/libsnetmpi.prod.so:  $(TARGETDIRS_PROD) 
-	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetmpi.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_MPI)
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)
-
-
-
-#
 # LPEL LIBRARY
 #
 $(PROJECT_ROOT)/lib/liblpel.so: $(TARGETDIRS_DEVEL) 
@@ -254,6 +229,15 @@ $(PROJECT_ROOT)/lib/liblpel.prod.so:  $(TARGETDIRS_PROD)
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
 
+$(PROJECT_ROOT)/lib/libdistribnodist.so: $(TARGETDIRS_DEVEL)
+	@$(ECHO) ""
+	@$(ECHO "$(TARGETDIRS_DEVEL)"
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libdistribnodist.so (developer version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
+	@$(RM) .make_track
+	@$(TOUCH) .done
+	@$(CLOCK_SKEW_ELIMINATION)
+
 #
 # SNET + LPEL
 #
@@ -273,27 +257,6 @@ $(PROJECT_ROOT)/lib/libsnetlpel.prod.so:  $(TARGETDIRS_PROD)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
-
-#
-# DISTRIBUTED SNET + LPEL
-#
-$(PROJECT_ROOT)/lib/libsnetlpelmpi.so: $(TARGETDIRS_DEVEL) 
-	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpelmpi.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL) $(RUNTIMELIB_DEPS_MPI)
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
-
-$(PROJECT_ROOT)/lib/libsnetlpelmpi.prod.so:  $(TARGETDIRS_PROD) 
-	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpelmpi.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL) $(RUNTIMELIB_DEPS_MPI)
-	@$(RM) .make_track
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)
-
 
 #
 # SNET UTIL

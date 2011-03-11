@@ -9,9 +9,9 @@
 # Collection of targets
 #
 
-targets_lpellib_devel     	  := liblpel.so
-targets_lpellib_prod      	  := liblpel.prod.so 
-targets_lpellib_default   	  := $(targets_lpellib_devel)
+targets_distrib_devel             := libdistribnodist.so
+targets_distrib_prod              := libdistribnodist.prod.so
+targets_distrib_default           := $(targets_distrib_devel)
 
 
 ###############################################################################
@@ -19,7 +19,7 @@ targets_lpellib_default   	  := $(targets_lpellib_devel)
 # Collection of target directories
 #
 
-targetdir_lpellib	          := lib
+targetdir_distrib                 := lib
 
 
 ###############################################################################
@@ -27,9 +27,9 @@ targetdir_lpellib	          := lib
 # Collection of additional files to be cleaned
 #
 
-clean_lpellib         	  :=
-clean_lpellib_devel    	  :=
-clean_lpellib_prod        :=
+clean_distrib             :=
+clean_distrib_devel       :=
+clean_distrib_prod        :=
 
 
 ###############################################################################
@@ -37,7 +37,7 @@ clean_lpellib_prod        :=
 # Collection of source directories
 #
 
-lpellib		= lpel
+distrib      = nodist
 
 
 ###############################################################################
@@ -47,7 +47,4 @@ lpellib		= lpel
 # Note that the variable names must coincide with the directory names above.
 #
 
-lpel      = threading.o scheduler.o stream.o buffer.o task.o taskqueue.o \
-            worker.o mailbox.o monitoring.o stream_list.o
-                  
-
+nodist = distribution.o
