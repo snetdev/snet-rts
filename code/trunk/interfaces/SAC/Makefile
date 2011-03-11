@@ -21,8 +21,6 @@ S4CFLAGS  = -incdir sac_include -libdir sac_lib -o $(SACTARGET)
 S4CINCS		= `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
 S4CLIBS		= `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)`
 
-DISTFLAGS = -DDISTRIBUTED_SNET
-
 COPY      = cp -f 
 
 # = = = = = = = = = = = = = = = = = = = =
@@ -48,20 +46,6 @@ lib%Mod.so: %.sac
 sac_lib/lib$(IFNAME)FibreIO.so: $(IFNAME)FibreIO.sac 
 	$(SAC2C) $(SACFLAGS) $(SACTARGET).sac
 	$(SAC4C) $(S4CFLAGS) $(SACTARGET)
-
-mpi: libSNetMod.so sac_lib/lib$(IFNAME)FibreIO.so
-	$(CC) $(CCFLAGS) $(DISTFLAGS) $(INCDIRS) $(MPIINCDIRS) $(S4CINCS) -c *.c
-	$(CC) $(LD_DYNAMIC) $(S4CLIBS) -o $(TARGET) $(OBJECTS) 
-	$(CC) $(LD_DYNAMIC) -o $(WRAPTARGET) $(WRAPOBJECTS) 
-	$(COPY) $(TARGET) $(WRAPTARGET) $(LIBDIR)/lib$(LIB).so $(TARGETDIR)
-	$(COPY) $(IFNAME).h $(SNETBASE)/include
-
-mpiprofiler: libSNetMod.so sac_lib/lib$(IFNAME)FibreIO.so
-	/opt/Scalasca/bin/scalasca -instrument mpicc  $(CCFLAGS) $(DISTFLAGS) $(INCDIRS) $(MPIINCDIRS) $(S4CINCS) -c *.c
-	/opt/Scalasca/bin/scalasca -instrument mpicc  $(LD_DYNAMIC) $(S4CLIBS) -o $(TARGET) $(OBJECTS) 
-	/opt/Scalasca/bin/scalasca -instrument mpicc  $(LD_DYNAMIC) -o $(WRAPTARGET) $(WRAPOBJECTS) 
-	$(COPY) $(TARGET) $(WRAPTARGET) $(LIBDIR)/lib$(LIB).so $(TARGETDIR)
-	$(COPY) $(IFNAME).h $(SNETBASE)/include
 
 clean:
 	rm -f *.o *.a *.so $(TARGETDIR)/$(TARGET) $(TARGETDIR)/$(WRAPTARGET) sac_include/* $(LIBDIR)/* $(SNETBASE)/include/$(IFNAME).h
