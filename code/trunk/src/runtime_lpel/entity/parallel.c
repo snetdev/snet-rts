@@ -7,21 +7,21 @@
  * This implements the choice dispatcher. [...]
  *
  * Special handling for initialiser boxes is also implemented here.
- * Initialiser boxes are instantiated before the dispatcher enters its main 
+ * Initialiser boxes are instantiated before the dispatcher enters its main
  * event loop. With respect to outbound streams, initialiser boxes are handled
- * in the same way as  ordinary boxes. Inbound stream handling is different 
+ * in the same way as  ordinary boxes. Inbound stream handling is different
  * though: A trigger record (REC_trigger_initialiser) followed by a termination
- * record is sent to each initialiser box. The trigger record activates the 
- * initialiser box once, the termination record removes the initialiser from 
+ * record is sent to each initialiser box. The trigger record activates the
+ * initialiser box once, the termination record removes the initialiser from
  * the network. The implementation ensures that a dispatcher removes itself
- * from the network if none or only one branch remain  after serving 
+ * from the network if none or only one branch remain  after serving
  * initialisation purposes:
- * If all branches of the dispatcher are initialiser boxes, the dispatcher 
+ * If all branches of the dispatcher are initialiser boxes, the dispatcher
  * exits after sending the trigger  and termination records. If there is one
  * ordinary branch  left, the dispatcher sends on its own inbound stream to
  * this branch  (REC_sync)  and exits afterwards. If more than one ordinary
  * boxes are left,  the dispatcher starts its main event loop as usual.
- * 
+ *
  *****************************************************************************/
 
 #include "snetentities.h"
@@ -30,14 +30,10 @@
 #include "collector.h"
 #include "memfun.h"
 #include "debug.h"
+#include "distribution.h"
 
 #include "lpelif.h"
 #include "lpel.h"
-
-#ifdef DISTRIBUTED_SNET
-#include "routing.h"
-#endif /* DISTRIBUTED_SNET */
-
 
 typedef struct {
   lpel_stream_t *input;
@@ -48,7 +44,7 @@ typedef struct {
 
 #define MC_ISMATCH( name) name->is_match
 #define MC_COUNT( name) name->match_count
-typedef struct { 
+typedef struct {
   bool is_match;
   int match_count;
 } match_count_t;
@@ -83,7 +79,7 @@ for( i=0; i<TENCNUM( venc); i++) {\
 
 
 
-static match_count_t *CheckMatch( snet_record_t *rec, 
+static match_count_t *CheckMatch( snet_record_t *rec,
     snet_typeencoding_t *tenc, match_count_t *mc)
 {
   snet_variantencoding_t *venc;
@@ -112,7 +108,7 @@ static match_count_t *CheckMatch( snet_record_t *rec,
       /* is_match is set to value inside the macros */
       FIND_NAME_LOOP( SNetRecGetNumFields, SNetTencGetNumFields,
           SNetRecGetFieldNames, SNetTencGetFieldNames);
-      FIND_NAME_LOOP( SNetRecGetNumTags, SNetTencGetNumTags, 
+      FIND_NAME_LOOP( SNetRecGetNumTags, SNetTencGetNumTags,
           SNetRecGetTagNames, SNetTencGetTagNames);
 
       for( i=0; i<SNetRecGetNumBTags( rec); i++) {
@@ -132,7 +128,7 @@ static match_count_t *CheckMatch( snet_record_t *rec,
     MC_ISMATCH( mc) = true;
     MC_COUNT( mc) = max;
   }
-  
+
   return( mc);
 }
 
@@ -144,7 +140,7 @@ static int BestMatch( match_count_t **counter, int num)
 {
   int i;
   int res, max;
-  
+
   res = -1;
   max = -1;
   for( i=0; i<num; i++) {
@@ -342,7 +338,6 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
 
 
 
-
 /*****************************************************************************/
 /* CREATION FUNCTIONS                                                        */
 /*****************************************************************************/
@@ -352,14 +347,11 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
  * Convenience function for creating parallel entities
  */
 static snet_stream_t *CreateParallel( snet_stream_t *instream,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_list_t *types,
     void **funs, bool is_det)
 {
-
   int i;
   int num;
   parallel_arg_t *parg;
@@ -367,40 +359,22 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   snet_stream_t **transits;
   snet_stream_t **collstreams;
   snet_startup_fun_t fun;
+  snet_info_t *new_info;
 
-#ifdef DISTRIBUTED_SNET
-  snet_routing_context_t *context;
-  snet_routing_context_t *new_context;
-  context = SNetInfoGetRoutingContext(info);
-  instream = SNetRoutingContextUpdate(context, instream, location); 
+  num = SNetTencGetNumTypes( types);
 
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Parallel created");
-#endif /* DISTRIBUTED_DEBUG */
-#endif /* DISTRIBUTED_SNET */
-
-    num = SNetTencGetNumTypes( types);
+  instream = SNetRouteUpdate(info, instream, location);
+  if(location == SNetNodeLocation) {
     collstreams = SNetMemAlloc( num * sizeof( lpel_stream_t*));
     transits = SNetMemAlloc( num * sizeof( lpel_stream_t*));
 
     /* create all branches */
-    for( i=0; i<num; i++) {
+    for(i = 0; i < num; i++) {
       transits[i] = (snet_stream_t*) LpelStreamCreate();
       fun = funs[i];
-#ifdef DISTRIBUTED_SNET
-      new_context = SNetRoutingContextCopy(context);
-      SNetRoutingContextSetLocation(new_context, location);
-      SNetRoutingContextSetParent(new_context, location);
-
-      SNetInfoSetRoutingContext(info, new_context);
-      collstreams[i] = (*fun)(transits[i], info, location);
-      collstreams[i] = SNetRoutingContextEnd(new_context, collstreams[i]);
-      SNetRoutingContextDestroy(new_context);
-#else
-      collstreams[i] = (*fun)( transits[i], info);
-#endif /* DISTRIBUTED_SNET */
-      
+      new_info = SNetInfoCopy(info);
+      collstreams[i] = (*fun)(transits[i], new_info, location);
+      SNetInfoDestroy(new_info);
     }
     /* create collector with outstreams */
     outstream = CollectorCreate(num, collstreams, info);
@@ -414,30 +388,21 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
         (is_det)? ENTITY_parallel_det: ENTITY_parallel_nondet,
         NULL
         );
-        
-#ifdef DISTRIBUTED_SNET
-  } else { 
-    num = SNetTencGetNumTypes( types); 
-    for(i = 0; i < num; i++) { 
+
+  } else {
+    for(i = 0; i < num; i++) {
       fun = funs[i];
-      new_context =  SNetRoutingContextCopy(context);
-      SNetRoutingContextSetLocation(new_context, location);
-      SNetRoutingContextSetParent(new_context, location);
-      SNetInfoSetRoutingContext(info, new_context);
+      new_info = SNetInfoCopy(info);
       instream = (*fun)( instream, info, location);
-      instream  = SNetRoutingContextEnd(new_context, instream);
-      SNetRoutingContextDestroy(new_context);
-    } 
+      SNetInfoDestroy(new_info);
+    }
     SNetTencDestroyTypeEncodingList( types);
-    outstream  = instream; 
+    outstream = instream;
   }
-  SNetInfoSetRoutingContext(info, context);
-#endif /* DISTRIBUTED_SNET */
-  
+
   SNetMemFree( funs);
   return( outstream);
 }
-
 
 
 
@@ -446,10 +411,8 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
  * Parallel creation function
  */
 snet_stream_t *SNetParallel( snet_stream_t *instream,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_list_t *types,
     ...)
 {
@@ -465,12 +428,7 @@ snet_stream_t *SNetParallel( snet_stream_t *instream,
   }
   va_end( args);
 
-#ifdef DISTRIBUTED_SNET
   return CreateParallel( instream, info, location, types, funs, false);
-#else
-  return CreateParallel( instream, info, types, funs, false);
-#endif /* DISTRIBUTED_SNET */
-
 }
 
 
@@ -478,10 +436,8 @@ snet_stream_t *SNetParallel( snet_stream_t *instream,
  * Det Parallel creation function
  */
 snet_stream_t *SNetParallelDet( snet_stream_t *inbuf,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_list_t *types,
     ...)
 {
@@ -497,11 +453,5 @@ snet_stream_t *SNetParallelDet( snet_stream_t *inbuf,
   }
   va_end( args);
 
-#ifdef DISTRIBUTED_SNET
   return CreateParallel( inbuf, info, location, types, funs, true);
-#else
-  return CreateParallel( inbuf, info, types, funs, true);
-#endif /* DISTRIBUTED_SNET */
 }
-
-

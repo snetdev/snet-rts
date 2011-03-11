@@ -10,13 +10,9 @@
 #include "lpel.h"
 
 #include "handle_p.h"
-
-#ifdef DISTRIBUTED_SNET
-#include "routing.h"
-#endif
+#include "distribution.h"
 
 #ifdef SNET_DEBUG_COUNTERS
-#include "debugtime.h"
 #include "debugcounters.h"
 #endif /* SNET_DEBUG_COUNTERS  */
 
@@ -44,7 +40,7 @@ static void BoxTask(lpel_task_t *self, void *arg)
   static struct timeval tv_out;
 #endif
 
-#ifdef SNET_DEBUG_COUNTERS 
+#ifdef SNET_DEBUG_COUNTERS
   snet_time_t time_in;
   snet_time_t time_out;
   long mseconds;
@@ -83,8 +79,8 @@ static void BoxTask(lpel_task_t *self, void *arg)
         SNetUtilDebugNotice("[DBG::RT::TimeTrace SnetBox Calls %p at %lf\n",
                         &hnd, tv_in.tv_sec + tv_in.tv_usec / 1000000.0);
 #endif
-#ifdef SNET_DEBUG_COUNTERS 
-	SNetDebugTimeGetTime(&time_in);
+#ifdef SNET_DEBUG_COUNTERS
+        SNetDebugTimeGetTime(&time_in);
 #endif /* SNET_DEBUG_COUNTERS */
 
         (*barg->boxfun)( &hnd);
@@ -96,11 +92,11 @@ static void BoxTask(lpel_task_t *self, void *arg)
                         (tv_out.tv_usec - tv_in.tv_usec) / 1000000.0);
 #endif
 #ifdef SNET_DEBUG_COUNTERS
-	SNetDebugTimeGetTime(&time_out);
+        SNetDebugTimeGetTime(&time_out);
 
-	mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
+        mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
 
-	SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
+        SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
 #endif /* SNET_DEBUG_COUNTERS */
         SNetRecDestroy( rec);
 
@@ -143,7 +139,7 @@ static void BoxTask(lpel_task_t *self, void *arg)
   LpelStreamClose( outstream, false);
 
   SNetHndDestroy( &hnd);
-  
+
   /* destroy box arg */
   SNetTencBoxSignDestroy( barg->out_signs);
   SNetMemFree( barg);
@@ -154,27 +150,20 @@ static void BoxTask(lpel_task_t *self, void *arg)
  * Box creation function
  */
 snet_stream_t *SNetBox( snet_stream_t *input,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */ 
     const char *boxname,
     snet_box_fun_t boxfun,
-    snet_box_sign_t *out_signs) 
+    snet_box_sign_t *out_signs)
 {
   snet_stream_t *output;
   box_arg_t *barg;
 
-#ifdef DISTRIBUTED_SNET
-  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Box \"%s\" created", boxname);
-#endif /* DISTRIBUTED_DEBUG */
-#endif /* DISTRIBUTED_SNET */
+  input = SNetRouteUpdate(info, input, location);
 
+  if(location == SNetNodeLocation) {
     output = (snet_stream_t*) LpelStreamCreate();
-    
+
     barg = (box_arg_t *) SNetMemAlloc( sizeof( box_arg_t));
     barg->input  = (lpel_stream_t*) input;
     barg->output = (lpel_stream_t*) output;
@@ -183,14 +172,11 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->boxname = boxname;
 
     SNetLpelIfSpawnEntity( BoxTask, (void*)barg, ENTITY_box, (char*) boxname);
-    
-#ifdef DISTRIBUTED_SNET
+
   } else {
     SNetTencBoxSignDestroy(out_signs);
     output = input;
   }
-#endif /* DISTRIBUTED_SNET */
+
   return( output);
 }
-
-

@@ -41,10 +41,7 @@
 #include "lpel.h"
 
 #include "debug.h"
-
-#ifdef DISTRIBUTED_SNET
-#include "routing.h"
-#endif /* DISTRIBUTED_SNET */
+#include "distribution.h"
 
 /* Size of buffer used to transfer unhanled data from received message to next message. */
 #define MSG_BUF_SIZE 256
@@ -957,46 +954,36 @@ static void CreateObserverTask( obs_handle_t *hnd)
  *   @return              LpelStream for outcoming records.
  *
  ******************************************************************************/
-snet_stream_t *SNetObserverSocketBox( snet_stream_t *input, 
-#ifdef DISTRIBUTED_SNET
-					snet_info_t *info, 
-					int location,
-#endif /* DISTRIBUTED_SNET */ 
-					const char *addr, 
-					int port, 
-					bool isInteractive, 
-					const char *position, 
-					char type, 
-					char data_level, 
-					const char *code)
+snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
+                                        snet_info_t *info,
+                                        int location,
+                                        const char *addr,
+                                        int port,
+                                        bool isInteractive,
+                                        const char *position,
+                                        char type,
+                                        char data_level,
+                                        const char *code)
 {
   obs_handle_t *hnd;
   snet_stream_t *output = NULL;
-  
-#ifdef DISTRIBUTED_SNET
-  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
 
-  if(location == SNetIDServiceGetNodeID()) {
+  input = SNetRouteUpdate(info, input, location);
 
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Observer (Socket) created");
-#endif /* DISTRIBUTED_DEBUG */
-
-#endif /* DISTRIBUTED_SNET */
-
+  if(location == SNetNodeLocation) {
     hnd = SNetMemAlloc(sizeof(obs_handle_t));
-    
+
     if(hnd == NULL){
       SNetMemFree(hnd);
       return input;
     }
 
     hnd->inbuf = (lpel_stream_t*) input;
-    
+
     pthread_mutex_lock(&connection_mutex);
     hnd->id = id_pool++;
     pthread_mutex_unlock(&connection_mutex);
-    
+
     hnd->obstype = OBSsocket;
 
     /* Register observer */
@@ -1004,7 +991,7 @@ snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
       SNetMemFree(hnd);
       return input;
     }
-    
+
     hnd->outbuf  = LpelStreamCreate();
 
     hnd->type = type;
@@ -1017,11 +1004,9 @@ snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
 
     output = (snet_stream_t*) hnd->outbuf;
 
-#ifdef DISTRIBUTED_SNET
   } else {
     output = input;
   }
-#endif /* DISTRIBUTED_SNET */
 
   return output;
 }
@@ -1054,31 +1039,21 @@ snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
  *   @return              LpelStream for outcoming records.
  *
  ******************************************************************************/
-snet_stream_t *SNetObserverFileBox(snet_stream_t *input, 
-#ifdef DISTRIBUTED_SNET
-				      snet_info_t *info, 
-				      int location,
-#endif /* DISTRIBUTED_SNET */ 
-				      const char *filename, 
-				      const char *position, 
-				      char type, 
-				      char data_level, 
-				      const char *code)
+snet_stream_t *SNetObserverFileBox(snet_stream_t *input,
+                                      snet_info_t *info,
+                                      int location,
+                                      const char *filename,
+                                      const char *position,
+                                      char type,
+                                      char data_level,
+                                      const char *code)
 {
   obs_handle_t *hnd;
   snet_stream_t *output = NULL;
-  
-#ifdef DISTRIBUTED_SNET
-  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
 
-  if(location == SNetIDServiceGetNodeID()) {
+  input = SNetRouteUpdate(info, input, location);
 
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Observer (File) created");
-#endif /* DISTRIBUTED_DEBUG */
-
-#endif /* DISTRIBUTED_SNET */
-
+  if(location == SNetNodeLocation) {
     hnd = SNetMemAlloc(sizeof(obs_handle_t));
     if(hnd == NULL){
       SNetMemFree(hnd);
@@ -1087,33 +1062,31 @@ snet_stream_t *SNetObserverFileBox(snet_stream_t *input,
 
     hnd->inbuf  = (lpel_stream_t*) input;
     hnd->outbuf = LpelStreamCreate();
-    
+
     pthread_mutex_lock(&connection_mutex);
     hnd->id = id_pool++;
     pthread_mutex_unlock(&connection_mutex);
-    
+
     hnd->obstype = OBSfile;
-    
+
     if(ObserverRegisterFile(hnd, filename) != 0) {
       SNetMemFree(hnd);
       return input;
     }
-    
+
     hnd->type = type;
     hnd->isInteractive = false;
     hnd->position = position;
     hnd->data_level = data_level;
     hnd->code = code;
-    
+
     CreateObserverTask( hnd);
-    
+
     output = (snet_stream_t*) hnd->outbuf;
 
-#ifdef DISTRIBUTED_SNET
   } else {
     output = input;
   }
-#endif /* DISTRIBUTED_SNET */
 
   return output;
 }

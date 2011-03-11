@@ -30,10 +30,7 @@
 
 #include "lpelif.h"
 
-#ifdef DISTRIBUTED_SNET
 #include "distribution.h"
-#endif /* DISTRIBUTED_SNET */
-
 
 typedef struct { 
   FILE *file;
@@ -49,10 +46,6 @@ typedef struct {
 static void GlobInputTask( lpel_task_t *self, void* data)
 {
   handle_t *hnd = (handle_t *)data;
-
-#ifdef DISTRIBUTED_SNET
-  hnd->buffer = (lpel_stream_t*) DistributionWaitForInput();
-#endif /* DISTRIBUTED_SNET */
 
   if(hnd->buffer != NULL) {
     int i;
@@ -73,13 +66,9 @@ static void GlobInputTask( lpel_task_t *self, void* data)
 
 
 void SNetInInputInit(FILE *file,
-		     snetin_label_t *labels, 
-#ifdef DISTRIBUTED_SNET
-		     snetin_interface_t *interfaces
-#else /* DISTRIBUTED_SNET */
-		     snetin_interface_t *interfaces,
-		     snet_stream_t *out_buf
-#endif /* DISTRIBUTED_SNET */
+                     snetin_label_t *labels,
+                     snetin_interface_t *interfaces,
+                     snet_stream_t *in_buf
   )
 {
   handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
@@ -87,11 +76,7 @@ void SNetInInputInit(FILE *file,
   hnd->file = file;
   hnd->labels = labels;
   hnd->interfaces = interfaces;
-#ifdef DISTRIBUTED_SNET
-  hnd->buffer = NULL;
-#else /* DISTRIBUTED_SNET */
-  hnd->buffer = (lpel_stream_t*) out_buf;
-#endif /* DISTRIBUTED_SNET */
+  hnd->buffer = (lpel_stream_t *) in_buf;
 
   /* create a joinable wrapper thread */
   SNetLpelIfSpawnWrapper( GlobInputTask, (void*)hnd, "glob_input");

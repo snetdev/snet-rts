@@ -7,14 +7,12 @@
 #include "debug.h"
 #include "interface_functions.h"
 #include "typeencode.h"
+#include "distribution.h"
 
 #include "lpelif.h" /* for enumeration */
 
 #include "lpel.h"
 
-#ifdef DISTRIBUTED_SNET
-#include "routing.h"
-#endif
 /* ------------------------------------------------------------------------- */
 /*  SNetFilter                                                               */
 /* ------------------------------------------------------------------------- */
@@ -597,10 +595,8 @@ static void FilterTask( lpel_task_t *self, void *arg)
  * Filter creation function
  */
 snet_stream_t* SNetFilter( snet_stream_t *instream,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *in_type,
     snet_expr_list_t *guards, ... )
 {
@@ -614,33 +610,27 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
   snet_typeencoding_list_t *out_types;
   va_list args;
 
-#ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location); 
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Filter created");
-#endif /* DISTRIBUTED_DEBUG */
-#endif /* DISTRIBUTED_SNET */
-
-    outstream = (snet_stream_t*) LpelStreamCreate(); //SNetTlCreateLpelStream(BUFFER_SIZE);
+  instream = SNetRouteUpdate(info, instream, location);
+  if(location == SNetNodeLocation) {
+    outstream = (snet_stream_t*) LpelStreamCreate();
     guard_expr = guards;
-    
+
     if( guard_expr == NULL) {
       guard_expr = SNetEcreateList( 1, SNetEconstb( true));
     }
-    
+
     num_outtypes = SNetElistGetNumExpressions( guard_expr);
     instr_list = SNetMemAlloc( num_outtypes * sizeof( snet_filter_instruction_set_list_t*));
-    
+
     va_start( args, guards);
     for( i=0; i<num_outtypes; i++) {
       lst = va_arg( args, snet_filter_instruction_set_list_t*);
       instr_list[i] = lst == NULL ? SNetCreateFilterInstructionList( 0) : lst;
     }
     va_end( args);
-    
+
     out_types = FilterComputeTypes( num_outtypes, instr_list);
-    
+
     farg = (filter_arg_t *) SNetMemAlloc( sizeof( filter_arg_t));
     farg->input  = (lpel_stream_t*) instream;
     farg->output = (lpel_stream_t*) outstream;
@@ -648,10 +638,9 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
     farg->type_list = out_types;
     farg->guard_list = guard_expr;
     farg->instr_lst = instr_list;
-    
+
     SNetLpelIfSpawnEntity( FilterTask, (void*)farg, ENTITY_filter, NULL);
-    
-#ifdef DISTRIBUTED_SNET
+
   } else {
     SNetDestroyTypeEncoding(in_type);
     num_outtypes = SNetElistGetNumExpressions( guards);
@@ -662,15 +651,15 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
     for( i=0; i<num_outtypes; i++) {
       lst = va_arg( args, snet_filter_instruction_set_list_t*);
       if(lst != NULL) {
-	SNetDestroyFilterInstructionSetList(lst);
+        SNetDestroyFilterInstructionSetList(lst);
       }
     }
     va_end( args);
-    
+
     SNetEdestroyList( guards);
     outstream = instream;
   }
-#endif /* DISTRIBUTED_SNET */
+
   return( outstream);
 }
 
@@ -679,10 +668,8 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
  * Translate creation function
  */
 snet_stream_t* SNetTranslate( snet_stream_t *instream,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *in_type,
     snet_expr_list_t *guards, ... )
 {
@@ -695,15 +682,9 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
   snet_typeencoding_list_t *out_types;
   va_list args;
 
-#ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location); 
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Translate created");
-#endif /* DISTRIBUTED_DEBUG */
-#endif /* DISTRIBUTED_SNET */
-    
-    outstream = (snet_stream_t *) LpelStreamCreate(); //SNetTlCreateLpelStream(BUFFER_SIZE);
+  instream = SNetRouteUpdate(info, instream, location);
+  if(location == SNetNodeLocation) {
+    outstream = (snet_stream_t *) LpelStreamCreate();
     guard_expr = guards;
     if( guard_expr == NULL) {
       guard_expr = SNetEcreateList( 1, SNetEconstb( true));
@@ -716,9 +697,9 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
       instr_list[i] = va_arg( args, snet_filter_instruction_set_list_t*);
     }
     va_end( args);
-    
+
     out_types = FilterComputeTypes( num_outtypes, instr_list);
-    
+
     farg = (filter_arg_t *) SNetMemAlloc( sizeof( filter_arg_t));
     farg->input  = (lpel_stream_t*) instream;
     farg->output = (lpel_stream_t*) outstream;
@@ -728,15 +709,14 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
     farg->instr_lst = instr_list;
 
     SNetLpelIfSpawnEntity( FilterTask, (void*)farg, ENTITY_filter, NULL);
-  
-#ifdef DISTRIBUTED_SNET
+
   } else {
     SNetDestroyTypeEncoding(in_type);
     num_outtypes = SNetElistGetNumExpressions( guards);
     if(num_outtypes == 0) {
       num_outtypes += 1;
     }
-    
+
     va_start( args, guards);
     for( i=0; i<num_outtypes; i++) {
       SNetDestroyFilterInstructionSetList(va_arg( args, snet_filter_instruction_set_list_t*));
@@ -747,7 +727,7 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
     SNetEdestroyList( guards);
     outstream = instream;
   }
-#endif /* DISTRIBUTED_SNET */
+
   return( outstream);
 }
 
@@ -854,24 +834,15 @@ static void NameshiftTask( lpel_task_t *self, void *arg)
  * Nameshift creation function
  */
 snet_stream_t *SNetNameShift( snet_stream_t *instream,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     int offset,
     snet_variantencoding_t *untouched)
 {
   snet_stream_t *outstream;
   filter_arg_t *farg;
 
-#ifdef DISTRIBUTED_SNET
-  instream = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), instream, location);
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Nameshift created");
-#endif /* DISTRIBUTED_DEBUG */
-#endif /* DISTRIBUTED_SNET */
-
+  if(location == SNetNodeLocation) {
     outstream = (snet_stream_t*) LpelStreamCreate(); //SNetTlCreateLpelStream( BUFFER_SIZE);
     
     farg = (filter_arg_t *) SNetMemAlloc( sizeof( filter_arg_t));
@@ -884,12 +855,11 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
     
     SNetLpelIfSpawnEntity( NameshiftTask, (void*)farg, ENTITY_filter, NULL);
   
-#ifdef DISTRIBUTED_SNET
   } else {
     SNetTencDestroyVariantEncoding( untouched);
     outstream = instream;
   }
-#endif /* DISTRIBUTED_SNET */
+
   return( outstream);
 }
 

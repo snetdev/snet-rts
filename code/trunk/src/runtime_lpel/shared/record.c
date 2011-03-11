@@ -15,10 +15,7 @@
 #include "snetentities.h"
 
 #include "debug.h"
-
-#ifdef DISTRIBUTED_SNET
-#include "reference.h"
-#endif /* DISTRIBUTED_SNET*/
+#include "distribution.h"
 
 #define GETNUM( N, M)   int i;\
                          i = N( GetVEnc( rec));\
@@ -57,7 +54,6 @@
 #define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
 #define COLL_REC( name, component) RECORD( name, coll_rec)->component
 
-#ifdef DISTRIBUTED_SNET
 typedef struct {
   snet_variantencoding_t *v_enc;
   snet_ref_t **fields;
@@ -66,16 +62,6 @@ typedef struct {
   int interface_id;
   snet_record_mode_t mode;
 } data_rec_t;
-#else
-typedef struct {
-  snet_variantencoding_t *v_enc;
-  void **fields;
-  int *tags;
-  int *btags;
-  int interface_id;
-  snet_record_mode_t mode;
-} data_rec_t;
-#endif
 
 typedef struct {
   snet_stream_t *input;
@@ -226,22 +212,15 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
 
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
       RECORD( rec, data_rec) = SNetMemAlloc( sizeof( data_rec_t));
-#ifdef DISTRIBUTED_SNET
       DATA_REC( rec, fields) = SNetMemAlloc( SNetTencGetNumFields( v_enc)
-					     * sizeof( snet_ref_t *));
-#else
-      DATA_REC( rec, fields) = SNetMemAlloc( SNetTencGetNumFields( v_enc)
-                                              * sizeof( void*));
-#endif /* DISTRIBUTED_SNET */
+                                             * sizeof( snet_ref_t *));
       DATA_REC( rec, tags) = SNetMemAlloc( SNetTencGetNumTags( v_enc)
                                               * sizeof( int));
       DATA_REC( rec, btags) = SNetMemAlloc( SNetTencGetNumBTags( v_enc)
                                               * sizeof( int));
       DATA_REC( rec, v_enc) = v_enc;
       DATA_REC( rec, mode) = MODE_binary;
-#ifdef DISTRIBUTED_SNET
       DATA_REC( rec, interface_id) = 0;
-#endif /* DISTRIBUTED_SNET */
       break;
     case REC_trigger_initialiser:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
@@ -282,18 +261,15 @@ void SNetRecDestroy( snet_record_t *rec)
 {
   int i;
   int num, *names;
-#ifdef DISTRIBUTED_SNET
   int offset;
-#else
   snet_free_fun_t freefun;
-#endif /* DISTRIBUTED_SNET */
 
   if( rec != NULL) {
     switch( REC_DESCR( rec)) {
-      case REC_data: 
+      case REC_data:
         num = SNetRecGetNumFields( rec);
         names = SNetRecGetUnconsumedFieldNames( rec);
-#ifdef DISTRIBUTED_SNET
+        /*
         for( i=0; i<num; i++) {
           offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
               SNetTencGetNumFields( GetVEnc( rec)), names[i]);
@@ -303,13 +279,13 @@ void SNetRecDestroy( snet_record_t *rec)
           }
 
           SNetRefDestroy(DATA_REC( rec, fields)[offset]);
-        }
-#else
+        }*/
+        //#ifndef DISTRIBUTED
         freefun = SNetGetFreeFunFromRec( rec);
-        for( i=0; i<num; i++) {
-          freefun( SNetRecTakeField( rec, names[i]));
+        for (i=0; i<num; i++) {
+            freefun(SNetRecTakeField( rec, names[i]));
         }
-#endif /* DISTRIBUTED_SNET */
+        //#endif
         SNetTencDestroyVariantEncoding( DATA_REC( rec, v_enc));
         SNetMemFree( names);
         SNetMemFree( DATA_REC( rec, fields));
@@ -414,20 +390,19 @@ void SNetRecSetBTag( snet_record_t *rec, int name, int val)
 }
 
 
-void SNetRecSetField( snet_record_t *rec, int name, void *val) 
+void SNetRecSetField( snet_record_t *rec, int name, void *val)
 {
   int offset;
-  
-  offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
-                        SNetTencGetNumFields( GetVEnc( rec)), name);
-#ifdef DISTRIBUTED_SNET
 
-  DATA_REC( rec, fields[offset]) = SNetRefCreate(SNetIDServiceGetID(), 
-						 SNetIDServiceGetNodeID(),
-						 DATA_REC( rec, interface_id), val);
-#else
+  offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
+                     SNetTencGetNumFields( GetVEnc( rec)), name);
+
+  /*
+  DATA_REC( rec, fields[offset]) = SNetRefCreate(SNetIDServiceGetID(),
+                                                 SNetNodeLocation,
+                                                 DATA_REC( rec, interface_id), val);
+                                                 */
   DATA_REC( rec, fields[offset]) = val;
-#endif /* DISTRIBUTED_SNET */
 }
 
 int SNetRecGetTag( snet_record_t *rec, int name)
@@ -459,39 +434,36 @@ int SNetRecGetBTag( snet_record_t *rec, int name)
   return( DATA_REC( rec, btags[offset]));
 }
 
-void *SNetRecGetField( snet_record_t *rec, int name) 
+void *SNetRecGetField( snet_record_t *rec, int name)
 {
   int offset;
-  
+
   offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
-                        SNetTencGetNumFields( GetVEnc( rec)), name);
+                     SNetTencGetNumFields( GetVEnc( rec)), name);
   if( offset == NOT_FOUND) {
     NotFoundError( name, "get", "field");
   }
-#ifdef DISTRIBUTED_SNET
+  /*
   return SNetRefGetData(DATA_REC( rec, fields[offset]));
-#else
-  return( DATA_REC( rec, fields[offset]));
-#endif /* DISTRIBUTED_SNET */
+  */
+  return (DATA_REC( rec, fields[offset]));
 }
 
-void *SNetRecReadField( snet_record_t *rec, int name) 
+void *SNetRecReadField( snet_record_t *rec, int name)
 {
   int offset;
-#ifndef DISTRIBUTED_SNET /* IF _NOT_ DEFINED */
   snet_copy_fun_t copyfun;
-#endif
+
   offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
-                        SNetTencGetNumFields( GetVEnc( rec)), name);
+                     SNetTencGetNumFields( GetVEnc( rec)), name);
   if( offset == NOT_FOUND) {
     NotFoundError( name, "get", "field");
   }
-#ifdef DISTRIBUTED_SNET
+  /*
   return SNetRefCopy( SNetRefGetData(DATA_REC( rec, fields[offset])));
-#else
-  copyfun = SNetGetCopyFunFromRec( rec);
-  return( copyfun( DATA_REC( rec, fields[offset])));
-#endif /* DISTRIBUTED_SNET */
+  */
+  copyfun = SNetGetCopyFunFromRec(rec);
+  return (copyfun(DATA_REC(rec, fields[offset])));
 }
 
 
@@ -528,17 +500,16 @@ void *SNetRecTakeField( snet_record_t *rec, int name)
   int offset;
 
   offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
-                      SNetTencGetNumFields( GetVEnc( rec)), name);
+                     SNetTencGetNumFields( GetVEnc( rec)), name);
   if( offset == NOT_FOUND) {
     NotFoundError( name, "take","field");
   }
   SNetTencRenameField( GetVEnc( rec), name, CONSUMED);
 
-#ifdef DISTRIBUTED_SNET
+  /*
   return SNetRefTakeData(DATA_REC( rec, fields[offset]));
-#else
-  return( DATA_REC( rec, fields[offset]));
-#endif /* DISTRIBUTED_SNET */
+  */
+  return (DATA_REC( rec, fields[offset]));
 }
 
 int SNetRecGetNumTags( snet_record_t *rec)
@@ -691,11 +662,7 @@ bool SNetRecAddBTag( snet_record_t *rec, int name)
 }
 bool SNetRecAddField( snet_record_t *rec, int name)
 {
-#ifdef DISTRIBUTED_SNET
   ADD_TO_RECORD( SNetTencAddField, SNetTencGetNumFields, fields, snet_ref_t *);
-#else
-  ADD_TO_RECORD( SNetTencAddField, SNetTencGetNumFields, fields, void*);
-#endif /* DISTRIBUTED_SNET */
 }
 
 
@@ -725,13 +692,8 @@ void SNetRecRemoveBTag( snet_record_t *rec, int name)
 }
 void SNetRecRemoveField( snet_record_t *rec, int name)
 {
-#ifdef DISTRIBUTED_SNET
   REMOVE_FROM_REC( SNetRecGetNumFields, SNetRecGetUnconsumedFieldNames,
-                        SNetRecGetField, SNetTencRemoveField, fields, snet_ref_t *);
-#else
-  REMOVE_FROM_REC( SNetRecGetNumFields, SNetRecGetUnconsumedFieldNames,
-                        SNetRecGetField, SNetTencRemoveField, fields, void*);
-#endif /* DISTRIBUTED_SNET */
+                   SNetRecGetField, SNetTencRemoveField, fields, snet_ref_t *);
 }
 
 
@@ -739,43 +701,40 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
 {
   int i;
   snet_record_t *new_rec;
-#ifdef DISTRIBUTED_SNET
   int num;
   int *names;
-#else
   snet_copy_fun_t copyfun;
-#endif /* DISTRIBUTED_SNET */
 
   switch( REC_DESCR( rec)) {
   case REC_data:
     new_rec = SNetRecCreate( REC_data,
-			     SNetTencCopyVariantEncoding( GetVEnc( rec)));
+                             SNetTencCopyVariantEncoding( GetVEnc( rec)));
     for( i=0; i<SNetRecGetNumTags( rec); i++) {
       DATA_REC( new_rec, tags[i]) = DATA_REC( rec, tags[i]);
     }
     for( i=0; i<SNetRecGetNumBTags( rec); i++) {
       DATA_REC( new_rec, btags[i]) = DATA_REC( rec, btags[i]);
     }
-#ifdef DISTRIBUTED_SNET
+    /*
     num = SNetRecGetNumFields( rec);
     names = SNetRecGetUnconsumedFieldNames( rec);
 
     for( i=0; i<num; i++) {
       SNetRecCopyFieldToRec( rec,  names[i],
-			     new_rec, names[i]);
+                             new_rec, names[i]);
     }
 
     SNetMemFree(names);
-#else
-    copyfun = SNetGetCopyFunFromRec( rec);
-    for( i=0; i<SNetRecGetNumFields( rec); i++) {
-      DATA_REC( new_rec, fields[i]) = copyfun( DATA_REC( rec, fields[i]));
+    */
+    copyfun = SNetGetCopyFunFromRec(rec);
+    for (i=0; i <SNetRecGetNumFields( rec); i++) {
+        DATA_REC( new_rec, fields[i]) = copyfun(DATA_REC(rec, fields[i]));
     }
-#endif /* DISTRIBUTED_SNET */
+    //endif
     SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
-    
+
     SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
-      
+
     break;
   case REC_sort_end:
     new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_E_REC( rec, level),
@@ -788,8 +747,7 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
     SNetUtilDebugFatal("Can't copy record of that type (%d)",
         REC_DESCR( rec));
   }
-  
-  
+
   return( new_rec);
 }
 
@@ -864,19 +822,17 @@ snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec)
 
 /* Copy */
 void SNetRecCopyFieldToRec( snet_record_t *from, int old_name ,
-				   snet_record_t *to, int new_name)
+                                   snet_record_t *to, int new_name)
 {
   int offset_old;
   int offset_new;
-#ifndef DISTRIBUTED_SNET
   snet_copy_fun_t copyfun;
-#endif /* DISTRIBUTED_SNET */
 
   offset_old = FindName( SNetTencGetFieldNames( GetVEnc( from)),
-			 SNetTencGetNumFields( GetVEnc( from)), old_name);
+                         SNetTencGetNumFields( GetVEnc( from)), old_name);
 
   offset_new = FindName( SNetTencGetFieldNames( GetVEnc( to)),
-			SNetTencGetNumFields( GetVEnc( to)), new_name);
+                        SNetTencGetNumFields( GetVEnc( to)), new_name);
 
   if(offset_old == NOT_FOUND) {
     NotFoundError( new_name, "copy", "field");
@@ -891,29 +847,26 @@ void SNetRecCopyFieldToRec( snet_record_t *from, int old_name ,
 			   SNetTencGetNumFields( GetVEnc( to)), new_name);
   }
 
-#ifdef DISTRIBUTED_SNET
+  /*
   DATA_REC( to, fields[offset_new]) = SNetRefCopy(DATA_REC( from, fields[offset_old]));
-#else
-  copyfun = SNetGlobalGetCopyFun( SNetGlobalGetInterface( 
-				   SNetRecGetInterfaceId( from)));
-
+  */
+  copyfun = SNetGlobalGetCopyFun(SNetGlobalGetInterface(SNetRecGetInterfaceId(from)));
   DATA_REC( to, fields[offset_new]) = copyfun(DATA_REC( from, fields[offset_old]));
-#endif /* DISTRIBUTED_SNET */
-  return; 
+  return;
 }
 
 /* Take */
-void SNetRecMoveFieldToRec( snet_record_t *from, int old_name ,
-				   snet_record_t *to, int new_name)
+void SNetRecMoveFieldToRec( snet_record_t *from, int old_name,
+                            snet_record_t *to, int new_name)
 {
   int offset_old;
   int offset_new;
 
   offset_old = FindName( SNetTencGetFieldNames( GetVEnc( from)),
-			 SNetTencGetNumFields( GetVEnc( from)), old_name);
+                         SNetTencGetNumFields( GetVEnc( from)), old_name);
 
   offset_new = FindName( SNetTencGetFieldNames( GetVEnc( to)),
-			SNetTencGetNumFields( GetVEnc( to)), new_name);
+                         SNetTencGetNumFields( GetVEnc( to)), new_name);
 
   if(offset_old == NOT_FOUND) {
     NotFoundError( new_name, "move", "field");
@@ -930,262 +883,6 @@ void SNetRecMoveFieldToRec( snet_record_t *from, int old_name ,
 
   SNetTencRenameField( GetVEnc( from), old_name, CONSUMED);
 
-#ifdef DISTRIBUTED_SNET
   DATA_REC( to, fields[offset_new]) = DATA_REC( from, fields[offset_old]);
-#else
-  DATA_REC( to, fields[offset_new]) = DATA_REC( from, fields[offset_old]);
-#endif /* DISTRIBUTED_SNET */
   DATA_REC( from, fields[offset_old]) = NULL;
 }
-
-#ifdef DISTRIBUTED_SNET
-
-int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, int buf_size)
-{
-  int result;
-  int num;
-  int *names;
-  int i;
-  int offset;
-
-  /* Pack record type */
-  if((result = MPI_Pack(&rec->rec_descr, 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-    return result; 
-  }
-
-  switch(REC_DESCR(rec)) {
-  case REC_data:
-    /* Pack interface id */
-    if((result = MPI_Pack(&DATA_REC(rec, interface_id), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-      return result; 
-    }
-
-    /* Pack mode */
-    if((result = MPI_Pack(&DATA_REC(rec, mode), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-      return result; 
-    }
-
-    num = SNetRecGetNumFields(rec);
-    names = SNetRecGetUnconsumedFieldNames(rec);
-
-    /* First pack number of fields and then all the fields. */
-    if((result = MPI_Pack(&num, 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-      return result; 
-    }
-
-    for(i = 0; i < num; i++) {
-      offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
-			 SNetTencGetNumFields( GetVEnc( rec)), names[i]);
-
-      if((result = MPI_Pack(&names[i], 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-	return result; 
-      }
-
-      if((result = SNetRefPack(DATA_REC( rec, fields[offset]), comm, pos, buf, buf_size)) != MPI_SUCCESS) {
-	return result; 
-      }
-
-      SNetTencRenameField( GetVEnc( rec), names[i], CONSUMED);
-    }
-  
-    SNetMemFree(names);
-
-    /* First pack number of tags and then all the tags. */ 
-
-    num = SNetRecGetNumTags(rec);
-    names = SNetRecGetTagNames(rec);
-
-    if((result = MPI_Pack(&num, 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-      return result; 
-    }
-
-    for(i = 0; i < num; i++) {
-      offset = FindName( SNetTencGetTagNames( GetVEnc( rec)),
-			 SNetTencGetNumTags( GetVEnc( rec)), names[i]);
-
-      if((result = MPI_Pack(&names[i], 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-	return result; 
-      }
-
-      if((result = MPI_Pack(&DATA_REC( rec, tags[offset]), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-	return result; 
-      }
-
-
-      SNetTencRenameTag( GetVEnc( rec), names[i], CONSUMED);
-    }
-
-    /* First pack number of btags and then all the btags. */ 
-
-    num = SNetRecGetNumBTags(rec);
-    names = SNetRecGetBTagNames(rec);
-
-    if((result = MPI_Pack(&num, 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-      return result; 
-    }
-
-    for(i = 0; i < num; i++) {
-      offset = FindName( SNetTencGetBTagNames( GetVEnc( rec)),
-			 SNetTencGetNumBTags( GetVEnc( rec)), names[i]);
-
-      if((result = MPI_Pack(&names[i], 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-	return result; 
-      }
-
-      if((result = MPI_Pack(&DATA_REC( rec, btags[offset]), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-	return result; 
-      }
-
-      SNetTencRenameBTag( GetVEnc( rec), names[i], CONSUMED);
-    }
-
-    break;
-  case REC_terminate:
-    break;
-  case REC_sort_end:
-    /* Pack num and level. */ 
-    if((result = MPI_Pack(&SORT_E_REC( rec, num), 1, MPI_INT, buf, buf_size, pos, comm)) != MPI_SUCCESS) {
-      return result; 
-    }
-
-    return MPI_Pack(&SORT_E_REC( rec, level), 1, MPI_INT, buf, buf_size, pos, comm);
-    break;
-  case REC_sync:
-    SNetUtilDebugFatal("Tried to serialize REC_sync.");
-    break;
-  case REC_collect:
-    SNetUtilDebugFatal("Tried to serialize REC_collect.");
-    break;
-  default:
-    SNetUtilDebugFatal("Tried to serialize Unknown record.");
-    break;
-  }
-
-  return MPI_SUCCESS;
-
-}
-
-snet_record_t *SNetRecUnpack(MPI_Comm comm, int *pos, void *buf, int buf_size)
-{
-  snet_record_t *rec = NULL;
-  int i;
-  int num;
-  int offset;
-  int temp_buf[4];
-
-  /* Unpack record type. */ 
-  if(MPI_Unpack(buf, buf_size, pos, &temp_buf, 1, MPI_INT, comm) == MPI_SUCCESS) {
-
-    switch(temp_buf[0]) {
-    case REC_data:
-      rec =  SNetRecCreate(REC_data,
-			   SNetTencVariantEncode( 
-				SNetTencCreateVector( 0), 
-				SNetTencCreateVector( 0), 
-				SNetTencCreateVector( 0)));
-
-      /* Unpack interface and mode. */ 
-      if(MPI_Unpack(buf, buf_size, pos, &DATA_REC(rec, interface_id), 1, MPI_INT, comm) != MPI_SUCCESS) {
-	SNetRecDestroy(rec);
-	return NULL;
-      }
-
-      if(MPI_Unpack(buf, buf_size, pos, &DATA_REC(rec, mode), 1, MPI_INT, comm) != MPI_SUCCESS) {
-	SNetRecDestroy(rec);
-	return NULL;
-      }
-      
-      /* Unpack number of fields and then each field. */ 
-      if(MPI_Unpack(buf, buf_size, pos, &num, 1, MPI_INT, comm) != MPI_SUCCESS) {
-	SNetRecDestroy(rec);
-	return NULL;
-      }
-      
-      for(i = 0; i < num; i++) {
-	
-	if(MPI_Unpack(buf, buf_size, pos, &temp_buf, 1, MPI_INT, comm) != MPI_SUCCESS) {
-	  SNetRecDestroy(rec);
-	  return NULL;
-	}
-	
-	if(SNetRecAddField(rec, temp_buf[0])) {
-	  offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
-			   SNetTencGetNumFields( GetVEnc( rec)), temp_buf[0]);
-	  
-	  if((DATA_REC( rec, fields[offset]) = SNetRefUnpack(comm, pos, buf, buf_size)) == NULL) {
-	    SNetRecDestroy(rec);
-	    return NULL;
-	  }
-	  
-	} else {
-	  /* TODO: Error: could not add field! */
-	}
-	
-      }
-      
-      /* Unpack number of tags and then each tag. */ 
-      if(MPI_Unpack(buf, buf_size, pos, &num, 1, MPI_INT, comm) != MPI_SUCCESS) {
-	SNetRecDestroy(rec);
-	return NULL;
-      }
-      
-      for(i = 0; i < num; i++) {
-	if(MPI_Unpack(buf, buf_size, pos, &temp_buf[0], 1, MPI_INT, comm) != MPI_SUCCESS
-	   || MPI_Unpack(buf, buf_size, pos, &temp_buf[1], 1, MPI_INT, comm) != MPI_SUCCESS) {
-	  SNetRecDestroy(rec);
-	  return NULL;
-	}
-	
-	SNetRecAddTag(rec, temp_buf[0]);
-	
-	SNetRecSetTag(rec, temp_buf[0], temp_buf[1]);
-      }
-      
-      /* Unpack number of btags and then each btag. */ 
-      if(MPI_Unpack(buf, buf_size, pos, &num, 1, MPI_INT, comm) != MPI_SUCCESS) {
-	SNetRecDestroy(rec);
-	return NULL;
-      }
-      
-      for(i = 0; i < num; i++) {
-	if(MPI_Unpack(buf, buf_size, pos, &temp_buf[0], 1, MPI_INT, comm) != MPI_SUCCESS
-	   || MPI_Unpack(buf, buf_size, pos, &temp_buf[1], 1, MPI_INT, comm) != MPI_SUCCESS) {
-	  SNetRecDestroy(rec);
-	  return NULL;
-	}
-	
-	SNetRecAddBTag(rec, temp_buf[0]);
-	
-	SNetRecSetBTag(rec, temp_buf[0], temp_buf[1]);
-      }
-      
-      return rec;
-      break;
-    case REC_terminate:
-      return SNetRecCreate(REC_terminate);
-      break;
-    case REC_sort_end:
-      /* Unpack num and level. */ 
-      if(MPI_Unpack(buf, buf_size, pos, &temp_buf[0], 1, MPI_INT, comm) == MPI_SUCCESS
-	 && MPI_Unpack(buf, buf_size, pos, &temp_buf[1], 1, MPI_INT, comm) == MPI_SUCCESS) {
-	return SNetRecCreate(REC_sort_end, temp_buf[0], temp_buf[1]);
-      }
-      break;
-    case REC_sync:
-      SNetUtilDebugFatal("Tried to deserialize REC_sync.");
-      break;
-    case REC_collect:
-      SNetUtilDebugFatal("Tried to deserialize REC_collect.");
-      break;
-    default:
-      SNetUtilDebugFatal("Tried to deserialize unknown record.");
-      break;
-    }
-  }
-
-  return NULL;
-}
-  
-
-#endif /* DISTRIBUTED_SNET */
-

@@ -36,12 +36,6 @@
 
 static snet_global_info_structure_t *snet_global = NULL;
 
-static void SNetGlobalSetInterfaceSupportLevel( snet_global_interface_functions_t *f,
-						snet_interface_support_level_t level)
-{
-  f->level = level;
-}
-
 void SNetGlobalSetFreeFun( snet_global_interface_functions_t *f,
 			   snet_free_fun_t freefun)
 {
@@ -208,42 +202,24 @@ void SNetGlobalDestroy()
 
 bool 
 SNetGlobalRegisterInterface( int id,
-                             snet_interface_support_level_t support_level,
 			     snet_free_fun_t freefun,
 			     snet_copy_fun_t copyfun,
 			     snet_serialise_fun_t serialisefun,
 			     snet_deserialise_fun_t deserialisefun,
 			     snet_encode_fun_t encodefun,
 
-#ifdef DISTRIBUTED_SNET
 			     snet_decode_fun_t decodefun,
-			     snet_mpi_serialize_type_fun_t serialize_type_fun,
-			     snet_mpi_deserialize_type_fun_t desrialize_type_fun,
-			     snet_mpi_pack_fun_t packfun,
-			     snet_mpi_unpack_fun_t unpackfun,
-			     snet_mpi_cleanup_fun_t cleanupfun)
-#else
-                             snet_decode_fun_t decodefun)
-#endif /* DISTRIBUTED_SNET */    
+			     snet_serialize_type_fun_t serialize_type_fun,
+			     snet_deserialize_type_fun_t desrialize_type_fun,
+			     snet_pack_fun_t packfun,
+			     snet_unpack_fun_t unpackfun,
+			     snet_cleanup_fun_t cleanupfun)
 {
   int num; 
   snet_global_interface_functions_t *new_if;
   
   SNetGlobalRuntimeInitialised();
   num = snet_global->num;
-
-#ifdef DISTRIBUTED_SNET
-  if(support_level != SNET_interface_MPI) {
-    SNetUtilDebugFatal("Language interface (%d) support inadequate (%d). Support level SNET_interface_MPI required.",
-                       id, support_level);
-  }
-#else /* DISTRIBUTED_SNET */
-  if(support_level != SNET_interface_basic
-     && support_level != SNET_interface_MPI) {
-     SNetUtilDebugFatal("Language interface (%d) support inadequate (%d). Support level SNET_interface_basic required.",
-                       id, support_level);
-  }
-#endif /* DISTRIBUTED_SNET */ 
 
   if( num == ( INITIAL_INTERFACE_TABLE_SIZE -1)) {
     /* TODO replace this with proper code!!!! */
@@ -252,20 +228,17 @@ SNetGlobalRegisterInterface( int id,
   else {
     new_if = SNetMemAlloc( sizeof( snet_global_interface_functions_t));  
     SNetGlobalSetId( new_if, id);
-    SNetGlobalSetInterfaceSupportLevel(new_if, support_level);
     SNetGlobalSetFreeFun( new_if, freefun);
     SNetGlobalSetCopyFun( new_if, copyfun);  
     SNetGlobalSetSerializationFun( new_if, serialisefun);
     SNetGlobalSetDeserializationFun( new_if, deserialisefun);  
     SNetGlobalSetEncodingFun( new_if, encodefun);
     SNetGlobalSetDecodingFun( new_if, decodefun);
-#ifdef DISTRIBUTED_SNET
     SNetGlobalSetSerializeTypeFun( new_if, serialize_type_fun);
     SNetGlobalSetDeserializeTypeFun( new_if, desrialize_type_fun);
     SNetGlobalSetPackFun( new_if, packfun);
     SNetGlobalSetUnpackFun( new_if, unpackfun);
     SNetGlobalSetCleanupFun( new_if, cleanupfun);
-#endif /* DISTRIBUTED_SNET */
 
     snet_global->interface[num] = new_if;
     snet_global->num += 1;
@@ -342,128 +315,108 @@ snet_decode_fun_t SNetGetDecodingFun( int id)
   return( SNetGlobalGetDecodingFun( SNetGlobalGetInterface( id)));
 }
 
-snet_interface_support_level_t SNetGlobalGetInterfaceSupportLevel( snet_global_interface_functions_t *f)
-{
-  return( f->level);
-}
-
-snet_interface_support_level_t SNetGetInterfaceSupportLevelFromRec( snet_record_t *rec) 
-{
-  return( SNetGlobalGetInterfaceSupportLevel( SNetGlobalGetInterface( 
-		SNetRecGetInterfaceId( rec))));
-}
-
-snet_interface_support_level_t SNetGetInterfaceSupportLevel(int id)
-{
-  return( SNetGlobalGetInterfaceSupportLevel( SNetGlobalGetInterface( id)));
-}
-
-#ifdef DISTRIBUTED_SNET
-
-void SNetGlobalSetSerializeTypeFun(snet_global_interface_functions_t *f, snet_mpi_serialize_type_fun_t serialize_type_fun)
+void SNetGlobalSetSerializeTypeFun(snet_global_interface_functions_t *f, snet_serialize_type_fun_t serialize_type_fun)
 {
   f->serialize_type_fun = serialize_type_fun;
 }
 
-snet_mpi_serialize_type_fun_t SNetGlobalGetSerializeTypeFun(snet_global_interface_functions_t *f)
+snet_serialize_type_fun_t SNetGlobalGetSerializeTypeFun(snet_global_interface_functions_t *f)
 {
   return( f->serialize_type_fun);
 }
 
-snet_mpi_serialize_type_fun_t SNetGetSerializeTypeFunFromRec(snet_record_t *rec)
+snet_serialize_type_fun_t SNetGetSerializeTypeFunFromRec(snet_record_t *rec)
 {
   return( SNetGlobalGetSerializeTypeFun( SNetGlobalGetInterface( SNetRecGetInterfaceId( rec))));
 }
 
-snet_mpi_serialize_type_fun_t SNetGetSerializeTypeFun(int id)
+snet_serialize_type_fun_t SNetGetSerializeTypeFun(int id)
 {
   return( SNetGlobalGetSerializeTypeFun( SNetGlobalGetInterface( id)));
 }
 
 
-void SNetGlobalSetDeserializeTypeFun(snet_global_interface_functions_t *f, snet_mpi_deserialize_type_fun_t desrialize_type_fun)
+void SNetGlobalSetDeserializeTypeFun(snet_global_interface_functions_t *f, snet_deserialize_type_fun_t desrialize_type_fun)
 {
   f->desrialize_type_fun = desrialize_type_fun;
 }
 
-snet_mpi_deserialize_type_fun_t SNetGlobalGetDeserializeTypeFun(snet_global_interface_functions_t *f)
+snet_deserialize_type_fun_t SNetGlobalGetDeserializeTypeFun(snet_global_interface_functions_t *f)
 {
   return( f->desrialize_type_fun);
 }
 
-snet_mpi_deserialize_type_fun_t SNetGetDeserializeTypeFunFromRec(snet_record_t *rec)
+snet_deserialize_type_fun_t SNetGetDeserializeTypeFunFromRec(snet_record_t *rec)
 {
   return( SNetGlobalGetDeserializeTypeFun( SNetGlobalGetInterface( SNetRecGetInterfaceId( rec))));
 }
 
-snet_mpi_deserialize_type_fun_t SNetGetDeserializeTypeFun(int id)
+snet_deserialize_type_fun_t SNetGetDeserializeTypeFun(int id)
 {
   return( SNetGlobalGetDeserializeTypeFun( SNetGlobalGetInterface( id)));
 }
 
 
-void SNetGlobalSetPackFun(snet_global_interface_functions_t *f, snet_mpi_pack_fun_t packfun)
+void SNetGlobalSetPackFun(snet_global_interface_functions_t *f, snet_pack_fun_t packfun)
 {
   f->packfun = packfun;
 }
 
-snet_mpi_pack_fun_t SNetGlobalGetPackFun(snet_global_interface_functions_t *f)
+snet_pack_fun_t SNetGlobalGetPackFun(snet_global_interface_functions_t *f)
 {
   return( f->packfun);
 }
 
-snet_mpi_pack_fun_t SNetGetPackFunFromRec(snet_record_t *rec)
+snet_pack_fun_t SNetGetPackFunFromRec(snet_record_t *rec)
 {
   return( SNetGlobalGetPackFun( SNetGlobalGetInterface( SNetRecGetInterfaceId( rec))));
 }
 
-snet_mpi_pack_fun_t SNetGetPackFun(int id)
+snet_pack_fun_t SNetGetPackFun(int id)
 {
   return( SNetGlobalGetPackFun( SNetGlobalGetInterface( id)));
 }
 
 
-void SNetGlobalSetUnpackFun(snet_global_interface_functions_t *f, snet_mpi_unpack_fun_t unpackfun)
+void SNetGlobalSetUnpackFun(snet_global_interface_functions_t *f, snet_unpack_fun_t unpackfun)
 {
   f->unpackfun = unpackfun;
 }
 
-snet_mpi_unpack_fun_t SNetGlobalGetUnpackFun(snet_global_interface_functions_t *f)
+snet_unpack_fun_t SNetGlobalGetUnpackFun(snet_global_interface_functions_t *f)
 {
   return( f->unpackfun);
 }
 
-snet_mpi_unpack_fun_t SNetGetUnpackFunFromRec(snet_record_t *rec)
+snet_unpack_fun_t SNetGetUnpackFunFromRec(snet_record_t *rec)
 {
   return( SNetGlobalGetUnpackFun( SNetGlobalGetInterface( SNetRecGetInterfaceId( rec))));
 }
 
-snet_mpi_unpack_fun_t SNetGetUnpackFun(int id)
+snet_unpack_fun_t SNetGetUnpackFun(int id)
 {
   return( SNetGlobalGetUnpackFun( SNetGlobalGetInterface( id)));
 }
 
-void SNetGlobalSetCleanupFun(snet_global_interface_functions_t *f, snet_mpi_cleanup_fun_t cleanupfun)
+void SNetGlobalSetCleanupFun(snet_global_interface_functions_t *f, snet_cleanup_fun_t cleanupfun)
 {
   f->cleanupfun = cleanupfun;
 }
 
-snet_mpi_cleanup_fun_t SNetGlobalGetCleanupFun(snet_global_interface_functions_t *f)
+snet_cleanup_fun_t SNetGlobalGetCleanupFun(snet_global_interface_functions_t *f)
 {
   return( f->cleanupfun);
 }
 
-snet_mpi_cleanup_fun_t SNetGetCleanupFunFromRec(snet_record_t *rec)
+snet_cleanup_fun_t SNetGetCleanupFunFromRec(snet_record_t *rec)
 {
   return( SNetGlobalGetCleanupFun( SNetGlobalGetInterface( SNetRecGetInterfaceId( rec))));
 }
 
-snet_mpi_cleanup_fun_t SNetGetCleanupFun(int id)
+snet_cleanup_fun_t SNetGetCleanupFun(int id)
 {
   return( SNetGlobalGetCleanupFun( SNetGlobalGetInterface( id)));
 }
-
-#endif /* DISTRIBUTED_SNET */
 
 /* END -- GLOBALS                                                            */
 /* ************************************************************************* */

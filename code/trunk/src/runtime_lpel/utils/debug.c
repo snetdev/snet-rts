@@ -1,13 +1,10 @@
 #include <pthread.h>
 #include <string.h>
 
-#ifdef DISTRIBUTED_SNET
-#include <mpi.h>
-#endif /* DISTRIBUTED_SNET */
-
 #include "debug.h"
 #include "record_p.h"
 #include "memfun.h"
+#include "distribution.h"
 
 extern char* SNetUtilDebugDumpRecord(snet_record_t *source, char* storage) {
   if(source == NULL) {
@@ -68,15 +65,8 @@ extern void SNetUtilDebugFatal(char* m, ...) {
   memset(temp, 0, strlen(m) + MAX_SIZE);
 
   va_start(p, m);
-#ifdef DISTRIBUTED_SNET
-  int my_rank;
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-  num = sprintf(temp, "(SNET FATAL (NODE %d THREAD %lu) ", my_rank, pthread_self());
-#else
-  num = sprintf(temp, "(SNET FATAL (THREAD %lu) ", pthread_self());
-#endif /* DISTRIBUTED_SNET */
+  num = sprintf(temp, "(SNET FATAL (NODE %d THREAD %lu) ", SNetNodeLocation, pthread_self());
   ret = vsprintf(temp + num, m, p);
   
   if(ret < 0) {
@@ -112,15 +102,7 @@ extern void SNetUtilDebugNotice(char *m, ...) {
   memset(temp, 0, strlen(m) + MAX_SIZE);
 
   va_start(p, m);
-#ifdef DISTRIBUTED_SNET
-  int my_rank;
-
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-  num = sprintf(temp, "(SNET NOTICE (NODE %d THREAD %lu) ", my_rank, pthread_self());
-#else
-  num = sprintf(temp, "(SNET NOTICE (THREAD %lu) ", pthread_self());
-#endif /* DISTRIBUTED_SNET */
+  num = sprintf(temp, "(SNET NOTICE (NODE %d THREAD %lu) ", SNetNodeLocation, pthread_self());
   ret = vsprintf(temp + num, m, p);
   
   if(ret < 0) {

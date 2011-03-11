@@ -35,12 +35,7 @@
 
 #include "lpelif.h"
 #include "lpel.h"
-
-#ifdef DISTRIBUTED_SNET
-#include "routing.h"
-#include "debug.h"
-#endif /* DISTRIBUTED_SNET */
-
+#include "distribution.h"
 
 /* --------------------------------------------------------
  * Syncro Cell: Flow Inheritance, uncomment desired variant
@@ -344,42 +339,33 @@ static void SyncBoxTask( lpel_task_t *self, void *arg)
  * Synchro-Box creation function
  */
 snet_stream_t *SNetSync( snet_stream_t *input,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *outtype,
     snet_typeencoding_t *patterns,
     snet_expr_list_t *guards )
 {
   snet_stream_t *output;
   sync_arg_t *sarg;
-#ifdef DISTRIBUTED_SNET
-  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location); 
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    SNetUtilDebugNotice("Synchrocell created");
-#endif /* DISTRIBUTED_DEBUG */
-#endif /* DISTRIBUTED_SNET */
 
+  input = SNetRouteUpdate(info, input, location);
+  if(location == SNetNodeLocation) {
     output = (snet_stream_t*) LpelStreamCreate();
     sarg = (sync_arg_t *) SNetMemAlloc( sizeof( sync_arg_t));
     sarg->input  = (lpel_stream_t*) input;
     sarg->output = (lpel_stream_t*) output;
-    sarg->outtype = outtype; 
+    sarg->outtype = outtype;
     sarg->patterns = patterns;
     sarg->guards = guards;
 
     SNetLpelIfSpawnEntity( SyncBoxTask, (void*)sarg, ENTITY_sync, NULL);
 
-#ifdef DISTRIBUTED_SNET
   } else {
     SNetDestroyTypeEncoding( outtype);
     SNetDestroyTypeEncoding( patterns);
     SNetEdestroyList(guards);
     output = input;
   }
-#endif /* DISTRIBUTED_SNET */
   return( output);
 }
 

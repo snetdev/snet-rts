@@ -29,10 +29,7 @@
 #include "debug.h"
 
 #include "lpelif.h"
-
-#ifdef DISTRIBUTED_SNET
 #include "distribution.h"
-#endif /* DISTRIBUTED_SNET */
 
 
 typedef struct { 
@@ -162,42 +159,36 @@ static void GlobOutputTask( lpel_task_t *self, void* data)
   handle_t *hnd = (handle_t *)data;
   snet_record_t *rec = NULL;
 
-#ifdef DISTRIBUTED_SNET
-  hnd->buffer = (lpel_stream_t*) DistributionWaitForOutput();
-#endif /* DISTRIBUTED_SNET */
-
   if(hnd->buffer != NULL) {
     lpel_stream_desc_t *instream = LpelStreamOpen( self, hnd->buffer, 'r');
 
     while(!terminate){
       rec = LpelStreamRead( instream);
       if(rec != NULL) {
-	switch(SNetRecGetDescriptor(rec)) {
-	case REC_sync:
+        switch(SNetRecGetDescriptor(rec)) {
+        case REC_sync:
           {
             lpel_stream_t *newstream = (lpel_stream_t*) SNetRecGetStream(rec);
             LpelStreamReplace( instream, newstream);
             hnd->buffer = newstream;
           }
-	  break;
-	case REC_data:
-	case REC_collect:
-	case REC_sort_end:
-	case REC_trigger_initialiser:
-	  printRec(rec, hnd);
-	  break;
-	case REC_terminate:
-	  printRec(rec, hnd);
-	  terminate = true;
-#ifdef DISTRIBUTED_SNET
-	  DistributionStop();
-#endif /* DISTRIBUTED_SNET */
-	  break;
-	default:
-	  break;
-	}
-	
-	SNetRecDestroy(rec);
+          break;
+        case REC_data:
+        case REC_collect:
+        case REC_sort_end:
+        case REC_trigger_initialiser:
+          printRec(rec, hnd);
+          break;
+        case REC_terminate:
+          printRec(rec, hnd);
+          terminate = true;
+          SNetDistribStop();
+          break;
+        default:
+          break;
+        }
+
+        SNetRecDestroy(rec);
       }
     }
 
@@ -213,13 +204,9 @@ static void GlobOutputTask( lpel_task_t *self, void* data)
 }
 
 void SNetInOutputInit(FILE *file,
-		     snetin_label_t *labels, 
-#ifdef DISTRIBUTED_SNET
-		     snetin_interface_t *interfaces
-#else /* DISTRIBUTED_SNET */
-		     snetin_interface_t *interfaces,
-		     snet_stream_t *in_buf
-#endif /* DISTRIBUTED_SNET */
+                     snetin_label_t *labels,
+                     snetin_interface_t *interfaces,
+                     snet_stream_t *out_buf
   )
 {
   handle_t *hnd = SNetMemAlloc(sizeof(handle_t));
@@ -227,13 +214,8 @@ void SNetInOutputInit(FILE *file,
   hnd->file = file;
   hnd->labels = labels;
   hnd->interfaces = interfaces;
-#ifdef DISTRIBUTED_SNET
-  hnd->buffer = NULL;
-#else /* DISTRIBUTED_SNET */
-  hnd->buffer = (lpel_stream_t*) in_buf;
-#endif /* DISTRIBUTED_SNET */
+  hnd->buffer = (lpel_stream_t *) out_buf;
 
   /* create a joinable wrapper thread */
   SNetLpelIfSpawnWrapper( GlobOutputTask, (void*)hnd, "glob_output");
 }
-

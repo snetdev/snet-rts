@@ -1,21 +1,14 @@
 #ifndef _SNET_INFO_H_
 #define _SNET_INFO_H_
 
-#include "bool.h"
-
+typedef int snet_info_tag_t;
 typedef struct snet_info snet_info_t;
 
-#ifdef DISTRIBUTED_SNET
-struct snet_routing_context;
-#endif /* DISTRIBUTED_SNET */
-
-
+snet_info_tag_t SNetInfoCreateTag();
 snet_info_t *SNetInfoInit();
+void SNetInfoSetTag(snet_info_t *info, snet_info_tag_t tag, void *data);
+void *SNetInfoGetTag(snet_info_t *info, snet_info_tag_t tag);
+void *SNetInfoDelTag(snet_info_t *info, snet_info_tag_t tag);
+snet_info_t *SNetInfoCopy(snet_info_t *info);
 void SNetInfoDestroy(snet_info_t *info);
-
-#ifdef DISTRIBUTED_SNET
-void SNetInfoSetRoutingContext(snet_info_t *info, struct snet_routing_context *context);
-struct snet_routing_context *SNetInfoGetRoutingContext(snet_info_t *info);
-
-#endif /* DISTRIBUTED_SNET */
 #endif /* _SNET_INFO_H_H */

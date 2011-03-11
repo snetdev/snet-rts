@@ -36,12 +36,7 @@
 #include "debug.h"
 
 #include "lpel.h"
-
-
-#ifdef DISTRIBUTED_SNET
 #include "distribution.h"
-#endif /* DISTRIBUTED_SNET */
-
 
 static FILE *SNetInOpenFile(const char *file, const char *args)
 {
@@ -159,13 +154,15 @@ static void SNetInClose(FILE *file)
 /**
  * Main starting entry point of the SNet program
  */
-int SNetInRun(int argc, char *argv[],
-	      char *static_labels[], int number_of_labels, 
-	      char *static_interfaces[], int number_of_interfaces, 
-	      snet_startup_fun_t fun)
+int SNetInRun(int argc, char **argv,
+              char *static_labels[], int number_of_labels,
+              char *static_interfaces[], int number_of_interfaces,
+              snet_startup_fun_t fun)
 {
   FILE *input = stdin;
   FILE *output = stdout;
+  snet_stream_t *input_stream = NULL;
+  snet_stream_t *output_stream = NULL;
   int i = 0;
   snet_info_t *info;
   snetin_label_t *labels = NULL;
@@ -178,15 +175,6 @@ int SNetInRun(int argc, char *argv[],
   int num_workers = 0;
   int mon_level = 0;
   int do_excl = 0;
-  int rank = -1;
-#ifndef DISTRIBUTED_SNET
-  snet_stream_t *global_in = NULL;
-  snet_stream_t *global_out = NULL;
-#endif /* DISTRIBUTED_SNET */
-
-#ifdef DISTRIBUTED_SNET
-  rank = DistributionInit(argc, argv);
-#endif /* DISTRIBUTED_SNET */
 
   /* Parse argv: */
   for(i = 1; i < argc; i++) {
@@ -255,12 +243,12 @@ int SNetInRun(int argc, char *argv[],
       output = SNetInOpenOutputSocket(addr, port);
     }
   }
- 
+
   if(input == NULL) {
 
     if(output != stdout && output != NULL) {
       SNetInClose(output);
-    }  
+    }
 
     SNetUtilDebugFatal("");
   }
@@ -280,47 +268,35 @@ int SNetInRun(int argc, char *argv[],
 
   labels     = SNetInLabelInit(static_labels, number_of_labels);
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
-  
+  SNetDistribInit(argc, argv);
 
-  
   /* Initialise LPEL and its interfacing modules */
-  SNetLpelIfInit( rank, num_workers, do_excl, mon_level);
+  SNetLpelIfInit( SNetNodeLocation, num_workers, do_excl, mon_level);
 
   SNetObserverInit(labels, interfaces);
 
   info = SNetInfoInit();
+  SNetDistribStart(info);
 
-#ifdef DISTRIBUTED_SNET
-  DistributionStart(fun, info);
+  input_stream = (snet_stream_t*) LpelStreamCreate();
+  output_stream = fun(input_stream, info, SNetNodeLocation);
 
-  /* create output thread */
-  SNetInOutputInit(output, labels, interfaces);
+  if (SNetNodeLocation == 0) { //FIXME: probably shouldn't be hardcoded like this
+    /* create output thread */
+    SNetInOutputInit(output, labels, interfaces, output_stream);
 
-  /* create input thread */
-  SNetInInputInit(input, labels, interfaces);
+    /* create input thread */
+    SNetInInputInit(input, labels, interfaces, input_stream);
+  }
 
-#else
-  global_in = (snet_stream_t*) LpelStreamCreate();
-  global_out = fun(global_in, info);
-
-  /* create output thread */
-  SNetInOutputInit(output, labels, interfaces, global_out);
- 
-  /* create input thread */
-  SNetInInputInit(input, labels, interfaces, global_in);
-
-#endif /* DISTRIBUTED_SNET */ 
+  /* wait on workers, cleanup LPEL */
+  SNetLpelIfDestroy();
 
   SNetInfoDestroy(info);
 
   /* destroy observers */
   SNetObserverDestroy();
 
-  /* wait on workers, cleanup LPEL */
-  SNetLpelIfDestroy();
-
-
-  
   SNetInLabelDestroy(labels);
   SNetInInterfaceDestroy(interfaces);
 
@@ -332,9 +308,7 @@ int SNetInRun(int argc, char *argv[],
     SNetInClose(output);
   }
 
-#ifdef DISTRIBUTED_SNET
-  DistributionDestroy();
-#endif /* DISTRIBUTED_SNET */ 
+  SNetDistribDestroy();
 
   return 0;
 }

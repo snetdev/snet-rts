@@ -16,11 +16,6 @@ typedef union record_types snet_record_types_t;
 #include "bool.h"
 #include "constants.h"
 
-#ifdef DISTRIBUTED_SNET
-#include <mpi.h>
-#include "id.h"
-#endif /* DISTRIBUTED_SNET */
-
 /* 
  * data structure for the record
  */
@@ -305,11 +300,6 @@ extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id);
 extern snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec);
 extern snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mode);
 
-
-#ifdef DISTRIBUTED_SNET
-extern int SNetRecPack(snet_record_t *rec, MPI_Comm comm, int *pos, void *buf, int buf_size);
-extern snet_record_t *SNetRecUnpack(MPI_Comm comm, int *pos, void *buf, int buf_size);
-#endif
 
 #if 0
 /*

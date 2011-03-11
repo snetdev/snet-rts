@@ -10,16 +10,10 @@
 
 #include "lpelif.h"
 #include "lpel.h"
+#include "distribution.h"
 
-#ifdef DISTRIBUTED_SNET
-#include "routing.h"
-#include "fun.h"
-#include "debug.h"
-#endif /* DISTRIBUTED_SNET */
-
-
-static bool MatchesExitPattern( snet_record_t *rec, 
-    snet_typeencoding_t *patterns, snet_expr_list_t *guards) 
+static bool MatchesExitPattern( snet_record_t *rec,
+    snet_typeencoding_t *patterns, snet_expr_list_t *guards)
 {
   int i;
   bool is_match;
@@ -49,6 +43,7 @@ typedef struct {
   snet_typeencoding_t *exit_tags;
   snet_startup_fun_t box, selffun;
   snet_expr_list_t *guards;
+  snet_info_t *info;
   bool is_det, is_incarnate;
 } star_arg_t;
 
@@ -68,20 +63,8 @@ static void StarBoxTask( lpel_task_t *self, void *arg)
   /* for deterministic variant: */
   int counter = 0;
 
-#ifdef DISTRIBUTED_SNET
-  int node_id;
-  snet_fun_id_t fun_id;
-#endif /* DISTRIBUTED_SNET */
-
   instream  = LpelStreamOpen( self, sarg->input, 'r');
   outstream = LpelStreamOpen( self, sarg->output, 'w');
-
-#ifdef DISTRIBUTED_SNET
-  node_id = SNetIDServiceGetNodeID();
-  if(!SNetDistFunFun2ID(sarg->box, &fun_id)) {
-    /* TODO: This is an error!*/
-  }
-#endif /* DISTRIBUTED_SNET */
 
   /* MAIN LOOP */
   while( !terminate) {
@@ -107,19 +90,8 @@ static void StarBoxTask( lpel_task_t *self, void *arg)
             nextstream = LpelStreamOpen( self, (lpel_stream_t*) nextstream_addr, 'w');
             /* register new buffer with dispatcher,
                starstream is returned by selffun, which is SNetStarIncarnate */
-            {
-              snet_info_t *info;
-              info = SNetInfoInit();
-#ifdef DISTRIBUTED_SNET
-              SNetInfoSetRoutingContext(info, SNetRoutingContextInit(SNetRoutingGetNewID(), true, node_id, &fun_id, node_id));
-              starstream = SNetSerial(nextstream_addr, info, node_id , sarg->box, sarg->selffun);
-              starstream = SNetRoutingContextEnd(SNetInfoGetRoutingContext(info), starstream);
-#else
-              /* starstream is the outstream of BOX + STAR_INC serial */
-              starstream = SNetSerial(nextstream_addr, info, sarg->box, sarg->selffun);
-#endif /* DISTRIBUTED_SNET */
-              SNetInfoDestroy(info);
-            }
+            starstream = SNetSerial(nextstream_addr, sarg->info, SNetNodeLocation , sarg->box, sarg->selffun);
+
             /* notify collector about the new instance */
             LpelStreamWrite( outstream, SNetRecCreate(REC_collect, starstream));
           }
@@ -202,11 +174,10 @@ static void StarBoxTask( lpel_task_t *self, void *arg)
 
   /* destroy the arg */
   SNetEdestroyList( sarg->guards);
+  SNetInfoDestroy( sarg->info);
   SNetDestroyTypeEncoding( sarg->exit_tags);
   SNetMemFree( sarg);
 } /* STAR BOX TASK END */
-
-
 
 
 
@@ -222,10 +193,8 @@ static void StarBoxTask( lpel_task_t *self, void *arg)
  * dependent on parameters is_incarnate and is_det
  */
 static snet_stream_t *CreateStar( snet_stream_t *input,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *type,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
@@ -238,18 +207,8 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
   star_arg_t *sarg;
   lpel_stream_t *newstream;
 
-#ifdef DISTRIBUTED_SNET
-  input = SNetRoutingContextUpdate(SNetInfoGetRoutingContext(info), input, location);
-  if(location == SNetIDServiceGetNodeID()) {
-#ifdef DISTRIBUTED_DEBUG
-    if (!is_incarnate) {
-      SNetUtilDebugNotice( (is_det) ? "DetStar created" : "Star created");
-    } else {
-      SNetUtilDebugNotice((is_det)? "DetStar incarnate created" : "Star incarnate created");
-    }
-#endif /* DISTRIBUTED_DEBUG */
-#endif /* DISTRIBUTED_SNET */
-
+  input = SNetRouteUpdate(info, input, location);
+  if(location == SNetNodeLocation) {
     sarg = (star_arg_t *) SNetMemAlloc( sizeof(star_arg_t));
     sarg->input = (lpel_stream_t*) input;
     newstream = LpelStreamCreate();
@@ -268,6 +227,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->selffun = box_b;
     sarg->exit_tags = type;
     sarg->guards = guards;
+    sarg->info = SNetInfoCopy(info);
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
 
@@ -276,18 +236,14 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
         NULL
         );
 
-#ifdef DISTRIBUTED_SNET
   } else {
     SNetEdestroyList( guards);
     SNetDestroyTypeEncoding( type);
     output = input;
   }
-#endif /* DISTRIBUTED_SNET */
+
   return( output);
 }
-
-
-
 
 
 
@@ -296,20 +252,14 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
  * Star creation function
  */
 snet_stream_t *SNetStar( snet_stream_t *input,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *type,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
 {
-  return CreateStar( input, info,
-#ifdef DISTRIBUTED_SNET
-      location,
-#endif /* DISTRIBUTED_SNET */
-      type, guards, box_a, box_b,
+  return CreateStar( input, info, location, type, guards, box_a, box_b,
       false, /* not incarnate */
       false /* not det */
       );
@@ -321,20 +271,14 @@ snet_stream_t *SNetStar( snet_stream_t *input,
  * Star incarnate creation function
  */
 snet_stream_t *SNetStarIncarnate( snet_stream_t *input,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *type,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
 {
-  return CreateStar( input, info,
-#ifdef DISTRIBUTED_SNET
-      location,
-#endif /* DISTRIBUTED_SNET */
-      type, guards, box_a, box_b,
+  return CreateStar( input, info, location, type, guards, box_a, box_b,
       true, /* is incarnate */
       false /* not det */
       );
@@ -346,20 +290,14 @@ snet_stream_t *SNetStarIncarnate( snet_stream_t *input,
  * Det Star creation function
  */
 snet_stream_t *SNetStarDet(snet_stream_t *input,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *type,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
 {
-  return CreateStar( input, info,
-#ifdef DISTRIBUTED_SNET
-      location,
-#endif /* DISTRIBUTED_SNET */
-      type, guards, box_a, box_b,
+  return CreateStar( input, info, location, type, guards, box_a, box_b,
       false, /* not incarnate */
       true /* is det */
       );
@@ -371,22 +309,15 @@ snet_stream_t *SNetStarDet(snet_stream_t *input,
  * Det star incarnate creation function
  */
 snet_stream_t *SNetStarDetIncarnate(snet_stream_t *input,
-    snet_info_t *info, 
-#ifdef DISTRIBUTED_SNET
+    snet_info_t *info,
     int location,
-#endif /* DISTRIBUTED_SNET */
     snet_typeencoding_t *type,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
 {
-  return CreateStar( input, info,
-#ifdef DISTRIBUTED_SNET
-      location,
-#endif /* DISTRIBUTED_SNET */
-      type, guards, box_a, box_b,
+  return CreateStar( input, info, location, type, guards, box_a, box_b,
       true, /* is incarnate */
       true /* is det */
       );
 }
-
