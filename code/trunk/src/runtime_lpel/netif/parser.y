@@ -498,9 +498,9 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	    if(iid != INTERFACE_UNKNOWN) {
 	
         if(current.mode == MODE_TEXTUAL) {
-          data = SNetGetDeserializationFun(iid)(yyin);
+          data = SNetInterfaceGet(iid)->deserialisefun(yyin);
 	      } else if(current.mode == MODE_BINARY) {
-		        data = SNetGetDecodingFun(iid)(yyin);
+		        data = SNetInterfaceGet(iid)->decodefun(yyin);
 	      } else {
 		        data = NULL;
 		        yyerror("Unknown data mode");

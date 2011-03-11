@@ -719,9 +719,9 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
 	  fprintf(file,"<field label=\"%s\" interface=\"%s\" >", label, interface);
 
 	  if(mode == MODE_textual) {
-	    SNetGetSerializationFun(id)(file, SNetRecGetField(rec, i));
+	    SNetInterfaceGet(id)->serialisefun(file, SNetRecGetField(rec, i));
 	  }else {
-	    SNetGetEncodingFun(id)(file, SNetRecGetField(rec, i));
+	    SNetInterfaceGet(id)->encodefun(file, SNetRecGetField(rec, i));
 	  }
 
 	  fprintf(file,"</field>");

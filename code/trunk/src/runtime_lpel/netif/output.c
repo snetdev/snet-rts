@@ -78,9 +78,9 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 		    interface);
 	    
 	    if(mode == MODE_textual) { 
-	      SNetGetSerializationFun(id)(hnd->file, SNetRecGetField(rec, i));
+	      SNetInterfaceGet(id)->serialisefun(hnd->file, SNetRecGetField(rec, i));
 	    }else {
-	      SNetGetEncodingFun(id)(hnd->file, SNetRecGetField(rec, i));
+	      SNetInterfaceGet(id)->encodefun(hnd->file, SNetRecGetField(rec, i));
 	    }
 	    
 	    fprintf(hnd->file, "</field>");

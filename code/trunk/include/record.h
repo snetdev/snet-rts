@@ -267,7 +267,7 @@ extern int *SNetRecGetUnconsumedFieldNames( snet_record_t *rec);
 
 
 
-// adds tag. copies array of ints to a new 
+// adds tag. copies array of ints to a new
 // array, which has its size increased by one.
 extern bool SNetRecAddTag( snet_record_t *rec, int name);
 extern bool SNetRecAddBTag( snet_record_t *rec, int name);
@@ -289,9 +289,6 @@ extern int SNetRecGetNum( snet_record_t *rec);
 extern int SNetRecGetLevel( snet_record_t *rec);
 
 
-//extern snet_lang_descr_t SNetRecGetLanguage( snet_record_t *rec);
-//extern void SNetRecSetLanguage( snet_record_t *rec, snet_lang_descr_t lang);
-
 extern snet_variantencoding_t *SNetRecGetVariantEncoding( snet_record_t *rec);
 
 extern int SNetRecGetInterfaceId( snet_record_t *rec);
@@ -299,44 +296,4 @@ extern snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id);
 
 extern snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec);
 extern snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mode);
-
-
-#if 0
-/*
- * returns if we keep track of the iteration this record is in
- * RETURNS: 1 if we do, 0 otherwise
- */
-extern int SNetRecHasIteration(snet_record_t *rec);
-
-/*
- * returns the number of times this record was iterated in the current star
- * RETURNS: amount of iterations
- */
-extern int SNetRecGetIteration(snet_record_t *rec);
-
-/*
- * Increments the times this record was iterated in the current star
- * by 1.
- */
-extern void SNetRecIncIteration(snet_record_t *rec);
-
-/*
- * Adds a new iteration counter and initializes this counter with the given
- * initial value. Iteration counters that are already present will be saved
- */
-extern void SNetRecAddIteration(snet_record_t *rec, int inital_value);
-
-/*
- * Removes the current iteration counter.
- */
-
-extern void SNetRecRemoveIteration(snet_record_t *rec);
-
-extern void SNetRecCopyIterations(snet_record_t *source, snet_record_t *target);
-
-extern snet_util_stack_t *SNetRecGetIterationStack(snet_record_t *rec);
-#endif
-
-
 #endif /* _RECORD_H_ */
-

@@ -269,7 +269,7 @@ void SNetRecDestroy( snet_record_t *rec)
       case REC_data:
         num = SNetRecGetNumFields( rec);
         names = SNetRecGetUnconsumedFieldNames( rec);
-        /*
+        /* FIXME
         for( i=0; i<num; i++) {
           offset = FindName( SNetTencGetFieldNames( GetVEnc( rec)),
               SNetTencGetNumFields( GetVEnc( rec)), names[i]);
@@ -281,7 +281,7 @@ void SNetRecDestroy( snet_record_t *rec)
           SNetRefDestroy(DATA_REC( rec, fields)[offset]);
         }*/
         //#ifndef DISTRIBUTED
-        freefun = SNetGetFreeFunFromRec( rec);
+        freefun = SNetInterfaceGet(SNetRecGetInterfaceId(rec))->freefun;
         for (i=0; i<num; i++) {
             freefun(SNetRecTakeField( rec, names[i]));
         }
@@ -462,7 +462,7 @@ void *SNetRecReadField( snet_record_t *rec, int name)
   /*
   return SNetRefCopy( SNetRefGetData(DATA_REC( rec, fields[offset])));
   */
-  copyfun = SNetGetCopyFunFromRec(rec);
+  copyfun = SNetInterfaceGet(SNetRecGetInterfaceId(rec))->copyfun;
   return (copyfun(DATA_REC(rec, fields[offset])));
 }
 
@@ -726,7 +726,7 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
 
     SNetMemFree(names);
     */
-    copyfun = SNetGetCopyFunFromRec(rec);
+    copyfun = SNetInterfaceGet(SNetRecGetInterfaceId(rec))->copyfun;
     for (i=0; i <SNetRecGetNumFields( rec); i++) {
         DATA_REC( new_rec, fields[i]) = copyfun(DATA_REC(rec, fields[i]));
     }
@@ -850,7 +850,7 @@ void SNetRecCopyFieldToRec( snet_record_t *from, int old_name ,
   /*
   DATA_REC( to, fields[offset_new]) = SNetRefCopy(DATA_REC( from, fields[offset_old]));
   */
-  copyfun = SNetGlobalGetCopyFun(SNetGlobalGetInterface(SNetRecGetInterfaceId(from)));
+  copyfun = SNetInterfaceGet(SNetRecGetInterfaceId(from))->copyfun;
   DATA_REC( to, fields[offset_new]) = copyfun(DATA_REC( from, fields[offset_old]));
   return;
 }
