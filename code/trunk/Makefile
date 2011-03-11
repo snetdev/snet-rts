@@ -8,8 +8,8 @@
 #
 # Calling conventions:
 #
-#  Start rules: 
-#    default    compile executables as developer code and libraries as product 
+#  Start rules:
+#    default    compile executables as developer code and libraries as product
 #               code
 #    devel      compile everything as developer code
 #    prod       compile everything as product code
@@ -18,13 +18,13 @@
 #    cleanprod  cleanup only compiled files (product code)
 #
 #  Parameters:
-#    DEPS="no"  de-activate dependency checking meachanism 
+#    DEPS="no"  de-activate dependency checking mechanism
 #    HIDE=""    show important commands issued by make (debugging)
 #
 ###############################################################################
 
 
-#######################################################################################
+###############################################################################
 #
 # general setup:
 #
@@ -50,9 +50,9 @@ include $(PROJECT_ROOT)/src/makefiles/config.mkf
 # Start rules
 #
 # The definition of these rules deliberately enforces a sequence in compilation
-# rather than expressing the dependencies properly by makefile rules. 
+# rather than expressing the dependencies properly by makefile rules.
 #
-# The rationale is that commonlib and maketools rather seldomly require 
+# The rationale is that commonlib and maketools rather seldomly require
 # recompilation. With proper dependencies, however, they would require a
 # dependency from every compilation rule. This would lead to extensive
 # rechecking at compile time that is absolutely superfluous.
@@ -80,20 +80,12 @@ default devel prod: checks
                         PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/lpellib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/lpellib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime_lpel  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
-ifeq ($(MAKEDISTR),yes)
-	$(HIDE) $(MAKE) -C src/runtime clean_no_targetdir
-	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-			PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" DISTRIBUTED=yes
-	$(HIDE) $(MAKE) -C src/runtime_lpel clean_no_targetdir
-	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-			PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" DISTRIBUTED=yes
-endif
+	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/distrib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/demo     DEPS="$(DEPS)" HIDE="$(HIDE)" \
@@ -103,8 +95,8 @@ endif
 	@$(ECHO) "* Building S-Net completed"
 	@$(ECHO) "************************************************************"
 	@$(ECHO) ""
- 
-clean cleandevel cleanprod: 
+
+clean cleandevel cleanprod:
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Cleaning S-Net"
@@ -117,18 +109,12 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/lpellib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/lpellib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
-ifeq ($(MAKEDISTR),yes)
-	$(HIDE) $(MAKE) -C src/runtime   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@ DISTRIBUTED=yes
-	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@ DISTRIBUTED=yes
-endif
+	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/distrib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/demo     DEPS="$(DEPS)" HIDE="$(HIDE)" \
@@ -148,7 +134,7 @@ efence:
 # Rules for configure mechanism
 #
 
-config: 
+config:
 	svn lock configure $(AUTOHEADERED)
 	autoconf
 	autoheader
@@ -161,6 +147,3 @@ config:
 #
 
 include $(PROJECT_ROOT)/src/makefiles/check.mkf
-
-
-
