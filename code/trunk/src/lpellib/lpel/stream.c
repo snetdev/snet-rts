@@ -417,7 +417,7 @@ lpel_stream_desc_t *LpelStreamPoll( lpel_stream_list_t *list)
       } else {
         /* nothing in the buffer, register stream as activator */
         sd->stream->is_poll = 1;
-        sd->event_flags |= STDESC_WAITON;
+        //sd->event_flags |= STDESC_WAITON;
         /* TODO marking all streams does potentially flood the log-files
            - is it desired to have anyway?
         MarkDirty( sd);

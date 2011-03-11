@@ -126,7 +126,7 @@ void _LpelMonitoringDebug( monitoring_t *mon, const char *fmt, ...)
 
   va_start(ap, fmt);
   vfprintf( mon->outfile, fmt, ap);
-  //fflush(mon->outfile);
+  fflush(mon->outfile);
   va_end(ap);
 }
 
@@ -179,6 +179,6 @@ void _LpelMonitoringOutput( monitoring_t *mon, lpel_task_t *t)
   }
 
   fprintf( file, "\n");
-  //fflush( file);
+  fflush( file);
 }
 

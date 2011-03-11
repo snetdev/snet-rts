@@ -12,21 +12,22 @@
 /* Free node pool management functions                                        */
 /******************************************************************************/
 
-mailbox_node_t *MailboxGetFree( mailbox_t *mbox)
+static mailbox_node_t *MailboxGetFree( mailbox_t *mbox)
 {
   mailbox_node_t * volatile top;
   volatile unsigned long ocnt;
   do {
-    ocnt = mbox->out_cnt;
-    top = mbox->list_free;
+    ocnt = mbox->stack_free.out_cnt;
+    top = mbox->stack_free.top;
     if (!top) return NULL;
-  } while( !CAS2( (void**) &mbox->list_free, top, ocnt, top->next, ocnt+1));
+  } while( !CAS2( (void**) &mbox->stack_free.top, top, ocnt, top->next, ocnt+1));
+  //} while( !compare_and_swap( (void**) &mbox->stack_free.top, top, top->next));
   
   top->next = NULL;
   return top;
 }
 
-mailbox_node_t *MailboxAllocateNode( void)
+static mailbox_node_t *MailboxAllocateNode( void)
 {
   /* allocate new node */
   mailbox_node_t *n = (mailbox_node_t *)malloc( sizeof( mailbox_node_t));
@@ -34,13 +35,13 @@ mailbox_node_t *MailboxAllocateNode( void)
   return n;
 }
 
-void MailboxPutFree( mailbox_t *mbox, mailbox_node_t *node)
+static void MailboxPutFree( mailbox_t *mbox, mailbox_node_t *node)
 {
   mailbox_node_t * volatile top;
   do {
-    top = mbox->list_free;
+    top = mbox->stack_free.top;
     node->next = top;
-  } while( !compare_and_swap( (void**) &mbox->list_free, top, node));
+  } while( !compare_and_swap( (void**) &mbox->stack_free.top, top, node));
 }
 
 
@@ -62,14 +63,14 @@ void MailboxInit( mailbox_t *mbox)
 #endif
   (void) sem_init( &mbox->counter, 0, 0);
 
-  mbox->list_free  = NULL;
-  mbox->out_cnt = 0;
+  mbox->stack_free.top     = NULL;
+  mbox->stack_free.out_cnt = 0;
 
   /* pre-create free nodes */
   for (i=0; i<100; i++) {
     n = (mailbox_node_t *)malloc( sizeof( mailbox_node_t));
-    n->next = mbox->list_free;
-    mbox->list_free = n;
+    n->next = mbox->stack_free.top;
+    mbox->stack_free.top = n;
   }
 
   /* dummy node */
@@ -98,9 +99,9 @@ void MailboxCleanup( mailbox_t *mbox)
   /* free list_free */
   do {
     do {
-      top = mbox->list_free;
+      top = mbox->stack_free.top;
       if (!top) break;
-    } while( !compare_and_swap( (void**) &mbox->list_free, top, top->next));
+    } while( !compare_and_swap( (void**) &mbox->stack_free.top, top, top->next));
 
     if (top) free(top);
   } while(top);
@@ -116,11 +117,17 @@ void MailboxCleanup( mailbox_t *mbox)
 
 
 
-
-
-void MailboxSend( mailbox_t *mbox, mailbox_node_t *node)
+void MailboxSend( mailbox_t *mbox, workermsg_t *msg)
 {
+  /* get a free node from recepient */
+  mailbox_node_t *node = MailboxGetFree( mbox);
+  if (node == NULL) {
+    node = MailboxAllocateNode();
+  }
   assert( node != NULL);
+
+  /* copy the message */
+  node->msg = *msg;
 
   /* aquire tail lock */
 #ifdef MAILBOX_USE_SPINLOCK

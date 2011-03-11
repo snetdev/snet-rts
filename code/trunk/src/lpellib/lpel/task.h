@@ -1,7 +1,7 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
-
+#include <pthread.h>
 #include <pcl.h>    /* tasks are executed in user-space with help of
                        GNU Portable Coroutine Library  */
 
@@ -16,6 +16,9 @@
 
 #define TASK_FLAGS(t, f)  (((t)->flags & (f)) == (f))
 
+#ifdef __LINUX__
+#define TASK_USE_SPINLOCK
+#endif
 
 typedef enum {
   TASK_CREATED = 'C',
@@ -87,7 +90,12 @@ struct lpel_task_t {
   lpel_stream_desc_t *dirty_list;
 
   /* CODE */
-  coroutine_t ctx;      /** context of the task*/
+#ifdef TASK_USE_SPINLOCK
+  pthread_spinlock_t lock;   /** spinlock */
+#else
+  pthread_mutex_t lock; /** mutex */
+#endif
+  coroutine_t mctx;     /** context of the task*/
   lpel_taskfunc_t code; /** function of the task */
   void *inarg;          /** input argument  */
 };
@@ -100,8 +108,28 @@ void         _LpelTaskDestroy( lpel_task_t *t);
 void _LpelTaskReset( lpel_task_t *t, lpel_taskreq_t *req);
 void _LpelTaskUnset( lpel_task_t *t);
 
-void _LpelTaskCall(  lpel_task_t *t);
 void _LpelTaskBlock( lpel_task_t *ct, taskstate_blocked_t block_on);
+
+
+
+static inline void TaskLock( lpel_task_t *t)
+{
+#ifdef TASK_USE_SPINLOCK
+  pthread_spin_lock( &t->lock);
+#else
+  pthread_mutex_lock( &t->lock);
+#endif
+}
+
+static inline void TaskUnlock( lpel_task_t *t)
+{
+#ifdef TASK_USE_SPINLOCK
+  pthread_spin_unlock( &t->lock);
+#else
+  pthread_mutex_unlock( &t->lock);
+#endif
+}
+
 
 
 #endif /* _TASK_H_ */

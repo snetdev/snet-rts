@@ -12,7 +12,7 @@
  * worker msg body
  */
 typedef enum {
-  WORKER_MSG_TERMINATE,
+  WORKER_MSG_TERMINATE = 1,
   WORKER_MSG_WAKEUP,
   WORKER_MSG_ASSIGN,
   WORKER_MSG_REQUEST,
