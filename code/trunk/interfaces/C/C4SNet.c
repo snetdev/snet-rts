@@ -13,11 +13,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef DISTRIBUTED_SNET
-#include <mpi.h>
-#endif /* DISTRIBUTED_SNET */
-
-
 #include "C4SNet.h"
 #include "memfun.h"
 #include "snettypes.h"
@@ -82,14 +77,6 @@ static void *C4SNetDataDeserialize(FILE *file);
 static int C4SNetDataEncode( FILE *file, void *ptr);
 static void *C4SNetDataDecode(FILE *file);
 
-#ifdef DISTRIBUTED_SNET
-static int C4SNetSerializeType(MPI_Comm comm, void *data, void *buf, int size);
-static int C4SNetPack(MPI_Comm comm, void *data, MPI_Datatype *type, void **buf, void **opt);
-static void C4SNetCleanup(MPI_Datatype type, void *opt);
-static int C4SNetDeserializeType(MPI_Comm comm, void *buf, int size, MPI_Datatype *type, void **opt);
-static void* C4SNetUnpack(MPI_Comm comm, void *buf, MPI_Datatype type, int count, void *opt);
-#endif /* DISTRIBUTED_SNET */
-
 /***************************** Auxiliary functions ****************************/
 
 /* Return size of the data type. */
@@ -149,27 +136,18 @@ int C4SNetSizeof(c4snet_data_t *data)
 void C4SNetInit( int id)
 {
   interface_id = id;
-  SNetGlobalRegisterInterface( id, 
-#ifdef DISTRIBUTED_SNET
-                               SNET_interface_MPI,
-#else
-                               SNET_interface_basic,
-#endif /* DISTRIBUTED_SNET */
-			       &C4SNetDataFree, 
+  SNetGlobalRegisterInterface( id,
+			       &C4SNetDataFree,
 			       &C4SNetDataShallowCopy,
-			       &C4SNetDataSerialize, 
+			       &C4SNetDataSerialize,
 			       &C4SNetDataDeserialize,
-			       &C4SNetDataEncode, 
-#ifdef DISTRIBUTED_SNET
+			       &C4SNetDataEncode,
 			       &C4SNetDataDecode,
-			       &C4SNetSerializeType,
-			       &C4SNetDeserializeType,
-			       &C4SNetPack,
-			       &C4SNetUnpack,
-			       &C4SNetCleanup);
-#else
-                               &C4SNetDataDecode);		       
-#endif /* DISTRIBUTED_SNET */
+			       NULL,
+			       NULL,
+			       NULL,
+			       NULL,
+			       NULL);
 }
 
 /* Communicates back the results of the box. */
@@ -181,7 +159,6 @@ void C4SNetOut( void *hnd, int variant, ...)
   SNetOutRawV( (struct handle *)hnd, interface_id, variant, args);
   va_end( args);
 }
-
 
 
 /****************************** Data functions *****************************/
@@ -1043,177 +1020,6 @@ static void *C4SNetDataDecode(FILE *file)
   return c;
 }
 
-#ifdef DISTRIBUTED_SNET
-
-static MPI_Datatype C4SNetTypeToMPIType(c4snet_type_t type)
-{
-  switch(type) {
-  case CTYPE_uchar: 
-    return MPI_UNSIGNED_CHAR;
-    break;
-  case CTYPE_char: 
-    return MPI_CHAR;
-    break;
-  case CTYPE_ushort: 
-    return MPI_UNSIGNED_SHORT;
-    break;
-  case CTYPE_short: 
-    return MPI_SHORT;
-    break;
-  case CTYPE_uint: 
-    return MPI_UNSIGNED;
-    break;
-  case CTYPE_int: 
-    return MPI_INT;
-    break;
-  case CTYPE_ulong:
-    return MPI_UNSIGNED_LONG;
-    break;
-  case CTYPE_long:
-    return MPI_LONG;
-    break;
-  case CTYPE_float: 
-    return MPI_FLOAT;
-    break;
-  case CTYPE_double: 
-    return MPI_DOUBLE;
-    break;
-  case CTYPE_ldouble: 
-    return MPI_LONG_DOUBLE;
-    break;
-  case CTYPE_unknown:
-  default:
-    break;
-  }
-
-  return MPI_DATATYPE_NULL;
-}
-
-/*
-static c4snet_type_t C4SNetMPITypeToType(MPI_Datatype type)
-{
-
-  if(type == MPI_UNSIGNED_CHAR) {
-    return CTYPE_uchar; 
-  } else if(type == MPI_CHAR) {
-    return CTYPE_char;
-  } else if(type == MPI_UNSIGNED_SHORT) {
-    return CTYPE_ushort;
-  } else if(type == MPI_SHORT) {
-    return CTYPE_short;
-  } else if(type == MPI_UNSIGNED) {
-    return CTYPE_uint;
-  } else if(type == MPI_INT) {
-    return CTYPE_int;
-  } else if(type == MPI_UNSIGNED_LONG) {
-    return CTYPE_ulong;
-  } else if(type == MPI_LONG) {
-    return CTYPE_long;
-  } else if(type == MPI_FLOAT) {
-    return CTYPE_float;
-  } else if(type == MPI_DOUBLE) {
-    return CTYPE_double;
-  } else if(type == MPI_LONG_DOUBLE) {
-    return CTYPE_ldouble;
-  }
-
-  return CTYPE_unknown;
-}
-*/
-
-static int C4SNetSerializeType(MPI_Comm comm, void *data, void *buf, int size)
-{
-  c4snet_data_t *temp = (c4snet_data_t *)data;
-  int pack_size;
-  int position = 0;
-
-  MPI_Pack_size(2, MPI_INT, comm, &pack_size);
-
-  if(pack_size < size) {
-    MPI_Pack(&temp->type, 1, MPI_INT, buf, size, &position, comm);
-    MPI_Pack(&temp->size, 1, MPI_INT, buf, size, &position, comm);
-  } else {
-    position = SNET_INTERFACE_ERR;
-  }
-
-  return position;
-}
-
-static int C4SNetPack(MPI_Comm comm, void *data, MPI_Datatype *type, void **buf, void **opt)
-{
-  c4snet_data_t *temp = (c4snet_data_t *)data;
-  int count;
-
-  *type = C4SNetTypeToMPIType(temp->type);
-
-  if(temp->vtype == VTYPE_array) {
-    count = temp->size;
-    *buf = temp->data.ptr;
-  } else {
-    count = 1;
-    *buf = (void *)&temp->data;
-  }
-
-  return count;
-}
-
-static void C4SNetCleanup(MPI_Datatype type, void *opt)
-{
-}
-
-
-
-static int C4SNetDeserializeType(MPI_Comm comm, void *buf, int size, MPI_Datatype *type, void **opt)
-{
-  int position = 0;
-  int count;
-  c4snet_data_t *c = NULL;
-  
-  if((c = ( c4snet_data_t *)SNetMemAlloc( sizeof( c4snet_data_t))) == NULL) {
-    return SNET_INTERFACE_ERR;
-  }
- 
-  c->ref_count = 1;
-
-  MPI_Unpack(buf, size, &position, &c->type, 1, MPI_INT, comm);
-  
-  MPI_Unpack(buf, size, &position, &c->size, 1, MPI_INT, comm);
-
-  if(c->size >= 0) {
-    c->vtype = VTYPE_array;
-    count = c->size;
-  } else {
-    c->vtype = VTYPE_simple;
-    count = 1;
-  }
-
-  *opt = c;
-
-  *type = C4SNetTypeToMPIType(c->type);
-
-  return count;
-}
-
-static void* C4SNetUnpack(MPI_Comm comm, void *buf, MPI_Datatype type, int count, void *opt)
-{
-  c4snet_data_t *c = (c4snet_data_t *)opt;
-  int size;
-
-  if(c->vtype == VTYPE_simple) {
-    size = C4SNetSizeof(c);
-    memcpy((void *)&c->data, buf, size);
-    SNetMemFree(buf);
-  } else {
-    c->data.ptr = buf;
-  }
- 
-  return c;
-}
-
-
-
-
-#endif /* DISTRIBUTED_SNET */
 
 
 /**************************** Container functions ***************************/

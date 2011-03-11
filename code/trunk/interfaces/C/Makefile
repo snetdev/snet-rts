@@ -6,9 +6,7 @@ CC         = gcc
 CCFLAGS    = -Wall -g -fPIC
 AR         = ar
 INCDIRS    = -I. -I$(SNETBASE)/include
-MPIINCDIRS = -I. -I$(SNETBASE)/include -I$(MPIROOT)/include
 COPY       = cp
-DISTFLAGS  = -DDISTRIBUTED_SNET 
 
 # = = = = = = = = = = = = = = = = = = = =
 OBJECTS     = $(NAME).o base64.o 
@@ -33,7 +31,7 @@ all:
 
 mpi:
 	make clean
-	$(CC) $(DISTFLAGS) $(CCFLAGS) $(MPIINCDIRS) -c *.c
+	$(CC) $(CCFLAGS) -c *.c
 	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
 	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETLIBDIR)

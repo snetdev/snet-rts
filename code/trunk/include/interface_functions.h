@@ -12,16 +12,6 @@
 /* forward declaration */
 struct record;
 
-#ifdef DISTRIBUTED_SNET
-#include <mpi.h>
-#endif /* DISTRIBUTED_SNET */
-
-typedef enum {
-  SNET_interface_unknown,
-  SNET_interface_basic,   /* Free, copy, serialize, deserialize, encode, decode */
-  SNET_interface_MPI      /* Basic + MPI functions */
-} snet_interface_support_level_t;
-
 typedef void (*snet_free_fun_t)( void*);
 typedef void* (*snet_copy_fun_t)( void*);
 typedef int (*snet_serialise_fun_t)( FILE *, void*);
@@ -29,22 +19,10 @@ typedef void* (*snet_deserialise_fun_t)( FILE *);
 typedef int (*snet_encode_fun_t)( FILE *, void*);
 typedef void* (*snet_decode_fun_t)( FILE *);
 
-#ifdef DISTRIBUTED_SNET
-
 #define SNET_INTERFACE_ERR     -1
 #define SNET_INTERFACE_ERR_BUF -2
 
-/* MPI_Pack data type information into buffer for sending.
- *
- * 1: IN:     comm
- * 2: IN:     data
- * 3: IN/OUT: buffer
- * 4: IN:     size of the buffer
- *
- * return: position in the buffer (Used as count for MPI_Send (as position from MPI_Pack))
- */
-
-typedef int (*snet_mpi_serialize_type_fun_t)(MPI_Comm, void*, void*, int);
+typedef int (*snet_serialize_type_fun_t)(void *data, void *buffer, int size);
 
 /* Prepare data for sending.
  *
@@ -56,8 +34,7 @@ typedef int (*snet_mpi_serialize_type_fun_t)(MPI_Comm, void*, void*, int);
  *
  * return: count of elements of returned type (Used as count for MPI_Send)
  */ 
-
-typedef int (*snet_mpi_pack_fun_t)(MPI_Comm, void*, MPI_Datatype*, void**, void**);
+typedef int (*snet_pack_fun_t)(void *data, void** result, void**, void**);
 
 /* Free resources used in sending.
  *
@@ -67,8 +44,7 @@ typedef int (*snet_mpi_pack_fun_t)(MPI_Comm, void*, MPI_Datatype*, void**, void*
  * Note: Expected to free all resources (MPI type, possible buffer for packing,
  *       optional return value etc.) reserved by the pack_fun!
  */
-
-typedef void (*snet_mpi_cleanup_fun_t)(MPI_Datatype, void*);
+typedef void (*snet_cleanup_fun_t)(void *, void*);
 
 /* Deserialize data type from buffer.
  *
@@ -81,8 +57,7 @@ typedef void (*snet_mpi_cleanup_fun_t)(MPI_Datatype, void*);
  * return: count of elements of returned type (Used as count for MPI_Recv)
  *
  */
-
-typedef int (*snet_mpi_deserialize_type_fun_t)(MPI_Comm, void*, int, MPI_Datatype*, void**);
+typedef int (*snet_deserialize_type_fun_t)(void *buffer, int size, void**, void**);
 
 /* 1: IN: comm
  * 2: IN: buffer (buffer received by MPI_Recv, function must free this, or it can be used directly as the data)
@@ -95,27 +70,23 @@ typedef int (*snet_mpi_deserialize_type_fun_t)(MPI_Comm, void*, int, MPI_Datatyp
  * Note: Expected to free all resources (MPI type, possible buffer for packing if
  *       not used directly etc.) used in this and deserialize_type_fun.
  */
-
-typedef void* (*snet_mpi_unpack_fun_t)(MPI_Comm, void*, MPI_Datatype, int, void*);
-
-#endif /* DISTRIBUTED_SNET */
+typedef void* (*snet_unpack_fun_t)(void*, void*, int, void*);
 
 typedef struct {
   int id;
-  snet_interface_support_level_t level;
   snet_free_fun_t freefun;
   snet_copy_fun_t copyfun;
   snet_serialise_fun_t serialisefun;
   snet_deserialise_fun_t deserialisefun;
   snet_encode_fun_t encodefun;
   snet_decode_fun_t decodefun;
-#ifdef DISTRIBUTED_SNET
-  snet_mpi_serialize_type_fun_t serialize_type_fun;
-  snet_mpi_deserialize_type_fun_t desrialize_type_fun;
-  snet_mpi_pack_fun_t packfun;
-  snet_mpi_unpack_fun_t unpackfun;
-  snet_mpi_cleanup_fun_t cleanupfun;
-#endif /* DISTRIBUTED_SNET */
+
+  snet_serialize_type_fun_t serialize_type_fun;
+  snet_deserialize_type_fun_t desrialize_type_fun;
+  snet_pack_fun_t packfun;
+  snet_unpack_fun_t unpackfun;
+  snet_cleanup_fun_t cleanupfun;
+
 } snet_global_interface_functions_t;
 
 typedef struct {
@@ -134,23 +105,18 @@ typedef struct {
 #endif
 
 bool SNetGlobalRegisterInterface( int id,
-                                  snet_interface_support_level_t level, 
 				  snet_free_fun_t freefun,
 				  snet_copy_fun_t copyfun,
 				  snet_serialise_fun_t serialisefun,
 				  snet_deserialise_fun_t deserialisefun,
 				  snet_encode_fun_t encodefun,
-
-#ifdef DISTRIBUTED_SNET
 				  snet_decode_fun_t decodefun,
-				  snet_mpi_serialize_type_fun_t serialize_type_fun,
-				  snet_mpi_deserialize_type_fun_t desrialize_type_fun,
-				  snet_mpi_pack_fun_t packfun,
-				  snet_mpi_unpack_fun_t unpackfun,
-				  snet_mpi_cleanup_fun_t cleanupfun);
-#else
-                                  snet_decode_fun_t decodefun);
-#endif /* DISTRIBUTED_SNET */    
+
+				  snet_serialize_type_fun_t serialize_type_fun,
+				  snet_deserialize_type_fun_t desrialize_type_fun,
+				  snet_pack_fun_t packfun,
+				  snet_unpack_fun_t unpackfun,
+				  snet_cleanup_fun_t cleanupfun);
 
 
 
@@ -203,36 +169,29 @@ snet_deserialise_fun_t SNetGetDeserializationFun(int id);
 snet_encode_fun_t SNetGetEncodingFun(int id);
 snet_decode_fun_t SNetGetDecodingFun(int id);
 
-snet_interface_support_level_t SNetGlobalGetInterfaceSupportLevel(snet_global_interface_functions_t *f);
-snet_interface_support_level_t SNetGetInterfaceSupportLevelFromRec(struct record *rec);
-snet_interface_support_level_t SNetGetInterfaceSupportLevel(int id);
+void SNetGlobalSetSerializeTypeFun(snet_global_interface_functions_t *f, snet_serialize_type_fun_t serialize_type_fun);
+snet_serialize_type_fun_t SNetGlobalGetSerializeTypeFun(snet_global_interface_functions_t *f);
+snet_serialize_type_fun_t SNetGetSerializeTypeFunFromRec(struct record *rec);
+snet_serialize_type_fun_t SNetGetSerializeTypeFun(int id);
 
-#ifdef DISTRIBUTED_SNET
+void SNetGlobalSetDeserializeTypeFun(snet_global_interface_functions_t *f, snet_deserialize_type_fun_t desrialize_type_fun);
+snet_deserialize_type_fun_t SNetGlobalGetDeserializeTypeFun(snet_global_interface_functions_t *f);
+snet_deserialize_type_fun_t SNetGetDeserializeTypeFunFromRec(struct record *rec);
+snet_deserialize_type_fun_t SNetGetDeserializeTypeFun(int id);
 
-void SNetGlobalSetSerializeTypeFun(snet_global_interface_functions_t *f, snet_mpi_serialize_type_fun_t serialize_type_fun);
-snet_mpi_serialize_type_fun_t SNetGlobalGetSerializeTypeFun(snet_global_interface_functions_t *f);
-snet_mpi_serialize_type_fun_t SNetGetSerializeTypeFunFromRec(struct record *rec);
-snet_mpi_serialize_type_fun_t SNetGetSerializeTypeFun(int id);
+void SNetGlobalSetPackFun(snet_global_interface_functions_t *f, snet_pack_fun_t packfun);
+snet_pack_fun_t SNetGlobalGetPackFun(snet_global_interface_functions_t *f);
+snet_pack_fun_t SNetGetPackFunFromRec(struct record *rec);
+snet_pack_fun_t SNetGetPackFun(int id);
 
-void SNetGlobalSetDeserializeTypeFun(snet_global_interface_functions_t *f, snet_mpi_deserialize_type_fun_t desrialize_type_fun);
-snet_mpi_deserialize_type_fun_t SNetGlobalGetDeserializeTypeFun(snet_global_interface_functions_t *f);
-snet_mpi_deserialize_type_fun_t SNetGetDeserializeTypeFunFromRec(struct record *rec);
-snet_mpi_deserialize_type_fun_t SNetGetDeserializeTypeFun(int id);
+void SNetGlobalSetUnpackFun(snet_global_interface_functions_t *f, snet_unpack_fun_t unpackfun);
+snet_unpack_fun_t SNetGlobalGetUnpackFun(snet_global_interface_functions_t *f);
+snet_unpack_fun_t SNetGetUnpackFunFromRec(struct record *rec);
+snet_unpack_fun_t SNetGetUnpackFun(int id);
 
-void SNetGlobalSetPackFun(snet_global_interface_functions_t *f, snet_mpi_pack_fun_t packfun);
-snet_mpi_pack_fun_t SNetGlobalGetPackFun(snet_global_interface_functions_t *f);
-snet_mpi_pack_fun_t SNetGetPackFunFromRec(struct record *rec);
-snet_mpi_pack_fun_t SNetGetPackFun(int id);
+void SNetGlobalSetCleanupFun(snet_global_interface_functions_t *f, snet_cleanup_fun_t cleanupfun);
+snet_cleanup_fun_t SNetGlobalGetCleanupFun(snet_global_interface_functions_t *f);
+snet_cleanup_fun_t SNetGetCleanupFunFromRec(struct record *rec);
+snet_cleanup_fun_t SNetGetCleanupFun(int id);
 
-void SNetGlobalSetUnpackFun(snet_global_interface_functions_t *f, snet_mpi_unpack_fun_t unpackfun);
-snet_mpi_unpack_fun_t SNetGlobalGetUnpackFun(snet_global_interface_functions_t *f);
-snet_mpi_unpack_fun_t SNetGetUnpackFunFromRec(struct record *rec);
-snet_mpi_unpack_fun_t SNetGetUnpackFun(int id);
-
-void SNetGlobalSetCleanupFun(snet_global_interface_functions_t *f, snet_mpi_cleanup_fun_t cleanupfun);
-snet_mpi_cleanup_fun_t SNetGlobalGetCleanupFun(snet_global_interface_functions_t *f);
-snet_mpi_cleanup_fun_t SNetGetCleanupFunFromRec(struct record *rec);
-snet_mpi_cleanup_fun_t SNetGetCleanupFun(int id);
-
-#endif /* DISTRIBUTED_SNET */
 #endif
