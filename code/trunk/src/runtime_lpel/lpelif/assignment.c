@@ -12,9 +12,8 @@ static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static int num_workers;
 static int box_next;
 static int non_box;
-static int *boxcnt;
+static unsigned int *boxcnt = NULL;
 
-static int blockcnt = 0;
 
 typedef struct nameround {
   struct nameround *next;
@@ -27,7 +26,7 @@ static nameround_t *head = NULL;
 
 static int findMinBoxes( void)
 {
-  int i, i_min=0, minval=0;
+  unsigned int i, i_min=0, minval=-1;
   for (i=0; i<num_workers; i++) {
     if (boxcnt[i] < minval) {
       minval = boxcnt[i];
@@ -42,8 +41,12 @@ static int findMinBoxes( void)
  */
 void AssignmentInit(int lpel_num_workers)
 {
+  int i;
   num_workers = lpel_num_workers;
-  boxcnt = (int*) SNetMemAlloc( num_workers * sizeof(int));
+  boxcnt = (unsigned int*) SNetMemAlloc( num_workers * sizeof(unsigned int));
+  for(i=0;i<num_workers;i++) {
+    boxcnt[i] = 0;
+  }
   non_box = num_workers -1;
   box_next = 0;
 }
@@ -51,6 +54,11 @@ void AssignmentInit(int lpel_num_workers)
 void AssignmentCleanup( void)
 {
   SNetMemFree( boxcnt);
+  while (head != NULL) {
+    nameround_t *n = head;
+    head = n->next;
+    SNetMemFree(n);
+  }
 }
 
 /**
@@ -66,14 +74,8 @@ int AssignmentGetWID(lpel_taskreq_t *t, bool is_box, char *boxname)
   {
     target = box_next;
     if (is_box) {
-//      blockcnt++;
-//      if (blockcnt == 100) {
-//        blockcnt = 0;
-        {
-          box_next += 1;
-          if (box_next == num_workers) box_next = 0;
-        }
-//      }
+      box_next += 1;
+      if (box_next == num_workers) box_next = 0;
     }
   }
   pthread_mutex_unlock( &lock);
