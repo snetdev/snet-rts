@@ -1,0 +1,14 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+ 
+
+
+net pipe 
+{
+  box boxA( (<A>) -> (<A>));
+  box boxB((<B>) -> (<B>));
+} connect boxA .. boxB;
+
