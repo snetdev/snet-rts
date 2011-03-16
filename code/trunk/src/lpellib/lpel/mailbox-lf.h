@@ -8,7 +8,7 @@
 
 #include "bool.h"
 
-#ifdef __LINUX__
+#ifdef __linux__
 #define MAILBOX_USE_SPINLOCK
 #endif
 

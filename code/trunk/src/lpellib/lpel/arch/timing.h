@@ -13,18 +13,19 @@
 typedef struct timespec timing_t;
 
 #define DO_TIMING
-
 /**
  * Current timestamp
  * @param t   pointer to timing_t
  */
-#if defined(__LINUX__) && defined(DO_TIMING)
+#if defined(__linux__) && defined(DO_TIMING)
 # define TIMESTAMP(t) do { \
     /*TODO check if CLOCK_MONOTONIC is available */ \
+    /*(void) clock_gettime(CLOCK_PROCESS_CPUTIME_ID, (t) );*/\
     (void) clock_gettime(CLOCK_MONOTONIC, (t) ); \
   } while (0)
 #else
 # define TIMESTAMP(t) /*NOP*/
+#warning "***  Timestamping is off in the binary! ***"
 #endif
 
 #define TIMING_BILLION 1000000000L

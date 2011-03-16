@@ -16,9 +16,7 @@
 
 #define TASK_FLAGS(t, f)  (((t)->flags & (f)) == (f))
 
-#ifdef __LINUX__
 #define TASK_USE_SPINLOCK
-#endif
 
 typedef enum {
   TASK_CREATED = 'C',
