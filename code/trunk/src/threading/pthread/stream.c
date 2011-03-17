@@ -19,7 +19,8 @@ snet_stream_t *SNetStreamCreate(int capacity)
   pthread_cond_init(&s->notempty, NULL);
   pthread_cond_init(&s->notfull, NULL);
   
-  s->size = capacity;
+
+  s->size = (capacity > 0) ? capacity : SNET_STREAM_DEFAULT_CAPACITY;
   s->head = 0;
   s->tail = 0;
   s->count = 0;

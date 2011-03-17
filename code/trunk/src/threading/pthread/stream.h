@@ -5,6 +5,10 @@
 
 #include "threading.h"
 
+
+#define SNET_STREAM_DEFAULT_CAPACITY  10
+
+
 struct snet_stream_t {
   pthread_mutex_t lock;
   pthread_cond_t  notempty;

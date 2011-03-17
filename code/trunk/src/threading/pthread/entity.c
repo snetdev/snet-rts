@@ -1,4 +1,11 @@
 
+#define USE_CORE_AFFINITY 1
+
+#ifdef USE_CORE_AFFINITY
+#define _GNU_SOURCE
+#endif
+
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -17,9 +24,22 @@ static pthread_cond_t  entity_cond = PTHREAD_COND_INITIALIZER;
 /* prototype for pthread thread function */
 static void *SNetEntityThread(void *arg);
 
+static size_t SNetEntityStackSize(snet_entity_id_t id);
+
+#ifdef USE_CORE_AFFINITY
+typedef enum {
+  DEFAULT,
+  MASKMOD2,
+  STRICTLYFIRST,
+  ALLBUTFIRST
+} affinity_type_t;
+
+static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at);
+#endif
 
 
-int SNetThreadingInit(int entity_cores, int comm_cores)
+
+int SNetThreadingInit(void)
 {
   /* initialize the entity counter to 0 */
   entity_count = 0;
@@ -36,13 +56,13 @@ int SNetThreadingProcess(void)
   while (entity_count > 0) {
     pthread_cond_wait( &entity_cond, &entity_lock );
   }
-  pthread_mutex_lock( &entity_lock );
+  pthread_mutex_unlock( &entity_lock );
 
   return 0;
 }
 
 
-int SNetThreadingShutdown(void)
+int SNetThreadingCleanup(void)
 {
 
   return 0;
@@ -54,7 +74,7 @@ int SNetEntitySpawn(snet_entity_id_t type, snet_entityfunc_t func, void *arg)
   int res;
   pthread_t p;
   pthread_attr_t attr;
-  int stacksize = 0;
+  size_t stacksize;
 
   /* create snet_entity_t */
   snet_entity_t *self = malloc(sizeof(snet_entity_t));
@@ -68,23 +88,26 @@ int SNetEntitySpawn(snet_entity_id_t type, snet_entityfunc_t func, void *arg)
   /* increment entity counter */
   pthread_mutex_lock( &entity_lock );
   entity_count += 1;
-  pthread_mutex_lock( &entity_lock );
+  pthread_mutex_unlock( &entity_lock );
 
 
   /* create pthread: */
-  stacksize = 0;//FIXME: stacksize dep on entity_id
-
-  /* TODO core affinity */
 
   (void) pthread_attr_init( &attr);
 
-  res = pthread_attr_setstacksize(&attr, stacksize);
-  if (res != 0) {
-    //error(1, res, "Cannot set stack size!");
-    return 1;
+  /* stacksize */
+  stacksize = SNetEntityStackSize(type);
+  
+  if (stacksize > 0) {
+    res = pthread_attr_setstacksize(&attr, stacksize);
+    if (res != 0) {
+      //error(1, res, "Cannot set stack size!");
+      return 1;
+    }
   }
 
-  res = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+  /* all threads are detached */
+  res = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
   if (res != 0) {
     //error(1, res, "Cannot set detached!");
     return 1;
@@ -98,6 +121,17 @@ int SNetEntitySpawn(snet_entity_id_t type, snet_entityfunc_t func, void *arg)
   }
   pthread_attr_destroy( &attr);
 
+
+  /* core affinity */
+#ifdef USE_CORE_AFFINITY
+  if( type == ENTITY_other) {
+    SNetSetThreadAffinity( &p, STRICTLYFIRST);
+  } else {
+    SNetSetThreadAffinity( &p, ALLBUTFIRST);
+  }
+#endif /* USE_CORE_AFFINITY */
+
+
   return 0;
 }
 
@@ -105,9 +139,9 @@ int SNetEntitySpawn(snet_entity_id_t type, snet_entityfunc_t func, void *arg)
 
 void SNetEntityYield(snet_entity_t *self)
 {
-  /* NOP,
-   * our pthreads are preemptive anyway
-   */
+#ifdef _GNU_SOURCE
+  (void) pthread_yield();
+#endif
 }
 
 
@@ -128,7 +162,7 @@ void SNetEntityExit(snet_entity_t *self)
   if (entity_count == 0) {
     pthread_cond_signal( &entity_cond );
   }
-  pthread_mutex_lock( &entity_lock );
+  pthread_mutex_unlock( &entity_lock );
 
   
   (void) pthread_exit(NULL);
@@ -136,8 +170,9 @@ void SNetEntityExit(snet_entity_t *self)
 
 
 
-
-
+/******************************************************************************
+ * Private functions
+ *****************************************************************************/
 
 static void *SNetEntityThread(void *arg)
 {
@@ -149,3 +184,72 @@ static void *SNetEntityThread(void *arg)
   /* following line is not reached, just for compiler happiness */
   return NULL;
 }
+
+
+static size_t SNetEntityStackSize(snet_entity_id_t id)
+{
+  size_t stack_size;
+
+  switch( id) {
+    case ENTITY_parallel:
+    case ENTITY_star:
+    case ENTITY_split:
+    case ENTITY_sync:
+    case ENTITY_filter:
+    case ENTITY_collect:
+      stack_size = 256*1024; /* HGHILY EXPERIMENTAL! */
+      break;
+    case ENTITY_box:
+    case ENTITY_other:
+      /* return 0 (caller will use default stack size) */
+      stack_size = 0;
+      break;
+    default:
+      /* we do not want an unhandled case here */
+      assert(0);
+  }
+
+ return( stack_size);   
+}
+
+#ifdef USE_CORE_AFFINITY
+static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at)
+{
+  int i, res, numcpus;
+  cpu_set_t cpuset;
+
+  res = pthread_getaffinity_np( *pt, sizeof(cpu_set_t), &cpuset);
+  if (res != 0) {
+    return 1;
+  }
+
+  numcpus = CPU_COUNT(&cpuset);
+  
+  switch(at) {
+    case MASKMOD2: 
+      CPU_ZERO(&cpuset);
+      for( i=0; i<numcpus; i+=2) {
+        CPU_SET( i, &cpuset);
+      }
+      break;
+    case STRICTLYFIRST:
+      CPU_ZERO(&cpuset);
+      CPU_SET(0, &cpuset);
+      break;
+    case ALLBUTFIRST: 
+      CPU_CLR(0, &cpuset);
+      break;
+    default:
+      break;
+  } 
+
+  /* set the affinity mask */
+  res = pthread_setaffinity_np( *pt, sizeof(cpu_set_t), &cpuset);
+  if( res != 0) {
+    return 1;
+  }
+  
+  return 0;
+}
+#endif
+

@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 
+#include "snettypes.h"
 
 
 /*****************************************************************************
@@ -31,17 +32,9 @@
 /**
  * Initialize the threading backend
  *
- * @param entity_cores  number of cores dedicated to processing entities
- * @param comm_cores    number of cores dedicated to communication
- *                      at the boundaries and other non-entity threads
- *                      if comm_cores = 0, the threads are distributed
- *                      over the enitity_cores.
- * @note  If the specified parameters are not supported by the backend,
- *        they are ignored.
- *
  * @return 0 on success
  */
-int SNetThreadingInit(int entity_cores, int comm_cores);
+int SNetThreadingInit(void);
 
 
 
@@ -65,7 +58,7 @@ int SNetThreadingProcess(void);
  *
  * @return 0 on success
  */
-int SNetThreadingShutdown(void);
+int SNetThreadingCleanup(void);
 
 
 
@@ -93,8 +86,16 @@ typedef void (*snet_entityfunc_t)(snet_entity_t *self, void *arg);
  * (can be extended in future implementations):
  */
 typedef enum {
+  ENTITY_parallel,
+  ENTITY_star,
+  ENTITY_split,
+  ENTITY_box,
+  ENTITY_sync,
+  ENTITY_filter,
+  ENTITY_collect,
   ENTITY_other
 } snet_entity_id_t;
+
 
 /**
  * Spawn a new thread
@@ -132,7 +133,7 @@ void SNetEntityExit(snet_entity_t *self);
 /**
  * Stream
  */
-typedef struct snet_stream_t snet_stream_t;
+//typedef struct snet_stream_t snet_stream_t;
 
 
 /**
@@ -334,10 +335,8 @@ void SNetStreamIterDestroy(snet_stream_iter_t *iter);
  *
  * @param iter  the iterator to reset
  * @param set   the streamset for which the iterator is reset
- *
- * @return 0 on success
  */
-int SNetStreamIterReset(snet_stream_iter_t *iter, snet_streamset_t *set);
+void SNetStreamIterReset(snet_stream_iter_t *iter, snet_streamset_t *set);
 
 
 
