@@ -29,13 +29,8 @@
 #include "input.h"
 #include "observers.h"
 #include "networkinterface.h"
-
-#include "assignment.h"
-#include "lpelif.h"
-
 #include "debug.h"
-
-#include "lpel.h"
+#include "threading.h"
 #include "distribution.h"
 
 static FILE *SNetInOpenFile(const char *file, const char *args)
@@ -262,7 +257,6 @@ int SNetInRun(int argc, char **argv,
     SNetUtilDebugFatal("");
   }
 
-  /*TODO something with LPEL configuration */
 
   /* Actual SNet network interface main: */
 
@@ -271,14 +265,15 @@ int SNetInRun(int argc, char **argv,
   SNetDistribInit(argc, argv);
 
   /* Initialise LPEL and its interfacing modules */
-  SNetLpelIfInit( SNetNodeLocation, num_workers, do_excl, mon_level);
+  //SNetLpelIfInit( SNetNodeLocation, num_workers, do_excl, mon_level);
+  (void) SNetThreadingInit();
 
   SNetObserverInit(labels, interfaces);
 
   info = SNetInfoInit();
   SNetDistribStart(info);
 
-  input_stream = (snet_stream_t*) LpelStreamCreate();
+  input_stream = SNetStreamCreate(0);
   output_stream = fun(input_stream, info, SNetNodeLocation);
 
   if (SNetNodeLocation == 0) { //FIXME: probably shouldn't be hardcoded like this
@@ -289,8 +284,9 @@ int SNetInRun(int argc, char **argv,
     SNetInInputInit(input, labels, interfaces, input_stream);
   }
 
-  /* wait on workers, cleanup LPEL */
-  SNetLpelIfDestroy();
+  (void) SNetThreadingProcess();
+
+  (void) SNetThreadingCleanup();
 
   SNetInfoDestroy(info);
 

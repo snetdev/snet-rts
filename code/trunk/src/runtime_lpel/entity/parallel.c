@@ -32,12 +32,11 @@
 #include "debug.h"
 #include "distribution.h"
 
-#include "lpelif.h"
-#include "lpel.h"
+#include "threading.h"
 
 typedef struct {
-  lpel_stream_t *input;
-  lpel_stream_t **outputs;
+  snet_stream_t *input;
+  snet_stream_t **outputs;
   snet_typeencoding_list_t *types;
   bool is_det;
 } parallel_arg_t;
@@ -159,13 +158,13 @@ static int BestMatch( match_count_t **counter, int num)
  * @param counter   pointer to a counter -
  *                  if NULL, no sort records are generated
  */
-static void PutToBuffers( lpel_stream_desc_t **outstreams, int num,
+static void PutToBuffers( snet_stream_desc_t **outstreams, int num,
     int idx, snet_record_t *rec, int *counter)
 {
 
   /* write data record to target stream */
   if (outstreams[idx] != NULL) {
-    LpelStreamWrite( outstreams[idx], rec);
+    SNetStreamWrite( outstreams[idx], rec);
   }
 
   /* for the deterministic variant, broadcast sort record afterwards */
@@ -173,7 +172,7 @@ static void PutToBuffers( lpel_stream_desc_t **outstreams, int num,
     int i;
     for( i=0; i<num; i++) {
       if (outstreams[i] != NULL) {
-        LpelStreamWrite( outstreams[i],
+        SNetStreamWrite( outstreams[i],
             SNetRecCreate( REC_sort_end, 0, *counter));
       }
     }
@@ -187,13 +186,13 @@ static void PutToBuffers( lpel_stream_desc_t **outstreams, int num,
 /**
  * Main Parallel Box Task
  */
-static void ParallelBoxTask( lpel_task_t *self, void *arg)
+static void ParallelBoxTask( snet_entity_t *self, void *arg)
 {
   parallel_arg_t *parg = (parallel_arg_t *) arg;
   /* the number of outputs */
   int num = SNetTencGetNumTypes( parg->types);
-  lpel_stream_desc_t *instream;
-  lpel_stream_desc_t *outstreams[num];
+  snet_stream_desc_t *instream;
+  snet_stream_desc_t *outstreams[num];
   int i, stream_index;
   snet_record_t *rec;
   match_count_t **matchcounter;
@@ -203,12 +202,12 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
 
 
   /* open instream for reading */
-  instream = LpelStreamOpen(self, parg->input, 'r');
+  instream = SNetStreamOpen(self, parg->input, 'r');
 
   /* open outstreams for writing */
   {
     for (i=0; i<num; i++) {
-      outstreams[i] = LpelStreamOpen( self, parg->outputs[i], 'w');
+      outstreams[i] = SNetStreamOpen( self, parg->outputs[i], 'w');
     }
     /* the mem region is not needed anymore */
     SNetMemFree( parg->outputs);
@@ -227,7 +226,7 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
           SNetRecCreate( REC_terminate), 
           NULL
           );
-      LpelStreamClose( outstreams[i], false);
+      SNetStreamClose( outstreams[i], false);
       outstreams[i] = NULL;
       num_init_branches += 1; 
     }
@@ -238,10 +237,10 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
       for( i=0; i<num; i++) { 
         if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( parg->types, i)) > 0) {
           /* send a sync record to the remaining branch */
-          LpelStreamWrite( outstreams[i],
+          SNetStreamWrite( outstreams[i],
               SNetRecCreate( REC_sync, parg->input) 
               );
-          LpelStreamClose( instream, false);
+          SNetStreamClose( instream, false);
         }
       }    
     case 0: /* and terminate */
@@ -261,7 +260,7 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
     SNetUtilDebugNotice("PARALLEL %p: reading %p", outstreams, instream);
 #endif
     /* read a record from the instream */
-    rec = LpelStreamRead( instream);
+    rec = SNetStreamRead( instream);
 
     switch( SNetRecGetDescriptor( rec)) {
 
@@ -275,8 +274,8 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
 
       case REC_sync:
         {
-          lpel_stream_t *newstream = (lpel_stream_t*) SNetRecGetStream( rec);
-          LpelStreamReplace( instream, newstream);
+          snet_stream_t *newstream = SNetRecGetStream( rec);
+          SNetStreamReplace( instream, newstream);
           SNetRecDestroy( rec);
         }
         break;
@@ -292,7 +291,7 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
         /* send a copy to all */
         for( i=0; i<num; i++) {
           if (outstreams[i] != NULL) {
-            LpelStreamWrite( outstreams[i], SNetRecCopy( rec));
+            SNetStreamWrite( outstreams[i], SNetRecCopy( rec));
           }
         }
         /* destroy the original */
@@ -304,13 +303,13 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
         /* send a copy to all */
         for( i=0; i<num; i++) {
           if (outstreams[i] != NULL) {
-            LpelStreamWrite( outstreams[i], SNetRecCopy( rec));
+            SNetStreamWrite( outstreams[i], SNetRecCopy( rec));
           }
         }
         /* destroy the original */
         SNetRecDestroy( rec);
         /* close instream: only destroy if not synch'ed before */
-        LpelStreamClose( instream, true);
+        SNetStreamClose( instream, true);
         /* note that no sort record needs to be appended */
         break;
 
@@ -325,7 +324,7 @@ static void ParallelBoxTask( lpel_task_t *self, void *arg)
   /* close the outstreams */
   for( i=0; i<num; i++) {
     if (outstreams[i] != NULL) {
-      LpelStreamClose( outstreams[i], false);
+      SNetStreamClose( outstreams[i], false);
     }
     SNetMemFree( matchcounter[i]);
   }
@@ -365,12 +364,12 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 
   instream = SNetRouteUpdate(info, instream, location);
   if(location == SNetNodeLocation) {
-    collstreams = SNetMemAlloc( num * sizeof( lpel_stream_t*));
-    transits = SNetMemAlloc( num * sizeof( lpel_stream_t*));
+    collstreams = SNetMemAlloc( num * sizeof( snet_stream_t*));
+    transits = SNetMemAlloc( num * sizeof( snet_stream_t*));
 
     /* create all branches */
     for(i = 0; i < num; i++) {
-      transits[i] = (snet_stream_t*) LpelStreamCreate();
+      transits[i] = SNetStreamCreate(0);
       fun = funs[i];
       new_info = SNetInfoCopy(info);
       collstreams[i] = (*fun)(transits[i], new_info, location);
@@ -380,14 +379,12 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     outstream = CollectorCreate(num, collstreams, info);
 
     parg = SNetMemAlloc( sizeof(parallel_arg_t));
-    parg->input   = (lpel_stream_t *) instream;
-    parg->outputs = (lpel_stream_t**) transits;
+    parg->input   = instream;
+    parg->outputs = transits;
     parg->types = types;
     parg->is_det = is_det;
-    SNetLpelIfSpawnEntity( ParallelBoxTask, (void*)parg,
-        (is_det)? ENTITY_parallel_det: ENTITY_parallel_nondet,
-        NULL
-        );
+
+    SNetEntitySpawn( ENTITY_parallel, ParallelBoxTask, (void*)parg );
 
   } else {
     for(i = 0; i < num; i++) {

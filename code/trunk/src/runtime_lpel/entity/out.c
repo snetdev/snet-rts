@@ -9,7 +9,7 @@
 #include <time.h>
 #endif
 
-#include "lpel.h"
+#include "threading.h"
 
 //#define BOX_DEBUG
 
@@ -143,7 +143,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
   }
   
   /* write to stream */
-  LpelStreamWrite( hnd->out_sd, out_rec);
+  SNetStreamWrite( hnd->out_sd, out_rec);
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
@@ -249,7 +249,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
   }
 
   /* write to stream */
-  LpelStreamWrite( hnd->out_sd, out_rec);
+  SNetStreamWrite( hnd->out_sd, out_rec);
 
 
 

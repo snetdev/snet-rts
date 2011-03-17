@@ -33,8 +33,8 @@
 #include "record_p.h"
 #include "memfun.h"
 
-#include "lpelif.h"
-#include "lpel.h"
+#include "threading.h"
+
 #include "distribution.h"
 
 /* --------------------------------------------------------
@@ -209,7 +209,7 @@ static bool MatchPattern( snet_record_t *rec,
 
 
 typedef struct {
-  lpel_stream_t *input, *output;
+  snet_stream_t *input, *output;
   snet_typeencoding_t *outtype, *patterns;
   snet_expr_list_t *guards;
 } sync_arg_t;
@@ -217,20 +217,20 @@ typedef struct {
 /**
  * Sync box task
  */
-static void SyncBoxTask( lpel_task_t *self, void *arg)
+static void SyncBoxTask( snet_entity_t *self, void *arg)
 {  
   int i; 
   int match_cnt=0, new_matches=0;
   int num_patterns;
   bool terminate = false;
   sync_arg_t *sarg = (sync_arg_t *) arg;
-  lpel_stream_desc_t *outstream, *instream;
+  snet_stream_desc_t *outstream, *instream;
   snet_record_t **storage;
   snet_record_t *rec;
   snet_record_t *temp_record;
 
-  instream  = LpelStreamOpen( self, sarg->input,  'r');
-  outstream = LpelStreamOpen( self, sarg->output, 'w');
+  instream  = SNetStreamOpen( self, sarg->input,  'r');
+  outstream = SNetStreamOpen( self, sarg->output, 'w');
 
   num_patterns = SNetTencGetNumVariants( sarg->patterns);
   
@@ -243,7 +243,7 @@ static void SyncBoxTask( lpel_task_t *self, void *arg)
   /* MAIN LOOP START */
   while( !terminate) {
     /* read from input stream */
-    rec = LpelStreamRead( instream);
+    rec = SNetStreamRead( instream);
 
     switch( SNetRecGetDescriptor( rec)) {
       
@@ -260,7 +260,7 @@ static void SyncBoxTask( lpel_task_t *self, void *arg)
         }
 
         if( new_matches == 0) {
-          LpelStreamWrite( outstream, rec);
+          SNetStreamWrite( outstream, rec);
         } else {
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
@@ -275,16 +275,16 @@ static void SyncBoxTask( lpel_task_t *self, void *arg)
                                   sarg->outtype, 
                                   storage[0]);
 #endif
-            LpelStreamWrite( outstream, temp_record);
+            SNetStreamWrite( outstream, temp_record);
             /* current_state->terminated = true; */
-            LpelStreamWrite( outstream,
+            SNetStreamWrite( outstream,
                 SNetRecCreate(REC_sync, sarg->input)
                 );
 
             /* the receiver of REC_sync will destroy the outstream */
-            LpelStreamClose( outstream, false);
+            SNetStreamClose( outstream, false);
             /* instream has been sent to next entity, do not destroy  */
-            LpelStreamClose( instream, false);
+            SNetStreamClose( instream, false);
 
             terminate = true;
           }
@@ -293,8 +293,8 @@ static void SyncBoxTask( lpel_task_t *self, void *arg)
 
       case REC_sync:
         {
-          lpel_stream_t *newstream = (lpel_stream_t*) SNetRecGetStream( rec);
-          LpelStreamReplace( instream, newstream);
+          snet_stream_t *newstream = SNetRecGetStream( rec);
+          SNetStreamReplace( instream, newstream);
           SNetRecDestroy( rec);
         }
         break;
@@ -307,15 +307,14 @@ static void SyncBoxTask( lpel_task_t *self, void *arg)
 
       case REC_sort_end:
         /* forward sort record */
-        LpelStreamWrite( outstream, rec);
+        SNetStreamWrite( outstream, rec);
         break;
 
       case REC_terminate:
         terminate = true;
-        LpelStreamWrite( outstream, rec);
-        LpelStreamClose( outstream, false);
-        LpelStreamClose( instream, true);
-        LpelStreamClose( instream, false);
+        SNetStreamWrite( outstream, rec);
+        SNetStreamClose( outstream, false);
+        SNetStreamClose( instream, true);
         break;
 
       default:
@@ -350,15 +349,15 @@ snet_stream_t *SNetSync( snet_stream_t *input,
 
   input = SNetRouteUpdate(info, input, location);
   if(location == SNetNodeLocation) {
-    output = (snet_stream_t*) LpelStreamCreate();
+    output = SNetStreamCreate(0);
     sarg = (sync_arg_t *) SNetMemAlloc( sizeof( sync_arg_t));
-    sarg->input  = (lpel_stream_t*) input;
-    sarg->output = (lpel_stream_t*) output;
+    sarg->input  = input;
+    sarg->output = output;
     sarg->outtype = outtype;
     sarg->patterns = patterns;
     sarg->guards = guards;
 
-    SNetLpelIfSpawnEntity( SyncBoxTask, (void*)sarg, ENTITY_sync, NULL);
+    SNetEntitySpawn( ENTITY_sync, SyncBoxTask, (void*)sarg);
 
   } else {
     SNetDestroyTypeEncoding( outtype);

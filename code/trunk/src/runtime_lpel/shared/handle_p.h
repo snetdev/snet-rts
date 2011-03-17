@@ -2,7 +2,7 @@
 #define _HANDLE_P_H_
 
 #include "handle.h"
-#include "lpel.h"
+#include "threading.h"
 
 typedef struct {
   int num;
@@ -15,7 +15,7 @@ struct handle {
   snet_record_t *rec;
   snet_box_sign_t *sign;
   name_mapping_t *mapping;
-  lpel_stream_desc_t *out_sd;
+  snet_stream_desc_t *out_sd;
 };
 
 void SNetHndDestroy( snet_handle_t *hnd);

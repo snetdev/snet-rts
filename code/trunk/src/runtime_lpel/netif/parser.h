@@ -6,7 +6,7 @@
 #include "label.h"
 #include "interface.h"
 
-#include "lpel.h"
+#include "threading.h"
 
 /* Return values of parserParse() */
 
@@ -19,7 +19,7 @@
  * @param file File where the input is read from.
  * @param labels Set of labels to use.
  * @param interfaces Set of interfaces to use.
- * @param in_buf Buffer where the parsed records are put.
+ * @param output stream descriptor where the parsed records are put.
  *
  * @notice parserInit should be the first call to the parser!
  */
@@ -27,7 +27,7 @@
 extern void SNetInParserInit(FILE *file,
 			     snetin_label_t *labels,
 			     snetin_interface_t *interfaces,
-                             lpel_stream_desc_t *output);
+                             snet_stream_desc_t *output);
 
 
 /* Parse the next data element from standard input stream 

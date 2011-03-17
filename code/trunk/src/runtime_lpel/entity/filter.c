@@ -9,9 +9,7 @@
 #include "typeencode.h"
 #include "distribution.h"
 
-#include "lpelif.h" /* for enumeration */
-
-#include "lpel.h"
+#include "threading.h"
 
 /* ------------------------------------------------------------------------- */
 /*  SNetFilter                                                               */
@@ -422,7 +420,7 @@ snet_filter_instruction_set_t **SNetFilterInstructionsGetSets(
 /*****************************************************************************/
 
 typedef struct {
-  lpel_stream_t *input, *output;
+  snet_stream_t *input, *output;
   snet_expr_list_t *guard_list;
   snet_typeencoding_t *in_type;
   snet_typeencoding_list_t *type_list;
@@ -456,12 +454,12 @@ static void FilterArgDestroy( filter_arg_t *farg)
 /**
  * Filter task
  */
-static void FilterTask( lpel_task_t *self, void *arg)
+static void FilterTask( snet_entity_t *self, void *arg)
 {
   int i,j,k;
   bool done, terminate;
   filter_arg_t *farg = (filter_arg_t *)arg;
-  lpel_stream_desc_t *instream, *outstream;
+  snet_stream_desc_t *instream, *outstream;
   snet_record_t *in_rec;
   snet_typeencoding_t *out_type;
   snet_filter_instruction_t *current_instr;
@@ -474,13 +472,13 @@ static void FilterTask( lpel_task_t *self, void *arg)
 #ifdef FILTER_DEBUG
   SNetUtilDebugNotice("(CREATION FILTER)");
 #endif
-  instream  = LpelStreamOpen(self, farg->input, 'r');
-  outstream = LpelStreamOpen(self, farg->output, 'w');
+  instream  = SNetStreamOpen(self, farg->input, 'r');
+  outstream = SNetStreamOpen(self, farg->output, 'w');
 
   /* MAIN LOOP */
   while( !( terminate)) {
     /* read from input stream */
-    in_rec = LpelStreamRead( instream);
+    in_rec = SNetStreamRead( instream);
     done = false;
 
     switch( SNetRecGetDescriptor( in_rec)) {
@@ -539,7 +537,7 @@ static void FilterTask( lpel_task_t *self, void *arg)
               SNetUtilDebugNotice("FILTER %x: outputting %x",
                   (unsigned int) outstream, (unsigned int) out_rec);
 #endif
-              LpelStreamWrite( outstream, out_rec);
+              SNetStreamWrite( outstream, out_rec);
             } // forall variants of selected out_type
           } // if guard is true
         } // forall guards
@@ -553,8 +551,8 @@ static void FilterTask( lpel_task_t *self, void *arg)
 
       case REC_sync:
         {
-          lpel_stream_t *newstream = (lpel_stream_t*) SNetRecGetStream( in_rec);
-          LpelStreamReplace( instream, newstream);
+          snet_stream_t *newstream = SNetRecGetStream( in_rec);
+          SNetStreamReplace( instream, newstream);
           SNetRecDestroy( in_rec);
         }
         break;
@@ -569,11 +567,11 @@ static void FilterTask( lpel_task_t *self, void *arg)
 
       case REC_sort_end:
         /* forward sort record */
-        LpelStreamWrite( outstream, in_rec);
+        SNetStreamWrite( outstream, in_rec);
         break;
 
       case REC_terminate:
-          LpelStreamWrite( outstream, in_rec);
+          SNetStreamWrite( outstream, in_rec);
           terminate = true;
         break;
 
@@ -583,8 +581,8 @@ static void FilterTask( lpel_task_t *self, void *arg)
     }
   } /* MAIN LOOP END */
 
-  LpelStreamClose( outstream, false);
-  LpelStreamClose( instream, true);
+  SNetStreamClose( outstream, false);
+  SNetStreamClose( instream, true);
 
   FilterArgDestroy( farg);
 }
@@ -612,7 +610,7 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
 
   instream = SNetRouteUpdate(info, instream, location);
   if(location == SNetNodeLocation) {
-    outstream = (snet_stream_t*) LpelStreamCreate();
+    outstream = SNetStreamCreate(0);
     guard_expr = guards;
 
     if( guard_expr == NULL) {
@@ -632,14 +630,14 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
     out_types = FilterComputeTypes( num_outtypes, instr_list);
 
     farg = (filter_arg_t *) SNetMemAlloc( sizeof( filter_arg_t));
-    farg->input  = (lpel_stream_t*) instream;
-    farg->output = (lpel_stream_t*) outstream;
+    farg->input  = instream;
+    farg->output = outstream;
     farg->in_type = in_type;
     farg->type_list = out_types;
     farg->guard_list = guard_expr;
     farg->instr_lst = instr_list;
 
-    SNetLpelIfSpawnEntity( FilterTask, (void*)farg, ENTITY_filter, NULL);
+    SNetEntitySpawn( ENTITY_filter, FilterTask, (void*)farg);
 
   } else {
     SNetDestroyTypeEncoding(in_type);
@@ -684,7 +682,7 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
 
   instream = SNetRouteUpdate(info, instream, location);
   if(location == SNetNodeLocation) {
-    outstream = (snet_stream_t *) LpelStreamCreate();
+    outstream = SNetStreamCreate(0);
     guard_expr = guards;
     if( guard_expr == NULL) {
       guard_expr = SNetEcreateList( 1, SNetEconstb( true));
@@ -701,14 +699,14 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
     out_types = FilterComputeTypes( num_outtypes, instr_list);
 
     farg = (filter_arg_t *) SNetMemAlloc( sizeof( filter_arg_t));
-    farg->input  = (lpel_stream_t*) instream;
-    farg->output = (lpel_stream_t*) outstream;
+    farg->input  = instream;
+    farg->output = outstream;
     farg->in_type = in_type;
     farg->type_list = out_types;
     farg->guard_list = guard_expr;
     farg->instr_lst = instr_list;
 
-    SNetLpelIfSpawnEntity( FilterTask, (void*)farg, ENTITY_filter, NULL);
+    SNetEntitySpawn( ENTITY_filter, FilterTask, (void*)farg );
 
   } else {
     SNetDestroyTypeEncoding(in_type);
@@ -735,17 +733,17 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
 /**
  * Nameshift task
  */
-static void NameshiftTask( lpel_task_t *self, void *arg)
+static void NameshiftTask( snet_entity_t *self, void *arg)
 {
   bool terminate = false;
   filter_arg_t *farg = (filter_arg_t *)arg;
-  lpel_stream_desc_t *outstream, *instream;
+  snet_stream_desc_t *outstream, *instream;
   snet_variantencoding_t *untouched;
   snet_record_t *rec;
   int i, num, *names, offset;
 
-  instream  = LpelStreamOpen(self, farg->input, 'r');
-  outstream = LpelStreamOpen(self, farg->output, 'w');
+  instream  = SNetStreamOpen(self, farg->input, 'r');
+  outstream = SNetStreamOpen(self, farg->output, 'w');
 
   untouched = SNetTencGetVariant( farg->in_type, 1);
 
@@ -755,7 +753,7 @@ static void NameshiftTask( lpel_task_t *self, void *arg)
   /* MAIN LOOP */
   while( !terminate) {
     /* read from input stream */
-    rec = LpelStreamRead( instream);
+    rec = SNetStreamRead( instream);
 
     switch( SNetRecGetDescriptor( rec)) {
 
@@ -787,13 +785,13 @@ static void NameshiftTask( lpel_task_t *self, void *arg)
         }
         SNetMemFree( names);
 
-        LpelStreamWrite( outstream, rec);
+        SNetStreamWrite( outstream, rec);
         break;
 
       case REC_sync:
         {
-          lpel_stream_t *newstream = (lpel_stream_t*) SNetRecGetStream(rec);
-          LpelStreamReplace( instream, newstream);
+          snet_stream_t *newstream = SNetRecGetStream(rec);
+          SNetStreamReplace( instream, newstream);
           SNetRecDestroy( rec);
         }
         break;
@@ -808,11 +806,11 @@ static void NameshiftTask( lpel_task_t *self, void *arg)
 
       case REC_sort_end:
         /* forward sort record */
-        LpelStreamWrite( outstream, rec);
+        SNetStreamWrite( outstream, rec);
         break;
 
       case REC_terminate:
-        LpelStreamWrite( outstream, rec);
+        SNetStreamWrite( outstream, rec);
         terminate = true;
         break;
 
@@ -823,8 +821,8 @@ static void NameshiftTask( lpel_task_t *self, void *arg)
     }
   } /* MAIN LOOP END */
 
-  LpelStreamClose( instream, true);
-  LpelStreamClose( outstream, false);
+  SNetStreamClose( instream, true);
+  SNetStreamClose( outstream, false);
   
   FilterArgDestroy( farg);
 }
@@ -843,17 +841,17 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
   filter_arg_t *farg;
 
   if(location == SNetNodeLocation) {
-    outstream = (snet_stream_t*) LpelStreamCreate(); //SNetTlCreateLpelStream( BUFFER_SIZE);
+    outstream = SNetStreamCreate(0);
     
     farg = (filter_arg_t *) SNetMemAlloc( sizeof( filter_arg_t));
-    farg->input  = (lpel_stream_t*) instream;
-    farg->output = (lpel_stream_t*) outstream;
+    farg->input  = instream;
+    farg->output = outstream;
     farg->in_type = SNetTencTypeEncode( 1, untouched);
     farg->type_list = NULL; /* out_types */
     farg->guard_list = SNetEcreateList( 1, SNetEconsti( offset));
     farg->instr_lst = NULL; /* instructions */
     
-    SNetLpelIfSpawnEntity( NameshiftTask, (void*)farg, ENTITY_filter, NULL);
+    SNetEntitySpawn( ENTITY_filter, NameshiftTask, (void*)farg);
   
   } else {
     SNetTencDestroyVariantEncoding( untouched);

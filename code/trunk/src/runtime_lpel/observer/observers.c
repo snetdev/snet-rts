@@ -37,8 +37,7 @@
 #include "interface_functions.h"
 #include "observers.h"
 
-#include "lpelif.h"
-#include "lpel.h"
+#include "threading.h"
 
 #include "debug.h"
 #include "distribution.h"
@@ -61,13 +60,14 @@ typedef struct obs_handle {
   obstype_t obstype;    // type of the observer
   void *desc;           // Observer descriptor, depends on the type of the observer (obs_socket_t / obs_file_T)
   bool isInteractive;   // Is this observer interactive
-  lpel_stream_t *inbuf;      // LpelStream for incoming records
-  lpel_stream_t *outbuf;     // LpelStream for outgoing records
+  snet_stream_t *inbuf;      // SNetStream for incoming records
+  snet_stream_t *outbuf;     // SNetStream for outgoing records
   int id;               // Instance specific ID of this observer (NOTICE: this will change!)
   const char *code;     // Code attribute
   const char *position; // Name of the net/box to which the observer is attached to
   char type;            // Type of the observer (before/after)
   char data_level;      // Data level used
+  char name[12];
 }obs_handle_t;
 
 
@@ -854,7 +854,7 @@ static int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
 
 /** <!--********************************************************************-->
  *
- * @fn void ObserverBoxTask( lpel_task_t *self, void *arg) {
+ * @fn void ObserverBoxTask( snet_entity_t *self, void *arg) {
  *
  *   @brief  The main function for observer task.
  *
@@ -865,19 +865,19 @@ static int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
  *
  ******************************************************************************/
 
-static void ObserverBoxTask( lpel_task_t *self, void *arg) 
+static void ObserverBoxTask( snet_entity_t *self, void *arg) 
 {
   obs_handle_t *hnd = (obs_handle_t*)arg; 
   snet_record_t *rec = NULL;
   bool terminate = false;
-  lpel_stream_desc_t *instream, *outstream;
+  snet_stream_desc_t *instream, *outstream;
 
-  instream  = LpelStreamOpen( self, hnd->inbuf,  'r');
-  outstream = LpelStreamOpen( self, hnd->outbuf, 'w');
+  instream  = SNetStreamOpen( self, hnd->inbuf,  'r');
+  outstream = SNetStreamOpen( self, hnd->outbuf, 'w');
 
   /* Do until terminate record is processed. */
   while(!terminate) {
-    rec = LpelStreamRead( instream);
+    rec = SNetStreamRead( instream);
     if(rec != NULL) {
            
       /* Send message. */
@@ -890,15 +890,15 @@ static void ObserverBoxTask( lpel_task_t *self, void *arg)
       }
       
       /* Pass the record to next component. */
-      LpelStreamWrite( outstream, rec);
+      SNetStreamWrite( outstream, rec);
     }
   } 
 
   /* Unregister observer */
   ObserverRemove(hnd);
 
-  LpelStreamClose( instream, true);
-  LpelStreamClose( outstream, false);
+  SNetStreamClose( instream, true);
+  SNetStreamClose( outstream, false);
 
   SNetMemFree(hnd);
 }
@@ -911,11 +911,10 @@ static void ObserverBoxTask( lpel_task_t *self, void *arg)
  */
 static void CreateObserverTask( obs_handle_t *hnd)
 {
-  char name[20];
-  (void) snprintf(name, 20, "observer%02d", hnd->id);
+  (void) snprintf(hnd->name, 12, "observer%02d", hnd->id);
 
   /* create a detached wrapper thread */
-  SNetLpelIfSpawnWrapper( ObserverBoxTask, (void*)hnd, name);
+  SNetEntitySpawn( ENTITY_other, ObserverBoxTask, (void*)hnd);
 }
 
 
@@ -940,7 +939,7 @@ static void CreateObserverTask( obs_handle_t *hnd)
  *           Observer handle is created and the observer is started.
  *           Incase the connection cannot be opened, this observer is ignored.
  *
- *   @param input         LpelStream for incoming records.
+ *   @param input         SNetStream for incoming records.
  *   @param info          Info struct.
  *   @param location      Location to where this component is built.
  *   @param addr          Address of the listener.
@@ -951,7 +950,7 @@ static void CreateObserverTask( obs_handle_t *hnd)
  *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_LABELS or SNET_OBSERVERS_DATA_LEVEL_TAGVALUES or SNET_OBSERVERS_DATA_LEVEL_ALLVALUES
  *   @param code          User specified code sent by the observer.
  *
- *   @return              LpelStream for outcoming records.
+ *   @return              SNetStream for outcoming records.
  *
  ******************************************************************************/
 snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
@@ -978,7 +977,7 @@ snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
       return input;
     }
 
-    hnd->inbuf = (lpel_stream_t*) input;
+    hnd->inbuf = input;
 
     pthread_mutex_lock(&connection_mutex);
     hnd->id = id_pool++;
@@ -992,7 +991,7 @@ snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
       return input;
     }
 
-    hnd->outbuf  = LpelStreamCreate();
+    hnd->outbuf  = SNetStreamCreate(0);
 
     hnd->type = type;
     hnd->isInteractive = isInteractive;
@@ -1027,7 +1026,7 @@ snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
  *           Observer handle is created and the observer is started.
  *           Incase the file cannot be opened, this observer is ignored.
  *
- *   @param input         LpelStream for incoming records.
+ *   @param input         SNetStream for incoming records.
  *   @param info          Info struct.
  *   @param location      Location to where this component is built.
  *   @param filename      Name of the file to be used.
@@ -1036,7 +1035,7 @@ snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
  *   @param data_level    Level of data sent by the observer: SNET_OBSERVERS_DATA_LEVEL_LABELS or SNET_OBSERVERS_DATA_LEVEL_TAGVALUES or SNET_OBSERVERS_DATA_LEVEL_ALLVALUES
  *   @param code          User specified code sent by the observer.
  *
- *   @return              LpelStream for outcoming records.
+ *   @return              SNetStream for outcoming records.
  *
  ******************************************************************************/
 snet_stream_t *SNetObserverFileBox(snet_stream_t *input,
@@ -1060,8 +1059,8 @@ snet_stream_t *SNetObserverFileBox(snet_stream_t *input,
       return input;
     }
 
-    hnd->inbuf  = (lpel_stream_t*) input;
-    hnd->outbuf = LpelStreamCreate();
+    hnd->inbuf  = input;
+    hnd->outbuf = SNetStreamCreate(0);
 
     pthread_mutex_lock(&connection_mutex);
     hnd->id = id_pool++;

@@ -6,8 +6,7 @@
 #include "debug.h"
 #include "memfun.h"
 
-#include "lpelif.h"
-#include "lpel.h"
+#include "threading.h"
 
 #include "handle_p.h"
 #include "distribution.h"
@@ -23,7 +22,7 @@
 /* ------------------------------------------------------------------------- */
 
 typedef struct {
-  lpel_stream_t *input, *output;
+  snet_stream_t *input, *output;
   void (*boxfun)( snet_handle_t*);
   snet_box_sign_t *out_signs;
   const char *boxname;
@@ -32,7 +31,7 @@ typedef struct {
 /**
  * Box task
  */
-static void BoxTask(lpel_task_t *self, void *arg)
+static void BoxTask(snet_entity_t *self, void *arg)
 {
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
@@ -48,14 +47,14 @@ static void BoxTask(lpel_task_t *self, void *arg)
 
   box_arg_t *barg = (box_arg_t *)arg;
   snet_record_t *rec;
-  lpel_stream_desc_t *instream, *outstream;
+  snet_stream_desc_t *instream, *outstream;
   bool terminate = false;
 
   /* storage for the handle is within the box task */
   snet_handle_t hnd;
 
-  instream = LpelStreamOpen(self, barg->input, 'r');
-  outstream =  LpelStreamOpen(self, barg->output, 'w');
+  instream = SNetStreamOpen(self, barg->input, 'r');
+  outstream =  SNetStreamOpen(self, barg->output, 'w');
 
   /* set out descriptor */
   hnd.out_sd = outstream;
@@ -67,7 +66,7 @@ static void BoxTask(lpel_task_t *self, void *arg)
   /* MAIN LOOP */
   while( !terminate) {
     /* read from input stream */
-    rec = LpelStreamRead( instream);
+    rec = SNetStreamRead( instream);
 
     switch( SNetRecGetDescriptor(rec)) {
       case REC_trigger_initialiser:
@@ -101,13 +100,13 @@ static void BoxTask(lpel_task_t *self, void *arg)
         SNetRecDestroy( rec);
 
         /* restrict to one data record per execution */
-        //LpelTaskYield( self);
+        // SNetEntityYield( self);
         break;
 
       case REC_sync:
         {
-          lpel_stream_t *newstream = (lpel_stream_t*) SNetRecGetStream(rec);
-          LpelStreamReplace( instream, newstream);
+          snet_stream_t *newstream = SNetRecGetStream(rec);
+          SNetStreamReplace( instream, newstream);
           SNetRecDestroy( rec);
         }
         break;
@@ -120,11 +119,11 @@ static void BoxTask(lpel_task_t *self, void *arg)
 
       case REC_sort_end:
         /* forward the sort record */
-        LpelStreamWrite( outstream, rec);
+        SNetStreamWrite( outstream, rec);
         break;
 
       case REC_terminate:
-        LpelStreamWrite( outstream, rec);
+        SNetStreamWrite( outstream, rec);
         terminate = true;
         break;
 
@@ -135,8 +134,8 @@ static void BoxTask(lpel_task_t *self, void *arg)
     }
   } /* MAIN LOOP END */
 
-  LpelStreamClose( instream, true);
-  LpelStreamClose( outstream, false);
+  SNetStreamClose( instream, true);
+  SNetStreamClose( outstream, false);
 
   SNetHndDestroy( &hnd);
 
@@ -162,16 +161,16 @@ snet_stream_t *SNetBox( snet_stream_t *input,
   input = SNetRouteUpdate(info, input, location);
 
   if(location == SNetNodeLocation) {
-    output = (snet_stream_t*) LpelStreamCreate();
+    output = SNetStreamCreate(0);
 
     barg = (box_arg_t *) SNetMemAlloc( sizeof( box_arg_t));
-    barg->input  = (lpel_stream_t*) input;
-    barg->output = (lpel_stream_t*) output;
+    barg->input  = input;
+    barg->output = output;
     barg->boxfun = boxfun;
     barg->out_signs = out_signs;
     barg->boxname = boxname;
 
-    SNetLpelIfSpawnEntity( BoxTask, (void*)barg, ENTITY_box, (char*) boxname);
+    SNetEntitySpawn( ENTITY_box, BoxTask, (void*)barg );
 
   } else {
     SNetTencBoxSignDestroy(out_signs);

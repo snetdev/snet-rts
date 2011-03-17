@@ -28,7 +28,7 @@
 #include "debug.h"
 #include "parser.h"
 
-#include "lpelif.h"
+#include "threading.h"
 
 #include "distribution.h"
 
@@ -36,20 +36,21 @@ typedef struct {
   FILE *file;
   snetin_label_t *labels;
   snetin_interface_t *interfaces;
-  lpel_stream_t *buffer;
+  snet_stream_t *buffer;
+  char name[11];
 } handle_t;
 
 
 /**
  * This is the task doing the global input
  */
-static void GlobInputTask( lpel_task_t *self, void* data)
+static void GlobInputTask( snet_entity_t *self, void* data)
 {
   handle_t *hnd = (handle_t *)data;
 
   if(hnd->buffer != NULL) {
     int i;
-    lpel_stream_desc_t *outstream = LpelStreamOpen( self, hnd->buffer, 'w');
+    snet_stream_desc_t *outstream = SNetStreamOpen( self, hnd->buffer, 'w');
 
     SNetInParserInit( hnd->file, hnd->labels, hnd->interfaces, outstream);
     i = SNET_PARSE_CONTINUE;
@@ -58,7 +59,7 @@ static void GlobInputTask( lpel_task_t *self, void* data)
     }
     SNetInParserDestroy();
 
-    LpelStreamClose( outstream, false);
+    SNetStreamClose( outstream, false);
   }
 
   SNetMemFree(hnd);
@@ -76,8 +77,8 @@ void SNetInInputInit(FILE *file,
   hnd->file = file;
   hnd->labels = labels;
   hnd->interfaces = interfaces;
-  hnd->buffer = (lpel_stream_t *) in_buf;
+  hnd->buffer = in_buf;
+  (void) snprintf(hnd->name, 11, "glob_input");
 
-  /* create a joinable wrapper thread */
-  SNetLpelIfSpawnWrapper( GlobInputTask, (void*)hnd, "glob_input");
+  SNetEntitySpawn( ENTITY_other, GlobInputTask, (void*)hnd);
 }

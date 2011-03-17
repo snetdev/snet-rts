@@ -28,7 +28,7 @@
 #include "bool.h"
 #include "debug.h"
 
-#include "lpelif.h"
+#include "threading.h"
 #include "distribution.h"
 
 
@@ -36,7 +36,8 @@ typedef struct {
   FILE *file;
   snetin_label_t *labels;
   snetin_interface_t *interfaces;
-  lpel_stream_t *buffer;
+  snet_stream_t *buffer;
+  char name[12];
 } handle_t;
 
 
@@ -153,23 +154,23 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 /**
  * This is the task doing the global output
  */
-static void GlobOutputTask( lpel_task_t *self, void* data)
+static void GlobOutputTask( snet_entity_t *self, void* data)
 {
   bool terminate = false;
   handle_t *hnd = (handle_t *)data;
   snet_record_t *rec = NULL;
 
   if(hnd->buffer != NULL) {
-    lpel_stream_desc_t *instream = LpelStreamOpen( self, hnd->buffer, 'r');
+    snet_stream_desc_t *instream = SNetStreamOpen( self, hnd->buffer, 'r');
 
     while(!terminate){
-      rec = LpelStreamRead( instream);
+      rec = SNetStreamRead( instream);
       if(rec != NULL) {
         switch(SNetRecGetDescriptor(rec)) {
         case REC_sync:
           {
-            lpel_stream_t *newstream = (lpel_stream_t*) SNetRecGetStream(rec);
-            LpelStreamReplace( instream, newstream);
+            snet_stream_t *newstream = SNetRecGetStream(rec);
+            SNetStreamReplace( instream, newstream);
             hnd->buffer = newstream;
           }
           break;
@@ -195,12 +196,10 @@ static void GlobOutputTask( lpel_task_t *self, void* data)
     fflush(hnd->file);
     fprintf(hnd->file, "\n");
 
-    LpelStreamClose( instream, true);
+    SNetStreamClose( instream, true);
   }
   SNetMemFree(hnd);
 
-  /* signal termination to workers */
-  LpelWorkerTerminate();
 }
 
 void SNetInOutputInit(FILE *file,
@@ -214,8 +213,9 @@ void SNetInOutputInit(FILE *file,
   hnd->file = file;
   hnd->labels = labels;
   hnd->interfaces = interfaces;
-  hnd->buffer = (lpel_stream_t *) out_buf;
+  hnd->buffer = out_buf;
+  (void) snprintf( hnd->name, 12, "glob_output");
 
   /* create a joinable wrapper thread */
-  SNetLpelIfSpawnWrapper( GlobOutputTask, (void*)hnd, "glob_output");
+  SNetEntitySpawn( ENTITY_other, GlobOutputTask, (void*)hnd);
 }

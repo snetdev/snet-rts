@@ -36,7 +36,7 @@ clean_runtime_lpel_prod        :=
 # Collection of source directories
 #
 
-runtime_lpel          = shared entity utils langif netif lpelif observer
+runtime_lpel          = shared entity utils langif netif observer
 
 
 ###############################################################################
@@ -59,6 +59,6 @@ langif          = interface_functions.o
 netif   	= label.o parser.tab.o parser.lex.o interface.o \
                   networkinterface.o output.o input.o 
 
-lpelif          = lpelif.o assignment.o
+#lpelif          = lpelif.o assignment.o
 
 observer	= observers.o

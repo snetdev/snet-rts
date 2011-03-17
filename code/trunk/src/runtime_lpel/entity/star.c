@@ -8,8 +8,7 @@
 #include "memfun.h"
 #include "collector.h"
 
-#include "lpelif.h"
-#include "lpel.h"
+#include "threading.h"
 #include "distribution.h"
 
 static bool MatchesExitPattern( snet_record_t *rec,
@@ -39,7 +38,7 @@ static bool MatchesExitPattern( snet_record_t *rec,
 
 
 typedef struct {
-  lpel_stream_t *input, *output;
+  snet_stream_t *input, *output;
   snet_typeencoding_t *exit_tags;
   snet_startup_fun_t box, selffun;
   snet_expr_list_t *guards;
@@ -50,33 +49,33 @@ typedef struct {
 /**
  * Star component task
  */
-static void StarBoxTask( lpel_task_t *self, void *arg)
+static void StarBoxTask( snet_entity_t *self, void *arg)
 {
   star_arg_t *sarg = (star_arg_t *)arg;
-  lpel_stream_desc_t *instream;
-  lpel_stream_desc_t *outstream; /* the stream to the collector */
+  snet_stream_desc_t *instream;
+  snet_stream_desc_t *outstream; /* the stream to the collector */
   /* The stream to the next instance;
      a non-null value indicates that the instance has been created. */
-  lpel_stream_desc_t *nextstream=NULL;
+  snet_stream_desc_t *nextstream=NULL;
   bool terminate = false;
   snet_record_t *rec;
   /* for deterministic variant: */
   int counter = 0;
 
-  instream  = LpelStreamOpen( self, sarg->input, 'r');
-  outstream = LpelStreamOpen( self, sarg->output, 'w');
+  instream  = SNetStreamOpen( self, sarg->input, 'r');
+  outstream = SNetStreamOpen( self, sarg->output, 'w');
 
   /* MAIN LOOP */
   while( !terminate) {
     /* read from input stream */
-    rec = LpelStreamRead( instream);
+    rec = SNetStreamRead( instream);
 
     switch( SNetRecGetDescriptor( rec)) {
 
       case REC_data:
         if( MatchesExitPattern( rec, sarg->exit_tags, sarg->guards)) {
           /* send rec to collector */
-          LpelStreamWrite( outstream, rec);
+          SNetStreamWrite( outstream, rec);
         } else {
           /* send to next instance */
           /* if instance has not been created yet, create it */
@@ -86,28 +85,28 @@ static void StarBoxTask( lpel_task_t *self, void *arg)
                at the collector. */
             snet_stream_t *starstream, *nextstream_addr;
             /* Create the stream to the instance */
-            nextstream_addr = (snet_stream_t*) LpelStreamCreate();
-            nextstream = LpelStreamOpen( self, (lpel_stream_t*) nextstream_addr, 'w');
+            nextstream_addr = SNetStreamCreate(0);
+            nextstream = SNetStreamOpen( self, nextstream_addr, 'w');
             /* register new buffer with dispatcher,
                starstream is returned by selffun, which is SNetStarIncarnate */
             starstream = SNetSerial(nextstream_addr, sarg->info, SNetNodeLocation , sarg->box, sarg->selffun);
 
             /* notify collector about the new instance */
-            LpelStreamWrite( outstream, SNetRecCreate(REC_collect, starstream));
+            SNetStreamWrite( outstream, SNetRecCreate(REC_collect, starstream));
           }
           /* send the record to the instance */
-          LpelStreamWrite( nextstream, rec);
+          SNetStreamWrite( nextstream, rec);
         } /* end if not matches exit pattern */
 
         /* deterministic non-incarnate has to append control records */
         if (sarg->is_det && !sarg->is_incarnate) {
           /* send new sort record to collector */
-          LpelStreamWrite( outstream,
+          SNetStreamWrite( outstream,
               SNetRecCreate( REC_sort_end, 0, counter) );
 
           /* if has next instance, send new sort record */
           if (nextstream != NULL) {
-            LpelStreamWrite( nextstream,
+            SNetStreamWrite( nextstream,
                 SNetRecCreate( REC_sort_end, 0, counter) );
           }
         }
@@ -115,8 +114,8 @@ static void StarBoxTask( lpel_task_t *self, void *arg)
 
       case REC_sync:
         {
-          lpel_stream_t *newstream = (lpel_stream_t*) SNetRecGetStream( rec);
-          LpelStreamReplace( instream, newstream);
+          snet_stream_t *newstream = SNetRecGetStream( rec);
+          SNetStreamReplace( instream, newstream);
           SNetRecDestroy( rec);
         }
         break;
@@ -132,7 +131,7 @@ static void StarBoxTask( lpel_task_t *self, void *arg)
           int rec_lvl = SNetRecGetLevel(rec);
           /* send a copy to the box, if exists */
           if( nextstream != NULL) {
-            LpelStreamWrite(
+            SNetStreamWrite(
                 nextstream,
                 SNetRecCreate( REC_sort_end,
                   (!sarg->is_incarnate)? rec_lvl+1 : rec_lvl,
@@ -145,16 +144,16 @@ static void StarBoxTask( lpel_task_t *self, void *arg)
             /* if non-incarnate, we have to increase level */
             SNetRecSetLevel( rec, rec_lvl+1);
           }
-          LpelStreamWrite( outstream, rec);
+          SNetStreamWrite( outstream, rec);
         }
         break;
 
       case REC_terminate:
         terminate = true;
         if( nextstream != NULL) {
-          LpelStreamWrite( nextstream, SNetRecCopy( rec));
+          SNetStreamWrite( nextstream, SNetRecCopy( rec));
         }
-        LpelStreamWrite( outstream, rec);
+        SNetStreamWrite( outstream, rec);
         /* note that no sort record has to be appended */
         break;
 
@@ -165,12 +164,12 @@ static void StarBoxTask( lpel_task_t *self, void *arg)
     }
   } /* MAIN LOOP END */
 
-  LpelStreamClose(instream, true);
+  SNetStreamClose(instream, true);
 
   if( nextstream != NULL) {
-    LpelStreamClose( nextstream, false);
+    SNetStreamClose( nextstream, false);
   }
-  LpelStreamClose( outstream, false);
+  SNetStreamClose( outstream, false);
 
   /* destroy the arg */
   SNetEdestroyList( sarg->guards);
@@ -205,22 +204,22 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 {
   snet_stream_t *output;
   star_arg_t *sarg;
-  lpel_stream_t *newstream;
+  snet_stream_t *newstream;
 
   input = SNetRouteUpdate(info, input, location);
   if(location == SNetNodeLocation) {
     sarg = (star_arg_t *) SNetMemAlloc( sizeof(star_arg_t));
-    sarg->input = (lpel_stream_t*) input;
-    newstream = LpelStreamCreate();
+    sarg->input = input;
+    newstream = SNetStreamCreate(0);
     if (!is_incarnate) {
       /* the "top-level" star also creates a collector */
       snet_stream_t **star_output;
-      star_output = (snet_stream_t **) SNetMemAlloc( sizeof(lpel_stream_t *));
-      star_output[0] = (snet_stream_t*) newstream;
+      star_output = (snet_stream_t **) SNetMemAlloc( sizeof(snet_stream_t *));
+      star_output[0] = newstream;
       output = CollectorCreate( 1, star_output, info);
       sarg->output = newstream;
     } else {
-      output = (snet_stream_t*) newstream;
+      output = newstream;
       sarg->output = newstream;
     }
     sarg->box = box_a;
@@ -231,10 +230,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
 
-    SNetLpelIfSpawnEntity( StarBoxTask, (void*)sarg,
-        (is_det) ? ENTITY_star_det : ENTITY_star_nondet,
-        NULL
-        );
+    SNetEntitySpawn( ENTITY_star, StarBoxTask, (void*)sarg );
 
   } else {
     SNetEdestroyList( guards);
