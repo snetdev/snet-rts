@@ -86,6 +86,8 @@ default devel prod: checks
                         PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/distrib/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/threading   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/threading/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/demo     DEPS="$(DEPS)" HIDE="$(HIDE)" \
@@ -115,6 +117,8 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/distrib/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/threading   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/threading/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/demo     DEPS="$(DEPS)" HIDE="$(HIDE)" \

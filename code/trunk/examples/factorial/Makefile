@@ -1,14 +1,12 @@
 include $(SNETBASE)/src/makefiles/config.mkf
 
 CC        = gcc
-MPICC     = mpicc
 CCFLAGS   = -Wall -g 
 SNETC     = snetc
 AR        = ar
-DISTFLAGS = -distributed
 INCDIRS   = -I. -I$(SNETBASE)/include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib 
-LIBS      = -lpthread -lC4SNet -lsnetlpel -lsnetutil $(SOCKETLIBS) $(RPATH)
+LIBS      = -ltbpthread -lpthread -lC4SNet -lsnetlpel -lsnetutil $(SOCKETLIBS) $(RPATH)
 FILES     = condif.c leq1.c mult.c sub.c
 
 # = = = = = = = = = = = = = = = = = = = =
@@ -23,7 +21,7 @@ all:
 net: 
 	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h
 	$(CC) $(CCFLAGS) $(INCDIRS) -c $(FILES)
-	$(SNETC) $(INCDIRS) $(LIBDIRS) -m $(TARGET).md -o $(TARGET) $(TARGET).snet 
+	$(SNETC) $(LIBS) $(INCDIRS) $(LIBDIRS) -m $(TARGET).md -o $(TARGET) $(TARGET).snet 
 
 clean:
 	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h

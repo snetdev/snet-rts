@@ -1,5 +1,6 @@
-
+#ifdef __linux__
 #define USE_CORE_AFFINITY 1
+#endif
 
 #ifdef USE_CORE_AFFINITY
 #define _GNU_SOURCE

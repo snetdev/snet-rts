@@ -8,6 +8,7 @@ include $(PROJECT_ROOT)/src/makefiles/targets_maketools.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_compiler.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_lpellib.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_distrib.mkf
+include $(PROJECT_ROOT)/src/makefiles/targets_threading.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_runtime_lpel.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_util.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_tools.mkf
