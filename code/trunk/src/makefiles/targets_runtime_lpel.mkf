@@ -52,7 +52,7 @@ entity          = filter.o syncro.o out.o box.o alias.o \
                   serial.o collector.o parallel.o star.o split.o
 
 utils		= debug.o bitmap.o hashtable.o queue.o \
-                  debugcounters.o hashtab.o
+                  debugtime.o debugcounters.o hashtab.o
 
 langif          = interface_functions.o
 

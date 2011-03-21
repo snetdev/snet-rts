@@ -2,7 +2,7 @@
 
 #include "snetentities.h"
 #include "record_p.h"
-#include "time.h"
+#include "debugtime.h"
 #include "debug.h"
 #include "memfun.h"
 
