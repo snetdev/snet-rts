@@ -12,4 +12,3 @@ include $(PROJECT_ROOT)/src/makefiles/targets_threading.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_runtime_lpel.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_util.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_tools.mkf
-include $(PROJECT_ROOT)/src/makefiles/targets_demo.mkf
