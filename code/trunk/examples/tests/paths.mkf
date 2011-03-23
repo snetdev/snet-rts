@@ -3,4 +3,4 @@ include $(SNETBASE)/src/makefiles/config.mkf
 
 SNETLIBS = $(SNETBASE)/lib/*.so
 INCLUDES  = -I. -I$(SNETBASE)/include
-LIBRARIES = -L. -L$(SNETBASE)/lib $(SOCKETLIBS) # -lmpi -lsnetlpelmpi
+LIBRARIES = -L. -L$(SNETBASE)/lib $(SOCKETLIBS) -lsnetlpel -lsnetutil -lC4SNet -ldistribnodist -ltbpthread
