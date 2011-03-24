@@ -2,6 +2,8 @@
 #define USE_CORE_AFFINITY 1
 #endif
 
+//#undef USE_CORE_AFFINITY 
+
 #ifdef USE_CORE_AFFINITY
 #define _GNU_SOURCE
 #endif

@@ -59,6 +59,4 @@ langif          = interface_functions.o
 netif   	= label.o parser.tab.o parser.lex.o interface.o \
                   networkinterface.o output.o input.o 
 
-#lpelif          = lpelif.o assignment.o
-
 observer	= observers.o

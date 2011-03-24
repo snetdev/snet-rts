@@ -44,7 +44,8 @@ TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
 
 
 LIB  := -L$(PROJECT_ROOT)/src/lib 
-INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) 
+INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) \
+        -I$(LPELSOURCE)
 
 COMMONLIBDEV   := $(patsubst lib%.a,%,$(targets_commonlib_devel))
 COMMONLIBPROD  := $(patsubst lib%.a,%,$(targets_commonlib_prod))
@@ -67,7 +68,6 @@ endif
 
 
 RUNTIMELIB_DEPS      := -lpthread
-RUNTIMELIB_DEPS_LPEL := -llpel
 
 UTILLIB  := -L$(PROJECT_ROOT)/lib
 UTILINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
@@ -209,27 +209,6 @@ $(PROJECT_ROOT)/lib/libsnet.prod.so:  $(TARGETDIRS_PROD)
 	@$(CLOCK_SKEW_ELIMINATION)  
 
 #
-# LPEL LIBRARY
-#
-$(PROJECT_ROOT)/lib/liblpel.so: $(TARGETDIRS_DEVEL) 
-	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/liblpel.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB_DEPS)
-	#$(HIDE) cp $(SNETBASE)/src/lpellib/lpel/lpel.h $(SNETBASE)/include/
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
-
-$(PROJECT_ROOT)/lib/liblpel.prod.so:  $(TARGETDIRS_PROD) 
-	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/liblpel.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB_DEPS)
-	#$(HIDE) cp $(SNETBASE)/src/lpellib/lpel/lpel.h $(SNETBASE)/include/
-	@$(RM) .make_track
-	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
-
-#
 # NODIST LIBRARY
 #
 $(PROJECT_ROOT)/lib/libdistribnodist.so: $(TARGETDIRS_DEVEL)
@@ -278,7 +257,7 @@ $(PROJECT_ROOT)/lib/libsnetlpel.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
 	@$(ECHO "$(TARGETDIRS_DEVEL)"
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpel.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL)
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
@@ -286,7 +265,7 @@ $(PROJECT_ROOT)/lib/libsnetlpel.so: $(TARGETDIRS_DEVEL)
 $(PROJECT_ROOT)/lib/libsnetlpel.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpel.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS) $(RUNTIMELIB_DEPS_LPEL)
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 	@$(CLOCK_SKEW_ELIMINATION)  
