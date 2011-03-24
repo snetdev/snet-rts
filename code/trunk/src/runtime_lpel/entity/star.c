@@ -230,7 +230,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
 
-    SNetEntitySpawn( ENTITY_star, StarBoxTask, (void*)sarg );
+    SNetEntitySpawn( ENTITY_STAR, StarBoxTask, (void*)sarg );
 
   } else {
     SNetEdestroyList( guards);

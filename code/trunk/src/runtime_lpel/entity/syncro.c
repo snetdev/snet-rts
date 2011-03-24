@@ -357,7 +357,7 @@ snet_stream_t *SNetSync( snet_stream_t *input,
     sarg->patterns = patterns;
     sarg->guards = guards;
 
-    SNetEntitySpawn( ENTITY_sync, SyncBoxTask, (void*)sarg);
+    SNetEntitySpawn( ENTITY_SYNC, SyncBoxTask, (void*)sarg);
 
   } else {
     SNetDestroyTypeEncoding( outtype);

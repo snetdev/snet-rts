@@ -34,15 +34,22 @@
  *
  * @return 0 on success
  */
-int SNetThreadingInit(void);
+int SNetThreadingInit(int argc, char **argv);
 
 
 
 /**
+ * Stop the threading backend
+ *
+ */
+void SNetThreadingStop(void);
+
+
+/**
  * Process the S-Net network.
- * This function blocks the calling (main) thread until the
- * application with all entity threads has finished and it is
- * safe to shutdown.
+ * This function blocks the calling (main) thread after calling
+ * SNetThreadingStop() until the entity threads have finished and
+ * it is safe to shutdown.
  *
  * @return 0 on success
  */
@@ -86,27 +93,44 @@ typedef void (*snet_entityfunc_t)(snet_entity_t *self, void *arg);
  * (can be extended in future implementations):
  */
 typedef enum {
+  ENTITY_box,
   ENTITY_parallel,
   ENTITY_star,
   ENTITY_split,
-  ENTITY_box,
   ENTITY_sync,
   ENTITY_filter,
   ENTITY_collect,
   ENTITY_other
-} snet_entity_id_t;
+} snet_entity_type_t;
 
+
+
+typedef struct {
+  snet_entity_type_t  type;
+  char               *name;
+} snet_entity_info_t;
+
+
+#define ENTITY_BOX(name)  (snet_entity_info_t){ ENTITY_box, (name)}
+#define ENTITY_PARALLEL   (snet_entity_info_t){ ENTITY_parallel, "<parallel>"}
+#define ENTITY_STAR       (snet_entity_info_t){ ENTITY_star, "<star>"}
+#define ENTITY_SPLIT      (snet_entity_info_t){ ENTITY_split, "<split>"}
+#define ENTITY_SYNC       (snet_entity_info_t){ ENTITY_sync, "<sync>"}
+#define ENTITY_FILTER     (snet_entity_info_t){ ENTITY_filter, "<filter>"}
+#define ENTITY_COLLECT    (snet_entity_info_t){ ENTITY_collect, "<collect>"}
+#define ENTITY_OTHER(name)\
+                          (snet_entity_info_t){ ENTITY_other, (name)}
 
 /**
  * Spawn a new thread
  *
- * @param type  the type of entity
+ * @param info  the entity info
  * @param func  the entity thread function
  * @param arg   the argument for the entity thread
  *
  * @return 0 on success
  */
-int SNetEntitySpawn(snet_entity_id_t type,
+int SNetEntitySpawn(snet_entity_info_t info,
   snet_entityfunc_t func, void *arg);
 
 

@@ -67,7 +67,6 @@ typedef struct obs_handle {
   const char *position; // Name of the net/box to which the observer is attached to
   char type;            // Type of the observer (before/after)
   char data_level;      // Data level used
-  char name[12];
 }obs_handle_t;
 
 
@@ -911,10 +910,10 @@ static void ObserverBoxTask( snet_entity_t *self, void *arg)
  */
 static void CreateObserverTask( obs_handle_t *hnd)
 {
-  (void) snprintf(hnd->name, 12, "observer%02d", hnd->id);
-
+  char name[16];
+  (void) snprintf(name, 16, "observer%02d", hnd->id);
   /* create a detached wrapper thread */
-  SNetEntitySpawn( ENTITY_other, ObserverBoxTask, (void*)hnd);
+  SNetEntitySpawn( ENTITY_OTHER(name), ObserverBoxTask, (void*)hnd);
 }
 
 

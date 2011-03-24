@@ -25,7 +25,7 @@ static pthread_cond_t  entity_cond = PTHREAD_COND_INITIALIZER;
 /* prototype for pthread thread function */
 static void *SNetEntityThread(void *arg);
 
-static size_t SNetEntityStackSize(snet_entity_id_t id);
+static size_t SNetEntityStackSize(snet_entity_type_t type);
 
 #ifdef USE_CORE_AFFINITY
 typedef enum {
@@ -40,12 +40,19 @@ static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at);
 
 
 
-int SNetThreadingInit(void)
+int SNetThreadingInit(int argc, char **argv)
 {
   /* initialize the entity counter to 0 */
   entity_count = 0;
 
   return 0;
+}
+
+
+
+void SNetThreadingStop(void)
+{
+  /* NOP */
 }
 
 
@@ -70,7 +77,7 @@ int SNetThreadingCleanup(void)
 }
 
 
-int SNetEntitySpawn(snet_entity_id_t type, snet_entityfunc_t func, void *arg)
+int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
 {
   int res;
   pthread_t p;
@@ -97,7 +104,7 @@ int SNetEntitySpawn(snet_entity_id_t type, snet_entityfunc_t func, void *arg)
   (void) pthread_attr_init( &attr);
 
   /* stacksize */
-  stacksize = SNetEntityStackSize(type);
+  stacksize = SNetEntityStackSize(info.type);
   
   if (stacksize > 0) {
     res = pthread_attr_setstacksize(&attr, stacksize);
@@ -125,7 +132,7 @@ int SNetEntitySpawn(snet_entity_id_t type, snet_entityfunc_t func, void *arg)
 
   /* core affinity */
 #ifdef USE_CORE_AFFINITY
-  if( type == ENTITY_other) {
+  if( info.type == ENTITY_other) {
     SNetSetThreadAffinity( &p, STRICTLYFIRST);
   } else {
     SNetSetThreadAffinity( &p, ALLBUTFIRST);
@@ -187,18 +194,18 @@ static void *SNetEntityThread(void *arg)
 }
 
 
-static size_t SNetEntityStackSize(snet_entity_id_t id)
+static size_t SNetEntityStackSize(snet_entity_type_t type)
 {
   size_t stack_size;
 
-  switch( id) {
+  switch(type) {
     case ENTITY_parallel:
     case ENTITY_star:
     case ENTITY_split:
     case ENTITY_sync:
     case ENTITY_filter:
     case ENTITY_collect:
-      stack_size = 256*1024; /* HGHILY EXPERIMENTAL! */
+      stack_size = 256*1024; /* HIGHLY EXPERIMENTAL! */
       break;
     case ENTITY_box:
     case ENTITY_other:

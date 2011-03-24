@@ -170,7 +170,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->out_signs = out_signs;
     barg->boxname = boxname;
 
-    SNetEntitySpawn( ENTITY_box, BoxTask, (void*)barg );
+    SNetEntitySpawn( ENTITY_BOX(barg->boxname), BoxTask, (void*)barg );
 
   } else {
     SNetTencBoxSignDestroy(out_signs);

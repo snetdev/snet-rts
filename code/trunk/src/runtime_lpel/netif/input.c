@@ -37,7 +37,6 @@ typedef struct {
   snetin_label_t *labels;
   snetin_interface_t *interfaces;
   snet_stream_t *buffer;
-  char name[11];
 } handle_t;
 
 
@@ -78,7 +77,6 @@ void SNetInInputInit(FILE *file,
   hnd->labels = labels;
   hnd->interfaces = interfaces;
   hnd->buffer = in_buf;
-  (void) snprintf(hnd->name, 11, "glob_input");
 
-  SNetEntitySpawn( ENTITY_other, GlobInputTask, (void*)hnd);
+  SNetEntitySpawn( ENTITY_OTHER("glob_input"), GlobInputTask, (void*)hnd);
 }

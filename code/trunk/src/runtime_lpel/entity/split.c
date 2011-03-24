@@ -232,7 +232,7 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->is_byloc = is_byloc;
 
     output = CollectorCreate( 1, initial, info);
-    SNetEntitySpawn( ENTITY_split, SplitBoxTask, (void*)sarg );
+    SNetEntitySpawn( ENTITY_SPLIT, SplitBoxTask, (void*)sarg );
 
   } else {
     output = input;

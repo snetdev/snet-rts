@@ -167,10 +167,6 @@ int SNetInRun(int argc, char **argv,
   int len;
   int port;
 
-  int num_workers = 0;
-  int mon_level = 0;
-  int do_excl = 0;
-
   /* Parse argv: */
   for(i = 1; i < argc; i++) {
     if(strcmp(argv[i], "-h") == 0) {
@@ -182,8 +178,8 @@ int SNetInRun(int argc, char **argv,
       printf("\t-h \t\t\tDisplay this help text.\n");
       printf("\t-o <filename>\t\tOutput to file.\n");
       printf("\t-O <address:port>\tOutput to socket.\n");
-      printf("\t-m <mon_level>\tSet monitoring level.\n");
-      printf("\t-w <workers>\t\tSet number of workers.\n");
+      //printf("\t-m <mon_level>\tSet monitoring level.\n");
+      //printf("\t-w <workers>\t\tSet number of workers.\n");
       printf("\n");
 
       if(input != stdin && input != NULL) {
@@ -196,17 +192,6 @@ int SNetInRun(int argc, char **argv,
 
       return 0;
 
-    } else if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
-      /* Monitoring configuration */
-      i = i + 1;
-      mon_level = atoi(argv[i]);
-    } else if(strcmp(argv[i], "-excl") == 0 ) {
-      /* Assign realtime priority to workers*/
-      do_excl = true;
-    } else if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
-      /* Number of workers */
-      i = i + 1;
-      num_workers = atoi(argv[i]);
     } else if(strcmp(argv[i], "-i") == 0 && input == stdin && i + 1 <= argc) {
       /* Input from file */
       i = i + 1;
@@ -264,9 +249,7 @@ int SNetInRun(int argc, char **argv,
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
   SNetDistribInit(argc, argv);
 
-  /* Initialise LPEL and its interfacing modules */
-  //SNetLpelIfInit( SNetNodeLocation, num_workers, do_excl, mon_level);
-  (void) SNetThreadingInit();
+  (void) SNetThreadingInit(argc, argv);
 
   SNetObserverInit(labels, interfaces);
 

@@ -37,7 +37,6 @@ typedef struct {
   snetin_label_t *labels;
   snetin_interface_t *interfaces;
   snet_stream_t *buffer;
-  char name[12];
 } handle_t;
 
 
@@ -200,6 +199,8 @@ static void GlobOutputTask( snet_entity_t *self, void* data)
   }
   SNetMemFree(hnd);
 
+  /* signal the threading layer */
+  SNetThreadingStop();
 }
 
 void SNetInOutputInit(FILE *file,
@@ -214,8 +215,7 @@ void SNetInOutputInit(FILE *file,
   hnd->labels = labels;
   hnd->interfaces = interfaces;
   hnd->buffer = out_buf;
-  (void) snprintf( hnd->name, 12, "glob_output");
 
   /* create a joinable wrapper thread */
-  SNetEntitySpawn( ENTITY_other, GlobOutputTask, (void*)hnd);
+  SNetEntitySpawn( ENTITY_OTHER("glob_output"), GlobOutputTask, (void*)hnd);
 }

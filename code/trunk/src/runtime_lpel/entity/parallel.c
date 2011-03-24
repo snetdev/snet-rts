@@ -384,7 +384,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     parg->types = types;
     parg->is_det = is_det;
 
-    SNetEntitySpawn( ENTITY_parallel, ParallelBoxTask, (void*)parg );
+    SNetEntitySpawn( ENTITY_PARALLEL, ParallelBoxTask, (void*)parg );
 
   } else {
     for(i = 0; i < num; i++) {
