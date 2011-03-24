@@ -1,8 +1,10 @@
 #
 # create a shared library
 #
-
-# relies on the environment variable LPELSOURCE
+# relies on the environment variable LPELSOURCE,
+# which points to a directory containing the lpel
+# sources from the external lpel directory
+#
 
 INCLUDES = -I$(SNETBASE)/include -I$(LPELSOURCE)
 CFLAGS = -c -g -Wall -pthread -fPIC $(INCLUDES)
