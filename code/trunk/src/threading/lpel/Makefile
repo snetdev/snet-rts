@@ -26,8 +26,20 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	gcc $(LDFLAGS) -o $@ $(OBJS)
 
-%.o: $(LPELSOURCE)/%.c
-	gcc $(CFLAGS) $<
+%.o: $(LPELSOURCE)/%.c lpel4snet.h
+	gcc -E $< |              \
+	sed -f translate4snet.sed |\
+	gcc -o $@ $(CFLAGS) -xc -
+
+%.o: %.c lpel4snet.h
+	gcc -E $(INCLUDES) $< |              \
+	sed -f translate4snet.sed |\
+	gcc -o $@ $(CFLAGS) -xc -
+
+lpel4snet.h: $(LPELSOURCE)/lpel.h
+	sed -f translate4snet.sed \
+	    -e "/typedef .*snet_.*/ d" \
+	    $< > $@   
 
 clean:
-	rm -fr $(OBJS) $(TARGET)
+	rm -fr lpel4snet.h $(OBJS) $(TARGET)
