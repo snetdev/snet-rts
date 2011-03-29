@@ -57,6 +57,8 @@ include $(PROJECT_ROOT)/src/makefiles/config.mkf
 # dependency from every compilation rule. This would lead to extensive
 # rechecking at compile time that is absolutely superfluous.
 #
+# XXX dlp: commonlib and maketools are gone - what does this imply?
+#
 # The runtime system may require the compiler and, likewise, the tools may
 # need the runtime system or parts thereof. Expressing all this by dependencies
 # would lead to a system in which the tools form the main target. This seems
@@ -74,12 +76,10 @@ default devel prod: checks
 	$(HIDE) mkdir -p lib src/bin src/lib
 	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/commonlib/" PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/maketools/" PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/util   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/snetc  DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/snetc/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime_lpel  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
@@ -101,12 +101,10 @@ clean cleandevel cleanprod:
 	@$(ECHO) "************************************************************"
 	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/commonlib/" PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/maketools DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/maketools/" PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/util   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/compiler/"  PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/snetc  DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/snetc/"  PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
@@ -122,7 +120,7 @@ clean cleandevel cleanprod:
 	@$(ECHO) ""
 
 efence:
-	$(HIDE) $(MAKE) -C src/compiler  DEPS="$(DEPS)" HIDE="$(HIDE)" $@
+	$(HIDE) $(MAKE) -C src/snetc  DEPS="$(DEPS)" HIDE="$(HIDE)" $@
 
 
 ###############################################################################

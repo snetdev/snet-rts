@@ -9,10 +9,10 @@
 # Collection of targets
 #
 
-targets_compiler_devel    := snetc
-targets_compiler_prod     := snetc.prod
-targets_compiler_efence   := snetc.efence
-targets_compiler_default  := $(targets_compiler_devel)
+targets_snetc_devel    := snetc
+targets_snetc_prod     := snetc.prod
+targets_snetc_efence   := snetc.efence
+targets_snetc_default  := $(targets_snetc_devel)
 
 
 ###############################################################################
@@ -20,7 +20,7 @@ targets_compiler_default  := $(targets_compiler_devel)
 # Collection of target directories
 #
 
-targetdir_compiler        := bin
+targetdir_snetc        := bin
 
 
 ###############################################################################
@@ -28,14 +28,14 @@ targetdir_compiler        := bin
 # Collection of additional files to be cleaned
 #
 
-clean_compiler            := snetc.efence \
-                             ../src/compiler/global/build.c \
-                             ../src/compiler/global/build_prod.c
+clean_snetc            := snetc.efence \
+                             ../src/snetc/global/build.c \
+                             ../src/snetc/global/build_prod.c
 
-clean_compiler_devel      := snetc.efence \
-                             ../src/compiler/global/build.c
+clean_snetc_devel      := snetc.efence \
+                             ../src/snetc/global/build.c
 
-clean_compiler_prod       := ../src/compiler/global/build_prod.c
+clean_snetc_prod       := ../src/snetc/global/build_prod.c
 
 
 ###############################################################################
@@ -43,7 +43,7 @@ clean_compiler_prod       := ../src/compiler/global/build_prod.c
 # Collection of source directories
 #
 
-compiler        = tree global support parse preproc flat typeinf opt \
+snetc        = tree global support parse preproc flat typeinf opt \
                   postproc codegen invokecc print md
 
 

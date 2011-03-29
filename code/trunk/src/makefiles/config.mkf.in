@@ -86,9 +86,4 @@ else
   YYFLAGS   := -DYYLMAX=8192
 endif
 
-CLOCK_SKEW_ELIMINATION   := if [ -x $(PROJECT_ROOT)/src/bin/cse ] ; \
-                            then $(PROJECT_ROOT)/src/bin/cse $@ ; \
-                            fi
-
-CODE_BEAUTIFIER          := @CB@
 
