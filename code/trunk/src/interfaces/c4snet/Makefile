@@ -19,21 +19,15 @@ TARGETINCDIR   = $(SNETBASE)/include
 # = = = = = = = = = = = = = = = = = = = =
 
 
-all:
+all: default
+
+default:
 	make clean
 	$(CC) $(CCFLAGS) $(INCDIRS) -c *.c
 	$(CC) $(subst %libname%,$(notdir $(TARGET)),$(LD_DYNAMIC))\
   -o $(TARGET) $(OBJECTS) 
 	$(CC) $(subst %libname%,$(notdir $(WRAPTARGET)),$(LD_DYNAMIC))\
   -o $(WRAPTARGET) $(WRAPOBJECTS) 
-	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETLIBDIR)
-	$(COPY) $(NAME).h $(TARGETINCDIR)
-
-mpi:
-	make clean
-	$(CC) $(CCFLAGS) -c *.c
-	$(CC) $(SOFLAGS) -o $(TARGET) $(OBJECTS) 
-	$(CC) $(SOFLAGS) -o $(WRAPTARGET) $(WRAPOBJECTS) 
 	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETLIBDIR)
 	$(COPY) $(NAME).h $(TARGETINCDIR)
 
