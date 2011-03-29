@@ -72,7 +72,7 @@ RUNTIMELIB_DEPS      := -lpthread
 UTILLIB  := -L$(PROJECT_ROOT)/lib
 UTILINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
-XML_DIR     = $(PROJECT_ROOT)/src/compiler/xml
+XML_DIR     = $(PROJECT_ROOT)/src/snetc/xml
 XML_COMMONS = $(wildcard $(XML_DIR)/common_*.xsl)
 
 GENERATED_INCLUDE_FILES = $(patsubst %.xsl,%,$(foreach dir,$(SOURCE_DIRS),$(wildcard $(dir)/*.h.xsl))) \
@@ -125,7 +125,6 @@ $(PROJECT_ROOT)/bin/snetc: global/build.o
                 -l$(COMMONLIBDEV) -l$(UTILDEV)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
 	@$(ECHO) ""
@@ -135,7 +134,6 @@ $(PROJECT_ROOT)/bin/snetc.prod: global/build_prod.o
                 -l$(COMMONLIBPROD) -l$(UTILPROD)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/bin/snetc.efence: global/build.o
 	@$(ECHO) ""
@@ -145,7 +143,6 @@ $(PROJECT_ROOT)/bin/snetc.efence: global/build.o
                 -l$(COMMONLIBDEV) -l$(UTILDEV)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 
 $(PROJECT_ROOT)/src/lib/libcommon.a: $(TARGETDIRS_DEVEL) 
@@ -155,7 +152,6 @@ $(PROJECT_ROOT)/src/lib/libcommon.a: $(TARGETDIRS_DEVEL)
 	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/src/lib/libcommon.prod.a:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
@@ -164,7 +160,6 @@ $(PROJECT_ROOT)/src/lib/libcommon.prod.a:  $(TARGETDIRS_PROD)
 	$(HIDE) $(RANLIB) $@
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 
 $(PROJECT_ROOT)/src/bin/%.devel: $(TARGETDIRS_DEVEL) 
@@ -176,7 +171,6 @@ $(PROJECT_ROOT)/src/bin/%.devel: $(TARGETDIRS_DEVEL)
 	$(HIDE) mv $@ $(patsubst %.devel,%,$@)							
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
@@ -186,7 +180,6 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
                 $(LIB) $(LIBS) -l$(COMMONLIBPROD)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 
 #
@@ -198,7 +191,6 @@ $(PROJECT_ROOT)/lib/libsnet.so: $(TARGETDIRS_DEVEL)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/lib/libsnet.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
@@ -206,7 +198,6 @@ $(PROJECT_ROOT)/lib/libsnet.prod.so:  $(TARGETDIRS_PROD)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 #
 # NODIST LIBRARY
@@ -218,7 +209,6 @@ $(PROJECT_ROOT)/lib/libdistribnodist.so: $(TARGETDIRS_DEVEL)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)
 
 $(PROJECT_ROOT)/lib/libdistribnodist.prod.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
@@ -227,7 +217,6 @@ $(PROJECT_ROOT)/lib/libdistribnodist.prod.so: $(TARGETDIRS_DEVEL)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)
 
 #
 # TBPTHREAD LIBRARY
@@ -239,7 +228,6 @@ $(PROJECT_ROOT)/lib/libtbpthread.so: $(TARGETDIRS_DEVEL)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)
 
 $(PROJECT_ROOT)/lib/libtbpthread.prod.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
@@ -248,7 +236,6 @@ $(PROJECT_ROOT)/lib/libtbpthread.prod.so: $(TARGETDIRS_DEVEL)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)
 
 #
 # SNET + LPEL
@@ -260,7 +247,6 @@ $(PROJECT_ROOT)/lib/libsnetlpel.so: $(TARGETDIRS_DEVEL)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/lib/libsnetlpel.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
@@ -268,7 +254,6 @@ $(PROJECT_ROOT)/lib/libsnetlpel.prod.so:  $(TARGETDIRS_PROD)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 #
 # SNET UTIL
@@ -279,7 +264,6 @@ $(PROJECT_ROOT)/lib/libsnetutil.so: $(TARGETDIRS_DEVEL)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/lib/libsnetutil.prod.so:  $(TARGETDIRS_PROD) 
 	@$(ECHO) ""
@@ -287,7 +271,6 @@ $(PROJECT_ROOT)/lib/libsnetutil.prod.so:  $(TARGETDIRS_PROD)
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 
 
@@ -300,7 +283,6 @@ $(PROJECT_ROOT)/bin/%.devel: $(TARGETDIRS_DEVEL)
                 -l$(COMMONLIBDEV) -l$(UTILDEV)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION)  
 
 $(PROJECT_ROOT)/bin/%: $(TARGETDIRS_PROD)  
 	@$(ECHO) ""
@@ -311,7 +293,6 @@ $(PROJECT_ROOT)/bin/%: $(TARGETDIRS_PROD)
                 -l$(COMMONLIBPROD) -l$(UTILPROD)
 	@$(RM) .make_track
 	@$(TOUCH) .done
-	@$(CLOCK_SKEW_ELIMINATION) 
 
 
 ###############################################################################
@@ -331,8 +312,8 @@ global/build.c: $(TARGETDIRS_DEVEL)
 	@$(ECHO) "char build_user[] = \"$(USER)\";" >> $@
 	@$(ECHO) "char build_host[] = \"`hostname`\";" >> $@
 	@$(ECHO) "char build_os[]   = \"$(OS)\";"   >> $@
-	@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
-	@$(CLOCK_SKEW_ELIMINATION)  
+	#@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
+	@$(ECHO) "char build_rev[]  = \"REVISION\";"  >> $@
 
 global/build_prod.c: $(TARGETDIRS_PROD)
 	@$(ECHO) ""
@@ -341,8 +322,8 @@ global/build_prod.c: $(TARGETDIRS_PROD)
 	@$(ECHO) "char build_user[] = \"$(USER)\";" >> $@
 	@$(ECHO) "char build_host[] = \"`hostname`\";" >> $@
 	@$(ECHO) "char build_os[]   = \"$(OS)\";"   >> $@
-	@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
-	@$(CLOCK_SKEW_ELIMINATION)  
+	#@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
+	@$(ECHO) "char build_rev[]  = \"REVISION\";"  >> $@
 
 
 
@@ -373,7 +354,6 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	@$(ECHO) "  Compiling developer code:  $(notdir $<)"
 	$(HIDE) $(CC) $(CCFLAGS) $(CFLAGS) $(YYFLAGS) $(INCS) $(UTILINCS) $(RUNTIMEINCS) \
 	 -o $@ -c $<
-	@$(CLOCK_SKEW_ELIMINATION) 
 
 %.prod.o: %.c 
 	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
@@ -384,7 +364,6 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	@$(ECHO) "  Compiling product code:  $(notdir $<)"
 	$(HIDE) $(CCPROD) $(CCPROD_FLAGS) $(CPROD_FLAGS) $(YYFLAGS) $(INCS) \
 	 $(UTILINCS) $(RUNTIMEINCS) -o $@ -c $<
-	@$(CLOCK_SKEW_ELIMINATION) 
 
 
 ###############################################################################
@@ -399,8 +378,7 @@ makesubdir.prod: $(TARGETDIRS_PROD)
               $(ECHO) "Generating header files in directory $(PREFIX_LOCAL)$(dir $@)" ; \
          fi
 	@$(ECHO) "  Generating header file from XML specification:  $(notdir $@)"
-	$(HIDE)$(XSLTENGINE) $< $(XML_DIR)/ast.xml | $(CODE_BEAUTIFIER) >$@
-	@$(CLOCK_SKEW_ELIMINATION)  
+	$(HIDE)$(XSLTENGINE) $< $(XML_DIR)/ast.xml >$@
 
 %.c: %.c.xsl $(XML_DIR)/ast.xml $(XML_COMMONS) 
 	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
@@ -409,8 +387,7 @@ makesubdir.prod: $(TARGETDIRS_PROD)
               $(ECHO) "Generating source files in directory $(PREFIX_LOCAL)$(dir $@)" ; \
          fi
 	@$(ECHO) "  Generating source code from XML specification:  $(notdir $@)"
-	$(HIDE)$(XSLTENGINE) $< $(XML_DIR)/ast.xml | $(CODE_BEAUTIFIER) >$@
-	@$(CLOCK_SKEW_ELIMINATION)  
+	$(HIDE)$(XSLTENGINE) $< $(XML_DIR)/ast.xml >$@
 
 
 %.lex.c: %.l 
@@ -422,7 +399,6 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	@$(ECHO) "  Generating source code from LEX specification:  $(notdir $@)"
 	$(HIDE)$(LEX) $<
 	$(HIDE)mv lex.yy.c $@
-	@$(CLOCK_SKEW_ELIMINATION) 
 
 %.tab.c: %.y 
 	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
@@ -435,7 +411,6 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	$(HIDE)mv y.tab.c $@
 	$(HIDE)$(RM) y.tab.h
 	$(HIDE)mv y.output $(dir $@)
-	@$(CLOCK_SKEW_ELIMINATION) 
 
 %.tab.h: %.y 
 	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
@@ -448,7 +423,6 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	$(HIDE)mv y.tab.h $@
 	$(HIDE)$(RM) y.tab.c 
 	$(HIDE)mv y.output $(dir $@)
-	@$(CLOCK_SKEW_ELIMINATION) 
 
 
 #######################################################################################
@@ -469,7 +443,6 @@ makesubdir.prod: $(TARGETDIRS_PROD)
 	 else $(RM) $@d ; \
 	      exit 1 ;  \
 	 fi
-	@$(CLOCK_SKEW_ELIMINATION) 
 
 
 

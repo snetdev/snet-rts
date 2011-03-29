@@ -6,8 +6,8 @@ dnl configure script (based on SAC scripts) for building snet compiler
 dnl on different hosts and os
 
 dnl tell configure who we are
-dnl parameters: package name, version, where to send bugreports
-AC_INIT(snetc, svn, info@snet-home.org)
+dnl parameters: package name, version, where to send bugreports, tarball-name
+AC_INIT(SNet, dev, info@snet-home.org, snet)
 
 dnl set source directory and scripting directory
 AC_CONFIG_SRCDIR(.)
@@ -91,28 +91,6 @@ AC_PROG_RANLIB()
 dnl check, whether we need -traditional flag
 AC_PROG_GCC_TRADITIONAL
 
-dnl check whether its gnu indent
-AC_MSG_CHECKING([whether GNU indent works])
-GNUINDENT=$(indent --version 2>/dev/null)
-case "$GNUINDENT" in
-  *GNU*) 
-    CB="indent"
-    AC_MSG_RESULT(yes)
-    ;;
-  *) 
-    GNUINDENT=$(gindent --version 2>/dev/null)
-    case "$GNUINDENT" in
-    *GNU*)
-      CB="gindent"
-      AC_MSG_RESULT(yes)
-      ;;
-    *)
-      CB="\$(PROJECT_ROOT)/src/bin/cb"
-      AC_MSG_RESULT(no)
-      ;;
-    esac
-esac
-AC_SUBST(CB, $CB)
 
 dnl search for bison, byacc or yacc
 AC_PROG_YACC()
@@ -130,7 +108,7 @@ if [ test "$YACC" != "yacc" ]; then
   AC_MSG_CHECKING([whether $YACC works])
   mkdir .ac_yacc_test
   cd .ac_yacc_test  
-  cp ../src/compiler/parse/snet.y .
+  cp ../src/snetc/parse/snet.y .
   if [ $YACC snet.y >/dev/null 2>/dev/null ]; then
     AC_MSG_RESULT(ok)
   else

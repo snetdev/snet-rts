@@ -17,7 +17,8 @@ ARCH=@ARCH@
 # svn setup:
 #
 
-REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
+#FIXME we need to agree on some tagging/versioning scheme
+#REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
 
 
 ################################################################################
@@ -86,9 +87,4 @@ else
   YYFLAGS   := -DYYLMAX=8192
 endif
 
-CLOCK_SKEW_ELIMINATION   := if [ -x $(PROJECT_ROOT)/src/bin/cse ] ; \
-                            then $(PROJECT_ROOT)/src/bin/cse $@ ; \
-                            fi
-
-CODE_BEAUTIFIER          := @CB@
 

@@ -91,7 +91,6 @@ make_%: checks
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Building S-Net $(SUBPROJECT) "
-	@$(ECHO) "* revision $(REVISION)"
 	@$(ECHO) "* on $(OS) for $(ARCH)"
 	@$(ECHO) "************************************************************"
 	@$(TOUCH) .make_track
