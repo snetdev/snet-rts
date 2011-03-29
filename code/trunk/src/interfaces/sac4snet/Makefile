@@ -47,7 +47,9 @@ lib%Mod.so: %.sac
 
 sac_lib/lib$(IFNAME)FibreIO.so: $(IFNAME)FibreIO.sac 
 	$(SAC2C) $(SACFLAGS) $(SACTARGET).sac
+	mkdir -p $(LIBDIR) sac_include
 	$(SAC4C) $(S4CFLAGS) $(SACTARGET)
 
 clean:
-	rm -f *.o *.a *.so $(TARGETDIR)/$(TARGET) $(TARGETDIR)/$(WRAPTARGET) sac_include/* $(LIBDIR)/* $(SNETBASE)/include/$(IFNAME).h
+	rm -f *.o *.a *.so $(TARGETDIR)/$(TARGET) $(TARGETDIR)/$(WRAPTARGET) $(SNETBASE)/include/$(IFNAME).h
+	rm -fr sac_include $(LIBDIR)
