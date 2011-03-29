@@ -6,8 +6,8 @@ dnl configure script (based on SAC scripts) for building snet compiler
 dnl on different hosts and os
 
 dnl tell configure who we are
-dnl parameters: package name, version, where to send bugreports
-AC_INIT(snetc, svn, info@snet-home.org)
+dnl parameters: package name, version, where to send bugreports, tarball-name
+AC_INIT(SNet, dev, info@snet-home.org, snet)
 
 dnl set source directory and scripting directory
 AC_CONFIG_SRCDIR(.)

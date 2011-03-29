@@ -17,7 +17,8 @@ ARCH=@ARCH@
 # svn setup:
 #
 
-REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
+#FIXME we need to agree on some tagging/versioning scheme
+#REVISION := $(shell svn info | grep Revision: | sed -e 's/Revision: //g')
 
 
 ################################################################################

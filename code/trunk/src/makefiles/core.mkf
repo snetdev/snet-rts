@@ -312,7 +312,8 @@ global/build.c: $(TARGETDIRS_DEVEL)
 	@$(ECHO) "char build_user[] = \"$(USER)\";" >> $@
 	@$(ECHO) "char build_host[] = \"`hostname`\";" >> $@
 	@$(ECHO) "char build_os[]   = \"$(OS)\";"   >> $@
-	@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
+	#@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
+	@$(ECHO) "char build_rev[]  = \"REVISION\";"  >> $@
 
 global/build_prod.c: $(TARGETDIRS_PROD)
 	@$(ECHO) ""
@@ -321,7 +322,8 @@ global/build_prod.c: $(TARGETDIRS_PROD)
 	@$(ECHO) "char build_user[] = \"$(USER)\";" >> $@
 	@$(ECHO) "char build_host[] = \"`hostname`\";" >> $@
 	@$(ECHO) "char build_os[]   = \"$(OS)\";"   >> $@
-	@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
+	#@$(ECHO) "char build_rev[]  = \"$(REVISION)\";"  >> $@
+	@$(ECHO) "char build_rev[]  = \"REVISION\";"  >> $@
 
 
 
