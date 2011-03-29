@@ -24,7 +24,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include "record_p.h"
 #include "output.h"
 #include "input.h"
 #include "observers.h"

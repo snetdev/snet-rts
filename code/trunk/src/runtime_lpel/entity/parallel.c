@@ -25,7 +25,6 @@
  *****************************************************************************/
 
 #include "snetentities.h"
-#include "record_p.h"
 #include "typeencode.h"
 #include "collector.h"
 #include "memfun.h"

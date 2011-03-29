@@ -4,7 +4,6 @@
 #include "collector.h"
 #include "snetentities.h"
 #include "memfun.h"
-#include "record_p.h"
 #include "bool.h"
 #include "debug.h"
 

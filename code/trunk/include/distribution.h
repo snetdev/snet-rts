@@ -1,10 +1,10 @@
 #ifndef _SNET_DISTRIBUTION_H_
 #define _SNET_DISTRIBUTION_H_
 
+typedef void* snet_ref_t;
+
 #include <snettypes.h>
 #include "info.h"
-
-typedef void* snet_ref_t;
 
 extern int SNetNodeLocation;
 

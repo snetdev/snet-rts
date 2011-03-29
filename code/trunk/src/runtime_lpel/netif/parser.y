@@ -27,7 +27,6 @@
 #include "memfun.h"
 #include "snetentities.h"
 #include "constants.h"
-#include "record_p.h"
 #include "debug.h"
 
 #include "threading.h"

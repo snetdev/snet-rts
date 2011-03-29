@@ -2,7 +2,6 @@
 #include "memfun.h"
 #include "stdarg.h"
 #include "bool.h"
-#include "record_p.h"
 #include "snetentities.h"
 #include "debug.h"
 #include "interface_functions.h"

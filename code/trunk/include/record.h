@@ -11,6 +11,21 @@
 typedef struct record snet_record_t;
 typedef union record_types snet_record_types_t;
 
+enum record_descr {
+  REC_data,
+  REC_sync,
+  REC_collect,
+  REC_sort_end,
+  REC_terminate,
+  REC_trigger_initialiser
+};
+
+enum record_mode {
+  MODE_textual,
+  MODE_binary,
+};
+
+
 #include "snettypes.h"
 #include "typeencode.h"
 #include "bool.h"

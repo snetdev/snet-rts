@@ -21,7 +21,6 @@
 
 #include "memfun.h"
 #include "output.h"
-#include "record_p.h"
 #include "snetentities.h"
 #include "label.h"
 #include "interface.h"

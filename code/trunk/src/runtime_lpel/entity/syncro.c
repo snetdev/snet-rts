@@ -30,7 +30,6 @@
 #include "snetentities.h"
 
 #include "bool.h"
-#include "record_p.h"
 #include "memfun.h"
 
 #include "threading.h"

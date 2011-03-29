@@ -2,7 +2,6 @@
 
 #include "snetentities.h"
 
-#include "record_p.h"
 #include "typeencode.h"
 #include "expression.h"
 #include "memfun.h"

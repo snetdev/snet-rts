@@ -9,7 +9,6 @@
 #include <stdarg.h>
 
 #include "memfun.h"
-#include "record_p.h"
 
 #include "snettypes.h"
 #include "snetentities.h"

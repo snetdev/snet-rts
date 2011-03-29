@@ -2,7 +2,6 @@
 #include <string.h>
 
 #include "debug.h"
-#include "record_p.h"
 #include "memfun.h"
 #include "distribution.h"
 
