@@ -44,8 +44,7 @@ TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
 
 
 LIB  := -L$(PROJECT_ROOT)/src/lib 
-INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) \
-        -I$(LPELSOURCE)
+INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
 
 COMMONLIBDEV   := $(patsubst lib%.a,%,$(targets_commonlib_devel))
 COMMONLIBPROD  := $(patsubst lib%.a,%,$(targets_commonlib_prod))

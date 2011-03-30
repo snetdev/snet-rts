@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import sys
+
 global_start_time = -1
 
 # create tasks_map, tasklists
@@ -17,6 +19,9 @@ class TaskTrace:
 
   def __str__(self):
     return "Task %u (%s)" % (self.tid, self.name)
+
+  def exists(self):
+    return len(self.records) > 0
 
   def addRecord(self, line):
     rec = TaskRecord( line, self)
@@ -85,12 +90,14 @@ class TaskRecord:
 
 ###############################################################################
 
+if len(sys.argv) > 1: fname = sys.argv[1]
+else: fname = "mon_all.log"
 
 # fill tasks_map
 f = open("tasks.map")
 try:
   for line in f.readlines():
-    tmp = line.split(':')
+    tmp = line.split()
     tid = int(tmp[0])
     taskname = tmp[1].strip()
     # tasks_map
@@ -108,7 +115,7 @@ finally: f.close()
 
 
 # just read global start time
-f = open("mon_all.log")
+f = open(fname)
 try:
   global_start_time = int(f.readline().split()[0])
 finally: f.close()
@@ -117,7 +124,7 @@ finally: f.close()
 
 
 # process each line of log
-f = open("mon_all.log")
+f = open(fname)
 try:
   for line in f:
     tmp = line.split()
@@ -136,10 +143,11 @@ for taskname, lst in tasklists.items():
     print "====================================================="
     for tid in sorted(lst):
       trace = tasks_map[tid]
-      trace.summary()
-      print trace, "disp %u total %.6f, avg %.6f, ttbd %.6f, mtbd %.6f" \
-            % (trace.disp, trace.total, trace.avg, trace.ttbd, trace.mtbd)
-      et_sum += trace.total
+      if trace.exists():
+        trace.summary()
+        print trace, "disp %u total %.6f, avg %.6f, ttbd %.6f, mtbd %.6f" \
+              % (trace.disp, trace.total, trace.avg, trace.ttbd, trace.mtbd)
+        et_sum += trace.total
     et_avg = et_sum / len(lst)
     print "*** %s: total %.6f, avg %.6f" % (taskname, et_sum, et_avg)
 
