@@ -25,7 +25,7 @@
 # general setup:
 #
 
-PROJECT_ROOT := ../..
+PROJECT_ROOT := $(SNETBASE)
 
 HIDE := @
 DEPS := yes
@@ -183,23 +183,6 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
 
 
 #
-# SNET
-#
-$(PROJECT_ROOT)/lib/libsnet.so: $(TARGETDIRS_DEVEL) 
-	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS)
-	@$(RM) .make_track
-	@$(TOUCH) .done
-
-$(PROJECT_ROOT)/lib/libsnet.prod.so:  $(TARGETDIRS_PROD) 
-	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(RUNTIMELIB_DEPS)
-	@$(RM) .make_track
-	@$(TOUCH) .done
-
-#
 # NODIST LIBRARY
 #
 $(PROJECT_ROOT)/lib/libdistribnodist.so: $(TARGETDIRS_DEVEL)
@@ -240,18 +223,18 @@ $(PROJECT_ROOT)/lib/libtbpthread.prod.so: $(TARGETDIRS_DEVEL)
 #
 # SNET + LPEL
 #
-$(PROJECT_ROOT)/lib/libsnetlpel.so: $(TARGETDIRS_DEVEL) 
+$(PROJECT_ROOT)/lib/libsnet.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
 	@$(ECHO "$(TARGETDIRS_DEVEL)"
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpel.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS)
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.so (developer version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
 
-$(PROJECT_ROOT)/lib/libsnetlpel.prod.so:  $(TARGETDIRS_PROD) 
+$(PROJECT_ROOT)/lib/libsnet.prod.so:  $(TARGETDIRS_PROD)
 	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnetlpel.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(LPELLIB) $(RUNTIMELIB_DEPS)
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.prod.so (product version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
 
@@ -438,7 +421,7 @@ makesubdir.prod: $(TARGETDIRS_PROD)
         fi
 	@$(ECHO) "  Checking dependencies of source file: $(notdir $<)"
 	$(HIDE) if $(CC) $(CCDEPS_FLAGS) $(CFLAGS) $(INCS) $(UTILINCS) $(RUNTIMEINCS) $<  > $@d ; \
-	 then sed 's/\($(notdir $*)\)\.o[ :]*/$(subst /,\/,$*)\.o $(subst /,\/,$@)\: ..\/makefiles\/config.mkf /'  <$@d >$@; \
+	 then sed 's#\($(notdir $*)\)\.o[ :]*#$*.o $@: $(PROJECT_ROOT)/src/makefiles/config.mkf #'  <$@d >$@; \
 	      $(RM) $@d ; \
 	 else $(RM) $@d ; \
 	      exit 1 ;  \

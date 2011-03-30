@@ -80,8 +80,8 @@ default devel prod: checks
                         PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/snetc  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/snetc/"  PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/runtime_lpel  DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/runtime/stream  DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/runtime/stream/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/distrib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/threading   DEPS="$(DEPS)" HIDE="$(HIDE)" \
@@ -109,8 +109,8 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/snetc  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/snetc/"  PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/runtime/stream  DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/runtime/stream/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/distrib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/threading   DEPS="$(DEPS)" HIDE="$(HIDE)" \
