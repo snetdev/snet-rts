@@ -80,18 +80,16 @@ default devel prod: checks
                         PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/snetc  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/snetc/"  PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/runtime_lpel  DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/runtime/stream  DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/runtime/stream/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/distrib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/threading   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/threading/"   PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/interfaces/c4snet HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/interfaces/c4snet/" PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/interfaces/sac4snet HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/interfaces/sac4snet/" PREFIX_ROOT="" $@
+	# $(HIDE) $(MAKE) -C src/interfaces/sac4snet HIDE="$(HIDE)" \
+        #                PREFIX_LOCAL="src/interfaces/sac4snet/" PREFIX_ROOT="" $@
 	@$(ECHO) ""
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Building S-Net completed"
@@ -109,14 +107,12 @@ clean cleandevel cleanprod:
                         PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/snetc  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/snetc/"  PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/runtime_lpel   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/runtime_lpel/"   PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/runtime/stream  DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/runtime/stream/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/distrib   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/distrib/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/threading   DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/threading/"   PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/tools     DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/tools/"     PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/interfaces/c4snet HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/interfaces/c4snet/" PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/interfaces/sac4snet HIDE="$(HIDE)" \
@@ -137,10 +133,10 @@ efence:
 #
 
 config:
-	svn lock configure $(AUTOHEADERED)
+	#svn lock configure $(AUTOHEADERED)
 	autoconf
 	autoheader
-	svn commit configure $(AUTOHEADERED)
+	#svn commit configure $(AUTOHEADERED)
 
 
 ###############################################################################

@@ -177,13 +177,13 @@ void SAC4SNet_out( void *hnd, int variant, ...)
 void SAC4SNetInit( int id)
 {
   my_interface_id = id;
-  SNetGlobalRegisterInterface( id,
-                               &SACARGfree,
-                               &SACARGcopy,
-                               &SAC4SNetDataSerialise,
-                               &SAC4SNetDataDeserialise,
-                               &SAC4SNetDataEncode,
-                               &SAC4SNetDataDecode);
+  SNetInterfaceRegister( id,
+                         &SACARGfree,
+                         &SACARGcopy,
+                         &SAC4SNetDataSerialise,
+                         &SAC4SNetDataDeserialise,
+                         &SAC4SNetDataEncode,
+                         &SAC4SNetDataDecode);
 }
 
 /******************************************************************************/

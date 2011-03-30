@@ -9,16 +9,16 @@
 # Collection of targets
 #
 
-targets_runtime_lpel_devel     := libsnetlpel.so 
-targets_runtime_lpel_prod      := libsnetlpel.prod.so 
-targets_runtime_lpel_default   := $(targets_runtime_lpel_devel)
+targets_stream_devel     := libsnet.so
+targets_stream_prod      := libsnet.prod.so
+targets_stream_default   := $(targets_stream_devel)
 
 ###############################################################################
 #
 # Collection of target directories
 #
 
-targetdir_runtime_lpel         := lib
+targetdir_stream         := lib
 
 
 ###############################################################################
@@ -26,9 +26,9 @@ targetdir_runtime_lpel         := lib
 # Collection of additional files to be cleaned
 #
 
-clean_runtime_lpel             :=
-clean_runtime_lpel_devel       :=
-clean_runtime_lpel_prod        :=
+clean_stream             :=
+clean_stream_devel       :=
+clean_stream_prod        :=
 
 
 ###############################################################################
@@ -36,7 +36,7 @@ clean_runtime_lpel_prod        :=
 # Collection of source directories
 #
 
-runtime_lpel          = shared entity utils langif netif observer
+stream          = shared entity utils langif netif observer
 
 
 ###############################################################################
@@ -51,12 +51,12 @@ shared          = handle.o record.o expression.o info.o
 entity          = filter.o syncro.o out.o box.o alias.o \
                   serial.o collector.o parallel.o star.o split.o
 
-utils		= debug.o bitmap.o hashtable.o queue.o \
+utils           = debug.o bitmap.o hashtable.o queue.o \
                   debugtime.o debugcounters.o hashtab.o
 
 langif          = interface_functions.o
 
-netif   	= label.o parser.tab.o parser.lex.o interface.o \
+netif           = label.o parser.tab.o parser.lex.o interface.o \
                   networkinterface.o output.o input.o 
 
-observer	= observers.o
+observer        = observers.o

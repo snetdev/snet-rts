@@ -37,7 +37,7 @@
 # General settings
 #
 
-PROJECT_ROOT = ../../..
+PROJECT_ROOT = $(SNETBASE)
 
 include $(PROJECT_ROOT)/src/makefiles/config.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets.mkf
@@ -68,7 +68,7 @@ devel: checks
 	@$(ECHO) ""
 	@$(ECHO) "Making current subdirectory (developer version)"
 	@$(TOUCH) .make_track
-	$(HIDE) $(MAKE) -C .. -f ../makefiles/core.mkf \
+	$(HIDE) $(MAKE) -C .. -f $(PROJECT_ROOT)/src/makefiles/core.mkf \
                         TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         makesubdir.devel
 	@$(RM) .make_track
@@ -77,7 +77,7 @@ prod: checks
 	@$(ECHO) ""
 	@$(ECHO) "Making current subdirectory (product version)"
 	@$(TOUCH) .make_track
-	$(HIDE) $(MAKE) -C .. -f ../makefiles/core.mkf \
+	$(HIDE) $(MAKE) -C .. -f $(PROJECT_ROOT)/src/makefiles/core.mkf \
                         TARGETDIR="$(TARGETDIR)" DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         makesubdir.prod
 	@$(RM) .make_track

@@ -30,7 +30,7 @@
 # general setup:
 #
 
-PROJECT_ROOT := ../..
+PROJECT_ROOT := $(SNETBASE)
 
 HIDE   := @
 DEPS   := yes

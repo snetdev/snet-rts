@@ -6,7 +6,7 @@ SNETC     = snetc
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib 
-LIBS      = -ldistribnodist -ltbpthread -lpthread -lC4SNet -lsnetlpel -lsnetutil $(SOCKETLIBS) $(RPATH)
+LIBS      = -ldistribnodist -ltbpthread -lpthread -lC4SNet -lsnet -lsnetutil $(SOCKETLIBS) $(RPATH)
 FILES     = condif.c leq1.c mult.c sub.c
 
 # = = = = = = = = = = = = = = = = = = = =
