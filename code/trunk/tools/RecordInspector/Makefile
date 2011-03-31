@@ -1,1 +1,1 @@
-../../makefiles/source.mkf
+../../src/makefiles/source.mkf

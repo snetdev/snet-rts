@@ -20,6 +20,62 @@ enum record_mode {
   MODE_binary,
 };
 
+/* macros for record datastructure */
+#define REC_DESCR( name) name->rec_descr
+#define RECPTR( name) name->rec
+#define RECORD( name, type) RECPTR( name)->type
+
+#define DATA_REC( name, component) RECORD( name, data_rec)->component
+#define SYNC_REC( name, component) RECORD( name, sync_rec)->component
+#define SORT_E_REC( name, component) RECORD( name, sort_end_rec)->component
+#define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
+#define COLL_REC( name, component) RECORD( name, coll_rec)->component
+
+#include "map.h"
+
+typedef struct {
+  snet_int_map_t *tags;
+  snet_int_map_t *btags;
+  snet_ref_map_t *fields;
+  int interface_id;
+  snet_record_mode_t mode;
+} data_rec_t;
+
+typedef struct {
+  snet_stream_t *input;
+} sync_rec_t;
+
+typedef struct {
+  int num;
+  int level;
+} sort_end_t;
+
+typedef struct {
+  /* empty */
+} terminate_rec_t;
+
+typedef struct {
+  snet_stream_t *output;
+} coll_rec_t;
+
+union record_types {
+  data_rec_t *data_rec;
+  sync_rec_t *sync_rec;
+  coll_rec_t *coll_rec;
+  sort_end_t *sort_end_rec;
+  terminate_rec_t *terminate_rec;
+};
+
+struct record {
+  snet_record_descr_t rec_descr;
+  snet_record_types_t *rec;
+};
+
+#define FOR_EACH_TAG(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, tags), name, val)
+#define FOR_EACH_BTAG(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, btags), name, val)
+#define FOR_EACH_FIELD(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, fields), name, val)
+
+
 #include "distribution.h"
 #include "snettypes.h"
 

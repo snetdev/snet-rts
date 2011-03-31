@@ -46,7 +46,7 @@ stream          = shared entity utils langif netif observer
 # Note that the variable names must coincide with the directory names above.
 #
 
-shared          = handle.o record.o expression.o info.o
+shared          = handle.o
 
 entity          = filter.o syncro.o out.o box.o alias.o \
                   serial.o collector.o parallel.o star.o split.o
@@ -57,6 +57,6 @@ utils           = debug.o bitmap.o hashtable.o queue.o \
 langif          = interface_functions.o
 
 netif           = label.o parser.tab.o parser.lex.o interface.o \
-                  networkinterface.o output.o input.o 
+                  networkinterface.o output.o input.o
 
 observer        = observers.o

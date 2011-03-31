@@ -53,7 +53,7 @@ UTILDEV := $(patsubst lib%.so,%,$(targets_util_devel))
 UTILPROD  := $(patsubst lib%.so,%,$(targets_util_prod))
 
 RUNTIMELIB  := -L$(PROJECT_ROOT)/lib $(MTLIBS) $(GTKLIBS) $(SOCKETLIBS)
-RUNTIMEINCS := -I$(PROJECT_ROOT)/include \
+RUNTIMEINCS := -I$(PROJECT_ROOT)/src/runtime/include \
                $(patsubst %,-I%,$(SUBPROJECT_DIRS)) \
                $(patsubst %,-I%,$(SUBPROJECT_DIRS))/../include \
                $(GTKFLAGS)
