@@ -10,10 +10,10 @@ all: $(TARGET)
 
 
 $(TARGET): $(TARGET).snet lib$(TARGET)Boxes.a 
-			snetc -Wl,-rpath=$(SNETBASE)/lib  \
-            -I. -I$(SNETBASE)/include \
+			snetc -I. -I$(SNETBASE)/include \
             -L. -L$(BOXPATH) -L$(SNETBASE)/lib \
             -l$(TARGET)Boxes -lm \
+            -lsnet -ldistribnodist -ltblpel -lpthread \
             $(TARGET).snet -o $(TARGET)
 
 
