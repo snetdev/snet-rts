@@ -109,7 +109,7 @@ int SNetThreadingInit(int argc, char **argv)
 
   SNetAssignInit(config.num_workers);
 
-  SNetInit(&config);
+  SNetLpInit(&config);
 
   return 0;
 }
@@ -117,14 +117,14 @@ int SNetThreadingInit(int argc, char **argv)
 
 void SNetThreadingStop(void)
 {
-  SNetStop();
+  SNetLpStop();
 }
 
 
 int SNetThreadingProcess(void)
 {
   /* following call will block until the workers have finished */
-  SNetCleanup();
+  SNetLpCleanup();
   return 0;
 }
 
