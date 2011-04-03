@@ -42,101 +42,87 @@ typedef struct {
 /* This function prints records to stdout */
 static void printRec(snet_record_t *rec, handle_t *hnd)
 {
-  int k = 0;
-  int i = 0;
+  snet_ref_t *ref;
+  int name, val;
   char *label = NULL;
   char *interface = NULL;
   snet_record_mode_t mode;
 
   /* Change this to redirect the output! */
 
-  if( rec != NULL) {
+  if (rec != NULL) {
 
     fprintf(hnd->file, "<?xml version=\"1.0\" ?>");
 
     switch( SNetRecGetDescriptor( rec)) {
     case REC_data:
-
       mode = SNetRecGetDataMode(rec);
-      
-      if(mode == MODE_textual) {
+      if (mode == MODE_textual) {
 	fprintf(hnd->file, "<record xmlns=\"snet-home.org\" type=\"data\" mode=\"textual\" >");
-      }else {
+      } else {
 	fprintf(hnd->file, "<record xmlns=\"snet-home.org\" type=\"data\" mode=\"binary\" >");
       }
 
       /* Fields */
-      for( k=0; k<SNetRecGetNumFields( rec); k++) {
-	i = SNetRecGetFieldNames( rec)[k];
-	
-	int id = SNetRecGetInterfaceId(rec);
-	
-	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	  if((interface = SNetInIdToInterface(hnd->interfaces, id)) != NULL) {
-	    fprintf(hnd->file, "<field label=\"%s\" interface=\"%s\">", label, 
-		    interface);
-	    
-	    if(mode == MODE_textual) { 
-	      SNetInterfaceGet(id)->serialisefun(hnd->file, SNetRecGetField(rec, i));
-	    }else {
-	      SNetInterfaceGet(id)->encodefun(hnd->file, SNetRecGetField(rec, i));
-	    }
-	    
-	    fprintf(hnd->file, "</field>");
-	    SNetMemFree(interface);
-	  }
+      FOR_EACH_FIELD(rec, name, ref)
+        int id = SNetRecGetInterfaceId(rec);
 
-	  SNetMemFree(label);
-	}else{
-	  SNetUtilDebugFatal("Unknown field %d at output!", i);
-	}
-	
-      }
-      
+        if((label = SNetInIdToLabel(hnd->labels, name)) != NULL){
+          if((interface = SNetInIdToInterface(hnd->interfaces, id)) != NULL) {
+            fprintf(hnd->file, "<field label=\"%s\" interface=\"%s\">", label,
+                    interface);
+
+            if(mode == MODE_textual) {
+              SNetInterfaceGet(id)->serialisefun(hnd->file, ref);
+            } else {
+              SNetInterfaceGet(id)->encodefun(hnd->file, ref);
+            }
+
+            fprintf(hnd->file, "</field>");
+            SNetMemFree(interface);
+          }
+
+          SNetMemFree(label);
+        } else{
+          SNetUtilDebugFatal("Unknown field %d at output!", name);
+        }
+      END_FOR
+
        /* Tags */
-      for( k=0; k<SNetRecGetNumTags( rec); k++) {
-	i = SNetRecGetTagNames( rec)[k];
-	
-	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	  fprintf(hnd->file, "<tag label=\"%s\">%d</tag>", label, SNetRecGetTag(rec, i));	   
-	}else{
-	  SNetUtilDebugFatal("Unknown tag %d at output!", i);
-	}
-	
-	SNetMemFree(label);
-      }
-      
+      FOR_EACH_TAG(rec, name, val)
+        if ((label = SNetInIdToLabel(hnd->labels, name)) != NULL) {
+          fprintf(hnd->file, "<tag label=\"%s\">%d</tag>", label, val);
+        } else{
+          SNetUtilDebugFatal("Unknown tag %d at output!", name);
+        }
+
+        SNetMemFree(label);
+      END_FOR
+
       /* BTags */
-      for( k=0; k<SNetRecGetNumBTags( rec); k++) {
-	i = SNetRecGetBTagNames( rec)[k];
-	
-	if((label = SNetInIdToLabel(hnd->labels, i)) != NULL){
-	  fprintf(hnd->file, "<btag label=\"%s\">%d</btag>", label, SNetRecGetBTag(rec, i)); 
-	}else{
-	  SNetUtilDebugFatal("Unknown binding tag %d at output!", i);
-	}
-	
-	SNetMemFree(label);
-      }
+      FOR_EACH_BTAG(rec, name, val)
+        if ((label = SNetInIdToLabel(hnd->labels, name)) != NULL){
+          fprintf(hnd->file, "<btag label=\"%s\">%d</btag>", label, val);
+        } else{
+          SNetUtilDebugFatal("Unknown binding tag %d at output!", name);
+        }
+
+        SNetMemFree(label);
+      END_FOR
+
       fprintf(hnd->file, "</record>");
       break;
-    case REC_sync: 
+    case REC_sync:
       SNetUtilDebugFatal("REC_synch in output! This should not happen.");
       break;
-    case REC_collect: 
+    case REC_collect:
       SNetUtilDebugFatal("REC_collect in output! This should not happen.");
-      //SNetUtilDebugFatal("Output of REC_collect not yet implemented!");
-      //fprintf(hnd->file, "<record type=\"collect\" />");
       break;
     case REC_sort_end:
       SNetUtilDebugFatal("REC_sort_end in output! This should not happen.");
-      //SNetUtilDebugFatal("Output of REC_sort_end not yet implemented!");
-      //fprintf(hnd->file, "<record type=\"sort_end\" />");
       break;
     case REC_trigger_initialiser:
       SNetUtilDebugFatal("REC_trigger_initializer in output! This should not happen.");
-      //SNetUtilDebugFatal("Output of REC_trigger_initializer not yet implemented!");
-      //fprintf(hnd->file, "<record type=\"trigger_initialiser\" />");
       break;
     case REC_terminate:
       fprintf(hnd->file, "<record type=\"terminate\" />");

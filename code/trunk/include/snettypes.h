@@ -1,9 +1,6 @@
 #ifndef _SNET_SNETTYPES_H_
 #define _SNET_SNETTYPES_H_
 
-/* runtime specific implementation */
-typedef struct snet_stream_t snet_stream_t;
-
 #include "typeencode.h"
 #include "expression.h"
 #include "filter.h"

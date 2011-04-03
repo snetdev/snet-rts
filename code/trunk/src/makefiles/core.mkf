@@ -49,6 +49,9 @@ INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%
 COMMONLIBDEV   := $(patsubst lib%.a,%,$(targets_commonlib_devel))
 COMMONLIBPROD  := $(patsubst lib%.a,%,$(targets_commonlib_prod))
 
+RUNTIMECOMMONLIBDEV   := $(patsubst lib%.a,%,$(targets_runtime_devel))
+RUNTIMECOMMONLIBPROD  := $(patsubst lib%.a,%,$(targets_runtime_prod))
+
 UTILDEV := $(patsubst lib%.so,%,$(targets_util_devel))
 UTILPROD  := $(patsubst lib%.so,%,$(targets_util_prod))
 
@@ -57,14 +60,6 @@ RUNTIMEINCS := -I$(PROJECT_ROOT)/src/runtime/include \
                $(patsubst %,-I%,$(SUBPROJECT_DIRS)) \
                $(patsubst %,-I%,$(SUBPROJECT_DIRS))/../include \
                $(GTKFLAGS)
-
-LPELLIB       := -L$(PROJECT_ROOT)/lib
-ifeq ($(OS),linux-gnu)
-LPELLIB_DEPS  := -lpthread -lpcl -lrt -lcap
-else
-LPELLIB_DEPS  := -lpthread -lpcl
-endif
-
 
 RUNTIMELIB_DEPS      := -lpthread
 
@@ -186,7 +181,6 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
 #
 $(PROJECT_ROOT)/lib/libdistribnodist.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
-	@$(ECHO "$(TARGETDIRS_DEVEL)"
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libdistribnodist.so (developer version)"
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
@@ -194,7 +188,6 @@ $(PROJECT_ROOT)/lib/libdistribnodist.so: $(TARGETDIRS_DEVEL)
 
 $(PROJECT_ROOT)/lib/libdistribnodist.prod.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
-	@$(ECHO "$(TARGETDIRS_DEVEL)"
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libdistribnodist.prod.so (product version)"
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
@@ -205,7 +198,6 @@ $(PROJECT_ROOT)/lib/libdistribnodist.prod.so: $(TARGETDIRS_DEVEL)
 #
 $(PROJECT_ROOT)/lib/libtbpthread.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
-	@$(ECHO "$(TARGETDIRS_DEVEL)"
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libtbpthread.so (developer version)"
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
@@ -213,27 +205,46 @@ $(PROJECT_ROOT)/lib/libtbpthread.so: $(TARGETDIRS_DEVEL)
 
 $(PROJECT_ROOT)/lib/libtbpthread.prod.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
-	@$(ECHO "$(TARGETDIRS_DEVEL)"
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libtbpthread.prod.so (product version)"
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
 	@$(RM) .make_track
 	@$(TOUCH) .done
 
 #
-# SNET + LPEL
+# COMMON RUNTIME LIBRARY
+#
+$(PROJECT_ROOT)/src/runtime/lib/libcommon.a: $(TARGETDIRS_DEVEL)
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)src/runtime/lib/libcommon.a (developer version)"
+	$(HIDE) mkdir -p $(PROJECT_ROOT)/src/runtime/lib
+	$(HIDE) ar rc $@ $^
+	$(HIDE) $(RANLIB) $@
+	@$(RM) .make_track
+	@$(TOUCH) .done
+
+$(PROJECT_ROOT)/src/runtime/lib/libcommon.prod.a:  $(TARGETDIRS_PROD)
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)src/runtime/lib/libcommon.prod.a (product version)"
+	$(HIDE) mkdir -p $(PROJECT_ROOT)/src/runtime/lib
+	$(HIDE) ar rc $@ $^
+	$(HIDE) $(RANLIB) $@
+	@$(RM) .make_track
+	@$(TOUCH) .done
+
+#
+# SNET
 #
 $(PROJECT_ROOT)/lib/libsnet.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
-	@$(ECHO "$(TARGETDIRS_DEVEL)"
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ -l$(RUNTIMECOMMONLIBDEV) -L$(PROJECT_ROOT)/src/runtime/lib
 	@$(RM) .make_track
 	@$(TOUCH) .done
 
 $(PROJECT_ROOT)/lib/libsnet.prod.so:  $(TARGETDIRS_PROD)
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ -l$(RUNTIMECOMMONLIBPROD -L$(PROJECT_ROOT)/src/runtime/lib)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 

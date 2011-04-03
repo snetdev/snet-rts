@@ -71,7 +71,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
-  
+
   gettimeofday( &tv_in, NULL);
   SNetUtilDebugNotice("[DBG::RT::TimeTrace], SNetOut called from %p at"
                       " %lf\n", hnd, 
@@ -79,13 +79,11 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 #endif
 
   // set values from box
-  if( variant_num > 0) { 
-
-   venc = SNetTencGetVariant( 
-            SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), 
+  if (variant_num > 0) {
+   venc = SNetTencGetVariant( SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), 
             variant_num);
 
-   out_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( venc));
+   out_rec = SNetRecCreate( REC_data);
 
    SNetRecSetInterfaceId( out_rec, if_id);
 
@@ -114,33 +112,27 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
   // flow inherit
 
   old_rec = hnd->rec;
-  if( SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
-    names = SNetRecGetUnconsumedFieldNames( old_rec);
-    for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
-      if( SNetRecAddField( out_rec, names[i])) {
-  
-        SNetRecCopyFieldToRec(old_rec, names[i],
-  			    out_rec, names[i]);
-      }
-    }
-    SNetMemFree( names);
-  
-    names = SNetRecGetUnconsumedTagNames( old_rec);
-    for( i=0; i<SNetRecGetNumTags( old_rec); i++) {
-      if( SNetRecAddTag( out_rec, names[i])) {
-        SNetRecSetTag( out_rec, names[i], SNetRecGetTag( old_rec, names[i]));
-      }
-    }
-    SNetMemFree( names);
-  }
+  if (SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
+    int name, val;
+    snet_ref_t *ref;
 
-  if( SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
+    FOR_EACH_FIELD(old_rec, name, ref)
+      if (!SNetRecHasField( out_rec, name)) {
+        SNetRecSetField(out_rec, name, ref);
+      }
+    END_FOR
+
+    FOR_EACH_TAG(old_rec, name, val)
+      if (!SNetRecHasTag( out_rec, name)) {
+        SNetRecSetTag( out_rec, name, val);
+      }
+    END_FOR
+
     SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
-  }
-  else {
+  } else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
-  
+
   /* write to stream */
   SNetStreamWrite( hnd->out_sd, out_rec);
 
@@ -150,7 +142,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
       (tv_out.tv_sec - tv_in.tv_sec) +(tv_out.tv_usec-tv_in.tv_usec) / 1000000.0
       );
 #endif
-  return( hnd);
+  return hnd;
 }
 
 
@@ -161,7 +153,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 snet_handle_t *SNetOutRawV( snet_handle_t *hnd, 
     int id, int variant_num, va_list args)
  {
-  int i, *names;
+  int i;
   snet_record_t *out_rec, *old_rec;
   snet_variantencoding_t *venc;
   snet_vector_t *mapping;
@@ -184,7 +176,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
             SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), 
             variant_num);
 
-   out_rec = SNetRecCreate( REC_data, SNetTencCopyVariantEncoding( venc));
+   out_rec = SNetRecCreate( REC_data);
 
    SNetRecSetInterfaceId( out_rec, id);
 
@@ -219,31 +211,24 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
   // flow inherit
 
   old_rec = hnd->rec;
-  
-  if( SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) { 
-    names = SNetRecGetUnconsumedFieldNames( old_rec);
-    for( i=0; i<SNetRecGetNumFields( old_rec); i++) {
-      if( SNetRecAddField( out_rec, names[i])) {
-  
-        SNetRecCopyFieldToRec(old_rec, names[i],
-  			    out_rec, names[i]);
+  if (SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
+    int name, val;
+    snet_ref_t *ref;
+
+    FOR_EACH_FIELD(old_rec, name, ref)
+      if (!SNetRecHasField( out_rec, name)) {
+        SNetRecSetField( out_rec, name, ref);
       }
-    }
-    SNetMemFree( names);
-  
-    names = SNetRecGetUnconsumedTagNames( old_rec);
-    for( i=0; i<SNetRecGetNumTags( old_rec); i++) {
-      if( SNetRecAddTag( out_rec, names[i])) {
-        SNetRecSetTag( out_rec, names[i], SNetRecGetTag( old_rec, names[i]));
+    END_FOR
+
+    FOR_EACH_TAG(old_rec, name, val)
+      if (!SNetRecHasTag( out_rec, name)) {
+        SNetRecSetTag( out_rec, name, val);
       }
-    }
-    SNetMemFree( names);
-  }
-  // output record
-  if( SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
+    END_FOR
+
     SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
-  }
-  else {
+  } else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
 
@@ -258,7 +243,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
       (tv_out.tv_sec - tv_in.tv_sec) + (tv_out.tv_usec-tv_in.tv_usec) / 1000000.0
       );
 #endif
-  return( hnd);
+  return hnd;
 }
 
 /**

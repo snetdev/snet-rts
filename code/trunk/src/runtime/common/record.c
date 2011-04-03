@@ -1,69 +1,37 @@
+#include <stdarg.h>
+#include "interface_functions.h"
 #include "distribution.h"
 #include "record.h"
-#include "debug.h"
-
-#define NAME int
-#define VAL int
-#include "map.c.h"
-#undef VAL
-#undef NAME
-
-#define NAME ref
-#define VAL snet_ref_t*
-#include "map.c.h"
-#undef VAL
-#undef NAME
-
-/* macros for record datastructure */
-#define REC_DESCR( name) name->rec_descr
-#define RECPTR( name) name->rec
-#define RECORD( name, type) RECPTR( name)->type
-
-#define DATA_REC( name, component) RECORD( name, data_rec)->component
-#define SYNC_REC( name, component) RECORD( name, sync_rec)->component
-#define SORT_E_REC( name, component) RECORD( name, sort_end_rec)->component
-#define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
-#define COLL_REC( name, component) RECORD( name, coll_rec)->component
-
-typedef struct {
-  snet_map_int_t *tags;
-  snet_map_int_t *btags;
-  snet_map_ref_t *fields;
-  int interface_id;
-  snet_record_mode_t mode;
-} data_rec_t;
-
-typedef struct {
-  snet_stream_t *input;
-} sync_rec_t;
-
-typedef struct {
-  int num;
-  int level;
-} sort_end_t;
-
-typedef struct {
-  /* empty */
-} terminate_rec_t;
-
-typedef struct {
-  snet_stream_t *output;
-} coll_rec_t;
-
-union record_types {
-  data_rec_t *data_rec;
-  sync_rec_t *sync_rec;
-  coll_rec_t *coll_rec;
-  sort_end_t *sort_end_rec;
-  terminate_rec_t *terminate_rec;
-};
-
-struct record {
-  snet_record_descr_t rec_descr;
-  snet_record_types_t *rec;
-};
+#include "memfun.h"
+//#include "debug.h"
+#include "map.h"
 
 /* ***************************************************************************/
+
+bool SNetRecPatternMatches(snet_variantencoding_t *pat, snet_record_t *rec)
+{
+  int j;
+
+  for (j = 0; j < SNetTencGetNumFields(pat); j++) {
+    if (!SNetRecHasField(rec, SNetTencGetFieldNames(pat)[j])) {
+      return false;
+    }
+  }
+
+  for (j = 0; j < SNetTencGetNumTags(pat); j++) {
+    if (!SNetRecHasTag(rec, SNetTencGetTagNames(pat)[j])) {
+      return false;
+    }
+  }
+
+  for (j = 0; j < SNetTencGetNumBTags(pat); j++) {
+    if (!SNetRecHasBTag(rec, SNetTencGetBTagNames(pat)[j])) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
 {
@@ -78,9 +46,9 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
     case REC_data:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
       RECORD( rec, data_rec) = SNetMemAlloc( sizeof( data_rec_t));
-      DATA_REC( rec, btags) = SNetMapintCreate(0, -1);
-      DATA_REC( rec, tags) = SNetMapintCreate(0, -1);
-      DATA_REC( rec, fields) = SNetMaprefCreate(0, NULL);
+      DATA_REC( rec, btags) = SNetintMapCreate(0, -1);
+      DATA_REC( rec, tags) = SNetintMapCreate(0, -1);
+      DATA_REC( rec, fields) = SNetrefMapCreate(0, NULL);
       DATA_REC( rec, mode) = MODE_binary;
       DATA_REC( rec, interface_id) = 0;
       break;
@@ -107,7 +75,9 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       SORT_E_REC( rec, num) = va_arg( args, int);
       break;
     default:
-      SNetUtilDebugFatal("Unknown control record destription. [%d]", descr);
+      //FIXME
+      //SNetUtilDebugFatal("Unknown control record destription. [%d]", descr);
+      break;
   }
   va_end( args);
 
@@ -116,12 +86,21 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
 
 snet_record_t *SNetRecCopy( snet_record_t *rec)
 {
+  int name;
+  snet_ref_t *ref;
   snet_record_t *new_rec;
 
   switch (REC_DESCR( rec)) {
     case REC_data:
       new_rec = SNetRecCreate( REC_data);
-      /* FIXME: copy tags, btags, fields */
+      DATA_REC( new_rec, fields) = SNetrefMapCreate(0, NULL);
+
+      MAP_FOR_EACH(DATA_REC( rec, fields), name, ref)
+        SNetRecSetField( new_rec, name, SNetInterfaceGet(DATA_REC( rec, interface_id))->copyfun(ref));
+      END_FOR
+
+      DATA_REC( new_rec, tags) = SNetintMapCopy( DATA_REC( rec, tags));
+      DATA_REC( new_rec, btags) = SNetintMapCopy( DATA_REC( rec, btags));
       SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
       SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
       break;
@@ -133,7 +112,9 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       new_rec = SNetRecCreate( REC_terminate);
       break;
     default:
-      SNetUtilDebugFatal("Can't copy record of type %d", REC_DESCR( rec));
+      //FIXME
+      //SNetUtilDebugFatal("Can't copy record of type %d", REC_DESCR( rec));
+      break;
   }
 
   return new_rec;
@@ -143,8 +124,9 @@ void SNetRecDestroy( snet_record_t *rec)
 {
   switch (REC_DESCR( rec)) {
     case REC_data:
-      /* FIXME: free all references */
-      /* FIXME: free btags, tags, fields */
+      SNetrefMapDestroy( DATA_REC( rec, fields));
+      SNetintMapDestroy( DATA_REC( rec, tags));
+      SNetintMapDestroy( DATA_REC( rec, btags));
       SNetMemFree( RECORD( rec, data_rec));
       break;
     case REC_sync:
@@ -161,7 +143,8 @@ void SNetRecDestroy( snet_record_t *rec)
     case REC_trigger_initialiser:
       break;
     default:
-      SNetUtilDebugFatal("Unknown record description, in SNetRecDestroy");
+      //FIXME
+      //SNetUtilDebugFatal("Unknown record description, in SNetRecDestroy");
       break;
   }
   SNetMemFree( RECPTR( rec));
@@ -180,8 +163,9 @@ snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec)
 snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id)
 {
   if (REC_DESCR( rec) != REC_data) {
-    SNetUtilDebugFatal("SNetRecSetInterfaceId only accepts data records (%d)",
-                       REC_DESCR(rec));
+    //FIXME
+    //SNetUtilDebugFatal("SNetRecSetInterfaceId only accepts data records (%d)",
+    //                   REC_DESCR(rec));
   }
 
   DATA_REC( rec, interface_id) = id;
@@ -191,8 +175,9 @@ snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id)
 int SNetRecGetInterfaceId( snet_record_t *rec)
 {
   if (REC_DESCR( rec) != REC_data) {
-    SNetUtilDebugFatal("SNetRecGetInterfaceId only accepts data records (%d)",
-                       REC_DESCR(rec));
+    //FIXME
+    //SNetUtilDebugFatal("SNetRecGetInterfaceId only accepts data records (%d)",
+    //                   REC_DESCR(rec));
   }
 
   return DATA_REC( rec, interface_id);
@@ -203,8 +188,9 @@ int SNetRecGetInterfaceId( snet_record_t *rec)
 snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mod)
 {
   if (REC_DESCR( rec) != REC_data) {
-    SNetUtilDebugFatal("SNetRecSetDataMode only accepts data records (%d)",
-                       REC_DESCR(rec));
+    //FIXME
+    //SNetUtilDebugFatal("SNetRecSetDataMode only accepts data records (%d)",
+    //                   REC_DESCR(rec));
   }
 
   DATA_REC( rec, mode) = mod;
@@ -214,8 +200,9 @@ snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mod)
 snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec)
 {
   if (REC_DESCR( rec) != REC_data) {
-    SNetUtilDebugFatal("SNetRecGetDataMode only accepts data records (%d)",
-                       REC_DESCR(rec));
+    //FIXME
+    //SNetUtilDebugFatal("SNetRecGetDataMode only accepts data records (%d)",
+    //                   REC_DESCR(rec));
   }
 
   return DATA_REC( rec, mode);
@@ -235,7 +222,8 @@ snet_stream_t *SNetRecGetStream( snet_record_t *rec)
     result = COLL_REC( rec, output);
     break;
   default:
-    SNetUtilDebugFatal("Wrong type in SNetRecGetStream() (%d)", REC_DESCR(rec));
+    //FIXME
+    //SNetUtilDebugFatal("Wrong type in SNetRecGetStream() (%d)", REC_DESCR(rec));
     break;
   }
 
@@ -247,7 +235,8 @@ snet_stream_t *SNetRecGetStream( snet_record_t *rec)
 void SNetRecSetNum( snet_record_t *rec, int value)
 {
   if (REC_DESCR( rec) != REC_sort_end) {
-    SNetUtilDebugFatal("Wrong type in SNetRecSetNum() (%d)", REC_DESCR( rec));
+    //FIXME
+    //SNetUtilDebugFatal("Wrong type in SNetRecSetNum() (%d)", REC_DESCR( rec));
   }
 
   SORT_E_REC( rec, num) = value;
@@ -256,7 +245,8 @@ void SNetRecSetNum( snet_record_t *rec, int value)
 int SNetRecGetNum( snet_record_t *rec)
 {
   if (REC_DESCR( rec) != REC_sort_end) {
-    SNetUtilDebugFatal("Wrong type in SNetRecGetNum() (%d)", REC_DESCR( rec));
+    //FIXME
+    ///SNetUtilDebugFatal("Wrong type in SNetRecGetNum() (%d)", REC_DESCR( rec));
   }
 
   return SORT_E_REC( rec, num);
@@ -265,7 +255,8 @@ int SNetRecGetNum( snet_record_t *rec)
 void SNetRecSetLevel( snet_record_t *rec, int value)
 {
   if (REC_DESCR( rec) != REC_sort_end) {
-    SNetUtilDebugFatal("Wrong type in SNetRecSetLevel() (%d)", REC_DESCR( rec));
+    //FIXME
+    ///SNetUtilDebugFatal("Wrong type in SNetRecSetLevel() (%d)", REC_DESCR( rec));
   }
 
   SORT_E_REC( rec, level) = value;
@@ -274,7 +265,8 @@ void SNetRecSetLevel( snet_record_t *rec, int value)
 int SNetRecGetLevel( snet_record_t *rec)
 {
   if (REC_DESCR( rec) != REC_sort_end) {
-    SNetUtilDebugFatal("Wrong type in SNetRecSetLevel() (%d)", REC_DESCR( rec));
+    //FIXME
+    //SNetUtilDebugFatal("Wrong type in SNetRecSetLevel() (%d)", REC_DESCR( rec));
   }
 
   return SORT_E_REC( rec, level);
@@ -284,17 +276,17 @@ int SNetRecGetLevel( snet_record_t *rec)
 
 void SNetRecSetTag( snet_record_t *rec, int name, int val)
 {
-  SNetMapintSet(DATA_REC(rec, tags), name, val);
+  SNetintMapSet(DATA_REC(rec, tags), name, val);
 }
 
 int SNetRecGetTag( snet_record_t *rec, int name)
 {
-  return SNetMapintGet(DATA_REC(rec, tags), name);
+  return SNetintMapGet(DATA_REC(rec, tags), name);
 }
 
 int SNetRecTakeTag( snet_record_t *rec, int name)
 {
-  return SNetMapintTake(DATA_REC(rec, tags), name);
+  return SNetintMapTake(DATA_REC(rec, tags), name);
 }
 
 bool SNetRecHasTag( snet_record_t *rec, int name)
@@ -306,17 +298,17 @@ bool SNetRecHasTag( snet_record_t *rec, int name)
 
 void SNetRecSetBTag( snet_record_t *rec, int name, int val)
 {
-  SNetMapintSet(DATA_REC(rec, btags), name, val);
+  SNetintMapSet(DATA_REC(rec, btags), name, val);
 }
 
 int SNetRecGetBTag( snet_record_t *rec, int name)
 {
-  return SNetMapintGet(DATA_REC(rec, btags), name);
+  return SNetintMapGet(DATA_REC(rec, btags), name);
 }
 
 int SNetRecTakeBTag( snet_record_t *rec, int name)
 {
-  return SNetMapintTake(DATA_REC(rec, btags), name);
+  return SNetintMapTake(DATA_REC(rec, btags), name);
 }
 
 bool SNetRecHasBTag( snet_record_t *rec, int name)
@@ -328,17 +320,17 @@ bool SNetRecHasBTag( snet_record_t *rec, int name)
 
 void SNetRecSetField( snet_record_t *rec, int name, snet_ref_t *val)
 {
-  SNetMaprefSet(DATA_REC(rec, fields), name, val);
+  SNetrefMapSet(DATA_REC(rec, fields), name, val);
 }
 
 snet_ref_t *SNetRecGetField( snet_record_t *rec, int name)
 {
-  return SNetMaprefGet(DATA_REC(rec, fields), name);
+  return SNetInterfaceGet(DATA_REC( rec, interface_id))->copyfun(SNetrefMapGet(DATA_REC(rec, fields), name));
 }
 
 snet_ref_t *SNetRecTakeField( snet_record_t *rec, int name)
 {
-  return SNetMaprefTake(DATA_REC(rec, fields), name);
+  return SNetrefMapTake(DATA_REC(rec, fields), name);
 }
 
 bool SNetRecHasField( snet_record_t *rec, int name)

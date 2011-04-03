@@ -32,6 +32,7 @@ enum record_mode {
 #define COLL_REC( name, component) RECORD( name, coll_rec)->component
 
 #include "map.h"
+#include "bool.h"
 
 typedef struct {
   snet_int_map_t *tags;
@@ -77,10 +78,10 @@ struct record {
 
 
 #include "distribution.h"
-#include "snettypes.h"
+#include "typeencode.h"
 
 /* returns true if the record matches the pattern. */
-bool SNetRecPatternMatches();
+bool SNetRecPatternMatches(snet_variantencoding_t *pat, snet_record_t *rec);
 
 snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...);
 snet_record_t *SNetRecCopy( snet_record_t *rec);
@@ -105,14 +106,17 @@ void SNetRecSetTag( snet_record_t *rec, int id, int val);
 int SNetRecGetTag( snet_record_t *rec, int id);
 int SNetRecTakeTag( snet_record_t *rec, int id);
 bool SNetRecHasTag( snet_record_t *rec, int id);
+void SNetRecRenameTag( snet_record_t *rec, int id, int newId);
 
 void SNetRecSetBTag( snet_record_t *rec, int id, int val);
 int SNetRecGetBTag( snet_record_t *rec, int id);
 int SNetRecTakeBTag( snet_record_t *rec, int id);
 bool SNetRecHasBTag( snet_record_t *rec, int id);
+void SNetRecRenameBTag( snet_record_t *rec, int id, int newId);
 
 void SNetRecSetField( snet_record_t *rec, int id, snet_ref_t *val);
 snet_ref_t *SNetRecGetField( snet_record_t *rec, int id);
 snet_ref_t *SNetRecTakeField( snet_record_t *rec, int id);
 bool SNetRecHasField( snet_record_t *rec, int id);
+void SNetRecRenameField( snet_record_t *rec, int id, int newId);
 #endif /* _RECORD_H_ */

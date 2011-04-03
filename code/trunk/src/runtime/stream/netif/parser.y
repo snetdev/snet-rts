@@ -257,11 +257,7 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		    }
 		  
 		    if(interface != NULL) {
-		      current.record = SNetRecCreate(REC_data,
-					   SNetTencVariantEncode( 
-					       SNetTencCreateVector( 0), 
-					       SNetTencCreateVector( 0), 
-					       SNetTencCreateVector( 0)));
+		      current.record = SNetRecCreate(REC_data);
 
 		      current.interface = SNetInInterfaceToId(parser.interface, interface->value);
 		      SNetRecSetInterfaceId(current.record, current.interface);
@@ -326,11 +322,7 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		    attrib_t *interface = searchAttribute($2, INTERFACE);
 		    attrib_t *mode = searchAttribute($2, MODE);
 
-		    current.record = SNetRecCreate(REC_data,
-					 SNetTencVariantEncode( 
-					     SNetTencCreateVector( 0), 
-					     SNetTencCreateVector( 0), 
-					     SNetTencCreateVector( 0)));
+		    current.record = SNetRecCreate(REC_data);
 
 
 		    /* Default mode: */
@@ -506,7 +498,6 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	      }
 
 	      if(data != NULL) {
-      		SNetRecAddField(current.record, label);
 	      	SNetRecSetField(current.record, label, data);
 	      } else {
 		      yyerror("Could not decode data!");
@@ -545,8 +536,6 @@ Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
 	    if(attr != NULL) {
 	      label = SNetInLabelToId(parser.labels, attr->value);
 	    
-	      SNetRecAddTag(current.record, label);
-
 	      SNetRecSetTag(current.record, label, 0);
 
 	    } else{
@@ -565,8 +554,6 @@ Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
 	    if(attr != NULL) {
 	      label = SNetInLabelToId(parser.labels, attr->value);
 	    
-	      SNetRecAddTag(current.record, label);
-
 	      /* TODO: test that the atoi call worked? */
 	      SNetRecSetTag(current.record, label, atoi($4));
 
@@ -587,8 +574,6 @@ Tag:      TAG_BEGIN Attributes STARTTAG_SHORTEND
 	    if(attr != NULL) {
 	      label = SNetInLabelToId(parser.labels, attr->value);
 	    
-	      SNetRecAddTag(current.record, label);
-
 	      SNetRecSetTag(current.record, label, 0);
 	    } else{
 	      yyerror("Tag without label found!");
@@ -610,8 +595,6 @@ Btag:     BTAG_BEGIN Attributes STARTTAG_SHORTEND
 	    if(attr != NULL) {
 	      label = SNetInLabelToId(parser.labels, attr->value);
 	    
-	      SNetRecAddBTag(current.record, label);
-	      
 	      SNetRecSetBTag(current.record, label, 0);
 	      
 	    } else{
@@ -629,8 +612,6 @@ Btag:     BTAG_BEGIN Attributes STARTTAG_SHORTEND
 	    if(attr != NULL) {
 	      label = SNetInLabelToId(parser.labels, attr->value);
 	    
-	      SNetRecAddBTag(current.record, label);
-
 	      /* TODO: test that the atoi call worked correctly? */
 	      SNetRecSetBTag(current.record, label, atoi($4));
 
@@ -650,8 +631,6 @@ Btag:     BTAG_BEGIN Attributes STARTTAG_SHORTEND
 	    if(attr != NULL) {
 	      label = SNetInLabelToId(parser.labels, attr->value);
 	    
-	      SNetRecAddBTag(current.record, label);
-
 	      SNetRecSetBTag(current.record, label, 0);
 
 	    } else{

@@ -47,39 +47,14 @@ typedef struct {
   int match_count;
 } match_count_t;
 
-static bool ContainsName( int name, int *names, int num)
-{
-  int i;
-  bool found = false;
-  for( i=0; i<num; i++) {
-    if( names[i] == name) {
-      found = true;
-      break;
-    }
-  }
-  return( found);
-}
-
 /* ------------------------------------------------------------------------- */
 /*  SNetParallel                                                             */
 /* ------------------------------------------------------------------------- */
 
-#define FIND_NAME_LOOP( RECNUM, TENCNUM, RECNAMES, TENCNAMES)\
-for( i=0; i<TENCNUM( venc); i++) {\
-       if( !( ContainsName( TENCNAMES( venc)[i], RECNAMES( rec), RECNUM( rec)))) {\
-        MC_ISMATCH( mc) = false;\
-      }\
-      else {\
-        MC_COUNT( mc) += 1;\
-      }\
-    }
-
-
-
-
 static match_count_t *CheckMatch( snet_record_t *rec,
     snet_typeencoding_t *tenc, match_count_t *mc)
 {
+  int name, val;
   snet_variantencoding_t *venc;
   int i,j,max=-1;
 
@@ -98,26 +73,32 @@ static match_count_t *CheckMatch( snet_record_t *rec,
     MC_COUNT( mc) = 0;
     MC_ISMATCH( mc) = true;
 
-    if( ( SNetRecGetNumFields( rec) < SNetTencGetNumFields( venc)) ||
-        ( SNetRecGetNumTags( rec) < SNetTencGetNumTags( venc)) ||
-        ( SNetRecGetNumBTags( rec) != SNetTencGetNumBTags( venc))) {
-      MC_ISMATCH( mc) = false;
-    } else {
-      /* is_match is set to value inside the macros */
-      FIND_NAME_LOOP( SNetRecGetNumFields, SNetTencGetNumFields,
-          SNetRecGetFieldNames, SNetTencGetFieldNames);
-      FIND_NAME_LOOP( SNetRecGetNumTags, SNetTencGetNumTags,
-          SNetRecGetTagNames, SNetTencGetTagNames);
-
-      for( i=0; i<SNetRecGetNumBTags( rec); i++) {
-        if(!SNetTencContainsBTagName(venc, SNetRecGetBTagNames(rec)[i])) {
-          MC_ISMATCH( mc) = false;
-        } else {
-          MC_COUNT( mc) += 1;
-        }
+    /* is_match is set to value inside the macros */
+    for (i=0; i<SNetTencGetNumFields( venc); i++) {\
+       if (!SNetRecHasField( rec, SNetTencGetFieldNames( venc)[i])) {
+        MC_ISMATCH( mc) = false;
+      } else {
+        MC_COUNT( mc) += 1;
       }
     }
-    if( MC_ISMATCH( mc)) {
+
+    for (i=0; i<SNetTencGetNumTags( venc); i++) {\
+       if (!SNetRecHasTag( rec, SNetTencGetTagNames( venc)[i])) {
+        MC_ISMATCH( mc) = false;
+      } else {
+        MC_COUNT( mc) += 1;
+      }
+    }
+
+    FOR_EACH_BTAG(rec, name, val)
+      if(!SNetTencContainsBTagName(venc, name)) {
+        MC_ISMATCH( mc) = false;
+      } else {
+        MC_COUNT( mc) += 1;
+      }
+    END_FOR
+
+    if (MC_ISMATCH( mc)) {
       max = MC_COUNT( mc) > max ? MC_COUNT( mc) : max;
     }
   } /* end for all variants */
@@ -127,7 +108,7 @@ static match_count_t *CheckMatch( snet_record_t *rec,
     MC_COUNT( mc) = max;
   }
 
-  return( mc);
+  return mc;
 }
 
 /**

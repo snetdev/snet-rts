@@ -675,7 +675,8 @@ static void ObserverRemove(obs_handle_t *self)
 
 static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_t *rec)
 {
-  int k, i;
+  int name, val;
+  snet_ref_t *ref;
   char *label = NULL;
   char *interface = NULL;
   snet_record_mode_t mode;
@@ -706,67 +707,58 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
       fprintf(file, "<record type=\"data\" mode=\"binary\" >");
     }
 
+    int id = SNetRecGetInterfaceId(rec);
     /* fields */
-    for(k=0; k<SNetRecGetNumFields( rec); k++) {    
-      int id = SNetRecGetInterfaceId(rec);  
+    FOR_EACH_FIELD(rec, name, ref)
+      if((label = SNetInIdToLabel(labels, name)) != NULL){
+        if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_ALLVALUES 
+           && (interface = SNetInIdToInterface(interfaces, id)) != NULL){
+          fprintf(file,"<field label=\"%s\" interface=\"%s\" >", label, interface);
 
-      i = SNetRecGetFieldNames( rec)[k];
-      if((label = SNetInIdToLabel(labels, i)) != NULL){
-	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_ALLVALUES 
-	   && (interface = SNetInIdToInterface(interfaces, id)) != NULL){
-	  fprintf(file,"<field label=\"%s\" interface=\"%s\" >", label, interface);
+          if(mode == MODE_textual) {
+            SNetInterfaceGet(id)->serialisefun(file, ref);
+          } else {
+            SNetInterfaceGet(id)->encodefun(file, ref);
+          }
 
-	  if(mode == MODE_textual) {
-	    SNetInterfaceGet(id)->serialisefun(file, SNetRecGetField(rec, i));
-	  }else {
-	    SNetInterfaceGet(id)->encodefun(file, SNetRecGetField(rec, i));
-	  }
-
-	  fprintf(file,"</field>");
-	}else{
-	  fprintf(file,"<field label=\"%s\" />", label);
-	}
+          fprintf(file,"</field>");
+        } else {
+          fprintf(file,"<field label=\"%s\" />", label);
+        }
       }
-      
-      SNetMemFree(label);
-    }
+    END_FOR
 
     /* tags */
-    for(k=0; k<SNetRecGetNumTags( rec); k++) {
-      i = SNetRecGetTagNames( rec)[k];
-      
-      if((label = SNetInIdToLabel(labels, i)) != NULL){
-	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_LABELS) {
-	  fprintf(file,"<tag label=\"%s\" />", label);
-	}else {
-	  fprintf(file,"<tag label=\"%s\" >%d</tag>", label, SNetRecGetTag(rec, i));	   
-	}
+    FOR_EACH_TAG(rec, name, val)
+      if((label = SNetInIdToLabel(labels, val)) != NULL){
+        if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_LABELS) {
+          fprintf(file,"<tag label=\"%s\" />", label);
+        }else {
+          fprintf(file,"<tag label=\"%s\" >%d</tag>", label, val);
+        }
       }
-      
       SNetMemFree(label);
-    }
+    END_FOR
 
     /* btags */
-    for(k=0; k<SNetRecGetNumBTags( rec); k++) {
-      i = SNetRecGetBTagNames( rec)[k];
-      
-      if((label = SNetInIdToLabel(labels, i)) != NULL){
-	if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_LABELS) {
-	  fprintf(file,"<btag label=\"%s\" />", label); 
-	}else {
-	  fprintf(file,"<btag label=\"%s\" >%d</btag>", label, SNetRecGetBTag(rec, i));
-	}
+    FOR_EACH_BTAG(rec, name, val)
+      if((label = SNetInIdToLabel(labels, name)) != NULL){
+        if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_LABELS) {
+          fprintf(file,"<btag label=\"%s\" />", label);
+        }else {
+          fprintf(file,"<btag label=\"%s\" >%d</btag>", label, val);
+        }
       }
-      
       SNetMemFree(label);
-    }
+    END_FOR
+
     fprintf(file,"</record>");
     break;
   case REC_sync:
     fprintf(file,"<record type=\"sync\" />");
-  case REC_collect: 
+  case REC_collect:
     fprintf(file,"<record type=\"collect\" />");
-  case REC_sort_end: 
+  case REC_sort_end:
     fprintf(file,"<record type=\"sort_end\" />");
   case REC_terminate:
     fprintf(file,"<record type=\"terminate\" />");
@@ -776,7 +768,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
   }
   fprintf(file,"</observer>");
   fflush(file);
- 
+
   return 0;
 }
 

@@ -41,33 +41,8 @@
  * --------------------------------------------------------
  */
 
-// inherit all fields and tags from matched records
-//#define SYNC_FI_VARIANT_1
-
-// inherit no tags/fields from previous matched records
-// merge tags/fields from pattern to last arriving record.
-#define SYNC_FI_VARIANT_2
-
 #define MC_ISMATCH( name) name->is_match
 #define MC_COUNT( name) name->match_count
-
-// used in SNetSync->IsMatch (depends on local variables!)
-#define FIND_NAME_IN_PATTERN( TENCNUM, RECNUM, TENCNAMES, RECNAMES)\
-  names = RECNAMES( rec);\
-  for( i=0; i<TENCNUM( pat); i++) {\
-    for( j=0; j<RECNUM( rec); j++) {\
-      if( names[j] == TENCNAMES( pat)[i]) {\
-        found_name = true;\
-        break;\
-      }\
-    }\
-    if ( !( found_name)) {\
-      is_match = false;\
-      break;\
-    }\
-    found_name = false;\
-  }\
-  SNetMemFree( names);
 
 /* ------------------------------------------------------------------------- */
 /*  SNetSync                                                                 */
@@ -79,7 +54,6 @@ struct sync_state {
   snet_record_t **storage;
 };
 
-#ifdef SYNC_FI_VARIANT_2
 // Destroys storage including all records
 static snet_record_t *Merge( snet_record_t **storage, 
     snet_typeencoding_t *patterns, 
@@ -94,15 +68,15 @@ static snet_record_t *Merge( snet_record_t **storage,
     names = SNetTencGetFieldNames( variant);
     for( j=0; j<SNetTencGetNumFields( variant); j++) {
       name = names[j];
-      if( SNetRecAddField( rec, name)) {
-      	SNetRecMoveFieldToRec(storage[i], name, rec, name);
+      if (!SNetRecHasField( rec, name)) {
+        SNetRecSetField(rec, name, SNetRecTakeField(storage[i], name));
       }
     }
     names = SNetTencGetTagNames( variant);
     for( j=0; j<SNetTencGetNumTags( variant); j++) {
       name = names[j];
-      if( SNetRecAddTag( rec, name)) {
-        SNetRecSetTag( rec, name, SNetRecGetTag( storage[i], name));  
+      if (!SNetRecHasTag( rec, name)) {
+        SNetRecSetTag( rec, name, SNetRecGetTag( storage[i], name));
       }
     }
   }
@@ -112,98 +86,56 @@ static snet_record_t *Merge( snet_record_t **storage,
       SNetRecDestroy( storage[i]);
     }
   }
-  
-  return( rec);
+
+  return rec;
 }
-#endif
-#ifdef SYNC_FI_VARIANT_1
-static snet_record_t *Merge( snet_record_t **storage, 
-    snet_typeencoding_t *patterns, 
-    snet_typeencoding_t *outtype)
-{
-  int i,j;
-  snet_record_t *outrec;
-  snet_variantencoding_t *outvariant;
-  snet_variantencoding_t *pat;
-  outvariant = SNetTencCopyVariantEncoding( SNetTencGetVariant( outtype, 1));
-  
-  outrec = SNetRecCreate( REC_data, outvariant);
-
-  for( i=0; i<SNetTencGetNumVariants( patterns); i++) {
-    pat = SNetTencGetVariant( patterns, i+1);
-    for( j=0; j<SNetTencGetNumFields( pat); j++) {
-      // set value in outrec of field (referenced by its new name) to the
-      // according value of the original record (old name)
-      if( storage[i] != NULL) {
-        SNetRecMoveFieldToRec( storage[i], 
-                               SNetTencGetFieldNames( pat)[j],
-                               outrec, 
-                               SNetTencGetFieldNames( pat)[j]);
-      }
-      for( j=0; j<SNetTencGetNumTags( pat); j++) {
-        SNetRecSetTag( outrec, 
-                       SNetTencGetTagNames( pat)[j], 
-                       SNetRecTakeTag( storage[i], 
-                         SNetTencGetTagNames( pat)[j]));
-      }
-    }
-  }
- 
-  
-  // flow inherit all tags/fields that are present in storage
-  // but not in pattern
-  for( i=0; i<SNetTencGetNumVariants( patterns); i++) {
-    int *names, num;
-    if( storage[i] != NULL) {
-
-      names = SNetRecGetUnconsumedTagNames( storage[i]);
-      num = SNetRecGetNumTags( storage[i]);
-      for( j=0; j<num; j++) {
-        int tag_value;
-        if( SNetRecAddTag( outrec, names[j])) { // Don't overwrite existing Tags
-          tag_value = SNetRecTakeTag( storage[i], names[j]);
-          SNetRecSetTag( outrec, names[j], tag_value);
-        }
-      }
-      SNetMemFree( names);
-
-      names = SNetRecGetUnconsumedFieldNames( storage[i]);
-      num = SNetRecGetNumFields( storage[i]);
-      for( j=0; j<num; j++) {
-        if( SNetRecAddField( outrec, names[j])) {
-          SNetRecMoveFieldToRec(storage[i], name[j], outrec, names[j]);
-        }
-      }
-      SNetMemFree( names);
-    }
-  }
-
-  return( outrec);
-}
-#endif
-
 
 static bool MatchPattern( snet_record_t *rec,
     snet_variantencoding_t *pat, snet_expr_t *guard)
 {
-  int i,j, *names;
+  int i, name, val;
   bool is_match, found_name;
   is_match = true;
 
   found_name = false;
-  FIND_NAME_IN_PATTERN( SNetTencGetNumTags, SNetRecGetNumTags, 
-			SNetTencGetTagNames, SNetRecGetUnconsumedTagNames);
+  for (i=0; i<SNetTencGetNumTags( pat); i++) {
+    FOR_EACH_TAG(rec, name, val)
+      if (name == SNetTencGetTagNames( pat)[i]) {
+        found_name = true;
+        break;
+      }
+    END_FOR
 
-  if( is_match) {
-    FIND_NAME_IN_PATTERN( SNetTencGetNumFields, SNetRecGetNumFields, 
-			  SNetTencGetFieldNames, SNetRecGetUnconsumedFieldNames);
+    if ( !found_name) {
+      is_match = false;
+      break;
+    }
+    found_name = false;
+  }
+
+  if (is_match) {
+    snet_ref_t *ref;
+    for( i=0; i<SNetTencGetNumFields( pat); i++) {
+      FOR_EACH_FIELD(rec, name, ref)
+        if( name == SNetTencGetFieldNames( pat)[i]) {
+          found_name = true;
+          break;
+        }
+      END_FOR
+
+      if ( !found_name) {
+        is_match = false;
+        break;
+      }
+      found_name = false;
+    }
   }
 
   if(is_match && !SNetEevaluateBool( guard, rec)) {
-    is_match = false; 
+    is_match = false;
   }
 
-  return( is_match);
+  return is_match;
 }
 
 
@@ -263,17 +195,10 @@ static void SyncBoxTask( snet_entity_t *self, void *arg)
         } else {
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
-#ifdef SYNC_FI_VARIANT_1
-            temp_record = Merge( storage, sarg->patterns, sarg->outtype);
-            SNetRecSetInterfaceId( temp_record, SNetRecGetInterfaceId( rec));
-            SNetRecSetDataMode( temp_record, SNetRecGetDataMode( rec));
-#endif
-#ifdef SYNC_FI_VARIANT_2
             temp_record =  Merge( storage, 
                                   sarg->patterns, 
                                   sarg->outtype, 
                                   storage[0]);
-#endif
             SNetStreamWrite( outstream, temp_record);
             /* current_state->terminated = true; */
             SNetStreamWrite( outstream,

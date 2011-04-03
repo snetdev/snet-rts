@@ -21,7 +21,7 @@ all:
 net: 
 	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h
 	$(CC) $(CCFLAGS) $(INCDIRS) -c $(FILES)
-	$(SNETC) $(LIBS) $(INCDIRS) $(LIBDIRS) -m $(TARGET).md -o $(TARGET) $(TARGET).snet 
+	$(SNETC) -g $(LIBS) $(INCDIRS) $(LIBDIRS) -m $(TARGET).md -o $(TARGET) $(TARGET).snet
 
 clean:
 	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h
