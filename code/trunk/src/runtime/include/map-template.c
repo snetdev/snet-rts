@@ -152,6 +152,14 @@ MAP_VAL_C MAP_FUNCTION(MAP_NAME_C, Take)(snet_map_t *map, int key)
   return result;
 }
 
+void MAP_FUNCTION(MAP_NAME_C, Rename)(snet_map_t *map, int oldKey, int newKey)
+{
+  int i = MAP_FUNCTION(MAP_NAME_C, Find)(map, oldKey);
+  if (i != -1) {
+    map->keys[i] = newKey;
+  }
+}
+
 #undef snet_map_t
 #undef MAP_FUNCTION
 #undef MAP

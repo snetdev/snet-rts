@@ -3,7 +3,7 @@
 #include "distribution.h"
 #include "record.h"
 #include "memfun.h"
-//#include "debug.h"
+#include "debug.h"
 #include "map.h"
 
 /* ***************************************************************************/
@@ -75,8 +75,7 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       SORT_E_REC( rec, num) = va_arg( args, int);
       break;
     default:
-      //FIXME
-      //SNetUtilDebugFatal("Unknown control record destription. [%d]", descr);
+      SNetUtilDebugFatal("Unknown control record destription. [%d]", descr);
       break;
   }
   va_end( args);
@@ -112,8 +111,7 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       new_rec = SNetRecCreate( REC_terminate);
       break;
     default:
-      //FIXME
-      //SNetUtilDebugFatal("Can't copy record of type %d", REC_DESCR( rec));
+      SNetUtilDebugFatal("Can't copy record of type %d", REC_DESCR( rec));
       break;
   }
 
@@ -143,8 +141,7 @@ void SNetRecDestroy( snet_record_t *rec)
     case REC_trigger_initialiser:
       break;
     default:
-      //FIXME
-      //SNetUtilDebugFatal("Unknown record description, in SNetRecDestroy");
+      SNetUtilDebugFatal("Unknown record description, in SNetRecDestroy");
       break;
   }
   SNetMemFree( RECPTR( rec));
@@ -163,9 +160,8 @@ snet_record_descr_t SNetRecGetDescriptor( snet_record_t *rec)
 snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id)
 {
   if (REC_DESCR( rec) != REC_data) {
-    //FIXME
-    //SNetUtilDebugFatal("SNetRecSetInterfaceId only accepts data records (%d)",
-    //                   REC_DESCR(rec));
+    SNetUtilDebugFatal("SNetRecSetInterfaceId only accepts data records (%d)",
+                       REC_DESCR(rec));
   }
 
   DATA_REC( rec, interface_id) = id;
@@ -175,9 +171,8 @@ snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id)
 int SNetRecGetInterfaceId( snet_record_t *rec)
 {
   if (REC_DESCR( rec) != REC_data) {
-    //FIXME
-    //SNetUtilDebugFatal("SNetRecGetInterfaceId only accepts data records (%d)",
-    //                   REC_DESCR(rec));
+    SNetUtilDebugFatal("SNetRecGetInterfaceId only accepts data records (%d)",
+                       REC_DESCR(rec));
   }
 
   return DATA_REC( rec, interface_id);
@@ -188,9 +183,8 @@ int SNetRecGetInterfaceId( snet_record_t *rec)
 snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mod)
 {
   if (REC_DESCR( rec) != REC_data) {
-    //FIXME
-    //SNetUtilDebugFatal("SNetRecSetDataMode only accepts data records (%d)",
-    //                   REC_DESCR(rec));
+    SNetUtilDebugFatal("SNetRecSetDataMode only accepts data records (%d)",
+                       REC_DESCR(rec));
   }
 
   DATA_REC( rec, mode) = mod;
@@ -200,9 +194,8 @@ snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mod)
 snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec)
 {
   if (REC_DESCR( rec) != REC_data) {
-    //FIXME
-    //SNetUtilDebugFatal("SNetRecGetDataMode only accepts data records (%d)",
-    //                   REC_DESCR(rec));
+    SNetUtilDebugFatal("SNetRecGetDataMode only accepts data records (%d)",
+                       REC_DESCR(rec));
   }
 
   return DATA_REC( rec, mode);
@@ -222,8 +215,7 @@ snet_stream_t *SNetRecGetStream( snet_record_t *rec)
     result = COLL_REC( rec, output);
     break;
   default:
-    //FIXME
-    //SNetUtilDebugFatal("Wrong type in SNetRecGetStream() (%d)", REC_DESCR(rec));
+    SNetUtilDebugFatal("Wrong type in SNetRecGetStream() (%d)", REC_DESCR(rec));
     break;
   }
 
@@ -235,8 +227,7 @@ snet_stream_t *SNetRecGetStream( snet_record_t *rec)
 void SNetRecSetNum( snet_record_t *rec, int value)
 {
   if (REC_DESCR( rec) != REC_sort_end) {
-    //FIXME
-    //SNetUtilDebugFatal("Wrong type in SNetRecSetNum() (%d)", REC_DESCR( rec));
+    SNetUtilDebugFatal("Wrong type in SNetRecSetNum() (%d)", REC_DESCR( rec));
   }
 
   SORT_E_REC( rec, num) = value;
@@ -245,8 +236,7 @@ void SNetRecSetNum( snet_record_t *rec, int value)
 int SNetRecGetNum( snet_record_t *rec)
 {
   if (REC_DESCR( rec) != REC_sort_end) {
-    //FIXME
-    ///SNetUtilDebugFatal("Wrong type in SNetRecGetNum() (%d)", REC_DESCR( rec));
+    SNetUtilDebugFatal("Wrong type in SNetRecGetNum() (%d)", REC_DESCR( rec));
   }
 
   return SORT_E_REC( rec, num);
@@ -255,8 +245,7 @@ int SNetRecGetNum( snet_record_t *rec)
 void SNetRecSetLevel( snet_record_t *rec, int value)
 {
   if (REC_DESCR( rec) != REC_sort_end) {
-    //FIXME
-    ///SNetUtilDebugFatal("Wrong type in SNetRecSetLevel() (%d)", REC_DESCR( rec));
+    SNetUtilDebugFatal("Wrong type in SNetRecSetLevel() (%d)", REC_DESCR( rec));
   }
 
   SORT_E_REC( rec, level) = value;
@@ -265,8 +254,7 @@ void SNetRecSetLevel( snet_record_t *rec, int value)
 int SNetRecGetLevel( snet_record_t *rec)
 {
   if (REC_DESCR( rec) != REC_sort_end) {
-    //FIXME
-    //SNetUtilDebugFatal("Wrong type in SNetRecSetLevel() (%d)", REC_DESCR( rec));
+    SNetUtilDebugFatal("Wrong type in SNetRecSetLevel() (%d)", REC_DESCR( rec));
   }
 
   return SORT_E_REC( rec, level);
@@ -294,6 +282,11 @@ bool SNetRecHasTag( snet_record_t *rec, int name)
   return SNetRecGetTag(rec, name) != -1;
 }
 
+void SNetRecRenameTag( snet_record_t *rec, int oldName, int newName)
+{
+  SNetintMapRename(DATA_REC( rec, tags), oldName, newName);
+}
+
 /*****************************************************************************/
 
 void SNetRecSetBTag( snet_record_t *rec, int name, int val)
@@ -316,6 +309,11 @@ bool SNetRecHasBTag( snet_record_t *rec, int name)
   return SNetRecGetBTag(rec, name) != -1;
 }
 
+void SNetRecRenameBTag( snet_record_t *rec, int oldName, int newName)
+{
+  SNetintMapRename(DATA_REC( rec, btags), oldName, newName);
+}
+
 /*****************************************************************************/
 
 void SNetRecSetField( snet_record_t *rec, int name, snet_ref_t *val)
@@ -336,4 +334,9 @@ snet_ref_t *SNetRecTakeField( snet_record_t *rec, int name)
 bool SNetRecHasField( snet_record_t *rec, int name)
 {
   return SNetRecGetField(rec, name) != NULL;
+}
+
+void SNetRecRenameField( snet_record_t *rec, int oldName, int newName)
+{
+  SNetrefMapRename(DATA_REC( rec, fields), oldName, newName);
 }

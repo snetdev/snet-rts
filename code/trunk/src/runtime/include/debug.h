@@ -7,10 +7,6 @@
 #include "assert.h"
 #include "record.h"
 
-/* prints a record in readable format 
- */
-extern char* SNetUtilDebugDumpRecord(snet_record_t *data, char* storage);
-
 /*
  * reports an error and terminates the application after that.
  * parameters are equal to printf.
