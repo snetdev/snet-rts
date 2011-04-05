@@ -11,17 +11,17 @@
 #include "distribution.h"
 
 static bool MatchesExitPattern( snet_record_t *rec,
-    snet_typeencoding_t *patterns, snet_expr_list_t *guards)
+    snet_typeencoding_t *exit_patterns, snet_expr_list_t *guards)
 {
   int i;
   bool is_match;
   snet_variantencoding_t *pat;
 
-  for( i=0; i<SNetTencGetNumVariants( patterns); i++) {
+  for( i=0; i<SNetTencGetNumVariants( exit_patterns); i++) {
     is_match = true;
 
     if( SNetEevaluateBool( SNetEgetExpr( guards, i), rec)) {
-      pat = SNetTencGetVariant( patterns, i+1);
+      pat = SNetTencGetVariant( exit_patterns, i+1);
       is_match = SNetRecPatternMatches(pat, rec);
     }
     else {
@@ -38,7 +38,7 @@ static bool MatchesExitPattern( snet_record_t *rec,
 
 typedef struct {
   snet_stream_t *input, *output;
-  snet_typeencoding_t *exit_tags;
+  snet_typeencoding_t *exit_patterns;
   snet_startup_fun_t box, selffun;
   snet_expr_list_t *guards;
   snet_info_t *info;
@@ -72,7 +72,7 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
     switch( SNetRecGetDescriptor( rec)) {
 
       case REC_data:
-        if( MatchesExitPattern( rec, sarg->exit_tags, sarg->guards)) {
+        if( MatchesExitPattern( rec, sarg->exit_patterns, sarg->guards)) {
           /* send rec to collector */
           SNetStreamWrite( outstream, rec);
         } else {
@@ -173,7 +173,7 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
   /* destroy the arg */
   SNetEdestroyList( sarg->guards);
   SNetInfoDestroy( sarg->info);
-  SNetDestroyTypeEncoding( sarg->exit_tags);
+  SNetDestroyTypeEncoding( sarg->exit_patterns);
   SNetMemFree( sarg);
 } /* STAR BOX TASK END */
 
@@ -193,7 +193,7 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
 static snet_stream_t *CreateStar( snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *type,
+    snet_typeencoding_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b,
@@ -223,7 +223,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     }
     sarg->box = box_a;
     sarg->selffun = box_b;
-    sarg->exit_tags = type;
+    sarg->exit_patterns = exit_patterns;
     sarg->guards = guards;
     sarg->info = SNetInfoCopy(info);
     sarg->is_incarnate = is_incarnate;
@@ -233,7 +233,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 
   } else {
     SNetEdestroyList( guards);
-    SNetDestroyTypeEncoding( type);
+    SNetDestroyTypeEncoding( exit_patterns);
     output = input;
   }
 
@@ -249,12 +249,12 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 snet_stream_t *SNetStar( snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *type,
+    snet_typeencoding_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
 {
-  return CreateStar( input, info, location, type, guards, box_a, box_b,
+  return CreateStar( input, info, location, exit_patterns, guards, box_a, box_b,
       false, /* not incarnate */
       false /* not det */
       );
@@ -268,12 +268,12 @@ snet_stream_t *SNetStar( snet_stream_t *input,
 snet_stream_t *SNetStarIncarnate( snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *type,
+    snet_typeencoding_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
 {
-  return CreateStar( input, info, location, type, guards, box_a, box_b,
+  return CreateStar( input, info, location, exit_patterns, guards, box_a, box_b,
       true, /* is incarnate */
       false /* not det */
       );
@@ -287,12 +287,12 @@ snet_stream_t *SNetStarIncarnate( snet_stream_t *input,
 snet_stream_t *SNetStarDet(snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *type,
+    snet_typeencoding_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
 {
-  return CreateStar( input, info, location, type, guards, box_a, box_b,
+  return CreateStar( input, info, location, exit_patterns, guards, box_a, box_b,
       false, /* not incarnate */
       true /* is det */
       );
@@ -306,12 +306,12 @@ snet_stream_t *SNetStarDet(snet_stream_t *input,
 snet_stream_t *SNetStarDetIncarnate(snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *type,
+    snet_typeencoding_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
 {
-  return CreateStar( input, info, location, type, guards, box_a, box_b,
+  return CreateStar( input, info, location, exit_patterns, guards, box_a, box_b,
       true, /* is incarnate */
       true /* is det */
       );
