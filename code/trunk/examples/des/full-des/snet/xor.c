@@ -8,7 +8,7 @@ void *xor( void *hnd, void *ptr_1, void *ptr_2)
 
   desboxes__xor2( &sac_result, ptr_1, ptr_2);
 
-  SAC2SNet_out( hnd, 1, sac_result);
+  SAC4SNet_out( hnd, 1, sac_result);
   
 
   return( hnd);

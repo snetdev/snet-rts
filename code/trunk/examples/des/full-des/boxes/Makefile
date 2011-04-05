@@ -41,9 +41,11 @@ clean:
 
 $(INCOUT)/$(MAINLIB).h $(LIBOUT)/lib$(MAINLIB).so \
 $(LIBOUT)/lib$(MAINLIB).a: $(LIBOUT)/lib$(MAINLIB)Tree.so
+	mkdir -p $(LIBOUT) $(INCOUT)
 	$(SAC4C) $(SAC4CFLAGS) -o $(MAINLIB) $(MAINLIB)
 
 $(LIBOUT)/lib$(MAINLIB)Tree.so: $(foreach LIB,$(LIBS),$(LIBOUT)/lib$(LIB)Tree.so)
 
 $(LIBOUT)/lib%Mod.a $(LIBOUT)/lib%Mod.so $(LIBOUT)/lib%Tree.so: %.sac
+	mkdir -p $(LIBOUT) $(INCOUT)
 	$(SAC2C) $(SAC2CFLAGS) -o $(LIBOUT) $<  

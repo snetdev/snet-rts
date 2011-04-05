@@ -1,7 +1,7 @@
 #ifndef _Pbox_h_
 #define _Pbox_h_
 
-#include <SAC2SNet.h>
+#include <SAC4SNet.h>
 
 void *Pbox( void *hnd, void *ptr_1);
 

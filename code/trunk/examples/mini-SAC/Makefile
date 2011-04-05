@@ -5,7 +5,7 @@ CCFLAGS   = -Wall -g -DFILTER_VERSION_2
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I./include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib -L$(SNETBASE)/interfaces/SAC
-LIBS      = -lSAC4SNet -lpthread -lsnetutil -lsnet 
+LIBS      = -lSAC4SNet -lpthread -lsnetutil -lsnet -ltblpel -ldistribnodist
 
 SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__mini=main
 
@@ -35,6 +35,7 @@ all: lib$(SACTARGET)Mod.so $(TARGET).c
 	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(S4CLIBS) $(LIBS)
 
 lib$(SACTARGET)Mod.so: $(SACTARGET).sac
+	mkdir -p lib include
 	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $(SACTARGET).sac
 	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $(SACTARGET)
 

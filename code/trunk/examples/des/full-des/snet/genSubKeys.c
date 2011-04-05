@@ -8,7 +8,7 @@ void *genSubKeys( void *hnd, void *ptr_1)
 
   desboxes__genSubKeys1( &sac_result, ptr_1);
 
-  SAC2SNet_out( hnd, 1, sac_result);
+  SAC4SNet_out( hnd, 1, sac_result);
 
   return( hnd);
 }

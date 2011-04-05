@@ -1,7 +1,7 @@
 #ifndef _genSubKeys_h_
 #define _genSubKeys_h_
 
-#include <SAC2SNet.h>
+#include <SAC4SNet.h>
 
 void *genSubKeys( void *hnd, void *ptr_1);
 

@@ -15,7 +15,7 @@ void *SubKey( void *hnd, void *ptr_1, int tag)
 
   c_tag = SACARGconvertToIntArray( sac_res3)[0];
   
-  SAC2SNet_out( hnd, 1, sac_res1, sac_res2, c_tag);
+  SAC4SNet_out( hnd, 1, sac_res1, sac_res2, c_tag);
 
   return( hnd);
 }
