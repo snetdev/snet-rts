@@ -76,15 +76,15 @@ flat            = flat.o
 typeinf         = typing.o siginfprim.o getsig.o getvrec.o getnrec.o \
                   routeinf.o typechk.o
 
-opt             = 
+opt             =
 
 postproc        = ptypcln.o ptran.o ploc.o netren.o netflat.o
 
-codegen         = codegen.o codefile.o cchoice.o cexpr.o cfilt.o cserial.o \
-                  cshield.o csplit.o cstar.o csync.o ctext.o ctrans.o cwrap.o \
-                  cvar.o cgenwrap.o
+codegen         = codegen.o codefile.o cchoice.o cexpr.o cfeedback.o cfilt.o \
+                  cserial.o cshield.o csplit.o cstar.o csync.o ctext.o \
+                  ctrans.o cwrap.o cvar.o cgenwrap.o
 
 invokecc        = invokecc.o
 
-print           = print.o 
+print           = print.o
 
