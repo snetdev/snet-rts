@@ -6,8 +6,8 @@
 
 
 net feedback {
-//  net fb_op ({A,<cnt>} -> {B}) {
-  net fb_op {
+  net fb_op ({A,<cnt>} -> {B}) {
+//  net fb_op {
     box foo((A, <cnt>) -> (A, <cnt>) | (B));
   } connect foo\{A,<cnt>};
 } connect [{A} -> {A, <cnt>}] .. fb_op;
