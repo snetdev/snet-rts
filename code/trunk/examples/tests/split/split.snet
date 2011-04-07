@@ -7,4 +7,4 @@
 
 net split {
   box ident((A,<T>) -> (A,<T>));
-} connect ident!!<T>;
+} connect ident!<T>;
