@@ -158,4 +158,17 @@ snet_stream_t *SNetLocSplitDet(snet_stream_t *instream,
     snet_startup_fun_t box_a,
     int ltag,
     int utag);
+
+
+/****************************************************************************/
+/* Feedback                                                                 */
+/****************************************************************************/
+snet_stream_t *SNetFeedback( snet_stream_t *inbuf,
+    snet_info_t *info,
+    int location,
+    snet_typeencoding_t *back_pattern,
+    snet_expr_list_t *guards,
+    snet_startup_fun_t box_a);
+
+
 #endif /* _SNETENTITIES_H_ */

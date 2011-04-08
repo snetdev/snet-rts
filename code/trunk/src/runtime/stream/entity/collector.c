@@ -28,7 +28,7 @@ typedef struct {
 static bool SortRecEqual( snet_record_t *rec1, snet_record_t *rec2)
 {
   return (SNetRecGetLevel(rec1) == SNetRecGetLevel(rec2)) &&
-         (SNetRecGetNum(  rec1) == SNetRecGetNum(  rec2)); 
+         (SNetRecGetNum(  rec1) == SNetRecGetNum(  rec2));
 }
 
 
@@ -65,7 +65,7 @@ void CollectorTask( snet_entity_t *self, void *arg)
   /* create an iterator for both sets, is reused within main loop*/
   iter = SNetStreamIterCreate( &readyset);
   wait_iter = SNetStreamIterCreate( &waitingset);
-  
+
   /* MAIN LOOP */
   while( !terminate) {
 
@@ -74,7 +74,7 @@ void CollectorTask( snet_entity_t *self, void *arg)
     while( SNetStreamIterHasNext(iter)) {
       snet_stream_desc_t *cur_stream = SNetStreamIterNext(iter);
       bool do_next = false;
-  
+
       /* process stream until empty or next sort record or empty */
       while ( !do_next && SNetStreamPeek( cur_stream) != NULL) {
         snet_record_t *rec = SNetStreamRead( cur_stream);
@@ -179,12 +179,12 @@ void CollectorTask( snet_entity_t *self, void *arg)
     } /* end for each stream in ready */
 
     /* one iteration finished through readyset */
-    
+
     /* check if all sort records are received */
     if ( SNetStreamsetIsEmpty( &readyset)) {
-      
+
       if ( !SNetStreamsetIsEmpty( &waitingset)) {
-        /* 
+        /*
          * waiting set contains all streams,
          * ready set is empty
          * -> "swap" sets

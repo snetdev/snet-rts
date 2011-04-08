@@ -67,7 +67,7 @@ void SNetAssignCleanup( void)
 /**
  * Get the worker id to assign a task to
  */
-int SNetAssignTask(int is_box, char *boxname)
+int SNetAssignTask(int is_box, const char *boxname)
 {
   int target = 0;
 

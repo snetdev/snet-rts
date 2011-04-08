@@ -34,6 +34,8 @@ static size_t SNetEntityStackSize(snet_entity_type_t type)
     case ENTITY_parallel:
     case ENTITY_star:
     case ENTITY_split:
+    case ENTITY_fbcoll:
+    case ENTITY_fbdisp:
     case ENTITY_sync:
     case ENTITY_filter:
     case ENTITY_collect:
@@ -48,7 +50,7 @@ static size_t SNetEntityStackSize(snet_entity_type_t type)
       assert(0);
   }
 
- return( stack_size);   
+ return( stack_size);
 }
 
 
@@ -61,7 +63,7 @@ int SNetThreadingInit(int argc, char **argv)
 
   config.flags = SNET_FLAG_PINNED;
   config.node = SNetNodeLocation;
-  
+
   for (i=0; i<argc; i++) {
     if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
       /* Monitoring level */
@@ -162,7 +164,7 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
    * 4: .. and stream events
    * 5: like 4, for all (but _other) entities
    */
-  
+
   mon_flags = 0;
   switch(mon_level) {
     case 4: mon_flags |= SNET_MON_TASK_STREAMS;

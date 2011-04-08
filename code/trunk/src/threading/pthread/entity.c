@@ -2,7 +2,7 @@
 #define USE_CORE_AFFINITY 1
 #endif
 
-//#undef USE_CORE_AFFINITY 
+//#undef USE_CORE_AFFINITY
 
 #ifdef USE_CORE_AFFINITY
 #define _GNU_SOURCE
@@ -107,7 +107,7 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
 
   /* stacksize */
   stacksize = SNetEntityStackSize(info.type);
-  
+
   if (stacksize > 0) {
     res = pthread_attr_setstacksize(&attr, stacksize);
     if (res != 0) {
@@ -163,7 +163,7 @@ void SNetEntityExit(snet_entity_t *self)
   /* cleanup */
   pthread_mutex_destroy( &self->lock );
   pthread_cond_destroy( &self->pollcond );
-  free(self); 
+  free(self);
 
 
   /* decrement and signal entity counter */
@@ -174,7 +174,7 @@ void SNetEntityExit(snet_entity_t *self)
   }
   pthread_mutex_unlock( &entity_lock );
 
-  
+
   (void) pthread_exit(NULL);
 }
 
@@ -204,6 +204,8 @@ static size_t SNetEntityStackSize(snet_entity_type_t type)
     case ENTITY_parallel:
     case ENTITY_star:
     case ENTITY_split:
+    case ENTITY_fbcoll:
+    case ENTITY_fbdisp:
     case ENTITY_sync:
     case ENTITY_filter:
     case ENTITY_collect:
@@ -219,7 +221,7 @@ static size_t SNetEntityStackSize(snet_entity_type_t type)
       assert(0);
   }
 
- return( stack_size);   
+ return( stack_size);
 }
 
 #ifdef USE_CORE_AFFINITY
@@ -234,9 +236,9 @@ static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at)
   }
 
   numcpus = CPU_COUNT(&cpuset);
-  
+
   switch(at) {
-    case MASKMOD2: 
+    case MASKMOD2:
       CPU_ZERO(&cpuset);
       for( i=0; i<numcpus; i+=2) {
         CPU_SET( i, &cpuset);
@@ -246,19 +248,19 @@ static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at)
       CPU_ZERO(&cpuset);
       CPU_SET(0, &cpuset);
       break;
-    case ALLBUTFIRST: 
+    case ALLBUTFIRST:
       CPU_CLR(0, &cpuset);
       break;
     default:
       break;
-  } 
+  }
 
   /* set the affinity mask */
   res = pthread_setaffinity_np( *pt, sizeof(cpu_set_t), &cpuset);
   if( res != 0) {
     return 1;
   }
-  
+
   return 0;
 }
 #endif

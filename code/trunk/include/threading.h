@@ -97,6 +97,8 @@ typedef enum {
   ENTITY_parallel,
   ENTITY_star,
   ENTITY_split,
+  ENTITY_fbcoll,
+  ENTITY_fbdisp,
   ENTITY_sync,
   ENTITY_filter,
   ENTITY_collect,
@@ -107,7 +109,7 @@ typedef enum {
 
 typedef struct {
   snet_entity_type_t  type;
-  char               *name;
+  const char         *name;
 } snet_entity_info_t;
 
 
@@ -115,6 +117,8 @@ typedef struct {
 #define ENTITY_PARALLEL   (snet_entity_info_t){ ENTITY_parallel, "<parallel>"}
 #define ENTITY_STAR       (snet_entity_info_t){ ENTITY_star, "<star>"}
 #define ENTITY_SPLIT      (snet_entity_info_t){ ENTITY_split, "<split>"}
+#define ENTITY_FBCOLL     (snet_entity_info_t){ ENTITY_fbcoll, "<fbcoll>"}
+#define ENTITY_FBDISP     (snet_entity_info_t){ ENTITY_fbdisp, "<fbdisp>"}
 #define ENTITY_SYNC       (snet_entity_info_t){ ENTITY_sync, "<sync>"}
 #define ENTITY_FILTER     (snet_entity_info_t){ ENTITY_filter, "<filter>"}
 #define ENTITY_COLLECT    (snet_entity_info_t){ ENTITY_collect, "<collect>"}
@@ -241,7 +245,7 @@ void *SNetStreamPeek(snet_stream_desc_t *sd);
 
 /**
  * Write an item to the stream
- * 
+ *
  * @param sd  stream descriptor
  * @param item  item to write
  * @pre sd is opened for writing
@@ -253,7 +257,7 @@ void SNetStreamWrite(snet_stream_desc_t *sd, void *item);
  * Try to write an item to the stream, non-blocking:
  * If the buffer is full, the function returns immediately
  * indicating failure
- * 
+ *
  * @param sd  stream descriptor
  * @param item  item to write
  * @pre sd is opened for writing
@@ -282,7 +286,7 @@ typedef snet_stream_desc_t *snet_streamset_t;
  * This function returns a stream descriptor for a stream that contains
  * available data. If no stream contains data, this function blocks
  * until data is written to one of the streams contained in the stream set.
- * 
+ *
  * @param set   the set of streams to be polled
  * @pre         all streams in the set are opened for reading
  *
@@ -318,7 +322,7 @@ int SNetStreamsetRemove(snet_streamset_t *set, snet_stream_desc_t *sd);
 
 
 
-/* 
+/*
  * NOTE:
  *   Streamsets need not to privide a function for checking membership,
  *   as a set only contains local stream descriptors of an entity anyway.
@@ -326,7 +330,7 @@ int SNetStreamsetRemove(snet_streamset_t *set, snet_stream_desc_t *sd);
 
 
 
-/** 
+/**
  * Iterators
  *
  * It is also possible to iterate over a streamset.
@@ -370,7 +374,7 @@ void SNetStreamIterReset(snet_stream_iter_t *iter, snet_streamset_t *set);
  *
  * @param iter  the iterator
  * @return      != 0 if there are stream descriptors left, 0 otherwise
- */  
+ */
 int SNetStreamIterHasNext(snet_stream_iter_t *iter);
 
 

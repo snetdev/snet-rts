@@ -49,7 +49,8 @@ stream          = shared entity utils langif netif observer
 shared          = handle.o
 
 entity          = filter.o syncro.o out.o box.o alias.o \
-                  serial.o collector.o parallel.o star.o split.o
+                  serial.o collector.o parallel.o star.o split.o \
+                  feedback.o
 
 utils           = debug.o bitmap.o hashtable.o queue.o \
                   debugtime.o debugcounters.o hashtab.o
