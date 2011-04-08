@@ -30,7 +30,7 @@ static void SNetQueueCompact(snet_queue_t *queue)
 	queue->entries[mark] = queue->entries[temp];
 	mark = (mark + 1) % queue->size;
       }
-      
+
       temp = (temp + 1) % queue->size;
     } while(temp != queue->tail);
 
@@ -42,34 +42,34 @@ static void SNetQueueIncreaseSize(snet_queue_t *queue)
 {
   int temp;
   void **new_entries;
-        
+
   new_entries = SNetMemAlloc(sizeof(void *) * (queue->size + NUM_INITIAL_ELEMENTS));
-      
+
   temp = 0;
-  
+
   do {
     if(queue->entries[queue->head] != NULL) {
       new_entries[temp] = queue->entries[queue->head];
       temp++;
     }
-    
+
     queue->head = (queue->head + 1) % queue->size;
   } while(queue->head != queue->tail);
-  
+
   SNetMemFree(queue->entries);
-  
+
   queue->head = 0;
   queue->tail = temp;
   queue->size +=  NUM_INITIAL_ELEMENTS;
-  
+
   memset(new_entries + queue->tail, 0, sizeof(void *) * (queue->size - queue->tail));
-  
+
   queue->entries = new_entries;
 
   return;
 }
 
-snet_queue_t *SNetQueueCreate() 
+snet_queue_t *SNetQueueCreate()
 {
   snet_queue_t *queue;
 
@@ -122,7 +122,7 @@ int SNetQueuePut(snet_queue_t *queue, void *value)
   queue->entries[queue->tail] = NULL;
   queue->elements++;
 
-  return SNET_QUEUE_SUCCESS; 
+  return SNET_QUEUE_SUCCESS;
 }
 
 void *SNetQueueGet(snet_queue_t *queue)
@@ -167,7 +167,7 @@ snet_queue_iterator_t SNetQueueIteratorNext(snet_queue_t *queue, snet_queue_iter
 {
   while(iterator != queue->tail) {
     iterator = (iterator + 1) % queue->size;
- 
+
     if(queue->entries[iterator] != NULL) {
       break;
     }
@@ -193,7 +193,7 @@ void *SNetQueueIteratorGet(snet_queue_t *queue, snet_queue_iterator_t iterator)
      return value;
   }
 
-  return NULL; 
+  return NULL;
 }
 
 void *SNetQueueIteratorPeek(snet_queue_t *queue, snet_queue_iterator_t iterator)

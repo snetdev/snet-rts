@@ -166,7 +166,7 @@ int SNetStreamTryWrite(snet_stream_desc_t *sd, void *item)
   pthread_mutex_lock( &s->lock);
   if (s->count == s->size) {
     pthread_mutex_unlock( &s->lock);
-    return 1;
+    return -1;
   }
   pthread_mutex_unlock( &s->lock);
  

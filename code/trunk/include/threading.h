@@ -99,6 +99,7 @@ typedef enum {
   ENTITY_split,
   ENTITY_fbcoll,
   ENTITY_fbdisp,
+  ENTITY_fbbuf,
   ENTITY_sync,
   ENTITY_filter,
   ENTITY_collect,
@@ -119,6 +120,7 @@ typedef struct {
 #define ENTITY_SPLIT      (snet_entity_info_t){ ENTITY_split, "<split>"}
 #define ENTITY_FBCOLL     (snet_entity_info_t){ ENTITY_fbcoll, "<fbcoll>"}
 #define ENTITY_FBDISP     (snet_entity_info_t){ ENTITY_fbdisp, "<fbdisp>"}
+#define ENTITY_FBBUF      (snet_entity_info_t){ ENTITY_fbbuf, "<fbbuf>"}
 #define ENTITY_SYNC       (snet_entity_info_t){ ENTITY_sync, "<sync>"}
 #define ENTITY_FILTER     (snet_entity_info_t){ ENTITY_filter, "<filter>"}
 #define ENTITY_COLLECT    (snet_entity_info_t){ ENTITY_collect, "<collect>"}
@@ -262,7 +264,7 @@ void SNetStreamWrite(snet_stream_desc_t *sd, void *item);
  * @param item  item to write
  * @pre sd is opened for writing
  *
- * @return 0 if successful, 1 if buffer is full
+ * @return 0 if successful, -1 if buffer is full
  */
 int SNetStreamTryWrite(snet_stream_desc_t *sd, void *item);
 

@@ -36,6 +36,7 @@ static size_t SNetEntityStackSize(snet_entity_type_t type)
     case ENTITY_split:
     case ENTITY_fbcoll:
     case ENTITY_fbdisp:
+    case ENTITY_fbbuf:
     case ENTITY_sync:
     case ENTITY_filter:
     case ENTITY_collect:

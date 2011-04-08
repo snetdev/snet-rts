@@ -83,7 +83,7 @@ int SNetAssignTask(int is_box, const char *boxname)
   }
   pthread_mutex_unlock( &lock);
 
-#else  
+#else
   pthread_mutex_lock( &lock);
   if (is_box) {
     /* lookup name in list */
