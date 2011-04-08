@@ -1,0 +1,12 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+
+
+net feedback2 {
+  net fb_op ({A,<R>,<cnt>} -> {B}) {
+    box foo((A,<R>,<cnt>) -> (A,<R>,<cnt>) | (B));
+  } connect foo\{A,<R>,<cnt>};
+} connect [{A,<R>} -> {A, <R>, <cnt>}] .. fb_op;

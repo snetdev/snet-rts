@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" >
+  <field label="A" interface="C4SNet">(int)2</field>
+  <tag label="R" interface="C4SNet">50</tag>
+</record>
+<record type="terminate" />
