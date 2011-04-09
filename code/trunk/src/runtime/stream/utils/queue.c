@@ -15,6 +15,7 @@ struct snet_queue{
   void **entries;
 };
 
+//XXX dlp: is this correct, i.e. does it preserve FIFO order/overwrite entries?
 static void SNetQueueCompact(snet_queue_t *queue)
 {
   unsigned int temp;
@@ -37,6 +38,7 @@ static void SNetQueueCompact(snet_queue_t *queue)
     queue->tail = (queue->head + queue->elements) % queue->size;
   }
 }
+
 
 static void SNetQueueIncreaseSize(snet_queue_t *queue)
 {
@@ -105,7 +107,7 @@ int SNetQueuePut(snet_queue_t *queue, void *value)
    */
 
   if((queue->tail + 1) % queue->size == queue->head) {
-    if(queue->elements < queue->size) {
+    if(queue->elements < queue->size-1) {
       /* There is room in the queue, but the queue is fragmented. */
 
       SNetQueueCompact(queue);
