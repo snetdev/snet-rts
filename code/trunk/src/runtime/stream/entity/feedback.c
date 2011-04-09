@@ -255,7 +255,7 @@ static void FeedbackDispTask( snet_entity_t *self, void *arg)
           /* send rec back into the loop */
           SNetStreamWrite( backstream, rec);
         } else {
-          /* send to outpute */
+          /* send to output */
           SNetStreamWrite( outstream, rec);
         }
         break;
@@ -366,26 +366,22 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
 
     while ( n<=K && SNetStreamPeek(instream)!=NULL ) {
       rec = SNetStreamRead(instream);
-
       /* put record into internal buffer */
       (void) SNetQueuePut(internal_buffer, rec);
       n++;
     }
 
-
     /* STEP 2: try to empty the internal buffer */
     rec = SNetQueuePeek(internal_buffer);
     while (rec != NULL) {
-      if (rec != NULL) {
-        if (0 == SNetStreamTryWrite(outstream, rec)) {
-          snet_record_t *rem;
-          /* success, also remove from queue */
-          rem = SNetQueueGet(internal_buffer);
-          assert( rem == rec );
-        } else {
-          /* there remain elements in the buffer */
-          break;
-        }
+      if (0 == SNetStreamTryWrite(outstream, rec)) {
+        snet_record_t *rem;
+        /* success, also remove from queue */
+        rem = SNetQueueGet(internal_buffer);
+        assert( rem == rec );
+      } else {
+        /* there remain elements in the buffer */
+        break;
       }
       /* for the next iteration */
       rec = SNetQueuePeek(internal_buffer);
@@ -429,7 +425,7 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     output  = SNetStreamCreate(0);
     back_bufin  = SNetStreamCreate(0);
 
-#define FEEDBACK_OMIT_BUFFER
+//#define FEEDBACK_OMIT_BUFFER
 
 
 #ifndef FEEDBACK_OMIT_BUFFER
