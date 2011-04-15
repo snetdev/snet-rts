@@ -1,0 +1,19 @@
+#!/bin/sh
+
+for dir in */; do
+  if make -C $dir 2>/dev/null >/dev/null; then
+    for input in $dir*.xml; do
+      if $dir${dir%/} <$input >out.bak; then
+        if ! diff -u ${input%.xml} out.bak; then
+          "Results differ for $dir$dir with input $input"
+        fi
+      else
+        echo "Execution failed for $dir$dir with input $input"
+      fi
+      rm out.bak
+    done
+  else
+    echo "Compile failed for $dir"
+  fi
+  make -C $dir clean 2>/dev/null >/dev/null
+done

@@ -1,3 +1,4 @@
+include ../paths.mkf
 
 TARGET	:=	pipe
 
@@ -12,8 +13,7 @@ all: $(TARGET)
 $(TARGET): $(TARGET).snet lib$(TARGET)Boxes.a 
 			snetc -I. -I$(SNETBASE)/include \
             -L. -L$(BOXPATH) -L$(SNETBASE)/lib \
-            -l$(TARGET)Boxes -lm \
-            -lsnet -ldistribnodist -ltblpel -lpthread \
+            -l$(TARGET)Boxes -lm $(LIBRARIES) \
             $(TARGET).snet -o $(TARGET)
 
 
