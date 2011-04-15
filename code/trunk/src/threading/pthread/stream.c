@@ -18,7 +18,7 @@ snet_stream_t *SNetStreamCreate(int capacity)
   pthread_mutex_init(&s->lock, NULL);
   pthread_cond_init(&s->notempty, NULL);
   pthread_cond_init(&s->notfull, NULL);
-  
+
 
   s->size = (capacity > 0) ? capacity : SNET_STREAM_DEFAULT_CAPACITY;
   s->head = 0;
@@ -84,6 +84,10 @@ void SNetStreamReplace(snet_stream_desc_t *sd, snet_stream_t *new_stream)
 }
 
 
+snet_stream_t *SNetStreamGet(snet_stream_desc_t *sd)
+{
+  return sd->stream;
+}
 
 
 void *SNetStreamRead(snet_stream_desc_t *sd)
@@ -96,7 +100,7 @@ void *SNetStreamRead(snet_stream_desc_t *sd)
   while(s->count == 0){
     pthread_cond_wait(&s->notempty, &s->lock);
   }
- 
+
   item = s->buffer[s->head];
   s->buffer[s->head] = NULL;
   s->head = (s->head+1) % s->size;
@@ -135,7 +139,7 @@ void SNetStreamWrite(snet_stream_desc_t *sd, void *item)
   while(s->count == s->size){
     pthread_cond_wait(&s->notfull, &s->lock);
   }
- 
+
   s->buffer[s->tail] = item;
   s->tail = (s->tail+1) % s->size;
   s->count++;
@@ -146,7 +150,7 @@ void SNetStreamWrite(snet_stream_desc_t *sd, void *item)
   if (s->is_poll) {
     s->is_poll = 0;
     snet_entity_t *cons = s->consumer->entity;
-    
+
     pthread_mutex_lock( &cons->lock );
     if (cons->wakeup_sd == NULL) {
       cons->wakeup_sd = s->consumer;
@@ -169,7 +173,7 @@ int SNetStreamTryWrite(snet_stream_desc_t *sd, void *item)
     return -1;
   }
   pthread_mutex_unlock( &s->lock);
- 
+
   SNetStreamWrite(sd, item);
   return 0;
 }
@@ -235,7 +239,7 @@ snet_stream_desc_t *SNetStreamPoll(snet_streamset_t *set)
   self->wakeup_sd = NULL;
   pthread_mutex_unlock( &self->lock );
 
-  
+
   /* 'rotate' list to stream descriptor for non-empty buffer */
   *set = result;
 

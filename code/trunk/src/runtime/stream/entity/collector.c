@@ -14,6 +14,7 @@ typedef struct {
   snet_stream_t *output;
   snet_stream_t **inputs;
   int num;
+  bool dynamic;
 } coll_arg_t;
 
 
@@ -43,6 +44,7 @@ void CollectorTask( snet_entity_t *self, void *arg)
   snet_stream_desc_t *outstream;
   snet_record_t *sort_rec = NULL;
   snet_record_t *term_rec = NULL;
+  int incount;
   bool terminate = false;
 
   /* open outstream for writing */
@@ -61,6 +63,9 @@ void CollectorTask( snet_entity_t *self, void *arg)
     }
     SNetMemFree( carg->inputs );
   }
+
+  /* initialize input stream counter*/
+  incount = carg->num;
 
   /* create an iterator for both sets, is reused within main loop*/
   iter = SNetStreamIterCreate( &readyset);
@@ -116,6 +121,7 @@ void CollectorTask( snet_entity_t *self, void *arg)
             break;
 
           case REC_collect:
+            assert( carg->dynamic == true );
             /* collect: add new stream to ready set */
 #if 1
             /* but first, check if we can free resources by checking the
@@ -133,6 +139,9 @@ void CollectorTask( snet_entity_t *self, void *arg)
                   (void) SNetStreamRead( sd);
                   SNetStreamIterRemove( wait_iter);
                   SNetStreamClose( sd, true);
+                  /* update incoming counter */
+                  incount--;
+                  assert(incount > 1);
                   /* destroy record */
                   SNetRecDestroy( wait_rec);
                 }
@@ -147,6 +156,8 @@ void CollectorTask( snet_entity_t *self, void *arg)
                   SNetRecGetStream( rec), 'r');
               /* add to readyset (via iterator: after current) */
               SNetStreamIterAppend( iter, new_sd);
+              /* update incoming counter */
+              incount++;
             }
             /* destroy collect record */
             SNetRecDestroy( rec);
@@ -160,6 +171,8 @@ void CollectorTask( snet_entity_t *self, void *arg)
             }
             SNetStreamIterRemove( iter);
             SNetStreamClose( cur_stream, true);
+            /* update incoming counter */
+            incount--;
             if (term_rec==NULL) {
               term_rec = rec;
             } else {
@@ -211,6 +224,19 @@ void CollectorTask( snet_entity_t *self, void *arg)
         terminate = true;
       }
 
+    } else if (!carg->dynamic && incount==1) {
+      /* static collector has only one incoming stream left
+       * -> this input stream can be sent to the collectors
+       *    successor via a sync record
+       */
+      snet_stream_desc_t *in = readyset;
+      assert( SNetStreamsetIsEmpty(&waitingset) );
+
+      SNetStreamWrite( outstream,
+          SNetRecCreate( REC_sync, SNetStreamGet(in))
+          );
+      SNetStreamClose( in, false);
+      terminate = true;
     } else {
       /* readyset is not empty: continue "collecting" sort records */
       /* wait on new input */
@@ -236,7 +262,7 @@ void CollectorTask( snet_entity_t *self, void *arg)
  * Collector creation function
  * @pre num >= 1
  */
-snet_stream_t *CollectorCreate( int num, snet_stream_t **instreams, snet_info_t *info)
+snet_stream_t *CollectorCreate( int num, snet_stream_t **instreams, bool dynamic, snet_info_t *info)
 {
   snet_stream_t *outstream;
   coll_arg_t *carg;
@@ -249,6 +275,7 @@ snet_stream_t *CollectorCreate( int num, snet_stream_t **instreams, snet_info_t 
   carg->inputs = instreams;
   carg->output = outstream;
   carg->num = num;
+  carg->dynamic = dynamic;
 
   /* spawn collector task */
   SNetEntitySpawn( ENTITY_COLLECT, CollectorTask, (void *)carg);

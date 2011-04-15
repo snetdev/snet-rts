@@ -356,7 +356,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
       SNetInfoDestroy(new_info);
     }
     /* create collector with outstreams */
-    outstream = CollectorCreate(num, collstreams, info);
+    outstream = CollectorCreate(num, collstreams, false, info);
 
     parg = SNetMemAlloc( sizeof(parallel_arg_t));
     parg->input   = instream;

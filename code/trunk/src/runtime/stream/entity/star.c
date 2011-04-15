@@ -215,7 +215,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
       snet_stream_t **star_output;
       star_output = (snet_stream_t **) SNetMemAlloc( sizeof(snet_stream_t *));
       star_output[0] = newstream;
-      output = CollectorCreate( 1, star_output, info);
+      output = CollectorCreate( 1, star_output, true, info);
       sarg->output = newstream;
     } else {
       output = newstream;
