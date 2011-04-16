@@ -1,3 +1,16 @@
+/**
+ * Feedback Combinator
+ *
+ * The feedback combinator implements a real feedback loop.
+ * Special care must be taken to avoid the situation of
+ * artificial deadlock.
+ *
+ * Author: Daniel Prokesch <daniel.prokesch@gmail.com>
+ * Date:   2011-04-11
+ */
+
+
+
 #include <assert.h>
 
 #include "snetentities.h"
@@ -8,6 +21,25 @@
 
 #include "threading.h"
 #include "distribution.h"
+
+
+
+/**
+ * If following is defined, no buffer entity in the back-channel
+ * is created. This can lead to artificial deadlock if there is not enough
+ * capacity in streams of the feedback network, for records produced in the
+ * feedback loop.
+ */
+//#define FEEDBACK_OMIT_BUFFER
+
+
+/**
+ * Use the stream-emitter implementation of the feedback buffer
+ */
+//#define FEEDBACK_STREAM_EMITTER
+
+
+#define FEEDBACK_BACKCHAN_CAPACITY 64
 
 
 /* Helper function for the feedback-dispatcher
@@ -145,8 +177,12 @@ static void FbCollReadFbi(struct fbcoll_state *state)
       }
       break;
 
-    case REC_terminate:
     case REC_sync:
+      SNetStreamReplace( state->backstream, SNetRecGetStream( rec));
+      SNetRecDestroy( rec);
+      break;
+
+    case REC_terminate:
     case REC_collect:
     default:
       assert(0);
@@ -267,8 +303,10 @@ static void FeedbackDispTask( snet_entity_t *self, void *arg)
       case REC_terminate:
         terminate = true;
         SNetStreamWrite( outstream, rec);
+#ifndef FEEDBACK_OMIT_BUFFER
         /* a terminate record is sent in the backloop for the buffer */
         SNetStreamWrite( backstream, SNetRecCopy( rec));
+#endif
         break;
 
       case REC_sync:
@@ -306,7 +344,58 @@ static void FeedbackDispTask( snet_entity_t *self, void *arg)
 
 typedef struct{
   snet_stream_t *in, *out;
+  int out_capacity;
 } fbbuf_arg_t;
+
+#ifdef FEEDBACK_STREAM_EMITTER
+
+static void FeedbackBufTask( snet_entity_t *self, void *arg)
+{
+  fbbuf_arg_t *fbbarg = (fbbuf_arg_t *)arg;
+
+  snet_stream_desc_t *instream;
+  snet_stream_desc_t *outstream;
+  snet_record_t *rec;
+  int out_counter = 0;
+  int out_capacity;
+
+  instream   = SNetStreamOpen( self, fbbarg->in,  'r');
+  outstream  = SNetStreamOpen( self, fbbarg->out, 'w');
+  out_capacity =  fbbarg->out_capacity;
+  SNetMemFree( fbbarg);
+
+
+  /* MAIN LOOP */
+  while(1) {
+
+    rec = SNetStreamRead(instream);
+    if( SNetRecGetDescriptor(rec) == REC_terminate ) {
+      /* this means, the outstream does not exist anymore! */
+      SNetRecDestroy(rec);
+      break; /* exit main loop */
+    }
+
+    if (out_counter+1 >= out_capacity) {
+      /* new stream */
+      snet_stream_t *new_stream = SNetStreamCreate(out_capacity);
+      SNetStreamWrite(outstream,
+          SNetRecCreate(REC_sync, new_stream)
+          );
+
+      SNetStreamClose(outstream, false);
+      outstream = SNetStreamOpen(self, new_stream, 'w');
+      out_counter = 0;
+    }
+    /* write the record to the stream */
+    SNetStreamWrite(outstream, rec);
+    out_counter++;
+  } /* END OF MAIN LOOP */
+
+  SNetStreamClose(instream,  true);
+  SNetStreamClose(outstream, false);
+}
+
+#else
 
 
 /**
@@ -320,20 +409,23 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
   snet_stream_desc_t *outstream;
   snet_queue_t *internal_buffer;
   snet_record_t *rec;
-  int K = 10;
+  int out_capacity;
+  int max_read;
 
   instream   = SNetStreamOpen( self, fbbarg->in,  'r');
   outstream  = SNetStreamOpen( self, fbbarg->out, 'w');
+  out_capacity =  fbbarg->out_capacity;
   SNetMemFree( fbbarg);
 
   internal_buffer = SNetQueueCreate();
+  max_read = out_capacity; /* TODO better usual stream capacity */
 
   /* MAIN LOOP */
   while(1) {
     int n = 0;
     rec = NULL;
 
-    /* STEP 1: read n=min(available,K) records from input stream */
+    /* STEP 1: read n=min(available,max_read) records from input stream */
 
     /* read first record of the actual dispatch */
     if (0 == SNetQueueSize(internal_buffer)) {
@@ -359,8 +451,20 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
     }
 
 
-    while ( n<=K && SNetStreamPeek(instream)!=NULL ) {
+    while ( n<=max_read && SNetStreamPeek(instream)!=NULL ) {
       rec = SNetStreamRead(instream);
+
+      /* check if we will need a larger outstream, and if so,
+       * create a larger stream
+       */
+      if (SNetQueueSize(internal_buffer)+1 >= out_capacity) {
+        snet_stream_t *new_stream;
+        out_capacity *= 2;
+
+        new_stream = SNetStreamCreate(out_capacity);
+        (void) SNetQueuePut(internal_buffer, SNetRecCreate(REC_sync, new_stream));
+      }
+
       /* put record into internal buffer */
       (void) SNetQueuePut(internal_buffer, rec);
       n++;
@@ -368,12 +472,23 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
 
     /* STEP 2: try to empty the internal buffer */
     rec = SNetQueuePeek(internal_buffer);
+
     while (rec != NULL) {
+      snet_stream_t *new_stream = NULL;
+      if( REC_sync == SNetRecGetDescriptor( rec)) {
+        new_stream = SNetRecGetStream(rec);
+      }
       if (0 == SNetStreamTryWrite(outstream, rec)) {
         snet_record_t *rem;
         /* success, also remove from queue */
         rem = SNetQueueGet(internal_buffer);
         assert( rem == rec );
+
+        if (new_stream != NULL) {
+          /* written sync record, now change stream */
+          SNetStreamClose(outstream, false);
+          outstream = SNetStreamOpen(self, new_stream, 'w');
+        }
       } else {
         /* there remain elements in the buffer */
         break;
@@ -381,7 +496,6 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
       /* for the next iteration */
       rec = SNetQueuePeek(internal_buffer);
     }
-
   } /* END OF MAIN LOOP */
 
 feedback_buf_epilogue:
@@ -392,6 +506,7 @@ feedback_buf_epilogue:
   SNetStreamClose(outstream,  false);
 }
 
+#endif
 
 
 /****************************************************************************/
@@ -418,21 +533,21 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     /* create streams */
     into_op = SNetStreamCreate(0);
     output  = SNetStreamCreate(0);
-    back_bufin  = SNetStreamCreate(0);
+    back_bufout = SNetStreamCreate(FEEDBACK_BACKCHAN_CAPACITY);
 
-//#define FEEDBACK_OMIT_BUFFER
 
 
 #ifndef FEEDBACK_OMIT_BUFFER
-    back_bufout = SNetStreamCreate(0);
+    back_bufin  = SNetStreamCreate(0);
 
     /* create the feedback buffer */
     fbbarg = SNetMemAlloc( sizeof( fbbuf_arg_t));
     fbbarg->in  = back_bufin;
     fbbarg->out = back_bufout;
+    fbbarg->out_capacity = FEEDBACK_BACKCHAN_CAPACITY;
     SNetEntitySpawn( ENTITY_FBBUF, FeedbackBufTask, (void*)fbbarg );
 #else
-    back_bufout = back_bufin;
+    back_bufin = back_bufout;
 #endif
 
     /* create the feedback collector */

@@ -221,6 +221,14 @@ void SNetStreamReplace(snet_stream_desc_t *sd, snet_stream_t *new_stream);
 
 
 /**
+ * Get the stream opened from a sream descriptor
+ * @param sd  stream descriptor
+ * @return  the stream opened by the stream descriptor
+ */
+snet_stream_t *SNetStreamGet(snet_stream_desc_t *sd);
+
+
+/**
  * Read an item from the stream, consuming
  *
  * @param sd  stream descriptor

@@ -13,7 +13,7 @@ struct snet_stream_t {
   pthread_mutex_t lock;
   pthread_cond_t  notempty;
   pthread_cond_t  notfull;
-  
+
   void **buffer;
   int head, tail;
   int size;

@@ -3,14 +3,16 @@
 for dir in */; do
   if make -C $dir 2>/dev/null >/dev/null; then
     for input in $dir*.xml; do
-      if $dir${dir%/} <$input >out.bak; then
-        if ! diff -u ${input%.xml} out.bak; then
-          "Results differ for $dir$dir with input $input"
+      if [ -f $dir${dir%/} ]; then
+        if $dir${dir%/} <$input >out.bak; then
+          if ! diff -u ${input%.xml} out.bak; then
+            echo "Results differ for $dir$dir with input $input"
+          fi
+        else
+          echo "Execution failed for $dir$dir with input $input"
         fi
-      else
-        echo "Execution failed for $dir$dir with input $input"
+        rm out.bak
       fi
-      rm out.bak
     done
   else
     echo "Compile failed for $dir"
