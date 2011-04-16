@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+from sys import argv, exit
+from re import compile, match
+
+tagPat = compile(r'<tag label="([^"]*)"[^>]*>([^<]*)</tag>')
+btagPat = compile(r'<btag label="([^"]*)"[^>]*>([^<]*)</btag>')
+fieldPat = compile(r'<field label="([^"]*)"[^>]*>([^<]*)</field>')
+recordPat = compile(r'<record.*type="([^"]*)".*>')
+
+class Record(object):
+    def __init__(self, type_):
+        self.type = type_
+        self.tags = {}
+        self.btags = {}
+        self.fields = {}
+
+    def __eq__(self, other):
+        return (self.type == other.type and self.tags == other.tags and
+                self.btags == other.btags and self.fields == other.fields)
+
+    def __repr__(self):
+      return ("Record {\n    Type: %s\n    Tags: %s\n    BTags: %s\n    " +
+              "Fields: %s\n}") % (self.type, self.tags, self.btags, self.fields)
+
+
+
+def grabFileContent(fileName):
+    handle = open(fileName, 'r')
+    fileContents = handle.read()
+    handle.close()
+    return fileContents
+
+def splitIntoRecords(fileContents):
+    record = None
+    recordList = []
+
+    for line in fileContents.replace('><', '>\n<').splitlines():
+        if line == '<?xml version="1.0" ?>':
+            continue
+        elif line == "</record>":
+            if record:
+                recordList.append(record)
+            record = None
+
+        elif recordPat.match(line):
+            match = recordPat.match(line)
+            record = Record(match.group(1))
+
+        elif tagPat.match(line):
+            match = tagPat.match(line)
+            record.tags[match.group(1)] = match.group(2)
+
+        elif btagPat.match(line):
+            match = btagPat.match(line)
+            record.btags[match.group(1)] = match.group(2)
+
+        elif fieldPat.match(line):
+            match = fieldPat.match(line)
+            record.fields[match.group(1)] = match.group(2)
+
+        else:
+            print "Encountered an unexpected line!"
+            print "Line: ", line
+            exit(1)
+
+    if record:
+        recordList.append(record)
+
+    return recordList
+
+if len(argv) != 3:
+    print "compare expects exactly 2 filename arguments"
+
+file1 = splitIntoRecords(grabFileContent(argv[1]))
+file2 = splitIntoRecords(grabFileContent(argv[2]))
+missing = []
+
+for record in file1:
+    if record in file2:
+        file2.remove(record)
+    else:
+        missing.append(record)
+
+if len(missing) + len(file2) != 0:
+    print "Results in %s and %s not identical!" % (argv[1], argv[2])
+
+    if len(missing) != 0:
+      print "Records in %s but not in %s:" % (argv[1], argv[2])
+      for record in missing:
+          print record
+
+    if len(file2) != 0:
+      print "Records in %s but not in %s:" % (argv[2], argv[1])
+      for record in file2:
+          print record
+
+    exit(1)
