@@ -5,32 +5,53 @@
 #include "memfun.h"
 #include "debug.h"
 #include "map.h"
+#include "variant.h"
 
 /* ***************************************************************************/
 
-bool SNetRecPatternMatches(snet_variantencoding_t *pat, snet_record_t *rec)
+bool SNetRecPatternMatches(snet_variant_t *pat, snet_record_t *rec)
 {
-  int j;
+  int val;
 
-  for (j = 0; j < SNetTencGetNumFields(pat); j++) {
-    if (!SNetRecHasField(rec, SNetTencGetFieldNames(pat)[j])) {
+  VARIANT_FOR_EACH_FIELD(pat, val)
+    if (!SNetRecHasField(rec, val)) {
       return false;
     }
-  }
+  END_FOR
 
-  for (j = 0; j < SNetTencGetNumTags(pat); j++) {
-    if (!SNetRecHasTag(rec, SNetTencGetTagNames(pat)[j])) {
+  VARIANT_FOR_EACH_TAG(pat, val)
+    if (!SNetRecHasTag(rec, val)) {
       return false;
     }
-  }
+  END_FOR
 
-  for (j = 0; j < SNetTencGetNumBTags(pat); j++) {
-    if (!SNetRecHasBTag(rec, SNetTencGetBTagNames(pat)[j])) {
+  VARIANT_FOR_EACH_BTAG(pat, val)
+    if (!SNetRecHasBTag(rec, val)) {
       return false;
     }
-  }
+  END_FOR
 
   return true;
+}
+
+
+void SNetRecFlowInherit( snet_variant_t *pat, snet_record_t *in_rec,
+                             snet_record_t *out_rec)
+{
+  int name, val;
+  snet_ref_t *ref;
+
+  FOR_EACH_FIELD(in_rec, name, ref)
+    if (!SNetVariantHasField( pat, name)) {
+      SNetRecSetField( out_rec, name, ref);
+    }
+  END_FOR
+
+  FOR_EACH_TAG(in_rec, name, val)
+    if (!SNetVariantHasTag( pat, name)) {
+      SNetRecSetTag( out_rec, name, val);
+    }
+  END_FOR
 }
 
 snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)

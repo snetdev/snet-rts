@@ -2,7 +2,6 @@
 
 #include "snetentities.h"
 
-#include "typeencode.h"
 #include "expression.h"
 #include "memfun.h"
 #include "queue.h"
@@ -15,27 +14,19 @@
  * - copied from star.c
  */
 static bool MatchesBackPattern( snet_record_t *rec,
-    snet_typeencoding_t *back_patterns, snet_expr_list_t *guards)
+    snet_variant_list_t *back_patterns, snet_expr_list_t *guards)
 {
-  int i;
-  bool is_match;
-  snet_variantencoding_t *pat;
+  int i = 0;
+  snet_variant_t *pattern;
 
-  for( i=0; i<SNetTencGetNumVariants( back_patterns); i++) {
-    is_match = true;
+  LIST_FOR_EACH(back_patterns, pattern)
+    if( SNetEevaluateBool( SNetEgetExpr( guards, i), rec) &&
+        SNetRecPatternMatches(pattern, rec)) {
+      return true;
+    }
+  END_FOR
 
-    if( SNetEevaluateBool( SNetEgetExpr( guards, i), rec)) {
-      pat = SNetTencGetVariant( back_patterns, i+1);
-      is_match = SNetRecPatternMatches(pat, rec);
-    }
-    else {
-      is_match = false;
-    }
-    if( is_match) {
-      break;
-    }
-  }
-  return( is_match);
+  return false;
 }
 
 
@@ -218,7 +209,7 @@ static void FeedbackCollTask( snet_entity_t *self, void *arg)
 
 typedef struct {
   snet_stream_t *in, *out, *fbo;
-  snet_typeencoding_t *back_patterns;
+  snet_variant_list_t *back_patterns;
   snet_expr_list_t *guards;
 } fbdisp_arg_t;
 
@@ -299,7 +290,11 @@ static void FeedbackDispTask( snet_entity_t *self, void *arg)
   SNetStreamClose(outstream,  false);
   SNetStreamClose(backstream, false);
 
-  SNetDestroyTypeEncoding( fbdarg->back_patterns);
+  snet_variant_t *variant;
+  LIST_FOR_EACH( fbdarg->back_patterns, variant)
+    SNetVariantDestroy(variant);
+  END_FOR
+  SNetvariantListDestroy( fbdarg->back_patterns);
   SNetEdestroyList( fbdarg->guards);
   SNetMemFree( fbdarg);
 }
@@ -405,7 +400,7 @@ feedback_buf_epilogue:
 snet_stream_t *SNetFeedback( snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *back_patterns,
+    snet_variant_list_t *back_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a
     )

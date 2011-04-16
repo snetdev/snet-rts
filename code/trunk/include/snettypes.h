@@ -1,7 +1,6 @@
 #ifndef _SNET_SNETTYPES_H_
 #define _SNET_SNETTYPES_H_
 
-#include "typeencode.h"
 #include "expression.h"
 #include "filter.h"
 #include "handle.h"
@@ -13,6 +12,5 @@ typedef snet_stream_t *(*snet_startup_fun_t)(snet_stream_t *, snet_info_t *, int
 
 /* Type for box function */
 typedef void (*snet_box_fun_t)(snet_handle_t *);
-//typedef void (*snet_box_fun_t)(struct handle *);
 
 #endif /* _SNET_SNETTYPES_H_ */

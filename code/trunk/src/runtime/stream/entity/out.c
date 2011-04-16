@@ -1,7 +1,6 @@
 #include "out.h"
 #include "debug.h"
 #include "handle_p.h"
-#include "typeencode.h"
 #include "memfun.h"
 #include "interface_functions.h"
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
@@ -65,9 +64,9 @@ snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec)
 snet_handle_t *SNetOutRawArray( snet_handle_t *hnd, 
     int if_id, int variant_num, void **fields, int *tags, int *btags) 
 {
-  int i, *names;
+  int i, name;
   snet_record_t *out_rec, *old_rec;
-  snet_variantencoding_t *venc;
+  snet_variant_t *variant;
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
@@ -80,37 +79,39 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
   // set values from box
   if (variant_num > 0) {
-   venc = SNetTencGetVariant( SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), 
-            variant_num);
+    variant = SNetvariantListGet( SNetHndGetVariants( hnd), variant_num - 1);
 
-   out_rec = SNetRecCreate( REC_data);
+    out_rec = SNetRecCreate( REC_data);
 
-   SNetRecSetInterfaceId( out_rec, if_id);
+    SNetRecSetInterfaceId( out_rec, if_id);
 
-   names = SNetTencGetFieldNames( venc);
-   for( i=0; i<SNetTencGetNumFields( venc); i++) {
-     SNetRecSetField( out_rec, names[i], fields[i]);
-   }
-   names = SNetTencGetTagNames( venc);
-   for( i=0; i<SNetTencGetNumTags( venc); i++) {
-     SNetRecSetTag( out_rec, names[i], tags[i]);
-   }
-   names = SNetTencGetBTagNames( venc);
-   for( i=0; i<SNetTencGetNumBTags( venc); i++) {
-     SNetRecSetBTag( out_rec, names[i], btags[i]);
-   }
+    i = 0;
+    VARIANT_FOR_EACH_FIELD(variant, name)
+      SNetRecSetField( out_rec, name, fields[i]);
+      i++;
+    END_FOR
 
-   SNetMemFree( fields);
-   SNetMemFree( tags);
-   SNetMemFree( btags);
-  }
-  else {
+    i = 0;
+    VARIANT_FOR_EACH_TAG(variant, name)
+      SNetRecSetTag( out_rec, name, tags[i]);
+      i++;
+    END_FOR
+
+    i = 0;
+    VARIANT_FOR_EACH_BTAG(variant, name)
+      SNetRecSetBTag( out_rec, name, btags[i]);
+      i++;
+    END_FOR
+
+    SNetMemFree( fields);
+    SNetMemFree( tags);
+    SNetMemFree( btags);
+  } else {
     SNetUtilDebugFatal("[SNetOut] variant_num <= 0\n\n");
   }
 
 
   // flow inherit
-
   old_rec = hnd->rec;
   if (SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
     int name, val;
@@ -150,15 +151,12 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 /**
  * Output Raw V
  */
-snet_handle_t *SNetOutRawV( snet_handle_t *hnd, 
-    int id, int variant_num, va_list args)
+snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
+                            va_list args)
  {
-  int i;
   snet_record_t *out_rec, *old_rec;
-  snet_variantencoding_t *venc;
-  snet_vector_t *mapping;
-  int num_entries, f_count=0, t_count=0, b_count=0;
-  int *f_names, *t_names, *b_names;
+  snet_variant_t *variant;
+  int name;
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
@@ -170,40 +168,26 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd,
 #endif
 
   // set values from box
-  if( variant_num > 0) { 
+  if( variant_num > 0) {
 
-   venc = SNetTencGetVariant( 
-            SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), 
-            variant_num);
+    variant = SNetvariantListGet( SNetHndGetVariants( hnd), variant_num - 1);
 
-   out_rec = SNetRecCreate( REC_data);
+    out_rec = SNetRecCreate( REC_data);
 
-   SNetRecSetInterfaceId( out_rec, id);
+    SNetRecSetInterfaceId( out_rec, id);
 
-   num_entries = SNetTencGetNumFields( venc) +
-                 SNetTencGetNumTags( venc) +
-                 SNetTencGetNumBTags( venc);
-   mapping = 
-     SNetTencBoxSignGetMapping( SNetHndGetBoxSign( hnd), variant_num-1); 
-   f_names = SNetTencGetFieldNames( venc);
-   t_names = SNetTencGetTagNames( venc);
-   b_names = SNetTencGetBTagNames( venc);
+    VARIANT_FOR_EACH_FIELD(variant, name)
+      SNetRecSetField( out_rec, name, va_arg( args, snet_ref_t*));
+    END_FOR
 
-   for( i=0; i<num_entries; i++) {
-     switch( SNetTencVectorGetEntry( mapping, i)) {
-       case field:
-         SNetRecSetField( out_rec, f_names[f_count++], va_arg( args, void*));
-         break;
-       case tag:
-         SNetRecSetTag( out_rec, t_names[t_count++], va_arg( args, int));
-         break;
-       case btag:
-         SNetRecSetBTag( out_rec, b_names[b_count++], va_arg( args, int));
-         break;
-     }
-   }
-  }
-  else {
+    VARIANT_FOR_EACH_TAG(variant, name)
+      SNetRecSetTag( out_rec, name, va_arg( args, int));
+    END_FOR
+
+    VARIANT_FOR_EACH_BTAG(variant, name)
+      SNetRecSetBTag( out_rec, name, va_arg( args, int));
+    END_FOR
+  } else {
     SNetUtilDebugFatal("[SNetOut] variant_num <= 0\n\n");
   }
 

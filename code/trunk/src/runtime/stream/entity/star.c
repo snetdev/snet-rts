@@ -2,7 +2,6 @@
 
 #include "snetentities.h"
 
-#include "typeencode.h"
 #include "expression.h"
 #include "memfun.h"
 #include "collector.h"
@@ -11,34 +10,27 @@
 #include "distribution.h"
 
 static bool MatchesExitPattern( snet_record_t *rec,
-    snet_typeencoding_t *exit_patterns, snet_expr_list_t *guards)
+    snet_variant_list_t *exit_patterns, snet_expr_list_t *guards)
 {
-  int i;
-  bool is_match;
-  snet_variantencoding_t *pat;
+  int i = 0;
+  snet_variant_t *pattern;
 
-  for( i=0; i<SNetTencGetNumVariants( exit_patterns); i++) {
-    is_match = true;
+  LIST_FOR_EACH(exit_patterns, pattern)
+    if( SNetEevaluateBool( SNetEgetExpr( guards, i), rec) &&
+        SNetRecPatternMatches(pattern, rec)) {
+      return true;
+    }
+    i++;
+  END_FOR
 
-    if( SNetEevaluateBool( SNetEgetExpr( guards, i), rec)) {
-      pat = SNetTencGetVariant( exit_patterns, i+1);
-      is_match = SNetRecPatternMatches(pat, rec);
-    }
-    else {
-      is_match = false;
-    }
-    if( is_match) {
-      break;
-    }
-  }
-  return( is_match);
+  return false;
 }
 
 
 
 typedef struct {
   snet_stream_t *input, *output;
-  snet_typeencoding_t *exit_patterns;
+  snet_variant_list_t *exit_patterns;
   snet_startup_fun_t box, selffun;
   snet_expr_list_t *guards;
   snet_info_t *info;
@@ -173,7 +165,12 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
   /* destroy the arg */
   SNetEdestroyList( sarg->guards);
   SNetInfoDestroy( sarg->info);
-  SNetDestroyTypeEncoding( sarg->exit_patterns);
+
+  snet_variant_t *variant;
+  LIST_FOR_EACH(sarg->exit_patterns, variant)
+    SNetVariantDestroy(variant);
+  END_FOR
+  SNetvariantListDestroy( sarg->exit_patterns);
   SNetMemFree( sarg);
 } /* STAR BOX TASK END */
 
@@ -193,7 +190,7 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
 static snet_stream_t *CreateStar( snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *exit_patterns,
+    snet_variant_list_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b,
@@ -233,7 +230,11 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 
   } else {
     SNetEdestroyList( guards);
-    SNetDestroyTypeEncoding( exit_patterns);
+    snet_variant_t *variant;
+    LIST_FOR_EACH(exit_patterns, variant)
+      SNetVariantDestroy(variant);
+    END_FOR
+    SNetvariantListDestroy( exit_patterns);
     output = input;
   }
 
@@ -249,7 +250,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 snet_stream_t *SNetStar( snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *exit_patterns,
+    snet_variant_list_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
@@ -268,7 +269,7 @@ snet_stream_t *SNetStar( snet_stream_t *input,
 snet_stream_t *SNetStarIncarnate( snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *exit_patterns,
+    snet_variant_list_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
@@ -287,7 +288,7 @@ snet_stream_t *SNetStarIncarnate( snet_stream_t *input,
 snet_stream_t *SNetStarDet(snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *exit_patterns,
+    snet_variant_list_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)
@@ -306,7 +307,7 @@ snet_stream_t *SNetStarDet(snet_stream_t *input,
 snet_stream_t *SNetStarDetIncarnate(snet_stream_t *input,
     snet_info_t *info,
     int location,
-    snet_typeencoding_t *exit_patterns,
+    snet_variant_list_t *exit_patterns,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a,
     snet_startup_fun_t box_b)

@@ -16,7 +16,6 @@
 #include "C4SNet.h"
 #include "memfun.h"
 #include "snettypes.h"
-#include "typeencode.h"
 #include "interface_functions.h"
 #include "out.h"
 #include "base64.h"
@@ -859,21 +858,20 @@ c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant)
 {
   int i;
   c4snet_container_t *c;
-  snet_variantencoding_t *v;
+  snet_variant_t *v;
 
   if(hnd == NULL) {
     return 0;
   }
 
-  v = SNetTencGetVariant( 
-        SNetTencBoxSignGetType( SNetHndGetBoxSign( (struct handle *)hnd)), variant);
+  v = SNetvariantListGet( SNetHndGetVariants( (struct handle *)hnd), variant - 1);
 
   c = (c4snet_container_t *)SNetMemAlloc( sizeof( c4snet_container_t));
   c->counter = (int *)SNetMemAlloc( 3 * sizeof( int));
 
-  c->fields = (void **)SNetMemAlloc( SNetTencGetNumFields( v) * sizeof( void*));
-  c->tags = (int *)SNetMemAlloc( SNetTencGetNumTags( v) * sizeof( int));
-  c->btags = (int *)SNetMemAlloc( SNetTencGetNumBTags( v) * sizeof( int));
+  c->fields = (void **)SNetMemAlloc( SNetVariantNumFields( v) * sizeof( void*));
+  c->tags = (int *)SNetMemAlloc( SNetVariantNumTags( v) * sizeof( int));
+  c->btags = (int *)SNetMemAlloc( SNetVariantNumBTags( v) * sizeof( int));
   c->hnd = (struct handle *)hnd;
   c->variant = variant;
 

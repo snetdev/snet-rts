@@ -31,7 +31,7 @@ snet_record_t *SNetHndGetRecord( snet_handle_t *hnd)
   return hnd->rec;
 }
 
-snet_box_sign_t *SNetHndGetBoxSign( snet_handle_t *hnd)
+snet_variant_list_t *SNetHndGetVariants( snet_handle_t *hnd)
 {
   return hnd->sign;
 }

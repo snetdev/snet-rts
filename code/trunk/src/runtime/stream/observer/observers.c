@@ -30,7 +30,6 @@
 
 #include "bool.h"
 #include "constants.h"
-#include "typeencode.h"
 #include "memfun.h"
 #include "bool.h"
 #include "interface_functions.h"

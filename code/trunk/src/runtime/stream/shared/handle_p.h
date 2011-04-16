@@ -13,7 +13,7 @@ typedef struct {
 
 struct handle {
   snet_record_t *rec;
-  snet_box_sign_t *sign;
+  snet_variant_list_t *sign;
   name_mapping_t *mapping;
   snet_stream_desc_t *out_sd;
 };

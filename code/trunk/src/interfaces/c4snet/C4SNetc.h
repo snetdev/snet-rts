@@ -6,8 +6,8 @@ extern "C" {
 #endif 
 
 #include <string.h>
-#include "typeencode.h"
 #include "metadata.h"
+#include "type.h"
 
 char *C4SNetGenBoxWrapper( char *box_name,
                            snetc_type_enc_t *type,

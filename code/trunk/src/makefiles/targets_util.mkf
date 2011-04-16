@@ -47,6 +47,6 @@ util		= core metadata
 # Note that the variable names must coincide with the directory names above.
 #
 
-core		= memfun.o typeencode.o 
+core		= memfun.o
 
 metadata	= metadata.o

@@ -8,6 +8,7 @@
 #include "threading.h"
 
 #include "handle_p.h"
+#include "list.h"
 #include "distribution.h"
 
 #ifdef SNET_DEBUG_COUNTERS
@@ -23,7 +24,7 @@
 typedef struct {
   snet_stream_t *input, *output;
   void (*boxfun)( snet_handle_t*);
-  snet_box_sign_t *out_signs;
+  snet_variant_list_t *out_variants;
   const char *boxname;
 } box_arg_t;
 
@@ -58,7 +59,7 @@ static void BoxTask(snet_entity_t *self, void *arg)
   /* set out descriptor */
   hnd.out_sd = outstream;
   /* set out signs */
-  hnd.sign = barg->out_signs;
+  hnd.sign = barg->out_variants;
   /* mapping */
   hnd.mapping = NULL;
 
@@ -139,7 +140,12 @@ static void BoxTask(snet_entity_t *self, void *arg)
   SNetHndDestroy( &hnd);
 
   /* destroy box arg */
-  SNetTencBoxSignDestroy( barg->out_signs);
+  snet_variant_t *variant;
+  LIST_FOR_EACH(barg->out_variants, variant)
+    SNetVariantDestroy(variant);
+  END_FOR
+
+  SNetvariantListDestroy(barg->out_variants);
   SNetMemFree( barg);
 }
 
@@ -152,7 +158,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     int location,
     const char *boxname,
     snet_box_fun_t boxfun,
-    snet_box_sign_t *out_signs)
+    snet_variant_list_t *out_variants)
 {
   snet_stream_t *output;
   box_arg_t *barg;
@@ -166,13 +172,18 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->input  = input;
     barg->output = output;
     barg->boxfun = boxfun;
-    barg->out_signs = out_signs;
+    barg->out_variants = out_variants;
     barg->boxname = boxname;
 
     SNetEntitySpawn( ENTITY_BOX(barg->boxname), BoxTask, (void*)barg );
 
   } else {
-    SNetTencBoxSignDestroy(out_signs);
+    snet_variant_t *variant;
+    LIST_FOR_EACH(out_variants, variant)
+      SNetVariantDestroy(variant);
+    END_FOR
+
+    SNetvariantListDestroy(out_variants);
     output = input;
   }
 

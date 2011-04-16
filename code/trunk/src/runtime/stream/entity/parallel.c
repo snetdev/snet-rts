@@ -25,7 +25,6 @@
  *****************************************************************************/
 
 #include "snetentities.h"
-#include "typeencode.h"
 #include "collector.h"
 #include "memfun.h"
 #include "debug.h"
@@ -36,7 +35,7 @@
 typedef struct {
   snet_stream_t *input;
   snet_stream_t **outputs;
-  snet_typeencoding_list_t *types;
+  snet_variant_list_list_t *variant_lists;
   bool is_det;
 } parallel_arg_t;
 
@@ -52,46 +51,45 @@ typedef struct {
 /* ------------------------------------------------------------------------- */
 
 static match_count_t *CheckMatch( snet_record_t *rec,
-    snet_typeencoding_t *tenc, match_count_t *mc)
+    snet_variant_list_t *variant_list, match_count_t *mc)
 {
   int name, val;
-  snet_variantencoding_t *venc;
-  int i,j,max=-1;
+  snet_variant_t *variant;
+  int max=-1;
 
   if(rec == NULL) {
     SNetUtilDebugFatal("PARALLEL: CheckMatch: rec == NULL");
   }
-  if(tenc == NULL) {
+  if(variant_list == NULL) {
     SNetUtilDebugFatal("PARALLEL: CheckMatch: tenc == NULL");
   }
   if(mc == NULL) {
     SNetUtilDebugFatal("PARALLEL: CheckMatch: mc == NULL");
   }
   /* for all variants */
-  for( j=0; j<SNetTencGetNumVariants( tenc); j++) {
-    venc = SNetTencGetVariant( tenc, j+1);
+  LIST_FOR_EACH(variant_list, variant)
     MC_COUNT( mc) = 0;
     MC_ISMATCH( mc) = true;
 
     /* is_match is set to value inside the macros */
-    for (i=0; i<SNetTencGetNumFields( venc); i++) {\
-       if (!SNetRecHasField( rec, SNetTencGetFieldNames( venc)[i])) {
+    VARIANT_FOR_EACH_FIELD(variant, name)
+      if (!SNetRecHasField( rec, name)) {
         MC_ISMATCH( mc) = false;
       } else {
         MC_COUNT( mc) += 1;
       }
-    }
+    END_FOR
 
-    for (i=0; i<SNetTencGetNumTags( venc); i++) {\
-       if (!SNetRecHasTag( rec, SNetTencGetTagNames( venc)[i])) {
+    VARIANT_FOR_EACH_TAG(variant, name)
+      if (!SNetRecHasTag( rec, name)) {
         MC_ISMATCH( mc) = false;
       } else {
         MC_COUNT( mc) += 1;
       }
-    }
+    END_FOR
 
     FOR_EACH_BTAG(rec, name, val)
-      if(!SNetTencContainsBTagName(venc, name)) {
+      if(!SNetVariantHasBTag(variant, name)) {
         MC_ISMATCH( mc) = false;
       } else {
         MC_COUNT( mc) += 1;
@@ -101,7 +99,7 @@ static match_count_t *CheckMatch( snet_record_t *rec,
     if (MC_ISMATCH( mc)) {
       max = MC_COUNT( mc) > max ? MC_COUNT( mc) : max;
     }
-  } /* end for all variants */
+  END_FOR
 
   if( max >= 0) {
     MC_ISMATCH( mc) = true;
@@ -161,8 +159,6 @@ static void PutToBuffers( snet_stream_desc_t **outstreams, int num,
 }
 
 
-
-
 /**
  * Main Parallel Box Task
  */
@@ -170,7 +166,7 @@ static void ParallelBoxTask( snet_entity_t *self, void *arg)
 {
   parallel_arg_t *parg = (parallel_arg_t *) arg;
   /* the number of outputs */
-  int num = SNetTencGetNumTypes( parg->types);
+  int num = SNetvariant_listListSize(parg->variant_lists);
   snet_stream_desc_t *instream;
   snet_stream_desc_t *outstreams[num];
   int i, stream_index;
@@ -195,7 +191,7 @@ static void ParallelBoxTask( snet_entity_t *self, void *arg)
 
   /* Handle initialiser branches */
   for( i=0; i<num; i++) {
-    if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( parg->types, i)) == 0) {
+    if (SNetvariantListSize( SNetvariant_listListGet( parg->variant_lists, i)) == 0) {
 
       PutToBuffers( outstreams, num, i, 
           SNetRecCreate( REC_trigger_initialiser), 
@@ -215,7 +211,7 @@ static void ParallelBoxTask( snet_entity_t *self, void *arg)
   switch( num - num_init_branches) {
     case 1: /* remove dispatcher from network ... */
       for( i=0; i<num; i++) { 
-        if (SNetTencGetNumVariants( SNetTencGetTypeEncoding( parg->types, i)) > 0) {
+        if (SNetvariantListSize( SNetvariant_listListGet( parg->variant_lists, i)) > 0) {
           /* send a sync record to the remaining branch */
           SNetStreamWrite( outstreams[i],
               SNetRecCreate( REC_sync, parg->input) 
@@ -246,7 +242,7 @@ static void ParallelBoxTask( snet_entity_t *self, void *arg)
 
       case REC_data:
         for( i=0; i<num; i++) {
-          CheckMatch( rec, SNetTencGetTypeEncoding( parg->types, i), matchcounter[i]);
+          CheckMatch( rec, SNetvariant_listListGet( parg->variant_lists, i), matchcounter[i]);
         }
         stream_index = BestMatch( matchcounter, num);
         PutToBuffers( outstreams, num, stream_index, rec, (parg->is_det)? &counter : NULL);
@@ -310,7 +306,17 @@ static void ParallelBoxTask( snet_entity_t *self, void *arg)
   }
   SNetMemFree( matchcounter);
 
-  SNetTencDestroyTypeEncodingList( parg->types);
+  snet_variant_list_t *variant_list;
+  snet_variant_t *variant;
+
+  LIST_FOR_EACH(parg->variant_lists, variant_list)
+    LIST_FOR_EACH(variant_list, variant)
+      SNetVariantDestroy(variant);
+    END_FOR
+
+    SNetvariantListDestroy(variant_list);
+  END_FOR
+  SNetvariant_listListDestroy( parg->variant_lists);
   SNetMemFree( parg);
 } /* END of PARALLEL BOX TASK */
 
@@ -328,7 +334,7 @@ static void ParallelBoxTask( snet_entity_t *self, void *arg)
 static snet_stream_t *CreateParallel( snet_stream_t *instream,
     snet_info_t *info,
     int location,
-    snet_typeencoding_list_t *types,
+    snet_variant_list_list_t *variant_lists,
     void **funs, bool is_det)
 {
   int i;
@@ -339,8 +345,10 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   snet_stream_t **collstreams;
   snet_startup_fun_t fun;
   snet_info_t *new_info;
+  snet_variant_list_t *variants;
+  snet_variant_t *variant;
 
-  num = SNetTencGetNumTypes( types);
+  num = SNetvariant_listListSize( variant_lists);
 
   instream = SNetRouteUpdate(info, instream, location);
   if(location == SNetNodeLocation) {
@@ -348,32 +356,45 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     transits = SNetMemAlloc( num * sizeof( snet_stream_t*));
 
     /* create all branches */
-    for(i = 0; i < num; i++) {
+    i = 0;
+    LIST_FOR_EACH(variant_lists, variants)
       transits[i] = SNetStreamCreate(0);
       fun = funs[i];
       new_info = SNetInfoCopy(info);
       collstreams[i] = (*fun)(transits[i], new_info, location);
       SNetInfoDestroy(new_info);
-    }
+      i++;
+    END_FOR
     /* create collector with outstreams */
     outstream = CollectorCreate(num, collstreams, info);
 
     parg = SNetMemAlloc( sizeof(parallel_arg_t));
     parg->input   = instream;
     parg->outputs = transits;
-    parg->types = types;
+    parg->variant_lists = variant_lists;
     parg->is_det = is_det;
 
     SNetEntitySpawn( ENTITY_PARALLEL, ParallelBoxTask, (void*)parg );
 
   } else {
-    for(i = 0; i < num; i++) {
+    i = 0;
+    LIST_FOR_EACH(variant_lists, variants)
       fun = funs[i];
       new_info = SNetInfoCopy(info);
       instream = (*fun)( instream, info, location);
       SNetInfoDestroy(new_info);
-    }
-    SNetTencDestroyTypeEncodingList( types);
+      i++;
+    END_FOR
+
+    LIST_FOR_EACH(variant_lists, variants)
+      LIST_FOR_EACH(variants, variant)
+        SNetVariantDestroy(variant);
+      END_FOR
+
+      SNetvariantListDestroy(variants);
+    END_FOR
+    SNetvariant_listListDestroy( variant_lists);
+
     outstream = instream;
   }
 
@@ -390,22 +411,22 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 snet_stream_t *SNetParallel( snet_stream_t *instream,
     snet_info_t *info,
     int location,
-    snet_typeencoding_list_t *types,
+    snet_variant_list_list_t *variant_lists,
     ...)
 {
   va_list args;
   int i, num;
   void **funs;
 
-  num = SNetTencGetNumTypes( types);
+  num = SNetvariant_listListSize( variant_lists);
   funs = SNetMemAlloc( num * sizeof( void*));
-  va_start( args, types);
+  va_start( args, variant_lists);
   for( i=0; i<num; i++) {
     funs[i] = va_arg( args, void*);
   }
   va_end( args);
 
-  return CreateParallel( instream, info, location, types, funs, false);
+  return CreateParallel( instream, info, location, variant_lists, funs, false);
 }
 
 
@@ -415,20 +436,20 @@ snet_stream_t *SNetParallel( snet_stream_t *instream,
 snet_stream_t *SNetParallelDet( snet_stream_t *inbuf,
     snet_info_t *info,
     int location,
-    snet_typeencoding_list_t *types,
+    snet_variant_list_list_t *variant_lists,
     ...)
 {
   va_list args;
   int i, num;
   void **funs;
 
-  num = SNetTencGetNumTypes( types);
+  num = SNetvariant_listListSize( variant_lists);
   funs = SNetMemAlloc( num * sizeof( void*));
-  va_start( args, types);
+  va_start( args, variant_lists);
   for( i=0; i<num; i++) {
     funs[i] = va_arg( args, void*);
   }
   va_end( args);
 
-  return CreateParallel( inbuf, info, location, types, funs, true);
+  return CreateParallel( inbuf, info, location, variant_lists, funs, true);
 }

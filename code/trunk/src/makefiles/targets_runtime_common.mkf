@@ -46,4 +46,4 @@ runtime          = common
 # Note that the variable names must coincide with the directory names above.
 #
 
-common = expression.o record.o info.o map.o list.o
+common = expression.o record.o info.o map.o list.o variant.o

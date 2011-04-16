@@ -78,10 +78,12 @@ struct record {
 
 
 #include "distribution.h"
-#include "typeencode.h"
+#include "variant.h"
 
 /* returns true if the record matches the pattern. */
-bool SNetRecPatternMatches(snet_variantencoding_t *pat, snet_record_t *rec);
+bool SNetRecPatternMatches(snet_variant_t *pat, snet_record_t *rec);
+void SNetRecFlowInherit( snet_variant_t *pat, snet_record_t *in_rec,
+                             snet_record_t *out_rec);
 
 snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...);
 snet_record_t *SNetRecCopy( snet_record_t *rec);
