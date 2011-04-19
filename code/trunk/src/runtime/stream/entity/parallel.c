@@ -28,8 +28,8 @@
 #include "collector.h"
 #include "memfun.h"
 #include "debug.h"
+#include "locvec.h"
 #include "distribution.h"
-
 #include "threading.h"
 
 typedef struct {
@@ -193,32 +193,32 @@ static void ParallelBoxTask( snet_entity_t *self, void *arg)
   for( i=0; i<num; i++) {
     if (SNetvariantListSize( SNetvariant_listListGet( parg->variant_lists, i)) == 0) {
 
-      PutToBuffers( outstreams, num, i, 
-          SNetRecCreate( REC_trigger_initialiser), 
+      PutToBuffers( outstreams, num, i,
+          SNetRecCreate( REC_trigger_initialiser),
           (parg->is_det) ? &counter : NULL
           );
       /* after terminate, it is not necessary to send a sort record */
-      PutToBuffers( outstreams, num, i, 
-          SNetRecCreate( REC_terminate), 
+      PutToBuffers( outstreams, num, i,
+          SNetRecCreate( REC_terminate),
           NULL
           );
       SNetStreamClose( outstreams[i], false);
       outstreams[i] = NULL;
-      num_init_branches += 1; 
+      num_init_branches += 1;
     }
   }
 
   switch( num - num_init_branches) {
     case 1: /* remove dispatcher from network ... */
-      for( i=0; i<num; i++) { 
+      for( i=0; i<num; i++) {
         if (SNetvariantListSize( SNetvariant_listListGet( parg->variant_lists, i)) > 0) {
           /* send a sync record to the remaining branch */
           SNetStreamWrite( outstreams[i],
-              SNetRecCreate( REC_sync, parg->input) 
+              SNetRecCreate( REC_sync, parg->input)
               );
           SNetStreamClose( instream, false);
         }
-      }    
+      }
     case 0: /* and terminate */
       terminate = true;
     break;
@@ -344,11 +344,14 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   snet_stream_t **transits;
   snet_stream_t **collstreams;
   snet_startup_fun_t fun;
-  snet_info_t *new_info;
   snet_variant_list_t *variants;
   snet_variant_t *variant;
+  snet_locvec_t *locvec;
 
   num = SNetvariant_listListSize( variant_lists);
+
+  locvec = SNetLocvecGet(info);
+  SNetLocvecAppend(locvec, LOC_PARALLEL, 0);
 
   instream = SNetRouteUpdate(info, instream, location);
   if(location == SNetNodeLocation) {
@@ -358,11 +361,10 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     /* create all branches */
     i = 0;
     LIST_FOR_EACH(variant_lists, variants)
+      SNetLocvecTopinc(locvec);
       transits[i] = SNetStreamCreate(0);
       fun = funs[i];
-      new_info = SNetInfoCopy(info);
-      collstreams[i] = (*fun)(transits[i], new_info, location);
-      SNetInfoDestroy(new_info);
+      collstreams[i] = (*fun)(transits[i], info, location);
       i++;
     END_FOR
     /* create collector with outstreams */
@@ -379,10 +381,9 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   } else {
     i = 0;
     LIST_FOR_EACH(variant_lists, variants)
+      SNetLocvecTopinc(locvec);
       fun = funs[i];
-      new_info = SNetInfoCopy(info);
       instream = (*fun)( instream, info, location);
-      SNetInfoDestroy(new_info);
       i++;
     END_FOR
 
@@ -397,6 +398,9 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 
     outstream = instream;
   }
+
+  /* restore parent */
+  SNetLocvecPop(locvec);
 
   SNetMemFree( funs);
   return( outstream);

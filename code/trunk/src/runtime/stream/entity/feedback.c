@@ -17,6 +17,7 @@
 
 #include "expression.h"
 #include "memfun.h"
+#include "locvec.h"
 #include "queue.h"
 
 #include "threading.h"
@@ -521,6 +522,10 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     )
 {
   snet_stream_t *output;
+  snet_locvec_t *locvec;
+
+  locvec = SNetLocvecGet(info);
+  SNetLocvecAppend(locvec, LOC_FEEDBACK, 0);
 
   input = SNetRouteUpdate(info, input, location);
   if(location == SNetNodeLocation) {
@@ -573,8 +578,8 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     output = input;
   }
 
+  SNetLocvecPop(locvec);
+
   return( output);
-
-
 }
 

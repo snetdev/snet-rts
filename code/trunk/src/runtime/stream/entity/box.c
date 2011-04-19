@@ -4,6 +4,7 @@
 #include "debugtime.h"
 #include "debug.h"
 #include "memfun.h"
+#include "locvec.h"
 
 #include "threading.h"
 
@@ -176,6 +177,9 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->boxname = boxname;
 
     SNetEntitySpawn( ENTITY_BOX(barg->boxname), BoxTask, (void*)barg );
+
+    //fprintf(stderr, "Box %s, location  ", boxname);
+    //SNetLocvecPrint(stderr, SNetLocvecGet(info));
 
   } else {
     snet_variant_t *variant;

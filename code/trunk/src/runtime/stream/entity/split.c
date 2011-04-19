@@ -4,6 +4,7 @@
 #include "snetentities.h"
 
 #include "memfun.h"
+#include "locvec.h"
 #include "hashtab.h"
 #include "collector.h"
 #include "threading.h"
@@ -18,7 +19,7 @@
 typedef struct {
   snet_stream_t *input, *output;
   snet_startup_fun_t boxfun;
-  snet_info_t *info;
+  snet_locvec_t *locvec_parent;
   int ltag, utag;
   bool is_det;
   bool is_byloc;
@@ -74,12 +75,24 @@ static void SplitBoxTask( snet_entity_t *self, void *arg)
             /* add to list */
             SNetStreamsetPut( &repos_set, outstream);
 
+            /* create info and location vector for creation of this replica */
+            snet_info_t *info = SNetInfoInit();
+            snet_locvec_t *locvec = SNetLocvecCopy(sarg->locvec_parent);
+            SNetLocvecAppend(locvec, LOC_SPLIT,
+                (!sarg->is_byloc)? i : SNetNodeLocation
+                );
+            SNetLocvecSet(info, locvec);
+
             snet_stream_t *temp_stream;
             if( sarg->is_byloc) {
-              temp_stream = sarg->boxfun(newstream_addr, sarg->info, i);
+              temp_stream = sarg->boxfun(newstream_addr, info, i);
             } else {
-              temp_stream = sarg->boxfun(newstream_addr, sarg->info, SNetNodeLocation);
+              temp_stream = sarg->boxfun(newstream_addr, info, SNetNodeLocation);
             }
+
+            /* destroy info and location vector */
+            SNetLocvecDestroy(locvec);
+            SNetInfoDestroy(info);
 
             if(temp_stream != NULL) {
               /* notify collector about the new instance via initial */
@@ -184,9 +197,6 @@ static void SplitBoxTask( snet_entity_t *self, void *arg)
   /* close instream */
   SNetStreamClose( instream, true);
 
-  /* free info object */
-  SNetInfoDestroy(sarg->info);
-
   /* destroy the argument */
   SNetMemFree( sarg);
 } /* END of SPLIT BOX TASK */
@@ -224,7 +234,7 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->input  = input;
     sarg->output = initial[0];
     sarg->boxfun = box_a;
-    sarg->info = SNetInfoCopy(info);
+    sarg->locvec_parent = SNetLocvecCopy(SNetLocvecGet(info));
     sarg->ltag = ltag;
     sarg->utag = utag;
     sarg->is_det = is_det;

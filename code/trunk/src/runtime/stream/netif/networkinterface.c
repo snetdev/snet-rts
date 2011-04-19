@@ -1,6 +1,6 @@
 /*******************************************************************************
  *
- * $Id: 
+ * $Id:$
  *
  * Author: Jukka Julku, VTT Technical Research Centre of Finland
  * -------
@@ -31,6 +31,7 @@
 #include "debug.h"
 #include "threading.h"
 #include "distribution.h"
+#include "locvec.h"
 
 static FILE *SNetInOpenFile(const char *file, const char *args)
 {
@@ -45,8 +46,8 @@ static FILE *SNetInOpenFile(const char *file, const char *args)
 
 static FILE *SNetInOpenInputSocket(int port)
 {
-  struct sockaddr_in addr;  
-  struct sockaddr_in in_addr; 
+  struct sockaddr_in addr;
+  struct sockaddr_in in_addr;
   int fdesc;
   FILE *file;
   int yes = 1;
@@ -56,10 +57,10 @@ static FILE *SNetInOpenInputSocket(int port)
   if ((fdesc = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     SNetUtilDebugFatal("Could not create socket for input!\n");
   }
-    
+
   if(setsockopt(fdesc, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
     SNetUtilDebugFatal("Could not obtain socket for input!\n");
-  } 
+  }
 
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
@@ -70,35 +71,35 @@ static FILE *SNetInOpenInputSocket(int port)
     SNetUtilDebugFatal("Could not bind to input port (%d)!\n", addr.sin_port);
   }
 
-  
-  /* Notice: This blocks the initialization of the SNet until the 
-   * first connection! (Listen in different thread?) 
+
+  /* Notice: This blocks the initialization of the SNet until the
+   * first connection! (Listen in different thread?)
    */
-  listen(fdesc, 1); 
-  
+  listen(fdesc, 1);
+
   sin_size = sizeof(in_addr);
-  
+
   in_fdesc = accept(fdesc, (struct sockaddr *)&in_addr, &sin_size);
-  
-  /* Currently only one connection accepted! 
-   * Note: it could be a nice feature to accept more?  
+
+  /* Currently only one connection accepted!
+   * Note: it could be a nice feature to accept more?
    */
-  
+
   close(fdesc);
 
   file = fdopen(in_fdesc, "r");
-  
+
   if(file == NULL) {
     SNetUtilDebugFatal("Socket error!\n");
   }
-  
+
   return file;
 }
 
 static FILE *SNetInOpenOutputSocket(const char *address, int port)
 {
   struct hostent *host;
-  struct sockaddr_in addr; 
+  struct sockaddr_in addr;
   int fdesc;
   FILE *file;
 
@@ -107,31 +108,27 @@ static FILE *SNetInOpenOutputSocket(const char *address, int port)
   }
 
   host = gethostbyname(address);
-    
+
   if(!host) {
     SNetUtilDebugFatal("Unknown host for output (%s)!\n", address);
   }
 
   addr.sin_addr = *(struct in_addr*)host->h_addr;
   fdesc = socket(PF_INET, SOCK_STREAM, 0);
-  
+
   if(fdesc == -1){
     SNetUtilDebugFatal("Could not create socket for output!\n");
   }
-	
   addr.sin_port = htons(port);
   addr.sin_family = AF_INET;
-  
+
   if(connect(fdesc, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-	
     close(fdesc);
     SNetUtilDebugFatal("Could not connect to host (%s:%d)!\n", address, port);
   }
-  
+
   file = fdopen(fdesc, "w");
-	  
   if(file == NULL) {
-	
     close(fdesc);
     SNetUtilDebugFatal("Socket error!\n");
   }
@@ -159,6 +156,7 @@ int SNetInRun(int argc, char **argv,
   snet_stream_t *output_stream = NULL;
   int i = 0;
   snet_info_t *info;
+  snet_locvec_t *locvec;
   snetin_label_t *labels = NULL;
   snetin_interface_t *interfaces = NULL;
   char *brk;
@@ -184,7 +182,7 @@ int SNetInRun(int argc, char **argv,
       if(input != stdin && input != NULL) {
 	SNetInClose(input);
       }
-      
+
       if(output != stdout && output != NULL) {
 	SNetInClose(output);
       }
@@ -255,6 +253,9 @@ int SNetInRun(int argc, char **argv,
   info = SNetInfoInit();
   SNetDistribStart(info);
 
+  locvec = SNetLocvecCreate();
+  SNetLocvecSet(info, locvec);
+
   input_stream = SNetStreamCreate(0);
   output_stream = fun(input_stream, info, SNetNodeLocation);
 
@@ -271,6 +272,8 @@ int SNetInRun(int argc, char **argv,
   (void) SNetThreadingCleanup();
 
   SNetInfoDestroy(info);
+
+  SNetLocvecDestroy(locvec);
 
   /* destroy observers */
   SNetObserverDestroy();

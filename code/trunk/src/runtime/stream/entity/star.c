@@ -4,6 +4,7 @@
 
 #include "expression.h"
 #include "memfun.h"
+#include "locvec.h"
 #include "collector.h"
 
 #include "threading.h"
@@ -27,13 +28,45 @@ static bool MatchesExitPattern( snet_record_t *rec,
 }
 
 
+/**
+ * A custom creation function for instances of star operands
+ * - having a separate function here allows for distinction
+ *   of an "ordinary" serial combinator and
+ *   another replica of the serial replicator
+ */
+static snet_stream_t *SNetSerialStarchild(snet_stream_t *input,
+    snet_info_t *info,
+    int location,
+    snet_startup_fun_t box_a,
+    snet_startup_fun_t box_b)
+{
+  snet_stream_t *internal_stream;
+  snet_stream_t *output;
+
+  SNetRouteUpdate(info, input, location);
+
+  assert( SNetLocvecToptype(SNetLocvecGet(info)) == LOC_STAR );
+
+  /* create operand A */
+  internal_stream = (*box_a)(input, info, location);
+
+  assert( SNetLocvecToptype(SNetLocvecGet(info)) == LOC_STAR );
+
+  /* create operand B */
+  output = (*box_b)(internal_stream, info, location);
+
+  return(output);
+}
+
+
+
 
 typedef struct {
   snet_stream_t *input, *output;
   snet_variant_list_t *exit_patterns;
   snet_startup_fun_t box, selffun;
   snet_expr_list_t *guards;
-  snet_info_t *info;
+  snet_locvec_t *locvec;
   bool is_det, is_incarnate;
 } star_arg_t;
 
@@ -71,6 +104,9 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
           /* send to next instance */
           /* if instance has not been created yet, create it */
           if( nextstream == NULL) {
+            /* info structure for network creation */
+            snet_info_t *info = SNetInfoInit();
+            SNetLocvecSet(info, sarg->locvec);
             /* The outstream to the collector from a newly created incarnate.
                Nothing is written to this stream, but it has to be registered
                at the collector. */
@@ -80,7 +116,10 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
             nextstream = SNetStreamOpen( self, nextstream_addr, 'w');
             /* register new buffer with dispatcher,
                starstream is returned by selffun, which is SNetStarIncarnate */
-            starstream = SNetSerial(nextstream_addr, sarg->info, SNetNodeLocation , sarg->box, sarg->selffun);
+            /* use custom creation function for proper/easier update of locvec */
+            starstream = SNetSerialStarchild(nextstream_addr, info, SNetNodeLocation , sarg->box, sarg->selffun);
+
+            SNetInfoDestroy( info);
 
             /* notify collector about the new instance */
             SNetStreamWrite( outstream, SNetRecCreate(REC_collect, starstream));
@@ -164,7 +203,8 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
 
   /* destroy the arg */
   SNetEdestroyList( sarg->guards);
-  SNetInfoDestroy( sarg->info);
+
+  SNetLocvecDestroy( sarg->locvec );
 
   snet_variant_t *variant;
   LIST_FOR_EACH(sarg->exit_patterns, variant)
@@ -207,6 +247,10 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg = (star_arg_t *) SNetMemAlloc( sizeof(star_arg_t));
     sarg->input = input;
     newstream = SNetStreamCreate(0);
+
+    /* copy location vector */
+    sarg->locvec = SNetLocvecCopy(SNetLocvecGet(info));
+
     if (!is_incarnate) {
       /* the "top-level" star also creates a collector */
       snet_stream_t **star_output;
@@ -214,15 +258,18 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
       star_output[0] = newstream;
       output = CollectorCreate( 1, star_output, true, info);
       sarg->output = newstream;
+
+      SNetLocvecAppend(sarg->locvec, LOC_STAR, 1);
     } else {
       output = newstream;
       sarg->output = newstream;
+
+      SNetLocvecTopinc(sarg->locvec);
     }
     sarg->box = box_a;
     sarg->selffun = box_b;
     sarg->exit_patterns = exit_patterns;
     sarg->guards = guards;
-    sarg->info = SNetInfoCopy(info);
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
 
@@ -237,6 +284,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     SNetvariantListDestroy( exit_patterns);
     output = input;
   }
+
 
   return( output);
 }
