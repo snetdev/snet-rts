@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)0</field>
+</record>
+
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)10</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="state" >(int)1</field>
+</record>
+
+
+<record type="terminate" />
+
+
+

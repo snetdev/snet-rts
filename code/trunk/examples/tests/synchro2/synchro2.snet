@@ -1,0 +1,14 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+ 
+ 
+net synchro {
+  net join connect [|{state}, {inval}|];
+  net id connect [{state} -> {state}];
+  box dec((state, inval) -> (state) | (outval));
+
+} connect (join .. (id | dec)) * {outval};
+
