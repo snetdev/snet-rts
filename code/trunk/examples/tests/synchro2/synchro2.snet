@@ -3,11 +3,11 @@
     <interface value="C4SNet"/>
   </boxdefault>
 </metadata>
- 
- 
-net synchro {
+
+
+net synchro2 {
   net join connect [|{state}, {inval}|];
-  net id connect [{state} -> {state}];
+  net id connect [{inval} -> {inval}];
   box dec((state, inval) -> (state) | (outval));
 
 } connect (join .. (id | dec)) * {outval};

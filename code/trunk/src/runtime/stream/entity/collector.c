@@ -36,7 +36,7 @@ static bool SortRecEqual( snet_record_t *rec1, snet_record_t *rec2)
 /**
  * Collector Task
  */
-void CollectorTask( snet_entity_t *self, void *arg)
+void CollectorTask(void *arg)
 {
   coll_arg_t *carg = (coll_arg_t *)arg;
   snet_streamset_t readyset, waitingset;
@@ -48,7 +48,7 @@ void CollectorTask( snet_entity_t *self, void *arg)
   bool terminate = false;
 
   /* open outstream for writing */
-  outstream = SNetStreamOpen( self, carg->output, 'w');
+  outstream = SNetStreamOpen(carg->output, 'w');
 
   readyset = waitingset = NULL;
   {
@@ -57,7 +57,7 @@ void CollectorTask( snet_entity_t *self, void *arg)
     for (i=0; i<carg->num; i++) {
       snet_stream_desc_t *tmp;
       /* open each stream in listening set for reading */
-      tmp = SNetStreamOpen( self, carg->inputs[i], 'r');
+      tmp = SNetStreamOpen(carg->inputs[i], 'r');
       /* add each stream instreams[i] to listening set of collector */
       SNetStreamsetPut( &readyset, tmp);
     }
@@ -152,7 +152,7 @@ void CollectorTask( snet_entity_t *self, void *arg)
             /* finally, add new stream to ready set */
             {
               /* new stream */
-              snet_stream_desc_t *new_sd = SNetStreamOpen( self,
+              snet_stream_desc_t *new_sd = SNetStreamOpen(
                   SNetRecGetStream( rec), 'r');
               /* add to readyset (via iterator: after current) */
               SNetStreamIterAppend( iter, new_sd);

@@ -32,7 +32,7 @@ typedef struct {
 /**
  * Box task
  */
-static void BoxTask(snet_entity_t *self, void *arg)
+static void BoxTask(void *arg)
 {
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
@@ -54,8 +54,8 @@ static void BoxTask(snet_entity_t *self, void *arg)
   /* storage for the handle is within the box task */
   snet_handle_t hnd;
 
-  instream = SNetStreamOpen(self, barg->input, 'r');
-  outstream =  SNetStreamOpen(self, barg->output, 'w');
+  instream = SNetStreamOpen(barg->input, 'r');
+  outstream =  SNetStreamOpen(barg->output, 'w');
 
   /* set out descriptor */
   hnd.out_sd = outstream;
@@ -101,7 +101,7 @@ static void BoxTask(snet_entity_t *self, void *arg)
         SNetRecDestroy( rec);
 
         /* restrict to one data record per execution */
-        SNetEntityYield( self);
+        SNetEntityYield();
         break;
 
       case REC_sync:

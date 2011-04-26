@@ -199,7 +199,7 @@ static void FbCollReadFbi(struct fbcoll_state *state)
  * The feedback collector, the entry point of the
  * feedback combinator loop
  */
-static void FeedbackCollTask( snet_entity_t *self, void *arg)
+static void FeedbackCollTask(void *arg)
 {
   fbcoll_arg_t *fbcarg = (fbcoll_arg_t *)arg;
   struct fbcoll_state state;
@@ -208,9 +208,9 @@ static void FeedbackCollTask( snet_entity_t *self, void *arg)
   state.terminate = false;
   state.mode = FBCOLL_IN;
 
-  state.instream   = SNetStreamOpen( self, fbcarg->in,  'r');
-  state.backstream = SNetStreamOpen( self, fbcarg->fbi, 'r');
-  state.outstream  = SNetStreamOpen( self, fbcarg->out, 'w');
+  state.instream   = SNetStreamOpen(fbcarg->in,  'r');
+  state.backstream = SNetStreamOpen(fbcarg->fbi, 'r');
+  state.outstream  = SNetStreamOpen(fbcarg->out, 'w');
   SNetMemFree( fbcarg);
 
   /* MAIN LOOP */
@@ -255,7 +255,7 @@ typedef struct {
  * The feedback dispatcher, at the end of the
  * feedback combinator loop
  */
-static void FeedbackDispTask( snet_entity_t *self, void *arg)
+static void FeedbackDispTask(void *arg)
 {
   fbdisp_arg_t *fbdarg = (fbdisp_arg_t *)arg;
 
@@ -265,9 +265,9 @@ static void FeedbackDispTask( snet_entity_t *self, void *arg)
   bool terminate = false;
   snet_record_t *rec;
 
-  instream   = SNetStreamOpen( self, fbdarg->in,  'r');
-  outstream  = SNetStreamOpen( self, fbdarg->out, 'w');
-  backstream = SNetStreamOpen( self, fbdarg->fbo, 'w');
+  instream   = SNetStreamOpen(fbdarg->in,  'r');
+  outstream  = SNetStreamOpen(fbdarg->out, 'w');
+  backstream = SNetStreamOpen(fbdarg->fbo, 'w');
 
   /* MAIN LOOP */
   while( !terminate) {
@@ -350,7 +350,7 @@ typedef struct{
 
 #ifdef FEEDBACK_STREAM_EMITTER
 
-static void FeedbackBufTask( snet_entity_t *self, void *arg)
+static void FeedbackBufTask(void *arg)
 {
   fbbuf_arg_t *fbbarg = (fbbuf_arg_t *)arg;
 
@@ -360,8 +360,8 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
   int out_counter = 0;
   int out_capacity;
 
-  instream   = SNetStreamOpen( self, fbbarg->in,  'r');
-  outstream  = SNetStreamOpen( self, fbbarg->out, 'w');
+  instream   = SNetStreamOpen(fbbarg->in,  'r');
+  outstream  = SNetStreamOpen(fbbarg->out, 'w');
   out_capacity =  fbbarg->out_capacity;
   SNetMemFree( fbbarg);
 
@@ -384,7 +384,7 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
           );
 
       SNetStreamClose(outstream, false);
-      outstream = SNetStreamOpen(self, new_stream, 'w');
+      outstream = SNetStreamOpen(new_stream, 'w');
       out_counter = 0;
     }
     /* write the record to the stream */
@@ -402,7 +402,7 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
 /**
  * The feedback buffer, in the back-loop
  */
-static void FeedbackBufTask( snet_entity_t *self, void *arg)
+static void FeedbackBufTask(void *arg)
 {
   fbbuf_arg_t *fbbarg = (fbbuf_arg_t *)arg;
 
@@ -413,8 +413,8 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
   int out_capacity;
   int max_read;
 
-  instream   = SNetStreamOpen( self, fbbarg->in,  'r');
-  outstream  = SNetStreamOpen( self, fbbarg->out, 'w');
+  instream   = SNetStreamOpen(fbbarg->in,  'r');
+  outstream  = SNetStreamOpen(fbbarg->out, 'w');
   out_capacity =  fbbarg->out_capacity;
   SNetMemFree( fbbarg);
 
@@ -438,7 +438,7 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
         goto feedback_buf_epilogue;
       }
     } else {
-      SNetEntityYield(self);
+      SNetEntityYield();
       if ( SNetStreamPeek(instream) != NULL ) {
         rec = SNetStreamRead(instream);
         assert( REC_terminate != SNetRecGetDescriptor( rec) );
@@ -488,7 +488,7 @@ static void FeedbackBufTask( snet_entity_t *self, void *arg)
         if (new_stream != NULL) {
           /* written sync record, now change stream */
           SNetStreamClose(outstream, false);
-          outstream = SNetStreamOpen(self, new_stream, 'w');
+          outstream = SNetStreamOpen(new_stream, 'w');
         }
       } else {
         /* there remain elements in the buffer */

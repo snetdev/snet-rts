@@ -39,7 +39,7 @@ $(TARGET): $(OBJS)
 lpel4snet.h: $(LPELSOURCE)/lpel.h translate4snet.sed
 	sed -f translate4snet.sed \
 	    -e "/typedef .*snet_.*/ d" \
-	    $< > $@   
+	    $< > $@
 
 clean:
 	rm -fr lpel4snet.h $(OBJS) $(TARGET)

@@ -1,8 +1,8 @@
 <?xml version="1.0" ?>
 <record xmlns="snet-home.org" type="data" mode="textual" >
-  <field label="A" interface="C4SNet">(int)5000</field>
+  <field label="A" interface="C4SNet">(int)9000</field>
 </record>
 <record xmlns="snet-home.org" type="data" mode="textual" >
-  <field label="A" interface="C4SNet">(int)4999</field>
+  <field label="A" interface="C4SNet">(int)8999</field>
 </record>
 <record type="terminate" />

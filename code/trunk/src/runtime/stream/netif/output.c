@@ -31,7 +31,7 @@
 #include "distribution.h"
 
 
-typedef struct { 
+typedef struct {
   FILE *file;
   snetin_label_t *labels;
   snetin_interface_t *interfaces;
@@ -138,14 +138,14 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 /**
  * This is the task doing the global output
  */
-static void GlobOutputTask( snet_entity_t *self, void* data)
+static void GlobOutputTask(void* data)
 {
   bool terminate = false;
   handle_t *hnd = (handle_t *)data;
   snet_record_t *rec = NULL;
 
   if(hnd->buffer != NULL) {
-    snet_stream_desc_t *instream = SNetStreamOpen( self, hnd->buffer, 'r');
+    snet_stream_desc_t *instream = SNetStreamOpen(hnd->buffer, 'r');
 
     while(!terminate){
       rec = SNetStreamRead( instream);

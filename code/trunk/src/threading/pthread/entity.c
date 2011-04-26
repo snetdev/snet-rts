@@ -20,14 +20,19 @@
 #include "entity.h"
 
 
+
 static unsigned int entity_count = 0;
 static pthread_mutex_t entity_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  entity_cond = PTHREAD_COND_INITIALIZER;
+static pthread_key_t entity_self_key;
 
 /* prototype for pthread thread function */
 static void *SNetEntityThread(void *arg);
 
 static size_t SNetEntityStackSize(snet_entity_type_t type);
+
+static void SNetEntityExit(snet_entity_t *self);
+
 
 #ifdef USE_CORE_AFFINITY
 typedef enum {
@@ -46,7 +51,7 @@ int SNetThreadingInit(int argc, char **argv)
 {
   /* initialize the entity counter to 0 */
   entity_count = 0;
-
+  pthread_key_create(&entity_self_key, NULL);
   return 0;
 }
 
@@ -74,7 +79,7 @@ int SNetThreadingProcess(void)
 
 int SNetThreadingCleanup(void)
 {
-
+  pthread_key_delete(entity_self_key);
   return 0;
 }
 
@@ -147,7 +152,7 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
 
 
 
-void SNetEntityYield(snet_entity_t *self)
+void SNetEntityYield(void)
 {
 #ifdef _GNU_SOURCE
   (void) pthread_yield();
@@ -155,10 +160,34 @@ void SNetEntityYield(snet_entity_t *self)
 }
 
 
+snet_entity_t *SNetEntitySelf(void)
+{
+  return (snet_entity_t *) pthread_getspecific(entity_self_key);
+}
+
+
+/******************************************************************************
+ * Private functions
+ *****************************************************************************/
+
+static void *SNetEntityThread(void *arg)
+{
+  snet_entity_t *ent = (snet_entity_t *)arg;
+
+  pthread_setspecific(entity_self_key, ent);
+
+  ent->func( ent->inarg );
+  /* call entity function */
+  SNetEntityExit(ent);
+
+  /* following line is not reached, just for compiler happiness */
+  return NULL;
+}
+
 /**
  * Let the current entity exit
  */
-void SNetEntityExit(snet_entity_t *self)
+static void SNetEntityExit(snet_entity_t *self)
 {
   /* cleanup */
   pthread_mutex_destroy( &self->lock );
@@ -177,24 +206,6 @@ void SNetEntityExit(snet_entity_t *self)
 
   (void) pthread_exit(NULL);
 }
-
-
-
-/******************************************************************************
- * Private functions
- *****************************************************************************/
-
-static void *SNetEntityThread(void *arg)
-{
-  snet_entity_t *ent = (snet_entity_t *)arg;
-  ent->func( ent, ent->inarg );
-  /* call entity function */
-  SNetEntityExit(ent);
-
-  /* following line is not reached, just for compiler happiness */
-  return NULL;
-}
-
 
 static size_t SNetEntityStackSize(snet_entity_type_t type)
 {

@@ -48,11 +48,11 @@ void SNetStreamDestroy(snet_stream_t *s)
 }
 
 
-snet_stream_desc_t *SNetStreamOpen(snet_entity_t *entity, snet_stream_t *stream, char mode)
+snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode)
 {
   assert( mode=='w' || mode=='r' );
   snet_stream_desc_t *sd = malloc(sizeof(snet_stream_t));
-  sd->entity = entity;
+  sd->entity = SNetEntitySelf();
   sd->stream = stream;
   sd->next = NULL;
   sd->mode = mode;
@@ -79,7 +79,10 @@ void SNetStreamReplace(snet_stream_desc_t *sd, snet_stream_t *new_stream)
 {
   assert( sd->mode == 'r' );
   SNetStreamDestroy(sd->stream);
+  pthread_mutex_lock( &new_stream->lock);
   new_stream->consumer = sd;
+  new_stream->is_poll = 0;
+  pthread_mutex_unlock( &new_stream->lock);
   sd->stream = new_stream;
 }
 
@@ -147,6 +150,7 @@ void SNetStreamWrite(snet_stream_desc_t *sd, void *item)
   if (s->count==1) pthread_cond_signal(&s->notempty);
 
   /* stream was registered to poll on */
+  assert(s->is_poll == 0 || s->is_poll == 1);
   if (s->is_poll) {
     s->is_poll = 0;
     snet_entity_t *cons = s->consumer->entity;
@@ -187,6 +191,7 @@ snet_stream_desc_t *SNetStreamPoll(snet_streamset_t *set)
   snet_stream_desc_t *result = NULL;
   snet_entity_t *self;
   snet_stream_iter_t *iter;
+  int cnt = 0;
 
   /* get 'self', i.e. the task calling SNetStreamPoll()
    * the set is a simple pointer to the last element
@@ -224,6 +229,7 @@ snet_stream_desc_t *SNetStreamPoll(snet_streamset_t *set)
       } else {
         /* nothing in the buffer, register stream as activator */
         s->is_poll = 1;
+        cnt++;
       }
     } /* CS END */
     /* unlock stream */
@@ -239,6 +245,16 @@ snet_stream_desc_t *SNetStreamPoll(snet_streamset_t *set)
   self->wakeup_sd = NULL;
   pthread_mutex_unlock( &self->lock );
 
+  SNetStreamIterReset(iter, set);
+  while( SNetStreamIterHasNext(iter)) {
+    snet_stream_t *s = (SNetStreamIterNext(iter))->stream;
+    pthread_mutex_lock(&s->lock);
+    s->is_poll = 0;
+    pthread_mutex_unlock(&s->lock);
+    if (--cnt == 0) break;
+  }
+
+  SNetStreamIterDestroy(iter);
 
   /* 'rotate' list to stream descriptor for non-empty buffer */
   *set = result;

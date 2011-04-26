@@ -30,7 +30,7 @@ typedef struct {
  *
  * Implements both the non-deterministic and deterministic variants.
  */
-static void SplitBoxTask( snet_entity_t *self, void *arg)
+static void SplitBoxTask(void *arg)
 {
   int i;
   split_arg_t *sarg = (split_arg_t *)arg;
@@ -47,8 +47,8 @@ static void SplitBoxTask( snet_entity_t *self, void *arg)
   /* for deterministic variant: */
   int counter = 0;
 
-  initial = SNetStreamOpen( self, sarg->output, 'w');
-  instream = SNetStreamOpen( self, sarg->input, 'r');
+  initial = SNetStreamOpen(sarg->output, 'w');
+  instream = SNetStreamOpen(sarg->input, 'r');
 
   /* MAIN LOOP START */
   while( !terminate) {
@@ -69,7 +69,7 @@ static void SplitBoxTask( snet_entity_t *self, void *arg)
           if( outstream == NULL) {
             snet_stream_t *newstream_addr = SNetStreamCreate(0);
             /* instance does not exist yet, create it */
-            outstream = SNetStreamOpen( self, newstream_addr, 'w');
+            outstream = SNetStreamOpen(newstream_addr, 'w');
             /* add to lookup table */
             HashtabPut( repos_tab, i, outstream);
             /* add to list */

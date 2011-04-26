@@ -128,6 +128,7 @@ static int BestMatch( match_count_t **counter, int num)
       }
     }
   }
+  assert( res != -1);
   return( res);
 }
 
@@ -162,7 +163,7 @@ static void PutToBuffers( snet_stream_desc_t **outstreams, int num,
 /**
  * Main Parallel Box Task
  */
-static void ParallelBoxTask( snet_entity_t *self, void *arg)
+static void ParallelBoxTask(void *arg)
 {
   parallel_arg_t *parg = (parallel_arg_t *) arg;
   /* the number of outputs */
@@ -178,12 +179,12 @@ static void ParallelBoxTask( snet_entity_t *self, void *arg)
 
 
   /* open instream for reading */
-  instream = SNetStreamOpen(self, parg->input, 'r');
+  instream = SNetStreamOpen(parg->input, 'r');
 
   /* open outstreams for writing */
   {
     for (i=0; i<num; i++) {
-      outstreams[i] = SNetStreamOpen( self, parg->outputs[i], 'w');
+      outstreams[i] = SNetStreamOpen(parg->outputs[i], 'w');
     }
     /* the mem region is not needed anymore */
     SNetMemFree( parg->outputs);

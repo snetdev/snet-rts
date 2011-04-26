@@ -8,6 +8,7 @@ for dir in */; do
           if ! ./compare ${input%.xml} out.bak; then
             echo "Results differ for $dir$dir with input $input"
           fi
+          echo "OK: $dir$dir with input $input"
         else
           echo "Execution failed for $dir$dir with input $input"
         fi

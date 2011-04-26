@@ -14,5 +14,6 @@ struct snet_entity_t {
   snet_stream_desc_t *wakeup_sd;
 };
 
+snet_entity_t *SNetEntitySelf(void);
 
 #endif /* _ENTITY_H_ */

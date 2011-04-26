@@ -151,7 +151,7 @@ static void FilterArgDestroy( filter_arg_t *farg)
 /**
  * Filter task
  */
-static void FilterTask( snet_entity_t *self, void *arg)
+static void FilterTask(void *arg)
 {
   int i;
   bool done, terminate;
@@ -170,8 +170,8 @@ static void FilterTask( snet_entity_t *self, void *arg)
 #ifdef FILTER_DEBUG
   SNetUtilDebugNotice("(CREATION FILTER)");
 #endif
-  instream  = SNetStreamOpen(self, farg->input, 'r');
-  outstream = SNetStreamOpen(self, farg->output, 'w');
+  instream  = SNetStreamOpen(farg->input, 'r');
+  outstream = SNetStreamOpen(farg->output, 'w');
 
   /* MAIN LOOP */
   while (!terminate) {
@@ -436,7 +436,7 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
 /**
  * Nameshift task
  */
-static void NameshiftTask( snet_entity_t *self, void *arg)
+static void NameshiftTask(void *arg)
 {
   bool terminate = false;
   filter_arg_t *farg = (filter_arg_t *)arg;
@@ -446,8 +446,8 @@ static void NameshiftTask( snet_entity_t *self, void *arg)
   int name, offset, val;
   snet_ref_t *ref;
 
-  instream  = SNetStreamOpen(self, farg->input, 'r');
-  outstream = SNetStreamOpen(self, farg->output, 'w');
+  instream  = SNetStreamOpen(farg->input, 'r');
+  outstream = SNetStreamOpen(farg->output, 'w');
 
   // Guards are misused for offset
   offset = SNetEevaluateInt( SNetEgetExpr( farg->guard_list, 0), NULL);

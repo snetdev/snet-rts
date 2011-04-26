@@ -32,7 +32,7 @@
 
 #include "distribution.h"
 
-typedef struct { 
+typedef struct {
   FILE *file;
   snetin_label_t *labels;
   snetin_interface_t *interfaces;
@@ -43,13 +43,13 @@ typedef struct {
 /**
  * This is the task doing the global input
  */
-static void GlobInputTask( snet_entity_t *self, void* data)
+static void GlobInputTask(void* data)
 {
   handle_t *hnd = (handle_t *)data;
 
   if(hnd->buffer != NULL) {
     int i;
-    snet_stream_desc_t *outstream = SNetStreamOpen( self, hnd->buffer, 'w');
+    snet_stream_desc_t *outstream = SNetStreamOpen(hnd->buffer, 'w');
 
     SNetInParserInit( hnd->file, hnd->labels, hnd->interfaces, outstream);
     i = SNET_PARSE_CONTINUE;

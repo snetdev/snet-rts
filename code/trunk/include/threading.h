@@ -76,16 +76,13 @@ int SNetThreadingCleanup(void);
  *
  * An entity thread has following signature:
  *
- *   void EntityThread(snet_entity_t *self, void *arg);
- *
- * where snet_entity_t is an opaque data type associated with the thread
- * executing that function.
+ *   void EntityThread(void *arg);
  *
  ****************************************************************************/
 
 typedef struct snet_entity_t snet_entity_t;
 
-typedef void (*snet_entityfunc_t)(snet_entity_t *self, void *arg);
+typedef void (*snet_entityfunc_t)(void *arg);
 
 
 /*
@@ -145,13 +142,8 @@ int SNetEntitySpawn(snet_entity_info_t info,
 /**
  * Let the current entity give up execution
  */
-void SNetEntityYield(snet_entity_t *self);
+void SNetEntityYield(void);
 
-
-/**
- * Let the current entity exit
- */
-void SNetEntityExit(snet_entity_t *self);
 
 
 
@@ -186,14 +178,12 @@ snet_stream_t *SNetStreamCreate(int capacity);
 /**
  * Open a stream for usage within an entity
  *
- * @param entity  usually "self"
  * @param stream  the stream top open
  * @param mode    either 'r' for reading or 'w' for writing
  *
  * @return a stream descriptor for further usage of the stream
  */
-snet_stream_desc_t *SNetStreamOpen(snet_entity_t *entity,
-  snet_stream_t *stream, char mode);
+snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode);
 
 
 /**
@@ -221,7 +211,7 @@ void SNetStreamReplace(snet_stream_desc_t *sd, snet_stream_t *new_stream);
 
 
 /**
- * Get the stream opened from a sream descriptor
+ * Get the stream opened from a stream descriptor
  * @param sd  stream descriptor
  * @return  the stream opened by the stream descriptor
  */
@@ -334,7 +324,7 @@ int SNetStreamsetRemove(snet_streamset_t *set, snet_stream_desc_t *sd);
 
 /*
  * NOTE:
- *   Streamsets need not to privide a function for checking membership,
+ *   Streamsets need not to provide a function for checking membership,
  *   as a set only contains local stream descriptors of an entity anyway.
  */
 

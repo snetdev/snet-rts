@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="state" >(int)15</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)10</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)8</field>
+</record>
+
+<!-- following are ignored -->
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)4</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)23</field>
+</record>
+
+<!-- also terminates all not yet synchronized "subnets" -->
+
+<record type="terminate" />
+
+
+

@@ -3,25 +3,25 @@
  * $Id: syncro.c 2887 2010-10-17 19:37:56Z dlp $
  *
  * file syncro.c
- * 
+ *
  * This implements the synchrocell component [...] TODO: write this...
  *
  * Flow inheritance at a synchrocell is (currently) defined in such a way
  * that only the record that matches the first pattern flow-inherits all
  * its constituents. The order of arrival is irrelevant. Previously, the
  * record that arrived last, i.e. the record that matched the last remaining
- * unmatched record, was to keep all its fields and tags. 
+ * unmatched record, was to keep all its fields and tags.
  *
  * The necessary changes to implement the 'new' behaviour is minimal, as
  * construction of the resulting outbound record is implemented in a separate
  * merge function (see above ;)).
- * Where previously the last record was passed as argument to the merge 
+ * Where previously the last record was passed as argument to the merge
  * function, now the record which is stored at first position in the record
  * storage is passed to the merge function. As excess fields and tags, i.e.
- * all those labels that are not present in the synchro pattern, are not 
- * stripped from records before they go into storage, the above is sufficient 
+ * all those labels that are not present in the synchro pattern, are not
+ * stripped from records before they go into storage, the above is sufficient
  * to implement the desired behaviour.
- * 
+ *
  *****************************************************************************/
 
 
@@ -92,7 +92,7 @@ typedef struct {
 /**
  * Sync box task
  */
-static void SyncBoxTask( snet_entity_t *self, void *arg)
+static void SyncBoxTask(void *arg)
 {
   int i;
   int match_cnt=0, new_matches=0;
@@ -105,8 +105,8 @@ static void SyncBoxTask( snet_entity_t *self, void *arg)
   snet_record_t *rec;
   snet_record_t *temp_record;
 
-  instream  = SNetStreamOpen( self, sarg->input,  'r');
-  outstream = SNetStreamOpen( self, sarg->output, 'w');
+  instream  = SNetStreamOpen(sarg->input,  'r');
+  outstream = SNetStreamOpen(sarg->output, 'w');
 
   num_patterns = SNetvariantListSize( sarg->patterns);
   storage = SNetMemAlloc(num_patterns * sizeof(snet_record_t*));

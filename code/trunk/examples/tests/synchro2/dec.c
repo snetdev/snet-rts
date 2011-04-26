@@ -11,14 +11,18 @@ void *dec( void *hnd, c4snet_data_t *state, c4snet_data_t *inval)
   int_a= *(int *)C4SNetDataGetData(state);
   int_b = *(int *) C4SNetDataGetData(inval);
 
-  if (int_a != 0) {
-    resultA = C4SNetDataCreate( CTYPE_int, &int_b);
+  /* update state */
+  int_a -= int_b;
+
+  if (int_a > 0) {
+    resultA = C4SNetDataCreate( CTYPE_int, &int_a);
     C4SNetOut( hnd, 1, resultA);
   } else {
-    resultB = C4SNetDataCreate( CTYPE_int, &int_b);
+    /* end value of state */
+    resultB = C4SNetDataCreate( CTYPE_int, &int_a);
     C4SNetOut( hnd, 2, resultB);
  }
- 
+
   C4SNetDataFree(state);
   C4SNetDataFree(inval);
   return( hnd);

@@ -73,7 +73,7 @@ typedef struct {
 /**
  * Star component task
  */
-static void StarBoxTask( snet_entity_t *self, void *arg)
+static void StarBoxTask(void *arg)
 {
   star_arg_t *sarg = (star_arg_t *)arg;
   snet_stream_desc_t *instream;
@@ -86,8 +86,8 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
   /* for deterministic variant: */
   int counter = 0;
 
-  instream  = SNetStreamOpen( self, sarg->input, 'r');
-  outstream = SNetStreamOpen( self, sarg->output, 'w');
+  instream  = SNetStreamOpen(sarg->input, 'r');
+  outstream = SNetStreamOpen(sarg->output, 'w');
 
   /* MAIN LOOP */
   while( !terminate) {
@@ -113,7 +113,7 @@ static void StarBoxTask( snet_entity_t *self, void *arg)
             snet_stream_t *starstream, *nextstream_addr;
             /* Create the stream to the instance */
             nextstream_addr = SNetStreamCreate(0);
-            nextstream = SNetStreamOpen( self, nextstream_addr, 'w');
+            nextstream = SNetStreamOpen(nextstream_addr, 'w');
             /* register new buffer with dispatcher,
                starstream is returned by selffun, which is SNetStarIncarnate */
             /* use custom creation function for proper/easier update of locvec */
