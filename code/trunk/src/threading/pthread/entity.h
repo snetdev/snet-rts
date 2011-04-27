@@ -5,6 +5,9 @@
 
 #include "threading.h"
 
+
+typedef struct snet_entity_t snet_entity_t;
+
 struct snet_entity_t {
   snet_entityfunc_t   func;
   void               *inarg;

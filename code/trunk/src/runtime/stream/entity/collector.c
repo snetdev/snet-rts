@@ -50,11 +50,20 @@ void CollectorTask(void *arg)
   /* open outstream for writing */
   outstream = SNetStreamOpen(carg->output, 'w');
 
+  /* initialize input stream counter*/
+  incount = carg->num;
+
   readyset = waitingset = NULL;
-  {
+
+  if (carg->dynamic) {
+    /* Open initial stream and put into readyset */
+    SNetStreamsetPut( &readyset,
+        SNetStreamOpen((snet_stream_t *)carg->inputs, 'r')
+        );
+  } else {
     int i;
     /* fill initial readyset of collector */
-    for (i=0; i<carg->num; i++) {
+    for (i=0; i<incount; i++) {
       snet_stream_desc_t *tmp;
       /* open each stream in listening set for reading */
       tmp = SNetStreamOpen(carg->inputs[i], 'r');
@@ -63,9 +72,6 @@ void CollectorTask(void *arg)
     }
     SNetMemFree( carg->inputs );
   }
-
-  /* initialize input stream counter*/
-  incount = carg->num;
 
   /* create an iterator for both sets, is reused within main loop*/
   iter = SNetStreamIterCreate( &readyset);
@@ -262,7 +268,7 @@ void CollectorTask(void *arg)
  * Collector creation function
  * @pre num >= 1
  */
-snet_stream_t *CollectorCreate( int num, snet_stream_t **instreams, bool dynamic, snet_info_t *info)
+snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, snet_info_t *info)
 {
   snet_stream_t *outstream;
   coll_arg_t *carg;
@@ -275,7 +281,32 @@ snet_stream_t *CollectorCreate( int num, snet_stream_t **instreams, bool dynamic
   carg->inputs = instreams;
   carg->output = outstream;
   carg->num = num;
-  carg->dynamic = dynamic;
+  carg->dynamic = false;
+
+  /* spawn collector task */
+  SNetEntitySpawn( ENTITY_COLLECT, CollectorTask, (void *)carg);
+  return outstream;
+}
+
+
+
+/**
+ * Collector creation function
+ */
+snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, snet_info_t *info)
+{
+  snet_stream_t *outstream;
+  coll_arg_t *carg;
+
+  /* create outstream */
+  outstream = (snet_stream_t*) SNetStreamCreate(0);
+
+  /* create collector handle */
+  carg = (coll_arg_t *) SNetMemAlloc( sizeof( coll_arg_t));
+  carg->inputs = (snet_stream_t **) instream;
+  carg->output = outstream;
+  carg->num = 1;
+  carg->dynamic = true;
 
   /* spawn collector task */
   SNetEntitySpawn( ENTITY_COLLECT, CollectorTask, (void *)carg);

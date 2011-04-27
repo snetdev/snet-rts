@@ -80,7 +80,6 @@ int SNetThreadingCleanup(void);
  *
  ****************************************************************************/
 
-typedef struct snet_entity_t snet_entity_t;
 
 typedef void (*snet_entityfunc_t)(void *arg);
 

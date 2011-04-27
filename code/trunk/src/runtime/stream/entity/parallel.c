@@ -128,7 +128,6 @@ static int BestMatch( match_count_t **counter, int num)
       }
     }
   }
-  assert( res != -1);
   return( res);
 }
 
@@ -246,6 +245,9 @@ static void ParallelBoxTask(void *arg)
           CheckMatch( rec, SNetvariant_listListGet( parg->variant_lists, i), matchcounter[i]);
         }
         stream_index = BestMatch( matchcounter, num);
+        if (stream_index == -1) {
+          SNetUtilDebugNotice("[PAR] Cannot route data record, no matching branch!\n");
+        }
         PutToBuffers( outstreams, num, stream_index, rec, (parg->is_det)? &counter : NULL);
         break;
 
@@ -369,7 +371,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
       i++;
     END_FOR
     /* create collector with outstreams */
-    outstream = CollectorCreate(num, collstreams, false, info);
+    outstream = CollectorCreateStatic(num, collstreams, info);
 
     parg = SNetMemAlloc( sizeof(parallel_arg_t));
     parg->input   = instream;

@@ -223,16 +223,15 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     bool is_det
     )
 {
-  snet_stream_t **initial, *output;
+  snet_stream_t *initial, *output;
   split_arg_t *sarg;
 
   input = SNetRouteUpdate(info, input, location);
   if(location == SNetNodeLocation) {
-    initial = (snet_stream_t **) SNetMemAlloc(sizeof(snet_stream_t *));
-    initial[0] = SNetStreamCreate(0);
+    initial = SNetStreamCreate(0);
     sarg = (split_arg_t *) SNetMemAlloc( sizeof( split_arg_t));
     sarg->input  = input;
-    sarg->output = initial[0];
+    sarg->output = initial;
     sarg->boxfun = box_a;
     sarg->locvec_parent = SNetLocvecCopy(SNetLocvecGet(info));
     sarg->ltag = ltag;
@@ -240,7 +239,7 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->is_det = is_det;
     sarg->is_byloc = is_byloc;
 
-    output = CollectorCreate( 1, initial, true, info);
+    output = CollectorCreateDynamic( initial, info);
     SNetEntitySpawn( ENTITY_SPLIT, SplitBoxTask, (void*)sarg );
 
   } else {

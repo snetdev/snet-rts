@@ -149,7 +149,8 @@ void SNetLocvecPrint(FILE *file, snet_locvec_t *vec)
   for (i=0; i<vec->size; i++) {
     snet_locitem_t *item = &vec->arr[i];
     snet_loctype_t type = (int)(*item & 0xff);
-    if (type != LOC_FEEDBACK) {
+    if (type != LOC_FEEDBACK && type != LOC_BOX &&
+        type != LOC_FILTER   && type != LOC_SYNC) {
       fprintf(file, ":%c%d", type, (int)(*item >> 8));
     } else {
       fprintf(file, ":%c", type);

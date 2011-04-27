@@ -163,8 +163,12 @@ snet_stream_t *SNetBox( snet_stream_t *input,
 {
   snet_stream_t *output;
   box_arg_t *barg;
+  snet_locvec_t *locvec;
 
   input = SNetRouteUpdate(info, input, location);
+
+  locvec = SNetLocvecGet(info);
+  SNetLocvecAppend(locvec, LOC_BOX, 0);
 
   if(location == SNetNodeLocation) {
     output = SNetStreamCreate(0);
@@ -178,8 +182,11 @@ snet_stream_t *SNetBox( snet_stream_t *input,
 
     SNetEntitySpawn( ENTITY_BOX(barg->boxname), BoxTask, (void*)barg );
 
-    //fprintf(stderr, "Box %s, location  ", boxname);
-    //SNetLocvecPrint(stderr, SNetLocvecGet(info));
+//XXX
+#if 0
+    fprintf(stderr, "Box %s, location  ", boxname);
+    SNetLocvecPrint(stderr, SNetLocvecGet(info));
+#endif
 
   } else {
     snet_variant_t *variant;
@@ -190,6 +197,8 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     SNetvariantListDestroy(out_variants);
     output = input;
   }
+
+  SNetLocvecPop(locvec);
 
   return( output);
 }

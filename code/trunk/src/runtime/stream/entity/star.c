@@ -204,6 +204,7 @@ static void StarBoxTask(void *arg)
   /* destroy the arg */
   SNetEdestroyList( sarg->guards);
 
+  /* destroy the location vector */
   SNetLocvecDestroy( sarg->locvec );
 
   snet_variant_t *variant;
@@ -253,13 +254,11 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 
     if (!is_incarnate) {
       /* the "top-level" star also creates a collector */
-      snet_stream_t **star_output;
-      star_output = (snet_stream_t **) SNetMemAlloc( sizeof(snet_stream_t *));
-      star_output[0] = newstream;
-      output = CollectorCreate( 1, star_output, true, info);
+      output = CollectorCreateDynamic(newstream, info);
       sarg->output = newstream;
 
-      SNetLocvecAppend(sarg->locvec, LOC_STAR, 1);
+      SNetLocvecAppend(sarg->locvec, LOC_STAR, 0);
+      /* TODO in info: update source (locvec) to collector? */
     } else {
       output = newstream;
       sarg->output = newstream;
@@ -272,6 +271,12 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->guards = guards;
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
+
+//XXX
+#if 0
+    fprintf(stderr, "Star location  ");
+    SNetLocvecPrint(stderr, sarg->locvec);
+#endif
 
     SNetEntitySpawn( ENTITY_STAR, StarBoxTask, (void*)sarg );
 

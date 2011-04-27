@@ -13,7 +13,10 @@ typedef enum {
   LOC_PARALLEL = 'P',
   LOC_SPLIT = 'I',
   LOC_STAR = 'R',
-  LOC_FEEDBACK = 'F'
+  LOC_FEEDBACK = 'F',
+  LOC_BOX = 'B',
+  LOC_FILTER = 'L',
+  LOC_SYNC = 'Y'
 } snet_loctype_t;
 
 typedef uint64_t snet_locitem_t;

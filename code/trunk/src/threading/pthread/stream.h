@@ -4,9 +4,9 @@
 #include <pthread.h>
 
 #include "threading.h"
+#include "entity.h"
 
-
-#define SNET_STREAM_DEFAULT_CAPACITY  10
+#define SNET_STREAM_DEFAULT_CAPACITY  16
 
 
 struct snet_stream_t {
