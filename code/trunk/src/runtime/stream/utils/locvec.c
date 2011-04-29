@@ -1,10 +1,28 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "locvec.h"
 
+#define LOCVEC_INFO_TAG 493
+
+
 #define LOCVEC_CAPACITY_DELTA 1
+
+
+
+void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num);
+void SNetLocvecPop(snet_locvec_t *vec);
+int SNetLocvecToptype(snet_locvec_t *vec);
+void SNetLocvecTopinc(snet_locvec_t *vec);
+void SNetLocvecTopdec(snet_locvec_t *vec);
+int SNetLocvecTopval(snet_locvec_t *vec);
+bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v);
+bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v);
+
+
+
 
 struct snet_locvec_t {
   int size;
@@ -70,6 +88,11 @@ int SNetLocvecToptype(snet_locvec_t *vec)
   return (int)(vec->arr[vec->size-1] & 0xff);
 }
 
+int SNetLocvecTopval(snet_locvec_t *vec)
+{
+  return (int)(vec->arr[vec->size-1] >> 8);
+}
+
 
 void SNetLocvecTopinc(snet_locvec_t *vec)
 {
@@ -77,6 +100,14 @@ void SNetLocvecTopinc(snet_locvec_t *vec)
   int num = (int)(*item >> 8);
 
   *item = ((num+1) << 8) | (int)(*item & 0xff);
+}
+
+void SNetLocvecTopdec(snet_locvec_t *vec)
+{
+  snet_locitem_t *item = &vec->arr[vec->size-1];
+  int num = (int)(*item >> 8);
+
+  *item = ((num-1) << 8) | (int)(*item & 0xff);
 }
 
 
@@ -117,25 +148,142 @@ bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v)
 
 
 
+/* for serial combinator */
+
+bool SNetLocvecSerialEnter(snet_locvec_t *vec)
+{
+  if (SNetLocvecToptype(vec) != LOC_SERIAL) {
+    SNetLocvecAppend(vec, LOC_SERIAL, 1);
+    return true;
+  }
+  return false;
+}
+
+void SNetLocvecSerialNext(snet_locvec_t *vec)
+{
+  assert( SNetLocvecToptype(vec) == LOC_SERIAL );
+  SNetLocvecTopinc(vec);
+}
+
+
+void SNetLocvecSerialLeave(snet_locvec_t *vec, bool enter)
+{
+  assert( SNetLocvecToptype(vec) == LOC_SERIAL );
+  if (enter) {
+    SNetLocvecPop(vec);
+  } else {
+  //TODO clear leaf
+  }
+}
+
+/* for parallel combinator */
+void SNetLocvecParallelEnter(snet_locvec_t *vec)
+{
+  SNetLocvecAppend(vec, LOC_PARALLEL, -1);
+}
+
+
+void SNetLocvecParallelNext(snet_locvec_t *vec)
+{
+  assert( SNetLocvecToptype(vec) == LOC_PARALLEL );
+  SNetLocvecTopinc(vec);
+}
+
+
+void SNetLocvecParallelLeave(snet_locvec_t *vec)
+{
+  assert( SNetLocvecToptype(vec) == LOC_PARALLEL );
+  SNetLocvecPop(vec);
+}
+
+
+/* for split combinator */
+void SNetLocvecSplitEnter(snet_locvec_t *vec)
+{
+  SNetLocvecAppend(vec, LOC_SPLIT, -1);
+}
+
+void SNetLocvecSplitLeave(snet_locvec_t *vec)
+{
+  assert( SNetLocvecToptype(vec) == LOC_SPLIT );
+  SNetLocvecPop(vec);
+}
+
+snet_locvec_t *SNetLocvecSplitSpawn(snet_locvec_t *vec, int i)
+{
+  assert( SNetLocvecToptype(vec) == LOC_SPLIT );
+  //TODO assert vec is disp
+  snet_locvec_t *copy = SNetLocvecCopy(vec);
+  SNetLocvecPop(copy);
+  SNetLocvecAppend(copy, LOC_SPLIT, i);
+  return copy;
+}
+
+
+
+/* for star combinator */
+bool SNetLocvecStarWithin(snet_locvec_t *vec)
+{
+  return ( SNetLocvecToptype(vec) == LOC_STAR );
+}
+
+void SNetLocvecStarEnter(snet_locvec_t *vec)
+{
+  if( SNetLocvecToptype(vec) != LOC_STAR ) {
+    SNetLocvecAppend(vec, LOC_STAR, 0);
+  } else {
+    SNetLocvecTopinc(vec);
+  }
+}
+
+snet_locvec_t *SNetLocvecStarSpawn(snet_locvec_t *vec)
+{
+  assert( SNetLocvecToptype(vec) == LOC_STAR );
+  return SNetLocvecCopy(vec);
+}
+
+void SNetLocvecStarLeave(snet_locvec_t *vec)
+{
+  assert( SNetLocvecToptype(vec) == LOC_STAR );
+  if (SNetLocvecTopval(vec) == 0) {
+    SNetLocvecPop(vec);
+  } else {
+    SNetLocvecTopdec(vec);
+    //TODO clear leaf/coll/disp
+  }
+}
+
+
+
+/* for feedback combinator */
+void SNetLocvecFeedbackEnter(snet_locvec_t *vec)
+{
+  SNetLocvecAppend(vec, LOC_FEEDBACK, -1);
+
+}
+
+
+void SNetLocvecFeedbackLeave(snet_locvec_t *vec)
+{
+  assert( SNetLocvecToptype(vec) == LOC_FEEDBACK );
+  SNetLocvecPop(vec);
+}
+
+
 /**
  * INFO STRUCTURE SETTING/RETRIEVAL
  */
 
 snet_locvec_t *SNetLocvecGet(snet_info_t *info)
 {
-  return SNetInfoGetTag(info, 493);
+  return SNetInfoGetTag(info, LOCVEC_INFO_TAG);
 }
 
 
 void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec)
 {
-  SNetInfoSetTag(info, 493, vec);
+  SNetInfoSetTag(info, LOCVEC_INFO_TAG, vec);
 }
-
-
-
-
-
 
 
 
@@ -148,10 +296,10 @@ void SNetLocvecPrint(FILE *file, snet_locvec_t *vec)
   int i;
   for (i=0; i<vec->size; i++) {
     snet_locitem_t *item = &vec->arr[i];
-    snet_loctype_t type = (int)(*item & 0xff);
-    if (type != LOC_FEEDBACK && type != LOC_BOX &&
-        type != LOC_FILTER   && type != LOC_SYNC) {
-      fprintf(file, ":%c%d", type, (int)(*item >> 8));
+    snet_loctype_t type = ((int)*item) & 0xff;
+    int num = ((int)*item) >> 8;
+    if (num >= 0) {
+      fprintf(file, ":%c%d", type, num);
     } else {
       fprintf(file, ":%c", type);
     }

@@ -32,7 +32,7 @@ static bool MatchesExitPattern( snet_record_t *rec,
  * A custom creation function for instances of star operands
  * - having a separate function here allows for distinction
  *   of an "ordinary" serial combinator and
- *   another replica of the serial replicator
+ *   another replica of the serial replicator (star)
  */
 static snet_stream_t *SNetSerialStarchild(snet_stream_t *input,
     snet_info_t *info,
@@ -45,12 +45,12 @@ static snet_stream_t *SNetSerialStarchild(snet_stream_t *input,
 
   SNetRouteUpdate(info, input, location);
 
-  assert( SNetLocvecToptype(SNetLocvecGet(info)) == LOC_STAR );
+  assert( SNetLocvecStarWithin(SNetLocvecGet(info)) );
 
   /* create operand A */
   internal_stream = (*box_a)(input, info, location);
 
-  assert( SNetLocvecToptype(SNetLocvecGet(info)) == LOC_STAR );
+  assert( SNetLocvecStarWithin(SNetLocvecGet(info)) );
 
   /* create operand B */
   output = (*box_b)(internal_stream, info, location);
@@ -242,29 +242,19 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
   snet_stream_t *output;
   star_arg_t *sarg;
   snet_stream_t *newstream;
+  snet_locvec_t *locvec;
+
+  locvec = SNetLocvecGet(info);
+  SNetLocvecStarEnter(locvec);
 
   input = SNetRouteUpdate(info, input, location);
   if(location == SNetNodeLocation) {
     sarg = (star_arg_t *) SNetMemAlloc( sizeof(star_arg_t));
-    sarg->input = input;
     newstream = SNetStreamCreate(0);
-
+    sarg->input = input;
     /* copy location vector */
-    sarg->locvec = SNetLocvecCopy(SNetLocvecGet(info));
-
-    if (!is_incarnate) {
-      /* the "top-level" star also creates a collector */
-      output = CollectorCreateDynamic(newstream, info);
-      sarg->output = newstream;
-
-      SNetLocvecAppend(sarg->locvec, LOC_STAR, 0);
-      /* TODO in info: update source (locvec) to collector? */
-    } else {
-      output = newstream;
-      sarg->output = newstream;
-
-      SNetLocvecTopinc(sarg->locvec);
-    }
+    sarg->locvec = SNetLocvecStarSpawn(locvec);
+    sarg->output = newstream;
     sarg->box = box_a;
     sarg->selffun = box_b;
     sarg->exit_patterns = exit_patterns;
@@ -280,6 +270,17 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 
     SNetEntitySpawn( ENTITY_STAR, StarBoxTask, (void*)sarg );
 
+    /* creation function of top level star will return output stream
+     * of its collector, the incarnates return their outstream
+     */
+    if (!is_incarnate) {
+      /* the "top-level" star also creates a collector */
+      output = CollectorCreateDynamic(newstream, info);
+      /* TODO in info: update source (locvec) to collector? */
+    } else {
+      output = newstream;
+    }
+
   } else {
     SNetEdestroyList( guards);
     snet_variant_t *variant;
@@ -290,6 +291,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     output = input;
   }
 
+  SNetLocvecStarLeave(locvec);
 
   return( output);
 }

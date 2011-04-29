@@ -12,7 +12,7 @@
 
 typedef struct {
   snet_stream_t *output;
-  snet_stream_t **inputs;
+  void* inputs; /* either snet_stream_t* or snet_stream_t** */
   int num;
   bool dynamic;
 } coll_arg_t;
@@ -66,7 +66,7 @@ void CollectorTask(void *arg)
     for (i=0; i<incount; i++) {
       snet_stream_desc_t *tmp;
       /* open each stream in listening set for reading */
-      tmp = SNetStreamOpen(carg->inputs[i], 'r');
+      tmp = SNetStreamOpen( ((snet_stream_t **)carg->inputs)[i], 'r');
       /* add each stream instreams[i] to listening set of collector */
       SNetStreamsetPut( &readyset, tmp);
     }
@@ -272,13 +272,18 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, snet_i
 {
   snet_stream_t *outstream;
   coll_arg_t *carg;
+  int i;
 
   /* create outstream */
   outstream = (snet_stream_t*) SNetStreamCreate(0);
 
   /* create collector handle */
   carg = (coll_arg_t *) SNetMemAlloc( sizeof( coll_arg_t));
-  carg->inputs = instreams;
+  /* copy instreams */
+  carg->inputs = SNetMemAlloc(num * sizeof(snet_stream_t *));
+  for(i=0; i<num; i++) {
+    ((snet_stream_t **)carg->inputs)[i] = instreams[i];
+  }
   carg->output = outstream;
   carg->num = num;
   carg->dynamic = false;
@@ -303,7 +308,7 @@ snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, snet_info_t *inf
 
   /* create collector handle */
   carg = (coll_arg_t *) SNetMemAlloc( sizeof( coll_arg_t));
-  carg->inputs = (snet_stream_t **) instream;
+  carg->inputs = instream;
   carg->output = outstream;
   carg->num = 1;
   carg->dynamic = true;

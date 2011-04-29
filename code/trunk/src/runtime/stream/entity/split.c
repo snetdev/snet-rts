@@ -19,7 +19,7 @@
 typedef struct {
   snet_stream_t *input, *output;
   snet_startup_fun_t boxfun;
-  snet_locvec_t *locvec_parent;
+  snet_locvec_t *locvec;
   int ltag, utag;
   bool is_det;
   bool is_byloc;
@@ -77,8 +77,8 @@ static void SplitBoxTask(void *arg)
 
             /* create info and location vector for creation of this replica */
             snet_info_t *info = SNetInfoInit();
-            snet_locvec_t *locvec = SNetLocvecCopy(sarg->locvec_parent);
-            SNetLocvecAppend(locvec, LOC_SPLIT,
+            snet_locvec_t *locvec = SNetLocvecSplitSpawn(
+                sarg->locvec,
                 (!sarg->is_byloc)? i : SNetNodeLocation
                 );
             SNetLocvecSet(info, locvec);
@@ -225,26 +225,35 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
 {
   snet_stream_t *initial, *output;
   split_arg_t *sarg;
+  snet_locvec_t *locvec;
+
+  locvec = SNetLocvecGet(info);
+  SNetLocvecSplitEnter(locvec);
 
   input = SNetRouteUpdate(info, input, location);
   if(location == SNetNodeLocation) {
     initial = SNetStreamCreate(0);
+
+    //TODO locvec set disp
+
     sarg = (split_arg_t *) SNetMemAlloc( sizeof( split_arg_t));
     sarg->input  = input;
     sarg->output = initial;
     sarg->boxfun = box_a;
-    sarg->locvec_parent = SNetLocvecCopy(SNetLocvecGet(info));
+    sarg->locvec = SNetLocvecCopy(locvec);
     sarg->ltag = ltag;
     sarg->utag = utag;
     sarg->is_det = is_det;
     sarg->is_byloc = is_byloc;
-
-    output = CollectorCreateDynamic( initial, info);
     SNetEntitySpawn( ENTITY_SPLIT, SplitBoxTask, (void*)sarg );
+
+    //TODO locvec set coll
+    output = CollectorCreateDynamic( initial, info);
 
   } else {
     output = input;
   }
+  SNetLocvecSplitLeave(locvec);
 
   return( output);
 }

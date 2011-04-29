@@ -354,37 +354,64 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   num = SNetvariant_listListSize( variant_lists);
 
   locvec = SNetLocvecGet(info);
-  SNetLocvecAppend(locvec, LOC_PARALLEL, 0);
+  SNetLocvecParallelEnter(locvec);
 
   instream = SNetRouteUpdate(info, instream, location);
   if(location == SNetNodeLocation) {
-    collstreams = SNetMemAlloc( num * sizeof( snet_stream_t*));
     transits = SNetMemAlloc( num * sizeof( snet_stream_t*));
-
-    /* create all branches */
-    i = 0;
-    LIST_FOR_EACH(variant_lists, variants)
-      SNetLocvecTopinc(locvec);
+    for (i=0; i<num; i++) {
       transits[i] = SNetStreamCreate(0);
-      fun = funs[i];
-      collstreams[i] = (*fun)(transits[i], info, location);
-      i++;
-    END_FOR
-    /* create collector with outstreams */
-    outstream = CollectorCreateStatic(num, collstreams, info);
+    }
 
+    /* IMPORTANT: we need to preserve a left-to-right order of
+     * entity creation, to assure the correct propagation
+     * of stream source information in locvec.
+     *
+     * Hence also the copying of transits - the ParallelTask
+     * will free parg->outputs as soon as it has opened the
+     * streams contained therein, leading to a race condition
+     * and making it impossible to use transits to build the branches.
+     */
+
+    /* create parallel */
     parg = SNetMemAlloc( sizeof(parallel_arg_t));
     parg->input   = instream;
-    parg->outputs = transits;
+    /* copy */
+    parg->outputs = SNetMemAlloc( num * sizeof( snet_stream_t*));
+    for (i=0; i<num; i++) {
+      parg->outputs[i] = transits[i];
+    }
     parg->variant_lists = variant_lists;
     parg->is_det = is_det;
 
     SNetEntitySpawn( ENTITY_PARALLEL, ParallelBoxTask, (void*)parg );
 
+
+    /* create all branches */
+    collstreams = SNetMemAlloc( num * sizeof( snet_stream_t*));
+    i = 0;
+    LIST_FOR_EACH(variant_lists, variants)
+      SNetLocvecParallelNext(locvec);
+      fun = funs[i];
+      collstreams[i] = (*fun)(transits[i], info, location);
+      i++;
+    END_FOR
+
+
+    /* create collector with collstreams */
+    outstream = CollectorCreateStatic(num, collstreams, info);
+
+    /* free transits array */
+    SNetMemFree(transits);
+
+    /* free collstreams array */
+    SNetMemFree(collstreams);
+
+
   } else {
     i = 0;
     LIST_FOR_EACH(variant_lists, variants)
-      SNetLocvecTopinc(locvec);
+      SNetLocvecParallelNext(locvec);
       fun = funs[i];
       instream = (*fun)( instream, info, location);
       i++;
@@ -402,8 +429,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     outstream = instream;
   }
 
-  /* restore parent */
-  SNetLocvecPop(locvec);
+  SNetLocvecParallelLeave(locvec);
 
   SNetMemFree( funs);
   return( outstream);

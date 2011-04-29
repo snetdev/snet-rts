@@ -23,28 +23,22 @@ snet_stream_t *SNetSerial(snet_stream_t *input,
   snet_stream_t *internal_stream;
   snet_stream_t *output;
   snet_locvec_t *locvec;
-  bool was_serial = true;
+  bool enterstate;
 
   SNetRouteUpdate(info, input, location);
 
   locvec = SNetLocvecGet(info);
-  if (SNetLocvecToptype(locvec) != LOC_SERIAL) {
-    SNetLocvecAppend(locvec, LOC_SERIAL, 1);
-    was_serial = false;
-  }
+  enterstate = SNetLocvecSerialEnter(locvec);
 
   /* create operand A */
   internal_stream = (*box_a)(input, info, location);
 
-  assert( SNetLocvecToptype(locvec) == LOC_SERIAL );
-  SNetLocvecTopinc(locvec);
+  SNetLocvecSerialNext(locvec);
 
   /* create operand B */
   output = (*box_b)(internal_stream, info, location);
 
-  if (!was_serial) {
-    SNetLocvecPop(locvec);
-  }
+  SNetLocvecSerialLeave(locvec, enterstate);
 
   return(output);
 }

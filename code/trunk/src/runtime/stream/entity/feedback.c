@@ -525,7 +525,7 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
   snet_locvec_t *locvec;
 
   locvec = SNetLocvecGet(info);
-  SNetLocvecAppend(locvec, LOC_FEEDBACK, 0);
+  SNetLocvecFeedbackEnter(locvec);
 
   input = SNetRouteUpdate(info, input, location);
   if(location == SNetNodeLocation) {
@@ -578,7 +578,7 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     output = input;
   }
 
-  SNetLocvecPop(locvec);
+  SNetLocvecFeedbackLeave(locvec);
 
   return( output);
 }
