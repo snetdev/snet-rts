@@ -13,16 +13,15 @@
 static bool MatchesExitPattern( snet_record_t *rec,
     snet_variant_list_t *exit_patterns, snet_expr_list_t *guards)
 {
-  int i = 0;
+  int i;
   snet_variant_t *pattern;
 
-  LIST_FOR_EACH(exit_patterns, pattern)
-    if( SNetEevaluateBool( SNetEgetExpr( guards, i), rec) &&
+  LIST_ENUMERATE(exit_patterns, pattern, i)
+    if( SNetEevaluateBool( SNetExprListGet( guards, i), rec) &&
         SNetRecPatternMatches(pattern, rec)) {
       return true;
     }
-    i++;
-  END_FOR
+  END_ENUMERATE
 
   return false;
 }
@@ -202,15 +201,11 @@ static void StarBoxTask(void *arg)
   SNetStreamClose( outstream, false);
 
   /* destroy the arg */
-  SNetEdestroyList( sarg->guards);
+  SNetExprListDestroy( sarg->guards);
 
   SNetLocvecDestroy( sarg->locvec );
 
-  snet_variant_t *variant;
-  LIST_FOR_EACH(sarg->exit_patterns, variant)
-    SNetVariantDestroy(variant);
-  END_FOR
-  SNetvariantListDestroy( sarg->exit_patterns);
+  SNetVariantListDestroy( sarg->exit_patterns);
   SNetMemFree( sarg);
 } /* STAR BOX TASK END */
 
@@ -248,6 +243,9 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->input = input;
     newstream = SNetStreamCreate(0);
 
+    if (guards == NULL) {
+      guards = SNetExprListCreate( 1, SNetEconstb( true));
+    }
     /* copy location vector */
     sarg->locvec = SNetLocvecCopy(SNetLocvecGet(info));
 
@@ -276,12 +274,8 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     SNetEntitySpawn( ENTITY_STAR, StarBoxTask, (void*)sarg );
 
   } else {
-    SNetEdestroyList( guards);
-    snet_variant_t *variant;
-    LIST_FOR_EACH(exit_patterns, variant)
-      SNetVariantDestroy(variant);
-    END_FOR
-    SNetvariantListDestroy( exit_patterns);
+    SNetExprListDestroy( guards);
+    SNetVariantListDestroy(exit_patterns);
     output = input;
   }
 

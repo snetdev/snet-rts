@@ -302,27 +302,6 @@ void *C4SNetDataGetData( c4snet_data_t *ptr)
   return ptr;
 }
 
-/* Returns the type of the data. */
-c4snet_type_t C4SNetDataGetType( c4snet_data_t *ptr)
-//FIXME: Use in distribution layer or delete
-{
-  if(ptr != NULL) {
-    return( ptr->type);
-  }
-
-  return CTYPE_unknown;
-}
-
-c4snet_vtype_t C4SNetDataGetVType( c4snet_data_t *ptr)
-//FIXME: Use in distribution layer or delete
-{
-  if(ptr != NULL) {
-    return( ptr->vtype);
-  }
-
-  return VTYPE_unknown;
-}
-
 int C4SNetDataGetArraySize( c4snet_data_t *ptr)
 {
   if(ptr != NULL && ptr->vtype == VTYPE_array) {
@@ -854,7 +833,7 @@ static void *C4SNetDataDecode(FILE *file)
 /**************************** Container functions ***************************/
 
 /* Creates a container that can be used to return values. */
-c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant) 
+c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant)
 {
   int i;
   c4snet_container_t *c;
@@ -864,7 +843,7 @@ c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant)
     return 0;
   }
 
-  v = SNetvariantListGet( SNetHndGetVariants( (struct handle *)hnd), variant - 1);
+  v = SNetVariantListGet( SNetHndGetVariants( (struct handle *)hnd), variant - 1);
 
   c = (c4snet_container_t *)SNetMemAlloc( sizeof( c4snet_container_t));
   c->counter = (int *)SNetMemAlloc( 3 * sizeof( int));

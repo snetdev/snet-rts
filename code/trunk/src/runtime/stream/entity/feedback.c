@@ -8,9 +8,6 @@
  * Author: Daniel Prokesch <daniel.prokesch@gmail.com>
  * Date:   2011-04-11
  */
-
-
-
 #include <assert.h>
 
 #include "snetentities.h"
@@ -23,8 +20,6 @@
 #include "threading.h"
 #include "distribution.h"
 
-
-
 /**
  * If following is defined, no buffer entity in the back-channel
  * is created. This can lead to artificial deadlock if there is not enough
@@ -33,15 +28,12 @@
  */
 //#define FEEDBACK_OMIT_BUFFER
 
-
 /**
  * Use the stream-emitter implementation of the feedback buffer
  */
 //#define FEEDBACK_STREAM_EMITTER
 
-
 #define FEEDBACK_BACKCHAN_CAPACITY 64
-
 
 /* Helper function for the feedback-dispatcher
  * - copied from star.c
@@ -49,20 +41,18 @@
 static bool MatchesBackPattern( snet_record_t *rec,
     snet_variant_list_t *back_patterns, snet_expr_list_t *guards)
 {
-  int i = 0;
+  snet_expr_t *expr;
   snet_variant_t *pattern;
 
-  LIST_FOR_EACH(back_patterns, pattern)
-    if( SNetEevaluateBool( SNetEgetExpr( guards, i), rec) &&
+  LIST_ZIP_EACH(guards, expr, back_patterns, pattern)
+    if (SNetEevaluateBool( expr, rec) &&
         SNetRecPatternMatches(pattern, rec)) {
       return true;
     }
-  END_FOR
+  END_ZIP
 
   return false;
 }
-
-
 
 
 
@@ -80,7 +70,6 @@ enum fbcoll_mode {
   FBCOLL_FB0
 };
 
-
 struct fbcoll_state {
     snet_stream_desc_t *instream;
     snet_stream_desc_t *outstream;
@@ -90,8 +79,6 @@ struct fbcoll_state {
 };
 
 /* helper functions to handle mode the feedback collector is in */
-
-
 static void FbCollReadIn(struct fbcoll_state *state)
 {
   snet_record_t *rec;
@@ -191,7 +178,6 @@ static void FbCollReadFbi(struct fbcoll_state *state)
       SNetRecDestroy( rec);
       break;
   }
-
 }
 
 
@@ -238,18 +224,15 @@ static void FeedbackCollTask(void *arg)
 
 
 
-
 /******************************************************************************
  * Feedback dispatcher
  *****************************************************************************/
-
 
 typedef struct {
   snet_stream_t *in, *out, *fbo;
   snet_variant_list_t *back_patterns;
   snet_expr_list_t *guards;
 } fbdisp_arg_t;
-
 
 /**
  * The feedback dispatcher, at the end of the
@@ -329,14 +312,11 @@ static void FeedbackDispTask(void *arg)
   SNetStreamClose(outstream,  false);
   SNetStreamClose(backstream, false);
 
-  snet_variant_t *variant;
-  LIST_FOR_EACH( fbdarg->back_patterns, variant)
-    SNetVariantDestroy(variant);
-  END_FOR
-  SNetvariantListDestroy( fbdarg->back_patterns);
-  SNetEdestroyList( fbdarg->guards);
+  SNetVariantListDestroy( fbdarg->back_patterns);
+  SNetExprListDestroy( fbdarg->guards);
   SNetMemFree( fbdarg);
 }
+
 
 
 /******************************************************************************
@@ -397,7 +377,6 @@ static void FeedbackBufTask(void *arg)
 }
 
 #else
-
 
 /**
  * The feedback buffer, in the back-loop
@@ -510,6 +489,7 @@ feedback_buf_epilogue:
 #endif
 
 
+
 /****************************************************************************/
 /* CREATION FUNCTION                                                        */
 /****************************************************************************/
@@ -539,7 +519,6 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     into_op = SNetStreamCreate(0);
     output  = SNetStreamCreate(0);
     back_bufout = SNetStreamCreate(FEEDBACK_BACKCHAN_CAPACITY);
-
 
 
 #ifndef FEEDBACK_OMIT_BUFFER
@@ -575,6 +554,8 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     SNetEntitySpawn( ENTITY_FBDISP, FeedbackDispTask, (void*)fbdarg );
 
   } else {
+    SNetVariantListDestroy(back_patterns);
+    SNetExprListDestroy(guards);
     output = input;
   }
 
@@ -582,4 +563,3 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
 
   return( output);
 }
-

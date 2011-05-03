@@ -55,12 +55,6 @@ struct expression {
 };
 
 
-struct expression_list {
-  int num;
-  snet_expr_t **list;
-};
-
-
 static snet_expr_t *CreateExpr( snet_expr_type_t t) {
   snet_expr_t *new;
 
@@ -90,7 +84,7 @@ static snet_expr_t *CreateExpr( snet_expr_type_t t) {
   return( new);
 }
 
-void SNetEdestroyExpr( snet_expr_t *expr) {
+void SNetExprDestroy( snet_expr_t *expr) {
 
   int i;
 
@@ -263,68 +257,6 @@ extern snet_expr_t *SNetEnot( snet_expr_t *a) {
 extern snet_expr_t *SNetEcond( snet_expr_t *a, snet_expr_t *b, snet_expr_t *c) {
   return( CreateTriOp( COND, a, b, c));
 }
-/*
---------------------------------------------------------------------------------
-*/
-
-extern snet_expr_list_t *SNetEcreateList( int num, ...) 
-{
-  
-  int i;
-  snet_expr_list_t *lst;
-  va_list args;
-
-  lst = SNetMemAlloc( sizeof( snet_expr_list_t));
-  lst->num = num;
-  lst->list = SNetMemAlloc( num * sizeof( snet_expr_t*));
-
-  va_start( args, num);
-  for( i=0; i<num; i++) {
-    lst->list[i] = va_arg( args, snet_expr_t*);
-  }
-  va_end( args);
-
-
-  return( lst);
-}
-
-extern void SNetEdestroyList( snet_expr_list_t *lst) 
-{
-  
-  int i;
-  if(lst != NULL) {
-    for( i=0; i<lst->num; i++) {
-      if(lst->list[i] != NULL) {
-	SNetEdestroyExpr(lst->list[i]);
-      }
-    }
-    SNetMemFree(lst->list);
-    
-    SNetMemFree(lst);
-  }
-  return;
-}
-
-extern int SNetElistGetNumExpressions( snet_expr_list_t *lst) 
-{
-  if( lst == NULL) {
-    return( 0);
-  }
-  else {
-    return( lst->num);
-  }
-}
-
-extern snet_expr_t *SNetEgetExpr( snet_expr_list_t *l, int num)
-{
-  if( l != NULL) {
-    return( l->list[num]);  
-  }
-  else {
-    return( NULL);
-  }
-}
-
 /*
 --------------------------------------------------------------------------------
 */
@@ -529,5 +461,3 @@ extern int SNetEevaluateInt( snet_expr_t *expr, snet_record_t *rec)
 
   return( result);
 }
-
-
