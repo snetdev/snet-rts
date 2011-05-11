@@ -40,7 +40,8 @@
 #include "sac_include/SAC4SNetFibreIO.h"
 #include "snetentities.h"
 #include "memfun.h"
-#include "typeencode.h"
+#include "variant.h"
+#include "type.h"
 #include "out.h"
 
 #define F_COUNT( c) c->counter[0]
@@ -133,41 +134,26 @@ void SAC4SNet_out( void *hnd, int variant, ...)
   int i;
   void **fields;
   int *tags, *btags;
-  snet_variantencoding_t *venc;
-  snet_vector_t *mapping;
-  int num_entries, f_count=0, t_count=0, b_count=0;
-  int *f_names, *t_names, *b_names;
+  snet_variant_t *v;
   va_list args;
 
 
-  venc = SNetTencGetVariant(
-           SNetTencBoxSignGetType( SNetHndGetBoxSign( hnd)), variant);
-  fields = SNetMemAlloc( SNetTencGetNumFields( venc) * sizeof( void*));
-  tags = SNetMemAlloc( SNetTencGetNumTags( venc) * sizeof( int));
-  btags = SNetMemAlloc( SNetTencGetNumBTags( venc) * sizeof( int));
-
-  num_entries = SNetTencGetNumFields( venc) +
-                SNetTencGetNumTags( venc) +
-                SNetTencGetNumBTags( venc);
-  mapping = 
-    SNetTencBoxSignGetMapping( SNetHndGetBoxSign( hnd), variant-1); 
-  f_names = SNetTencGetFieldNames( venc);
-  t_names = SNetTencGetTagNames( venc);
-  b_names = SNetTencGetBTagNames( venc);
+  v = SNetVariantListGet( SNetHndGetVariants( (struct handle *) hnd), variant -1);
+  fields = SNetMemAlloc( SNetVariantNumFields( v) * sizeof( void*));
+  tags = SNetMemAlloc( SNetVariantNumTags( v) * sizeof( int));
+  btags = SNetMemAlloc( SNetVariantNumBTags( v) * sizeof( int));
 
   va_start( args, variant);
-  for( i=0; i<num_entries; i++) {
-    switch( SNetTencVectorGetEntry( mapping, i)) {
-      case field:
-        fields[f_count++] =  SACARGnewReference( va_arg( args, SACarg*));
-        break;
-      case tag:
-        tags[t_count++] =  va_arg( args, int);
-        break;
-      case btag:
-        btags[b_count++] = va_arg( args, int);
-        break;
-    }
+  for (i = 0; i < SNetVariantNumFields(v); i++) {
+    fields[i] =  SACARGnewReference( va_arg( args, SACarg*));
+  }
+
+  for (i = 0; i < SNetVariantNumTags(v); i++) {
+    tags[i] =  va_arg( args, int);
+  }
+
+  for (i = 0; i < SNetVariantNumBTags(v); i++) {
+    btags[i] =  va_arg( args, int);
   }
   va_end( args);
 
@@ -327,21 +313,21 @@ static void *SAC4SNetDataDeserialise( FILE *file)
 }
 /******************************************************************************/
 
-sac4snet_container_t *SAC4SNet_containerCreate( struct handle *hnd, snet_typeencoding_t *type, int var_num) 
+sac4snet_container_t *SAC4SNet_containerCreate( struct handle *hnd, int var_num) 
 {
   
   int i;
   sac4snet_container_t *c;
-  snet_variantencoding_t *v;
+  snet_variant_t *v;
 
 
-  v = SNetTencGetVariant( type, var_num);
+  v = SNetVariantListGet( SNetHndGetVariants( (struct handle *)hnd), var_num - 1);
 
   c = SNetMemAlloc( sizeof( sac4snet_container_t));
   c->counter = SNetMemAlloc( 3 * sizeof( int));
-  c->fields = SNetMemAlloc( SNetTencGetNumFields( v) * sizeof( void*));
-  c->tags = SNetMemAlloc( SNetTencGetNumTags( v) * sizeof( int));
-  c->btags = SNetMemAlloc( SNetTencGetNumBTags( v) * sizeof( int));
+  c->fields = SNetMemAlloc( SNetVariantNumFields( v) * sizeof( void*));
+  c->tags = SNetMemAlloc( SNetVariantNumTags( v) * sizeof( int));
+  c->btags = SNetMemAlloc( SNetVariantNumBTags( v) * sizeof( int));
   c->hnd = hnd;
   c->variant = var_num;
 
