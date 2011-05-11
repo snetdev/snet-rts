@@ -5,6 +5,7 @@
 #include <string.h>
 #include <assert.h>
 
+typedef struct snet_task_t *snet_entity_t;
 
 /* S-Net threading backend interface */
 #include "threading.h"
@@ -14,6 +15,7 @@
 
 /* provisional assignment module */
 #include "assign.h"
+
 
 extern int SNetNodeLocation;
 
