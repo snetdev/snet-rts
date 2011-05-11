@@ -2,7 +2,7 @@
 #define _SAC4SNetc_h_
 
 #include <string.h>
-#include "typeencode.h"
+#include "type.h"
 #include "metadata.h"
 
 char *SAC4SNetGenBoxWrapper( char *box_name,

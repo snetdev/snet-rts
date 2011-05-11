@@ -16,25 +16,19 @@
 #include "debugcounters.h"
 #endif /* SNET_DEBUG_COUNTERS  */
 
-//#define BOX_DEBUG
+typedef struct {
+  snet_stream_t *input, *output;
+  void (*boxfun)( snet_handle_t*);
+  snet_variant_list_t *output_variants;
+  const char *boxname;
+} box_arg_t;
 
 /* ------------------------------------------------------------------------- */
 /*  SNetBox                                                                  */
 /* ------------------------------------------------------------------------- */
 
-typedef struct {
-  snet_stream_t *input, *output;
-  void (*boxfun)( snet_handle_t*);
-  snet_variant_list_t *out_variants;
-  const char *boxname;
-} box_arg_t;
-
-/**
- * Box task
- */
 static void BoxTask(void *arg)
 {
-
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
   static struct timeval tv_in;
   static struct timeval tv_out;
@@ -60,7 +54,7 @@ static void BoxTask(void *arg)
   /* set out descriptor */
   hnd.out_sd = outstream;
   /* set out signs */
-  hnd.sign = barg->out_variants;
+  hnd.sign = barg->output_variants;
   /* mapping */
   hnd.mapping = NULL;
 
@@ -87,9 +81,10 @@ static void BoxTask(void *arg)
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_out, NULL);
-        SNetUtilDebugNotice("[DBG::RT::TimeTrace] SnetBox resumes from %p after "
-                    "%lf\n\n", &hnd, (tv_out.tv_sec - tv_in.tv_sec) +
-                        (tv_out.tv_usec - tv_in.tv_usec) / 1000000.0);
+        SNetUtilDebugNotice("[DBG::RT::TimeTrace] SnetBox resumes from %p "
+                            "after %lf\n\n", &hnd,
+                            (tv_out.tv_sec - tv_in.tv_sec) +
+                            (tv_out.tv_usec - tv_in.tv_usec) / 1000000.0);
 #endif
 #ifdef SNET_DEBUG_COUNTERS
         SNetDebugTimeGetTime(&time_out);
@@ -141,25 +136,21 @@ static void BoxTask(void *arg)
   SNetHndDestroy( &hnd);
 
   /* destroy box arg */
-  snet_variant_t *variant;
-  LIST_FOR_EACH(barg->out_variants, variant)
-    SNetVariantDestroy(variant);
-  END_FOR
-
-  SNetvariantListDestroy(barg->out_variants);
+  SNetVariantListDestroy(barg->output_variants);
   SNetMemFree( barg);
 }
+
 
 
 /**
  * Box creation function
  */
 snet_stream_t *SNetBox( snet_stream_t *input,
-    snet_info_t *info,
-    int location,
-    const char *boxname,
-    snet_box_fun_t boxfun,
-    snet_variant_list_t *out_variants)
+                        snet_info_t *info,
+                        int location,
+                        const char *boxname,
+                        snet_box_fun_t boxfun,
+                        snet_variant_list_t *output_variants)
 {
   snet_stream_t *output;
   box_arg_t *barg;
@@ -176,21 +167,16 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->input  = input;
     barg->output = output;
     barg->boxfun = boxfun;
-    barg->out_variants = out_variants;
+    barg->output_variants = output_variants;
     barg->boxname = boxname;
 
     SNetEntitySpawn( ENTITY_BOX(barg->boxname), BoxTask, (void*)barg );
 
 
   } else {
-    snet_variant_t *variant;
-    LIST_FOR_EACH(out_variants, variant)
-      SNetVariantDestroy(variant);
-    END_FOR
-
-    SNetvariantListDestroy(out_variants);
+    SNetVariantListDestroy(output_variants);
     output = input;
   }
 
-  return( output);
+  return output;
 }

@@ -24,43 +24,28 @@
  *
  *****************************************************************************/
 
-
 #include <assert.h>
 
 #include "snetentities.h"
-
 #include "bool.h"
 #include "memfun.h"
-
 #include "threading.h"
-
 #include "distribution.h"
-
-/* --------------------------------------------------------
- * Syncro Cell: Flow Inheritance, uncomment desired variant
- * --------------------------------------------------------
- */
 
 /* ------------------------------------------------------------------------- */
 /*  SNetSync                                                                 */
 /* ------------------------------------------------------------------------- */
 
-struct sync_state {
-  bool terminated;
-  int match_count;
-  snet_record_t **storage;
-};
-
 // Destroys storage including all records
-static snet_record_t *Merge( snet_record_t **storage,
-    snet_variant_list_t *patterns)
+static snet_record_t *merge( snet_record_t **storage,
+                             snet_variant_list_t *patterns)
 {
-  int i = 0, name;
+  int i, name;
   snet_variant_t *pattern;
   snet_record_t *result = storage[0];
 
-  LIST_FOR_EACH(patterns, pattern)
-    if (i != 0) {
+  LIST_ENUMERATE(patterns, pattern, i)
+    if (i > 0) {
       VARIANT_FOR_EACH_FIELD(pattern, name)
         if (!SNetRecHasField( result, name)) {
           SNetRecSetField(result, name, SNetRecTakeField(storage[i], name));
@@ -73,10 +58,9 @@ static snet_record_t *Merge( snet_record_t **storage,
         }
       END_FOR
     }
-    i++;
-  END_FOR
+  END_ENUMERATE
 
-  for( i=1; i<SNetvariantListSize( patterns); i++) {
+  for (i = 1; i < SNetVariantListLength( patterns); i++) {
     SNetRecDestroy( storage[i]);
   }
 
@@ -86,7 +70,7 @@ static snet_record_t *Merge( snet_record_t **storage,
 typedef struct {
   snet_stream_t *input, *output;
   snet_variant_list_t *patterns;
-  snet_expr_list_t *guards;
+  snet_expr_list_t *guard_exprs;
 } sync_arg_t;
 
 /**
@@ -101,49 +85,48 @@ static void SyncBoxTask(void *arg)
   sync_arg_t *sarg = (sync_arg_t *) arg;
   snet_stream_desc_t *outstream, *instream;
   snet_record_t **storage;
-  snet_variant_t *variant;
   snet_record_t *rec;
-  snet_record_t *temp_record;
+  snet_variant_t *pattern;
 
   instream  = SNetStreamOpen(sarg->input,  'r');
   outstream = SNetStreamOpen(sarg->output, 'w');
 
-  num_patterns = SNetvariantListSize( sarg->patterns);
+  num_patterns = SNetVariantListLength( sarg->patterns);
   storage = SNetMemAlloc(num_patterns * sizeof(snet_record_t*));
   for(i = 0; i < num_patterns; i++) {
     storage[i] = NULL;
   }
   match_cnt = 0;
+  //FIXME: Clean up more
 
   /* MAIN LOOP START */
   while( !terminate) {
     /* read from input stream */
     rec = SNetStreamRead( instream);
 
-    switch( SNetRecGetDescriptor( rec)) {
+    switch (SNetRecGetDescriptor( rec)) {
       case REC_data:
         new_matches = 0;
-        for( i=0; i<num_patterns; i++) {
+        LIST_ENUMERATE(sarg->patterns, pattern, i)
           /* storage empty and guard accepts => store record*/
-          if( (storage[i] == NULL) &&
-              (SNetRecPatternMatches(SNetvariantListGet(sarg->patterns, i), rec)) &&
-              (SNetEevaluateBool(SNetEgetExpr(sarg->guards, i), rec))) {
+          if ((storage[i] == NULL) &&
+              (SNetRecPatternMatches(pattern, rec)) &&
+              (
+               i >= SNetExprListLength(sarg->guard_exprs) ||
+               SNetEevaluateBool(SNetExprListGet(sarg->guard_exprs, i), rec)
+              )) {
             storage[i] = rec;
             new_matches += 1;
           }
-        }
+        END_ENUMERATE
 
-        if( new_matches == 0) {
+        if (new_matches == 0) {
           SNetStreamWrite( outstream, rec);
         } else {
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
-            temp_record =  Merge( storage, sarg->patterns);
-            SNetStreamWrite( outstream, temp_record);
-            /* current_state->terminated = true; */
-            SNetStreamWrite( outstream,
-                SNetRecCreate(REC_sync, sarg->input)
-                );
+            SNetStreamWrite( outstream, merge( storage, sarg->patterns));
+            SNetStreamWrite( outstream, SNetRecCreate(REC_sync, sarg->input));
 
             /* the receiver of REC_sync will destroy the outstream */
             SNetStreamClose( outstream, false);
@@ -189,12 +172,9 @@ static void SyncBoxTask(void *arg)
   } /* MAIN LOOP END */
 
   SNetMemFree(storage);
-  LIST_FOR_EACH(sarg->patterns, variant)
-    SNetVariantDestroy(variant);
-  END_FOR
 
-  SNetvariantListDestroy(sarg->patterns);
-  SNetEdestroyList( sarg->guards);
+  SNetVariantListDestroy( sarg->patterns);
+  SNetExprListDestroy( sarg->guard_exprs);
   SNetMemFree( sarg);
 }
 
@@ -207,7 +187,7 @@ snet_stream_t *SNetSync( snet_stream_t *input,
     snet_info_t *info,
     int location,
     snet_variant_list_t *patterns,
-    snet_expr_list_t *guards )
+    snet_expr_list_t *guard_exprs )
 {
   snet_stream_t *output;
   sync_arg_t *sarg;
@@ -219,19 +199,14 @@ snet_stream_t *SNetSync( snet_stream_t *input,
     sarg->input  = input;
     sarg->output = output;
     sarg->patterns = patterns;
-    sarg->guards = guards;
+    sarg->guard_exprs = guard_exprs;
 
     SNetEntitySpawn( ENTITY_SYNC, SyncBoxTask, (void*)sarg);
-
   } else {
-    snet_variant_t *variant;
-    LIST_FOR_EACH(patterns, variant)
-      SNetVariantDestroy(variant);
-    END_FOR
-    SNetvariantListDestroy( patterns);
-    SNetEdestroyList(guards);
+    SNetVariantListDestroy( patterns);
+    SNetExprListDestroy( guard_exprs);
     output = input;
   }
-  return( output);
-}
 
+  return output;
+}

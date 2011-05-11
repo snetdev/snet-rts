@@ -79,7 +79,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
   // set values from box
   if (variant_num > 0) {
-    variant = SNetvariantListGet( SNetHndGetVariants( hnd), variant_num - 1);
+    variant = SNetVariantListGet( SNetHndGetVariants( hnd), variant_num - 1);
 
     out_rec = SNetRecCreate( REC_data);
 
@@ -170,7 +170,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
   // set values from box
   if( variant_num > 0) {
 
-    variant = SNetvariantListGet( SNetHndGetVariants( hnd), variant_num - 1);
+    variant = SNetVariantListGet( SNetHndGetVariants( hnd), variant_num - 1);
 
     out_rec = SNetRecCreate( REC_data);
 

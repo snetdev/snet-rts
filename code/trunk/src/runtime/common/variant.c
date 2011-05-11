@@ -23,25 +23,25 @@ snet_variant_t *SNetVariantCreateEmpty()
 {
   snet_variant_t *variant = SNetMemAlloc(sizeof(snet_variant_t));
 
-  variant->tags = SNetintListCreate(0, -1);
-  variant->btags = SNetintListCreate(0, -1);
-  variant->fields = SNetintListCreate(0, -1);
+  variant->tags = SNetIntListCreate(0);
+  variant->btags = SNetIntListCreate(0);
+  variant->fields = SNetIntListCreate(0);
 
   return variant;
 }
 
 snet_variant_t *SNetVariantCopy( snet_variant_t *var)
 {
-  return SNetVariantCreate( SNetintListCopy(var->fields),
-                            SNetintListCopy(var->tags),
-                            SNetintListCopy(var->btags));
+  return SNetVariantCreate( SNetIntListCopy(var->fields),
+                            SNetIntListCopy(var->tags),
+                            SNetIntListCopy(var->btags));
 }
 
 void SNetVariantDestroy( snet_variant_t *var)
 {
-  SNetintListDestroy(var->tags);
-  SNetintListDestroy(var->btags);
-  SNetintListDestroy(var->fields);
+  SNetIntListDestroy(var->tags);
+  SNetIntListDestroy(var->btags);
+  SNetIntListDestroy(var->fields);
   SNetMemFree(var);
 }
 
@@ -50,23 +50,23 @@ void SNetVariantDestroy( snet_variant_t *var)
 void SNetVariantAddTag( snet_variant_t *var, int name)
 {
   //FIXME: Already exists?
-  return SNetintListAppend(var->tags, name);
+  return SNetIntListAppend(var->tags, name);
 }
 
 void SNetVariantRemoveTag( snet_variant_t *var, int name)
 {
   //FIXME: not present?
-  SNetintListRemove(var->tags, name);
+  SNetIntListRemove(var->tags, name);
 }
 
 bool SNetVariantHasTag( snet_variant_t *var, int name)
 {
-  return SNetintListContains(var->tags, name);
+  return SNetIntListContains(var->tags, name);
 }
 
 int SNetVariantNumTags( snet_variant_t *var)
 {
-  return SNetintListSize(var->tags);
+  return SNetIntListLength(var->tags);
 }
 
 
@@ -74,23 +74,23 @@ int SNetVariantNumTags( snet_variant_t *var)
 void SNetVariantAddBTag( snet_variant_t *var, int name)
 {
   //FIXME: Already exists?
-  return SNetintListAppend(var->btags, name);
+  return SNetIntListAppend(var->btags, name);
 }
 
 void SNetVariantRemoveBTag( snet_variant_t *var, int name)
 {
   //FIXME: not present?
-  SNetintListRemove(var->btags, name);
+  SNetIntListRemove(var->btags, name);
 }
 
 bool SNetVariantHasBTag( snet_variant_t *var, int name)
 {
-  return SNetintListContains(var->btags, name);
+  return SNetIntListContains(var->btags, name);
 }
 
 int SNetVariantNumBTags( snet_variant_t *var)
 {
-  return SNetintListSize(var->btags);
+  return SNetIntListLength(var->btags);
 }
 
 
@@ -98,21 +98,21 @@ int SNetVariantNumBTags( snet_variant_t *var)
 void SNetVariantAddField( snet_variant_t *var, int name)
 {
   //FIXME: Already exists?
-  return SNetintListAppend(var->fields, name);
+  return SNetIntListAppend(var->fields, name);
 }
 
 void SNetVariantRemoveField( snet_variant_t *var, int name)
 {
   //FIXME: not present?
-  SNetintListRemove(var->fields, name);
+  SNetIntListRemove(var->fields, name);
 }
 
 bool SNetVariantHasField( snet_variant_t *var, int name)
 {
-  return SNetintListContains(var->fields, name);
+  return SNetIntListContains(var->fields, name);
 }
 
 int SNetVariantNumFields( snet_variant_t *var)
 {
-  return SNetintListSize(var->fields);
+  return SNetIntListLength(var->fields);
 }

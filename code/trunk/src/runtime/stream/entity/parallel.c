@@ -166,7 +166,7 @@ static void ParallelBoxTask(void *arg)
 {
   parallel_arg_t *parg = (parallel_arg_t *) arg;
   /* the number of outputs */
-  int num = SNetvariant_listListSize(parg->variant_lists);
+  int num = SNetVariantListListLength(parg->variant_lists);
   snet_stream_desc_t *instream;
   snet_stream_desc_t *outstreams[num];
   int i, stream_index;
@@ -191,7 +191,7 @@ static void ParallelBoxTask(void *arg)
 
   /* Handle initialiser branches */
   for( i=0; i<num; i++) {
-    if (SNetvariantListSize( SNetvariant_listListGet( parg->variant_lists, i)) == 0) {
+    if (SNetVariantListLength( SNetVariantListListGet( parg->variant_lists, i)) == 0) {
 
       PutToBuffers( outstreams, num, i,
           SNetRecCreate( REC_trigger_initialiser),
@@ -211,11 +211,9 @@ static void ParallelBoxTask(void *arg)
   switch( num - num_init_branches) {
     case 1: /* remove dispatcher from network ... */
       for( i=0; i<num; i++) {
-        if (SNetvariantListSize( SNetvariant_listListGet( parg->variant_lists, i)) > 0) {
+        if (SNetVariantListLength( SNetVariantListListGet( parg->variant_lists, i)) > 0) {
           /* send a sync record to the remaining branch */
-          SNetStreamWrite( outstreams[i],
-              SNetRecCreate( REC_sync, parg->input)
-              );
+          SNetStreamWrite( outstreams[i], SNetRecCreate( REC_sync, parg->input));
           SNetStreamClose( instream, false);
         }
       }
@@ -242,7 +240,7 @@ static void ParallelBoxTask(void *arg)
 
       case REC_data:
         for( i=0; i<num; i++) {
-          CheckMatch( rec, SNetvariant_listListGet( parg->variant_lists, i), matchcounter[i]);
+          CheckMatch( rec, SNetVariantListListGet( parg->variant_lists, i), matchcounter[i]);
         }
         stream_index = BestMatch( matchcounter, num);
         if (stream_index == -1) {
@@ -309,17 +307,7 @@ static void ParallelBoxTask(void *arg)
   }
   SNetMemFree( matchcounter);
 
-  snet_variant_list_t *variant_list;
-  snet_variant_t *variant;
-
-  LIST_FOR_EACH(parg->variant_lists, variant_list)
-    LIST_FOR_EACH(variant_list, variant)
-      SNetVariantDestroy(variant);
-    END_FOR
-
-    SNetvariantListDestroy(variant_list);
-  END_FOR
-  SNetvariant_listListDestroy( parg->variant_lists);
+  SNetVariantListListDestroy( parg->variant_lists);
   SNetMemFree( parg);
 } /* END of PARALLEL BOX TASK */
 
@@ -348,10 +336,9 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   snet_stream_t **collstreams;
   snet_startup_fun_t fun;
   snet_variant_list_t *variants;
-  snet_variant_t *variant;
   snet_locvec_t *locvec;
 
-  num = SNetvariant_listListSize( variant_lists);
+  num = SNetVariantListListLength( variant_lists);
 
   locvec = SNetLocvecGet(info);
   SNetLocvecParallelEnter(locvec);
@@ -389,13 +376,11 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 
     /* create all branches */
     collstreams = SNetMemAlloc( num * sizeof( snet_stream_t*));
-    i = 0;
-    LIST_FOR_EACH(variant_lists, variants)
+    LIST_ENUMERATE(variant_lists, variants, i)
       SNetLocvecParallelNext(locvec);
       fun = funs[i];
       collstreams[i] = (*fun)(transits[i], info, location);
-      i++;
-    END_FOR
+    END_ENUMERATE
 
 
     /* create collector with collstreams */
@@ -409,22 +394,13 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 
 
   } else {
-    i = 0;
-    LIST_FOR_EACH(variant_lists, variants)
+    LIST_ENUMERATE(variant_lists, variants, i)
       SNetLocvecParallelNext(locvec);
       fun = funs[i];
       instream = (*fun)( instream, info, location);
-      i++;
-    END_FOR
+    END_ENUMERATE
 
-    LIST_FOR_EACH(variant_lists, variants)
-      LIST_FOR_EACH(variants, variant)
-        SNetVariantDestroy(variant);
-      END_FOR
-
-      SNetvariantListDestroy(variants);
-    END_FOR
-    SNetvariant_listListDestroy( variant_lists);
+    SNetVariantListListDestroy( variant_lists);
 
     outstream = instream;
   }
@@ -451,7 +427,7 @@ snet_stream_t *SNetParallel( snet_stream_t *instream,
   int i, num;
   void **funs;
 
-  num = SNetvariant_listListSize( variant_lists);
+  num = SNetVariantListListLength( variant_lists);
   funs = SNetMemAlloc( num * sizeof( void*));
   va_start( args, variant_lists);
   for( i=0; i<num; i++) {
@@ -476,7 +452,7 @@ snet_stream_t *SNetParallelDet( snet_stream_t *inbuf,
   int i, num;
   void **funs;
 
-  num = SNetvariant_listListSize( variant_lists);
+  num = SNetVariantListListLength( variant_lists);
   funs = SNetMemAlloc( num * sizeof( void*));
   va_start( args, variant_lists);
   for( i=0; i<num; i++) {

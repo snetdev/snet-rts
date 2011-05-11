@@ -231,34 +231,6 @@ void *C4SNetDataGetData( c4snet_data_t *ptr);
 
 /** <!--********************************************************************-->
  *
- * @fn c4snet_type_t C4SNetDataGetType( c4snet_data_t *c)
- *
- *   @brief Returns the type of the data.
- *
- *   @param ptr Pointer to type c4snet_data_t struct. 
- *
- *   @return Type of the data or CTYPE_unknown in case of an error. 
- *
- *****************************************************************************/
-
-c4snet_type_t C4SNetDataGetType( c4snet_data_t *c);
-
-/** <!--********************************************************************-->
- *
- * @fn c4snet_type_t C4SNetDataGetVType( c4snet_data_t *c)
- *
- *   @brief Returns the vtype of the data.
- *
- *   @param ptr Pointer to type c4snet_data_t struct. 
- *
- *   @return VType of the data or VTYPE_unknown in case of an error. 
- *
- *****************************************************************************/
-
-c4snet_vtype_t C4SNetDataGetVType( c4snet_data_t *c);
-
-/** <!--********************************************************************-->
- *
  * @fn int C4SNetDataGetArraySize( c4snet_data_t *c);
  *
  *   @brief Returns number of elements in the data array
