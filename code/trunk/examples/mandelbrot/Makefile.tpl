@@ -16,7 +16,7 @@ SLIB     = -lsnetmpi -lSAC4SNetMPI
 else
 SLIB     = -lsnet -lSAC4SNet 
 endif
-LIBS      = -lpthread $(SLIB) -lsnetutil
+LIBS      = -lpthread $(SLIB) -lsnetutil -ltblpel -ldistribnodist
 
 SACNAMES  = -DSACTYPE_SNet_SNet=23 -DSNetMain__$(TARGET)=main
 TMAPIDS   = -DCID=24 -DCPXID=20 -DDISPID=26

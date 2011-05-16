@@ -8,6 +8,11 @@
 
 #include "threading.h"
 
+//extern void SNetThreadingEventBoxStart(void);
+//extern void SNetThreadingEventBoxStop(void);
+
+
+
 #include "handle_p.h"
 #include "list.h"
 #include "distribution.h"
@@ -77,7 +82,9 @@ static void BoxTask(void *arg)
         SNetDebugTimeGetTime(&time_in);
 #endif /* SNET_DEBUG_COUNTERS */
 
+//        SNetThreadingEventBoxStart();
         (*barg->boxfun)( &hnd);
+//        SNetThreadingEventBoxStop();
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_out, NULL);
