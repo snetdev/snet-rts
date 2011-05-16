@@ -152,7 +152,11 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
 {
   int mon_flags;
   int do_mon = 0;
-  int worker = SNetAssignTask( (info.type==ENTITY_box), info.name );
+  int worker = -1;
+
+  if ( info.type != ENTITY_other) {
+    SNetAssignTask( (info.type==ENTITY_box), info.name );
+  }
 
   snet_entity_t *t = SNetEntityCreate(
       worker,
