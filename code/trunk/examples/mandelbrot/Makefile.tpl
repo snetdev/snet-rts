@@ -60,6 +60,7 @@ boxes/lib$(SACTARGET)Mod.so: boxes/$(SACTARGET).sac \
 	$(SAC2C) $(TMAPIDS) $(S2CFLAGS) $(LIBDIRS) -o boxes boxes/$(SACTARGET).sac
 
 include/$(SACTARGET).h: boxes/lib$(SACTARGET)Mod.so 
+	mkdir -p include lib
 	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) -o $(SACTARGET) -Lboxes $(SACTARGET)
   
 boxes/lib$(SACFRAC)Mod.so: boxes/$(SACFRAC).sac
