@@ -1,16 +1,23 @@
 #!/bin/sh
 
-for dir in */; do
+if [ $# -gt 0 ]; then
+  TESTS=$@
+else
+  TESTS=(*/)
+  TESTS=("${TESTS[@]%/}")
+fi
+
+for dir in "${TESTS[@]}"; do
   if make -C $dir 2>/dev/null >/dev/null; then
-    for input in $dir*.xml; do
-      if [ -f $dir${dir%/} ]; then
-        if $dir${dir%/} <$input >out.bak; then
+    for input in $dir/*.xml; do
+      if [ -f $dir/$dir ]; then
+        if $dir/$dir <$input >out.bak; then
           if ! ./compare ${input%.xml} out.bak; then
-            echo "Results differ for $dir$dir with input $input"
+            echo "Results differ for $dir/$dir with input $input"
           fi
-          echo "OK: $dir$dir with input $input"
+          echo "OK: $dir/$dir with input $input"
         else
-          echo "Execution failed for $dir$dir with input $input"
+          echo "Execution failed for $dir/$dir with input $input"
         fi
         rm out.bak
       fi
