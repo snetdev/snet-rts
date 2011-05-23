@@ -16,6 +16,7 @@
 #define DEFAULT_MODE MODE_textual
 
 
+#if 0
 // used in SNetOut (depends on local variables!)
 #define ENTRYSUM( RECNUM, TENCNUM)\
                         RECNUM( HNDgetRecord( hnd)) +\
@@ -61,6 +62,7 @@ snet_handle_t *SNetOut( snet_handle_t *hnd, snet_record_t *rec)
   return( hnd);
 }
 
+#endif
 snet_handle_t *SNetOutRawArray( snet_handle_t *hnd, 
     int if_id, int variant_num, void **fields, int *tags, int *btags) 
 {
@@ -230,6 +232,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
   return hnd;
 }
 
+#if 0
 /**
  * Output Raw
  */
@@ -247,4 +250,4 @@ snet_handle_t *SNetOutRaw( snet_handle_t *hnd,
 
   return( h);
 }
-
+#endif

@@ -47,4 +47,4 @@ distrib      = nodist
 # Note that the variable names must coincide with the directory names above.
 #
 
-nodist = distribution.o
+nodist = distribution.o reference.o
