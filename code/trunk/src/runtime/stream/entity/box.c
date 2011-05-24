@@ -8,6 +8,11 @@
 
 #include "threading.h"
 
+//extern void SNetThreadingEventBoxStart(void);
+//extern void SNetThreadingEventBoxStop(void);
+
+
+
 #include "handle_p.h"
 #include "list.h"
 #include "distribution.h"
@@ -77,7 +82,9 @@ static void BoxTask(void *arg)
         SNetDebugTimeGetTime(&time_in);
 #endif /* SNET_DEBUG_COUNTERS */
 
+//        SNetThreadingEventBoxStart();
         (*barg->boxfun)( &hnd);
+//        SNetThreadingEventBoxStop();
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_out, NULL);
@@ -107,12 +114,6 @@ static void BoxTask(void *arg)
         }
         break;
 
-      case REC_collect:
-        assert(0);
-        /* if ignore, destroy at least ...*/
-        SNetRecDestroy( rec);
-        break;
-
       case REC_sort_end:
         /* forward the sort record */
         SNetStreamWrite( outstream, rec);
@@ -123,6 +124,12 @@ static void BoxTask(void *arg)
         terminate = true;
         break;
 
+      case REC_source:
+        /* ignore, destroy */
+        SNetRecDestroy( rec);
+        break;
+
+      case REC_collect:
       default:
         assert(0);
         /* if ignore, destroy at least ...*/

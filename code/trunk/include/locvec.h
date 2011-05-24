@@ -2,7 +2,6 @@
 #define _LOCVEC_H_
 
 
-#include <stdint.h>
 #include <stdio.h>
 #include "bool.h"
 
@@ -19,7 +18,10 @@ typedef enum {
   LOC_SYNC = 'Y'
 } snet_loctype_t;
 
-typedef uint64_t snet_locitem_t;
+
+//TODO leaf types
+
+typedef struct snet_locitem_t snet_locitem_t;
 
 typedef struct snet_locvec_t snet_locvec_t;
 
@@ -30,6 +32,8 @@ void SNetLocvecDestroy(snet_locvec_t *vec);
 
 snet_locvec_t *SNetLocvecCopy(snet_locvec_t *vec);
 
+bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v);
+bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v);
 
 
 /* for serial combinator */

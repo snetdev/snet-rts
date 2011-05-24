@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <assert.h>
 
@@ -12,17 +13,17 @@
 
 
 
-void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num);
-void SNetLocvecPop(snet_locvec_t *vec);
-int SNetLocvecToptype(snet_locvec_t *vec);
-void SNetLocvecTopinc(snet_locvec_t *vec);
-void SNetLocvecTopdec(snet_locvec_t *vec);
-int SNetLocvecTopval(snet_locvec_t *vec);
-bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v);
-bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v);
+static void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num);
+static void SNetLocvecPop(snet_locvec_t *vec);
+static int SNetLocvecToptype(snet_locvec_t *vec);
+static void SNetLocvecTopinc(snet_locvec_t *vec);
+static void SNetLocvecTopdec(snet_locvec_t *vec);
+static int SNetLocvecTopval(snet_locvec_t *vec);
 
 
-
+struct snet_locitem_t {
+  uint64_t word;
+};
 
 struct snet_locvec_t {
   int size;
@@ -57,7 +58,13 @@ snet_locvec_t *SNetLocvecCopy(snet_locvec_t *vec)
   return newvec;
 }
 
-void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num)
+
+
+/******************************************************************************
+ * Static helper functions
+ *****************************************************************************/
+
+static void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num)
 {
   if (vec->size == vec->capacity) {
     /* grow */
@@ -72,44 +79,45 @@ void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num)
 
   snet_locitem_t *item = &vec->arr[vec->size];
   /* pack item into a 64 bit integer */
-  *item = (num << 8) | type ;
+  item->word = (num << 8) | type ;
   vec->size++;
 }
 
 
-void SNetLocvecPop(snet_locvec_t *vec)
+static void SNetLocvecPop(snet_locvec_t *vec)
 {
   vec->size--;
 }
 
 
-int SNetLocvecToptype(snet_locvec_t *vec)
+static int SNetLocvecToptype(snet_locvec_t *vec)
 {
-  return (int)(vec->arr[vec->size-1] & 0xff);
+  return (int)(vec->arr[vec->size-1].word & 0xff);
 }
 
-int SNetLocvecTopval(snet_locvec_t *vec)
+static int SNetLocvecTopval(snet_locvec_t *vec)
 {
-  return (int)(vec->arr[vec->size-1] >> 8);
+  return (int)(vec->arr[vec->size-1].word >> 8);
 }
 
 
-void SNetLocvecTopinc(snet_locvec_t *vec)
-{
-  snet_locitem_t *item = &vec->arr[vec->size-1];
-  int num = (int)(*item >> 8);
-
-  *item = ((num+1) << 8) | (int)(*item & 0xff);
-}
-
-void SNetLocvecTopdec(snet_locvec_t *vec)
+static void SNetLocvecTopinc(snet_locvec_t *vec)
 {
   snet_locitem_t *item = &vec->arr[vec->size-1];
-  int num = (int)(*item >> 8);
+  int num = (int)(item->word >> 8);
 
-  *item = ((num-1) << 8) | (int)(*item & 0xff);
+  item->word = ((num+1) << 8) | (int)(item->word & 0xff);
 }
 
+static void SNetLocvecTopdec(snet_locvec_t *vec)
+{
+  snet_locitem_t *item = &vec->arr[vec->size-1];
+  int num = (int)(item->word >> 8);
+
+  item->word = ((num-1) << 8) | (int)(item->word & 0xff);
+}
+
+/*****************************************************************************/
 
 bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v)
 {
@@ -119,7 +127,7 @@ bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v)
   if (u->size != v->size) return false;
 
   for (i=0; i<u->size; i++) {
-    if (u->arr[i] != v->arr[i]) { return false; }
+    if (u->arr[i].word != v->arr[i].word) { return false; }
   }
   return true;
 }
@@ -132,11 +140,11 @@ bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v)
   if (u->size != v->size) return false;
 
   for (i=0; i<u->size-1; i++) {
-    if (u->arr[i] != v->arr[i]) { return false; }
+    if (u->arr[i].word != v->arr[i].word) { return false; }
   }
 
   i = u->size-1;
-  if ( (u->arr[i] & 0xff) != (v->arr[i] & 0xff) ) {
+  if ( (u->arr[i].word & 0xff) != (v->arr[i].word & 0xff) ) {
     return false;
   }
 
@@ -296,8 +304,8 @@ void SNetLocvecPrint(FILE *file, snet_locvec_t *vec)
   int i;
   for (i=0; i<vec->size; i++) {
     snet_locitem_t *item = &vec->arr[i];
-    snet_loctype_t type = ((int)*item) & 0xff;
-    int num = ((int)*item) >> 8;
+    snet_loctype_t type = ((int)item->word) & 0xff;
+    int num = ((int)item->word) >> 8;
     if (num >= 0) {
       fprintf(file, ":%c%d", type, num);
     } else {

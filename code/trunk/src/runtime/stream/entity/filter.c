@@ -193,6 +193,11 @@ static void FilterTask(void *arg)
         terminate = true;
         break;
 
+      case REC_source:
+        /* ignore, destroy */
+        SNetRecDestroy( in_rec);
+        break;
+
       default:
         SNetUtilDebugNotice("[Filter] Unknown control record destroyed (%d).\n",
                             SNetRecGetDescriptor( in_rec));
@@ -408,6 +413,11 @@ static void NameshiftTask(void *arg)
       case REC_terminate:
         SNetStreamWrite( outstream, rec);
         terminate = true;
+        break;
+
+      case REC_source:
+        /* ignore, destroy */
+        SNetRecDestroy( rec);
         break;
 
       default:

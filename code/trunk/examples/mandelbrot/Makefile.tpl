@@ -16,7 +16,7 @@ SLIB     = -lsnetmpi -lSAC4SNetMPI
 else
 SLIB     = -lsnet -lSAC4SNet 
 endif
-LIBS      = -lpthread $(SLIB) -lsnetutil
+LIBS      = -lpthread $(SLIB) -lsnetutil -ltblpel -ldistribnodist
 
 SACNAMES  = -DSACTYPE_SNet_SNet=23 -DSNetMain__$(TARGET)=main
 TMAPIDS   = -DCID=24 -DCPXID=20 -DDISPID=26
@@ -60,6 +60,7 @@ boxes/lib$(SACTARGET)Mod.so: boxes/$(SACTARGET).sac \
 	$(SAC2C) $(TMAPIDS) $(S2CFLAGS) $(LIBDIRS) -o boxes boxes/$(SACTARGET).sac
 
 include/$(SACTARGET).h: boxes/lib$(SACTARGET)Mod.so 
+	mkdir -p include lib
 	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) -o $(SACTARGET) -Lboxes $(SACTARGET)
   
 boxes/lib$(SACFRAC)Mod.so: boxes/$(SACFRAC).sac

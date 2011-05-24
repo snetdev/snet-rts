@@ -137,13 +137,6 @@ static void SplitBoxTask(void *arg)
         }
         break;
 
-      case REC_collect:
-        /* invalid control record */
-        assert( 0);
-        /* if to ignore, at least destroy it ...*/
-        SNetRecDestroy( rec);
-        break;
-
       case REC_sort_end:
         /* broadcast the sort record */
         SNetStreamIterReset( iter, &repos_set);
@@ -181,6 +174,13 @@ static void SplitBoxTask(void *arg)
         terminate = true;
         break;
 
+      case REC_source:
+        /* ignore, destroy */
+        SNetRecDestroy( rec);
+        break;
+
+      case REC_collect:
+        /* invalid control record */
       default:
         assert( 0);
         /* if ignore, at least destroy it */

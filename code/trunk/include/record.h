@@ -12,13 +12,15 @@ enum record_descr {
   REC_collect,
   REC_sort_end,
   REC_terminate,
-  REC_trigger_initialiser
+  REC_trigger_initialiser,
+  REC_source
 };
 
 enum record_mode {
   MODE_textual,
   MODE_binary,
 };
+
 
 /* macros for record datastructure */
 #define REC_DESCR( name) name->rec_descr
@@ -30,9 +32,11 @@ enum record_mode {
 #define SORT_E_REC( name, component) RECORD( name, sort_end_rec)->component
 #define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
 #define COLL_REC( name, component) RECORD( name, coll_rec)->component
+#define SOURCE_REC( name, component) RECORD( name, source_rec)->component
 
 #include "map.h"
 #include "bool.h"
+#include "locvec.h"
 
 typedef struct {
   snet_int_map_t *tags;
@@ -59,12 +63,18 @@ typedef struct {
   snet_stream_t *output;
 } coll_rec_t;
 
+typedef struct {
+  snet_locvec_t *loc;
+} source_rec_t;
+
+
 union record_types {
   data_rec_t *data_rec;
   sync_rec_t *sync_rec;
   coll_rec_t *coll_rec;
   sort_end_t *sort_end_rec;
   terminate_rec_t *terminate_rec;
+  source_rec_t *source_rec;
 };
 
 struct record {
@@ -121,4 +131,8 @@ snet_ref_t *SNetRecGetField( snet_record_t *rec, int id);
 snet_ref_t *SNetRecTakeField( snet_record_t *rec, int id);
 bool SNetRecHasField( snet_record_t *rec, int id);
 void SNetRecRenameField( snet_record_t *rec, int id, int newId);
+
+
+snet_locvec_t *SNetRecGetLocvec( snet_record_t *rec);
+
 #endif /* _RECORD_H_ */
