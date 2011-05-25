@@ -290,6 +290,11 @@ static void ParallelBoxTask(void *arg)
         /* note that no sort record needs to be appended */
         break;
 
+      case REC_source:
+        /* ignore, destroy */
+        SNetRecDestroy( rec);
+        break;
+
       default:
         SNetUtilDebugNotice("[PAR] Unknown control rec destroyed (%d).\n",
             SNetRecGetDescriptor( rec));

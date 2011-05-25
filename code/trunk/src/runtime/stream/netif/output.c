@@ -113,7 +113,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
       fprintf(hnd->file, "</record>");
       break;
     case REC_sync:
-      SNetUtilDebugFatal("REC_synch in output! This should not happen.");
+      SNetUtilDebugFatal("REC_sync in output! This should not happen.");
       break;
     case REC_collect:
       SNetUtilDebugFatal("REC_collect in output! This should not happen.");

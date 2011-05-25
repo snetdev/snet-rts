@@ -9,5 +9,5 @@ net synchro2 {
   net id connect [{inval} -> {inval}];
   box dec((state, inval) -> (state) | (outval));
 
-} connect (join .. (id | dec)) * {outval};
+} connect (join .. ([] | dec)) * {outval};
 

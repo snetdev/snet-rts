@@ -27,6 +27,22 @@ struct snet_stream_iter_t;
 static FILE *mapfile = NULL;
 static int mon_level = 0;
 
+/* monitoring user events */
+static int monevt_boxstart;
+static int monevt_boxstop;
+static int monevt_syncfirst;
+static int monevt_syncdone;
+
+
+void SNetThreadingEventBoxStart(void) {
+  SNetMonEventSignal(monevt_boxstart);
+}
+
+void SNetThreadingEventBoxStop(void) {
+  SNetMonEventSignal(monevt_boxstop);
+}
+
+
 
 static size_t SNetEntityStackSize(snet_entity_type_t type)
 {
@@ -116,6 +132,14 @@ int SNetThreadingInit(int argc, char **argv)
 
   SNetLpInit(&config);
 
+  /* register monitoring user events */
+  monevt_boxstart  = SNetMonEventRegister("box_start");
+  monevt_boxstop   = SNetMonEventRegister("box_stop");
+  monevt_syncfirst = SNetMonEventRegister("sync_first");
+  monevt_syncdone  = SNetMonEventRegister("sync_done");
+
+  SNetLpStart();
+
   return 0;
 }
 
@@ -173,6 +197,7 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
    */
 
   mon_flags = 0;
+  mon_flags |= SNET_MON_TASK_USREVT;
   switch(mon_level) {
     case 4: mon_flags |= SNET_MON_TASK_STREAMS;
     case 3: mon_flags |= SNET_MON_TASK_TIMES;
@@ -196,6 +221,9 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
     int tid = SNetEntityGetUID(t);
     (void) fprintf(mapfile, "%d: %s\n", tid, info.name);
   }
+
+//FIXME only for debugging purposes
+  //fflush(mapfile);
 
   SNetEntityRun(t);
   return 0;

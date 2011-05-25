@@ -7,6 +7,8 @@
 #include "map.h"
 #include "variant.h"
 
+
+
 /* ***************************************************************************/
 
 bool SNetRecPatternMatches(snet_variant_t *pat, snet_record_t *rec)
@@ -77,9 +79,11 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
       break;
     case REC_sync:
-      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
-      RECORD( rec, sync_rec) = SNetMemAlloc( sizeof( sync_rec_t));
-      SYNC_REC( rec, input) = va_arg( args, snet_stream_t *);
+      {
+        RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+        RECORD( rec, sync_rec) = SNetMemAlloc( sizeof( sync_rec_t));
+        SYNC_REC( rec, input) = va_arg( args, snet_stream_t *);
+      }
       break;
     case REC_collect:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
@@ -95,8 +99,13 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       SORT_E_REC( rec, level) = va_arg( args, int);
       SORT_E_REC( rec, num) = va_arg( args, int);
       break;
+    case REC_source:
+      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+      RECORD( rec, source_rec) = SNetMemAlloc( sizeof( source_rec_t));
+      SOURCE_REC( rec, loc) = SNetLocvecCopy(va_arg( args, snet_locvec_t*));
+      break;
     default:
-      SNetUtilDebugFatal("Unknown control record destription. [%d]", descr);
+      SNetUtilDebugFatal("Unknown control record description. [%d]", descr);
       break;
   }
   va_end( args);
@@ -149,7 +158,9 @@ void SNetRecDestroy( snet_record_t *rec)
       SNetMemFree( RECORD( rec, data_rec));
       break;
     case REC_sync:
-      SNetMemFree( RECORD( rec, sync_rec));
+      {
+        SNetMemFree( RECORD( rec, sync_rec));
+      }
       break;
     case REC_collect:
       SNetMemFree( RECORD( rec, coll_rec));
@@ -160,6 +171,10 @@ void SNetRecDestroy( snet_record_t *rec)
     case REC_terminate:
       break;
     case REC_trigger_initialiser:
+      break;
+    case REC_source:
+      SNetLocvecDestroy( SOURCE_REC( rec, loc));
+      SNetMemFree( RECORD( rec, source_rec));
       break;
     default:
       SNetUtilDebugFatal("Unknown record description, in SNetRecDestroy");
@@ -361,3 +376,15 @@ void SNetRecRenameField( snet_record_t *rec, int oldName, int newName)
 {
   SNetrefMapRename(DATA_REC( rec, fields), oldName, newName);
 }
+
+/*****************************************************************************/
+
+snet_locvec_t *SNetRecGetLocvec( snet_record_t *rec)
+{
+  if (REC_DESCR( rec) != REC_source) {
+    SNetUtilDebugFatal("Wrong type in SNetRecGetLocvec() (%d)", REC_DESCR(rec));
+  }
+  return SOURCE_REC( rec, loc);
+}
+
+

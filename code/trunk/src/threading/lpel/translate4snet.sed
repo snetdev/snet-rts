@@ -3,6 +3,7 @@
 s/lpel_task/snet_entity/g
 s/LpelTask/SNetEntity/g
 s/LpelInit/SNetLpInit/g
+s/LpelStart/SNetLpStart/g
 s/LpelStop/SNetLpStop/g
 s/LpelCleanup/SNetLpCleanup/g
 s/lpel_/snet_/g

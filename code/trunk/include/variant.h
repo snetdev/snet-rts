@@ -20,6 +20,8 @@ snet_variant_t *SNetVariantCreateEmpty();
 snet_variant_t *SNetVariantCopy( snet_variant_t *var);
 void SNetVariantDestroy( snet_variant_t *var);
 
+bool SNetVariantIsEmpty( snet_variant_t *var);
+
 void SNetVariantAddTag( snet_variant_t *var, int name);
 void SNetVariantRemoveTag( snet_variant_t *var, int name);
 bool SNetVariantHasTag( snet_variant_t *var, int name);

@@ -189,6 +189,9 @@ void CollectorTask(void *arg)
             do_next = true;
             break;
 
+
+          case REC_source:
+            /* no REC_source at a collector! */
           default:
             assert(0);
             /* if ignore, at least destroy ... */

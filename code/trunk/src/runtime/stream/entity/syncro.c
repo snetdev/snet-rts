@@ -87,6 +87,7 @@ static void SyncBoxTask(void *arg)
   snet_record_t **storage;
   snet_record_t *rec;
   snet_variant_t *pattern;
+  snet_locvec_t *instream_source = NULL;
 
   instream  = SNetStreamOpen(sarg->input,  'r');
   outstream = SNetStreamOpen(sarg->output, 'w');
@@ -126,12 +127,23 @@ static void SyncBoxTask(void *arg)
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
             SNetStreamWrite( outstream, merge( storage, sarg->patterns));
+
+            if (instream_source != NULL) {
+              /* predecessor made known its location,
+               * presumably for garbage collection, so we will forward it
+               * to let our successor know
+               */
+              SNetStreamWrite( outstream,
+                  SNetRecCreate(REC_source, instream_source));
+            }
+            /* follow by a sync record */
             SNetStreamWrite( outstream, SNetRecCreate(REC_sync, sarg->input));
 
             /* the receiver of REC_sync will destroy the outstream */
             SNetStreamClose( outstream, false);
             /* instream has been sent to next entity, do not destroy  */
             SNetStreamClose( instream, false);
+
 
             terminate = true;
           }
@@ -140,16 +152,10 @@ static void SyncBoxTask(void *arg)
 
       case REC_sync:
         {
-          snet_stream_t *newstream = SNetRecGetStream( rec);
-          SNetStreamReplace( instream, newstream);
+          sarg->input = SNetRecGetStream( rec);
+          SNetStreamReplace( instream, sarg->input);
           SNetRecDestroy( rec);
         }
-        break;
-
-      case REC_collect:
-        /* invalid record */
-        assert(0);
-        SNetRecDestroy( rec);
         break;
 
       case REC_sort_end:
@@ -164,12 +170,28 @@ static void SyncBoxTask(void *arg)
         SNetStreamClose( instream, true);
         break;
 
+      case REC_source:
+        /* Get (a copy of) the location */
+        if (instream_source != NULL) {
+          SNetLocvecDestroy(instream_source);
+        }
+        instream_source = SNetLocvecCopy( SNetRecGetLocvec( rec));
+        SNetRecDestroy( rec);
+        break;
+
+      case REC_collect:
+        /* invalid record */
       default:
         assert(0);
         /* if ignore, destroy at least ... */
         SNetRecDestroy( rec);
     }
   } /* MAIN LOOP END */
+
+  /* free any stored location vector */
+  if (instream_source != NULL) {
+    SNetLocvecDestroy(instream_source);
+  }
 
   SNetMemFree(storage);
 
