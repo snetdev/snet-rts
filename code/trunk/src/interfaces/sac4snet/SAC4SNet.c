@@ -66,10 +66,10 @@ extern void *SACARGcopy( void*);
 
 struct container {
   struct handle *hnd;
-  int variant;
-  
+  snet_variant_t *variant;
+
   int *counter;
-  void **fields;
+  snet_ref_t **fields;
   int *tags;
   int *btags;
 };
@@ -129,30 +129,30 @@ void SAC4SNet_outCompound( sac4snet_container_t *c)
   SNetOutRawArray( c->hnd, my_interface_id, c->variant, c->fields, c->tags, c->btags);
 }
 
-void SAC4SNet_out( void *hnd, int variant, ...)
+void SAC4SNet_out( void *hnd, int variant_num, ...)
 {
   int i;
-  void **fields;
+  snet_ref_t **fields;
   int *tags, *btags;
-  snet_variant_t *v;
+  snet_variant_t *variant;
   va_list args;
 
 
-  v = SNetVariantListGet( SNetHndGetVariants( (struct handle *) hnd), variant -1);
-  fields = SNetMemAlloc( SNetVariantNumFields( v) * sizeof( void*));
-  tags = SNetMemAlloc( SNetVariantNumTags( v) * sizeof( int));
-  btags = SNetMemAlloc( SNetVariantNumBTags( v) * sizeof( int));
+  variant = SNetVariantListGet( SNetHndGetVariants( (struct handle *) hnd), variant_num -1);
+  fields = SNetMemAlloc( SNetVariantNumFields( variant) * sizeof( snet_ref_t*));
+  tags = SNetMemAlloc( SNetVariantNumTags( variant) * sizeof( int));
+  btags = SNetMemAlloc( SNetVariantNumBTags( variant) * sizeof( int));
 
-  va_start( args, variant);
-  for (i = 0; i < SNetVariantNumFields(v); i++) {
+  va_start( args, variant_num);
+  for (i = 0; i < SNetVariantNumFields(variant); i++) {
     fields[i] =  SACARGnewReference( va_arg( args, SACarg*));
   }
 
-  for (i = 0; i < SNetVariantNumTags(v); i++) {
+  for (i = 0; i < SNetVariantNumTags(variant); i++) {
     tags[i] =  va_arg( args, int);
   }
 
-  for (i = 0; i < SNetVariantNumBTags(v); i++) {
+  for (i = 0; i < SNetVariantNumBTags(variant); i++) {
     btags[i] =  va_arg( args, int);
   }
   va_end( args);
@@ -315,27 +315,23 @@ static void *SAC4SNetDataDeserialise( FILE *file)
 
 sac4snet_container_t *SAC4SNet_containerCreate( struct handle *hnd, int var_num) 
 {
-  
   int i;
   sac4snet_container_t *c;
-  snet_variant_t *v;
-
-
-  v = SNetVariantListGet( SNetHndGetVariants( (struct handle *)hnd), var_num - 1);
-
   c = SNetMemAlloc( sizeof( sac4snet_container_t));
+
+  c->variant = SNetVariantListGet( SNetHndGetVariants( (struct handle *)hnd), var_num - 1);
+
   c->counter = SNetMemAlloc( 3 * sizeof( int));
-  c->fields = SNetMemAlloc( SNetVariantNumFields( v) * sizeof( void*));
-  c->tags = SNetMemAlloc( SNetVariantNumTags( v) * sizeof( int));
-  c->btags = SNetMemAlloc( SNetVariantNumBTags( v) * sizeof( int));
+  c->fields = SNetMemAlloc( SNetVariantNumFields( c->variant) * sizeof( void*));
+  c->tags = SNetMemAlloc( SNetVariantNumTags( c->variant) * sizeof( int));
+  c->btags = SNetMemAlloc( SNetVariantNumBTags( c->variant) * sizeof( int));
   c->hnd = hnd;
-  c->variant = var_num;
 
   for( i=0; i<3; i++) {
     c->counter[i] = 0;
   }
 
-  return( c);
+  return c;
 }
 
 

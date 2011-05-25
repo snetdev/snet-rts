@@ -33,10 +33,10 @@ static int interface_id;
 /* Container for returning the result. */
 struct container {
   struct handle *hnd;
-  int variant;
+  snet_variant_t *variant;
 
   int *counter;
-  void **fields;
+  snet_ref_t **fields;
   int *tags;
   int *btags;
 };
@@ -837,28 +837,29 @@ c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant)
 {
   int i;
   c4snet_container_t *c;
-  snet_variant_t *v;
 
   if(hnd == NULL) {
     return 0;
   }
-
-  v = SNetVariantListGet( SNetHndGetVariants( (struct handle *)hnd), variant - 1);
+  //FIXME: diagnostics for non-existent variant
 
   c = (c4snet_container_t *)SNetMemAlloc( sizeof( c4snet_container_t));
-  c->counter = (int *)SNetMemAlloc( 3 * sizeof( int));
+  //variant - 1: Lists are zero indexed, but existing S-Net code defines
+  //variants as 1-indexed. Go backwards compatibility!
+  c->variant = SNetVariantListGet( SNetHndGetVariants((struct handle *) hnd), variant - 1);
 
-  c->fields = (void **)SNetMemAlloc( SNetVariantNumFields( v) * sizeof( void*));
-  c->tags = (int *)SNetMemAlloc( SNetVariantNumTags( v) * sizeof( int));
-  c->btags = (int *)SNetMemAlloc( SNetVariantNumBTags( v) * sizeof( int));
-  c->hnd = (struct handle *)hnd;
-  c->variant = variant;
+  c->counter = SNetMemAlloc( 3 * sizeof( int));
+
+  c->fields = SNetMemAlloc( SNetVariantNumFields( c->variant) * sizeof(snet_ref_t*));
+  c->tags = SNetMemAlloc( SNetVariantNumTags( c->variant) * sizeof( int));
+  c->btags = SNetMemAlloc( SNetVariantNumBTags( c->variant) * sizeof( int));
+  c->hnd = hnd;
 
   for( i=0; i<3; i++) {
     c->counter[i] = 0;
   }
 
-  return( c);
+  return c;
 }
 
 
@@ -893,7 +894,7 @@ c4snet_container_t *C4SNetContainerSetBTag(c4snet_container_t *c, int value)
 void C4SNetContainerOut(c4snet_container_t *c)
 {
   SNetOutRawArray( c->hnd, interface_id, c->variant, c->fields, c->tags, c->btags);
-  
+
   SNetMemFree(c->counter);
   SNetMemFree(c);
 }
