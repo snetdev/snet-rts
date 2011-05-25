@@ -19,7 +19,7 @@ snet_variant_t *SNetVariantCreate( snet_int_list_t *fields,
   return variant;
 }
 
-snet_variant_t *SNetVariantCreateEmpty()
+snet_variant_t *SNetVariantCreateEmpty(void)
 {
   snet_variant_t *variant = SNetMemAlloc(sizeof(snet_variant_t));
 
@@ -37,12 +37,21 @@ snet_variant_t *SNetVariantCopy( snet_variant_t *var)
                             SNetIntListCopy(var->btags));
 }
 
+
 void SNetVariantDestroy( snet_variant_t *var)
 {
   SNetIntListDestroy(var->tags);
   SNetIntListDestroy(var->btags);
   SNetIntListDestroy(var->fields);
   SNetMemFree(var);
+}
+
+
+bool SNetVariantIsEmpty( snet_variant_t *var)
+{
+  return ( SNetIntListLength(var->tags) == 0 &&
+      SNetIntListLength(var->btags) == 0 &&
+      SNetIntListLength(var->fields) == 0 );
 }
 
 
