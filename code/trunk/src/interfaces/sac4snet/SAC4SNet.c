@@ -145,7 +145,7 @@ void SAC4SNet_out( void *hnd, int variant_num, ...)
 
   va_start( args, variant_num);
   for (i = 0; i < SNetVariantNumFields(variant); i++) {
-    fields[i] =  SACARGnewReference( va_arg( args, SACarg*));
+    fields[i] =  (snet_ref_t*)SACARGnewReference( va_arg( args, SACarg*));
   }
 
   for (i = 0; i < SNetVariantNumTags(variant); i++) {
