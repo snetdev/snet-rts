@@ -32,12 +32,16 @@
 #include "threading.h"
 #include "distribution.h"
 
-/* ------------------------------------------------------------------------- */
-/*  SNetSync                                                                 */
-/* ------------------------------------------------------------------------- */
 
-// Destroys storage including all records
-static snet_record_t *merge( snet_record_t **storage,
+/*****************************************************************************/
+/* HELPER FUNCTIONS                                                          */
+/*****************************************************************************/
+
+/*
+ * Merges the other records from the storage into the first pattern record.
+ * After that, all (but the first) records are destroyed from the storage.
+ */
+static snet_record_t *MergeFromStorage( snet_record_t **storage,
                              snet_variant_list_t *patterns)
 {
   int i, name;
@@ -46,26 +50,29 @@ static snet_record_t *merge( snet_record_t **storage,
 
   LIST_ENUMERATE(patterns, pattern, i)
     if (i > 0) {
+      /*
+       * Overwriting inherited fields/tags (of the first record).
+       * One could avoid overwriting with
+       * "if (!SNetRecHasXXX( result, name)) { ... }"
+       */
       VARIANT_FOR_EACH_FIELD(pattern, name)
-        if (!SNetRecHasField( result, name)) {
-          SNetRecSetField(result, name, SNetRecTakeField(storage[i], name));
-        }
+        SNetRecSetField(result, name, SNetRecTakeField(storage[i], name));
       END_FOR
 
       VARIANT_FOR_EACH_TAG(pattern, name)
-        if (!SNetRecHasTag( result, name)) {
-          SNetRecSetTag( result, name, SNetRecGetTag( storage[i], name));
-        }
+        SNetRecSetTag( result, name, SNetRecGetTag( storage[i], name));
       END_FOR
     }
+    /* destroy the record */
+    SNetRecDestroy(storage[i]);
   END_ENUMERATE
-
-  for (i = 1; i < SNetVariantListLength( patterns); i++) {
-    SNetRecDestroy( storage[i]);
-  }
 
   return result;
 }
+
+/*****************************************************************************/
+/* SYNCHRO TASK                                                              */
+/*****************************************************************************/
 
 typedef struct {
   snet_stream_t *input, *output;
@@ -126,7 +133,7 @@ static void SyncBoxTask(void *arg)
         } else {
           match_cnt += new_matches;
           if(match_cnt == num_patterns) {
-            SNetStreamWrite( outstream, merge( storage, sarg->patterns));
+            SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
 
             if (instream_source != NULL) {
               /* predecessor made known its location,
@@ -201,6 +208,10 @@ static void SyncBoxTask(void *arg)
 }
 
 
+/*****************************************************************************/
+/* CREATION FUNCTION                                                         */
+/*****************************************************************************/
+
 
 /**
  * Synchro-Box creation function
@@ -232,3 +243,4 @@ snet_stream_t *SNetSync( snet_stream_t *input,
 
   return output;
 }
+

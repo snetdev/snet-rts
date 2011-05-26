@@ -159,31 +159,31 @@ static void FilterTask(void *arg)
 
               LIST_FOR_EACH(farg->filter_instructions[i], instr_list)
                 out_rec = SNetRecCreate( REC_data);
-              SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
-              SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
+                SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
+                SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
 
-              LIST_FOR_EACH(instr_list, instr)
-                switch (instr->opcode) {
-                  case snet_tag:
-                    SNetRecSetTag( out_rec, instr->name,
-                        SNetEevaluateInt( instr->expr, in_rec));
-                    break;
-                  case snet_btag:
-                    SNetRecSetBTag( out_rec, instr->name,
-                        SNetEevaluateInt( instr->expr, in_rec));
-                    break;
-                  case snet_field:
-                    SNetRecSetField(out_rec, instr->newName,
-                        SNetRecGetField(in_rec, instr->name));
-                    break;
-                  case create_record: /* NOP */
-                    break;
-                  default: assert(0);
-                }
-              END_FOR
+                LIST_FOR_EACH(instr_list, instr)
+                  switch (instr->opcode) {
+                    case snet_tag:
+                      SNetRecSetTag( out_rec, instr->name,
+                          SNetEevaluateInt( instr->expr, in_rec));
+                      break;
+                    case snet_btag:
+                      SNetRecSetBTag( out_rec, instr->name,
+                          SNetEevaluateInt( instr->expr, in_rec));
+                      break;
+                    case snet_field:
+                      SNetRecSetField(out_rec, instr->newName,
+                          SNetRecGetField(in_rec, instr->name));
+                      break;
+                    case create_record: /* NOP */
+                      break;
+                    default: assert(0);
+                  }
+                END_FOR
 
                 SNetRecFlowInherit( farg->input_variant, in_rec, out_rec);
-              SNetStreamWrite( outstream, out_rec);
+                SNetStreamWrite( outstream, out_rec);
               END_FOR /* forall instruction lists */
             } /* if a guard is true first time */
           END_ENUMERATE
