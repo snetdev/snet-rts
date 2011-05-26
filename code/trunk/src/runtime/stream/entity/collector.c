@@ -191,7 +191,10 @@ void CollectorTask(void *arg)
 
 
           case REC_source:
-            /* no REC_source at a collector! */
+            /* ignore, destroy */
+            SNetRecDestroy( rec);
+            break;
+
           default:
             assert(0);
             /* if ignore, at least destroy ... */
