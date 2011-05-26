@@ -62,9 +62,10 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
       VARIANT_FOR_EACH_TAG(pattern, name)
         SNetRecSetTag( result, name, SNetRecGetTag( storage[i], name));
       END_FOR
+
+      /* destroy the record */
+      SNetRecDestroy(storage[i]);
     }
-    /* destroy the record */
-    SNetRecDestroy(storage[i]);
   END_ENUMERATE
 
   return result;

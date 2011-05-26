@@ -350,49 +350,31 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 
   instream = SNetRouteUpdate(info, instream, location);
   if(location == SNetNodeLocation) {
-    transits = SNetMemAlloc( num * sizeof( snet_stream_t*));
-    for (i=0; i<num; i++) {
-      transits[i] = SNetStreamCreate(0);
-    }
-
-    /* IMPORTANT: we need to preserve a left-to-right order of
-     * entity creation, to assure the correct propagation
-     * of stream source information in locvec.
-     *
-     * Hence also the copying of transits - the ParallelTask
-     * will free parg->outputs as soon as it has opened the
-     * streams contained therein, leading to a race condition
-     * and making it impossible to use transits to build the branches.
-     */
-
-    /* create parallel */
-    parg = SNetMemAlloc( sizeof(parallel_arg_t));
-    parg->input   = instream;
-    /* copy */
-    parg->outputs = SNetMemAlloc( num * sizeof( snet_stream_t*));
-    for (i=0; i<num; i++) {
-      parg->outputs[i] = transits[i];
-    }
-    parg->variant_lists = variant_lists;
-    parg->is_det = is_det;
-
-    SNetEntitySpawn( ENTITY_PARALLEL, ParallelBoxTask, (void*)parg );
-
-
-    /* create all branches */
+    transits    = SNetMemAlloc( num * sizeof( snet_stream_t*));
     collstreams = SNetMemAlloc( num * sizeof( snet_stream_t*));
+
+    /* create branches */
     LIST_ENUMERATE(variant_lists, variants, i)
+      transits[i] = SNetStreamCreate(0);
       SNetLocvecParallelNext(locvec);
       fun = funs[i];
       collstreams[i] = (*fun)(transits[i], info, location);
     END_ENUMERATE
 
 
+    /* create parallel */
+    parg = SNetMemAlloc( sizeof(parallel_arg_t));
+    parg->input   = instream;
+    /* copy */
+    parg->outputs = transits;
+    parg->variant_lists = variant_lists;
+    parg->is_det = is_det;
+
+    SNetEntitySpawn( ENTITY_PARALLEL, ParallelBoxTask, (void*)parg );
+
+
     /* create collector with collstreams */
     outstream = CollectorCreateStatic(num, collstreams, info);
-
-    /* free transits array */
-    SNetMemFree(transits);
 
     /* free collstreams array */
     SNetMemFree(collstreams);
