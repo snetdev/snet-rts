@@ -1,0 +1,109 @@
+<?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="SAC4SNet">
+:::SACFIBRE: float 1 2  :::
+[ 0,1:
+    1.800000e+01
+    1.800000e+01
+]
+</field></record><?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="SAC4SNet">
+:::SACFIBRE: float 1 2  :::
+[ 0,1:
+    1.900000e+01
+    1.900000e+01
+]
+</field></record><?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="SAC4SNet">
+:::SACFIBRE: float 1 2  :::
+[ 0,1:
+    2.000000e+01
+    2.000000e+01
+]
+</field></record><?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="SAC4SNet">
+:::SACFIBRE: int 3 4 1 1  :::
+[ 0,3:
+ [ 0,0:
+  [ 0,0:
+   18
+  ]
+ ]
+ [ 0,0:
+  [ 0,0:
+   18
+  ]
+ ]
+ [ 0,0:
+  [ 0,0:
+   18
+  ]
+ ]
+ [ 0,0:
+  [ 0,0:
+   18
+  ]
+ ]
+]
+</field></record><?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="SAC4SNet">
+:::SACFIBRE: int 3 4 1 1  :::
+[ 0,3:
+ [ 0,0:
+  [ 0,0:
+   19
+  ]
+ ]
+ [ 0,0:
+  [ 0,0:
+   19
+  ]
+ ]
+ [ 0,0:
+  [ 0,0:
+   19
+  ]
+ ]
+ [ 0,0:
+  [ 0,0:
+   19
+  ]
+ ]
+]
+</field></record><?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="SAC4SNet">
+:::SACFIBRE: int 3 4 1 1  :::
+[ 0,3:
+ [ 0,0:
+  [ 0,0:
+   20
+  ]
+ ]
+ [ 0,0:
+  [ 0,0:
+   20
+  ]
+ ]
+ [ 0,0:
+  [ 0,0:
+   20
+  ]
+ ]
+ [ 0,0:
+  [ 0,0:
+   20
+  ]
+ ]
+]
+</field></record><?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="SAC4SNet">
+:::SACFIBRE: double 1 2  :::
+[ 0,1:
+    1.800000e+01
+    1.800000e+01
+]
+</field></record><?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="SAC4SNet">
+:::SACFIBRE: double 1 2  :::
+[ 0,1:
+    1.900000e+01
+    1.900000e+01
+]
+</field></record><?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="SAC4SNet">
+:::SACFIBRE: double 1 2  :::
+[ 0,1:
+    2.000000e+01
+    2.000000e+01
+]
+</field></record><?xml version="1.0" ?><record type="terminate" />
