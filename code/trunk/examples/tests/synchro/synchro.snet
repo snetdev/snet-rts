@@ -1,10 +1,9 @@
 <metadata>
-  <boxdefault>
+  <default>
     <interface value="C4SNet"/>
-  </boxdefault>
+  </default>
 </metadata>
- 
 
-net synchro {
-  box dec((A,B) -> (A,B));
-} connect [|{A},{B}|]*{A,B} .. dec;
+
+net synchro
+connect [|{A},{B}|]*{A,B};
