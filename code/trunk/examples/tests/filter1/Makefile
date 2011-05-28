@@ -1,6 +1,6 @@
 include ../paths.mkf
 
-TARGET = filter2
-BOXES  = dec.o
+TARGET = filter1
+BOXES  =
 
 include ../rules.mkf
