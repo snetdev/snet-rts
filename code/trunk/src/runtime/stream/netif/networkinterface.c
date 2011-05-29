@@ -242,6 +242,11 @@ int SNetInRun(int argc, char **argv,
 
   /* Actual SNet network interface main: */
 
+  /* check for number of interfaces */
+  if (0 == number_of_interfaces) {
+    SNetUtilDebugFatal("No language interfaces were specified by the source program!");
+  }
+
   labels     = SNetInLabelInit(static_labels, number_of_labels);
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
   SNetDistribInit(argc, argv);

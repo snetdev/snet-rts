@@ -1,0 +1,8 @@
+<metadata>
+  <default>
+    <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+net filter2
+connect [{A,<T>} -> {<T>,A}];

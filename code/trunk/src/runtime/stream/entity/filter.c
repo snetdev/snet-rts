@@ -16,6 +16,15 @@
 /* FILTER INSTRUCTIONS                                                       */
 /*****************************************************************************/
 
+
+struct filter_instr {
+  snet_filter_opcode_t opcode;
+  int name, newName;
+  snet_expr_t *expr;
+};
+
+
+
 snet_filter_instr_t *SNetCreateFilterInstruction( snet_filter_opcode_t opcode, ...)
 {
   va_list args;
@@ -84,6 +93,12 @@ static void FilterArgsDestroy( snet_variant_t *input_variant,
 }
 
 
+
+/**
+ * Check from the creation function parameters
+ * if the filter is a pure bypass, i.e. []
+ * TODO also consider [ A -> A ] as bypass
+ */
 static bool FilterIsBypass(
     snet_variant_t *input_variant,
     snet_expr_list_t *guard_exprs,
@@ -91,12 +106,23 @@ static bool FilterIsBypass(
 {
   snet_filter_instr_list_t *instr_list;
 
+
+  /*
+   * TODO
+   * Guards: only true (single guard) => only instr_lists[0]
+   * Length of instr_lists[0] == 1 (i.e. single output record)
+   */
   if ( !SNetVariantIsEmpty(input_variant) ||
       SNetExprListLength( guard_exprs) != 1 ||
       SNetFilterInstrListListLength(instr_lists[0]) != 1) {
     return false;
   }
 
+  /* TODO
+   * - instr_list must resemble creation of a record identical to the
+   *   input record (input_variant)
+   * - instructions for fields/(b)tags of form x = x
+   */
   instr_list = SNetFilterInstrListListGet(instr_lists[0], 0);
   if ( SNetFilterInstrListLength(instr_list) != 1 ||
       (SNetFilterInstrListGet(instr_list, 0))->opcode != create_record) {

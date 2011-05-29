@@ -382,7 +382,8 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      SNetRecDestroy(current.record);
 		      current.record = NULL;
 		      current.interface = INTERFACE_UNKNOWN;
-		      yyerror("Error encountered while parsing a record. Record discarded (2)!");
+		      //yyerror("Error encountered while parsing a record. Record discarded (2)!");
+		      yyerror("Error encountered while parsing a record: Unknown interface! Record discarded.");
 		      parser.terminate = SNET_PARSE_CONTINUE;
 		    } else {
                       /* write record to stream */
