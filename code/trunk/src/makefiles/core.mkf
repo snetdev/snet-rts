@@ -372,6 +372,7 @@ makesubdir.prod: $(TARGETDIRS_PROD)
          fi
 	@$(ECHO) "  Generating header file from XML specification:  $(notdir $@)"
 	$(HIDE)$(XSLTENGINE) $< $(XML_DIR)/ast.xml >$@
+	@printf "\n" >> $@
 
 %.c: %.c.xsl $(XML_DIR)/ast.xml $(XML_COMMONS) 
 	@if [ ! -f .make_track -o "$(dir $*)" != "`cat .make_track`" ] ; \
@@ -381,6 +382,7 @@ makesubdir.prod: $(TARGETDIRS_PROD)
          fi
 	@$(ECHO) "  Generating source code from XML specification:  $(notdir $@)"
 	$(HIDE)$(XSLTENGINE) $< $(XML_DIR)/ast.xml >$@
+	@printf "\n" >> $@
 
 
 %.lex.c: %.l 

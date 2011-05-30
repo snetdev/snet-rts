@@ -93,7 +93,7 @@ AC_PROG_GCC_TRADITIONAL
 
 
 dnl search for bison, byacc or yacc
-AC_PROG_YACC()
+AC_PROG_YACC
 AC_CHECK_PROG(HAVE_YACC, $YACC, yes, no)
 if [[ "$HAVE_YACC" = "no" ]]; then
        AC_MSG_ERROR(cannot find bison/yacc)
@@ -124,18 +124,18 @@ if [ test "$YACC" != "yacc" ]; then
   rm -rf .ac_yacc_test
 fi
 dnl search for flex or lex
-AC_PROG_LEX()
+AC_PROG_LEX
 AC_CHECK_PROGS(LEX, flex lex, no)
-if [[ "$LEX" == "no" ]]; then
+if test x"$LEX" = x"no" ; then
        AC_MSG_ERROR(cannot find flex/lex)
 fi
 
 
 
 dnl search for xlst engine
-AC_CHECK_PROGS(XSLT, [xsltproc sabcmd], [!fail])
+AC_CHECK_PROGS(XSLT, [xsltproc sabcmd])
 
-if [ test "$XSLT" = "!fail" ]; then
+if test x"$XSLT" = xno; then
   AC_MSG_ERROR( [Cannot find a usable xslt processor.])
 fi
 
@@ -147,19 +147,28 @@ dnl check for mkdtemp
 AC_CHECK_FUNCS(mkdtemp)
 
 dnl search for pthread.h
-AC_CHECK_HEADER(pthread.h,[
+AC_ARG_ENABLE([mt], [AC_HELP_STRING([--disable-mt], [disable multi threading (default is try to enable)])], [], [enable_mt=yes])
+if test x$enable_mt = xyes; then
+ AX_PTHREAD
+ if test x$ax_pthread_ok = xno; then
+     enable_mt=no
+     AC_MSG_WARN([pthreads not available, disabling MT])
+ fi
+fi
+if test x$enable_mt = xyes; then
+   AC_DEFINE([HAVE_PTHREAD_H], [1], [set to 1 if pthreads are available])
+   DISABLE_MT=no
+   LIBS="$LIBS $PTHREAD_LIBS"
+   CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+else
+   DISABLE_MT=yes
+fi
+AC_SUBST([DISABLE_MT])
 
-dnl if found, enable multi threading
-AC_DEFINE(HAVE_PTHREAD_H, 1, set to 1 if you have the <pthread.h> header file)
-AC_SUBST(DISABLE_MT, no)
+if test x$enable_mt = xyes; then
+   AC_CHECK_FUNCS(pthread_setaffinity_np)
+fi
 
-],[
-
-dnl otherwise disable mt
-AC_DEFINE(DISABLE_MT, 1, set to 1 to disable multi threading)
-AC_SUBST(DISABLE_MT, yes)
-
-])
 
 dnl check whether to link math library
 AC_SEARCH_LIBS(sqrt, m)

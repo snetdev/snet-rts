@@ -3,9 +3,6 @@
 /* set to the architecture */
 #undef ARCH
 
-/* set to 1 to disable multi threading */
-#undef DISABLE_MT
-
 /* Define to 1 if you have the declaration of `pthread_getaffinity_np', and to
    0 if you don't. */
 #undef HAVE_DECL_PTHREAD_GETAFFINITY_NP
@@ -26,8 +23,14 @@
 /* Define to 1 if you have the `mkdtemp' function. */
 #undef HAVE_MKDTEMP
 
-/* set to 1 if you have the <pthread.h> header file */
+/* Define if you have POSIX threads libraries and header files. */
+#undef HAVE_PTHREAD
+
+/* set to 1 if pthreads are available */
 #undef HAVE_PTHREAD_H
+
+/* Define to 1 if you have the `pthread_setaffinity_np' function. */
+#undef HAVE_PTHREAD_SETAFFINITY_NP
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -82,6 +85,10 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Define to necessary symbol if this constant uses a non-standard name on
+   your system. */
+#undef PTHREAD_CREATE_JOINABLE
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
