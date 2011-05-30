@@ -694,6 +694,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+enable_mt
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1316,6 +1317,12 @@ if test -n "$ac_init_help"; then
      short | recursive ) echo "Configuration of SNet dev:";;
    esac
   cat <<\_ACEOF
+
+Optional Features:
+  --disable-option-checking  ignore unrecognized --enable/--with options
+  --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
+  --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --disable-mt            disable multi threading (default is try to enable)
 
 Some influential environment variables:
   CC          C compiler command
@@ -4649,7 +4656,7 @@ fi
 done
 test -n "$LEX" || LEX="no"
 
-if [ "$LEX" == "no" ]; then
+if test x"$LEX" = x"no" ; then
        as_fn_error "cannot find flex/lex" "$LINENO" 5
 fi
 
@@ -4696,10 +4703,9 @@ fi
 
   test -n "$XSLT" && break
 done
-test -n "$XSLT" || XSLT="!fail"
 
 
-if  test "$XSLT" = "!fail" ; then
+if test x"$XSLT" = xno; then
   as_fn_error "Cannot find a usable xslt processor." "$LINENO" 5
 fi
 
@@ -4729,29 +4735,46 @@ fi
 done
 
 
-ac_fn_c_check_header_mongrel "$LINENO" "pthread.h" "ac_cv_header_pthread_h" "$ac_includes_default"
-if test "x$ac_cv_header_pthread_h" = x""yes; then :
+# Check whether --enable-mt was given.
+if test "${enable_mt+set}" = set; then :
+  enableval=$enable_mt;
+else
+  enable_mt=yes
+fi
 
-
+if test x$enable_mt = xyes; then
+ AX_PTHREAD
+ if test x$ax_pthread_ok = xno; then
+     enable_mt=no
+     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pthreads not available, disabling MT" >&5
+$as_echo "$as_me: WARNING: pthreads not available, disabling MT" >&2;}
+ fi
+fi
+if test x$enable_mt = xyes; then
 
 $as_echo "#define HAVE_PTHREAD_H 1" >>confdefs.h
 
-DISABLE_MT=no
-
-
-
+   DISABLE_MT=no
+   LIBS="$LIBS $PTHREAD_LIBS"
+   CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 else
-
-
-
-$as_echo "#define DISABLE_MT 1" >>confdefs.h
-
-DISABLE_MT=yes
-
-
-
+   DISABLE_MT=yes
 fi
 
+
+if test x$enable_mt = xyes; then
+   for ac_func in pthread_setaffinity_np
+do :
+  ac_fn_c_check_func "$LINENO" "pthread_setaffinity_np" "ac_cv_func_pthread_setaffinity_np"
+if test "x$ac_cv_func_pthread_setaffinity_np" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_PTHREAD_SETAFFINITY_NP 1
+_ACEOF
+
+fi
+done
+
+fi
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing sqrt" >&5
