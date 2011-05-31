@@ -43,13 +43,13 @@ void SNetRecFlowInherit( snet_variant_t *pat, snet_record_t *in_rec,
   int name, val;
   snet_ref_t *ref;
 
-  FOR_EACH_FIELD(in_rec, name, ref)
+  RECORD_FOR_EACH_FIELD(in_rec, name, ref)
     if (!SNetVariantHasField( pat, name)) {
       SNetRecSetField( out_rec, name, ref);
     }
   END_FOR
 
-  FOR_EACH_TAG(in_rec, name, val)
+  RECORD_FOR_EACH_TAG(in_rec, name, val)
     if (!SNetVariantHasTag( pat, name)) {
       SNetRecSetTag( out_rec, name, val);
     }

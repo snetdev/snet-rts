@@ -88,7 +88,7 @@ static match_count_t *CheckMatch( snet_record_t *rec,
       }
     END_FOR
 
-    FOR_EACH_BTAG(rec, name, val)
+    RECORD_FOR_EACH_BTAG(rec, name, val)
       if(!SNetVariantHasBTag(variant, name)) {
         MC_ISMATCH( mc) = false;
       } else {
