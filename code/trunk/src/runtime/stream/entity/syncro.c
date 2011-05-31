@@ -31,6 +31,7 @@
 #include "memfun.h"
 #include "threading.h"
 #include "distribution.h"
+#include "debug.h"
 
 
 /*****************************************************************************/
@@ -42,29 +43,34 @@
  * After that, all (but the first) records are destroyed from the storage.
  */
 static snet_record_t *MergeFromStorage( snet_record_t **storage,
-                             snet_variant_list_t *patterns)
+                                        snet_variant_list_t *patterns)
 {
-  int i, name;
+  int i, name, value;
+  snet_ref_t *field;
   snet_variant_t *pattern;
   snet_record_t *result = storage[0];
 
   LIST_ENUMERATE(patterns, pattern, i)
-    if (i > 0) {
-      /*
-       * Overwriting inherited fields/tags (of the first record).
-       * One could avoid overwriting with
-       * "if (!SNetRecHasXXX( result, name)) { ... }"
-       */
-      VARIANT_FOR_EACH_FIELD(pattern, name)
-        SNetRecSetField(result, name, SNetRecTakeField(storage[i], name));
+    if (i > 0 && storage[i] != NULL) {
+      FOR_EACH_FIELD(storage[i], name, field)
+        if (SNetVariantHasField(pattern, name)) {
+            SNetRecSetField(result, name, field);
+        } else if (!SNetRecHasField(result, name)) {
+            SNetRecSetField(result, name, field);
+        }
       END_FOR
 
-      VARIANT_FOR_EACH_TAG(pattern, name)
-        SNetRecSetTag( result, name, SNetRecGetTag( storage[i], name));
+      FOR_EACH_TAG(storage[i], name, value)
+        if (SNetVariantHasTag(pattern, name)) {
+            SNetRecSetTag(result, name, value);
+        } else if (!SNetRecHasTag(result, name)) {
+            SNetRecSetTag(result, name, value);
+        }
       END_FOR
 
-      /* destroy the record */
-      SNetRecDestroy(storage[i]);
+      if (storage[i] != NULL) {
+        SNetRecDestroy(storage[i]);
+      }
     }
   END_ENUMERATE
 
@@ -86,27 +92,32 @@ typedef struct {
  */
 static void SyncBoxTask(void *arg)
 {
-  int i;
-  int match_cnt=0, new_matches=0;
-  int num_patterns;
-  bool terminate = false;
-  sync_arg_t *sarg = (sync_arg_t *) arg;
-  snet_stream_desc_t *outstream, *instream;
-  snet_record_t **storage;
+  snet_expr_t *expr;
   snet_record_t *rec;
+  snet_record_t dummy; /* used to indicate unmatched pattern */
   snet_variant_t *pattern;
+  snet_stream_desc_t *outstream, *instream;
+
+  bool terminate = false;
+  int i, new_matches, match_cnt = 0;
+  sync_arg_t *sarg = (sync_arg_t *) arg;
+  int num_patterns = SNetVariantListLength( sarg->patterns);
+  snet_record_t *storage[num_patterns];
   snet_locvec_t *instream_source = NULL;
 
   instream  = SNetStreamOpen(sarg->input,  'r');
   outstream = SNetStreamOpen(sarg->output, 'w');
 
-  num_patterns = SNetVariantListLength( sarg->patterns);
-  storage = SNetMemAlloc(num_patterns * sizeof(snet_record_t*));
-  for(i = 0; i < num_patterns; i++) {
-    storage[i] = NULL;
+  /* !! CAUTION !!
+   * Set all storage slots to &dummy, indicating unmatched pattern. This frees
+   * up NULL to indicate that a pattern was matched by a record which also
+   * matched an earlier pattern. This lets us avoid the storage container
+   * holding the same pointer multiple times, this means the merge function can
+   * safely free them all without freeing the same pointer multiple times.
+   */
+  for (i = 0; i < num_patterns; i++) {
+    storage[i] = &dummy;
   }
-  match_cnt = 0;
-  //FIXME: Clean up more
 
   /* MAIN LOOP START */
   while( !terminate) {
@@ -116,45 +127,43 @@ static void SyncBoxTask(void *arg)
     switch (SNetRecGetDescriptor( rec)) {
       case REC_data:
         new_matches = 0;
-        LIST_ENUMERATE(sarg->patterns, pattern, i)
+        LIST_ZIP_ENUMERATE(sarg->patterns, pattern, sarg->guard_exprs, expr, i)
           /* storage empty and guard accepts => store record*/
-          if ((storage[i] == NULL) &&
-              (SNetRecPatternMatches(pattern, rec)) &&
-              (
-               i >= SNetExprListLength(sarg->guard_exprs) ||
-               SNetEevaluateBool(SNetExprListGet(sarg->guard_exprs, i), rec)
-              )) {
-            storage[i] = rec;
+          if (storage[i] == &dummy && SNetRecPatternMatches(pattern, rec) &&
+              SNetEevaluateBool(expr, rec)) {
+            if (new_matches == 0) {
+              storage[i] = rec;
+            } else {
+              /* Record already stored as match for another pattern. */
+              storage[i] = NULL;
+            }
             new_matches += 1;
           }
-        END_ENUMERATE
+        END_ZIP
 
+        match_cnt += new_matches;
         if (new_matches == 0) {
           SNetStreamWrite( outstream, rec);
-        } else {
-          match_cnt += new_matches;
-          if(match_cnt == num_patterns) {
-            SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
+        } else if (match_cnt == num_patterns) {
+          SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
 
-            if (instream_source != NULL) {
-              /* predecessor made known its location,
-               * presumably for garbage collection, so we will forward it
-               * to let our successor know
-               */
-              SNetStreamWrite( outstream,
-                  SNetRecCreate(REC_source, instream_source));
-            }
-            /* follow by a sync record */
-            SNetStreamWrite( outstream, SNetRecCreate(REC_sync, sarg->input));
-
-            /* the receiver of REC_sync will destroy the outstream */
-            SNetStreamClose( outstream, false);
-            /* instream has been sent to next entity, do not destroy  */
-            SNetStreamClose( instream, false);
-
-
-            terminate = true;
+          if (instream_source != NULL) {
+            /* predecessor made known its location,
+             * presumably for garbage collection, so we will forward it
+             * to let our successor know
+             */
+            SNetStreamWrite( outstream,
+                SNetRecCreate(REC_source, instream_source));
           }
+          /* follow by a sync record */
+          SNetStreamWrite( outstream, SNetRecCreate(REC_sync, sarg->input));
+
+          /* the receiver of REC_sync will destroy the outstream */
+          SNetStreamClose( outstream, false);
+          /* instream has been sent to next entity, do not destroy  */
+          SNetStreamClose( instream, false);
+
+          terminate = true;
         }
         break;
 
@@ -201,8 +210,6 @@ static void SyncBoxTask(void *arg)
     SNetLocvecDestroy(instream_source);
   }
 
-  SNetMemFree(storage);
-
   SNetVariantListDestroy( sarg->patterns);
   SNetExprListDestroy( sarg->guard_exprs);
   SNetMemFree( sarg);
@@ -244,4 +251,3 @@ snet_stream_t *SNetSync( snet_stream_t *input,
 
   return output;
 }
-

@@ -71,25 +71,33 @@ void SNetDestroyFilterInstruction( snet_filter_instr_t *instr)
 /* HELPER FUNCTIONS                                                          */
 /*****************************************************************************/
 
+/**
+ * Argument for filter tasks
+ */
+typedef struct {
+  snet_stream_t *input, *output;
+  snet_variant_t *input_variant;
+  snet_expr_list_t *guard_exprs;
+  snet_filter_instr_list_list_t **filter_instructions;
+} filter_arg_t;
 
-static void FilterArgsDestroy( snet_variant_t *input_variant,
-    snet_expr_list_t *guard_exprs,
-    snet_filter_instr_list_list_t **filter_instructions)
+static void FilterArgsDestroy( filter_arg_t *farg)
 {
-  SNetVariantDestroy(input_variant);
+  SNetVariantDestroy( farg->input_variant);
 
-  if (filter_instructions != NULL) {
+  if (farg->filter_instructions != NULL) {
     int i;
     snet_expr_t *expr;
 
-    LIST_ENUMERATE(guard_exprs, expr, i)
-      SNetFilterInstrListListDestroy(filter_instructions[i]);
+    LIST_ENUMERATE(farg->guard_exprs, expr, i)
+      SNetFilterInstrListListDestroy( farg->filter_instructions[i]);
     END_ENUMERATE
 
-    SNetMemFree(filter_instructions);
+    SNetMemFree( farg->filter_instructions);
   }
 
-  SNetExprListDestroy( guard_exprs);
+  SNetExprListDestroy( farg->guard_exprs);
+  SNetMemFree( farg);
 }
 
 
@@ -138,16 +146,6 @@ static bool FilterIsBypass(
 /* FILTER TASKS                                                              */
 /*****************************************************************************/
 
-/**
- * Argument for filter tasks
- */
-typedef struct {
-  snet_stream_t *input, *output;
-  snet_variant_t *input_variant;
-  snet_expr_list_t *guard_exprs;
-  snet_filter_instr_list_list_t **filter_instructions;
-} filter_arg_t;
-
 
 /**
  * Filter task
@@ -156,11 +154,11 @@ static void FilterTask(void *arg)
 {
   filter_arg_t *farg = (filter_arg_t *)arg;
   snet_expr_t *expr;
-  snet_record_t *in_rec;
+  snet_record_t *in_rec = NULL, *out_rec = NULL;
   snet_filter_instr_t *instr;
   snet_filter_instr_list_t *instr_list;
   snet_stream_desc_t *instream, *outstream;
-  bool terminate = false;
+  bool done, terminate = false;
   int i;
 
   assert( farg->guard_exprs != NULL &&
@@ -177,10 +175,9 @@ static void FilterTask(void *arg)
     switch (SNetRecGetDescriptor( in_rec)) {
       case REC_data:
         {
-          bool done = false;
+          done = false;
           LIST_ENUMERATE( farg->guard_exprs, expr, i)
             if (SNetEevaluateBool( expr, in_rec) && !done) {
-              snet_record_t *out_rec = NULL;
               done = true;
 
               LIST_FOR_EACH(farg->filter_instructions[i], instr_list)
@@ -250,12 +247,7 @@ static void FilterTask(void *arg)
   SNetStreamClose( outstream, false);
   SNetStreamClose( instream, true);
 
-  FilterArgsDestroy(
-      farg->input_variant,
-      farg->guard_exprs,
-      farg->filter_instructions
-      );
-  SNetMemFree( farg);
+  FilterArgsDestroy( farg);
 }
 
 
@@ -339,12 +331,7 @@ static void NameshiftTask(void *arg)
   SNetStreamClose( instream, true);
   SNetStreamClose( outstream, false);
 
-  FilterArgsDestroy(
-      farg->input_variant,
-      farg->guard_exprs,
-      farg->filter_instructions
-      );
-  SNetMemFree( farg);
+  FilterArgsDestroy( farg);
 }
 
 
@@ -372,13 +359,9 @@ snet_stream_t* CreateFilter( snet_stream_t *instream,
   /* Check for bypass
    * - if it is a bypass, exit out early and do not create any component
    */
-  if (FilterIsBypass(input_variant, guard_exprs, instr_list)) {
-    FilterArgsDestroy(input_variant, guard_exprs, instr_list);
-    return instream;
-  }
-
   instream = SNetRouteUpdate(info, instream, location);
-  if (location == SNetNodeLocation) {
+  if (location == SNetNodeLocation &&
+      !FilterIsBypass(input_variant, guard_exprs, instr_list)) {
     outstream = SNetStreamCreate(0);
 
     farg = (filter_arg_t *) SNetMemAlloc( sizeof( filter_arg_t));
@@ -390,7 +373,9 @@ snet_stream_t* CreateFilter( snet_stream_t *instream,
 
     SNetEntitySpawn( ENTITY_FILTER, FilterTask, (void*)farg);
   } else {
-    FilterArgsDestroy(input_variant, guard_exprs, instr_list);
+    SNetVariantDestroy(input_variant);
+    SNetExprListDestroy(guard_exprs);
+    SNetMemFree(instr_list);
     outstream = instream;
   }
 
@@ -432,10 +417,6 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
   assert(input_variant != NULL);
   assert(guard_exprs != NULL);
 
-  //FIXME remove following
-  if (guard_exprs == NULL) {
-    guard_exprs = SNetExprListCreate( 1, SNetEconstb( true));
-  }
   num_outtypes = SNetExprListLength( guard_exprs);
 
   /* read in the filter instructions from varargs */
@@ -443,6 +424,7 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
 
   return CreateFilter(instream, info, location, input_variant, guard_exprs, instr_list);
 }
+
 
 
 /**
@@ -460,10 +442,6 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
   assert(input_variant != NULL);
   assert(guard_exprs != NULL);
 
-  //FIXME remove following
-  if (guard_exprs == NULL) {
-    guard_exprs = SNetExprListCreate( 1, SNetEconstb( true));
-  }
   num_outtypes = SNetExprListLength( guard_exprs);
 
   /* read in the filter instructions from varargs */
@@ -471,9 +449,6 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
 
   return CreateFilter(instream, info, location, input_variant, guard_exprs, instr_list);
 }
-
-
-
 
 
 
