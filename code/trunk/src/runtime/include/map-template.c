@@ -7,6 +7,10 @@
 #error Map requires a MAP_NAME_C value to be defined.
 #endif
 
+#ifndef MAP_TYPE_NAME_C
+#error Map requires a MAP_TYPE_NAME_C value to be defined.
+#endif
+
 #ifndef MAP_VAL_C
 #error Map requires a MAP_VAL_C value to be defined.
 #endif
@@ -24,13 +28,12 @@
  *
  * 3) Similar macros are also used in set-template.c and set-template.h
  */
-#define CONCAT(prefix, s, suffix)  prefix ## s ## suffix
-#define CONCAT4(prefix, s1, s2, suffix)  prefix ## s1 ## s2 ## suffix
-#define MAP(name)                  CONCAT(snet_, name, _map_t)
-#define MAP_FUNCTION(name, funName)    CONCAT4(SNet, name, Map, funName)
-#define snet_map_t                 MAP(MAP_NAME_C)
+#define CONCAT(prefix, s1, s2, suffix)  prefix ## s1 ## s2 ## suffix
+#define MAP(name)                       CONCAT(snet_, name, _map, _t)
+#define MAP_FUNCTION(name, funName)     CONCAT(SNet, name, Map, funName)
+#define snet_map_t                      MAP(MAP_TYPE_NAME_C)
 
-snet_map_t *MAP_FUNCTION(MAP_NAME_C, Create)(int size, MAP_VAL_C error, ...)
+snet_map_t *MAP_FUNCTION(MAP_NAME_C, Create)(int size, ...)
 {
   int i;
   va_list args;
@@ -38,11 +41,10 @@ snet_map_t *MAP_FUNCTION(MAP_NAME_C, Create)(int size, MAP_VAL_C error, ...)
 
   result->size = size;
   result->used = size;
-  result->error = error;
   result->keys = SNetMemAlloc(size * sizeof(int));
   result->values = SNetMemAlloc(size * sizeof(MAP_VAL_C));
 
-  va_start(args, error);
+  va_start(args, size);
   for (i = 0; i < size; i++) {
     result->keys[i] = va_arg(args, int);
     result->values[i] = va_arg(args, MAP_VAL_C);
@@ -68,8 +70,33 @@ snet_map_t *MAP_FUNCTION(MAP_NAME_C, Copy)(snet_map_t *map)
   return result;
 }
 
+snet_map_t *MAP_FUNCTION(MAP_NAME_C, DeepCopy)(snet_map_t *map, MAP_VAL_C (*copyfun)(MAP_VAL_C))
+{
+  int i;
+  snet_map_t *result = SNetMemAlloc(sizeof(snet_map_t));
+
+  result->size = map->used;
+  result->used = map->used;
+
+  result->keys = SNetMemAlloc(map->used * sizeof(int));
+  result->values = SNetMemAlloc(map->used * sizeof(MAP_VAL_C));
+  for (i = 0; i < result->used; i++) {
+    result->keys[i] = map->keys[i];
+    result->values[i] = (*copyfun)(map->values[i]);
+  }
+
+  return result;
+}
+
 void MAP_FUNCTION(MAP_NAME_C, Destroy)(snet_map_t *map)
 {
+  #ifdef MAP_FREE_FUNCTION
+  int i;
+  for (i = 0; i < map->used; i++) {
+    MAP_FREE_FUNCTION(map->values[i]);
+  }
+  #endif
+
   SNetMemFree(map->keys);
   SNetMemFree(map->values);
   SNetMemFree(map);
@@ -124,12 +151,23 @@ void MAP_FUNCTION(MAP_NAME_C, Set)(snet_map_t *map, int key, MAP_VAL_C val)
   }
 }
 
+bool MAP_FUNCTION(MAP_NAME_C, Contains)(snet_map_t *map, int key)
+{
+  int i = MAP_FUNCTION(MAP_NAME_C, Find)(map, key);
+
+  if (i == -1) {
+    return false;
+  }
+
+  return true;
+}
+
 MAP_VAL_C MAP_FUNCTION(MAP_NAME_C, Get)(snet_map_t *map, int key)
 {
   int i = MAP_FUNCTION(MAP_NAME_C, Find)(map, key);
 
   if (i == -1) {
-    return map->error;
+    //FIXME: crash!
   }
 
   return map->values[i];
@@ -140,7 +178,7 @@ MAP_VAL_C MAP_FUNCTION(MAP_NAME_C, Take)(snet_map_t *map, int key)
   MAP_VAL_C result;
   int i = MAP_FUNCTION(MAP_NAME_C, Find)(map, key);
   if (i == -1) {
-    return map->error;
+    //FIXME: crash!
   }
 
   result = map->values[i];
