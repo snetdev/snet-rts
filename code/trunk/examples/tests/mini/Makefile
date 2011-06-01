@@ -25,7 +25,7 @@ S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)`
 
 
 # = = = = = = = = = = = = = = = = = = = =
-TARGET    = miniSAC
+TARGET    = mini
 # = = = = = = = = = = = = = = = = = = = =
 
 

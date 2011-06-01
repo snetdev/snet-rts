@@ -5,7 +5,7 @@
    </boxdefault>
   </metadata>
 
-net miniSAC {
+net mini {
 
     <metadata>
       <box name="boxA" >
