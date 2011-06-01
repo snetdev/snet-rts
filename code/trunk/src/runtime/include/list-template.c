@@ -4,15 +4,15 @@
 #include "memfun.h"
 
 #ifndef LIST_NAME_C
-#error list requires a LIST_NAME_C value to be defined.
+#error List requires a LIST_NAME_C value to be defined.
 #endif
 
 #ifndef LIST_TYPE_NAME_C
-#error
+#error List requires a LIST_TYPE_NAME_C value to be defined.
 #endif
 
 #ifndef LIST_VAL_C
-#error list requires a LIST_VAL_C value to be defined.
+#error List requires a LIST_VAL_C value to be defined.
 #endif
 
 /* !! CAUTION !!

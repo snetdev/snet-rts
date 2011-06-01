@@ -279,19 +279,19 @@ static void NameshiftTask(void *arg)
 
     switch (SNetRecGetDescriptor( rec)) {
       case REC_data:
-        FOR_EACH_FIELD(rec, name, ref)
+        RECORD_FOR_EACH_FIELD(rec, name, ref)
           if (!SNetVariantHasField(untouched, name)) {
             SNetRecRenameField( rec, name, name + offset);
           }
         END_FOR
 
-        FOR_EACH_TAG(rec, name, val)
+        RECORD_FOR_EACH_TAG(rec, name, val)
           if (!SNetVariantHasTag(untouched, name)) {
             SNetRecRenameTag( rec, name, name + offset);
           }
         END_FOR
 
-        FOR_EACH_BTAG(rec, name, val)
+        RECORD_FOR_EACH_BTAG(rec, name, val)
           if (!SNetVariantHasBTag(untouched, name)) {
             SNetRecRenameBTag( rec, name, name + offset);
           }

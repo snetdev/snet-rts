@@ -64,7 +64,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
       }
 
       /* Fields */
-      FOR_EACH_FIELD(rec, name, ref)
+      RECORD_FOR_EACH_FIELD(rec, name, ref)
         int id = SNetRecGetInterfaceId(rec);
 
         if((label = SNetInIdToLabel(hnd->labels, name)) != NULL){
@@ -89,7 +89,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
       END_FOR
 
        /* Tags */
-      FOR_EACH_TAG(rec, name, val)
+      RECORD_FOR_EACH_TAG(rec, name, val)
         if ((label = SNetInIdToLabel(hnd->labels, name)) != NULL) {
           fprintf(hnd->file, "<tag label=\"%s\">%d</tag>", label, val);
         } else{
@@ -100,7 +100,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
       END_FOR
 
       /* BTags */
-      FOR_EACH_BTAG(rec, name, val)
+      RECORD_FOR_EACH_BTAG(rec, name, val)
         if ((label = SNetInIdToLabel(hnd->labels, name)) != NULL){
           fprintf(hnd->file, "<btag label=\"%s\">%d</btag>", label, val);
         } else{

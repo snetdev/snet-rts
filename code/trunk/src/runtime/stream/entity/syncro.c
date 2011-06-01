@@ -52,7 +52,7 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
 
   LIST_ENUMERATE(patterns, pattern, i)
     if (i > 0 && storage[i] != NULL) {
-      FOR_EACH_FIELD(storage[i], name, field)
+      RECORD_FOR_EACH_FIELD(storage[i], name, field)
         if (SNetVariantHasField(pattern, name)) {
             SNetRecSetField(result, name, field);
         } else if (!SNetRecHasField(result, name)) {
@@ -60,7 +60,7 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
         }
       END_FOR
 
-      FOR_EACH_TAG(storage[i], name, value)
+      RECORD_FOR_EACH_TAG(storage[i], name, value)
         if (SNetVariantHasTag(pattern, name)) {
             SNetRecSetTag(result, name, value);
         } else if (!SNetRecHasTag(result, name)) {

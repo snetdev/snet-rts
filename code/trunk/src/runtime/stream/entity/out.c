@@ -59,14 +59,14 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
     int name, val;
     snet_ref_t *ref;
 
-    FOR_EACH_FIELD(old_rec, name, ref)
+    RECORD_FOR_EACH_FIELD(old_rec, name, ref)
       if (!SNetVariantHasField(variant, name) &&
           !SNetRecHasField( out_rec, name)) {
         SNetRecSetField(out_rec, name, ref);
       }
     END_FOR
 
-    FOR_EACH_TAG(old_rec, name, val)
+    RECORD_FOR_EACH_TAG(old_rec, name, val)
       if (!SNetVariantHasField(variant, name) &&
           !SNetRecHasTag( out_rec, name)) {
         SNetRecSetTag( out_rec, name, val);
@@ -143,13 +143,13 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
     int name, val;
     snet_ref_t *ref;
 
-    FOR_EACH_FIELD(old_rec, name, ref)
+    RECORD_FOR_EACH_FIELD(old_rec, name, ref)
       if (!SNetRecHasField( out_rec, name)) {
         SNetRecSetField( out_rec, name, ref);
       }
     END_FOR
 
-    FOR_EACH_TAG(old_rec, name, val)
+    RECORD_FOR_EACH_TAG(old_rec, name, val)
       if (!SNetRecHasTag( out_rec, name)) {
         SNetRecSetTag( out_rec, name, val);
       }
