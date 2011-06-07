@@ -1,10 +1,8 @@
 #ifndef _SNET_DISTRIBUTION_H_
 #define _SNET_DISTRIBUTION_H_
 
-typedef void* snet_ref_t;
-typedef struct snet_stream_t snet_stream_t;
-
 #include "info.h"
+#include "stream.h"
 
 extern int SNetNodeLocation;
 

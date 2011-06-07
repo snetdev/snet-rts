@@ -12,9 +12,9 @@
 #undef MAP_TYPE_NAME_C
 #undef MAP_NAME_C
 
-#define MAP_NAME_C Ref
-#define MAP_TYPE_NAME_C ref
-#define MAP_VAL_C snet_ref_t*
+#define MAP_NAME_C Void
+#define MAP_TYPE_NAME_C void
+#define MAP_VAL_C void*
 #include "map-template.c"
 #undef MAP_VAL_C
 #undef MAP_TYPE_NAME_C

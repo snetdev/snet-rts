@@ -69,7 +69,7 @@ struct container {
   snet_variant_t *variant;
 
   int *counter;
-  snet_ref_t **fields;
+  void **fields;
   int *tags;
   int *btags;
 };
@@ -132,20 +132,20 @@ void SAC4SNet_outCompound( sac4snet_container_t *c)
 void SAC4SNet_out( void *hnd, int variant_num, ...)
 {
   int i;
-  snet_ref_t **fields;
+  void **fields;
   int *tags, *btags;
   snet_variant_t *variant;
   va_list args;
 
 
   variant = SNetVariantListGet( SNetHndGetVariants( (struct handle *) hnd), variant_num -1);
-  fields = SNetMemAlloc( SNetVariantNumFields( variant) * sizeof( snet_ref_t*));
+  fields = SNetMemAlloc( SNetVariantNumFields( variant) * sizeof( void*));
   tags = SNetMemAlloc( SNetVariantNumTags( variant) * sizeof( int));
   btags = SNetMemAlloc( SNetVariantNumBTags( variant) * sizeof( int));
 
   va_start( args, variant_num);
   for (i = 0; i < SNetVariantNumFields(variant); i++) {
-    fields[i] =  (snet_ref_t*)SACARGnewReference( va_arg( args, SACarg*));
+    fields[i] =  SACARGnewReference( va_arg( args, SACarg*));
   }
 
   for (i = 0; i < SNetVariantNumTags(variant); i++) {

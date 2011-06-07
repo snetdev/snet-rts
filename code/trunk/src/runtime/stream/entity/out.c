@@ -13,7 +13,7 @@
 #define DEFAULT_MODE MODE_textual
 
 snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
-    int if_id, snet_variant_t *variant, snet_ref_t **fields, int *tags, int *btags) 
+    int if_id, snet_variant_t *variant, void **fields, int *tags, int *btags) 
 {
   int i, name;
   snet_record_t *out_rec, *old_rec;
@@ -33,7 +33,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
   i = 0;
   VARIANT_FOR_EACH_FIELD(variant, name)
-    SNetRecSetField( out_rec, name, fields[i]);
+    SNetRecSetField( out_rec, name, SNetInterfaceGet(if_id)->copyfun(fields[i]));
     i++;
   END_FOR
 
@@ -56,23 +56,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
   // flow inherit
   old_rec = hnd->rec;
   if (SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
-    int name, val;
-    snet_ref_t *ref;
-
-    RECORD_FOR_EACH_FIELD(old_rec, name, ref)
-      if (!SNetVariantHasField(variant, name) &&
-          !SNetRecHasField( out_rec, name)) {
-        SNetRecSetField(out_rec, name, ref);
-      }
-    END_FOR
-
-    RECORD_FOR_EACH_TAG(old_rec, name, val)
-      if (!SNetVariantHasField(variant, name) &&
-          !SNetRecHasTag( out_rec, name)) {
-        SNetRecSetTag( out_rec, name, val);
-      }
-    END_FOR
-
+    SNetRecFlowInherit(variant, old_rec, out_rec);
     SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
   } else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
@@ -121,7 +105,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
     SNetRecSetInterfaceId( out_rec, id);
 
     VARIANT_FOR_EACH_FIELD(variant, name)
-      SNetRecSetField( out_rec, name, va_arg( args, snet_ref_t*));
+      SNetRecSetField( out_rec, name, va_arg( args, void*));
     END_FOR
 
     VARIANT_FOR_EACH_TAG(variant, name)
@@ -140,21 +124,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
 
   old_rec = hnd->rec;
   if (SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
-    int name, val;
-    snet_ref_t *ref;
-
-    RECORD_FOR_EACH_FIELD(old_rec, name, ref)
-      if (!SNetRecHasField( out_rec, name)) {
-        SNetRecSetField( out_rec, name, ref);
-      }
-    END_FOR
-
-    RECORD_FOR_EACH_TAG(old_rec, name, val)
-      if (!SNetRecHasTag( out_rec, name)) {
-        SNetRecSetTag( out_rec, name, val);
-      }
-    END_FOR
-
+    SNetRecFlowInherit(variant, old_rec, out_rec);
     SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
   } else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);

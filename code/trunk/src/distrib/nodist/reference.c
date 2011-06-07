@@ -1,13 +1,12 @@
 #include "arch/atomic.h"
 #include "interface_functions.h"
 #include "memfun.h"
-#include "reference.h"
 
-struct snet_ref {
+typedef struct snet_ref {
   atomic_t count;
   int interface;
   void *data;
-};
+} snet_ref_t;
 
 snet_ref_t *SNetRefCreate(int interface, void *data)
 {

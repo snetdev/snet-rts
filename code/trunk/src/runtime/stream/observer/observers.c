@@ -675,7 +675,7 @@ static void ObserverRemove(obs_handle_t *self)
 static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_t *rec)
 {
   int name, val;
-  snet_ref_t *ref;
+  void *field;
   char *label = NULL;
   char *interface = NULL;
   snet_record_mode_t mode;
@@ -708,16 +708,16 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
 
     int id = SNetRecGetInterfaceId(rec);
     /* fields */
-    RECORD_FOR_EACH_FIELD(rec, name, ref)
+    RECORD_FOR_EACH_FIELD(rec, name, field)
       if((label = SNetInIdToLabel(labels, name)) != NULL){
         if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_ALLVALUES
            && (interface = SNetInIdToInterface(interfaces, id)) != NULL){
           fprintf(file,"<field label=\"%s\" interface=\"%s\" >", label, interface);
 
           if(mode == MODE_textual) {
-            SNetInterfaceGet(id)->serialisefun(file, ref);
+            SNetInterfaceGet(id)->serialisefun(file, field);
           } else {
-            SNetInterfaceGet(id)->encodefun(file, ref);
+            SNetInterfaceGet(id)->encodefun(file, field);
           }
 
           fprintf(file,"</field>");

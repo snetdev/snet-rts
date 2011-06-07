@@ -15,11 +15,9 @@
 #undef MAP_TYPE_NAME
 #undef MAP_NAME
 
-#include "distribution.h"
-
-#define MAP_NAME Ref
-#define MAP_TYPE_NAME ref
-#define MAP_VAL snet_ref_t*
+#define MAP_NAME Void
+#define MAP_TYPE_NAME void
+#define MAP_VAL void*
 #include "map-template.h"
 #undef MAP_VAL
 #undef MAP_TYPE_NAME

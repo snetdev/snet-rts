@@ -264,7 +264,7 @@ static void NameshiftTask(void *arg)
   snet_record_t *rec;
   bool terminate = false;
   int name, offset, val;
-  snet_ref_t *ref;
+  void *field;
 
   instream  = SNetStreamOpen(farg->input, 'r');
   outstream = SNetStreamOpen(farg->output, 'w');
@@ -279,7 +279,7 @@ static void NameshiftTask(void *arg)
 
     switch (SNetRecGetDescriptor( rec)) {
       case REC_data:
-        RECORD_FOR_EACH_FIELD(rec, name, ref)
+        RECORD_FOR_EACH_FIELD(rec, name, field)
           if (!SNetVariantHasField(untouched, name)) {
             SNetRecRenameField( rec, name, name + offset);
           }

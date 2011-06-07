@@ -42,7 +42,7 @@ typedef struct {
 /* This function prints records to stdout */
 static void printRec(snet_record_t *rec, handle_t *hnd)
 {
-  snet_ref_t *ref;
+  void *field;
   int name, val;
   char *label = NULL;
   char *interface = NULL;
@@ -64,7 +64,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
       }
 
       /* Fields */
-      RECORD_FOR_EACH_FIELD(rec, name, ref)
+      RECORD_FOR_EACH_FIELD(rec, name, field)
         int id = SNetRecGetInterfaceId(rec);
 
         if((label = SNetInIdToLabel(hnd->labels, name)) != NULL){
@@ -73,9 +73,9 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
                     interface);
 
             if(mode == MODE_textual) {
-              SNetInterfaceGet(id)->serialisefun(hnd->file, ref);
+              SNetInterfaceGet(id)->serialisefun(hnd->file, field);
             } else {
-              SNetInterfaceGet(id)->encodefun(hnd->file, ref);
+              SNetInterfaceGet(id)->encodefun(hnd->file, field);
             }
 
             fprintf(hnd->file, "</field>");

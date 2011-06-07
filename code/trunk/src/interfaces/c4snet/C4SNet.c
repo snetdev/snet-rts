@@ -36,7 +36,7 @@ struct container {
   snet_variant_t *variant;
 
   int *counter;
-  snet_ref_t **fields;
+  void **fields;
   int *tags;
   int *btags;
 };
@@ -850,7 +850,7 @@ c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant)
 
   c->counter = SNetMemAlloc( 3 * sizeof( int));
 
-  c->fields = SNetMemAlloc( SNetVariantNumFields( c->variant) * sizeof(snet_ref_t*));
+  c->fields = SNetMemAlloc( SNetVariantNumFields( c->variant) * sizeof(void*));
   c->tags = SNetMemAlloc( SNetVariantNumTags( c->variant) * sizeof( int));
   c->btags = SNetMemAlloc( SNetVariantNumBTags( c->variant) * sizeof( int));
   c->hnd = hnd;

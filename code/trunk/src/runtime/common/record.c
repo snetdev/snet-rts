@@ -41,11 +41,12 @@ void SNetRecFlowInherit( snet_variant_t *pat, snet_record_t *in_rec,
                              snet_record_t *out_rec)
 {
   int name, val;
-  snet_ref_t *ref;
+  void *field;
+  snet_copy_fun_t copyfun = SNetInterfaceGet(DATA_REC( in_rec, interface_id))->copyfun;
 
-  RECORD_FOR_EACH_FIELD(in_rec, name, ref)
+  RECORD_FOR_EACH_FIELD(in_rec, name, field)
     if (!SNetVariantHasField( pat, name)) {
-      SNetRecSetField( out_rec, name, ref);
+      SNetRecSetField( out_rec, name, copyfun(field));
     }
   END_FOR
 
@@ -71,7 +72,7 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       RECORD( rec, data_rec) = SNetMemAlloc( sizeof( data_rec_t));
       DATA_REC( rec, btags) = SNetIntMapCreate(0);
       DATA_REC( rec, tags) = SNetIntMapCreate(0);
-      DATA_REC( rec, fields) = SNetRefMapCreate(0);
+      DATA_REC( rec, fields) = SNetVoidMapCreate(0);
       DATA_REC( rec, mode) = MODE_binary;
       DATA_REC( rec, interface_id) = 0;
       break;
@@ -115,18 +116,13 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
 
 snet_record_t *SNetRecCopy( snet_record_t *rec)
 {
-  int name;
-  snet_ref_t *ref;
   snet_record_t *new_rec;
 
   switch (REC_DESCR( rec)) {
     case REC_data:
       new_rec = SNetRecCreate( REC_data);
-      DATA_REC( new_rec, fields) = SNetRefMapCreate(0, NULL);
-
-      MAP_FOR_EACH(DATA_REC( rec, fields), name, ref)
-        SNetRecSetField( new_rec, name, SNetInterfaceGet(DATA_REC( rec, interface_id))->copyfun(ref));
-      END_FOR
+      DATA_REC( new_rec, fields) = SNetVoidMapDeepCopy(DATA_REC( rec, fields),
+              SNetInterfaceGet(DATA_REC( rec, interface_id))->copyfun);
 
       DATA_REC( new_rec, tags) = SNetIntMapCopy( DATA_REC( rec, tags));
       DATA_REC( new_rec, btags) = SNetIntMapCopy( DATA_REC( rec, btags));
@@ -150,9 +146,16 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
 
 void SNetRecDestroy( snet_record_t *rec)
 {
+  int name;
+  void *field;
+  snet_free_fun_t freefun;
   switch (REC_DESCR( rec)) {
     case REC_data:
-      SNetRefMapDestroy( DATA_REC( rec, fields));
+      freefun = SNetInterfaceGet(DATA_REC( rec, interface_id))->freefun;
+      RECORD_FOR_EACH_FIELD(rec, name, field)
+        freefun(field);
+      END_FOR
+      SNetVoidMapDestroy( DATA_REC( rec, fields));
       SNetIntMapDestroy( DATA_REC( rec, tags));
       SNetIntMapDestroy( DATA_REC( rec, btags));
       SNetMemFree( RECORD( rec, data_rec));
@@ -352,29 +355,29 @@ void SNetRecRenameBTag( snet_record_t *rec, int oldName, int newName)
 
 /*****************************************************************************/
 
-void SNetRecSetField( snet_record_t *rec, int name, snet_ref_t *val)
+void SNetRecSetField( snet_record_t *rec, int name, void *val)
 {
-  SNetRefMapSet(DATA_REC(rec, fields), name, val);
+  SNetVoidMapSet(DATA_REC(rec, fields), name, val);
 }
 
-snet_ref_t *SNetRecGetField( snet_record_t *rec, int name)
+void *SNetRecGetField( snet_record_t *rec, int name)
 {
-  return SNetInterfaceGet(DATA_REC( rec, interface_id))->copyfun(SNetRefMapGet(DATA_REC(rec, fields), name));
+  return SNetInterfaceGet(DATA_REC( rec, interface_id))->copyfun(SNetVoidMapGet(DATA_REC(rec, fields), name));
 }
 
-snet_ref_t *SNetRecTakeField( snet_record_t *rec, int name)
+void *SNetRecTakeField( snet_record_t *rec, int name)
 {
-  return SNetRefMapTake(DATA_REC(rec, fields), name);
+  return SNetVoidMapTake(DATA_REC(rec, fields), name);
 }
 
 bool SNetRecHasField( snet_record_t *rec, int name)
 {
-  return SNetRefMapContains(DATA_REC(rec, fields), name);
+  return SNetVoidMapContains(DATA_REC(rec, fields), name);
 }
 
 void SNetRecRenameField( snet_record_t *rec, int oldName, int newName)
 {
-  SNetRefMapRename(DATA_REC( rec, fields), oldName, newName);
+  SNetVoidMapRename(DATA_REC( rec, fields), oldName, newName);
 }
 
 /*****************************************************************************/

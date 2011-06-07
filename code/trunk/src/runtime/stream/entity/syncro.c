@@ -46,7 +46,7 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
                                         snet_variant_list_t *patterns)
 {
   int i, name, value;
-  snet_ref_t *field;
+  void *field;
   snet_variant_t *pattern;
   snet_record_t *result = storage[0];
 
@@ -54,16 +54,12 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
     if (i > 0 && storage[i] != NULL) {
       RECORD_FOR_EACH_FIELD(storage[i], name, field)
         if (SNetVariantHasField(pattern, name)) {
-            SNetRecSetField(result, name, field);
-        } else if (!SNetRecHasField(result, name)) {
-            SNetRecSetField(result, name, field);
+            SNetRecSetField(result, name, SNetRecGetField(storage[i], name));
         }
       END_FOR
 
       RECORD_FOR_EACH_TAG(storage[i], name, value)
         if (SNetVariantHasTag(pattern, name)) {
-            SNetRecSetTag(result, name, value);
-        } else if (!SNetRecHasTag(result, name)) {
             SNetRecSetTag(result, name, value);
         }
       END_FOR
@@ -153,7 +149,7 @@ static void SyncBoxTask(void *arg)
              * to let our successor know
              */
             SNetStreamWrite( outstream,
-                SNetRecCreate(REC_source, instream_source));
+            SNetRecCreate(REC_source, instream_source));
           }
           /* follow by a sync record */
           SNetStreamWrite( outstream, SNetRecCreate(REC_sync, sarg->input));
