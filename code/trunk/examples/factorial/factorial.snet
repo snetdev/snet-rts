@@ -9,9 +9,9 @@ net factorial
                 box mult( (xm,rm) -> (rrm));
         }
         connect [{<F>,x,r} -> {xm=x,rm=r}; {x=x}] .. 
-					(sub|mult) .. 
-					  ([|{xx},{rrm} |]*{xx,rrm}) ..
+					(sub|mult@2) .. 
+					  ([|{xx},{rrm} |]@2*{xx,rrm}) ..
 					    [{xx,rrm}->{x=xx,r=rrm}];
 
 }
-connect (leq1 .. condif .. ([{<T>} -> {<stop>}] | compute))*{<stop>};
+connect (leq1 .. condif .. ([{<T>} -> {<stop>}] | compute@1))*{<stop>};
