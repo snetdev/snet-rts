@@ -17,6 +17,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 {
   int i, name;
   snet_record_t *out_rec, *old_rec;
+  snet_copy_fun_t copyfun = SNetInterfaceGet(if_id)->copyfun;
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
@@ -33,7 +34,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
   i = 0;
   VARIANT_FOR_EACH_FIELD(variant, name)
-    SNetRecSetField( out_rec, name, SNetInterfaceGet(if_id)->copyfun(fields[i]));
+    SNetRecSetField( out_rec, name, copyfun(fields[i]));
     i++;
   END_FOR
 

@@ -49,12 +49,15 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
   void *field;
   snet_variant_t *pattern;
   snet_record_t *result = storage[0];
+  snet_copy_fun_t copyfun;
 
   LIST_ENUMERATE(patterns, pattern, i)
     if (i > 0 && storage[i] != NULL) {
+      copyfun = SNetInterfaceGet(SNetRecGetInterfaceId(storage[i]))->copyfun;
+
       RECORD_FOR_EACH_FIELD(storage[i], name, field)
         if (SNetVariantHasField(pattern, name)) {
-            SNetRecSetField(result, name, SNetRecGetField(storage[i], name));
+            SNetRecSetField(result, name, copyfun(field));
         }
       END_FOR
 

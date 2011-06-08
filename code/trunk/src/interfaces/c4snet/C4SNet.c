@@ -285,6 +285,7 @@ void C4SNetDataFree( void *ptr)
 }
 
 /* Returns the actual data. */
+//FIXME: copy data if ref_count > 1
 void *C4SNetDataGetData( c4snet_data_t *ptr)
 {
   if(ptr != NULL) {
