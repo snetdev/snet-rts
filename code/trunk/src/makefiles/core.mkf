@@ -182,14 +182,52 @@ $(PROJECT_ROOT)/src/bin/%: $(TARGETDIRS_PROD)
 $(PROJECT_ROOT)/lib/libdistribnodist.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libdistribnodist.so (developer version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $(foreach x, $^, $(if $(findstring nodist, $(x)), $(x)))
 	@$(RM) .make_track
 	@$(TOUCH) .done
 
 $(PROJECT_ROOT)/lib/libdistribnodist.prod.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libdistribnodist.prod.so (product version)"
-	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $(foreach x, $^, $(if $(findstring nodist, $(x)), $(x)))
+	@$(RM) .make_track
+	@$(TOUCH) .done
+
+
+
+#
+# MPI DISTRIBUTION LIBRARY
+#
+$(PROJECT_ROOT)/lib/libdistribmpi.so: $(TARGETDIRS_DEVEL)
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libdistribmpi.so (developer version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $(foreach x, $^, $(if $(findstring mpi, $(x)), $(x)))
+	@$(RM) .make_track
+	@$(TOUCH) .done
+
+$(PROJECT_ROOT)/lib/libdistribmpi.prod.so: $(TARGETDIRS_DEVEL)
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libdistribmpi.prod.so (product version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $(foreach x, $^, $(if $(findstring mpi, $(x)), $(x)))
+	@$(RM) .make_track
+	@$(TOUCH) .done
+
+
+
+#
+# SCC LIBRARY
+#
+$(PROJECT_ROOT)/lib/libdistribscc.so: $(TARGETDIRS_DEVEL)
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libdistribscc.so (developer version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $(foreach x, $^, $(if $(findstring scc, $(x)), $(x)))
+	@$(RM) .make_track
+	@$(TOUCH) .done
+
+$(PROJECT_ROOT)/lib/libdistribscc.prod.so: $(TARGETDIRS_DEVEL)
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libdistribscc.prod.so (product version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $(foreach x, $^, $(if $(findstring scc, $(x)), $(x)))
 	@$(RM) .make_track
 	@$(TOUCH) .done
 
