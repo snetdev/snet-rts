@@ -272,16 +272,16 @@ $(PROJECT_ROOT)/src/runtime/lib/libcommon.prod.a:  $(TARGETDIRS_PROD)
 #
 # SNET
 #
-$(PROJECT_ROOT)/lib/libsnet.so: $(TARGETDIRS_DEVEL)
+$(PROJECT_ROOT)/lib/libruntimestream.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.so (developer version)"
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libruntimestream.so (developer version)"
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ -l$(RUNTIMECOMMONLIBDEV) -L$(PROJECT_ROOT)/src/runtime/lib
 	@$(RM) .make_track
 	@$(TOUCH) .done
 
-$(PROJECT_ROOT)/lib/libsnet.prod.so:  $(TARGETDIRS_PROD)
+$(PROJECT_ROOT)/lib/libruntimestream.prod.so:  $(TARGETDIRS_PROD)
 	@$(ECHO) ""
-	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libsnet.prod.so (product version)"
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libruntimestream.prod.so (product version)"
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ -l$(RUNTIMECOMMONLIBPROD -L$(PROJECT_ROOT)/src/runtime/lib)
 	@$(RM) .make_track
 	@$(TOUCH) .done

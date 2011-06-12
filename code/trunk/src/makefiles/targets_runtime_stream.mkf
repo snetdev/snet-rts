@@ -9,8 +9,8 @@
 # Collection of targets
 #
 
-targets_stream_devel     := libsnet.so
-targets_stream_prod      := libsnet.prod.so
+targets_stream_devel     := libruntimestream.so
+targets_stream_prod      := libruntimestream.prod.so
 targets_stream_default   := $(targets_stream_devel)
 
 ###############################################################################
