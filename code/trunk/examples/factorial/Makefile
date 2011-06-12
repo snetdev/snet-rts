@@ -16,7 +16,7 @@ TARGET    = factorial
 all: 
 	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h
 	$(CC) $(CCFLAGS) $(INCDIRS) -c $(FILES)
-	$(SNETC) -g $(LIBS) -m $(TARGET).md -o $(TARGET) $(TARGET).snet
+	$(SNETC) -g $(LIBS) -o $(TARGET) $(TARGET).snet
 
 clean:
 	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h

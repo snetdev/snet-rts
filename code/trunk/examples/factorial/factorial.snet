@@ -1,3 +1,9 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet" />
+  </boxdefault>
+</metadata>
+
 net factorial
 {
         box leq1( (x) -> (x,p));
