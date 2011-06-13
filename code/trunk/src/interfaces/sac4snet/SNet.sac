@@ -3,8 +3,6 @@ class SNet;
 
 external classtype;
   #pragma freefun "SNetHndDestroy"
-  /* #pragma copyfun "SNetHndCopy" */
-  #pragma linkwith "snet"
 
 provide all;
 
