@@ -5,7 +5,7 @@ CCFLAGS   = -Wall -g -DFILTER_VERSION_2
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I./include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib -L$(SNETBASE)/interfaces/SAC
-LIBS      = -lSAC4SNet -lpthread -lsnetutil -lsnet -ltbpthread -ldistribnodist
+LIBS      = -lSAC4SNet -lpthread -lsnetutil -ltbpthread -ldistribnodist -lruntimestream
 
 SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__mini=main
 
