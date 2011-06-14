@@ -1,6 +1,5 @@
 
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <assert.h>
 
@@ -13,23 +12,44 @@
 
 
 
-static void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num);
-static void SNetLocvecPop(snet_locvec_t *vec);
-static int SNetLocvecToptype(snet_locvec_t *vec);
-static void SNetLocvecTopinc(snet_locvec_t *vec);
-static void SNetLocvecTopdec(snet_locvec_t *vec);
-static int SNetLocvecTopval(snet_locvec_t *vec);
+typedef enum {
+  LOC_SERIAL = 'S',
+  LOC_PARALLEL = 'P',
+  LOC_SPLIT = 'I',
+  LOC_STAR = 'R',
+  LOC_FEEDBACK = 'F',
+  /*
+  LOC_BOX = 'B',
+  LOC_FILTER = 'L',
+  LOC_SYNC = 'Y'
+  */
+} snet_loctype_t;
 
-
-struct snet_locitem_t {
-  uint64_t word;
-};
+typedef struct {
+  snet_loctype_t type;
+  int num;
+} snet_locitem_t;
 
 struct snet_locvec_t {
   int size;
   int capacity;
   snet_locitem_t *arr;
 };
+
+
+static void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num);
+static void SNetLocvecPop(snet_locvec_t *vec);
+static snet_loctype_t SNetLocvecToptype(snet_locvec_t *vec);
+static void SNetLocvecTopinc(snet_locvec_t *vec);
+static void SNetLocvecTopdec(snet_locvec_t *vec);
+static int SNetLocvecTopval(snet_locvec_t *vec);
+
+
+
+/*****************************************************************************
+ * PUBLIC FUNCTIONS
+ ****************************************************************************/
+
 
 snet_locvec_t *SNetLocvecCreate(void)
 {
@@ -60,64 +80,7 @@ snet_locvec_t *SNetLocvecCopy(snet_locvec_t *vec)
 
 
 
-/******************************************************************************
- * Static helper functions
- *****************************************************************************/
 
-static void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num)
-{
-  if (vec->size == vec->capacity) {
-    /* grow */
-    snet_locitem_t *newarr = malloc(
-        (vec->capacity + LOCVEC_CAPACITY_DELTA) * sizeof(snet_locitem_t)
-        );
-    vec->capacity += LOCVEC_CAPACITY_DELTA;
-    (void) memcpy(newarr, vec->arr, vec->size * sizeof(snet_locitem_t));
-    free(vec->arr);
-    vec->arr = newarr;
-  }
-
-  snet_locitem_t *item = &vec->arr[vec->size];
-  /* pack item into a 64 bit integer */
-  item->word = (num << 8) | type ;
-  vec->size++;
-}
-
-
-static void SNetLocvecPop(snet_locvec_t *vec)
-{
-  vec->size--;
-}
-
-
-static int SNetLocvecToptype(snet_locvec_t *vec)
-{
-  return (int)(vec->arr[vec->size-1].word & 0xff);
-}
-
-static int SNetLocvecTopval(snet_locvec_t *vec)
-{
-  return (int)(vec->arr[vec->size-1].word >> 8);
-}
-
-
-static void SNetLocvecTopinc(snet_locvec_t *vec)
-{
-  snet_locitem_t *item = &vec->arr[vec->size-1];
-  int num = (int)(item->word >> 8);
-
-  item->word = ((num+1) << 8) | (int)(item->word & 0xff);
-}
-
-static void SNetLocvecTopdec(snet_locvec_t *vec)
-{
-  snet_locitem_t *item = &vec->arr[vec->size-1];
-  int num = (int)(item->word >> 8);
-
-  item->word = ((num-1) << 8) | (int)(item->word & 0xff);
-}
-
-/*****************************************************************************/
 
 bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v)
 {
@@ -127,7 +90,10 @@ bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v)
   if (u->size != v->size) return false;
 
   for (i=0; i<u->size; i++) {
-    if (u->arr[i].word != v->arr[i].word) { return false; }
+    if (u->arr[i].type != v->arr[i].type ||
+        u->arr[i].num  != v->arr[i].num ) {
+      return false;
+    }
   }
   return true;
 }
@@ -140,11 +106,14 @@ bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v)
   if (u->size != v->size) return false;
 
   for (i=0; i<u->size-1; i++) {
-    if (u->arr[i].word != v->arr[i].word) { return false; }
+    if (u->arr[i].type != v->arr[i].type ||
+        u->arr[i].num  != v->arr[i].num ) {
+      return false;
+    }
   }
 
   i = u->size-1;
-  if ( (u->arr[i].word & 0xff) != (v->arr[i].word & 0xff) ) {
+  if ( (u->arr[i].type) != (v->arr[i].type) ) {
     return false;
   }
 
@@ -304,12 +273,12 @@ void SNetLocvecPrint(FILE *file, snet_locvec_t *vec)
   int i;
   for (i=0; i<vec->size; i++) {
     snet_locitem_t *item = &vec->arr[i];
-    snet_loctype_t type = ((int)item->word) & 0xff;
-    int num = ((int)item->word) >> 8;
+    snet_loctype_t type = item->type;
+    int num = item->num;
     if (num >= 0) {
-      fprintf(file, ":%c%d", type, num);
+      fprintf(file, ":%c%d", (char)type, num);
     } else {
-      fprintf(file, ":%c", type);
+      fprintf(file, ":%c", (char)type);
     }
   }
   fprintf(file, "\n");
@@ -354,3 +323,56 @@ int main(void)
 }
 #endif
 
+/******************************************************************************
+ * Static helper functions
+ *****************************************************************************/
+
+static void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num)
+{
+  if (vec->size == vec->capacity) {
+    /* grow */
+    snet_locitem_t *newarr = malloc(
+        (vec->capacity + LOCVEC_CAPACITY_DELTA) * sizeof(snet_locitem_t)
+        );
+    vec->capacity += LOCVEC_CAPACITY_DELTA;
+    (void) memcpy(newarr, vec->arr, vec->size * sizeof(snet_locitem_t));
+    free(vec->arr);
+    vec->arr = newarr;
+  }
+
+  snet_locitem_t *item = &vec->arr[vec->size];
+  item->type = type;
+  item->num = num;
+
+  vec->size++;
+}
+
+
+static void SNetLocvecPop(snet_locvec_t *vec)
+{
+  vec->size--;
+}
+
+
+static snet_loctype_t SNetLocvecToptype(snet_locvec_t *vec)
+{
+  return vec->arr[vec->size-1].type;
+}
+
+static int SNetLocvecTopval(snet_locvec_t *vec)
+{
+  return vec->arr[vec->size-1].num;
+}
+
+
+static void SNetLocvecTopinc(snet_locvec_t *vec)
+{
+  snet_locitem_t *item = &vec->arr[vec->size-1];
+  item->num++;
+}
+
+static void SNetLocvecTopdec(snet_locvec_t *vec)
+{
+  snet_locitem_t *item = &vec->arr[vec->size-1];
+  item->num--;
+}

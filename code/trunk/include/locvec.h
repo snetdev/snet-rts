@@ -7,21 +7,9 @@
 
 #include "info.h"
 
-typedef enum {
-  LOC_SERIAL = 'S',
-  LOC_PARALLEL = 'P',
-  LOC_SPLIT = 'I',
-  LOC_STAR = 'R',
-  LOC_FEEDBACK = 'F',
-  LOC_BOX = 'B',
-  LOC_FILTER = 'L',
-  LOC_SYNC = 'Y'
-} snet_loctype_t;
 
 
-//TODO leaf types
-
-typedef struct snet_locitem_t snet_locitem_t;
+/** forward declaration */
 
 typedef struct snet_locvec_t snet_locvec_t;
 
@@ -61,10 +49,6 @@ snet_locvec_t *SNetLocvecSplitSpawn(snet_locvec_t *, int);
 void SNetLocvecFeedbackEnter(snet_locvec_t *);
 void SNetLocvecFeedbackLeave(snet_locvec_t *);
 
-
-/* stream source handling */
-void SNetLocvecUpdateStreamSource(snet_locvec_t *);
-void SNetLocvecUpdateStreamSourceFrom(snet_locvec_t *, snet_locvec_t *);
 
 
 /* get from info */
