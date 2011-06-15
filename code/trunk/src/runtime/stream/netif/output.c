@@ -167,7 +167,6 @@ static void GlobOutputTask(void* data)
         case REC_terminate:
           printRec(rec, hnd);
           terminate = true;
-          SNetDistribStop();
           break;
         default:
           break;

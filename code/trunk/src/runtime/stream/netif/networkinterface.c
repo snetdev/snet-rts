@@ -294,7 +294,7 @@ int SNetInRun(int argc, char **argv,
     SNetInClose(output);
   }
 
-  SNetDistribDestroy();
+  SNetDistribStop();
 
   return 0;
 }
