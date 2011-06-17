@@ -5,16 +5,16 @@
 #include "memfun.h"
 
 #ifndef LIST_NAME
-#error List requires a LIST_NAME value to be defined (mirroring LIST_NAME_H).
+#error List requires a LIST_NAME value to be defined (mirroring LIST_NAME).
 #endif
 
 #ifndef LIST_TYPE_NAME
 #error List requires a LIST_TYPE_NAME value to be defined (mirroring
-#error LIST_TYPE_NAME_H).
+#error LIST_TYPE_NAME).
 #endif
 
 #ifndef LIST_VAL
-#error List requires a LIST_VAL value to be defined (mirroring LIST_VAL_H).
+#error List requires a LIST_VAL value to be defined (mirroring LIST_VAL).
 #endif
 
 /* !! CAUTION !!
@@ -43,6 +43,7 @@ snet_list_t *LIST_FUNCTION(LIST_NAME, Create)(int size, ...)
 
   result->size = size;
   result->used = size;
+  result->start = 0;
   result->values = SNetMemAlloc(size * sizeof(LIST_VAL));
 
   va_start(args, size);
@@ -60,9 +61,15 @@ snet_list_t *LIST_FUNCTION(LIST_NAME, Copy)(snet_list_t *list)
 
   result->size = list->used;
   result->used = list->used;
+  result->start = 0;
 
   result->values = SNetMemAlloc(list->used * sizeof(LIST_VAL));
-  memcpy(result->values, list->values, list->used * sizeof(LIST_VAL));
+
+  int startToArrayEnd = list->size - list->start;
+  memcpy(result->values, list->values + list->start,
+         startToArrayEnd * sizeof(LIST_VAL));
+  memcpy(result->values + startToArrayEnd, list->values,
+         (list->size - startToArrayEnd) * sizeof(LIST_VAL));
 
   return result;
 }
@@ -70,10 +77,11 @@ snet_list_t *LIST_FUNCTION(LIST_NAME, Copy)(snet_list_t *list)
 void LIST_FUNCTION(LIST_NAME, Destroy)(snet_list_t *list)
 {
   #ifdef LIST_FREE_FUNCTION
-  int i;
-  for (i = 0; i < list->used; i++) {
-    LIST_FREE_FUNCTION(list->values[i]);
-  }
+  LIST_VAL val;
+
+  LIST_FOR_EACH(list, val)
+    LIST_FREE_FUNCTION(val);
+  END_FOR
   #endif
 
   SNetMemFree(list->values);
@@ -86,15 +94,17 @@ snet_list_t *LIST_FUNCTION(LIST_NAME, DeepCopy)(snet_list_t *list,
                                                 LIST_VAL (*copyfun)(LIST_VAL))
 {
   int i;
+  LIST_VAL val;
   snet_list_t *result = SNetMemAlloc(sizeof(snet_list_t));
 
   result->size = list->used;
   result->used = list->used;
+  result->start = 0;
 
   result->values = SNetMemAlloc(list->used * sizeof(LIST_VAL));
-  for (i = 0; i < result->used; i++) {
-    result->values[i] = (*copyfun)(list->values[i]);
-  }
+  LIST_ENUMERATE(list, val, i)
+    result->values[i] = (*copyfun)(val);
+  END_ENUMERATE
 
   return result;
 }
@@ -112,14 +122,44 @@ void LIST_FUNCTION(LIST_NAME, Push)(snet_list_t *list, LIST_VAL val)
 {
   if (list->used == list->size) {
     LIST_VAL *values = SNetMemAlloc((list->size + 1) * sizeof(LIST_VAL));
-    memcpy(values, list->values, list->size * sizeof(LIST_VAL));
+
+    int startToArrayEnd = list->size - list->start;
+    memcpy(values, list->values + list->start,
+           startToArrayEnd * sizeof(LIST_VAL));
+    memcpy(values + startToArrayEnd, list->values,
+           (list->size - startToArrayEnd) * sizeof(LIST_VAL));
+
     SNetMemFree(list->values);
 
     list->values = values;
     list->size++;
+    list->start = 0;
   }
 
-  list->values[list->used] = val;
+  list->values[(list->start + list->used) % list->size] = val;
+  list->used++;
+}
+
+void LIST_FUNCTION(LIST_NAME, Append)(snet_list_t *list, LIST_VAL val)
+{
+  if (list->used == list->size) {
+    LIST_VAL *values = SNetMemAlloc((list->size + 1) * sizeof(LIST_VAL));
+
+    int startToArrayEnd = list->size - list->start;
+    memcpy(values + 1, list->values + list->start,
+           startToArrayEnd * sizeof(LIST_VAL));
+    memcpy(values + 1 + startToArrayEnd, list->values,
+           (list->size - startToArrayEnd) * sizeof(LIST_VAL));
+
+    SNetMemFree(list->values);
+    list->values = values;
+    list->size++;
+    list->start = 1;
+  }
+  //Note: first add size to start before subtracting 1 to make sure start is
+  //always >= 0
+  list->start = (list->start + list->size - 1) % list->size;
+  list->values[list->start] = val;
   list->used++;
 }
 
@@ -128,20 +168,29 @@ LIST_VAL LIST_FUNCTION(LIST_NAME, Pop)(snet_list_t *list)
   assert(list->used > 0); //FIXME: Desired behaviour?
 
   list->used--;
-  return list->values[list->used];
+  return list->values[(list->start + list->used) % list->size];
+}
+
+LIST_VAL LIST_FUNCTION(LIST_NAME, Unappend)(snet_list_t *list)
+{
+  assert(list->used > 0); //FIXME: Desired behaviour?
+
+  list->used--;
+  list->start++;
+  return list->values[list->start - 1];
 }
 
 
 
 bool LIST_FUNCTION(LIST_NAME, Contains)(snet_list_t *list, LIST_VAL val)
 {
-  int i;
+  LIST_VAL tmp;
 
-  for (i = 0; i < list->used; i++) {
-    if (list->values[i] == val) {
+  LIST_FOR_EACH(list, tmp)
+    if (tmp == val) {
       return true;
     }
-  }
+  END_FOR
 
   return false;
 }
@@ -152,7 +201,7 @@ LIST_VAL LIST_FUNCTION(LIST_NAME, Get)(snet_list_t *list, int i)
 {
   assert(i >= 0 && list->used > i); //FIXME: Desired behaviour?
 
-  return list->values[i];
+  return list->values[(list->start + i) % list->size];
 }
 
 LIST_VAL LIST_FUNCTION(LIST_NAME, Remove)(snet_list_t *list, int i)
@@ -164,7 +213,8 @@ LIST_VAL LIST_FUNCTION(LIST_NAME, Remove)(snet_list_t *list, int i)
   result = list->values[i];
 
   for (; i < list->used; i++) {
-    list->values[i] = list->values[i+1];
+    list->values[(list->start + i) % list->size] =
+              list->values[(list->start + i + 1) % list->size];
   }
 
   list->used--;

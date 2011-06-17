@@ -34,13 +34,13 @@
 #define LIST_FOR_EACH(list, val) {\
   int snet_list_ctr;\
   for (snet_list_ctr = 0; snet_list_ctr < list->used; snet_list_ctr++) {\
-    val = list->values[snet_list_ctr];
+    val = list->values[(list->start + snet_list_ctr) % list->size];
 
 #define END_FOR                     } }
 
 #define LIST_ENUMERATE(list, val, index) \
   for (index = 0; index < list->used; index++) {\
-    val = list->values[index];
+    val = list->values[(list->start + index) % list->size];
 
 #define END_ENUMERATE               }
 
@@ -49,18 +49,18 @@
   for (snet_list_ctr = 0;\
        snet_list_ctr < list1->used && snet_list_ctr < list2->used;\
        snet_list_ctr++) {\
-    val1 = list1->values[snet_list_ctr];\
-    val2 = list2->values[snet_list_ctr];
+    val1 = list1->values[(list1->start + snet_list_ctr) % list1->size];\
+    val2 = list2->values[(list2->start + snet_list_ctr) % list2->size];
 
 #define LIST_ZIP_ENUMERATE(list1, val1, list2, val2, index) {\
   for (index = 0; index < list1->used && index < list2->used; index++) {\
-    val1 = list1->values[index];\
-    val2 = list2->values[index];\
+    val1 = list1->values[(list1->start + index) % list1->size];\
+    val2 = list2->values[(list2->start + index) % list2->size];
 
 #define END_ZIP                     } }
 
 typedef struct snet_list_t {
-  int size, used;
+  int size, used, start;
   LIST_VAL_H *values;
 } snet_list_t;
 
@@ -75,7 +75,9 @@ snet_list_t *LIST_FUNCTION(LIST_NAME_H, DeepCopy)(
 int LIST_FUNCTION(LIST_NAME_H, Length)(snet_list_t *list);
 
 void LIST_FUNCTION(LIST_NAME_H, Push)(snet_list_t *list, LIST_VAL_H val);
+void LIST_FUNCTION(LIST_NAME_H, Append)(snet_list_t *list, LIST_VAL_H val);
 LIST_VAL_H LIST_FUNCTION(LIST_NAME_H, Pop)(snet_list_t *list);
+LIST_VAL_H LIST_FUNCTION(LIST_NAME_H, )(snet_list_t *list);
 
 bool LIST_FUNCTION(LIST_NAME_H, Contains)(snet_list_t *list, LIST_VAL_H val);
 
