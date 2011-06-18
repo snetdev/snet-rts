@@ -349,7 +349,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   SNetLocvecParallelEnter(locvec);
 
   instream = SNetRouteUpdate(info, instream, location);
-  if(location == SNetNodeLocation) {
+  if(SNetDistribIsNodeLocation(location)) {
     transits    = SNetMemAlloc( num * sizeof( snet_stream_t*));
     collstreams = SNetMemAlloc( num * sizeof( snet_stream_t*));
 

@@ -21,6 +21,7 @@ typedef struct {
   snet_expr_list_t *guards;
   snet_locvec_t *locvec;
   bool is_det, is_incarnate;
+  int location;
 } star_arg_t;
 
 
@@ -101,7 +102,7 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
   starstream = SNetSerialStarchild(
       nextstream_addr,
       info,
-      SNetNodeLocation,
+      sarg->location,
       sarg->box,
       sarg->selffun
       );
@@ -298,7 +299,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
   SNetLocvecStarEnter(locvec);
 
   input = SNetRouteUpdate(info, input, location);
-  if(location == SNetNodeLocation) {
+  if(SNetDistribIsNodeLocation(location)) {
     /* create the task argument */
     sarg = (star_arg_t *) SNetMemAlloc( sizeof(star_arg_t));
     newstream = SNetStreamCreate(0);
@@ -312,6 +313,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->guards = guards;
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
+    sarg->location = location;
 
     SNetEntitySpawn( ENTITY_STAR, StarBoxTask, (void*)sarg );
 

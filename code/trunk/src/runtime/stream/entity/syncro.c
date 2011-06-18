@@ -233,7 +233,7 @@ snet_stream_t *SNetSync( snet_stream_t *input,
   sync_arg_t *sarg;
 
   input = SNetRouteUpdate(info, input, location);
-  if(location == SNetNodeLocation) {
+  if(SNetDistribIsNodeLocation(location)) {
     output = SNetStreamCreate(0);
     sarg = (sync_arg_t *) SNetMemAlloc( sizeof( sync_arg_t));
     sarg->input  = input;

@@ -958,7 +958,7 @@ snet_stream_t *SNetObserverSocketBox( snet_stream_t *input,
 
   input = SNetRouteUpdate(info, input, location);
 
-  if(location == SNetNodeLocation) {
+  if(SNetDistribIsNodeLocation(location)) {
     hnd = SNetMemAlloc(sizeof(obs_handle_t));
 
     if(hnd == NULL){
@@ -1041,7 +1041,7 @@ snet_stream_t *SNetObserverFileBox(snet_stream_t *input,
 
   input = SNetRouteUpdate(info, input, location);
 
-  if(location == SNetNodeLocation) {
+  if(SNetDistribIsNodeLocation(location)) {
     hnd = SNetMemAlloc(sizeof(obs_handle_t));
     if(hnd == NULL){
       SNetMemFree(hnd);

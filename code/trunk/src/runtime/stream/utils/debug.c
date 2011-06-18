@@ -22,7 +22,7 @@ extern void SNetUtilDebugFatal(char* m, ...) {
 
   va_start(p, m);
 
-  num = sprintf(temp, "(SNET FATAL (NODE %d THREAD %lu) ", SNetNodeLocation, pthread_self());
+  num = sprintf(temp, "(SNET FATAL (NODE %d THREAD %lu) ", SNetDistribGetNodeId(), pthread_self());
   ret = vsprintf(temp + num, m, p);
 
   if(ret < 0) {
@@ -58,7 +58,7 @@ extern void SNetUtilDebugNotice(char *m, ...) {
   memset(temp, 0, strlen(m) + MAX_SIZE);
 
   va_start(p, m);
-  num = sprintf(temp, "(SNET NOTICE (NODE %d THREAD %lu) ", SNetNodeLocation, pthread_self());
+  num = sprintf(temp, "(SNET NOTICE (NODE %d THREAD %lu) ", SNetDistribGetNodeId(), pthread_self());
   ret = vsprintf(temp + num, m, p);
 
   if(ret < 0) {

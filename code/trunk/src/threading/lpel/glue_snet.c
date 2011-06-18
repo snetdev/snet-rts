@@ -17,7 +17,6 @@ typedef struct snet_task_t *snet_entity_t;
 #include "assign.h"
 
 
-extern int SNetNodeLocation;
 
 struct snet_entity_t;
 struct snet_stream_t;
@@ -81,7 +80,7 @@ int SNetThreadingInit(int argc, char **argv)
   int i;
 
   config.flags = SNET_FLAG_PINNED;
-  config.node = SNetNodeLocation;
+  config.node = SNetDistribGetNodeId();
 
   for (i=0; i<argc; i++) {
     if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {

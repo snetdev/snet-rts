@@ -262,9 +262,9 @@ int SNetInRun(int argc, char **argv,
   SNetLocvecSet(info, locvec);
 
   input_stream = SNetStreamCreate(0);
-  output_stream = fun(input_stream, info, SNetNodeLocation);
+  output_stream = fun(input_stream, info, SNetDistribGetNodeId());
 
-  if (SNetNodeLocation == 0) { //FIXME: probably shouldn't be hardcoded like this
+  if (SNetDistribIsRootNode()) {
     /* create output thread */
     SNetInOutputInit(output, labels, interfaces, output_stream);
 

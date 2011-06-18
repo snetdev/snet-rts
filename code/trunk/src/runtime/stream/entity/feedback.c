@@ -508,7 +508,7 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
   SNetLocvecFeedbackEnter(locvec);
 
   input = SNetRouteUpdate(info, input, location);
-  if(location == SNetNodeLocation) {
+  if(SNetDistribIsNodeLocation(location)) {
     snet_stream_t *into_op, *from_op;
     snet_stream_t *back_bufin, *back_bufout;
     fbbuf_arg_t *fbbarg;

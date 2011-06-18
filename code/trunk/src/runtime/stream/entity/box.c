@@ -167,7 +167,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
 
   locvec = SNetLocvecGet(info);
 
-  if(location == SNetNodeLocation) {
+  if(SNetDistribIsNodeLocation(location)) {
     output = SNetStreamCreate(0);
 
     barg = (box_arg_t *) SNetMemAlloc( sizeof( box_arg_t));
