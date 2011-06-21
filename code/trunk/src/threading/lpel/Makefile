@@ -12,7 +12,7 @@ LDFLAGS = -shared -pthread -lpthread -lpcl -lrt -lcap
 
 OBJS = buffer.o scheduler.o stream.o \
        streamset.o task.o taskqueue.o lpel_main.o worker.o \
-       glue_snet.o assign.o mutex.o \
+       glue_snet.o assign.o mon_snet.o \
        mailbox.o \
        # mailbox-lf.o \
 
