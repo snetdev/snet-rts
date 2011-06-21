@@ -10,7 +10,7 @@ INCLUDES = -I$(SNETBASE)/include -I$(LPELSOURCE)
 CFLAGS = -c -g -Wall -pthread -fPIC $(INCLUDES)
 LDFLAGS = -shared -pthread -lpthread -lpcl -lrt -lcap
 
-OBJS = buffer.o monitoring.o scheduler.o stream.o \
+OBJS = buffer.o scheduler.o stream.o \
        streamset.o task.o taskqueue.o lpel_main.o worker.o \
        glue_snet.o assign.o mutex.o \
        mailbox.o \
@@ -38,7 +38,7 @@ $(TARGET): $(OBJS)
 
 lpel4snet.h: $(LPELSOURCE)/lpel.h translate4snet.sed
 	sed -f translate4snet.sed \
-	    -e "/typedef .*snet_.*/ d" \
+            -e "/typedef .*snet_.*/ d" \
 	    $< > $@
 
 clean:
