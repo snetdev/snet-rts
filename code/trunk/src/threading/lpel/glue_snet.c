@@ -37,20 +37,6 @@ static int mon_level = 0;
  */
 static bool dloc_placement = false;
 
-/**
-  "__BOX__",      // ENTITY_box,
-  "<parallel>",   // ENTITY_parallel,
-  "<star>",       // ENTITY_star,
-  "<split>",      // ENTITY_split,
-  "<fbcoll>",     // ENTITY_fbcoll,
-  "<fbdisp>",     // ENTITY_fbdisp,
-  "<fbbuf>",      // ENTITY_fbbuf,
-  "<sync>",       // ENTITY_sync,
-  "<filter>",     // ENTITY_filter,
-  "<collect>",    // ENTITY_collect,
-  "__OTHER__" // ENTITY_other
- */
-
 
 static size_t SNetEntityStackSize(snet_entity_type_t type)
 {
@@ -202,9 +188,17 @@ int SNetEntitySpawn(
   int mon_flags;
   int do_mon = 0;
   int worker = -1;
+  char locstr[128];
+
 
   // if locvec is NULL then entity_other
   assert(locvec != NULL || type == ENTITY_other);
+
+  if (locvec != NULL) {
+    SNetLocvecPrint(locstr, locvec);
+  } else {
+    locstr[0] = '\0';
+  }
 
   if ( type != ENTITY_other) {
     if (dloc_placement) {
@@ -229,6 +223,9 @@ int SNetEntitySpawn(
    * 5: like 4, for all (but _other) entities
    */
 
+  /* saturate mon level */
+  if (mon_level > 5) mon_level = 5;
+
   mon_flags = 0;
   mon_flags |= SNET_MON_TASK_USREVT;
   switch(mon_level) {
@@ -236,6 +233,7 @@ int SNetEntitySpawn(
     case 3: mon_flags |= SNET_MON_TASK_TIMES;
     case 2:
       if (type==ENTITY_box) {
+
         mon_task_t *mt = SNetThreadingMonTaskCreate(
           SNetEntityGetID(t), name, mon_flags
           );
@@ -254,12 +252,17 @@ int SNetEntitySpawn(
         do_mon = 1;
       }
       break;
+
+    case 1:
+      do_mon = 1;
+      break;
+
     default: /*NOP*/;
   }
 
   if (do_mon && mapfile) {
     int tid = SNetEntityGetID(t);
-    (void) fprintf(mapfile, "%d: %s\n", tid, name);
+    (void) fprintf(mapfile, "%d %s %s\n", tid, locstr, name);
   }
 
 //FIXME only for debugging purposes
