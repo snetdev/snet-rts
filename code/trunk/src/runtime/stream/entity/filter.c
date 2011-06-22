@@ -345,12 +345,13 @@ static void NameshiftTask(void *arg)
 /**
  * Convenience function for creating filter and translate
  */
-snet_stream_t* CreateFilter( snet_stream_t *instream,
+static snet_stream_t* CreateFilter( snet_stream_t *instream,
     snet_info_t *info,
     int location,
     snet_variant_t *input_variant,
     snet_expr_list_t *guard_exprs,
-    snet_filter_instr_list_list_t **instr_list
+    snet_filter_instr_list_list_t **instr_list,
+    const char *name
     )
 {
   snet_stream_t *outstream;
@@ -371,7 +372,8 @@ snet_stream_t* CreateFilter( snet_stream_t *instream,
     farg->guard_exprs = guard_exprs;
     farg->filter_instructions = instr_list;
 
-    SNetEntitySpawn( ENTITY_FILTER, FilterTask, (void*)farg);
+    SNetEntitySpawn( ENTITY_filter, SNetLocvecGet(info), location,
+      name, FilterTask, (void*)farg);
   } else {
     SNetVariantDestroy(input_variant);
     SNetExprListDestroy(guard_exprs);
@@ -422,7 +424,8 @@ snet_stream_t* SNetFilter( snet_stream_t *instream,
   /* read in the filter instructions from varargs */
   BUILD_INSTR_FROM_VARARG(instr_list, num_outtypes, guard_exprs);
 
-  return CreateFilter(instream, info, location, input_variant, guard_exprs, instr_list);
+  return CreateFilter(instream, info, location, input_variant,
+      guard_exprs, instr_list, "<filter>");
 }
 
 
@@ -447,7 +450,8 @@ snet_stream_t* SNetTranslate( snet_stream_t *instream,
   /* read in the filter instructions from varargs */
   BUILD_INSTR_FROM_VARARG(instr_list, num_outtypes, guard_exprs);
 
-  return CreateFilter(instream, info, location, input_variant, guard_exprs, instr_list);
+  return CreateFilter(instream, info, location, input_variant,
+      guard_exprs, instr_list, "<translate>");
 }
 
 
@@ -474,7 +478,8 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
     farg->guard_exprs = SNetExprListCreate( 1, SNetEconsti( offset));
     farg->filter_instructions = NULL; /* instructions */
 
-    SNetEntitySpawn( ENTITY_FILTER, NameshiftTask, (void*)farg);
+    SNetEntitySpawn( ENTITY_filter, SNetLocvecGet(info), location,
+      "<nameshift>", NameshiftTask, (void*)farg);
   } else {
     SNetVariantDestroy( untouched);
     outstream = instream;

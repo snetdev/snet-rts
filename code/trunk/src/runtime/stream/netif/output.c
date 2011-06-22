@@ -201,6 +201,6 @@ void SNetInOutputInit(FILE *file,
   hnd->interfaces = interfaces;
   hnd->buffer = out_buf;
 
-  /* create a joinable wrapper thread */
-  SNetEntitySpawn( ENTITY_OTHER("glob_output"), GlobOutputTask, (void*)hnd);
+  SNetEntitySpawn( ENTITY_other, NULL, -1,
+    "glob_output", GlobOutputTask, (void*)hnd);
 }

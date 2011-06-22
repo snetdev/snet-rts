@@ -78,5 +78,6 @@ void SNetInInputInit(FILE *file,
   hnd->interfaces = interfaces;
   hnd->buffer = in_buf;
 
-  SNetEntitySpawn( ENTITY_OTHER("glob_input"), GlobInputTask, (void*)hnd);
+  SNetEntitySpawn( ENTITY_other, NULL, -1,
+      "glob_input", GlobInputTask, (void*)hnd);
 }

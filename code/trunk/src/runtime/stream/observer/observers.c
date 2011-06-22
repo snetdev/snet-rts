@@ -903,7 +903,8 @@ static void CreateObserverTask( obs_handle_t *hnd)
   char name[16];
   (void) snprintf(name, 16, "observer%02d", hnd->id);
   /* create a detached wrapper thread */
-  SNetEntitySpawn( ENTITY_OTHER(name), ObserverBoxTask, (void*)hnd);
+  SNetEntitySpawn( ENTITY_other, NULL, -1,
+      name, ObserverBoxTask, (void*)hnd);
 }
 
 

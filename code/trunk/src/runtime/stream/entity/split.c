@@ -242,9 +242,10 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->is_det = is_det;
     sarg->is_byloc = is_byloc;
     sarg->location = location;
-    SNetEntitySpawn( ENTITY_SPLIT, SplitBoxTask, (void*)sarg );
+    SNetEntitySpawn( ENTITY_split, locvec, location,
+        "<split>", SplitBoxTask, (void*)sarg);
 
-    output = CollectorCreateDynamic( initial, info);
+    output = CollectorCreateDynamic( initial, location, info);
 
   } else {
     output = input;

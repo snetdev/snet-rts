@@ -315,15 +315,15 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->is_det = is_det;
     sarg->location = location;
 
-    SNetEntitySpawn( ENTITY_STAR, StarBoxTask, (void*)sarg );
+    SNetEntitySpawn( ENTITY_star, sarg->locvec, location,
+        "<star>", StarBoxTask, (void*)sarg);
 
     /* creation function of top level star will return output stream
      * of its collector, the incarnates return their outstream
      */
     if (!is_incarnate) {
       /* the "top-level" star also creates a collector */
-      output = CollectorCreateDynamic(newstream, info);
-      /* TODO in info: update source (locvec) to collector? */
+      output = CollectorCreateDynamic(newstream, location, info);
     } else {
       output = newstream;
     }

@@ -274,7 +274,7 @@ void CollectorTask(void *arg)
  * Collector creation function
  * @pre num >= 1
  */
-snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, snet_info_t *info)
+snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, int location, snet_info_t *info)
 {
   snet_stream_t *outstream;
   coll_arg_t *carg;
@@ -295,7 +295,8 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, snet_i
   carg->dynamic = false;
 
   /* spawn collector task */
-  SNetEntitySpawn( ENTITY_COLLECT, CollectorTask, (void *)carg);
+  SNetEntitySpawn( ENTITY_collect, SNetLocvecGet(info), location,
+      "<collect>", CollectorTask, (void*)carg);
   return outstream;
 }
 
@@ -304,7 +305,7 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, snet_i
 /**
  * Collector creation function
  */
-snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, snet_info_t *info)
+snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, int location, snet_info_t *info)
 {
   snet_stream_t *outstream;
   coll_arg_t *carg;
@@ -320,7 +321,8 @@ snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, snet_info_t *inf
   carg->dynamic = true;
 
   /* spawn collector task */
-  SNetEntitySpawn( ENTITY_COLLECT, CollectorTask, (void *)carg);
+  SNetEntitySpawn( ENTITY_collect, SNetLocvecGet(info), location,
+      "<collect>", CollectorTask, (void*)carg);
   return outstream;
 }
 

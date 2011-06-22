@@ -84,7 +84,14 @@ int SNetThreadingCleanup(void)
 }
 
 
-int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
+int SNetEntitySpawn(
+  snet_entity_type_t type,
+  snet_locvec_t *locvec,
+  int location,
+  const char *name,
+  snet_entityfunc_t func,
+  void *arg
+  )
 {
   int res;
   pthread_t p;
@@ -111,7 +118,7 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
   (void) pthread_attr_init( &attr);
 
   /* stacksize */
-  stacksize = SNetEntityStackSize(info.type);
+  stacksize = SNetEntityStackSize(type);
 
   if (stacksize > 0) {
     res = pthread_attr_setstacksize(&attr, stacksize);
@@ -139,7 +146,7 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
 
   /* core affinity */
 #ifdef USE_CORE_AFFINITY
-  if( info.type == ENTITY_other) {
+  if( type == ENTITY_other) {
     SNetSetThreadAffinity( &p, STRICTLYFIRST);
   } else {
     SNetSetThreadAffinity( &p, ALLBUTFIRST);

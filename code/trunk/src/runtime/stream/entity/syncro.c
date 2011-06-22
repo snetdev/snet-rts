@@ -241,7 +241,8 @@ snet_stream_t *SNetSync( snet_stream_t *input,
     sarg->patterns = patterns;
     sarg->guard_exprs = guard_exprs;
 
-    SNetEntitySpawn( ENTITY_SYNC, SyncBoxTask, (void*)sarg);
+    SNetEntitySpawn( ENTITY_sync, SNetLocvecGet(info), location,
+      "<sync>", SyncBoxTask, (void*)sarg);
   } else {
     SNetVariantListDestroy( patterns);
     SNetExprListDestroy( guard_exprs);

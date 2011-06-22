@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
@@ -173,6 +174,12 @@ void SNetLocvecParallelLeave(snet_locvec_t *vec)
   SNetLocvecPop(vec);
 }
 
+void SNetLocvecParallelReset(snet_locvec_t *vec)
+{
+  SNetLocvecParallelLeave(vec);
+  SNetLocvecParallelEnter(vec);
+}
+
 
 /* for split combinator */
 void SNetLocvecSplitEnter(snet_locvec_t *vec)
@@ -267,21 +274,28 @@ void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec)
 
 
 
-
-void SNetLocvecPrint(FILE *file, snet_locvec_t *vec)
+/**
+ * @pre sbuf is a char buffer large enough to hold the printed
+ *      locvec
+  TODO cleanup this hack
+ */
+void SNetLocvecPrint(char *sbuf, snet_locvec_t *vec)
 {
   int i;
+  char itembuf[32];
+
+  sbuf[0] = '\0';
   for (i=0; i<vec->size; i++) {
     snet_locitem_t *item = &vec->arr[i];
     snet_loctype_t type = item->type;
     int num = item->num;
     if (num >= 0) {
-      fprintf(file, ":%c%d", (char)type, num);
+      sprintf(itembuf, ":%c%d", (char)type, num);
     } else {
-      fprintf(file, ":%c", (char)type);
+      sprintf(itembuf, ":%c", (char)type);
     }
+    strcat( sbuf, itembuf );
   }
-  fprintf(file, "\n");
 }
 
 #if 0

@@ -177,7 +177,8 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->output_variants = output_variants;
     barg->boxname = boxname;
 
-    SNetEntitySpawn( ENTITY_BOX(barg->boxname), BoxTask, (void*)barg );
+    SNetEntitySpawn( ENTITY_box, SNetLocvecGet(info), location,
+      barg->boxname, BoxTask, (void*)barg);
 
 
   } else {

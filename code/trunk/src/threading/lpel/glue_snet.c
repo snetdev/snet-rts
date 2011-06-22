@@ -26,10 +26,30 @@
 
 
 
+
+
+
 static FILE *mapfile = NULL;
 static int mon_level = 0;
 
+/**
+ * use the Distributed S-Net placement operators for worker placement
+ */
+static bool dloc_placement = false;
 
+/**
+  "__BOX__",      // ENTITY_box,
+  "<parallel>",   // ENTITY_parallel,
+  "<star>",       // ENTITY_star,
+  "<split>",      // ENTITY_split,
+  "<fbcoll>",     // ENTITY_fbcoll,
+  "<fbdisp>",     // ENTITY_fbdisp,
+  "<fbbuf>",      // ENTITY_fbbuf,
+  "<sync>",       // ENTITY_sync,
+  "<filter>",     // ENTITY_filter,
+  "<collect>",    // ENTITY_collect,
+  "__OTHER__" // ENTITY_other
+ */
 
 
 static size_t SNetEntityStackSize(snet_entity_type_t type)
@@ -81,6 +101,9 @@ int SNetThreadingInit(int argc, char **argv)
     } else if(strcmp(argv[i], "-excl") == 0 ) {
       /* Assign realtime priority to workers*/
       config.flags |= SNET_FLAG_EXCLUSIVE;
+    } else if(strcmp(argv[i], "-dloc") == 0 ) {
+      /* Use distributed s-net location placement */
+      dloc_placement = true;
     } else if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
       /* Number of workers */
       i = i + 1;
@@ -163,21 +186,40 @@ int SNetThreadingCleanup(void)
 }
 
 
-int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
+
+/*****************************************************************************
+ * Spawn a new task
+ ****************************************************************************/
+int SNetEntitySpawn(
+  snet_entity_type_t type,
+  snet_locvec_t *locvec,
+  int location,
+  const char *name,
+  snet_entityfunc_t func,
+  void *arg
+  )
 {
   int mon_flags;
   int do_mon = 0;
   int worker = -1;
 
-  if ( info.type != ENTITY_other) {
-    worker = SNetAssignTask( (info.type==ENTITY_box), info.name );
+  // if locvec is NULL then entity_other
+  assert(locvec != NULL || type == ENTITY_other);
+
+  if ( type != ENTITY_other) {
+    if (dloc_placement) {
+      assert(location != -1);
+      worker = location;
+    } else {
+      worker = SNetAssignTask( (type==ENTITY_box), name );
+    }
   }
 
   snet_entity_t *t = SNetEntityCreate(
       worker,
       (snet_entityfunc_t) func,
       arg,
-      SNetEntityStackSize(info.type)
+      SNetEntityStackSize(type)
       );
 
   /* monitoring levels:
@@ -193,9 +235,9 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
     case 4: mon_flags |= SNET_MON_TASK_STREAMS;
     case 3: mon_flags |= SNET_MON_TASK_TIMES;
     case 2:
-      if (info.type==ENTITY_box) {
+      if (type==ENTITY_box) {
         mon_task_t *mt = SNetThreadingMonTaskCreate(
-          SNetEntityGetID(t), info.name, mon_flags
+          SNetEntityGetID(t), name, mon_flags
           );
         SNetEntityMonitor(t, mt);
         do_mon = 1;
@@ -203,9 +245,9 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
       break;
 
     case 5:
-      if (info.type!=ENTITY_other) {
+      if (type!=ENTITY_other) {
         mon_task_t *mt = SNetThreadingMonTaskCreate(
-          SNetEntityGetID(t), info.name,
+          SNetEntityGetID(t), name,
           SNET_MON_TASK_STREAMS | SNET_MON_TASK_TIMES
           );
         SNetEntityMonitor(t, mt);
@@ -217,7 +259,7 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
 
   if (do_mon && mapfile) {
     int tid = SNetEntityGetID(t);
-    (void) fprintf(mapfile, "%d: %s\n", tid, info.name);
+    (void) fprintf(mapfile, "%d: %s\n", tid, name);
   }
 
 //FIXME only for debugging purposes

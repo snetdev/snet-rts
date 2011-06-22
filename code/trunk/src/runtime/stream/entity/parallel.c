@@ -361,6 +361,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
       collstreams[i] = (*fun)(transits[i], info, location);
     END_ENUMERATE
 
+    SNetLocvecParallelReset(locvec);
 
     /* create parallel */
     parg = SNetMemAlloc( sizeof(parallel_arg_t));
@@ -370,11 +371,11 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     parg->variant_lists = variant_lists;
     parg->is_det = is_det;
 
-    SNetEntitySpawn( ENTITY_PARALLEL, ParallelBoxTask, (void*)parg );
-
+    SNetEntitySpawn( ENTITY_parallel, locvec, location,
+        "<parallel>", ParallelBoxTask, (void*)parg);
 
     /* create collector with collstreams */
-    outstream = CollectorCreateStatic(num, collstreams, info);
+    outstream = CollectorCreateStatic(num, collstreams, location, info);
 
     /* free collstreams array */
     SNetMemFree(collstreams);
