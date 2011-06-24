@@ -286,11 +286,11 @@ static void FeedbackDispTask(void *arg)
 
       case REC_terminate:
         terminate = true;
-        SNetStreamWrite( outstream, rec);
 #ifndef FEEDBACK_OMIT_BUFFER
         /* a terminate record is sent in the backloop for the buffer */
         SNetStreamWrite( backstream, SNetRecCopy( rec));
 #endif
+        SNetStreamWrite( outstream, rec);
         break;
 
       case REC_sync:
