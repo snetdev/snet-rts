@@ -103,7 +103,7 @@ static void BoxTask(void *arg)
         SNetRecDestroy( rec);
 
         /* restrict to one data record per execution */
-        //SNetEntityYield();
+        SNetEntityYield();
         break;
 
       case REC_sync:

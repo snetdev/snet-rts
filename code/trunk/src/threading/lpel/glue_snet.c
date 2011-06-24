@@ -26,7 +26,8 @@
 
 
 
-
+static int num_cpus = 0;
+static int num_workers = 0;
 
 
 static FILE *mapfile = NULL;
@@ -71,7 +72,6 @@ int SNetThreadingInit(int argc, char **argv)
 {
   snet_config_t config;
   char fname[20+1];
-  int num_cpus, num_workers=0;
   int i;
 
   memset(&config, 0, sizeof(snet_config_t));
@@ -122,7 +122,7 @@ int SNetThreadingInit(int argc, char **argv)
     config.num_workers = num_workers;
     config.proc_others = 0;
   }
-
+  num_workers = config.num_workers;
 
   /* initialise monitoring module */
   SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId());
@@ -203,7 +203,7 @@ int SNetEntitySpawn(
   if ( type != ENTITY_other) {
     if (dloc_placement) {
       assert(location != -1);
-      worker = location;
+      worker = location % num_workers;
     } else {
       worker = SNetAssignTask( (type==ENTITY_box), name );
     }
@@ -262,7 +262,7 @@ int SNetEntitySpawn(
 
   if (do_mon && mapfile) {
     int tid = SNetEntityGetID(t);
-    (void) fprintf(mapfile, "%d %s %s\n", tid, locstr, name);
+    (void) fprintf(mapfile, "%d %s %s %d\n", tid, locstr, name, worker);
   }
 
 //FIXME only for debugging purposes
