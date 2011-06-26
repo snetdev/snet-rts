@@ -147,7 +147,7 @@ void CollectorTask(void *arg)
                   SNetStreamClose( sd, true);
                   /* update incoming counter */
                   incount--;
-                  assert(incount > 1);
+                  assert(incount > 0);
                   /* destroy record */
                   SNetRecDestroy( wait_rec);
                 }
@@ -171,10 +171,12 @@ void CollectorTask(void *arg)
 
           case REC_terminate:
             /* termination record: close stream and remove from ready set */
-            if ( !SNetStreamsetIsEmpty( &waitingset)) {
-              SNetUtilDebugNotice("[COLL] Warning: Termination record "
-                  "received while waiting on sort records!\n");
-            }
+
+            /* Pre garbage-collection it was impossible that a termination
+             * records was received while waiting on sort records.
+             */
+            //assert( !SNetStreamsetIsEmpty( &waitingset) );
+
             SNetStreamIterRemove( iter);
             SNetStreamClose( cur_stream, true);
             /* update incoming counter */

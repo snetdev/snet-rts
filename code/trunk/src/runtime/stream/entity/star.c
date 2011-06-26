@@ -130,8 +130,6 @@ static void StarBoxTask(void *arg)
   bool terminate = false;
   bool sync_cleanup = false;
   snet_record_t *rec;
-  /* for deterministic variant: */
-  int counter = 0;
 
   instream  = SNetStreamOpen(sarg->input, 'r');
   outstream = SNetStreamOpen(sarg->output, 'w');
@@ -145,6 +143,7 @@ static void StarBoxTask(void *arg)
 
       case REC_data:
         if( MatchesExitPattern( rec, sarg->exit_patterns, sarg->guards)) {
+          assert(!sync_cleanup);
           /* send rec to collector */
           SNetStreamWrite( outstream, rec);
         } else {
@@ -158,32 +157,51 @@ static void StarBoxTask(void *arg)
 
         /* deterministic non-incarnate has to append control records */
         if (sarg->is_det && !sarg->is_incarnate) {
-          /* send new sort record to collector */
+          /* send new sort record to collector level=0, counter=0*/
           SNetStreamWrite( outstream,
-              SNetRecCreate( REC_sort_end, 0, counter) );
+              SNetRecCreate( REC_sort_end, 0, 0) );
 
           /* if has next instance, send new sort record */
           if (nextstream != NULL) {
             SNetStreamWrite( nextstream,
-                SNetRecCreate( REC_sort_end, 0, counter) );
+                SNetRecCreate( REC_sort_end, 0, 0) );
           }
+        } else if (sync_cleanup) {
+          /* If sync_cleanup is set, then we received a source record that
+           * told us we will receive a REC_sync next containing the
+           * outstream of a predecessor star dispatcher.
+           * The sync rec immediately followed the source rec.
+           * Cleaning up is done at the next incoming  data record (now)
+           * such that the operand network is not created unnecessarily
+           * only to be able to forward the sync record.
+           */
+          assert( nextstream != NULL);
+          /* first send a sync record to the next instance */
+          SNetStreamWrite( nextstream,
+              SNetRecCreate( REC_sync, sarg->input) );
+
+          /* send a terminate record to collector, it will close and
+             destroy the stream */
+          SNetStreamWrite( outstream, SNetRecCreate(REC_terminate));
+
+          terminate = true;
+          SNetStreamClose(nextstream, false);
+          SNetStreamClose(instream, false);
         }
         break;
 
       case REC_sync:
-        if (sync_cleanup) {
+        if (sync_cleanup && nextstream != NULL) {
           /* If sync_cleanup is set, then we received a source record that
            * told us we will receive a REC_sync next containing the
            * outstream of a predecessor star dispatcher.
            * Here it is, to avoid stale star dispatcher components, we will
            * clean ourselves up and forward the REC_sync to the operand network
            */
-          if( nextstream == NULL) {
-            CreateOperandNetwork(&nextstream, sarg, outstream);
-          }
           /* forward the sync record  */
           SNetStreamWrite( nextstream, rec);
-          /* send a terminate record to collector, it will close and destroy the stream */
+          /* send a terminate record to collector, it will close and
+             destroy the stream */
           SNetStreamWrite( outstream, SNetRecCreate(REC_terminate));
 
           terminate = true;
@@ -193,6 +211,7 @@ static void StarBoxTask(void *arg)
           /* handle sync record as usual */
           snet_stream_t *newstream = SNetRecGetStream( rec);
           SNetStreamReplace( instream, newstream);
+          sarg->input = newstream;
           SNetRecDestroy( rec);
         }
         break;

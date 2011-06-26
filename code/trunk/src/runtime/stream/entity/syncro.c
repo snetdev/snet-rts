@@ -31,6 +31,7 @@
 #include "memfun.h"
 #include "threading.h"
 #include "distribution.h"
+#include "locvec.h"
 #include "debug.h"
 
 
@@ -84,6 +85,7 @@ typedef struct {
   snet_stream_t *input, *output;
   snet_variant_list_t *patterns;
   snet_expr_list_t *guard_exprs;
+  snet_locvec_t *myloc;
 } sync_arg_t;
 
 /**
@@ -98,6 +100,7 @@ static void SyncBoxTask(void *arg)
   snet_stream_desc_t *outstream, *instream;
 
   bool terminate = false;
+  bool partial_sync = false;
   int i, new_matches, match_cnt = 0;
   sync_arg_t *sarg = (sync_arg_t *) arg;
   int num_patterns = SNetVariantListLength( sarg->patterns);
@@ -137,6 +140,7 @@ static void SyncBoxTask(void *arg)
               storage[i] = NULL;
             }
             new_matches += 1;
+            partial_sync = true;
           }
         END_ZIP
 
@@ -163,6 +167,7 @@ static void SyncBoxTask(void *arg)
           SNetStreamClose( instream, false);
 
           terminate = true;
+          partial_sync = false;
         }
         break;
 
@@ -180,6 +185,12 @@ static void SyncBoxTask(void *arg)
         break;
 
       case REC_terminate:
+        if (partial_sync) {
+          char slocvec[64];
+          SNetLocvecPrint(slocvec, sarg->myloc);
+          SNetUtilDebugNotice("[SYNC] Warning: Destroying partially "
+              "synchronized sync-cell in %s", slocvec);
+        }
         terminate = true;
         SNetStreamWrite( outstream, rec);
         SNetStreamClose( outstream, false);
@@ -208,6 +219,7 @@ static void SyncBoxTask(void *arg)
   if (instream_source != NULL) {
     SNetLocvecDestroy(instream_source);
   }
+  SNetLocvecDestroy(sarg->myloc);
 
   SNetVariantListDestroy( sarg->patterns);
   SNetExprListDestroy( sarg->guard_exprs);
@@ -231,6 +243,9 @@ snet_stream_t *SNetSync( snet_stream_t *input,
 {
   snet_stream_t *output;
   sync_arg_t *sarg;
+  snet_locvec_t *locvec;
+
+  locvec = SNetLocvecGet(info);
 
   input = SNetRouteUpdate(info, input, location);
   if(SNetDistribIsNodeLocation(location)) {
@@ -240,8 +255,9 @@ snet_stream_t *SNetSync( snet_stream_t *input,
     sarg->output = output;
     sarg->patterns = patterns;
     sarg->guard_exprs = guard_exprs;
+    sarg->myloc = SNetLocvecCopy(locvec);
 
-    SNetEntitySpawn( ENTITY_sync, SNetLocvecGet(info), location,
+    SNetEntitySpawn( ENTITY_sync, locvec, location,
       "<sync>", SyncBoxTask, (void*)sarg);
   } else {
     SNetVariantListDestroy( patterns);
