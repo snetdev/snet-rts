@@ -12,8 +12,9 @@
   <field label="inval" >(int)8</field>
 </record>
 
-<!-- following are ignored -->
+<!-- following records will partially synchronize -->
 
+<!--
 <record type="data" mode="textual" interface="C4SNet">
   <field label="inval" >(int)4</field>
 </record>
@@ -21,6 +22,7 @@
 <record type="data" mode="textual" interface="C4SNet">
   <field label="inval" >(int)23</field>
 </record>
+-->
 
 <!-- also terminates all not yet synchronized "subnets" -->
 
