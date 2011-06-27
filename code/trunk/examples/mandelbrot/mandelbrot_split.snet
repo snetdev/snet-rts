@@ -24,7 +24,7 @@ net mandelbrot_split
     box merge( (nvs, <tasks>, <num>, res, tracker)
                -> (res, tracker) |
                   (nvs, <done>) );
-  } connect (init | [])
+  } connect (init || [])
               .. ( [|{res,tracker},{nvs,<tasks>,<num>}|]
                    .. ( merge | [] )
                  )**{<done>};
