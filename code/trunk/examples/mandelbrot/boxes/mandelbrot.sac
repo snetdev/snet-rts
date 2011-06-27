@@ -60,10 +60,10 @@ void genSubPlane( SNet::SNet &hnd,  double[3] params, int tasks, int num)
 
   cmin = toc( xc - 0.5d * d, yc - 0.5d * d);
   cmax = toc( xc + 0.5d * d, yc + 0.5d * d);
-  
+
   plane = genComplexArray( [YRES,XRES], cmin, cmax);
-  
-  sub_plane = drop( [(YRES/tasks)*num], 
+
+  sub_plane = drop( [(YRES/tasks)*num],
                 take( [(YRES/tasks)*(num+1)], plane));
 
   SNet::out( hnd, 1, Complex::wrapcomplex( CPXID, sub_plane), tasks, num);
@@ -72,11 +72,11 @@ void genSubPlane( SNet::SNet &hnd,  double[3] params, int tasks, int num)
 void splitter( SNet::SNet &hnd, complex[.,.] plane, int tasks)
 {
   for( i=0; i<tasks; i++) {
-    sub_plane = drop( [(YRES/tasks)*i], 
+    sub_plane = drop( [(YRES/tasks)*i],
                   take( [(YRES/tasks)*(i+1)], plane));
     if( i == 0) {
         SNet::out( hnd, 2, Complex::wrapcomplex( CPXID, sub_plane), tasks, i, 0);
-    } 
+    }
     else {
         SNet::out( hnd, 1, Complex::wrapcomplex( CPXID, sub_plane), tasks, i);
     }
@@ -95,15 +95,15 @@ void init( SNet::SNet &hnd, double[.,.] r, int tasks, int num, int first)
 
     tracker = genarray( [tasks], false);
     tracker[num] = true;
-    SNet::out( hnd, 1, wrap( res), wrap( tracker));  
+    SNet::out( hnd, 1, wrap( res), wrap( tracker));
   }
 }
 
-void merge( SNet::SNet &hnd, double[.,.] r, int tasks, 
+void merge( SNet::SNet &hnd, double[.,.] r, int tasks,
                              int num, double[.,.] res, bool[.] tracker)
 {
   nres = with {
-           ([num*(YRES/tasks)] <= iv < [(num+1) * YRES/tasks]) : 
+           ([num*(YRES/tasks)] <= iv < [(num+1) * YRES/tasks]) :
              r[ iv - num*(YRES/tasks)];
          } : modarray( res);
   tracker[num] = true;
@@ -128,7 +128,7 @@ void genPlane( SNet::SNet &hnd,  double[3] params)
 
   cmin = toc( xc - 0.5d * d, yc - 0.5d * d);
   cmax = toc( xc + 0.5d * d, yc + 0.5d * d);
-  
+
   plane = genComplexArray( [YRES,XRES], cmin, cmax);
   SNet::out( hnd, 1, Complex::wrapcomplex( CPXID, plane));
 }
@@ -169,7 +169,7 @@ void mandelbrot( SNet::SNet &hnd,  double[3] params)
 
   cmin = toc( xc - 0.5d * d, yc - 0.5d * d);
   cmax = toc( xc + 0.5d * d, yc + 0.5d * d);
-  
+
   plane = genComplexArray( [YRES,XRES], cmin, cmax);
 
   ts = escapeTime( plane, DEPTH);

@@ -17,18 +17,18 @@ net mandelbrot_split
   box normItCount( (ts, vs) -> (nvs));
   box toRGB( (nvs) -> (rgb_img));
 
-  net merge {
+  net merge ({nvs, <tasks>, <num>, <first>} | {nvs, <tasks>, <num>} -> {nvs, <done>}) {
     box init( (nvs, <tasks>, <num>, <first>)
               -> (res, tracker) |
                  (nvs, <done>));
     box merge( (nvs, <tasks>, <num>, res, tracker)
                -> (res, tracker) |
-                  (nvs, <done>));
-  } connect ( (init | merge | [])
-              .. ([|{res,tracker},{nvs,<tasks>,<num>}|]
-                  |
-                  [{<done>} -> {<done>}])
-            )*{<done>};
+                  (nvs, <done>) );
+  } connect (init | [])
+              .. ( [|{res,tracker},{nvs,<tasks>,<num>}|]
+                   .. ( merge | [] )
+                 )**{<done>};
+
 } connect schedule
        .. [{<num>, <nodes>} -> {<num>, <instance = num % nodes>}]
        .. (genSubPlane
@@ -37,7 +37,8 @@ net mandelbrot_split
             |
             ([{<V>} -> {}] .. escVals))
        .. [|{ts}, {vs}|]*{ts,vs}
-       .. normItCount)!@<instance>
-       .. merge;
+       .. normItCount)!!@<instance>
+       .. merge
+       .. [{nvs} -> {}];
 
 
