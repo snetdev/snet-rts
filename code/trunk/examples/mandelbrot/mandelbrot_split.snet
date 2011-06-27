@@ -11,33 +11,34 @@ net mandelbrot_split
                           |  (<tasks>, <num>, <first>));
 
   box genSubPlane( (params, <tasks>, <num>) -> (plane, <tasks>, <num>));
-  
+
   box escTime( (plane) -> (ts));
   box escVals( (plane) -> (vs));
   box normItCount( (ts, vs) -> (nvs));
   box toRGB( (nvs) -> (rgb_img));
-  
-  net merge {
-    box init( (nvs, <tasks>, <num>, <first>) 
+
+  net merge ({nvs, <tasks>, <num>, <first>} | {nvs, <tasks>, <num>} -> {nvs, <done>}) {
+    box init( (nvs, <tasks>, <num>, <first>)
               -> (res, tracker) |
                  (nvs, <done>));
-    box merge( (nvs, <tasks>, <num>, res, tracker) 
+    box merge( (nvs, <tasks>, <num>, res, tracker)
                -> (res, tracker) |
-                  (nvs, <done>));
-  } connect ( (init | merge | []) 
-              .. ([|{res,tracker},{nvs,<tasks>,<num>}|] 
-                  | 
-                  [{<done>} -> {<done>}])
-            )*{<done>};
-} connect schedule 
-       .. [{<num>, <nodes>} -> {<num>, <instance = num % nodes>}] 
-       .. (genSubPlane 
-       .. [{plane} -> {plane, <T>}; {plane, <V>}] 
-       .. ( ([{<T>} -> {}] .. escTime) 
+                  (nvs, <done>) );
+  } connect (init | [])
+              .. ( [|{res,tracker},{nvs,<tasks>,<num>}|]
+                   .. ( merge | [] )
+                 )**{<done>};
+
+} connect schedule
+       .. [{<num>, <nodes>} -> {<num>, <instance = num % nodes>}]
+       .. (genSubPlane
+       .. [{plane} -> {plane, <T>}; {plane, <V>}]
+       .. ( ([{<T>} -> {}] .. escTime)
             |
             ([{<V>} -> {}] .. escVals))
        .. [|{ts}, {vs}|]*{ts,vs}
-       .. normItCount)!<instance>
-       .. merge;
+       .. normItCount)!!@<instance>
+       .. merge
+       .. [{nvs} -> {}];
 
 

@@ -12,8 +12,8 @@ net mandelbrot_simple
   net show {
     box createDisplay( -> (disp));
     box displayImg( (disp, rgb_img) -> (disp) | (<fin>));
-  } connect (createDisplay | []) 
-        ..  ( [|{rgb_img},{disp}|] 
+  } connect (createDisplay | [])
+        ..  ( [|{rgb_img},{disp}|]
               .. ( displayImg | [] )
             )*{<fin>};
 

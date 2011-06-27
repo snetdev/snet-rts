@@ -103,7 +103,7 @@ static void BoxTask(void *arg)
         SNetRecDestroy( rec);
 
         /* restrict to one data record per execution */
-        //SNetEntityYield();
+        SNetEntityYield();
         break;
 
       case REC_sync:
@@ -167,7 +167,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
 
   locvec = SNetLocvecGet(info);
 
-  if(location == SNetNodeLocation) {
+  if(SNetDistribIsNodeLocation(location)) {
     output = SNetStreamCreate(0);
 
     barg = (box_arg_t *) SNetMemAlloc( sizeof( box_arg_t));
@@ -177,7 +177,8 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->output_variants = output_variants;
     barg->boxname = boxname;
 
-    SNetEntitySpawn( ENTITY_BOX(barg->boxname), BoxTask, (void*)barg );
+    SNetEntitySpawn( ENTITY_box, SNetLocvecGet(info), location,
+      barg->boxname, BoxTask, (void*)barg);
 
 
   } else {

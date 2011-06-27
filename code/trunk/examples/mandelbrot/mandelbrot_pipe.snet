@@ -12,22 +12,22 @@ net mandelbrot_pipe
   box escVals( (plane) -> (vs));
   box normItCount( (ts, vs) -> (nvs));
   box toRGB( (nvs) -> (rgb_img));
-  
+
   net show {
     box createDisplay( -> (disp));
     box displayImg( (disp, rgb_img) -> (disp) | (<fin>));
-  } connect (createDisplay | []) 
-         .. ( [|{rgb_img},{disp}|] 
+  } connect (createDisplay | [])
+         .. ( [|{rgb_img},{disp}|]
               .. ( displayImg | [] )
             )*{<fin>};
 }
-connect genPlane 
-     .. [{plane} -> {plane, <T>}; {plane, <V>}] 
-     .. ( ([{<T>} -> {}] .. escTime) 
+connect genPlane@0
+     .. [{plane} -> {plane, <T>}; {plane, <V>}]@0
+     .. ( ([{<T>} -> {}] .. escTime)@1
           |
-          ([{<V>} -> {}] .. escVals))
-     .. [|{ts}, {vs}|]*{ts,vs}
-     .. normItCount
-     .. toRGB
-     .. show;
+          ([{<V>} -> {}] .. escVals)@0)@0
+     .. [|{ts}, {vs}|]*{ts,vs}@1
+     .. normItCount@1
+     .. toRGB@0
+     .. show@1;
 

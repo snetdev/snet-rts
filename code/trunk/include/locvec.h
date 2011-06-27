@@ -2,7 +2,6 @@
 #define _LOCVEC_H_
 
 
-#include <stdio.h>
 #include "bool.h"
 
 #include "info.h"
@@ -33,6 +32,7 @@ void SNetLocvecSerialLeave(snet_locvec_t *, bool);
 void SNetLocvecParallelEnter(snet_locvec_t *);
 void SNetLocvecParallelNext(snet_locvec_t *);
 void SNetLocvecParallelLeave(snet_locvec_t *);
+void SNetLocvecParallelReset(snet_locvec_t *);
 
 /* for star combinator */
 bool SNetLocvecStarWithin(snet_locvec_t *);
@@ -57,6 +57,6 @@ snet_locvec_t *SNetLocvecGet(snet_info_t *info);
 /* set to info */
 void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec);
 
-void SNetLocvecPrint(FILE *file, snet_locvec_t *vec);
+void SNetLocvecPrint(char *sbuf, snet_locvec_t *vec);
 
 #endif /* _LOCVEC_H_ */

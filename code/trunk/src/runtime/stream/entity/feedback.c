@@ -286,11 +286,11 @@ static void FeedbackDispTask(void *arg)
 
       case REC_terminate:
         terminate = true;
-        SNetStreamWrite( outstream, rec);
 #ifndef FEEDBACK_OMIT_BUFFER
         /* a terminate record is sent in the backloop for the buffer */
         SNetStreamWrite( backstream, SNetRecCopy( rec));
 #endif
+        SNetStreamWrite( outstream, rec);
         break;
 
       case REC_sync:
@@ -508,7 +508,7 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
   SNetLocvecFeedbackEnter(locvec);
 
   input = SNetRouteUpdate(info, input, location);
-  if(location == SNetNodeLocation) {
+  if(SNetDistribIsNodeLocation(location)) {
     snet_stream_t *into_op, *from_op;
     snet_stream_t *back_bufin, *back_bufout;
     fbbuf_arg_t *fbbarg;
@@ -529,7 +529,8 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     fbbarg->in  = back_bufin;
     fbbarg->out = back_bufout;
     fbbarg->out_capacity = FEEDBACK_BACKCHAN_CAPACITY;
-    SNetEntitySpawn( ENTITY_FBBUF, FeedbackBufTask, (void*)fbbarg );
+    SNetEntitySpawn( ENTITY_fbbuf, locvec, location,
+        "<fbbuf>", FeedbackBufTask, (void*)fbbarg);
 #else
     back_bufin = back_bufout;
 #endif
@@ -539,7 +540,8 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     fbcarg->in = input;
     fbcarg->fbi = back_bufout;
     fbcarg->out = into_op;
-    SNetEntitySpawn( ENTITY_FBCOLL, FeedbackCollTask, (void*)fbcarg );
+    SNetEntitySpawn( ENTITY_fbcoll, locvec, location,
+        "<fbcoll>", FeedbackCollTask, (void*)fbcarg);
 
     /* create the instance network */
     from_op = box_a(into_op, info, location);
@@ -551,7 +553,8 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     fbdarg->out = output;
     fbdarg->back_patterns = back_patterns;
     fbdarg->guards = guards;
-    SNetEntitySpawn( ENTITY_FBDISP, FeedbackDispTask, (void*)fbdarg );
+    SNetEntitySpawn( ENTITY_fbdisp, locvec, location,
+        "<fbdisp>", FeedbackDispTask, (void*)fbdarg);
 
   } else {
     SNetVariantListDestroy(back_patterns);

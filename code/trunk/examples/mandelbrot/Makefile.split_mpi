@@ -2,9 +2,7 @@
 TARGET    = mandelbrot_split_mpi
 # = = = = = = = = = = = = = = = = = = = =
 
-MPIMODE   = true
-CMPIFLAG  = -DDISTRIBUTED_SNET
-SMPIFLAG  = -distributed
+#MPIMODE   = true
 
 include Makefile.tpl
 

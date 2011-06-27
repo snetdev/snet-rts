@@ -3,26 +3,29 @@ include $(SNETBASE)/src/makefiles/config.mkf
 
 ifdef MPIMODE
 CC        = mpicc
+LANGIFLIB = -lSAC4SNetMPI
+DISTLIB   =  -ldistribmpi
 else
 CC        = gcc
+LANGIFLIB = -lSAC4SNet
+DISTLIB   = -ldistribnodist
 endif
-CCFLAGS   = -Wall -O3 $(CMPIFLAG)
+
+COMMONLIB = $(LANGIFLIB) $(DISTLIB) -lsnetutil -lruntimestream
+TBLPELLIB = -ltblpel
+TBPTLIB   = -lpthread -ltbpthread
+
+CCFLAGS   = -Wall -O3
 AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include -I./include 
-LIBDIRS   = -L. -Lboxes -Lboxes/src -L$(SNETBASE)/lib -L./lib \
-            -L$(SNETBASE)/interfaces/SAC
-ifdef MPIMODE
-SLIB     = -lsnetmpi -lSAC4SNetMPI 
-else
-SLIB     = -lsnet -lSAC4SNet 
-endif
-LIBS      = -lpthread $(SLIB) -lsnetutil -ltblpel -ldistribnodist
+INCDIRS   = -I. -I$(SNETBASE)/include -I./include
+LIBDIRS   = -L. -Lboxes -Lboxes/src -L$(SNETBASE)/lib -L./lib
+
 
 SACNAMES  = -DSACTYPE_SNet_SNet=23 -DSNetMain__$(TARGET)=main
 TMAPIDS   = -DCID=24 -DCPXID=20 -DDISPID=26
 
 SNETC      = snetc
-SNETCFLAGS = -b7 -v0 $(SMPIFLAG)
+SNETCFLAGS = -b7 -v0 # linking is done separately
 
 # - - - - - - - - - - - - - - - - - - - -
 SACTARGET = boxes
@@ -32,19 +35,22 @@ SACMANDEL = mandelbrot
 # - - - - - - - - - - - - - - - - - - - -
 
 SAC2C     = sac2c
-S2CFLAGS  = -v0 -O3 
+S2CFLAGS  = -v0 -O3
 SAC4C     = sac4c
-S4CFLAGS  = -v3 -incdir include -libdir lib $(LIBDIRS) 
+S4CFLAGS  = -v3 -incdir include -libdir lib $(LIBDIRS)
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags -o $(SACTARGET) $(SACTARGET)`
-S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags -o $(SACTARGET) $(SACTARGET)` 
+S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags -o $(SACTARGET) $(SACTARGET)`
 
 
+
+.PHONY: all clean
 
 ifdef TARGET
 
 all:  include/$(SACTARGET).h $(TARGET).c
 	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c $(TARGET).c
-	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) $(TARGET).o $(LIBS) $(S4CLIBS) $(LIBS)
+	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) $(TARGET).o $(S4CLIBS) $(COMMONLIB) $(TBPTLIB)
+	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET).lpel $(TARGET).o $(S4CLIBS) $(COMMONLIB) $(TBLPELLIB)
 
 else
 

@@ -5,43 +5,38 @@
 #include <string.h>
 #include <assert.h>
 
-typedef struct snet_task_t *snet_entity_t;
+
 
 /* S-Net threading backend interface */
 #include "threading.h"
 
+/* IMPORTANT: following order of includes */
+#include "tblpel.h"
 /* LPEL library interface */
 #include "lpel4snet.h"
 
 /* provisional assignment module */
 #include "assign.h"
 
+/* monitoring module */
+#include "mon_snet.h"
 
-extern int SNetNodeLocation;
+//FIXME put this into assignment/monitoring module
+#include "distribution.h"
 
-struct snet_entity_t;
-struct snet_stream_t;
-struct snet_stream_desc_t;
-struct snet_stream_iter_t;
+
+
+static int num_cpus = 0;
+static int num_workers = 0;
+
 
 static FILE *mapfile = NULL;
 static int mon_level = 0;
 
-/* monitoring user events */
-static int monevt_boxstart;
-static int monevt_boxstop;
-static int monevt_syncfirst;
-static int monevt_syncdone;
-
-
-void SNetThreadingEventBoxStart(void) {
-  SNetMonEventSignal(monevt_boxstart);
-}
-
-void SNetThreadingEventBoxStop(void) {
-  SNetMonEventSignal(monevt_boxstop);
-}
-
+/**
+ * use the Distributed S-Net placement operators for worker placement
+ */
+static bool dloc_placement = false;
 
 
 static size_t SNetEntityStackSize(snet_entity_type_t type)
@@ -77,11 +72,12 @@ int SNetThreadingInit(int argc, char **argv)
 {
   snet_config_t config;
   char fname[20+1];
-  int num_cpus, num_workers=0;
   int i;
 
+  memset(&config, 0, sizeof(snet_config_t));
+
+
   config.flags = SNET_FLAG_PINNED;
-  config.node = SNetNodeLocation;
 
   for (i=0; i<argc; i++) {
     if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
@@ -91,6 +87,9 @@ int SNetThreadingInit(int argc, char **argv)
     } else if(strcmp(argv[i], "-excl") == 0 ) {
       /* Assign realtime priority to workers*/
       config.flags |= SNET_FLAG_EXCLUSIVE;
+    } else if(strcmp(argv[i], "-dloc") == 0 ) {
+      /* Use distributed s-net location placement */
+      dloc_placement = true;
     } else if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
       /* Number of workers */
       i = i + 1;
@@ -100,12 +99,9 @@ int SNetThreadingInit(int argc, char **argv)
 
   config.worker_dbg = (mon_level >= 5)? 1 : 0;
 
+  //FIXME
   if ( mon_level > 0) {
-    if (config.node < 0) {
-      snprintf(fname, 20, "tasks.map");
-    } else {
-      snprintf(fname, 20, "n%02d_tasks.map", config.node);
-    }
+    snprintf(fname, 20, "n%02d_tasks.map", SNetDistribGetNodeId() );
     /* create a map file */
     mapfile = fopen(fname, "w");
   }
@@ -126,22 +122,23 @@ int SNetThreadingInit(int argc, char **argv)
     config.num_workers = num_workers;
     config.proc_others = 0;
   }
+  num_workers = config.num_workers;
 
-
+  /* initialise monitoring module */
+  SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId());
   SNetAssignInit(config.num_workers);
 
   SNetLpInit(&config);
-
-  /* register monitoring user events */
-  monevt_boxstart  = SNetMonEventRegister("box_start");
-  monevt_boxstop   = SNetMonEventRegister("box_stop");
-  monevt_syncfirst = SNetMonEventRegister("sync_first");
-  monevt_syncdone  = SNetMonEventRegister("sync_done");
 
   SNetLpStart();
 
   return 0;
 }
+
+
+
+
+
 
 
 void SNetThreadingStop(void)
@@ -164,6 +161,9 @@ int SNetThreadingCleanup(void)
 {
   SNetAssignCleanup();
 
+  /* Cleanup monitoring module */
+  SNetThreadingMonCleanup();
+
   if (mapfile) {
     (void) fclose(mapfile);
   }
@@ -172,21 +172,48 @@ int SNetThreadingCleanup(void)
 }
 
 
-int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
+
+/*****************************************************************************
+ * Spawn a new task
+ ****************************************************************************/
+int SNetEntitySpawn(
+  snet_entity_type_t type,
+  snet_locvec_t *locvec,
+  int location,
+  const char *name,
+  snet_entityfunc_t func,
+  void *arg
+  )
 {
   int mon_flags;
   int do_mon = 0;
   int worker = -1;
+  char locstr[128];
 
-  if ( info.type != ENTITY_other) {
-    worker = SNetAssignTask( (info.type==ENTITY_box), info.name );
+
+  // if locvec is NULL then entity_other
+  assert(locvec != NULL || type == ENTITY_other);
+
+  if (locvec != NULL) {
+    SNetLocvecPrint(locstr, locvec);
+  } else {
+    locstr[0] = '\0';
+  }
+
+  if ( type != ENTITY_other) {
+    if (dloc_placement) {
+      assert(location != -1);
+      worker = location % num_workers;
+    } else {
+      worker = SNetAssignTask( (type==ENTITY_box), name );
+    }
   }
 
   snet_entity_t *t = SNetEntityCreate(
       worker,
       (snet_entityfunc_t) func,
       arg,
-      SNetEntityStackSize(info.type)
+      SNetEntityStackSize(type)
       );
 
   /* monitoring levels:
@@ -196,30 +223,46 @@ int SNetEntitySpawn(snet_entity_info_t info, snet_entityfunc_t func, void *arg)
    * 5: like 4, for all (but _other) entities
    */
 
+  /* saturate mon level */
+  if (mon_level > 5) mon_level = 5;
+
   mon_flags = 0;
   mon_flags |= SNET_MON_TASK_USREVT;
   switch(mon_level) {
     case 4: mon_flags |= SNET_MON_TASK_STREAMS;
     case 3: mon_flags |= SNET_MON_TASK_TIMES;
     case 2:
-      if (info.type==ENTITY_box) {
-        SNetEntityMonitor(t, info.name, mon_flags);
+      if (type==ENTITY_box) {
+
+        mon_task_t *mt = SNetThreadingMonTaskCreate(
+          SNetEntityGetID(t), name, mon_flags
+          );
+        SNetEntityMonitor(t, mt);
         do_mon = 1;
       }
       break;
 
     case 5:
-      if (info.type!=ENTITY_other) {
-        SNetEntityMonitor(t, info.name, SNET_MON_TASK_STREAMS | SNET_MON_TASK_TIMES );
+      if (type!=ENTITY_other) {
+        mon_task_t *mt = SNetThreadingMonTaskCreate(
+          SNetEntityGetID(t), name,
+          SNET_MON_TASK_STREAMS | SNET_MON_TASK_TIMES
+          );
+        SNetEntityMonitor(t, mt);
         do_mon = 1;
       }
       break;
+
+    case 1:
+      do_mon = 1;
+      break;
+
     default: /*NOP*/;
   }
 
   if (do_mon && mapfile) {
-    int tid = SNetEntityGetUID(t);
-    (void) fprintf(mapfile, "%d: %s\n", tid, info.name);
+    int tid = SNetEntityGetID(t);
+    (void) fprintf(mapfile, "%d %s %s %d\n", tid, locstr, name, worker);
   }
 
 //FIXME only for debugging purposes
