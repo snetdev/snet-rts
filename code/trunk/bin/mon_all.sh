@@ -1,2 +1,2 @@
 #!/bin/bash
-cat mon_worker*.log | sort > mon_all.log
+cat mon_n00_worker*.log | sort -n > mon_all.log
