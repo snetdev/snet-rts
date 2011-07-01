@@ -355,10 +355,12 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 
     /* create branches */
     LIST_ENUMERATE(variant_lists, variants, i)
+      snet_info_t *newInfo = SNetInfoCopy(info);
       transits[i] = SNetStreamCreate(0);
       SNetLocvecParallelNext(locvec);
       fun = funs[i];
-      collstreams[i] = (*fun)(transits[i], info, location);
+      collstreams[i] = (*fun)(transits[i], newInfo, location);
+      SNetInfoDestroy(newInfo);
     END_ENUMERATE
 
     SNetLocvecParallelReset(locvec);
@@ -383,9 +385,11 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 
   } else {
     LIST_ENUMERATE(variant_lists, variants, i)
+      snet_info_t *newInfo = SNetInfoCopy(info);
       SNetLocvecParallelNext(locvec);
       fun = funs[i];
-      instream = (*fun)( instream, info, location);
+      instream = (*fun)( instream, newInfo, location);
+      SNetInfoDestroy(newInfo);
     END_ENUMERATE
 
     SNetVariantListListDestroy( variant_lists);

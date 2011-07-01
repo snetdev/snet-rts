@@ -260,13 +260,13 @@ void SNetLocvecFeedbackLeave(snet_locvec_t *vec)
 
 snet_locvec_t *SNetLocvecGet(snet_info_t *info)
 {
-  return SNetInfoGetTag(info, LOCVEC_INFO_TAG);
+  return (snet_locvec_t*) SNetInfoGetTag(info, LOCVEC_INFO_TAG);
 }
 
 
 void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec)
 {
-  SNetInfoSetTag(info, LOCVEC_INFO_TAG, vec);
+  SNetInfoSetTag(info, LOCVEC_INFO_TAG, (uintptr_t) vec);
 }
 
 

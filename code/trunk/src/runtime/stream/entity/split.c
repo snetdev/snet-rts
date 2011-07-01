@@ -228,7 +228,7 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
   locvec = SNetLocvecGet(info);
   SNetLocvecSplitEnter(locvec);
 
-  input = SNetRouteUpdate(info, input, location);
+  input = SNetRouteUpdateDynamic(info, input, location, box_a);
   if(SNetDistribIsNodeLocation(location)) {
     initial = SNetStreamCreate(0);
 

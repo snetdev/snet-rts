@@ -249,20 +249,21 @@ int SNetInRun(int argc, char **argv,
 
   labels     = SNetInLabelInit(static_labels, number_of_labels);
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
-  SNetDistribInit(argc, argv);
+
+  info = SNetInfoInit();
+  SNetDistribInit(argc, argv, info);
 
   (void) SNetThreadingInit(argc, argv);
 
   SNetObserverInit(labels, interfaces);
-
-  info = SNetInfoInit();
-  SNetDistribStart(info);
 
   locvec = SNetLocvecCreate();
   SNetLocvecSet(info, locvec);
 
   input_stream = SNetStreamCreate(0);
   output_stream = fun(input_stream, info, SNetDistribGetNodeId());
+
+  SNetDistribStart();
 
   if (SNetDistribIsRootNode()) {
     /* create output thread */

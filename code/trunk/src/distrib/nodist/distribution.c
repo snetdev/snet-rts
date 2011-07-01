@@ -2,12 +2,12 @@
 
 static int node_location;
 
-void SNetDistribInit(int argc, char **argv)
+void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 {
     node_location = 0;
 }
 
-void SNetDistribStart(snet_info_t *info)
+void SNetDistribStart()
 {
 }
 
@@ -34,4 +34,9 @@ bool SNetDistribIsRootNode(void)
 snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int location)
 {
     return input;
+}
+
+snet_stream_t *SNetRouteUpdateDynamic(snet_info_t *info, snet_stream_t *input, int location, snet_startup_fun_t start)
+{
+  return input;
 }

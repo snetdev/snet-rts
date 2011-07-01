@@ -2,7 +2,9 @@
 #define SNETOUT_HEADER
 
 #include <stdarg.h>
-#include "snettypes.h"
+#include "variant.h"
+#include "record.h"
+#include "handle.h"
 
 struct handle *SNetOut(struct handle *hnd, struct record *rec);
 

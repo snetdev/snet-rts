@@ -2,11 +2,11 @@
 
 static int node_location;
 
-void SNetDistribInit(int argc, char **argv)
+void SNetDistribInit(int argc, char **argv, snet_info_t *infp)
 {
 }
 
-void SNetDistribStart(snet_info_t *info)
+void SNetDistribStart()
 {
 }
 

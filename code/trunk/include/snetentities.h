@@ -3,11 +3,11 @@
 
 #include <stdio.h>
 
-#include "snettypes.h"
 #include "handle.h"
 #include "constants.h"
 #include "expression.h"
 #include "interface_functions.h"
+#include "snettypes.h"
 
 
 

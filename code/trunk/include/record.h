@@ -88,8 +88,8 @@ struct record {
 #define RECORD_FOR_EACH_FIELD(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, fields), name, val)
 
 
-#include "distribution.h"
 #include "variant.h"
+#include "distribution.h"
 
 /* returns true if the record matches the pattern. */
 bool SNetRecPatternMatches(snet_variant_t *pat, snet_record_t *rec);
@@ -132,7 +132,6 @@ void *SNetRecGetField( snet_record_t *rec, int id);
 void *SNetRecTakeField( snet_record_t *rec, int id);
 bool SNetRecHasField( snet_record_t *rec, int id);
 void SNetRecRenameField( snet_record_t *rec, int id, int newId);
-
 
 snet_locvec_t *SNetRecGetLocvec( snet_record_t *rec);
 

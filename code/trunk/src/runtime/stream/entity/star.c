@@ -317,7 +317,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
   locvec = SNetLocvecGet(info);
   SNetLocvecStarEnter(locvec);
 
-  input = SNetRouteUpdate(info, input, location);
+  input = SNetRouteUpdateDynamic(info, input, location, box_a);
   if(SNetDistribIsNodeLocation(location)) {
     /* create the task argument */
     sarg = (star_arg_t *) SNetMemAlloc( sizeof(star_arg_t));
