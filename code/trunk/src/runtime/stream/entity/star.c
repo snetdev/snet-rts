@@ -58,10 +58,13 @@ static snet_stream_t *SNetSerialStarchild(snet_stream_t *input,
 {
   snet_stream_t *internal_stream;
   snet_stream_t *output;
+  snet_locvec_t *locvec;
+
+  locvec = SNetLocvecGet(info);
+  (void) SNetLocvecStarSpawn(locvec);
 
   SNetRouteUpdate(info, input, location);
 
-  assert( SNetLocvecStarWithin(SNetLocvecGet(info)) );
 
   /* create operand A */
   internal_stream = (*box_a)(input, info, location);
@@ -70,6 +73,8 @@ static snet_stream_t *SNetSerialStarchild(snet_stream_t *input,
 
   /* create operand B */
   output = (*box_b)(internal_stream, info, location);
+
+  (void) SNetLocvecStarSpawnRet(locvec);
 
   return(output);
 }
@@ -315,7 +320,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
   snet_locvec_t *locvec;
 
   locvec = SNetLocvecGet(info);
-  SNetLocvecStarEnter(locvec);
+  if (!is_incarnate) SNetLocvecStarEnter(locvec);
 
   input = SNetRouteUpdate(info, input, location);
   if(SNetDistribIsNodeLocation(location)) {
@@ -324,7 +329,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     newstream = SNetStreamCreate(0);
     sarg->input = input;
     /* copy location vector */
-    sarg->locvec = SNetLocvecStarSpawn(locvec);
+    sarg->locvec = SNetLocvecCopy(locvec);
     sarg->output = newstream;
     sarg->box = box_a;
     sarg->selffun = box_b;
@@ -353,7 +358,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     output = input;
   }
 
-  SNetLocvecStarLeave(locvec);
+  if (!is_incarnate) SNetLocvecStarLeave(locvec);
 
   return( output);
 }

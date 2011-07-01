@@ -39,6 +39,7 @@ bool SNetLocvecStarWithin(snet_locvec_t *);
 void SNetLocvecStarEnter(snet_locvec_t *);
 void SNetLocvecStarLeave(snet_locvec_t *);
 snet_locvec_t *SNetLocvecStarSpawn(snet_locvec_t *);
+snet_locvec_t *SNetLocvecStarSpawnRet(snet_locvec_t *);
 
 /* for split combinator */
 void SNetLocvecSplitEnter(snet_locvec_t *);

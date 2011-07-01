@@ -213,28 +213,31 @@ bool SNetLocvecStarWithin(snet_locvec_t *vec)
 
 void SNetLocvecStarEnter(snet_locvec_t *vec)
 {
-  if( SNetLocvecToptype(vec) != LOC_STAR ) {
-    SNetLocvecAppend(vec, LOC_STAR, 0);
-  } else {
-    SNetLocvecTopinc(vec);
-  }
+  assert( SNetLocvecToptype(vec) != LOC_STAR );
+
+  SNetLocvecAppend(vec, LOC_STAR, -1);
 }
 
 snet_locvec_t *SNetLocvecStarSpawn(snet_locvec_t *vec)
 {
   assert( SNetLocvecToptype(vec) == LOC_STAR );
-  return SNetLocvecCopy(vec);
+  SNetLocvecTopinc(vec);
+  return vec;
+}
+
+snet_locvec_t *SNetLocvecStarSpawnRet(snet_locvec_t *vec)
+{
+  assert( SNetLocvecToptype(vec) == LOC_STAR );
+  SNetLocvecTopdec(vec);
+  return vec;
 }
 
 void SNetLocvecStarLeave(snet_locvec_t *vec)
 {
   assert( SNetLocvecToptype(vec) == LOC_STAR );
-  if (SNetLocvecTopval(vec) == 0) {
-    SNetLocvecPop(vec);
-  } else {
-    SNetLocvecTopdec(vec);
-    //TODO clear leaf/coll/disp
-  }
+  assert( SNetLocvecTopval(vec) == -1);
+
+  SNetLocvecPop(vec);
 }
 
 
@@ -298,44 +301,6 @@ void SNetLocvecPrint(char *sbuf, snet_locvec_t *vec)
   }
 }
 
-#if 0
-int main(void)
-{
-  snet_locvec_t *v, *u;
-
-  v = SNetLocvecCreate();
-
-  SNetLocvecAppend(v,LOC_SERIAL,0);
-  SNetLocvecAppend(v,LOC_PARALLEL,2);
-  SNetLocvecAppend(v,LOC_SPLIT,4345);
-  printf("equals %d\n", SNetLocvecEqual(v,v));
-
-  u = SNetLocvecCopy(v);
-  SNetLocvecAppend(u,LOC_SERIAL,1);
-
-  SNetLocvecPrint(u);
-  SNetLocvecPrint(v);
-  printf("equals %d\n", SNetLocvecEqual(u,v));
-
-
-  printf("toptype %c\n", SNetLocvecToptype(v));
-  SNetLocvecTopinc(v);
-  SNetLocvecPrint(v);
-
-  SNetLocvecPop(u);
-  SNetLocvecPrint(u);
-  printf("equals %d\n", SNetLocvecEqual(u,v));
-
-  SNetLocvecPop(u);
-  SNetLocvecPrint(u);
-  SNetLocvecPop(v);
-  SNetLocvecPrint(v);
-  printf("equals %d\n", SNetLocvecEqual(u,v));
-
-  SNetLocvecDestroy(u);
-  SNetLocvecDestroy(v);
-}
-#endif
 
 /******************************************************************************
  * Static helper functions
@@ -390,3 +355,4 @@ static void SNetLocvecTopdec(snet_locvec_t *vec)
   snet_locitem_t *item = &vec->arr[vec->size-1];
   item->num--;
 }
+
