@@ -140,7 +140,11 @@ static void SyncBoxTask(void *arg)
               storage[i] = NULL;
             }
             new_matches += 1;
-            partial_sync = true;
+            /* this is the first sync */
+            if (!partial_sync) {
+              SNetThreadingEventSignal(EVT_SYNCFIRST);
+              partial_sync = true;
+            }
           }
         END_ZIP
 
@@ -148,6 +152,7 @@ static void SyncBoxTask(void *arg)
         if (new_matches == 0) {
           SNetStreamWrite( outstream, rec);
         } else if (match_cnt == num_patterns) {
+          /* this is the last sync */
           SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
 
           if (instream_source != NULL) {
@@ -168,6 +173,7 @@ static void SyncBoxTask(void *arg)
 
           terminate = true;
           partial_sync = false;
+          SNetThreadingEventSignal(EVT_SYNCDONE);
         }
         break;
 

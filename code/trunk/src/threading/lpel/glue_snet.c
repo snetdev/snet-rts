@@ -172,6 +172,22 @@ int SNetThreadingCleanup(void)
 }
 
 
+/**
+ * Signal an event
+ */
+void SNetThreadingEventSignal(snet_threading_event_t evt)
+{
+  snet_entity_t *t = SNetEntitySelf();
+  assert(t != NULL);
+  mon_task_t *mt = SNetEntityGetMon(t);
+  if (mt != NULL) {
+    SNetThreadingMonEvent(mt, evt);
+  }
+}
+
+
+
+
 
 /*****************************************************************************
  * Spawn a new task
@@ -221,13 +237,13 @@ int SNetEntitySpawn(
    * 3: .. with timestamps
    * 4: .. and stream events
    * 5: like 4, for all (but _other) entities
+   * 6: like 5, also with usrevents
    */
 
   /* saturate mon level */
-  if (mon_level > 5) mon_level = 5;
+  if (mon_level > 6) mon_level = 6;
 
   mon_flags = 0;
-  mon_flags |= SNET_MON_TASK_USREVT;
   switch(mon_level) {
     case 4: mon_flags |= SNET_MON_TASK_STREAMS;
     case 3: mon_flags |= SNET_MON_TASK_TIMES;
@@ -242,11 +258,15 @@ int SNetEntitySpawn(
       }
       break;
 
+    case 6:
+      if (type==ENTITY_box || type==ENTITY_sync) {
+        mon_flags = SNET_MON_TASK_USREVT;
+      }
     case 5:
       if (type!=ENTITY_other) {
         mon_task_t *mt = SNetThreadingMonTaskCreate(
           SNetEntityGetID(t), name,
-          SNET_MON_TASK_STREAMS | SNET_MON_TASK_TIMES
+          mon_flags | SNET_MON_TASK_STREAMS | SNET_MON_TASK_TIMES
           );
         SNetEntityMonitor(t, mt);
         do_mon = 1;

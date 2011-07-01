@@ -24,8 +24,15 @@ static int mon_node = -1;
 static const char *prefix = "mon_";
 static const char *suffix = ".log";
 
+static const char *evtnames[] = {
+  "BF", /*EVT_BOXFIRE*/
+  "BR", /*EVT_BOXRET*/
+  "SF", /*EVT_SYNCFIRST*/
+  "SD", /*EVT_SYNCDONE*/
+};
 
-#define MON_USREVT_BUFSIZE 64
+
+#define MON_USREVT_BUFSIZE_DELTA 64
 
 typedef struct mon_usrevt_t mon_usrevt_t;
 
@@ -44,7 +51,6 @@ struct mon_worker_t {
   timing_t      wait_current;
   struct {
     int cnt, size;
-    int start, end;
     mon_usrevt_t *buffer;
   } events;         /** user-defined events */
 };
@@ -71,6 +77,8 @@ struct mon_task_t {
     timing_t stop;  /** stop time of last dispatch */
   } times;
   mon_stream_t *dirty_list; /** head of dirty stream list */
+  unsigned long last_in_cnt;  /** last counter of an input stream */
+  unsigned long last_out_cnt; /** last counter of an output stream */
   char blockon;     /** for convenience: tracking if blocked
                         on read or write or any */
 };
@@ -92,9 +100,14 @@ struct mon_stream_t {
 };
 
 
+/**
+ * Item to log the possible user events of the treading interface
+ */
 struct mon_usrevt_t {
   timing_t ts;
-  int evt;
+  snet_threading_event_t evt;
+  unsigned long in_cnt;
+  unsigned long out_cnt;
 };
 
 
@@ -181,7 +194,7 @@ static inline void PrintNormTSus( const timing_t *t, FILE *file)
 
   TimingDiff(&norm_ts, &monitoring_begin, t);
   (void) fprintf( file,
-      "%lu.%06lu ",
+      "%lu%06lu",
       (unsigned long) norm_ts.tv_sec,
       (norm_ts.tv_nsec / 1000)
       );
@@ -196,7 +209,7 @@ static inline void PrintNormTSns( const timing_t *t, FILE *file)
 
   TimingDiff(&norm_ts, &monitoring_begin, t);
   (void) fprintf( file,
-      "%lu.%09lu ",
+      "%lu%09lu",
       (unsigned long) norm_ts.tv_sec,
       (norm_ts.tv_nsec)
       );
@@ -222,6 +235,12 @@ static inline void MarkDirty( mon_stream_t *ms)
      */
     ms->dirty = mt->dirty_list;
     mt->dirty_list = ms;
+  }
+  /* in every case, copy the counter value */
+  switch(ms->mode) {
+    case 'r': mt->last_in_cnt  = ms->counter; break;
+    case 'w': mt->last_out_cnt = ms->counter; break;
+    default: assert(0);
   }
 }
 
@@ -289,31 +308,26 @@ static void PrintDirtyList(mon_task_t *mt)
 static void PrintUsrEvt(mon_task_t *mt)
 {
   mon_worker_t *mw = mt->mw;
+  int i;
 
   if (!mw) return;
 
   FILE *file = mw->outfile;
 
-  int pos = (mw->events.cnt <= mw->events.size)
-          ? mw->events.start : ((mw->events.end+1)%(mw->events.size));
-  fprintf( file,"%d[", mw->events.cnt );
-  //fprintf( file,"(pos %d) (start %d) (end %d) (cnt %d) (size %d); ", pos, mt->events.start, mt->events.end, mt->events.cnt, mt->events.size);
-  while (pos != mw->events.end) {
-    mon_usrevt_t *cur = &mw->events.buffer[pos];
+  fprintf( file,"[");
+  for (i=0; i<mw->events.cnt; i++) {
+    mon_usrevt_t *cur = &mw->events.buffer[i];
     /* print cur */
     if FLAG_TIMES(mt) {
       PrintNormTS(&cur->ts, file);
     }
-    //FIXME fprintf( file,"%s; ", event_table.tab[cur->evt]);
-
-    /* increment */
-    pos++;
-    if (pos == mw->events.size) { pos = 0; }
+    /* print event field */
+    fprintf( file, ",%s,%lu,%lu;",
+        evtnames[cur->evt], cur->in_cnt, cur->out_cnt);
   }
-  /* reset */
-  mw->events.start = mw->events.end;
-  mw->events.cnt = 0;
   fprintf( file,"] " );
+  /* reset */
+  mw->events.cnt = 0;
 }
 
 
@@ -336,7 +350,7 @@ static void MonCbDebug( mon_worker_t *mon, const char *fmt, ...)
   //TODO check if timestamping required
   TIMESTAMP(&tnow);
   PrintNormTS(&tnow, mon->outfile);
-  fprintf( mon->outfile, "*** ");
+  fprintf( mon->outfile, " *** ");
 
   va_start(ap, fmt);
   vfprintf( mon->outfile, fmt, ap);
@@ -377,10 +391,8 @@ static mon_worker_t *MonCbWorkerCreate(int wid)
   TimingZero(&mon->wait_current);
 
   /* user events */
-  mon->events.size = MON_USREVT_BUFSIZE;
   mon->events.cnt = 0;
-  mon->events.start = 0;
-  mon->events.end = 0;
+  mon->events.size = MON_USREVT_BUFSIZE_DELTA;
   mon->events.buffer = malloc( mon->events.size * sizeof(mon_usrevt_t));
 
   /* start message */
@@ -419,11 +431,9 @@ static mon_worker_t *MonCbWrapperCreate(mon_task_t *mt)
   TimingZero(&mon->wait_current);
 
   /* user events */
-  mon->events.size = MON_USREVT_BUFSIZE;
+  mon->events.size = 0;
   mon->events.cnt = 0;
-  mon->events.start = 0;
-  mon->events.end = 0;
-  mon->events.buffer = malloc( mon->events.size * sizeof(mon_usrevt_t));
+  mon->events.buffer = NULL;
 
   /* start message */
   MonCbDebug( mon, "Wrapper %s started.\n", fname);
@@ -460,7 +470,9 @@ static void MonCbWorkerDestroy(mon_worker_t *mon)
     assert(ret == 0);
   }
 
-  free(mon->events.buffer);
+  if (mon->events.buffer != NULL) {
+    free(mon->events.buffer);
+  }
 
   free( mon);
 }
@@ -551,7 +563,7 @@ static void MonCbTaskStop(mon_task_t *mt, lpel_taskstate_t state)
   }
 
   /* print general info: tid, disp.cnt, state */
-  fprintf( file, "%lu disp %lu ", mt->tid, mt->disp);
+  fprintf( file, " %lu disp %lu ", mt->tid, mt->disp);
 
   if ( state==TASK_BLOCKED) {
     fprintf( file, "st B%c ", mt->blockon);
@@ -584,7 +596,7 @@ static void MonCbTaskStop(mon_task_t *mt, lpel_taskstate_t state)
   }
 
   /* print user events */
-  if (FLAG_EVENTS(mt) && mt->mw && mt->mw->events.cnt>0 ) {
+  if FLAG_EVENTS(mt) {
     PrintUsrEvt(mt);
   }
 
@@ -792,30 +804,35 @@ mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *name, unsi
 }
 
 
-void SNetThreadingEventBoxStart(void) {
-//  SNetMonEventSignal(monevt_boxstart);
-}
-
-void SNetThreadingEventBoxStop(void) {
-//  SNetMonEventSignal(monevt_boxstop);
-}
-
-
-//TODO static
-void SNetThreadingMonEventSignal(int evt)
+void SNetThreadingMonEvent(mon_task_t *mt, snet_threading_event_t evt)
 {
-  snet_entity_t *t = SNetEntitySelf();
-  assert(t != NULL);
-  mon_task_t *mt = SNetEntityGetMon(t);
+  assert(mt != NULL);
   mon_worker_t *mw = mt->mw;
 
-  if (mt && FLAG_EVENTS(mt) && mw) {
-    mon_usrevt_t *current = &mw->events.buffer[mw->events.end];
-    if FLAG_TIMES(mt) TIMESTAMP(&current->ts);
-    current->evt = evt;
-    /* update counters */
-    mw->events.end++;
-    if (mw->events.end == mw->events.size) { mw->events.end = 0; }
-    mw->events.cnt += 1;
+
+  if (FLAG_EVENTS(mt) && mw) {
+    /* grow events buffer if needed */
+    if (mw->events.cnt == mw->events.size) {
+        /* grow */
+        mon_usrevt_t *newbuf = malloc(
+          (mw->events.size + MON_USREVT_BUFSIZE_DELTA ) * sizeof(mon_usrevt_t)
+          );
+      mw->events.size += MON_USREVT_BUFSIZE_DELTA;
+      (void) memcpy(newbuf, mw->events.buffer, mw->events.size * sizeof(mon_usrevt_t));
+      free(mw->events.buffer);
+      mw->events.buffer = newbuf;
+    }
+    /* get a pointer to a usrevt slot */
+    mon_usrevt_t *me = &mw->events.buffer[mw->events.cnt];
+    /* set values */
+    if FLAG_TIMES(mt) TIMESTAMP(&me->ts);
+    me->evt = evt;
+    me->in_cnt = mt->last_in_cnt;
+    me->out_cnt = mt->last_out_cnt;
+
+    mw->events.cnt++;
   }
 }
+
+
+
