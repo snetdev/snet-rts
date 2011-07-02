@@ -11,6 +11,13 @@
 <record type="data" mode="textual" interface="C4SNet">
   <field label="B" >(int)2</field>
 </record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)2</field>
+</record>
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)1</field>
+</record>
 <record type="terminate" />
 
 

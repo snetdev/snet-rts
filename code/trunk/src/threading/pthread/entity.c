@@ -158,6 +158,10 @@ int SNetEntitySpawn(
 }
 
 
+void SNetThreadingEventSignal(snet_threading_event_t evt)
+{
+  /* NOP */
+}
 
 void SNetEntityYield(void)
 {

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+from subprocess import call
 
 #global_start_time = -1
 
@@ -9,6 +10,10 @@ tasks_map = {}
 tasklists = {}
 
 loctree = None
+
+def put_or_add(d, key, val):
+  if not key in d: d[key] = val
+  else: d[key] += val
 
 ###############################################################################
 
@@ -67,7 +72,7 @@ class TaskRecord:
     while (pos < len(fields)):
       if pos == 0:
         # end time
-        self.end = float(fields[0]) # - global_start_time
+        self.end = float(fields[0])/1000000000.0
         # check tid
         pos += 1; assert( parent.tid == int(fields[pos]))
         pass
@@ -79,7 +84,7 @@ class TaskRecord:
       elif fields[pos] == "et":
         pos += 1; self.et = float(fields[pos])/1000000000.0
       elif fields[pos] == "creat":
-        pos += 1; self.creat = float(fields[pos])
+        pos += 1; self.creat = float(fields[pos])/1000000000.0
       elif fields[pos][0] == "[":
         # stream info
         pass
@@ -105,15 +110,27 @@ class LocTree:
       self.val = val
       self.children = dict()
       self.leaves = set()
-      self.time = -1
+      # per wid counters
+      self.times = None
 
-    def __repr__(self):
+    def times2str(self):
+      s = "{ "
+      num = len(self.times)
+      cnt = 0
+      for tup in sorted(self.times.items()):
+        s += "%d: %.6f" % tup
+        cnt += 1
+        if cnt < num: s += ", "
+      s += " }"
+      return s
+
+    def __str__(self):
       if self.val == (None,None):
-        return "[ ROOT ] %.6f" % (self.time)
+        return "[ ROOT ] %s" % (self.times2str())
       else:
         if self.val[1]==-1:
-          return "[ %c%c ] %.6f" % (self.val[0], '*', self.time)
-        else: return "[ %c%u ] %.6f" % (self.val[0], self.val[1], self.time)
+          return "[ %c%c ] %s" % (self.val[0], '*', self.times2str())
+        else: return "[ %c%u ] %s" % (self.val[0], self.val[1], self.times2str())
 
   # LocTree methods ######################
 
@@ -150,23 +167,24 @@ class LocTree:
 
 
   def _synth_from_children(self, node):
-    node.time = 0.0
+    node.times = dict()
     # child nodes
     for v,ch in sorted(node.children.items()):
       self._synth_from_children(ch)
-      node.time += ch.time
+      for (wid,time) in ch.times.iteritems():
+        put_or_add(node.times, wid, time)
     # leaves
     for t in node.leaves:
-      node.time += t.total
+      put_or_add(node.times, t.wid, t.total)
 
   def synthesize(self):
     self._synth_from_children(self.root)
 
   def _printnode(self, node, level):
-    print level*"  ", node
+    print level*"  ", str(node)
     # print leaves
     for t in node.leaves:
-      print (level+1)*"  ", t
+      print (level+1)*"  ", str(t)
     #print child nodes
     for v,ch in sorted(node.children.items()):
       self._printnode(ch, level+1)
@@ -180,11 +198,15 @@ class LocTree:
 # main program entry point
 if __name__=="__main__":
 
-  if len(sys.argv) > 1: fname = sys.argv[1]
-  else: fname = "mon_all.log"
+  fname = "mon_all.log"
+  node = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+
+  cmd = "cat mon_n%02d_worker*.log | sort -n > %s" % (node, fname)
+  call(cmd, shell=True)
+
 
   # fill tasks_map
-  f = open("n00_tasks.map")
+  f = open("n%02d_tasks.map" % (node))
   try:
     loctree = LocTree()
 
@@ -195,10 +217,11 @@ if __name__=="__main__":
       # loc tree
       loctree.extend(task.locvec, task)
       # tasklists
-      if not task.name in tasklists:
-        tasklists[task.name] = [ task.tid ]
+      key = (task.name,task.wid)
+      if not key in tasklists:
+        tasklists[key] = [ task.tid ]
       else:
-        tasklists[task.name].append( task.tid )
+        tasklists[key].append( task.tid )
   finally: f.close()
 
   #print tasklists
@@ -237,8 +260,8 @@ if __name__=="__main__":
     loctree.doprint()
 
 
-    for taskname, lst in sorted(tasklists.items()):
-      #if taskname[0] != "<":
+    for (taskname,wid), lst in sorted(tasklists.items()):
+      if not taskname.startswith("<"):
         et_sum = 0
         print "====================================================="
         for tid in sorted(lst):
@@ -249,7 +272,7 @@ if __name__=="__main__":
                   % (trace.disp, trace.total, trace.avg, trace.ttbd, trace.mtbd)
             et_sum += trace.total
         et_avg = et_sum / len(lst)
-        print "*** %s: total %.6f, avg %.6f" % (taskname, et_sum, et_avg)
+        print "*** %s @%d: total %.6f, avg %.6f" % (taskname, wid, et_sum, et_avg)
 
     exit(0)
 

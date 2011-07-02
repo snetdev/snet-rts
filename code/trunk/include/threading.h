@@ -12,8 +12,9 @@
  * multithreaded S-Net runtime system. It includes:
  *
  * (1) general initialization and shutdown,
- * (2) entity (task) creation, and
- * (3) stream operations and management
+ * (2) supporting calls to signal events,
+ * (3) entity (task) creation, and
+ * (4) stream operations and management
  *
  *
  * Author: Daniel Prokesch <dlp@snet-home.org>
@@ -68,9 +69,23 @@ int SNetThreadingProcess(void);
 int SNetThreadingCleanup(void);
 
 
+/*****************************************************************************
+ * (2) Supporting calls to signal events
+ ****************************************************************************/
+
+typedef enum {
+  EVT_BOXFIRE=0,
+  EVT_BOXRET,
+  EVT_SYNCFIRST,
+  EVT_SYNCDONE
+} snet_threading_event_t;
+
+void SNetThreadingEventSignal(snet_threading_event_t);
+
+
 
 /*****************************************************************************
- * (2) Entity creation
+ * (3) Entity creation
  *
  * All entities are detached (not joinable).
  *
@@ -140,7 +155,7 @@ void SNetEntityYield(void);
 
 
 /*****************************************************************************
- * (3) Stream handling
+ * (4) Stream handling
  ****************************************************************************/
 
 /**

@@ -82,9 +82,9 @@ static void BoxTask(void *arg)
         SNetDebugTimeGetTime(&time_in);
 #endif /* SNET_DEBUG_COUNTERS */
 
-//        SNetThreadingEventBoxStart();
+        SNetThreadingEventSignal(EVT_BOXFIRE);
         (*barg->boxfun)( &hnd);
-//        SNetThreadingEventBoxStop();
+        SNetThreadingEventSignal(EVT_BOXRET);
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_out, NULL);
