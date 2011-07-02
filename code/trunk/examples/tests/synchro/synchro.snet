@@ -6,4 +6,4 @@
 
 
 net synchro
-connect [|{A},{B}|]*{A,B};
+connect [|{A},{B}|]**{A,B};
