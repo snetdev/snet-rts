@@ -6,6 +6,7 @@
 #include <assert.h>
 
 
+#include "debug.h"
 
 /* S-Net threading backend interface */
 #include "threading.h"
@@ -28,6 +29,7 @@
 
 static int num_cpus = 0;
 static int num_workers = 0;
+static int num_others = 0;
 
 
 static FILE *mapfile = NULL;
@@ -90,6 +92,10 @@ int SNetThreadingInit(int argc, char **argv)
     } else if(strcmp(argv[i], "-dloc") == 0 ) {
       /* Use distributed s-net location placement */
       dloc_placement = true;
+    } else if(strcmp(argv[i], "-wo") == 0 && i + 1 <= argc) {
+      /* Number of cores for others */
+      i = i + 1;
+      num_others = atoi(argv[i]);
     } else if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
       /* Number of workers */
       i = i + 1;
@@ -108,7 +114,7 @@ int SNetThreadingInit(int argc, char **argv)
 
   /* determine number of cpus */
   if ( 0 != SNetGetNumCores( &num_cpus) ) {
-    //FIXME SNetUtilDebugFatal("Could not determine number of cores!\n");
+    SNetUtilDebugFatal("Could not determine number of cores!\n");
     assert(0);
   }
 
@@ -116,11 +122,11 @@ int SNetThreadingInit(int argc, char **argv)
     config.proc_workers = num_cpus;
     //config.num_workers = num_cpus + 1;
     config.num_workers = num_cpus;
-    config.proc_others = 0;
+    config.proc_others = num_others;
   } else {
     config.proc_workers = num_cpus;
     config.num_workers = num_workers;
-    config.proc_others = 0;
+    config.proc_others = num_others;
   }
   num_workers = config.num_workers;
 
@@ -278,6 +284,10 @@ int SNetEntitySpawn(
       break;
 
     default: /*NOP*/;
+  }
+
+  if (type != ENTITY_box) {
+    SNetEntityPrio(t, 1);
   }
 
   if (do_mon && mapfile) {

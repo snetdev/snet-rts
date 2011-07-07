@@ -36,6 +36,9 @@ $(TARGET): $(OBJS)
 	sed -f translate4snet.sed |\
 	gcc -o $@ $(CFLAGS) -xc -
 
+ctx_amd64.o: $(LPELSOURCE)/ctx_amd64.S
+	gcc -c $< -o $@
+
 lpel4snet.h: $(LPELSOURCE)/lpel.h translate4snet.sed
 	sed -f translate4snet.sed \
             -e "/typedef .*snet_.*/ d" \
