@@ -46,6 +46,27 @@ void SNetVariantDestroy( snet_variant_t *var)
   SNetMemFree(var);
 }
 
+static void IntlistAddAll(snet_int_list_t *dst, snet_int_list_t *src, bool ow)
+{
+  int name;
+  LIST_FOR_EACH(src, name)
+    bool cont = SNetIntListContains(dst, name);
+    if (cont && ow) {
+      SNetIntListRemove(dst, name);
+    }
+    if (!cont || ow) {
+      SNetIntListPush(dst, name);
+    }
+  END_FOR
+}
+
+void SNetVariantAddAll( snet_variant_t *to, snet_variant_t *from, bool overwrite)
+{
+  IntlistAddAll(to->fields, from->fields, overwrite);
+  IntlistAddAll(to->tags, from->tags, overwrite);
+  IntlistAddAll(to->btags, from->btags, overwrite);
+}
+
 
 bool SNetVariantIsEmpty( snet_variant_t *var)
 {

@@ -39,75 +39,86 @@ typedef struct {
   bool is_det;
 } parallel_arg_t;
 
-#define MC_ISMATCH( name) name->is_match
-#define MC_COUNT( name) name->match_count
 typedef struct {
   bool is_match;
-  int match_count;
+  int count;
 } match_count_t;
 
-/* ------------------------------------------------------------------------- */
-/*  SNetParallel                                                             */
-/* ------------------------------------------------------------------------- */
 
-static match_count_t *CheckMatch( snet_record_t *rec,
+
+static inline void MatchCountUpdate( match_count_t *mc, bool match_cond)
+{
+  if (match_cond) {
+    mc->count += 1;
+  } else {
+    mc->is_match = false;
+  }
+}
+
+
+static void CheckMatch( snet_record_t *rec,
     snet_variant_list_t *variant_list, match_count_t *mc)
 {
   int name, val;
   snet_variant_t *variant;
   int max=-1;
 
-  if(rec == NULL) {
-    SNetUtilDebugFatal("PARALLEL: CheckMatch: rec == NULL");
-  }
-  if(variant_list == NULL) {
-    SNetUtilDebugFatal("PARALLEL: CheckMatch: tenc == NULL");
-  }
-  if(mc == NULL) {
-    SNetUtilDebugFatal("PARALLEL: CheckMatch: mc == NULL");
-  }
+  assert(rec != NULL);
+  assert(variant_list != NULL);
+  assert(mc != NULL);
+
   /* for all variants */
   LIST_FOR_EACH(variant_list, variant)
-    MC_COUNT( mc) = 0;
-    MC_ISMATCH( mc) = true;
+    mc->count = 0;
+    mc->is_match = true;
 
-    /* is_match is set to value inside the macros */
     VARIANT_FOR_EACH_FIELD(variant, name)
-      if (!SNetRecHasField( rec, name)) {
-        MC_ISMATCH( mc) = false;
-      } else {
-        MC_COUNT( mc) += 1;
-      }
+      MatchCountUpdate(mc, SNetRecHasField(rec, name));
     END_FOR
 
     VARIANT_FOR_EACH_TAG(variant, name)
-      if (!SNetRecHasTag( rec, name)) {
-        MC_ISMATCH( mc) = false;
-      } else {
-        MC_COUNT( mc) += 1;
-      }
+      MatchCountUpdate(mc, SNetRecHasTag(rec, name));
     END_FOR
 
     RECORD_FOR_EACH_BTAG(rec, name, val)
-      if(!SNetVariantHasBTag(variant, name)) {
-        MC_ISMATCH( mc) = false;
-      } else {
-        MC_COUNT( mc) += 1;
-      }
+      MatchCountUpdate(mc, SNetVariantHasBTag(variant, name));
     END_FOR
 
-    if (MC_ISMATCH( mc)) {
-      max = MC_COUNT( mc) > max ? MC_COUNT( mc) : max;
+    if (mc->is_match) {
+      max = mc->count > max ? mc->count : max;
     }
   END_FOR
 
   if( max >= 0) {
-    MC_ISMATCH( mc) = true;
-    MC_COUNT( mc) = max;
+    mc->is_match = true;
+    mc->count = max;
   }
-
-  return mc;
 }
+
+
+static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
+    snet_variant_list_t *variant_list)
+{
+  snet_variant_t *other;
+  int name;
+
+  /* for all variants in the list */
+  LIST_FOR_EACH(variant_list, other)
+    VARIANT_FOR_EACH_FIELD(var, name)
+      if (!SNetVariantHasField(other, name)) return false;
+    END_FOR
+
+    VARIANT_FOR_EACH_TAG(var, name)
+      if (!SNetVariantHasTag(other, name)) return false;
+    END_FOR
+
+    VARIANT_FOR_EACH_BTAG(var, name)
+      if (!SNetVariantHasBTag(other, name)) return false;
+    END_FOR
+  END_FOR
+  return true;
+}
+
 
 /**
  * Check for "best match" and decide which buffer to dispatch to
@@ -121,10 +132,10 @@ static int BestMatch( match_count_t **counter, int num)
   res = -1;
   max = -1;
   for( i=0; i<num; i++) {
-    if( MC_ISMATCH( counter[i])) {
-      if( MC_COUNT( counter[i]) > max) {
+    if( counter[i]->is_match) {
+      if( counter[i]->count > max) {
         res = i;
-        max = MC_COUNT( counter[i]);
+        max = counter[i]->count;
       }
     }
   }
@@ -169,8 +180,9 @@ static void ParallelBoxTask(void *arg)
   int num = SNetVariantListListLength(parg->variant_lists);
   snet_stream_desc_t *instream;
   snet_stream_desc_t *outstreams[num];
-  int i, stream_index;
+  int i;
   snet_record_t *rec;
+  snet_record_t *sourcerec = NULL;
   match_count_t **matchcounter;
   int num_init_branches = 0;
   bool terminate = false;
@@ -239,26 +251,88 @@ static void ParallelBoxTask(void *arg)
     switch( SNetRecGetDescriptor( rec)) {
 
       case REC_data:
-        for( i=0; i<num; i++) {
-          CheckMatch( rec, SNetVariantListListGet( parg->variant_lists, i), matchcounter[i]);
+        {
+          int stream_index;
+          for( i=0; i<num; i++) {
+            CheckMatch( rec, SNetVariantListListGet( parg->variant_lists, i), matchcounter[i]);
+          }
+          stream_index = BestMatch( matchcounter, num);
+          if (stream_index == -1) {
+            SNetUtilDebugNotice("[PAR] Cannot route data record, no matching branch!");
+          }
+          PutToBuffers( outstreams, num, stream_index, rec, (parg->is_det)? &counter : NULL);
         }
-        stream_index = BestMatch( matchcounter, num);
-        if (stream_index == -1) {
-          SNetUtilDebugNotice("[PAR] Cannot route data record, no matching branch!\n");
-        }
-        PutToBuffers( outstreams, num, stream_index, rec, (parg->is_det)? &counter : NULL);
         break;
 
       case REC_sync:
         {
-          snet_stream_t *newstream = SNetRecGetStream( rec);
-          SNetStreamReplace( instream, newstream);
-          SNetRecDestroy( rec);
+          snet_variant_t *synctype = SNetRecGetVariant(rec);
+          if (synctype!=NULL && sourcerec!=NULL) {
+            snet_stream_desc_t *last;
+            int cnt = 0;
+            /* terminate affected branches */
+            for( i=0; i<num; i++) {
+              if ( VariantIsSupertypeOfAllOthers( synctype,
+                    SNetVariantListListGet( parg->variant_lists, i)) ) {
+                // FIXME FIXME FIXME
+                SNetUtilDebugNotice("[PAR] Terminate branch %d!", i);
+                SNetStreamWrite(outstreams[i], SNetRecCreate(REC_terminate));
+                SNetStreamClose(outstreams[i], false);
+                outstreams[i] = NULL;
+              }
+            }
+
+
+
+            /* count remaining branches, and send a sort record through */
+            for (i=0;i<num;i++) {
+              if (outstreams[i] != NULL) {
+                cnt++;
+                last = outstreams[i];
+                SNetStreamWrite( last,
+                    SNetRecCreate( REC_sort_end, 0, counter));
+              }
+              counter += 1;
+            }
+
+            /* if only one branch left, we can terminate ourselves*/
+            if (cnt == 1) {
+              /* forward source record */
+              SNetStreamWrite(last, sourcerec);
+              sourcerec = NULL;
+
+              /* forward stripped sync record */
+              SNetRecSetVariant(rec, NULL);
+              SNetStreamWrite(last, rec);
+
+              /* close instream */
+              SNetStreamClose( instream, false);
+              terminate = true;
+              // FIXME FIXME FIXME
+              SNetUtilDebugNotice("[PAR] Terminate self!");
+            } else {
+              /* usual sync replace */
+              parg->input = SNetRecGetStream( rec);
+              SNetStreamReplace( instream, parg->input);
+              SNetRecDestroy( rec);
+            }
+
+          } else {
+            /* usual sync replace */
+            parg->input = SNetRecGetStream( rec);
+            SNetStreamReplace( instream, parg->input);
+            SNetRecDestroy( rec);
+          }
+          /* in either case, clear the stored source record! */
+          if (sourcerec != NULL) {
+            SNetRecDestroy(sourcerec);
+            sourcerec = NULL;
+          }
         }
         break;
 
       case REC_collect:
-        SNetUtilDebugNotice("[PAR] Received REC_collect, destroying it\n");
+        SNetUtilDebugNotice("[PAR] Received REC_collect, destroying it");
         SNetRecDestroy( rec);
         break;
 
@@ -285,14 +359,15 @@ static void ParallelBoxTask(void *arg)
         }
         /* destroy the original */
         SNetRecDestroy( rec);
-        /* close instream: only destroy if not synch'ed before */
+        /* close and destroy instream */
         SNetStreamClose( instream, true);
         /* note that no sort record needs to be appended */
         break;
 
       case REC_source:
-        /* ignore, destroy */
-        SNetRecDestroy( rec);
+        /* store temporarily */
+        assert(sourcerec == NULL);
+        sourcerec = rec;
         break;
 
       default:

@@ -10,6 +10,8 @@
 #include "threading.h"
 
 
+//#define COLLECTOR_DEBUG_OUTPUT_FOR_GC
+
 typedef struct {
   snet_stream_t *output;
   void* inputs; /* either snet_stream_t* or snet_stream_t** */
@@ -176,7 +178,12 @@ void CollectorTask(void *arg)
              * records was received while waiting on sort records.
              */
             //assert( !SNetStreamsetIsEmpty( &waitingset) );
-
+#ifdef COLLECTOR_DEBUG_OUTPUT_FOR_GC
+            //FIXME FIXME FIXME
+            if (!carg->dynamic) {
+              SNetUtilDebugNotice("[COLL] received REC_terminate!");
+            }
+#endif
             SNetStreamIterRemove( iter);
             SNetStreamClose( cur_stream, true);
             /* update incoming counter */
@@ -236,6 +243,12 @@ void CollectorTask(void *arg)
         SNetStreamWrite( outstream, term_rec);
         /* waitingset is also empty: terminate*/
         terminate = true;
+#ifdef COLLECTOR_DEBUG_OUTPUT_FOR_GC
+        // FIXME FIXME FIXME
+        if (!carg->dynamic) {
+          SNetUtilDebugNotice("[COLL] Terminate self noinputs!");
+        }
+#endif
       }
 
     } else if (!carg->dynamic && incount==1) {
@@ -251,6 +264,10 @@ void CollectorTask(void *arg)
           );
       SNetStreamClose( in, false);
       terminate = true;
+#ifdef COLLECTOR_DEBUG_OUTPUT_FOR_GC
+      // FIXME FIXME FIXME
+      SNetUtilDebugNotice("[COLL] Terminate self shortcut!");
+#endif
     } else {
       /* readyset is not empty: continue "collecting" sort records */
       /* wait on new input */

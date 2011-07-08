@@ -13,12 +13,16 @@ struct snet_variant_t {
 #define VARIANT_FOR_EACH_BTAG(var, val)     LIST_FOR_EACH(var->btags, val)
 #define VARIANT_FOR_EACH_FIELD(var, val)    LIST_FOR_EACH(var->fields, val)
 
-snet_variant_t *SNetVariantCreate( snet_int_list_t *fields, snet_int_list_t *tags,
+snet_variant_t *SNetVariantCreate( snet_int_list_t *fields,
+                                   snet_int_list_t *tags,
                                    snet_int_list_t *btags);
 
 snet_variant_t *SNetVariantCreateEmpty();
 snet_variant_t *SNetVariantCopy( snet_variant_t *var);
 void SNetVariantDestroy( snet_variant_t *var);
+
+void SNetVariantAddAll( snet_variant_t *to, snet_variant_t *from,
+    bool overwrite);
 
 bool SNetVariantIsEmpty( snet_variant_t *var);
 

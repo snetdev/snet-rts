@@ -34,6 +34,8 @@
 #include "locvec.h"
 #include "debug.h"
 
+/* FIXME for testing the garbage collection mechanism */
+//#define SYNC_SEND_OUTTYPES
 
 /*****************************************************************************/
 /* HELPER FUNCTIONS                                                          */
@@ -76,6 +78,26 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
 
   return result;
 }
+
+
+/**
+ * Create a new variant that contains the union of fields/tags/btags of
+ * a list of variants.
+ *
+ * It has to be destroyed by the client.
+ */
+static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
+{
+  snet_variant_t *res, *var;
+
+  res = SNetVariantCreateEmpty();
+  LIST_FOR_EACH(patterns, var)
+    SNetVariantAddAll(res, var, false);
+  END_FOR
+
+  return res;
+}
+
 
 /*****************************************************************************/
 /* SYNCHRO TASK                                                              */
@@ -152,6 +174,9 @@ static void SyncBoxTask(void *arg)
         if (new_matches == 0) {
           SNetStreamWrite( outstream, rec);
         } else if (match_cnt == num_patterns) {
+          snet_record_t *syncrec;
+          snet_variant_t *outtype;
+
           /* this is the last sync */
           SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
 
@@ -164,7 +189,13 @@ static void SyncBoxTask(void *arg)
             SNetRecCreate(REC_source, instream_source));
           }
           /* follow by a sync record */
-          SNetStreamWrite( outstream, SNetRecCreate(REC_sync, sarg->input));
+          syncrec = SNetRecCreate(REC_sync, sarg->input);
+#ifdef SYNC_SEND_OUTTYPES
+          outtype = GetMergedTypeVariant(sarg->patterns);
+          SNetRecSetVariant(syncrec, outtype);
+          SNetVariantDestroy(outtype);
+#endif
+          SNetStreamWrite( outstream, syncrec);
 
           /* the receiver of REC_sync will destroy the outstream */
           SNetStreamClose( outstream, false);

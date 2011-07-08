@@ -84,6 +84,7 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
         RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
         RECORD( rec, sync_rec) = SNetMemAlloc( sizeof( sync_rec_t));
         SYNC_REC( rec, input) = va_arg( args, snet_stream_t *);
+        SYNC_REC( rec, outtype) = NULL;
       }
       break;
     case REC_collect:
@@ -165,6 +166,10 @@ void SNetRecDestroy( snet_record_t *rec)
       break;
     case REC_sync:
       {
+        snet_variant_t *var = SYNC_REC( rec, outtype);
+        if (var != NULL) {
+          SNetVariantDestroy(var);
+        }
         SNetMemFree( RECORD( rec, sync_rec));
       }
       break;
@@ -264,6 +269,33 @@ snet_stream_t *SNetRecGetStream( snet_record_t *rec)
   return result;
 }
 
+snet_variant_t *SNetRecGetVariant(snet_record_t *rec)
+{
+  if (REC_DESCR( rec) != REC_sync) {
+    SNetUtilDebugFatal("Wrong type in SNetRecGetVariant() (%d)", REC_DESCR(rec));
+  }
+  return SYNC_REC( rec, outtype);
+}
+
+void SNetRecSetVariant(snet_record_t *rec, snet_variant_t *var)
+{
+  if (REC_DESCR( rec) != REC_sync) {
+    SNetUtilDebugFatal("Wrong type in SNetRecSetVariant() (%d)", REC_DESCR(rec));
+  }
+  if (SYNC_REC(rec, outtype)) SNetVariantDestroy(SYNC_REC(rec,outtype));
+  SYNC_REC( rec, outtype) = (var!=NULL) ? SNetVariantCopy(var) : NULL;
+}
+
+/*****************************************************************************/
+
+snet_locvec_t *SNetRecGetLocvec(snet_record_t *rec)
+{
+  if (REC_DESCR( rec) != REC_source) {
+    SNetUtilDebugFatal("Wrong type in SNetRecGetLocvec() (%d)", REC_DESCR(rec));
+  }
+  return SOURCE_REC( rec, loc);
+}
+
 /*****************************************************************************/
 
 void SNetRecSetNum( snet_record_t *rec, int value)
@@ -301,6 +333,7 @@ int SNetRecGetLevel( snet_record_t *rec)
 
   return SORT_E_REC( rec, level);
 }
+
 
 /*****************************************************************************/
 
@@ -386,12 +419,5 @@ void SNetRecRenameField( snet_record_t *rec, int oldName, int newName)
 
 /*****************************************************************************/
 
-snet_locvec_t *SNetRecGetLocvec( snet_record_t *rec)
-{
-  if (REC_DESCR( rec) != REC_source) {
-    SNetUtilDebugFatal("Wrong type in SNetRecGetLocvec() (%d)", REC_DESCR(rec));
-  }
-  return SOURCE_REC( rec, loc);
-}
 
 
