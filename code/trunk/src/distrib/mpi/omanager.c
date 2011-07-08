@@ -43,7 +43,7 @@ void *SNetOutputManager(void *args)
 
   while (running) {
     sd = SNetStreamPoll(&outgoing);
-    rec = (snet_record_t*) SNetStreamGet(sd);
+    rec = (snet_record_t*) SNetStreamRead(sd);
     dest = SNetStreamDestMapGet(streamMap, sd);
     SendRecord(dest, rec);
   }
