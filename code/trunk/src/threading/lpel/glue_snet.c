@@ -124,7 +124,7 @@ int SNetThreadingInit(int argc, char **argv)
     config.num_workers = num_cpus;
     config.proc_others = num_others;
   } else {
-    config.proc_workers = num_cpus;
+    config.proc_workers = num_workers;
     config.num_workers = num_workers;
     config.proc_others = num_others;
   }
