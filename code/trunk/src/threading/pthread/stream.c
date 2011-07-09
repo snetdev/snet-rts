@@ -198,13 +198,32 @@ snet_stream_desc_t *SNetStreamPoll(snet_streamset_t *set)
    */
   self = (*set)->entity;
 
+  iter = SNetStreamIterCreate(set);
+
+  /* fast path: there is something anywhere */
+  {
+    while( SNetStreamIterHasNext(iter)) {
+      snet_stream_desc_t *sd = SNetStreamIterNext( iter);
+      snet_stream_t *s = sd->stream;
+      pthread_mutex_lock(&s->lock);
+      if (s->count > 0) result = sd;
+      pthread_mutex_unlock(&s->lock);
+    }
+    if (result != NULL) {
+      goto poll_fastpath;
+    }
+  }
+
+
+
+
   /* reset wakeup_sd */
   pthread_mutex_lock( &self->lock );
   self->wakeup_sd = NULL;
   pthread_mutex_unlock( &self->lock );
 
   /* for each stream in the set */
-  iter = SNetStreamIterCreate(set);
+  SNetStreamIterReset(iter, set);
   while( SNetStreamIterHasNext(iter)) {
     snet_stream_desc_t *sd = SNetStreamIterNext( iter);
     snet_stream_t *s = sd->stream;
@@ -254,8 +273,8 @@ snet_stream_desc_t *SNetStreamPoll(snet_streamset_t *set)
     if (--cnt == 0) break;
   }
 
+poll_fastpath:
   SNetStreamIterDestroy(iter);
-
   /* 'rotate' list to stream descriptor for non-empty buffer */
   *set = result;
 

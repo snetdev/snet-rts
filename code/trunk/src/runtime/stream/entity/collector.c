@@ -10,6 +10,10 @@
 #include "threading.h"
 
 
+//#define COLLECTOR_DEBUG_OUTPUT_FOR_GC
+
+#define DESTROY_TERM_IN_WAITING_UPON_COLLECT
+
 typedef struct {
   snet_stream_t *output;
   void* inputs; /* either snet_stream_t* or snet_stream_t** */
@@ -18,8 +22,10 @@ typedef struct {
 } coll_arg_t;
 
 
-
+//FIXME in threading layer?
 #define SNetStreamsetIsEmpty(set) ((*set)==NULL)
+
+
 
 
 
@@ -31,6 +37,41 @@ static bool SortRecEqual( snet_record_t *rec1, snet_record_t *rec2)
   return (SNetRecGetLevel(rec1) == SNetRecGetLevel(rec2)) &&
          (SNetRecGetNum(  rec1) == SNetRecGetNum(  rec2));
 }
+
+
+/**
+ * Peeks the top record of all streams in waitingset,
+ * if there is a terminate record, the stream is closed
+ * and removed from the waitingset
+ */
+static int DestroyTermInWaitingSet(snet_stream_iter_t *wait_iter,
+    snet_streamset_t *waitingset)
+{
+  int destroy_cnt=0;
+  if ( !SNetStreamsetIsEmpty( waitingset)) {
+    SNetStreamIterReset( wait_iter, waitingset);
+    while( SNetStreamIterHasNext( wait_iter)) {
+      snet_stream_desc_t *sd = SNetStreamIterNext( wait_iter);
+      snet_record_t *wait_rec = SNetStreamPeek( sd);
+
+      /* for this stream, check if there is a termination record next */
+      if ( wait_rec != NULL &&
+          SNetRecGetDescriptor( wait_rec) == REC_terminate ) {
+        /* consume, remove from waiting set and free the stream */
+        (void) SNetStreamRead( sd);
+        SNetStreamIterRemove( wait_iter);
+        SNetStreamClose( sd, true);
+        /* update destroyed counter */
+        destroy_cnt++;
+        /* destroy record */
+        SNetRecDestroy( wait_rec);
+      }
+      /* else do nothing */
+    }
+  }
+  return destroy_cnt;
+}
+
 
 
 /**
@@ -79,6 +120,9 @@ void CollectorTask(void *arg)
 
   /* MAIN LOOP */
   while( !terminate) {
+
+    /*XXX improve: is_dynamic && |readyset|==1 => StreamRead(initial) */
+
 
     /* iterate through readyset: for each node (stream) */
     SNetStreamIterReset( iter, &readyset);
@@ -129,31 +173,11 @@ void CollectorTask(void *arg)
           case REC_collect:
             assert( carg->dynamic == true );
             /* collect: add new stream to ready set */
-#if 1
+#ifdef DESTROY_TERM_IN_WAITING_UPON_COLLECT
             /* but first, check if we can free resources by checking the
                waiting set for arrival of termination records */
-            if ( !SNetStreamsetIsEmpty( &waitingset)) {
-              SNetStreamIterReset( wait_iter, &waitingset);
-              while( SNetStreamIterHasNext( wait_iter)) {
-                snet_stream_desc_t *sd = SNetStreamIterNext( wait_iter);
-                snet_record_t *wait_rec = SNetStreamPeek( sd);
-
-                /* for this stream, check if there is a termination record next */
-                if ( wait_rec != NULL &&
-                    SNetRecGetDescriptor( wait_rec) == REC_terminate ) {
-                  /* consume, remove from waiting set and free the stream */
-                  (void) SNetStreamRead( sd);
-                  SNetStreamIterRemove( wait_iter);
-                  SNetStreamClose( sd, true);
-                  /* update incoming counter */
-                  incount--;
-                  assert(incount > 0);
-                  /* destroy record */
-                  SNetRecDestroy( wait_rec);
-                }
-                /* else do nothing */
-              }
-            }
+            incount -= DestroyTermInWaitingSet(wait_iter, &waitingset);
+            assert(incount > 0);
 #endif
             /* finally, add new stream to ready set */
             {
@@ -176,7 +200,12 @@ void CollectorTask(void *arg)
              * records was received while waiting on sort records.
              */
             //assert( !SNetStreamsetIsEmpty( &waitingset) );
-
+#ifdef COLLECTOR_DEBUG_OUTPUT_FOR_GC
+            //FIXME FIXME FIXME
+            if (!carg->dynamic) {
+              SNetUtilDebugNotice("[COLL] received REC_terminate!");
+            }
+#endif
             SNetStreamIterRemove( iter);
             SNetStreamClose( cur_stream, true);
             /* update incoming counter */
@@ -236,6 +265,12 @@ void CollectorTask(void *arg)
         SNetStreamWrite( outstream, term_rec);
         /* waitingset is also empty: terminate*/
         terminate = true;
+#ifdef COLLECTOR_DEBUG_OUTPUT_FOR_GC
+        // FIXME FIXME FIXME
+        if (!carg->dynamic) {
+          SNetUtilDebugNotice("[COLL] Terminate self noinputs!");
+        }
+#endif
       }
 
     } else if (!carg->dynamic && incount==1) {
@@ -251,6 +286,10 @@ void CollectorTask(void *arg)
           );
       SNetStreamClose( in, false);
       terminate = true;
+#ifdef COLLECTOR_DEBUG_OUTPUT_FOR_GC
+      // FIXME FIXME FIXME
+      SNetUtilDebugNotice("[COLL] Terminate self shortcut!");
+#endif
     } else {
       /* readyset is not empty: continue "collecting" sort records */
       /* wait on new input */

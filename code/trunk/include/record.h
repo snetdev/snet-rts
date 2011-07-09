@@ -37,6 +37,7 @@ enum record_mode {
 #include "stream.h"
 #include "map.h"
 #include "bool.h"
+#include "variant.h"
 #include "locvec.h"
 
 typedef struct {
@@ -49,6 +50,7 @@ typedef struct {
 
 typedef struct {
   snet_stream_t *input;
+  snet_variant_t *outtype;
 } sync_rec_t;
 
 typedef struct {
@@ -110,6 +112,11 @@ snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mode);
 
 snet_stream_t *SNetRecGetStream( snet_record_t *rec);
 
+snet_variant_t *SNetRecGetVariant(snet_record_t *rec);
+void SNetRecSetVariant(snet_record_t *rec, snet_variant_t *var);
+
+snet_locvec_t *SNetRecGetLocvec( snet_record_t *rec);
+
 void SNetRecSetNum( snet_record_t *rec, int value);
 int SNetRecGetNum( snet_record_t *rec);
 void SNetRecSetLevel( snet_record_t *rec, int value);
@@ -133,6 +140,5 @@ void *SNetRecTakeField( snet_record_t *rec, int id);
 bool SNetRecHasField( snet_record_t *rec, int id);
 void SNetRecRenameField( snet_record_t *rec, int id, int newId);
 
-snet_locvec_t *SNetRecGetLocvec( snet_record_t *rec);
 
 #endif /* _RECORD_H_ */
