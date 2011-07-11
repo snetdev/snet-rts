@@ -1,30 +1,82 @@
 #!/usr/bin/env bash
 
+# runTests takes a base dir followed by an (optional) list of tests from that
+# subdirectory to run. If no such list is given all tests are run.
+function runTests {
+  local base tests
+
+  base=$1; shift
+
+  if [ $# -gt 0 ]; then
+    tests=$@
+  else
+    tests=($base/*/)
+    tests=(${tests[@]%/})
+    tests=(${tests[@]#$base/})
+  fi
+
+  # For all tests
+  for dir in "${tests[@]}"; do
+    # Try to compile test
+    if make -C $base/$dir 2>/dev/null >/dev/null; then
+      # If the compile succeeded, run the test for each XML file.
+      for input in $base/$dir/*.xml; do
+        if [ -f $base/$dir/$dir ]; then
+          if $RUNCOMMAND $base/$dir/$dir -i $input -o out.bak; then
+            # If the test exited succesfully, verify the output
+            if ! ./compare ${input%.xml} out.bak; then
+              echo "Results differ for $dir with ${input#$base/$dir/}"
+            else
+              echo "OK: $dir with ${input#$base/$dir/}"
+            fi
+          else
+            echo "Execution failed for $dir with ${input#$base/$dir/}"
+          fi
+          rm -f out.bak
+        fi
+      done
+    else
+      echo "Compile failed for $dir"
+    fi
+    make -C $base/$dir clean 2>/dev/null >/dev/null
+  done
+}
+
 if [ $# -gt 0 ]; then
-  TESTS=$@
+  categories=$1; shift
 else
-  TESTS=(*/)
-  TESTS=("${TESTS[@]%/}")
+  categories=(*/)
+  categories=(${categories[@]%/})
 fi
 
-for dir in "${TESTS[@]}"; do
-  if make -C $dir 2>/dev/null >/dev/null; then
-    for input in $dir/*.xml; do
-      if [ -f $dir/$dir ]; then
-        if $dir/$dir <$input >out.bak; then
-          if ! ./compare ${input%.xml} out.bak; then
-            echo "Results differ for $dir/$dir with input $input"
-          else
-            echo "OK: $dir/$dir with input $input"
-          fi
-        else
-          echo "Execution failed for $dir/$dir with input $input"
-        fi
-        rm out.bak
+for category in ${categories[@]}; do
+  for config in $category/*.config; do
+    # Set default config values
+    export SNETTESTFLAGS=""
+    export RUNCOMMAND=""
+    export RUN=1
+
+    # If a config file exists, source it to set the above values
+    if [ -f $config ]; then
+      source $config
+      config=${config#$category/}
+      config=${config%.config}
+    else
+      config=""
+      if [ -f $category/config ]; then
+        source $category/config
       fi
-    done
-  else
-    echo "Compile failed for $dir"
-  fi
-  make -C $dir clean 2>/dev/null >/dev/null
+    fi
+
+    if [ $RUN -ne 0 ]; then
+      if [ -n "$config" ]; then
+        echo "Running $category $config tests:"
+      else
+        echo "Running $category tests:"
+      fi
+
+      runTests $category $@
+      echo
+    fi
+  done
 done

@@ -4,3 +4,4 @@ include $(SNETBASE)/src/makefiles/config.mkf
 SNETLIBS = $(SNETBASE)/lib/*.so
 INCLUDES  = -I. -I$(SNETBASE)/include
 LIBRARIES = $(SOCKETLIBS)
+SNETCFLAGS+= $(SNETTESTFLAGS)

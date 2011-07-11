@@ -1,0 +1,3 @@
+if ! (which -s sac2c && which -s sac4c); then
+  RUN=0
+fi

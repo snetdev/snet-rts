@@ -1,8 +1,0 @@
-<metadata>
-  <default>
-    <interface value="C4SNet"/>
-  </default>
-</metadata>
-
-net distparallel
-connect [{<T>} -> {<T=T+1>}]@1 | [{<S>} -> {<S=S+2>}]@2;

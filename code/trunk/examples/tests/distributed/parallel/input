@@ -1,0 +1,26 @@
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" >
+  <tag label="T">2</tag>
+</record>
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" >
+  <tag label="T">3</tag>
+</record>
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" >
+  <tag label="T">4</tag>
+</record>
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" >
+  <tag label="S">3</tag>
+</record>
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" >
+  <tag label="S">4</tag>
+</record>
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" >
+  <tag label="S">5</tag>
+</record>
+<?xml version="1.0" ?>
+<record type="terminate" />
