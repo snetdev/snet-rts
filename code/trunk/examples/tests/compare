@@ -2,10 +2,14 @@
 from sys import argv, exit
 from re import compile, match
 
-tagPat = compile(r'<tag label="([^"]*)"[^>]*>([^<]*)</tag>')
-btagPat = compile(r'<btag label="([^"]*)"[^>]*>([^<]*)</btag>')
-fieldPat = compile(r'<field label="([^"]*)"[^>]*>([^<]*)</field>')
-recordPat = compile(r'<record.*type="([^"]*)".*>')
+tagStart = compile(r'<tag label="([^"]*)"[^>]*>')
+tagEnd = compile(r'</tag>')
+btagStart = compile(r'<btag label="([^"]*)"[^>]*>')
+btagEnd = compile(r'</btag>')
+fieldStart = compile(r'<field label="([^"]*)"[^>]*>')
+fieldEnd = compile(r'</field>')
+recordStart = compile(r'<record.*type="([^"]*)".*>')
+recordEnd = compile(r'</record>')
 
 class Record(object):
     def __init__(self, type_):
@@ -33,35 +37,51 @@ def grabFileContent(fileName):
 def splitIntoRecords(fileContents):
     record = None
     recordList = []
+    name = ''
+    value = ''
+    fileContents = fileContents.replace('>', '>\n').replace('<', '\n<')
 
-    for line in fileContents.replace('><', '>\n<').splitlines():
+    for line in filter(lambda x: x != '', fileContents.splitlines()):
         if line == '<?xml version="1.0" ?>':
             continue
-        elif line == "</record>":
-            if record:
-                recordList.append(record)
-            record = None
 
-        elif recordPat.match(line):
-            match = recordPat.match(line)
+        elif recordStart.match(line):
+            match = recordStart.match(line)
             record = Record(match.group(1))
 
-        elif tagPat.match(line):
-            match = tagPat.match(line)
-            record.tags[match.group(1)] = match.group(2)
+        elif recordEnd.match(line):
+            recordList.append(record)
+            record = None
 
-        elif btagPat.match(line):
-            match = btagPat.match(line)
-            record.btags[match.group(1)] = match.group(2)
+        elif tagStart.match(line):
+            match = tagStart.match(line)
+            name = match.group(1)
 
-        elif fieldPat.match(line):
-            match = fieldPat.match(line)
-            record.fields[match.group(1)] = match.group(2)
+        elif tagEnd.match(line):
+            record.tags[name] = value
+            name = ''
+            value = ''
+
+        elif btagStart.match(line):
+            match = btagStart.match(line)
+            name = match.group(1)
+
+        elif btagEnd.match(line):
+            record.btags[name] = value
+            name = ''
+            value = ''
+
+        elif fieldStart.match(line):
+            match = fieldStart.match(line)
+            name = match.group(1)
+
+        elif fieldEnd.match(line):
+            record.fields[name] = value
+            name = ''
+            value = ''
 
         else:
-            print "Encountered an unexpected line!"
-            print "Line: ", line
-            exit(1)
+            value += line
 
     if record:
         recordList.append(record)
