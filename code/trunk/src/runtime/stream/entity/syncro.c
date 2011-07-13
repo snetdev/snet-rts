@@ -80,6 +80,7 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
 }
 
 
+#ifdef SYNC_SEND_OUTTYPES
 /**
  * Create a new variant that contains the union of fields/tags/btags of
  * a list of variants.
@@ -97,6 +98,7 @@ static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
 
   return res;
 }
+#endif
 
 
 /*****************************************************************************/
@@ -175,7 +177,9 @@ static void SyncBoxTask(void *arg)
           SNetStreamWrite( outstream, rec);
         } else if (match_cnt == num_patterns) {
           snet_record_t *syncrec;
+#ifdef SYNC_SEND_OUTTYPES
           snet_variant_t *outtype;
+#endif
 
           /* this is the last sync */
           SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
