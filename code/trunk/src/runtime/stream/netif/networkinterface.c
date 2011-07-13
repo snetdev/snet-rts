@@ -261,7 +261,8 @@ int SNetInRun(int argc, char **argv,
   SNetLocvecSet(info, locvec);
 
   input_stream = SNetStreamCreate(0);
-  output_stream = fun(input_stream, info, SNetDistribGetNodeId());
+  output_stream = fun(input_stream, info, 0);
+  output_stream = SNetRouteUpdate(info, output_stream, 0);
 
   SNetDistribStart();
 
