@@ -269,7 +269,7 @@ snet_locvec_t *SNetLocvecGet(snet_info_t *info)
 
 void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec)
 {
-  SNetInfoSetTag(info, LOCVEC_INFO_TAG, (uintptr_t) vec);
+  SNetInfoSetTag(info, LOCVEC_INFO_TAG, (uintptr_t) vec, NULL);
 }
 
 
