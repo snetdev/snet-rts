@@ -22,17 +22,18 @@ function runTests {
       # If the compile succeeded, run the test for each XML file.
       for input in $base/$dir/*.xml; do
         if [ -f $base/$dir/$dir ]; then
-          if $RUNCOMMAND $base/$dir/$dir -i $input -o out.bak; then
+          if run $base/$dir/$dir $input out.bak; then
             # If the test exited succesfully, verify the output
             if ! ./compare ${input%.xml} out.bak; then
               echo "Results differ for $dir with ${input#$base/$dir/}"
             else
               echo "OK: $dir with ${input#$base/$dir/}"
+              rm -f out.bak
             fi
           else
             echo "Execution failed for $dir with ${input#$base/$dir/}"
+            rm -f out.bak
           fi
-          rm -f out.bak
         fi
       done
     else
@@ -52,8 +53,10 @@ fi
 for category in ${categories[@]}; do
   for config in $category/*.config; do
     # Set default config values
+    function run {
+      $1 -i $2 -o $3
+    }
     export SNETTESTFLAGS=""
-    export RUNCOMMAND=""
     export RUN=1
 
     # If a config file exists, source it to set the above values
