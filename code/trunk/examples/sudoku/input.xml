@@ -1,0 +1,15 @@
+<record type="data" mode="textual">
+<field label="board" interface="SAC4SNet">
+:::SACFIBRE: int 2 9 9 :::
+inputs/easy01.inp
+</field>
+</record>
+
+<record type="data" mode="textual">
+<field label="board" interface="SAC4SNet">
+:::SACFIBRE: int 2 9 9 :::
+inputs/hard06.inp
+</field>
+</record>
+
+<record type="terminate" />

@@ -1,0 +1,6 @@
+<record type="data" mode="textual">
+<field label="board" interface="SAC4SNet">
+:::SACFIBRE: int 2 9 9 :::
+easy01.inp
+</field>
+</record> 

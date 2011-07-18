@@ -32,31 +32,31 @@ export all;
  * options first. The function 'findMinTrues' is used to that effect.
  */
 
-int[*], bool[*] addNumber( int i, int j, int k, int[*] set, bool[*] opts)
+int[*], bool[*] addNumber(int i, int j, int k, int[*] set, bool[*] opts)
 {
-  set[i,j] = k;
-  k = k-1;
-  i_q = (i/SIZE)*SIZE;
-  j_q = (j/SIZE)*SIZE;
+  set[i, j] = k;
+  k = k - 1;
+  i_q = (i / SIZE) * SIZE;
+  j_q = (j / SIZE) * SIZE;
   opts = with {
-          ([i,j,0] <= iv <= [i,j,SIZE*SIZE-1]) : false;
-          ([i,0,k] <= iv <= [i,SIZE*SIZE-1,k]) : false;
-          ([0,j,k] <= iv <= [SIZE*SIZE-1,j,k]) : false;
-          ([i_q,j_q,k] <= iv <= [i_q+SIZE-1,j_q+SIZE-1,k]) : false;
+          ([i, j, 0] <= iv <= [i, j, SIZE*SIZE - 1]) : false;
+          ([i, 0, k] <= iv <= [i, SIZE*SIZE - 1, k]) : false;
+          ([0, j, k] <= iv <= [SIZE*SIZE - 1, j, k]) : false;
+          ([i_q, j_q, k] <= iv <= [i_q + SIZE-1, j_q + SIZE-1, k]) : false;
   } : modarray( opts);
 
   return( set, opts);
 }
 
-int countTrues( bool[*] b)
+int countTrues(bool[*] b)
 {
   return( sum( toi( b)));
 }
 
-int findTrue( bool[.] b)
+int findTrue(bool[.] b)
 {
   i=0;
-  while( !(b[i])) {
+  while(!(b[i])) {
     i++;
   }
   return( i);
@@ -115,7 +115,7 @@ int[*],bool[*] solveRec( int[*] set, bool[*] opts)
        */
       mem_set = set;
       mem_opts = opts;
-      for( k=0; (k<9) && (!isCompleted(set)); k++) {
+      for( k=0; (k<(SIZE*SIZE)) && (!isCompleted(set)); k++) {
         if( mem_opts[i, j, k] ) {
           set, opts = addNumber( i, j, k+1, mem_set, mem_opts);
           set, opts = solveRec( set, opts);
@@ -200,7 +200,7 @@ int[*], bool[*] solveOneLevel( int[*] board, bool[*] opts)
 	i,j = findMinTrues( opts);
 	mem_board = board;
 	mem_opts = opts;
-	for( k=1; (k<=9) && !isCompleted(board); k++) {
+	for( k=1; (k<=(SIZE*SIZE)) && !isCompleted(board); k++) {
 		if( mem_opts[i,j,k-1] ) {
 			board, opts = addNumber( i, j, k, mem_board, mem_opts);
 		}

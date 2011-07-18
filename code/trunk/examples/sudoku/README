@@ -1,0 +1,33 @@
+==================
+Sudoku example
+==================
+
+
+Directory contents
+==================
+
+./sac-solver/
+
+  Contains a standalone SAC sudoku solver (no S-Net involved).
+  Just for illustrative purposes.
+
+
+./boxes/
+
+  contains the boxes written in SAC.
+
+
+./inputs/
+
+  contains example inputs in fibre format.
+
+
+
+Instructions
+============
+
+Type 'make'.
+This will first build the boxes,
+then the S-Net program, then links the executable.
+
+Try inputs.xml as input, or just type 'make test'.

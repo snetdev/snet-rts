@@ -1,9 +1,13 @@
+include $(SNETBASE)/src/makefiles/config.mkf
+
 CC        = gcc
 CCFLAGS   = -Wall -g -DFILTER_VERSION_2
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I./include 
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib
-LIBS      = -lpthread -lsnet -lSAC2SNet
+LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib -L$(SNETBASE)/src/interfaces/sac4snet
+LIBS      = -lpthread -lsnet -ldistribnodist -ltbpthread -lSAC4Snet -lsnetutil
+
+SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__sudokusolve=main
 
 # SAC SimpleFibre library
 FIBREOBJS = $(SACBASE)/stdlib/world/stdio/src/FibreIO/*.o

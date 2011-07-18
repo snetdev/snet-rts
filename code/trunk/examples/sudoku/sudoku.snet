@@ -1,12 +1,14 @@
-<?xml version="1.0"?>
-<metadata xmlns="snet-home.org" >
-  <interface name="SAC4SNet" default="true" />
+
+<metadata>
+  <boxdefault>
+    <interface value="SAC4SNet" />
+  </boxdefault>
 </metadata>
+
 
 net sudoku {
 
-<?xml version="1.0"?>
-  <metadata xmlns="snet-home.org" >
+  <metadata>
     <box name="computeOpts" >
       <SACmodule>sudoku</SACmodule>
     </box>
@@ -17,17 +19,18 @@ net sudoku {
 
   box computeOpts( (board) -> (board, opts));
   box solve( (board, opts) -> (board));
+  box readInput((fibre) -> (board));
 
   net oneLevelStar {
 
-  <?xml version="1.0"?>
-    <metadata xmlns="snet-home.org" >
+    <metadata>
       <box name="solveOneLevel" >
         <SACmodule>sudoku</SACmodule>
       </box>
     </metadata>
+
     box solveOneLevel( (board, opts) -> (board, opts, <k>, <level>));
-  } connect ([{<k>} -> {<k=k%4>}] .. 
-            (solveOneLevel!<k>))*{<level>} if <level >= 40>;
+  } connect ([{<k>} -> {<k=k%4>}] ..
+            (solveOneLevel!<k>))*{<level>} if <level >= 2>;
 
 } connect computeOpts .. [{} -> {<k=0>,<level=0>}] .. oneLevelStar .. solve;

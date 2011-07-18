@@ -1,8 +1,8 @@
 use Structures: all;
 use StdIO: all;
+use CommandLine: {argc, argv};
 
-
-#define SIZE 5
+#define SIZE 3
 
 /*******************************************************************************
  * 
@@ -25,53 +25,54 @@ use StdIO: all;
  * options first. The function 'findMinTrues' is used to that effect.
  */
 
-int[*], bool[*] addNumber( int i, int j, int k, int[*] set, bool[*] opts)
+int[*], bool[*] addNumber(int i, int j, int k, int[*] set, bool[*] opts)
 {
-  set[i,j] = k;
-  k = k-1;
-  i_q = (i/SIZE)*SIZE;
-  j_q = (j/SIZE)*SIZE;
+  set[i, j] = k;
+  k = k - 1;
+  i_q = (i / SIZE) * SIZE;
+  j_q = (j / SIZE) * SIZE;
   opts = with(iv)
-          ([i,j,0] <= iv <= [i,j,SIZE*SIZE-1]) : false;
-          ([i,0,k] <= iv <= [i,SIZE*SIZE-1,k]) : false;
-          ([0,j,k] <= iv <= [SIZE*SIZE-1,j,k]) : false;
-          ([i_q,j_q,k] <= iv <= [i_q+SIZE-1,j_q+SIZE-1,k]) : false;
+          ([i, j, 0] <= iv <= [i, j, SIZE * SIZE - 1]) : false;
+          ([i, 0, k] <= iv <= [i, SIZE * SIZE - 1, k]) : false;
+          ([0, j, k] <= iv <= [SIZE * SIZE - 1, j, k]) : false;
+/* the square which the position [i, j] belongs to */
+          ([i_q, j_q, k] <= iv <= [i_q + SIZE - 1, j_q + SIZE-1, k]) : false;
          modarray( opts);
 
   return( set, opts);
 }
 
-int countTrues( bool[*] b)
+int countTrues(bool[*] b)
 {
-  return( sum( toi( b)));
+  return(sum(toi( b)));
 }
 
-int findTrue( bool[.] b)
+int findTrue(bool[.] b)
 {
-  i=0;
-  while( !(b[i])) {
+  i = 0;
+  while(!(b[i])) {
     i++;
   }
   return( i);
 }
 
-int, int findMinTrues( bool[*] opts)
+int, int findMinTrues(bool[*] opts)
 {
-  minCount = SIZE*SIZE;
+  minCount = SIZE * SIZE;
   min_i = 0;
   min_j = 0;
 
-  for( i=0; i<SIZE*SIZE; i++) {
-    for( j=0; j<SIZE*SIZE; j++) {
-      if( (countTrues( opts[i,j]) < minCount)
-          && (0 < countTrues( opts[i,j]))) {
+  for(i = 0; i < SIZE * SIZE; i++){
+    for(j = 0; j < SIZE * SIZE; j++){
+      if((countTrues(opts[i,j]) < minCount)
+          && (0 < countTrues(opts[i,j]))) {
         minCount = countTrues( opts[i,j]);
         min_i = i;
         min_j = j;
       }
     }
   }
-  return( min_i, min_j);
+  return(min_i, min_j);
 }
 
 bool isStuck( int[*] set, bool[*] opts)
@@ -87,10 +88,10 @@ bool isCompleted(  int[*] set)
 
 int[*], bool[*] solve( int[*] set, bool[*] opts)
 {
-  while( !( isStuck( set, opts) || isCompleted( set)) ) {
-    i,j = findMinTrues( opts);
-    if( countTrues( opts[i,j]) == 1) {
-      set, opts = addNumber( i,j, findTrue( opts[i,j]) +1  ,set,opts);
+  while(!( isStuck( set, opts) || isCompleted( set)) ) {
+    i, j = findMinTrues( opts);
+    if( countTrues(opts[i,j]) == 1) {
+      set, opts = addNumber(i, j, findTrue(opts[i, j]) + 1, set, opts);
     } else {
       /**
        * here, we need to place a number without being sure that it
@@ -102,9 +103,9 @@ int[*], bool[*] solve( int[*] set, bool[*] opts)
        */
       mem_set = set;
       mem_opts = opts;
-      for( k=0; (k<SIZE*SIZE) && (!isCompleted(set)); k++) {
-        if( mem_opts[i, j, k] ) {
-          set, opts = addNumber( i, j, k+1, mem_set, mem_opts);
+      for (k = 0; (k < SIZE*SIZE ) && (!isCompleted(set)); k++) {
+        if (mem_opts[i, j, k]) {
+          set, opts = addNumber( i, j, k + 1, mem_set, mem_opts);
           set, opts = solve( set, opts);
         }
       }
@@ -114,22 +115,44 @@ int[*], bool[*] solve( int[*] set, bool[*] opts)
 }
 
 int main()
-{ 
-  set = genarray( [SIZE*SIZE,SIZE*SIZE], 0);
-  opts = genarray( [SIZE*SIZE,SIZE*SIZE,SIZE*SIZE], true);
+{
 
-  a = FibreScanIntArray( stdin, 2, [SIZE*SIZE,SIZE*SIZE]);
+	inputfile = "";
+	printf("Usage: %s -i <inputfile>\n", argv(0));
 
-  for( i=0; i<SIZE*SIZE; i++) {
-    for( j=0; j<SIZE*SIZE; j++) {
-      if( a[i,j] > 0 ) {
-        set, opts = addNumber( i,j, a[i,j],set,opts);
+	for (i = 1; i < argc() - 1; i++) {
+		if (argv(i) String::== "-i")
+			inputfile = argv(i+1);
+	}
+
+	if (inputfile String::== "") {
+		printf("Input file must be specified!\n");
+	} else {
+		 
+	/* read input */
+	err, f = fopen(inputfile, "r");
+	a = FibreScanIntArray(f);
+	fclose(f);
+
+  set = genarray( [SIZE * SIZE, SIZE * SIZE], 0);
+  opts = genarray( [SIZE * SIZE, SIZE * SIZE, SIZE * SIZE], true);
+
+
+  for(i = 0; i < SIZE * SIZE; i++) {
+    for(j = 0; j < SIZE * SIZE; j++) {
+      if(a[i, j] > 0) {
+        set, opts = addNumber(i, j, a[i,j], set, opts);
       }
     }
   }
 
   set, opts = solve( set, opts);
-  print( set);
 
+	printf("Input = \n");
+	print(a);
+	printf("\n Output = \n");
+  print(set);
+
+}
   return( 0);
 }

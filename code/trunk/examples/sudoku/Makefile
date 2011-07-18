@@ -1,52 +1,69 @@
 include $(SNETBASE)/src/makefiles/config.mkf
 
 CC        = gcc
-CCFLAGS   = -Wall -g -DFILTER_VERSION_2
+CCFLAGS   = -Wall -g
 AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include -I./include 
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib
-LIBS      = -lpthread -lsnet -lSAC4SNet -lsnetutil 
+INCDIRS   = -I. -I$(SNETBASE)/include  -I./boxes/include
+LIBDIRS   = -L. -L$(SNETBASE)/lib  -L./boxes/lib -Lboxes
+LIBS      = -lruntimestream -ldistribnodist -lsnetutil -lSAC4SNet -lpthread
+LIBS_PTHR = -ltbpthread
+LIBS_LPEL = -ltblpel
 
-SACDEFS   = -DSACTYPE_SNet_SNet=20
+SACNAMES   = -DSACTYPE_SNet_SNet=20 -DSNetMain__sudoku=main
 
 # SAC SimpleFibre library
-FIBREOBJS = $(SACBASE)/stdlib/world/stdio/src/FibreIO/*.o
+# FIBREOBJS = $(SACBASE)/stdlib/world/stdio/src/FibreIO/*.o
 
 
 SNETC	  = snetc
-SCFLAGS   = -b7 -v1
+SNETCFLAGS= -b7
 
 
 # - - - - - - - - - - - - - - - - - - - -
 SACTARGET = sudoku
+SACBOXLIB = boxes/lib$(SACTARGET)Mod.so
 # - - - - - - - - - - - - - - - - - - - -
 
-SAC2C     = sac2c
-S2CFLAGS  = -v1  -O3
 SAC4C     = sac4c
-S4CFLAGS  = -O3 -v1 -incdir include -libdir lib -g $(LIBDIRS) 
+S4CFLAGS  = -v3 -g $(LIBDIRS) -o boxes
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
-S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)` 
+S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)`
 
 
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = sudoku
 # = = = = = = = = = = = = = = = = = = = =
 
-all: $(TARGET) 
 
-$(TARGET): libsudokuMod.a Objects
-	$(CC) $(RPATH) $(LIBDIRS) $(SACDEFS) -o $(TARGET) *.o $(LIBS) $(S4CLIBS) $(LIBS) $(FIBREOBJS)
+.PHONY: all clean test $(SACBOXLIB)
 
-libsudokuMod.a: sudoku.sac
-	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $(SACTARGET).sac
-	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $(SACTARGET)
+
+
+all: $(TARGET) $(TARGET).lpel
+
+$(TARGET): $(TARGET).o $(SACBOXLIB)
+	$(CC) $(LIBDIRS) $(RPATH) -o $@ $< $(S4CLIBS) $(LIBS) $(LIBS_PTHR)
+
+$(TARGET).lpel: $(TARGET).o $(SACBOXLIB)
+	$(CC) $(LIBDIRS) $(RPATH) -o $@ $< $(S4CLIBS) $(LIBS) $(LIBS_LPEL)
+
+
+$(TARGET).o: $(TARGET).c
+	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c $<
 
 $(TARGET).c: $(TARGET).snet
-	$(SNETC) $(SCFLAGS) $(TARGET).snet
+	$(SNETC) $(SNETCFLAGS) $(TARGET).snet
 
-Objects: main.c $(TARGET).c
-	$(CC) $(CCFLAGS) $(INCDIRS) $(SACDEFS) $(S4CINCS) -c *.c
+$(SACBOXLIB):
+	make -C boxes/
+
+test: $(TARGET)
+	./$(TARGET) < input.xml
 
 clean:
-	rm -f *.o *.so *.a  lib/*.so lib/*.a  include/cwrapper.h $(TARGET) $(TARGET).c $(TARGET).h 
+	make -C boxes/ clean
+	rm -f  $(TARGET) $(TARGET).lpel $(TARGET).[och]
+	rm -f  mon_*.log n*tasks.map
+
+
+
