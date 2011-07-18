@@ -1,7 +1,5 @@
-#include <sub.h>
-#include <stdlib.h>
-#include <bool.h>
-#include <stdio.h>
+#include "bool.h"
+#include "sub.h"
 
 void *sub( void *hnd, c4snet_data_t *x)
 {

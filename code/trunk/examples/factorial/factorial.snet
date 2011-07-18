@@ -14,8 +14,8 @@ net factorial
                 box sub( (x) -> (xx));
                 box mult( (xm,rm) -> (rrm));
         }
-        connect [{<F>,x,r} -> {xm=x,rm=r}; {x=x}] .. 
-					(sub|mult@2) .. 
+        connect [{<F>,x,r} -> {xm=x,rm=r}; {x=x}] ..
+					(sub|mult@2) ..
 					  ([|{xx},{rrm} |]@2*{xx,rrm}) ..
 					    [{xx,rrm}->{x=xx,r=rrm}];
 

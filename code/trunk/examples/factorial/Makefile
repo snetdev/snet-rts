@@ -1,22 +1,29 @@
 include $(SNETBASE)/src/makefiles/config.mkf
 
-CC        = gcc
-CCFLAGS   = -Wall -g
-SNETC     = snetc
-AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include
-LIBS      = $(SOCKETLIBS) $(RPATH)
-FILES     = condif.c leq1.c mult.c sub.c
-
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = factorial
+BOXES     = boxes/libboxes.a
 # = = = = = = = = = = = = = = = = = = = =
 
+SNETC     = snetc
+LIBS      = $(SOCKETLIBS) $(RPATH)
 
-all: 
-	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h
-	$(CC) $(CCFLAGS) $(INCDIRS) -c $(FILES)
-	$(SNETC) -g $(LIBS) -o $(TARGET) $(TARGET).snet
+.PHONY: all clean test
 
+all: $(TARGET) $(TARGET).lpel
+
+$(TARGET): $(TARGET).snet $(BOXES)
+	$(SNETC) -g $(LIBS) -o $(TARGET) $(TARGET).snet -L./boxes -lboxes
+
+$(TARGET).lpel: $(TARGET).snet $(BOXES)
+	$(SNETC) -g $(LIBS) -o $(TARGET).lpel $(TARGET).snet -L./boxes -lboxes -threading lpel
+
+$(BOXES):
+	make -C boxes/
+
+test: $(TARGET)
+	./$(TARGET) < data/data.xml
 clean:
-	rm -f *.o $(TARGET) $(TARGET).c $(TARGET).h
+	make -C boxes/ clean
+	rm -f $(TARGET) $(TARGET).lpel $(TARGET).[och]
+	rm -f mon*.log n*_tasks.map

@@ -1,10 +1,8 @@
-#include <mult.h>
-#include <stdlib.h>
-#include <bool.h>
-#include <stdio.h>
+#include "bool.h"
+#include "mult.h"
 
 void *mult( void *hnd, c4snet_data_t *x, c4snet_data_t *r)
-{ 
+{
   c4snet_data_t *result;
   int int_x, int_r, int_rr ;
 
