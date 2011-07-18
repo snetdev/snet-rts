@@ -1,0 +1,21 @@
+This example shows how to model a state network with S-Net,
+that is garbage-collectable and serves as basic pattern for
+all networks that have to model state in some way.
+
+Encapsulated by a serial replication, there is *first*
+a synchrocell followed by a parallel composition.
+The sync-cell will merge the current state and the input
+record into a single record.
+The parallel composition has a branch that will operate on the
+merged record, by means of updating the current state by the input value,
+i.e. generating a new state and (optionally) producing output that will leave
+the serial replication.
+The other branch is a simple bypass that allows to bypass unprocessed
+input values into successive instances of the seial replication to reside
+in synchro cells and wait for the state to arrive.
+
+In this example, the box 'add' just adds the input value to the current state,
+emits the current state as new state record and the old state as output value
+record that will leave the replication immediately.
+
+

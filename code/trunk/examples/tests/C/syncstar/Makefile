@@ -1,6 +1,6 @@
 include ../../paths.mkf
 
-TARGET = synchro
+TARGET = syncstar
 BOXES  =
 
 include ../../rules.mkf

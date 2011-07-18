@@ -5,5 +5,5 @@
 </metadata>
 
 
-net synchro
-connect [|{A},{B}|]**{A,B};
+net syncstar
+connect [|{A},{B}|]*{A,B};

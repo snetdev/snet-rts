@@ -1,6 +1,6 @@
 include ../../paths.mkf
 
-TARGET = synchro2
-BOXES  = dec.o
+TARGET = state
+BOXES  = add.o
 
 include ../../rules.mkf

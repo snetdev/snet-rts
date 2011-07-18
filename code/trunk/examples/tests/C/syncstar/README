@@ -1,0 +1,20 @@
+Testing a sync-star construct.
+This construct is useful for continuous synchronisation.
+
+The geninput.sh script generates an xml input data file
+containing records of tags A and B n following way:
+
+  ./geninput.sh <repeats> <depth>
+
+will create <depth> times record with tag A followed by <depth> times
+record with tag B. This pattern is repeated <repeats> times.
+The value of tags A and B is an increasing number.
+
+
+Example:
+  ./geninput.sh 2 3
+
+will generate following sequence of records:
+
+A=0, A=1, A=2, B=0, B=1, B=2,
+A=3, A=4, A=5, B=3, B=4, B=5
