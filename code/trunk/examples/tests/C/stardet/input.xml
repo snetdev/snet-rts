@@ -1,26 +1,20 @@
 <?xml version="1.0" ?>
 <record xmlns="snet-home.org" type="data" mode="textual" >
   <field label="A" interface="C4SNet">(int)5</field>
-  <tag label="T">50</tag>
 </record>
 <record xmlns="snet-home.org" type="data" mode="textual" >
   <field label="A" interface="C4SNet">(int)4</field>
-  <tag label="T">40</tag>
 </record>
 <record xmlns="snet-home.org" type="data" mode="textual" >
   <field label="A" interface="C4SNet">(int)3</field>
-  <tag label="T">30</tag>
 </record>
 <record xmlns="snet-home.org" type="data" mode="textual" >
   <field label="A" interface="C4SNet">(int)2</field>
-  <tag label="T">20</tag>
 </record>
 <record xmlns="snet-home.org" type="data" mode="textual" >
   <field label="A" interface="C4SNet">(int)1</field>
-  <tag label="T">10</tag>
 </record>
 <record xmlns="snet-home.org" type="data" mode="textual" >
   <field label="A" interface="C4SNet">(int)0</field>
-  <tag label="T">0</tag>
 </record>
 <record type="terminate" />

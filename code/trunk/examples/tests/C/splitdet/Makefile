@@ -1,6 +1,6 @@
 include ../../paths.mkf
 
-TARGET = split
+TARGET = splitdet
 BOXES  = delay.o
 
 include ../../rules.mkf

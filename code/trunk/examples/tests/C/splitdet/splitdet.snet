@@ -4,6 +4,6 @@
   </boxdefault>
 </metadata>
 
-net split {
+net splitdet {
   box delay((A,<T>) -> (A,<T>));
-} connect delay!<T>;
+} connect delay!!<T>;

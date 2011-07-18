@@ -5,6 +5,6 @@
 </metadata>
 
 
-net star {
+net stardet {
   box foo((A, <cnt>) -> (A, <cnt>) | (B));
-} connect [{A} -> {A, <cnt>}] .. foo*{B};
+} connect [{A} -> {A, <cnt>}] .. foo**{B};

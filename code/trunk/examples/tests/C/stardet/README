@@ -1,0 +1,12 @@
+Simple non-deterministic serial replication.
+
+The geninput.sh script allows to generate
+a sequence of records that will leave the replication
+pipeline at random points.
+
+Synopsis:
+
+  ./geninput.sh <num_records> <max_depth>
+
+num_records specifies the number of records that are generated,
+max_depth specifies the upper limit of randomly generated values.
