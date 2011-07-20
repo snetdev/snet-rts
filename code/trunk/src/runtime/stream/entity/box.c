@@ -21,12 +21,20 @@
 #include "debugcounters.h"
 #endif /* SNET_DEBUG_COUNTERS  */
 
+
+//#define DBG_RT_TRACE_OUT_TIMINGS
+
+
+
 typedef struct {
   snet_stream_t *input, *output;
   void (*boxfun)( snet_handle_t*);
   snet_variant_list_t *output_variants;
+  snet_locvec_t *myloc;
   const char *boxname;
 } box_arg_t;
+
+
 
 /* ------------------------------------------------------------------------- */
 /*  SNetBox                                                                  */
@@ -62,6 +70,8 @@ static void BoxTask(void *arg)
   hnd.sign = barg->output_variants;
   /* mapping */
   hnd.mapping = NULL;
+  /* location of box */
+  hnd.boxloc = barg->myloc;
 
   /* MAIN LOOP */
   while( !terminate) {
@@ -75,8 +85,10 @@ static void BoxTask(void *arg)
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_in, NULL);
-        SNetUtilDebugNotice("[DBG::RT::TimeTrace SnetBox Calls %p at %lf\n",
-                        &hnd, tv_in.tv_sec + tv_in.tv_usec / 1000000.0);
+        SNetUtilDebugNoticeLoc( barg->myloc,
+            "[BOX] Firing box function at %lf.",
+            tv_in.tv_sec + tv_in.tv_usec / 1000000.0
+            );
 #endif
 #ifdef SNET_DEBUG_COUNTERS
         SNetDebugTimeGetTime(&time_in);
@@ -88,18 +100,19 @@ static void BoxTask(void *arg)
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_out, NULL);
-        SNetUtilDebugNotice("[DBG::RT::TimeTrace] SnetBox resumes from %p "
-                            "after %lf\n\n", &hnd,
-                            (tv_out.tv_sec - tv_in.tv_sec) +
-                            (tv_out.tv_usec - tv_in.tv_usec) / 1000000.0);
+        SNetUtilDebugNoticeLoc( barg->myloc,
+            "[BOX] Return from box function after %lf sec.",
+            (tv_out.tv_sec - tv_in.tv_sec) + (tv_out.tv_usec - tv_in.tv_usec) / 1000000.0
+            );
 #endif
+
+
 #ifdef SNET_DEBUG_COUNTERS
         SNetDebugTimeGetTime(&time_out);
-
         mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
-
         SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
 #endif /* SNET_DEBUG_COUNTERS */
+
         SNetRecDestroy( rec);
 
         /* restrict to one data record per execution */
@@ -143,6 +156,7 @@ static void BoxTask(void *arg)
   SNetHndDestroy( &hnd);
 
   /* destroy box arg */
+  SNetLocvecDestroy(barg->myloc);
   SNetVariantListDestroy(barg->output_variants);
   SNetMemFree( barg);
 }
@@ -175,9 +189,10 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->output = output;
     barg->boxfun = boxfun;
     barg->output_variants = output_variants;
+    barg->myloc = SNetLocvecCopy(locvec);
     barg->boxname = boxname;
 
-    SNetEntitySpawn( ENTITY_box, SNetLocvecGet(info), location,
+    SNetEntitySpawn( ENTITY_box, locvec, location,
       barg->boxname, BoxTask, (void*)barg);
 
 

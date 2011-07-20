@@ -2,8 +2,8 @@
  * $Id$
  */
 
-#ifndef HANDLE_H
-#define HANDLE_H
+#ifndef _HANDLE_H_
+#define _HANDLE_H_
 
 struct handle;
 typedef struct handle snet_handle_t;
@@ -12,4 +12,5 @@ typedef struct handle snet_handle_t;
 
 extern snet_record_t *SNetHndGetRecord( snet_handle_t *hndl);
 extern snet_variant_list_t *SNetHndGetVariants( snet_handle_t *hnd);
-#endif
+
+#endif /* _HANDLE_H_ */

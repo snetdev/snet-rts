@@ -1,79 +1,135 @@
 #include <pthread.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
 
+#include "locvec.h"
 #include "debug.h"
+#include "bool.h"
 #include "memfun.h"
 #include "distribution.h"
 
 #define MAX_SIZE 256
 
-extern void SNetUtilDebugFatal(char* m, ...) {
-  va_list p;
+
+/**
+ * Helper function to check overflow and
+ * keep track of written chars and space left
+ */
+static inline void CheckAndUpdate(int *ret, int *len, int *num)
+{
+  assert( *ret >= 0 );
+  if(*ret >= *len) {
+    SNetUtilDebugFatal("Debug message too long!");
+  }
+
+  /* update counters */
+  *num += *ret; *len -= *ret;
+}
+
+
+static void PrintDebugMessage(char *msg, char *category,
+  va_list arg, snet_locvec_t *locvec)
+{
   char *temp;
-  int num;
-  int ret;
+  int num, ret, len;
 
   /* NOTICE: the text is first printed into buffer to prevent it from
    * breaking in to multiple pieces when printing to stderr!
    */
 
-  temp = SNetMemAlloc(sizeof(char) * (strlen(m) + MAX_SIZE));
-  memset(temp, 0, strlen(m) + MAX_SIZE);
+  len = strlen(msg) + MAX_SIZE;
+  num = 0;
 
-  va_start(p, m);
+  temp = SNetMemAlloc(sizeof(char) * len);
+  //memset(temp, 0, len);
 
-  num = sprintf(temp, "(SNET FATAL (NODE %d THREAD %lu) ", SNetDistribGetNodeId(), pthread_self());
-  ret = vsprintf(temp + num, m, p);
+  if (locvec != NULL) {
+    ret = snprintf(temp, len, "(SNET %s (NODE %d in ",
+        category,
+        SNetDistribGetNodeId()
+        );
+    CheckAndUpdate( &ret, &len, &num);
 
-  if(ret < 0) {
-    SNetUtilDebugFatal("Debug message too long!");
+    ret = SNetLocvecPrint(temp+num, len, locvec);
+    CheckAndUpdate( &ret, &len, &num);
+
+    ret = snprintf(temp+num, len, ") ");
+    CheckAndUpdate( &ret, &len, &num);
+  } else {
+    ret = snprintf(temp, len, "(SNET %s (NODE %d THREAD %lu) ",
+        category,
+        SNetDistribGetNodeId(),
+        pthread_self()
+        );
+    CheckAndUpdate( &ret, &len, &num);
   }
 
-  num += ret;
+  ret = vsnprintf(temp+num, len, msg, arg);
+  CheckAndUpdate( &ret, &len, &num);
 
-  ret = sprintf(temp + num, ")\n");
+  ret = snprintf(temp+num, len, ")\n");
+  CheckAndUpdate( &ret, &len, &num);
 
-  if(ret < 0) {
-    SNetUtilDebugFatal("Debug message too long!");
-  }
-
+  /* finally print to stderr */
   fputs(temp, stderr);
   fflush(stderr);
-  va_end(p);
 
+  SNetMemFree(temp);
+}
+
+
+
+/**
+ * Print an error message on stderr and abort the program.
+ */
+void SNetUtilDebugFatal(char* msg, ...)
+{
+  va_list arg;
+
+  va_start(arg, msg);
+  PrintDebugMessage(msg, "FATAL", arg, NULL);
+  va_end(arg);
   abort();
 }
 
-extern void SNetUtilDebugNotice(char *m, ...) {
-  va_list p;
-  char *temp;
-  int num;
-  int ret;
+/**
+ * Print a warning/notice message on stderr
+ */
+void SNetUtilDebugNotice(char *msg, ...)
+{
+  va_list arg;
 
-  /* NOTICE: the text is first printed into buffer to prevent it from
-   * breaking in to multiple pieces when printing to stderr!
-   */
-
-  temp = SNetMemAlloc(sizeof(char) * (strlen(m) + MAX_SIZE));
-  memset(temp, 0, strlen(m) + MAX_SIZE);
-
-  va_start(p, m);
-  num = sprintf(temp, "(SNET NOTICE (NODE %d THREAD %lu) ", SNetDistribGetNodeId(), pthread_self());
-  ret = vsprintf(temp + num, m, p);
-
-  if(ret < 0) {
-    SNetUtilDebugFatal("Debug message too long!");
-  }
-
-  num += ret;
-
-  ret = sprintf(temp + num, ")\n");
-
-  if(ret < 0) {
-    SNetUtilDebugFatal("Debug message too long!");
-  }
-
-  fputs(temp, stderr);
-  fflush(stderr);
-  va_end(p);
+  va_start(arg, msg);
+  PrintDebugMessage(msg, "NOTICE", arg, NULL);
+  va_end(arg);
 }
+
+
+/**
+ * Print an error message on stderr and abort the program.
+ */
+void SNetUtilDebugFatalLoc(snet_locvec_t *locvec, char* msg, ...)
+{
+  va_list arg;
+
+  va_start(arg, msg);
+  PrintDebugMessage(msg, "FATAL", arg, locvec);
+  va_end(arg);
+  abort();
+}
+
+/**
+ * Print a warning/notice message on stderr
+ */
+void SNetUtilDebugNoticeLoc(snet_locvec_t *locvec, char *msg, ...)
+{
+  va_list arg;
+
+  va_start(arg, msg);
+  PrintDebugMessage(msg, "NOTICE", arg, locvec);
+  va_end(arg);
+}
+
+

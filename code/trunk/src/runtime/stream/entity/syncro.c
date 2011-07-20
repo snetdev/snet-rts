@@ -102,7 +102,7 @@ static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
 
 
 /*****************************************************************************/
-/* SYNCHRO TASK                                                              */
+/* SYNCCELL TASK                                                             */
 /*****************************************************************************/
 
 typedef struct {
@@ -227,10 +227,8 @@ static void SyncBoxTask(void *arg)
 
       case REC_terminate:
         if (partial_sync) {
-          char slocvec[64];
-          SNetLocvecPrint(slocvec, sarg->myloc);
-          SNetUtilDebugNotice("[SYNC] Warning: Destroying partially "
-              "synchronized sync-cell in %s", slocvec);
+          SNetUtilDebugNoticeLoc( sarg->myloc,
+          "[SYNC] Warning: Destroying partially synchronized sync-cell!");
         }
         terminate = true;
         SNetStreamWrite( outstream, rec);

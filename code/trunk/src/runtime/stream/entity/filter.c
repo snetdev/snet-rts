@@ -1,8 +1,11 @@
+
+#include <stdarg.h>
+#include <assert.h>
+
 #include "expression.h"
 #include "filter.h"
 #include "list.h"
 #include "memfun.h"
-#include "stdarg.h"
 #include "bool.h"
 #include "record.h"
 #include "snetentities.h"
