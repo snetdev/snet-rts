@@ -545,6 +545,7 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
 
     /* create the instance network */
     from_op = box_a(into_op, info, location);
+    from_op = SNetRouteUpdate(info, from_op, location);
 
     /* create the feedback dispatcher */
     fbdarg = SNetMemAlloc( sizeof( fbdisp_arg_t));
@@ -559,7 +560,8 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
   } else {
     SNetVariantListDestroy(back_patterns);
     SNetExprListDestroy(guards);
-    output = input;
+    output = box_a(input, info, location);
+    output = SNetRouteUpdate(info, output, location);
   }
 
   SNetLocvecFeedbackLeave(locvec);
