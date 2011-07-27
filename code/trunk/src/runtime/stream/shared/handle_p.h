@@ -2,6 +2,7 @@
 #define _HANDLE_P_H_
 
 #include "handle.h"
+#include "locvec.h"
 #include "threading.h"
 
 typedef struct {
@@ -16,6 +17,7 @@ struct handle {
   snet_variant_list_t *sign;
   name_mapping_t *mapping;
   snet_stream_desc_t *out_sd;
+  snet_locvec_t *boxloc;
 };
 
 void SNetHndDestroy( snet_handle_t *hnd);

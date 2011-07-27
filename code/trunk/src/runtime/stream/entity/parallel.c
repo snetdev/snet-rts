@@ -24,6 +24,8 @@
  *
  *****************************************************************************/
 
+#include <assert.h>
+
 #include "snetentities.h"
 #include "collector.h"
 #include "memfun.h"
@@ -32,10 +34,15 @@
 #include "distribution.h"
 #include "threading.h"
 
+//#define DEBUG_PRINT_GC
+
+//#define ENABLE_GARBAGE_COLLECT_STATE
+
 typedef struct {
   snet_stream_t *input;
   snet_stream_t **outputs;
   snet_variant_list_list_t *variant_lists;
+  snet_locvec_t *myloc;
   bool is_det;
 } parallel_arg_t;
 
@@ -96,6 +103,8 @@ static void CheckMatch( snet_record_t *rec,
 }
 
 
+#ifdef ENABLE_GARBAGE_COLLECT_STATE
+
 static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
     snet_variant_list_t *variant_list)
 {
@@ -118,6 +127,8 @@ static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
   END_FOR
   return true;
 }
+
+#endif /* ENABLE_GARBAGE_COLLECT_STATE */
 
 
 /**
@@ -242,9 +253,6 @@ static void ParallelBoxTask(void *arg)
 
   /* MAIN LOOP START */
   while( !terminate) {
-#ifdef PARALLEL_DEBUG
-    SNetUtilDebugNotice("PARALLEL %p: reading %p", outstreams, instream);
-#endif
     /* read a record from the instream */
     rec = SNetStreamRead( instream);
 
@@ -258,7 +266,8 @@ static void ParallelBoxTask(void *arg)
           }
           stream_index = BestMatch( matchcounter, num);
           if (stream_index == -1) {
-            SNetUtilDebugNotice("[PAR] Cannot route data record, no matching branch!");
+            SNetUtilDebugNoticeLoc( parg->myloc,
+                "[PAR] Cannot route data record, no matching branch!");
           }
           PutToBuffers( outstreams, num, stream_index, rec, (parg->is_det)? &counter : NULL);
         }
@@ -266,6 +275,7 @@ static void ParallelBoxTask(void *arg)
 
       case REC_sync:
         {
+#ifdef ENABLE_GARBAGE_COLLECT_STATE
           snet_variant_t *synctype = SNetRecGetVariant(rec);
           if (synctype!=NULL && sourcerec!=NULL) {
             snet_stream_desc_t *last;
@@ -274,8 +284,10 @@ static void ParallelBoxTask(void *arg)
             for( i=0; i<num; i++) {
               if ( VariantIsSupertypeOfAllOthers( synctype,
                     SNetVariantListListGet( parg->variant_lists, i)) ) {
-                // FIXME FIXME FIXME
-                SNetUtilDebugNotice("[PAR] Terminate branch %d!", i);
+#ifdef DEBUG_PRINT_GC
+                SNetUtilDebugNoticeLoc( parg->myloc,
+                    "[PAR] Terminate branch %d due to outtype of synchrocell!", i);
+#endif
                 SNetStreamWrite(outstreams[i], SNetRecCreate(REC_terminate));
                 SNetStreamClose(outstreams[i], false);
                 outstreams[i] = NULL;
@@ -309,7 +321,10 @@ static void ParallelBoxTask(void *arg)
               SNetStreamClose( instream, false);
               terminate = true;
               // FIXME FIXME FIXME
-              SNetUtilDebugNotice("[PAR] Terminate self!");
+#ifdef DEBUG_PRINT_GC
+              SNetUtilDebugNoticeLoc( parg->myloc,
+                  "[PAR] Terminate self, as only one branch left!");
+#endif
             } else {
               /* usual sync replace */
               parg->input = SNetRecGetStream( rec);
@@ -317,7 +332,9 @@ static void ParallelBoxTask(void *arg)
               SNetRecDestroy( rec);
             }
 
-          } else {
+          } else
+#endif /* ENABLE_GARBAGE_COLLECT_STATE */
+          {
             /* usual sync replace */
             parg->input = SNetRecGetStream( rec);
             SNetStreamReplace( instream, parg->input);
@@ -332,7 +349,7 @@ static void ParallelBoxTask(void *arg)
         break;
 
       case REC_collect:
-        SNetUtilDebugNotice("[PAR] Received REC_collect, destroying it");
+        SNetUtilDebugNoticeLoc( parg->myloc, "[PAR] Received REC_collect, destroying it");
         SNetRecDestroy( rec);
         break;
 
@@ -371,7 +388,7 @@ static void ParallelBoxTask(void *arg)
         break;
 
       default:
-        SNetUtilDebugNotice("[PAR] Unknown control rec destroyed (%d).\n",
+        SNetUtilDebugNoticeLoc(parg->myloc, "[PAR] Unknown control rec destroyed (%d).\n",
             SNetRecGetDescriptor( rec));
         SNetRecDestroy( rec);
     }
@@ -386,6 +403,8 @@ static void ParallelBoxTask(void *arg)
     SNetMemFree( matchcounter[i]);
   }
   SNetMemFree( matchcounter);
+
+  SNetMemFree(parg->myloc);
 
   SNetVariantListListDestroy( parg->variant_lists);
   SNetMemFree( parg);
@@ -447,6 +466,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     /* copy */
     parg->outputs = transits;
     parg->variant_lists = variant_lists;
+    parg->myloc = SNetLocvecCopy(locvec);
     parg->is_det = is_det;
 
     SNetEntitySpawn( ENTITY_parallel, locvec, location,

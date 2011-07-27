@@ -34,8 +34,11 @@
 #include "locvec.h"
 #include "debug.h"
 
-/* FIXME for testing the garbage collection mechanism */
-//#define SYNC_SEND_OUTTYPES
+/*
+ * needs to be enabled to trigger the garbage collection mechanism
+ * at the parallel dispatcher
+ */
+#define SYNC_SEND_OUTTYPES
 
 /*****************************************************************************/
 /* HELPER FUNCTIONS                                                          */
@@ -102,7 +105,7 @@ static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
 
 
 /*****************************************************************************/
-/* SYNCHRO TASK                                                              */
+/* SYNCCELL TASK                                                             */
 /*****************************************************************************/
 
 typedef struct {
@@ -195,6 +198,11 @@ static void SyncBoxTask(void *arg)
           /* follow by a sync record */
           syncrec = SNetRecCreate(REC_sync, sarg->input);
 #ifdef SYNC_SEND_OUTTYPES
+          /*
+           * To trigger garbage collection at a following parallel dispatcher
+           * within a state-modeling network, the dispatcher needs knowledge about the
+           * type of the merged record ('outtype' of the synchrocell).
+           */
           outtype = GetMergedTypeVariant(sarg->patterns);
           SNetRecSetVariant(syncrec, outtype);
           SNetVariantDestroy(outtype);
@@ -227,10 +235,8 @@ static void SyncBoxTask(void *arg)
 
       case REC_terminate:
         if (partial_sync) {
-          char slocvec[64];
-          SNetLocvecPrint(slocvec, sarg->myloc);
-          SNetUtilDebugNotice("[SYNC] Warning: Destroying partially "
-              "synchronized sync-cell in %s", slocvec);
+          SNetUtilDebugNoticeLoc( sarg->myloc,
+          "[SYNC] Warning: Destroying partially synchronized sync-cell!");
         }
         terminate = true;
         SNetStreamWrite( outstream, rec);

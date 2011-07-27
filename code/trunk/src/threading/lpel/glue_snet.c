@@ -217,7 +217,7 @@ int SNetEntitySpawn(
   assert(locvec != NULL || type == ENTITY_other);
 
   if (locvec != NULL) {
-    SNetLocvecPrint(locstr, locvec);
+    (void) SNetLocvecPrint(locstr, 128, locvec);
   } else {
     locstr[0] = '\0';
   }
