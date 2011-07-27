@@ -70,6 +70,11 @@ void MAP_FUNCTION(MAP_NAME_H, Rename)(
         snet_map_t *map,
         MAP_KEY_H oldKey,
         MAP_KEY_H newKey);
+
+void MAP_FUNCTION(MAP_NAME_H, Serialise)(snet_map_t *map,
+                                         void (*serialiseKeys)(int, MAP_KEY_H*),
+                                         void (*serialiseValues)(int, MAP_VAL_H*));
+
 #ifdef MAP_CANARY_H
 #undef MAP_KEY_H
 #undef MAP_CANARY_H

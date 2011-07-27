@@ -232,6 +232,14 @@ void MAP_FUNCTION(MAP_NAME, Rename)(snet_map_t *map, MAP_KEY oldKey, MAP_KEY new
   map->keys[i] = newKey;
 }
 
+void MAP_FUNCTION(MAP_NAME, Serialise)(snet_map_t *map,
+                                       void (*serialiseKeys)(int, MAP_KEY*),
+                                       void (*serialiseValues)(int, MAP_VAL*))
+{
+  serialiseKeys(map->used, map->keys);
+  serialiseValues(map->used, map->values);
+}
+
 #ifdef MAP_CANARY
 #undef MAP_KEY
 #undef MAP_CANARY

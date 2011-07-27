@@ -420,4 +420,38 @@ void SNetRecRenameField( snet_record_t *rec, int oldName, int newName)
 /*****************************************************************************/
 
 
-
+void SNetRecSerialise( snet_record_t *rec, void (*serialiseFun)(int, int*))
+{
+  int tmp;
+  tmp = REC_DESCR(rec);
+  serialiseFun(1, &tmp);
+  switch (REC_DESCR(rec)) {
+    case REC_data:
+      SNetIntMapSerialise(DATA_REC(rec, btags), serialiseFun, serialiseFun);
+      SNetIntMapSerialise(DATA_REC(rec, tags), serialiseFun, serialiseFun);
+      //DATA_REC( rec, fields)
+      tmp = DATA_REC( rec, mode);
+      serialiseFun(1, &tmp);
+      tmp = DATA_REC( rec, interface_id);
+      serialiseFun(1, &tmp);
+      break;
+    case REC_sort_end:
+      tmp = SORT_E_REC(rec, level);
+      serialiseFun(1, &tmp);
+      tmp = SORT_E_REC(rec, num);
+      serialiseFun(1, &tmp);
+      break;
+    case REC_terminate:
+    case REC_trigger_initialiser:
+      break;
+    case REC_sync:
+    case REC_collect:
+      SNetUtilDebugFatal("Disallowed control record description. [%d]", REC_DESCR(rec));
+      break;
+    case REC_source:
+      //SOURCE_REC( rec, loc) = SNetLocvecCopy(va_arg( args, snet_locvec_t*));
+    default:
+      SNetUtilDebugFatal("Unknown control record description. [%d]", REC_DESCR(rec));
+      break;
+  }
+}
