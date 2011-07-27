@@ -34,8 +34,11 @@
 #include "locvec.h"
 #include "debug.h"
 
-/* FIXME for testing the garbage collection mechanism */
-//#define SYNC_SEND_OUTTYPES
+/*
+ * needs to be enabled to trigger the garbage collection mechanism
+ * at the parallel dispatcher
+ */
+#define SYNC_SEND_OUTTYPES
 
 /*****************************************************************************/
 /* HELPER FUNCTIONS                                                          */
@@ -195,6 +198,11 @@ static void SyncBoxTask(void *arg)
           /* follow by a sync record */
           syncrec = SNetRecCreate(REC_sync, sarg->input);
 #ifdef SYNC_SEND_OUTTYPES
+          /*
+           * To trigger garbage collection at a following parallel dispatcher
+           * within a state-modeling network, the dispatcher needs knowledge about the
+           * type of the merged record ('outtype' of the synchrocell).
+           */
           outtype = GetMergedTypeVariant(sarg->patterns);
           SNetRecSetVariant(syncrec, outtype);
           SNetVariantDestroy(outtype);

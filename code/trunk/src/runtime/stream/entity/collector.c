@@ -13,6 +13,18 @@
 
 //#define DEBUG_PRINT_GC
 
+
+/*
+ * Streams that are in the waitingset are not inspected until
+ * the waitingset becomes the readyset again.
+ * It is possible that the next record on a stream in the waitingset
+ * is a termination record, which means that the stream is not required
+ * anymore and could be destroyed.
+ *
+ * Following flag causes a scanning of the streams in the waiting set
+ * upon arrival of a collect record to find and destroy such streams that
+ * are not required anymore.
+ */
 #define DESTROY_TERM_IN_WAITING_UPON_COLLECT
 
 typedef struct {
@@ -144,10 +156,16 @@ void CollectorTask(void *arg)
           SNetStreamsetPut( &waitingset, cur_stream);
 
           if (sort_rec!=NULL) {
-            /* assure that level & counter match */
+            /*
+             * check that level & counter match
+             */
             if( !SortRecEqual(rec, sort_rec) ) {
               SNetUtilDebugNoticeLoc( carg->myloc,
-                  "[COLL] Warning: Received sort records do not match!");
+                  "[COLL] Warning: Received sort records do not match! "
+                  "expected (l%d,c%d) got (l%d,c%d)", /*TROLLFACE*/
+                  SNetRecGetLevel(sort_rec), SNetRecGetNum(sort_rec),
+                  SNetRecGetLevel(rec),      SNetRecGetNum(rec)
+                  );
             }
             /* destroy record */
             SNetRecDestroy( rec);
@@ -164,10 +182,27 @@ void CollectorTask(void *arg)
           break;
 
         case REC_sync:
+#ifdef DEBUG_PRINT_GC
+          //FIXME FIXME FIXME
+          if (!carg->dynamic) {
+            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_sync on %p!", cur_stream);
+          }
+#endif
           /* sync: replace stream */
           SNetStreamReplace( cur_stream, SNetRecGetStream( rec));
           /* destroy record */
           SNetRecDestroy( rec);
+          /*
+           * *** !!! IMPORTANT FOR GC !!! ***
+           *
+           * Leave the loop to check if we can terminate.
+           * Source and according sync record have to travel in pairs.
+           * Any subsequent sync record on this stream must arrive at the successor entity.
+           * TODO reorder, put in REC_source handler
+           */
+          if (source_rec != NULL) {
+            do_next = true;
+          }
           break;
 
         case REC_collect:
@@ -203,7 +238,7 @@ void CollectorTask(void *arg)
 #ifdef DEBUG_PRINT_GC
           //FIXME FIXME FIXME
           if (!carg->dynamic) {
-            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_terminate!");
+            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_terminate on %p!", cur_stream);
           }
 #endif
           res = SNetStreamsetRemove( &readyset, cur_stream);
@@ -223,17 +258,16 @@ void CollectorTask(void *arg)
 
 
         case REC_source:
-          /* ignore, destroy */
-          //SNetRecDestroy( rec);
           /**
            * Invariant: Collector will ever receive only one source record
            */
           assert(source_rec == NULL);
           source_rec = rec;
+          assert(1 == incount);
 #ifdef DEBUG_PRINT_GC
           //FIXME FIXME FIXME
           if (!carg->dynamic) {
-            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_source!");
+            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_source on %p!", cur_stream);
           }
 #endif
           break;

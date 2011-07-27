@@ -7,7 +7,7 @@
 #
 
 INCLUDES = -I$(SNETBASE)/include -I$(LPELSOURCE)
-CFLAGS = -c -g -Wall -pthread -fPIC $(INCLUDES)
+CFLAGS = -c -g -Wall -pthread -fPIC $(INCLUDES) -DUSE_MCTX_PCL
 LDFLAGS = -shared -pthread -lpthread -lpcl -lrt -lcap
 
 OBJS = buffer.o scheduler.o stream.o \
@@ -27,7 +27,7 @@ $(TARGET): $(OBJS)
 	gcc $(LDFLAGS) -o $@ $(OBJS)
 
 %.o: $(LPELSOURCE)/%.c lpel4snet.h translate4snet.sed
-	gcc -E $< |              \
+	gcc -E $(CFLAGS) $< |              \
 	sed -f translate4snet.sed |\
 	gcc -o $@ $(CFLAGS) -xc -
 

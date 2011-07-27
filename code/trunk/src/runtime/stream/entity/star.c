@@ -156,6 +156,10 @@ static void StarBoxTask(void *arg)
       case REC_data:
         if( MatchesExitPattern( rec, sarg->exit_patterns, sarg->guards)) {
           assert(!sync_cleanup);
+#ifdef DEBUG_PRINT_GC
+          SNetUtilDebugNoticeLoc( sarg->myloc,
+              "[STAR] Notice: Data leaves replication network.");
+#endif
           /* send rec to collector */
           SNetStreamWrite( outstream, rec);
         } else {
