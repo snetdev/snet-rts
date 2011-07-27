@@ -232,13 +232,49 @@ void MAP_FUNCTION(MAP_NAME, Rename)(snet_map_t *map, MAP_KEY oldKey, MAP_KEY new
   map->keys[i] = newKey;
 }
 
+#ifdef MAP_CANARY
 void MAP_FUNCTION(MAP_NAME, Serialise)(snet_map_t *map,
+                                       void (*serialiseInts)(int, int*),
+                                       void (*serialiseValues)(int, MAP_VAL*))
+{
+  serialiseInts(1, &map->used);
+  serialiseInts(map->used, map->keys);
+  serialiseValues(map->used, map->values);
+}
+
+void MAP_FUNCTION(MAP_NAME, Deserialise)(snet_map_t *map,
+                                       void (*deserialiseInts)(int, int*),
+                                       void (*deserialiseValues)(int, MAP_VAL*))
+{
+  deserialiseInts(1, &map->used);
+  map->keys = SNetMemAlloc(map->used * sizeof(MAP_KEY));
+  deserialiseInts(map->used, map->keys);
+  map->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));
+  deserialiseValues(map->used, map->values);
+}
+#else /* MAP_CANARY */
+void MAP_FUNCTION(MAP_NAME, Serialise)(snet_map_t *map,
+                                       void (*serialiseInts)(int, int*),
                                        void (*serialiseKeys)(int, MAP_KEY*),
                                        void (*serialiseValues)(int, MAP_VAL*))
 {
+  serialiseInts(1, &map->used);
   serialiseKeys(map->used, map->keys);
   serialiseValues(map->used, map->values);
 }
+
+void MAP_FUNCTION(MAP_NAME, Deserialise)(snet_map_t *map,
+                                       void (*deserialiseInts)(int, int*),
+                                       void (*deserialiseKeys)(int, MAP_KEY*),
+                                       void (*deserialiseValues)(int, MAP_VAL*))
+{
+  deserialiseInts(1, &map->used);
+  map->keys = SNetMemAlloc(map->used * sizeof(MAP_KEY));
+  deserialiseKeys(map->used, map->keys);
+  map->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));
+  deserialiseValues(map->used, map->values);
+}
+#endif /* MAP_CANARY */
 
 #ifdef MAP_CANARY
 #undef MAP_KEY

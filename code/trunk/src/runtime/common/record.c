@@ -420,26 +420,26 @@ void SNetRecRenameField( snet_record_t *rec, int oldName, int newName)
 /*****************************************************************************/
 
 
-void SNetRecSerialise( snet_record_t *rec, void (*serialiseFun)(int, int*))
+void SNetRecSerialise( snet_record_t *rec, void (*serialise)(int, int*))
 {
-  int tmp;
-  tmp = REC_DESCR(rec);
-  serialiseFun(1, &tmp);
+  int enumConversion;
+  enumConversion = REC_DESCR(rec);
+  serialise(1, &enumConversion);
   switch (REC_DESCR(rec)) {
     case REC_data:
-      SNetIntMapSerialise(DATA_REC(rec, btags), serialiseFun, serialiseFun);
-      SNetIntMapSerialise(DATA_REC(rec, tags), serialiseFun, serialiseFun);
+      SNetIntMapSerialise(DATA_REC(rec, btags), serialise, serialise);
+      SNetIntMapSerialise(DATA_REC(rec, tags), serialise, serialise);
       //DATA_REC( rec, fields)
-      tmp = DATA_REC( rec, mode);
-      serialiseFun(1, &tmp);
-      tmp = DATA_REC( rec, interface_id);
-      serialiseFun(1, &tmp);
+
+      enumConversion = DATA_REC( rec, mode);
+      serialise(1, &enumConversion);
+
+      enumConversion = DATA_REC( rec, interface_id);
+      serialise(1, &enumConversion);
       break;
     case REC_sort_end:
-      tmp = SORT_E_REC(rec, level);
-      serialiseFun(1, &tmp);
-      tmp = SORT_E_REC(rec, num);
-      serialiseFun(1, &tmp);
+      serialise(1, &SORT_E_REC(rec, level));
+      serialise(1, &SORT_E_REC(rec, num));
       break;
     case REC_terminate:
     case REC_trigger_initialiser:
@@ -454,4 +454,46 @@ void SNetRecSerialise( snet_record_t *rec, void (*serialiseFun)(int, int*))
       SNetUtilDebugFatal("Unknown control record description. [%d]", REC_DESCR(rec));
       break;
   }
+}
+
+snet_record_t *SNetRecDeserialise( void (*deserialise)(int, int*))
+{
+  int enumConversion;
+  snet_record_t *result;
+
+  deserialise(1, &enumConversion);
+  switch (enumConversion) {
+    case REC_data:
+      result = SNetRecCreate(enumConversion);
+      SNetIntMapDeserialise(DATA_REC(result, btags), deserialise, deserialise);
+      SNetIntMapDeserialise(DATA_REC(result, tags), deserialise, deserialise);
+      //DATA_REC( rec, fields)
+
+      enumConversion = DATA_REC( result, mode);
+      deserialise(1, &enumConversion);
+
+      enumConversion = DATA_REC( result, interface_id);
+      deserialise(1, &enumConversion);
+      break;
+    case REC_sort_end:
+      result = SNetRecCreate(enumConversion, 0, 0);
+      deserialise(1, &SORT_E_REC(result, level));
+      deserialise(1, &SORT_E_REC(result, num));
+      break;
+    case REC_terminate:
+    case REC_trigger_initialiser:
+      result = SNetRecCreate(enumConversion);
+      break;
+    case REC_sync:
+    case REC_collect:
+      SNetUtilDebugFatal("Disallowed control record description. [%d]", REC_DESCR(result));
+      break;
+    case REC_source:
+      //SOURCE_REC( rec, loc) = SNetLocvecCopy(va_arg( args, snet_locvec_t*));
+    default:
+      SNetUtilDebugFatal("Unknown control record description. [%d]", REC_DESCR(result));
+      break;
+  }
+
+  return result;
 }
