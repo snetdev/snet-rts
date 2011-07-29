@@ -25,7 +25,7 @@ SACNAMES  = -DSACTYPE_SNet_SNet=23 -DSNetMain__$(TARGET)=main
 TMAPIDS   = -DCID=24 -DCPXID=20 -DDISPID=26
 
 SNETC      = snetc
-SNETCFLAGS = -b7 -v0 # linking is done separately
+SNETCFLAGS = -b7 -v1 # linking is done separately
 
 # - - - - - - - - - - - - - - - - - - - -
 SACTARGET = boxes
@@ -35,7 +35,7 @@ SACMANDEL = mandelbrot
 # - - - - - - - - - - - - - - - - - - - -
 
 SAC2C     = sac2c
-S2CFLAGS  = -v0 -O3
+S2CFLAGS  = -v1 -O3
 SAC4C     = sac4c
 S4CFLAGS  = -v3 -incdir include -libdir lib $(LIBDIRS)
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags -o $(SACTARGET) $(SACTARGET)`
