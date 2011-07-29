@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <pthread.h>
 #include <stdint.h>
-#include "arch/atomic.h"
 #include "info.h"
 #include "bool.h"
 #include "memfun.h"
