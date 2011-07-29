@@ -12,6 +12,17 @@
 
 
 
+void SNetStreamSetSource(snet_stream_t *s, snet_locvec_t *lv)
+{
+  s->source = lv;
+}
+
+snet_locvec_t *SNetStreamGetSource(snet_stream_t *s)
+{
+  return s->source;
+}
+
+
 snet_stream_t *SNetStreamCreate(int capacity)
 {
   snet_stream_t *s = malloc(sizeof(snet_stream_t));
@@ -31,6 +42,7 @@ snet_stream_t *SNetStreamCreate(int capacity)
   s->is_poll = 0;
 
   memset( s->buffer, 0, s->size*sizeof(void*) );
+  s->source = NULL;
   return s;
 }
 
@@ -42,6 +54,10 @@ void SNetStreamDestroy(snet_stream_t *s)
   pthread_mutex_destroy(&s->lock);
   pthread_cond_destroy(&s->notempty);
   pthread_cond_destroy(&s->notfull);
+
+  if (s->source != NULL) {
+    free(s->source);
+  }
 
   free(s->buffer);
   free(s);

@@ -18,8 +18,9 @@
 #include "threading.h"
 
 #include "entity.h"
+#include "monitorer.h"
 
-
+#include "distribution.h"
 
 static unsigned int entity_count = 0;
 static pthread_mutex_t entity_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -49,13 +50,24 @@ static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at);
 
 int SNetThreadingInit(int argc, char **argv)
 {
+  char fname[32];
   /* initialize the entity counter to 0 */
   entity_count = 0;
   pthread_key_create(&entity_self_key, NULL);
+
+  /* initialize the monitorer */
+
+  snprintf(fname, 31, "mon_n%02u_info.log", SNetDistribGetNodeId());
+  SNetThreadingMonitoringInit(fname);
+
   return 0;
 }
 
-
+unsigned int SNetThreadingGetId()
+{
+  /* returns the thread id */
+  return pthread_self();
+}
 
 void SNetThreadingStop(void)
 {
@@ -80,6 +92,7 @@ int SNetThreadingProcess(void)
 int SNetThreadingCleanup(void)
 {
   pthread_key_delete(entity_self_key);
+  SNetThreadingMonitoringCleanup();
   return 0;
 }
 
@@ -160,7 +173,8 @@ int SNetEntitySpawn(
 
 void SNetThreadingEventSignal(snet_threading_event_t evt)
 {
-  /* NOP */
+  //FIXME replace by sensible data
+  SNetThreadingMonitoringAppend( (struct snet_moninfo_t *) ((void*)0x1000+evt) );
 }
 
 void SNetEntityYield(void)

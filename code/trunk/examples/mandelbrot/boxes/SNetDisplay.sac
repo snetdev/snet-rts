@@ -1,6 +1,6 @@
 module SNetDisplay;
 
-use Color8: all;
+use Color8: all except {*, +};
 use Array: {*, +, <, ++};
 
 provide all;

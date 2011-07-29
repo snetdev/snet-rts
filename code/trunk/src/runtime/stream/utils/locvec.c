@@ -117,7 +117,13 @@ bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v)
   if ( (u->arr[i].type) != (v->arr[i].type) ) {
     return false;
   }
-
+  assert((u->arr[i].num) < (v->arr[i].num));
+  /*
+  if( ((u->arr[i].num) != -1) &&
+      ((u->arr[i].num) < (v->arr[i].num)) ) {
+    return false;
+  }
+  */
   return true;
 }
 
@@ -278,27 +284,41 @@ void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec)
 
 
 /**
+ * Prints the locvec as string representation into a given string buffer
+ *
+ * @param sbuf  string buffer
+ * @param size  maximal allowed size to be printed
+ * @param vec   the locvec to be printed
+ * @return  the number of characters that were printed, or, that would have
+ *          been printed if they didn't exceed the size
  * @pre sbuf is a char buffer large enough to hold the printed
- *      locvec
-  TODO cleanup this hack
+ *      locvec, >= size
  */
-void SNetLocvecPrint(char *sbuf, snet_locvec_t *vec)
+int SNetLocvecPrint(char *sbuf, int size, snet_locvec_t *vec)
 {
-  int i;
-  char itembuf[32];
+  int i, ret, cnt;
+  /* the decimal number representable by 64 bits is at most 20 digits long*/
+  char itembuf[24];
 
+  if (size <= 0) return 0;
+
+  cnt = 0;
   sbuf[0] = '\0';
   for (i=0; i<vec->size; i++) {
     snet_locitem_t *item = &vec->arr[i];
     snet_loctype_t type = item->type;
     int num = item->num;
     if (num >= 0) {
-      sprintf(itembuf, ":%c%d", (char)type, num);
+      ret = sprintf(itembuf, ":%c%d", (char)type, num);
     } else {
-      sprintf(itembuf, ":%c", (char)type);
+      ret = sprintf(itembuf, ":%c", (char)type);
     }
-    strcat( sbuf, itembuf );
+    if (cnt+ret < size) {
+      strcpy( sbuf+cnt, itembuf );
+    }
+    cnt += ret;
   }
+  return cnt;
 }
 
 

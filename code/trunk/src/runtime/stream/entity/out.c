@@ -3,8 +3,15 @@
 #include "handle_p.h"
 #include "memfun.h"
 #include "interface_functions.h"
+
+
+//#define DBG_RT_TRACE_OUT_TIMINGS
+
+
+
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
-#include <time.h>
+//#include <time.h>
+#include <sys/time.h>
 #endif
 
 #include "threading.h"
@@ -13,19 +20,21 @@
 #define DEFAULT_MODE MODE_textual
 
 snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
-    int if_id, snet_variant_t *variant, void **fields, int *tags, int *btags) 
+    int if_id, snet_variant_t *variant, void **fields, int *tags, int *btags)
 {
   int i, name;
   snet_record_t *out_rec, *old_rec;
   snet_copy_fun_t copyfun = SNetInterfaceGet(if_id)->copyfun;
+
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
 
   gettimeofday( &tv_in, NULL);
-  SNetUtilDebugNotice("[DBG::RT::TimeTrace], SNetOut called from %p at"
-                      " %lf\n", hnd, 
-                        tv_in.tv_sec + tv_in.tv_usec/1000000.0);
+  SNetUtilDebugNoticeLoc( hnd->boxloc,
+      "[BOX] SNetOut called at %lf.",
+      tv_in.tv_sec + tv_in.tv_usec / 1000000.0
+      );
 #endif
 
   // set values from box
@@ -68,8 +77,9 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
-  SNetUtilDebugNotice("[DBG::RT::TimeTrace] SNetOut finished for %p at %lf\n",  hnd,
-      (tv_out.tv_sec - tv_in.tv_sec) +(tv_out.tv_usec-tv_in.tv_usec) / 1000000.0
+  SNetUtilDebugNoticeLoc( hnd->boxloc,
+      "[BOX] SNetOut finished after %lf sec.",
+      (tv_out.tv_sec-tv_in.tv_sec)+(tv_out.tv_usec-tv_in.tv_usec)/1000000.0
       );
 #endif
   return hnd;
@@ -86,14 +96,16 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
   snet_record_t *out_rec, *old_rec;
   snet_variant_t *variant;
   int name;
+
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
   struct timeval tv_out;
-  
+
   gettimeofday( &tv_in, NULL);
-  SNetUtilDebugNotice("[DBG::RT::TimeTrace], SNetOut called from %p at"
-                      " %lf\n", hnd, 
-                        tv_in.tv_sec + tv_in.tv_usec/1000000.0);
+  SNetUtilDebugNoticeLoc( hnd->boxloc,
+      "[BOX] SNetOut called at %lf.",
+      tv_in.tv_sec + tv_in.tv_usec / 1000000.0
+      );
 #endif
 
   // set values from box
@@ -117,7 +129,9 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
       SNetRecSetBTag( out_rec, name, va_arg( args, int));
     END_FOR
   } else {
-    SNetUtilDebugFatal("[SNetOut] variant_num <= 0\n\n");
+    SNetUtilDebugFatalLoc( hnd->boxloc,
+        "[BOX] SNetOut: variant_num <= 0"
+        );
   }
 
 
@@ -135,12 +149,13 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
   SNetStreamWrite( hnd->out_sd, out_rec);
 
 
-
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
-  SNetUtilDebugNotice("[DBG::RT::TimeTrance] SnetOut finished for %p at %lf\n", hnd,
-      (tv_out.tv_sec - tv_in.tv_sec) + (tv_out.tv_usec-tv_in.tv_usec) / 1000000.0
+  SNetUtilDebugNoticeLoc( hnd->boxloc,
+      "[BOX] SNetOut finished after %lf sec.",
+      (tv_out.tv_sec-tv_in.tv_sec)+(tv_out.tv_usec-tv_in.tv_usec)/1000000.0
       );
 #endif
+
   return hnd;
 }

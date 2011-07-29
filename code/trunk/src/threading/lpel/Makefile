@@ -6,11 +6,15 @@
 # sources from the external lpel directory
 #
 
-INCLUDES = -I$(SNETBASE)/include -I$(LPELSOURCE) 
-CFLAGS = -g -Wall -pthread -DUSE_MCTX_PCL -fPIC $(INCLUDES)
-LDFLAGS = -undefined suppress -flat_namespace -dynamiclib 
+INCLUDES = -I$(SNETBASE)/include -I$(LPELSOURCE)
+CFLAGS = -c -g -Wall -pthread -fPIC $(INCLUDES) -DUSE_MCTX_PCL
+LDFLAGS = -shared -pthread -lpthread -lpcl -lrt -lcap
 
-OBJS = glue_snet.o assign.o mon_snet.o 
+OBJS = buffer.o scheduler.o stream.o \
+       streamset.o task.o taskqueue.o lpel_main.o worker.o \
+       glue_snet.o assign.o mon_snet.o \
+       mailbox.o \
+       # mailbox-lf.o \
 
 TARGET = libtblpel.so
 
@@ -20,10 +24,25 @@ all: $(TARGET)
 	cp $(TARGET) $(SNETBASE)/lib
 
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+	gcc $(LDFLAGS) -o $@ $(OBJS)
 
-%.o: %.c
-	$(CC) -c -o $@ $(CFLAGS) $<
+%.o: $(LPELSOURCE)/%.c lpel4snet.h translate4snet.sed
+	gcc -E $(CFLAGS) $< |              \
+	sed -f translate4snet.sed |\
+	gcc -o $@ $(CFLAGS) -xc -
+
+%.o: %.c lpel4snet.h translate4snet.sed
+	gcc -E $(INCLUDES) $< |              \
+	sed -f translate4snet.sed |\
+	gcc -o $@ $(CFLAGS) -xc -
+
+ctx_amd64.o: $(LPELSOURCE)/ctx_amd64.S
+	gcc -c $< -o $@
+
+lpel4snet.h: $(LPELSOURCE)/lpel.h translate4snet.sed
+	sed -f translate4snet.sed \
+            -e "/typedef .*snet_.*/ d" \
+	    $< > $@
 
 clean:
-	rm -fr $(OBJS) $(TARGET)
+	rm -fr lpel4snet.h $(OBJS) $(TARGET)

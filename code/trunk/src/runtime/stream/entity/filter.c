@@ -1,8 +1,11 @@
+
+#include <stdarg.h>
+#include <assert.h>
+
 #include "expression.h"
 #include "filter.h"
 #include "list.h"
 #include "memfun.h"
-#include "stdarg.h"
 #include "bool.h"
 #include "record.h"
 #include "snetentities.h"
@@ -231,11 +234,6 @@ static void FilterTask(void *arg)
         SNetStreamWrite( outstream, in_rec);
         break;
 
-      case REC_source:
-        /* ignore, destroy */
-        SNetRecDestroy( in_rec);
-        break;
-
       case REC_collect:
       default:
         assert(0);
@@ -313,11 +311,6 @@ static void NameshiftTask(void *arg)
       case REC_sort_end:
         /* forward record */
         SNetStreamWrite( outstream, rec);
-        break;
-
-      case REC_source:
-        /* ignore, destroy */
-        SNetRecDestroy( rec);
         break;
 
       case REC_collect:

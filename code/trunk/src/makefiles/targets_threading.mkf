@@ -47,4 +47,4 @@ threading      = pthread
 # Note that the variable names must coincide with the directory names above.
 #
 
-pthread = entity.o stream.o streamset.o
+pthread = entity.o stream.o streamset.o monitorer.o
