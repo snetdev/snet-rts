@@ -16,6 +16,7 @@
 #include "memfun.h"
 #include "threading.h"
 #include "debug.h"
+#include "string.h"
 
 
 static unsigned int moninfo_local_id = 0; /* sequence number to create ids */
@@ -38,8 +39,8 @@ snet_moninfo_t *SNetMonInfoCreate ( snet_moninfo_event_t event, snet_moninfo_des
     case MON_RECORD:
       MONINFOPTR( mon) = SNetMemAlloc( sizeof( snet_moninfo_record_t));
       REC_MONINFO( mon, id) = SNetMonInfoCreateID();
-      REC_MONINFO( mon, parents) = va_arg( args, snet_moninfo_id_t *);
-      REC_MONINFO( mon, add_data) = va_arg( args, char *);
+      REC_MONINFO( mon, parent_ids) = va_arg( args, snet_moninfo_id_t *);
+      REC_MONINFO( mon, add_moninfo_rec_data) = va_arg( args, snet_add_moninfo_rec_data_t);
   default:
     SNetUtilDebugFatal("Unknown monitoring information description. [%d]", descr);
     break;
@@ -61,5 +62,15 @@ snet_moninfo_id_t SNetMonInfoCreateID(void)
   return id;
 }
 
+/*****************************************************************************
+ * Create a copy of the additional data of record monitoring information
+ ****************************************************************************/
+snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAddData(snet_add_moninfo_rec_data_t add_data)
+{
+  snet_add_moninfo_rec_data_t new_add_data = (snet_add_moninfo_rec_data_t) strdup ( add_data);
+  if (new_add_data == NULL)
+    SNetUtilDebugFatal("Copy of additional monitoring information for records failed. [%s]", add_data);
+  return new_add_data;
+}
 
 

@@ -40,16 +40,18 @@ enum moninfo_descr {
 
 /* data structure of system-wide unique id vector */
 typedef struct {
-  unsigned int ids [3];  /* fields: 0..local_id, 1..thread_id, 2..node_id (distributed snet) */
+  unsigned long ids [3];  /* fields: 0..local_id, 1..thread_id, 2..node_id (distributed snet) */
 } snet_moninfo_id_t;
 
+/* data structure of additional monitoring information of records (e.g., shape, etc.) */
+typedef char* snet_add_moninfo_rec_data_t;
 
 /* data structure of monitoring information for records */
 typedef struct {
   snet_moninfo_id_t id;
-  snet_moninfo_id_t *parents;
+  snet_moninfo_id_t *parent_ids;
   unsigned int time;  /* time stamp of monitoring e */
-  char *add_data; /* container for additional arbitrary data */
+  snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
 } snet_moninfo_record_t;
 
 
@@ -78,6 +80,12 @@ snet_moninfo_t *SNetMonInfoCreate ( snet_moninfo_event_t event, snet_moninfo_des
  * Create unique system-wide id
  ****************************************************************************/
 snet_moninfo_id_t SNetMonInfoCreateID(void);
+
+
+/*****************************************************************************
+ * Create a copy of the additional data of record monitoring information
+ ****************************************************************************/
+snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAddData(snet_add_moninfo_rec_data_t add_data);
 
 
 #endif /* MONINFO_H_ */

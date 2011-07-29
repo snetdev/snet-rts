@@ -74,6 +74,9 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       DATA_REC( rec, tags) = SNetIntMapCreate(0);
       DATA_REC( rec, fields) = SNetVoidMapCreate(0);
       DATA_REC( rec, mode) = MODE_binary;
+      DATA_REC( rec, id) = SNetMonInfoCreateID();
+      DATA_REC( rec, parent_ids) = NULL;
+      DATA_REC( rec, add_moninf_rec_data) = NULL;
       DATA_REC( rec, interface_id) = 0;
       break;
     case REC_trigger_initialiser:
@@ -126,6 +129,10 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       DATA_REC( new_rec, btags) = SNetIntMapCopy( DATA_REC( rec, btags));
       SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
       SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
+      DATA_REC( new_rec, id) = SNetMonInfoCreateID();  /* system-wide unique id */
+      DATA_REC( new_rec, parent_ids) = NULL; /* ids of parent records */
+      DATA_REC( new_rec, add_moninf_rec_data) = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninf_rec_data));
+
       break;
     case REC_sort_end:
       new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_E_REC( rec, level),

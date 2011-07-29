@@ -63,10 +63,10 @@ int SNetThreadingInit(int argc, char **argv)
   return 0;
 }
 
-unsigned int SNetThreadingGetId()
+unsigned long SNetThreadingGetId()
 {
   /* returns the thread id */
-  return pthread_self();
+  return (unsigned long) pthread_self(); /* returns a pointer on Mac */
 }
 
 void SNetThreadingStop(void)

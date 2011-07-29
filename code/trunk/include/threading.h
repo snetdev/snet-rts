@@ -42,7 +42,7 @@ int SNetThreadingInit(int argc, char **argv);
  * Return the thread id as integer value
  *
  */
-unsigned int SNetThreadingGetId();
+unsigned long SNetThreadingGetId();
 
 
 /**
