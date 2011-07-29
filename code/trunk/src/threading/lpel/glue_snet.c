@@ -12,9 +12,7 @@
 #include "threading.h"
 
 /* IMPORTANT: following order of includes */
-#include "tblpel.h"
-/* LPEL library interface */
-#include "lpel4snet.h"
+#include "lpel.h"
 
 /* provisional assignment module */
 #include "assign.h"
@@ -72,14 +70,14 @@ static size_t SNetEntityStackSize(snet_entity_type_t type)
 
 int SNetThreadingInit(int argc, char **argv)
 {
-  snet_config_t config;
+  lpel_config_t config;
   char fname[20+1];
   int i;
 
-  memset(&config, 0, sizeof(snet_config_t));
+  memset(&config, 0, sizeof(lpel_config_t));
 
 
-  config.flags = SNET_FLAG_PINNED;
+  config.flags = LPEL_FLAG_PINNED;
 
   for (i=0; i<argc; i++) {
     if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
@@ -88,7 +86,7 @@ int SNetThreadingInit(int argc, char **argv)
       mon_level = atoi(argv[i]);
     } else if(strcmp(argv[i], "-excl") == 0 ) {
       /* Assign realtime priority to workers*/
-      config.flags |= SNET_FLAG_EXCLUSIVE;
+      config.flags |= LPEL_FLAG_EXCLUSIVE;
     } else if(strcmp(argv[i], "-dloc") == 0 ) {
       /* Use distributed s-net location placement */
       dloc_placement = true;
@@ -113,7 +111,7 @@ int SNetThreadingInit(int argc, char **argv)
   }
 
   /* determine number of cpus */
-  if ( 0 != SNetGetNumCores( &num_cpus) ) {
+  if ( 0 != LpelGetNumCores( &num_cpus) ) {
     SNetUtilDebugFatal("Could not determine number of cores!\n");
     assert(0);
   }
@@ -134,9 +132,9 @@ int SNetThreadingInit(int argc, char **argv)
   SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId());
   SNetAssignInit(config.num_workers);
 
-  SNetLpInit(&config);
+  LpelInit(&config);
 
-  SNetLpStart();
+  LpelStart();
 
   return 0;
 }
@@ -149,14 +147,14 @@ int SNetThreadingInit(int argc, char **argv)
 
 void SNetThreadingStop(void)
 {
-  SNetLpStop();
+  LpelStop();
 }
 
 
 int SNetThreadingProcess(void)
 {
   /* following call will block until the workers have finished */
-  SNetLpCleanup();
+  LpelCleanup();
   return 0;
 }
 
@@ -183,9 +181,9 @@ int SNetThreadingCleanup(void)
  */
 void SNetThreadingEventSignal(snet_threading_event_t evt)
 {
-  snet_entity_t *t = SNetEntitySelf();
+  lpel_task_t *t = LpelTaskSelf();
   assert(t != NULL);
-  mon_task_t *mt = SNetEntityGetMon(t);
+  mon_task_t *mt = LpelTaskGetMon(t);
   if (mt != NULL) {
     SNetThreadingMonEvent(mt, evt);
   }
@@ -231,9 +229,9 @@ int SNetEntitySpawn(
     }
   }
 
-  snet_entity_t *t = SNetEntityCreate(
+  lpel_task_t *t = LpelTaskCreate(
       worker,
-      (snet_entityfunc_t) func,
+      (lpel_taskfunc_t) func,
       arg,
       SNetEntityStackSize(type)
       );
@@ -257,9 +255,9 @@ int SNetEntitySpawn(
       if (type==ENTITY_box) {
 
         mon_task_t *mt = SNetThreadingMonTaskCreate(
-          SNetEntityGetID(t), name, mon_flags
+          LpelTaskGetID(t), name, mon_flags
           );
-        SNetEntityMonitor(t, mt);
+        LpelTaskMonitor(t, mt);
         do_mon = 1;
       }
       break;
@@ -271,10 +269,10 @@ int SNetEntitySpawn(
     case 5:
       if (type!=ENTITY_other) {
         mon_task_t *mt = SNetThreadingMonTaskCreate(
-          SNetEntityGetID(t), name,
+          LpelTaskGetID(t), name,
           mon_flags | SNET_MON_TASK_STREAMS | SNET_MON_TASK_TIMES
           );
-        SNetEntityMonitor(t, mt);
+        LpelTaskMonitor(t, mt);
         do_mon = 1;
       }
       break;
@@ -287,18 +285,18 @@ int SNetEntitySpawn(
   }
 
   if (type != ENTITY_box) {
-    SNetEntityPrio(t, 1);
+    LpelTaskPrio(t, 1);
   }
 
   if (do_mon && mapfile) {
-    int tid = SNetEntityGetID(t);
+    int tid = LpelTaskGetID(t);
     (void) fprintf(mapfile, "%d %s %s %d\n", tid, locstr, name, worker);
   }
 
 //FIXME only for debugging purposes
   //fflush(mapfile);
 
-  SNetEntityRun(t);
+  LpelTaskRun(t);
   return 0;
 }
 

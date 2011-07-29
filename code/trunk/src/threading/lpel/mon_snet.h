@@ -8,9 +8,7 @@
 
 /* IMPORTANT: following order of includes */
 #include "threading.h"
-#include "tblpel.h"
-#include "lpel4snet.h"
-
+#include "lpel.h"
 
 struct mon_worker_t;
 struct mon_task_t;
