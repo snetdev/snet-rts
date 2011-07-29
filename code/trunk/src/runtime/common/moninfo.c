@@ -30,16 +30,16 @@ snet_moninfo_t *SNetMonInfoCreate ( snet_moninfo_event_t event, snet_moninfo_des
   va_list args;
 
   mon = SNetMemAlloc( sizeof( snet_moninfo_t));
-  mon -> mon_descr = descr;
-  mon -> mon_event = event;
+  MONINFO_DESCR( mon) = descr;
+  MONINFO_EVENT( mon) = event;
 
   va_start( args, descr);
   switch (descr) {
     case MON_RECORD:
-      mon -> mon_data = SNetMemAlloc( sizeof( snet_moninfo_record_t));
-      mon -> mon_data -> moninfo_rec.id = SNetMonInfoCreateID();
-      mon -> mon_data -> moninfo_rec.parents = va_arg( args, snet_moninfo_id_t *);
-      mon -> mon_data -> moninfo_rec.add_data = va_arg( args, char *);
+      MONINFOPTR( mon) = SNetMemAlloc( sizeof( snet_moninfo_record_t));
+      REC_MONINFO( mon, id) = SNetMonInfoCreateID();
+      REC_MONINFO( mon, parents) = va_arg( args, snet_moninfo_id_t *);
+      REC_MONINFO( mon, add_data) = va_arg( args, char *);
   default:
     SNetUtilDebugFatal("Unknown monitoring information description. [%d]", descr);
     break;

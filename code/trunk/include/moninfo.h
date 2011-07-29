@@ -18,6 +18,13 @@ typedef enum moninfo_event snet_moninfo_event_t;
 typedef enum moninfo_descr snet_moninfo_descr_t;
 typedef union moninfo_types snet_moninfo_types_t;
 
+/* macros for monitoring information */
+#define MONINFO_DESCR( name) name->mon_descr
+#define MONINFO_EVENT( name) name->mon_event
+#define MONINFOPTR( name) name->mon_data
+
+#define REC_MONINFO( name, component) MONINFOPTR( name) ->moninfo_rec.component
+
 
 enum moninfo_event {
   EV_BOX_START,
