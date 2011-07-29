@@ -234,11 +234,6 @@ static void FilterTask(void *arg)
         SNetStreamWrite( outstream, in_rec);
         break;
 
-      case REC_source:
-        /* ignore, destroy */
-        SNetRecDestroy( in_rec);
-        break;
-
       case REC_collect:
       default:
         assert(0);
@@ -316,11 +311,6 @@ static void NameshiftTask(void *arg)
       case REC_sort_end:
         /* forward record */
         SNetStreamWrite( outstream, rec);
-        break;
-
-      case REC_source:
-        /* ignore, destroy */
-        SNetRecDestroy( rec);
         break;
 
       case REC_collect:

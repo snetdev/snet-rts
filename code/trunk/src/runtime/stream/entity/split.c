@@ -172,11 +172,6 @@ static void SplitBoxTask(void *arg)
         terminate = true;
         break;
 
-      case REC_source:
-        /* ignore, destroy */
-        SNetRecDestroy( rec);
-        break;
-
       case REC_collect:
         /* invalid control record */
       default:

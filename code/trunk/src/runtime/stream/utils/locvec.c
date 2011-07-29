@@ -117,7 +117,13 @@ bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v)
   if ( (u->arr[i].type) != (v->arr[i].type) ) {
     return false;
   }
-
+  assert((u->arr[i].num) < (v->arr[i].num));
+  /*
+  if( ((u->arr[i].num) != -1) &&
+      ((u->arr[i].num) < (v->arr[i].num)) ) {
+    return false;
+  }
+  */
   return true;
 }
 

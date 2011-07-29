@@ -132,7 +132,6 @@ static void SyncBoxTask(void *arg)
   sync_arg_t *sarg = (sync_arg_t *) arg;
   int num_patterns = SNetVariantListLength( sarg->patterns);
   snet_record_t *storage[num_patterns];
-  snet_locvec_t *instream_source = NULL;
 
   instream  = SNetStreamOpen(sarg->input,  'r');
   outstream = SNetStreamOpen(sarg->output, 'w');
@@ -187,14 +186,6 @@ static void SyncBoxTask(void *arg)
           /* this is the last sync */
           SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
 
-          if (instream_source != NULL) {
-            /* predecessor made known its location,
-             * presumably for garbage collection, so we will forward it
-             * to let our successor know
-             */
-            SNetStreamWrite( outstream,
-            SNetRecCreate(REC_source, instream_source));
-          }
           /* follow by a sync record */
           syncrec = SNetRecCreate(REC_sync, sarg->input);
 #ifdef SYNC_SEND_OUTTYPES
@@ -244,15 +235,6 @@ static void SyncBoxTask(void *arg)
         SNetStreamClose( instream, true);
         break;
 
-      case REC_source:
-        /* Get (a copy of) the location */
-        if (instream_source != NULL) {
-          SNetLocvecDestroy(instream_source);
-        }
-        instream_source = SNetLocvecCopy( SNetRecGetLocvec( rec));
-        SNetRecDestroy( rec);
-        break;
-
       case REC_collect:
         /* invalid record */
       default:
@@ -262,10 +244,6 @@ static void SyncBoxTask(void *arg)
     }
   } /* MAIN LOOP END */
 
-  /* free any stored location vector */
-  if (instream_source != NULL) {
-    SNetLocvecDestroy(instream_source);
-  }
   SNetLocvecDestroy(sarg->myloc);
 
   SNetVariantListDestroy( sarg->patterns);

@@ -181,10 +181,29 @@ typedef struct snet_stream_desc_t snet_stream_desc_t;
 snet_stream_t *SNetStreamCreate(int capacity);
 
 
+
+/**
+ * Set the source location vector of a stream
+ *
+ * @param s   the stream
+ * @param lv  the location vector
+ */
+void SNetStreamSetSource(snet_stream_t *s, snet_locvec_t *lv);
+
+
+/**
+ * Get the source location vector of a stream
+ *
+ * @param s   the stream
+ * @return  the location vector
+ */
+snet_locvec_t *SNetStreamGetSource(snet_stream_t *s);
+
+
 /**
  * Open a stream for usage within an entity
  *
- * @param stream  the stream top open
+ * @param stream  the stream to open
  * @param mode    either 'r' for reading or 'w' for writing
  *
  * @return a stream descriptor for further usage of the stream

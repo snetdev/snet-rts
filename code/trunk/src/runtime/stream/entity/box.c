@@ -137,11 +137,6 @@ static void BoxTask(void *arg)
         terminate = true;
         break;
 
-      case REC_source:
-        /* ignore, destroy */
-        SNetRecDestroy( rec);
-        break;
-
       case REC_collect:
       default:
         assert(0);

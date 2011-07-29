@@ -99,7 +99,6 @@ void CollectorTask(void *arg)
   snet_stream_desc_t *outstream;
   snet_record_t *sort_rec = NULL;
   snet_record_t *term_rec = NULL;
-  snet_record_t *source_rec = NULL;
   int incount;
   bool terminate = false;
 
@@ -171,6 +170,12 @@ void CollectorTask(void *arg)
             SNetRecDestroy( rec);
           } else {
             sort_rec = rec;
+#ifdef DEBUG_PRINT_GC
+            SNetUtilDebugNoticeLoc( carg->myloc,
+                "[COLL] Info: Received first sort record: (l%d,c%d)",
+                SNetRecGetLevel(sort_rec), SNetRecGetNum(sort_rec)
+                );
+#endif
           }
           /* end processing this stream */
           do_next = true;
@@ -185,24 +190,19 @@ void CollectorTask(void *arg)
 #ifdef DEBUG_PRINT_GC
           //FIXME FIXME FIXME
           if (!carg->dynamic) {
-            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_sync on %p!", cur_stream);
+            snet_locvec_t *str_source = SNetStreamGetSource( SNetRecGetStream(rec) );
+            char slocvec[64];
+            slocvec[0] = '\0';
+            if (str_source != NULL) {
+              (void) SNetLocvecPrint(slocvec, 64, str_source);
+            }
+            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_sync on %p with source %s!", cur_stream, slocvec);
           }
 #endif
           /* sync: replace stream */
           SNetStreamReplace( cur_stream, SNetRecGetStream( rec));
           /* destroy record */
           SNetRecDestroy( rec);
-          /*
-           * *** !!! IMPORTANT FOR GC !!! ***
-           *
-           * Leave the loop to check if we can terminate.
-           * Source and according sync record have to travel in pairs.
-           * Any subsequent sync record on this stream must arrive at the successor entity.
-           * TODO reorder, put in REC_source handler
-           */
-          if (source_rec != NULL) {
-            do_next = true;
-          }
           break;
 
         case REC_collect:
@@ -254,22 +254,6 @@ void CollectorTask(void *arg)
           }
           /* stop processing this stream */
           do_next = true;
-          break;
-
-
-        case REC_source:
-          /**
-           * Invariant: Collector will ever receive only one source record
-           */
-          assert(source_rec == NULL);
-          source_rec = rec;
-          assert(1 == incount);
-#ifdef DEBUG_PRINT_GC
-          //FIXME FIXME FIXME
-          if (!carg->dynamic) {
-            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_source on %p!", cur_stream);
-          }
-#endif
           break;
 
         default:
@@ -328,11 +312,6 @@ void CollectorTask(void *arg)
       snet_stream_desc_t *in = readyset;
       assert( SNetStreamsetIsEmpty(&waitingset) );
 
-      if (source_rec != NULL) {
-        SNetStreamWrite(outstream, source_rec);
-        source_rec = NULL;
-      };
-
       SNetStreamWrite( outstream,
           SNetRecCreate( REC_sync, SNetStreamGet(in))
           );
@@ -347,11 +326,6 @@ void CollectorTask(void *arg)
     }
 
   } /* MAIN LOOP END*/
-
-
-  if (source_rec != NULL) {
-    SNetRecDestroy(source_rec);
-  }
 
   /* close outstream */
   SNetStreamClose( outstream, false);

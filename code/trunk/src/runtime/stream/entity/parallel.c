@@ -36,7 +36,7 @@
 
 //#define DEBUG_PRINT_GC
 
-//#define ENABLE_GARBAGE_COLLECT_STATE
+#define ENABLE_GC_STATE
 
 typedef struct {
   snet_stream_t *input;
@@ -103,7 +103,7 @@ static void CheckMatch( snet_record_t *rec,
 }
 
 
-#ifdef ENABLE_GARBAGE_COLLECT_STATE
+#ifdef ENABLE_GC_STATE
 
 static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
     snet_variant_list_t *variant_list)
@@ -128,7 +128,7 @@ static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
   return true;
 }
 
-#endif /* ENABLE_GARBAGE_COLLECT_STATE */
+#endif /* ENABLE_GC_STATE */
 
 
 /**
@@ -193,11 +193,10 @@ static void ParallelBoxTask(void *arg)
   snet_stream_desc_t *outstreams[num];
   int i;
   snet_record_t *rec;
-  snet_record_t *sourcerec = NULL;
   match_count_t **matchcounter;
   int num_init_branches = 0;
   bool terminate = false;
-  int counter = 1;
+  int counter = 0;
 
 
   /* open instream for reading */
@@ -275,11 +274,12 @@ static void ParallelBoxTask(void *arg)
 
       case REC_sync:
         {
-#ifdef ENABLE_GARBAGE_COLLECT_STATE
+#ifdef ENABLE_GC_STATE
           snet_variant_t *synctype = SNetRecGetVariant(rec);
-          if (synctype!=NULL && sourcerec!=NULL) {
+          if (synctype!=NULL) {
             snet_stream_desc_t *last;
             int cnt = 0;
+
             /* terminate affected branches */
             for( i=0; i<num; i++) {
               if ( VariantIsSupertypeOfAllOthers( synctype,
@@ -294,24 +294,22 @@ static void ParallelBoxTask(void *arg)
               }
             }
 
-
-
-            /* count remaining branches, and send a sort record through */
+            /* count remaining branches */
             for (i=0;i<num;i++) {
               if (outstreams[i] != NULL) {
                 cnt++;
                 last = outstreams[i];
-                SNetStreamWrite( last,
+                /* send sort records through */
+                /*
+                SNetStreamWrite( outstreams[i],
                     SNetRecCreate( REC_sort_end, 0, counter));
+                */
               }
-              counter += 1;
             }
+            //counter += 1;
 
             /* if only one branch left, we can terminate ourselves*/
             if (cnt == 1) {
-              /* forward source record */
-              SNetStreamWrite(last, sourcerec);
-              sourcerec = NULL;
 
               /* forward stripped sync record */
               SNetRecSetVariant(rec, NULL);
@@ -320,8 +318,8 @@ static void ParallelBoxTask(void *arg)
               /* close instream */
               SNetStreamClose( instream, false);
               terminate = true;
-              // FIXME FIXME FIXME
 #ifdef DEBUG_PRINT_GC
+              // FIXME FIXME FIXME
               SNetUtilDebugNoticeLoc( parg->myloc,
                   "[PAR] Terminate self, as only one branch left!");
 #endif
@@ -333,17 +331,12 @@ static void ParallelBoxTask(void *arg)
             }
 
           } else
-#endif /* ENABLE_GARBAGE_COLLECT_STATE */
+#endif /* ENABLE_GC_STATE */
           {
             /* usual sync replace */
             parg->input = SNetRecGetStream( rec);
             SNetStreamReplace( instream, parg->input);
             SNetRecDestroy( rec);
-          }
-          /* in either case, clear the stored source record! */
-          if (sourcerec != NULL) {
-            SNetRecDestroy(sourcerec);
-            sourcerec = NULL;
           }
         }
         break;
@@ -379,12 +372,6 @@ static void ParallelBoxTask(void *arg)
         /* close and destroy instream */
         SNetStreamClose( instream, true);
         /* note that no sort record needs to be appended */
-        break;
-
-      case REC_source:
-        /* store temporarily */
-        assert(sourcerec == NULL);
-        sourcerec = rec;
         break;
 
       default:
