@@ -26,7 +26,7 @@
 #include "interface.h"
 #include "bool.h"
 #include "debug.h"
-#include "parser.h"
+#include "parserutils.h"
 
 #include "threading.h"
 
