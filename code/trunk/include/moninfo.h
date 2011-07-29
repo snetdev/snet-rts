@@ -14,9 +14,70 @@
 #ifndef MONINFO_H_
 #define MONINFO_H_
 
-typedef int record_id_t[3];  /* fields: 0..id (unique for thread), 1..thread_id, 2..node_id */
+typedef enum moninfo_event snet_moninfo_event_t;
+typedef enum moninfo_descr snet_moninfo_descr_t;
+typedef union moninfo_types snet_moninfo_types_t;
+
+/* macros for monitoring information */
+#define MONINFO_DESCR( name) name->mon_descr
+#define MONINFO_EVENT( name) name->mon_event
+#define MONINFOPTR( name) name->mon_data
+
+#define REC_MONINFO( name, component) MONINFOPTR( name) ->moninfo_rec.component
 
 
+enum moninfo_event {
+  EV_BOX_START,
+  EV_BOX_FINISH,
+  EV_SYNC_FIRST,
+  EV_SYNC_FIRE,
+};
+
+enum moninfo_descr {
+  MON_RECORD,
+};
+
+
+/* data structure of system-wide unique id vector */
+typedef struct {
+  unsigned int ids [3];  /* fields: 0..local_id, 1..thread_id, 2..node_id (distributed snet) */
+} snet_moninfo_id_t;
+
+
+/* data structure of monitoring information for records */
+typedef struct {
+  snet_moninfo_id_t id;
+  snet_moninfo_id_t *parents;
+  unsigned int time;  /* time stamp of monitoring e */
+  char *add_data; /* container for additional arbitrary data */
+} snet_moninfo_record_t;
+
+
+/* enum of different monitoring info structures */
+union moninfo_types {
+  snet_moninfo_record_t moninfo_rec;
+};
+
+
+/* data structure of monitoring information */
+typedef struct snet_moninfo {
+  snet_moninfo_event_t mon_event;
+  snet_moninfo_descr_t mon_descr;
+  snet_moninfo_types_t *mon_data;
+} snet_moninfo_t;
+
+
+
+/*****************************************************************************
+ * Create monitoring information (entries depend on monitoring item)
+ ****************************************************************************/
+snet_moninfo_t *SNetMonInfoCreate ( snet_moninfo_event_t event, snet_moninfo_descr_t descr,... );
+
+
+/*****************************************************************************
+ * Create unique system-wide id
+ ****************************************************************************/
+snet_moninfo_id_t SNetMonInfoCreateID(void);
 
 
 #endif /* MONINFO_H_ */
