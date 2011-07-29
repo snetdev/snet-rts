@@ -1,0 +1,8 @@
+<metadata>
+  <default>
+    <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+net locsplit
+connect [{<T>} -> {<T=T+1>}]!@<T>;
