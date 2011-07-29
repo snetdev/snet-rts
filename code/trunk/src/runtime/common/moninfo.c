@@ -51,6 +51,23 @@ snet_moninfo_t *SNetMonInfoCreate ( snet_moninfo_event_t event, snet_moninfo_des
 
 
 /*****************************************************************************
+ * Delete monitoring information (entries depend on monitoring item)
+ ****************************************************************************/
+void SNetMonInfoDestroy( snet_moninfo_t *mon)
+{
+  switch (MONINFO_DESCR( mon)) {
+  case MON_RECORD:
+    if (REC_MONINFO( mon, parent_ids) != NULL) SNetMemFree( REC_MONINFO( mon, parent_ids));
+    if (REC_MONINFO( mon, add_moninfo_rec_data) != NULL) SNetMemFree( REC_MONINFO( mon, add_moninfo_rec_data));
+    SNetMemFree( MONINFOPTR( mon));
+  default:
+    SNetUtilDebugFatal("Unknown monitoring information description. [%d]", MONINFO_DESCR( mon));
+    break;
+  }
+}
+
+
+/*****************************************************************************
  * Create unique system-wide id
  ****************************************************************************/
 snet_moninfo_id_t SNetMonInfoCreateID(void)

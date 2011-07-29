@@ -76,7 +76,7 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       DATA_REC( rec, mode) = MODE_binary;
       DATA_REC( rec, id) = SNetMonInfoCreateID();
       DATA_REC( rec, parent_ids) = NULL;
-      DATA_REC( rec, add_moninf_rec_data) = NULL;
+      DATA_REC( rec, add_moninfo_rec_data) = NULL;
       DATA_REC( rec, interface_id) = 0;
       break;
     case REC_trigger_initialiser:
@@ -131,7 +131,7 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
       DATA_REC( new_rec, id) = SNetMonInfoCreateID();  /* system-wide unique id */
       DATA_REC( new_rec, parent_ids) = NULL; /* ids of parent records */
-      DATA_REC( new_rec, add_moninf_rec_data) = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninf_rec_data));
+      DATA_REC( new_rec, add_moninfo_rec_data) = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninfo_rec_data));
 
       break;
     case REC_sort_end:
@@ -164,6 +164,8 @@ void SNetRecDestroy( snet_record_t *rec)
       SNetVoidMapDestroy( DATA_REC( rec, fields));
       SNetIntMapDestroy( DATA_REC( rec, tags));
       SNetIntMapDestroy( DATA_REC( rec, btags));
+      if (DATA_REC( rec, parent_ids) != NULL) SNetMemFree( DATA_REC( rec, parent_ids));
+      if (DATA_REC( rec, add_moninfo_rec_data) != NULL) SNetMemFree( DATA_REC( rec, add_moninfo_rec_data));
       SNetMemFree( RECORD( rec, data_rec));
       break;
     case REC_sync:

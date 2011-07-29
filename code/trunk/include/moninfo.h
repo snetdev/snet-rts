@@ -77,6 +77,13 @@ snet_moninfo_t *SNetMonInfoCreate ( snet_moninfo_event_t event, snet_moninfo_des
 
 
 /*****************************************************************************
+ * Delete monitoring information (entries depend on monitoring item)
+ ****************************************************************************/
+void SNetMonInfoDestroy( snet_moninfo_t *mon);
+
+
+
+/*****************************************************************************
  * Create unique system-wide id
  ****************************************************************************/
 snet_moninfo_id_t SNetMonInfoCreateID(void);
