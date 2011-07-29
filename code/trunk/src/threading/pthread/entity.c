@@ -55,7 +55,11 @@ int SNetThreadingInit(int argc, char **argv)
   return 0;
 }
 
-
+unsigned int SNetThreadingGetId()
+{
+  /* returns the thread id */
+  return pthread_self();
+}
 
 void SNetThreadingStop(void)
 {
