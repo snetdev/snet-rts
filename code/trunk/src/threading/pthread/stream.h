@@ -23,6 +23,8 @@ struct snet_stream_t {
   snet_stream_desc_t *consumer;
 
   int is_poll;
+
+  snet_locvec_t *source;
 };
 
 

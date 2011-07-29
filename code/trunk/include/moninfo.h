@@ -14,7 +14,7 @@
 #ifndef MONINFO_H_
 #define MONINFO_H_
 
-typedef int[3] record_id_t;  /* fields: 0..id (unique for thread), 1..thread_id, 2..node_id */
+typedef int record_id_t[3];  /* fields: 0..id (unique for thread), 1..thread_id, 2..node_id */
 
 
 

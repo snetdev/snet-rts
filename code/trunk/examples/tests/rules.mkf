@@ -1,6 +1,6 @@
 
 
-.PHONY: clean
+.PHONY: clean all lpel
 
 all: $(TARGET)
 
@@ -9,9 +9,15 @@ all: $(TARGET)
 %.o: %.c
 	gcc -c $< -o $@ $(INCLUDES)
 
+all: $(TARGET)
 
 $(TARGET):  $(TARGET).snet $(BOXES) $(SNETLIBS)
-	snetc -g $(SNETCFLAGS) $(TARGET).snet -o $(TARGET)
+	snetc -g $(SNETCFLAGS) $< -o $@
+
+lpel: $(TARGET).lpel
+
+$(TARGET).lpel: $(TARGET).snet $(BOXES) $(SNETLIBS)
+	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel
 
 clean:
-	rm -f $(TARGET) $(TARGET).o $(TARGET).c $(TARGET).h $(BOXES) mon_*.log *tasks.map
+	rm -f $(TARGET) $(TARGET).lpel $(TARGET).[och] $(BOXES) mon_*.log *tasks.map

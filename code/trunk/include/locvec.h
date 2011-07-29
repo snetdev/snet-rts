@@ -58,6 +58,6 @@ snet_locvec_t *SNetLocvecGet(snet_info_t *info);
 /* set to info */
 void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec);
 
-void SNetLocvecPrint(char *sbuf, snet_locvec_t *vec);
+int SNetLocvecPrint(char *sbuf, int size, snet_locvec_t *vec);
 
 #endif /* _LOCVEC_H_ */

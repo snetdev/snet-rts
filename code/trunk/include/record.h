@@ -13,7 +13,6 @@ enum record_descr {
   REC_sort_end,
   REC_terminate,
   REC_trigger_initialiser,
-  REC_source
 };
 
 enum record_mode {
@@ -32,7 +31,6 @@ enum record_mode {
 #define SORT_E_REC( name, component) RECORD( name, sort_end_rec)->component
 #define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
 #define COLL_REC( name, component) RECORD( name, coll_rec)->component
-#define SOURCE_REC( name, component) RECORD( name, source_rec)->component
 
 #include "stream.h"
 #include "map.h"
@@ -66,9 +64,6 @@ typedef struct {
   snet_stream_t *output;
 } coll_rec_t;
 
-typedef struct {
-  snet_locvec_t *loc;
-} source_rec_t;
 
 
 union record_types {
@@ -77,7 +72,6 @@ union record_types {
   coll_rec_t *coll_rec;
   sort_end_t *sort_end_rec;
   terminate_rec_t *terminate_rec;
-  source_rec_t *source_rec;
 };
 
 struct record {
@@ -115,7 +109,6 @@ snet_stream_t *SNetRecGetStream( snet_record_t *rec);
 snet_variant_t *SNetRecGetVariant(snet_record_t *rec);
 void SNetRecSetVariant(snet_record_t *rec, snet_variant_t *var);
 
-snet_locvec_t *SNetRecGetLocvec( snet_record_t *rec);
 
 void SNetRecSetNum( snet_record_t *rec, int value);
 int SNetRecGetNum( snet_record_t *rec);

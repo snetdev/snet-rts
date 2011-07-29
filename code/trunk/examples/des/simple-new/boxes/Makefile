@@ -7,7 +7,7 @@
 
 
 # some values that might need to be adopted to the current project
-# 
+#
 MAINLIB := simpleDesboxes
 EXCLUDE := Boxes
 S2SLIB  := $(SNETBASE)/lib
@@ -17,10 +17,10 @@ S2SLIB  := $(SNETBASE)/lib
 LIBOUT := libs
 INCOUT := include
 SAC2C := sac2c
-SAC2CFLAGS := -no cf -L $(LIBOUT) -L $(S2SLIB)
+SAC2CFLAGS := -nophm  -L$(LIBOUT) -L$(S2SLIB)
 
 SAC4C := sac4c
-SAC4CFLAGS := -L $(LIBOUT) -L $(S2SLIB) -incdir $(INCOUT) -libdir $(LIBOUT) 
+SAC4CFLAGS := -L$(LIBOUT) -L$(S2SLIB) -incdir $(INCOUT) -libdir $(LIBOUT) 
 
 LIBS := $(filter-out $(MAINLIB) $(EXCLUDE), $(patsubst %.sac,%, $(wildcard *.sac)))
 
@@ -41,9 +41,14 @@ clean:
 	rm -fr $(INCOUT)
 	rm -fr $(LIBOUT)
 
+$(LIBOUT):
+	mkdir -p $(LIBOUT)
+
+$(INCOUT):
+	mkdir -p $(INCOUT)
+
 $(INCOUT)/$(MAINLIB).h $(LIBOUT)/lib$(MAINLIB).so \
-$(LIBOUT)/lib$(MAINLIB).a: $(LIBOUT)/lib$(MAINLIB)Tree.so
-	mkdir -p $(LIBOUT) $(INCOUT)
+$(LIBOUT)/lib$(MAINLIB).a: $(LIBOUT) $(INCOUT) $(LIBOUT)/lib$(MAINLIB)Tree.so
 	$(SAC4C) $(SAC4CFLAGS) -o $(MAINLIB) $(MAINLIB)
 
 $(LIBOUT)/lib$(MAINLIB)Tree.so: $(foreach LIB,$(LIBS),$(LIBOUT)/lib$(LIB)Tree.so)

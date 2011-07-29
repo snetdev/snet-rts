@@ -34,8 +34,11 @@
 #include "locvec.h"
 #include "debug.h"
 
-/* FIXME for testing the garbage collection mechanism */
-//#define SYNC_SEND_OUTTYPES
+/*
+ * needs to be enabled to trigger the garbage collection mechanism
+ * at the parallel dispatcher
+ */
+#define SYNC_SEND_OUTTYPES
 
 /*****************************************************************************/
 /* HELPER FUNCTIONS                                                          */
@@ -102,7 +105,7 @@ static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
 
 
 /*****************************************************************************/
-/* SYNCHRO TASK                                                              */
+/* SYNCCELL TASK                                                             */
 /*****************************************************************************/
 
 typedef struct {
@@ -129,7 +132,6 @@ static void SyncBoxTask(void *arg)
   sync_arg_t *sarg = (sync_arg_t *) arg;
   int num_patterns = SNetVariantListLength( sarg->patterns);
   snet_record_t *storage[num_patterns];
-  snet_locvec_t *instream_source = NULL;
 
   instream  = SNetStreamOpen(sarg->input,  'r');
   outstream = SNetStreamOpen(sarg->output, 'w');
@@ -184,17 +186,14 @@ static void SyncBoxTask(void *arg)
           /* this is the last sync */
           SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
 
-          if (instream_source != NULL) {
-            /* predecessor made known its location,
-             * presumably for garbage collection, so we will forward it
-             * to let our successor know
-             */
-            SNetStreamWrite( outstream,
-            SNetRecCreate(REC_source, instream_source));
-          }
           /* follow by a sync record */
           syncrec = SNetRecCreate(REC_sync, sarg->input);
 #ifdef SYNC_SEND_OUTTYPES
+          /*
+           * To trigger garbage collection at a following parallel dispatcher
+           * within a state-modeling network, the dispatcher needs knowledge about the
+           * type of the merged record ('outtype' of the synchrocell).
+           */
           outtype = GetMergedTypeVariant(sarg->patterns);
           SNetRecSetVariant(syncrec, outtype);
           SNetVariantDestroy(outtype);
@@ -227,24 +226,13 @@ static void SyncBoxTask(void *arg)
 
       case REC_terminate:
         if (partial_sync) {
-          char slocvec[64];
-          SNetLocvecPrint(slocvec, sarg->myloc);
-          SNetUtilDebugNotice("[SYNC] Warning: Destroying partially "
-              "synchronized sync-cell in %s", slocvec);
+          SNetUtilDebugNoticeLoc( sarg->myloc,
+          "[SYNC] Warning: Destroying partially synchronized sync-cell!");
         }
         terminate = true;
         SNetStreamWrite( outstream, rec);
         SNetStreamClose( outstream, false);
         SNetStreamClose( instream, true);
-        break;
-
-      case REC_source:
-        /* Get (a copy of) the location */
-        if (instream_source != NULL) {
-          SNetLocvecDestroy(instream_source);
-        }
-        instream_source = SNetLocvecCopy( SNetRecGetLocvec( rec));
-        SNetRecDestroy( rec);
         break;
 
       case REC_collect:
@@ -256,10 +244,6 @@ static void SyncBoxTask(void *arg)
     }
   } /* MAIN LOOP END */
 
-  /* free any stored location vector */
-  if (instream_source != NULL) {
-    SNetLocvecDestroy(instream_source);
-  }
   SNetLocvecDestroy(sarg->myloc);
 
   SNetVariantListDestroy( sarg->patterns);

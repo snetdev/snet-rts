@@ -101,11 +101,6 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       SORT_E_REC( rec, level) = va_arg( args, int);
       SORT_E_REC( rec, num) = va_arg( args, int);
       break;
-    case REC_source:
-      RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
-      RECORD( rec, source_rec) = SNetMemAlloc( sizeof( source_rec_t));
-      SOURCE_REC( rec, loc) = SNetLocvecCopy(va_arg( args, snet_locvec_t*));
-      break;
     default:
       SNetUtilDebugFatal("Unknown control record description. [%d]", descr);
       break;
@@ -182,10 +177,6 @@ void SNetRecDestroy( snet_record_t *rec)
     case REC_terminate:
       break;
     case REC_trigger_initialiser:
-      break;
-    case REC_source:
-      SNetLocvecDestroy( SOURCE_REC( rec, loc));
-      SNetMemFree( RECORD( rec, source_rec));
       break;
     default:
       SNetUtilDebugFatal("Unknown record description, in SNetRecDestroy");
@@ -286,15 +277,6 @@ void SNetRecSetVariant(snet_record_t *rec, snet_variant_t *var)
   SYNC_REC( rec, outtype) = (var!=NULL) ? SNetVariantCopy(var) : NULL;
 }
 
-/*****************************************************************************/
-
-snet_locvec_t *SNetRecGetLocvec(snet_record_t *rec)
-{
-  if (REC_DESCR( rec) != REC_source) {
-    SNetUtilDebugFatal("Wrong type in SNetRecGetLocvec() (%d)", REC_DESCR(rec));
-  }
-  return SOURCE_REC( rec, loc);
-}
 
 /*****************************************************************************/
 
