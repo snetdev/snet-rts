@@ -43,7 +43,7 @@ static void SNetLocvecPop(snet_locvec_t *vec);
 static snet_loctype_t SNetLocvecToptype(snet_locvec_t *vec);
 static void SNetLocvecTopinc(snet_locvec_t *vec);
 static void SNetLocvecTopdec(snet_locvec_t *vec);
-static int SNetLocvecTopval(snet_locvec_t *vec);
+int SNetLocvecTopval(snet_locvec_t *vec);
 
 
 
@@ -358,7 +358,7 @@ static snet_loctype_t SNetLocvecToptype(snet_locvec_t *vec)
   return vec->arr[vec->size-1].type;
 }
 
-static int SNetLocvecTopval(snet_locvec_t *vec)
+int SNetLocvecTopval(snet_locvec_t *vec)
 {
   return vec->arr[vec->size-1].num;
 }

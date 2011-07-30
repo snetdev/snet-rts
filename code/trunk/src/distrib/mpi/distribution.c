@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <mpi.h>
+#include <stdio.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "distribution.h"
 #include "threading.h"
@@ -8,18 +10,35 @@
 #include "info.h"
 #include "distribmap.h"
 
-extern void *SNetOutputManager(void *);
-extern void *SNetInputManager(void *);
+bool debugWait = false;
+bool outputDistribInfo = false;
+extern snet_stream_dest_map_t *streamMap;
 
-snet_stream_dest_map_t *streamMap;
+extern void SNetOutputManager(void *);
+extern void SNetInputManager(void *);
+
 snet_dest_stream_map_t *destMap;
+snet_dynamic_map_t *dynamicMap;
 
+bool globalRunning = true;
 int node_location;
-static snet_info_tag_t prevDest;
+int counter = 0;
+int parentCounter = 1;
+snet_info_tag_t prevDest;
+snet_stream_t *stream;
+snet_stream_desc_t *sd;
 
 bool SNetDestCompare(snet_dest_t d1, snet_dest_t d2)
 {
-  return d1.node == d2.node && d1.dest == d2.dest && d1.dynamicParent == d2.dynamicParent;
+  return d1.node == d2.node && d1.dest == d2.dest &&
+         d1.parent == d2.parent && d1.parentIndex == d2.parentIndex;
+}
+
+void *SNetDestCopy(void *d)
+{
+  snet_dest_t *result = SNetMemAlloc(sizeof(snet_dest_t));
+  *result = *(snet_dest_t*)d;
+  return result;
 }
 
 void SNetDistribInit(int argc, char **argv, snet_info_t *info)
@@ -28,8 +47,16 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   snet_dest_t *dest = SNetMemAlloc(sizeof(snet_dest_t));
 
   dest->node = 0;
-  dest->dest = 0;
-  dest->dynamicParent = 0;
+  dest->dest = counter;
+  dest->parent = parentCounter;
+  dest->parentIndex = 0;
+
+  streamMap = SNetStreamDestMapCreate(0);
+  destMap = SNetDestStreamMapCreate(0);
+  dynamicMap = SNetDynamicMapCreate(0);
+
+  stream = SNetStreamCreate(0);
+  sd = SNetStreamOpen(stream, 'w');
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level);
   if (level < MPI_THREAD_MULTIPLE) {
@@ -40,24 +67,43 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   MPI_Comm_rank(MPI_COMM_WORLD, &node_location);
 
   prevDest = SNetInfoCreateTag();
+  SNetInfoSetTag(info, prevDest, (uintptr_t) dest, &SNetDestCopy);
 
-  SNetInfoSetTag(info, prevDest, (uintptr_t) dest);
+  if (debugWait) {
+    int i = 0;
+    char hostname[256];
+    gethostname(hostname, sizeof(hostname));
+    printf("PID %d (rank #%d) ready for attach\n", getpid(), node_location);
+    fflush(stdout);
+    while (0 == i)
+        sleep(5);
+  }
 }
 
 void SNetDistribStart()
 {
-  int err;
-  pthread_t p;
 
-  err = pthread_create(&p, NULL, &SNetOutputManager, NULL);
-  assert(err == 0);
+  SNetEntitySpawn( ENTITY_other, NULL, -1,
+    "output_manager", &SNetOutputManager, stream);
 
-  err = pthread_create(&p, NULL, &SNetInputManager, NULL);
-  assert(err == 0);
+  SNetEntitySpawn( ENTITY_other, NULL, -1,
+    "input_manager", &SNetInputManager, NULL);
 }
 
 void SNetDistribStop()
 {
+  int i, size;
+  if (node_location == 0) {
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    for (i = 0; i < size; i++) {
+      MPI_Send(&i, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+    }
+  }
+}
+
+void SNetDistribDestroy()
+{
+  MPI_Finalize();
 }
 
 int SNetDistribGetNodeId(void)
@@ -75,55 +121,65 @@ bool SNetDistribIsRootNode(void)
   return node_location == 0;
 }
 
-extern snet_streamset_t outgoing;
-
-snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
+snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc, snet_startup_fun_t fun)
 {
-  snet_stream_desc_t *sd;
+  int current_node;
   snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
-  dest->dest++;
+  counter++;
+  dest->dest = counter;
+  if (fun != NULL) {
+    parentCounter++;
+    dest->parent = parentCounter;
+    SNetDynamicMapSet(dynamicMap, parentCounter, fun);
+  }
+  current_node = dest->node;
 
   if (dest->node != loc) {
-    dest->node = loc;
-
     if (dest->node == node_location) {
-      sd = SNetStreamOpen(input, 'r');
-      SNetStreamDestMapSet(streamMap, sd, *dest);
+      dest->node = loc;
+      SNetStreamDestMapSet(streamMap, input, *dest);
+      SNetStreamWrite(sd, SNetRecCreate(REC_collect, input));
 
-      SNetStreamsetPut(&outgoing, sd);
-      input = SNetStreamCreate(0);
+      if (outputDistribInfo) {
+        fprintf(stderr, "Node #%d: Added outgoing #%d.\n", node_location,
+                dest->dest);
+      }
+      input = NULL;
     } else if (loc == node_location) {
-      sd = SNetStreamOpen(input, 'w');
-      SNetDestStreamMapSet(destMap, *dest, sd);
-    }
+      dest->node = loc;
+      if (input == NULL) {
+        input = SNetStreamCreate(0);
+      }
 
+      if (outputDistribInfo) {
+        fprintf(stderr, "Node #%d: Added incoming #%d.\n", node_location,
+                dest->dest);
+      }
+      SNetDestStreamMapSet(destMap, *dest, SNetStreamOpen(input, 'w'));
+    } else {
+      dest->node = loc;
+    }
+  }
+
+  if (outputDistribInfo) {
+    fprintf(stderr, "SNet (Node #%d):\n  Dest.dest: %d\n  Origin: %d\n  Destination: %d\n  Parent: %d\n  Parent index: %d\n", node_location, dest->dest, current_node, loc, dest->parent, dest->parentIndex);
   }
 
   return input;
 }
 
 snet_stream_t *SNetRouteUpdateDynamic(snet_info_t *info, snet_stream_t *input,
-                                      int loc, snet_startup_fun_t fun)
+                                      int loc, int parentIndex)
 {
-  /*
-  snet_stream_desc_t *sd;
-  snet_dest_t *dest = SNetInfoGetTag(info, prevDest);
-  dest->dest++;
+  int current_node;
+  snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
+  counter = 0;
+  dest->parentIndex = parentIndex;
+  current_node = dest->node;
 
-  if (dest->node != loc) {
-    if (dest->node == node_location) {
-      sd = SNetStreamOpen(input, 'r');
-      SNetStreamDestMapSet(streamMap, sd, dest);
-
-      SNetStreamsetPut(outgoing, sd);
-      input = SNetStreamCreate(0);
-    } else if (loc == node_location) {
-      sd = SNetStreamOpen(input, 'w');
-      SNetDestStreamMapSet(destMap, dest, sd);
-    }
-
-    dest->node = loc;
+  if (outputDistribInfo) {
+    fprintf(stderr, "SNet (Node #%d) (dynamic):\n  Dest.dest: %d\n  Origin: %d\n  Destination: %d\n  Parent: %d\n  Parent index: %d\n", node_location, dest->dest, current_node, loc, dest->parent, dest->parentIndex);
   }
-*/
+
   return input;
 }

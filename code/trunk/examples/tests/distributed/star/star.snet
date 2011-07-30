@@ -1,0 +1,10 @@
+<metadata>
+  <default>
+    <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+net star {
+  net op
+  connect ([{<T>} -> {<T=T+1>}] .. [{<S>} -> {<S=S+1>}])@1;
+} connect op*{<T>} if <T==10>;
