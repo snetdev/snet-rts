@@ -120,7 +120,7 @@ snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAddData(snet_add_moninfo_rec_data_
 
 
 /*****************************************************************************
- *
+ * Trigger the output of some monitoring information
  ****************************************************************************/
 void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,... )
 {
@@ -149,7 +149,7 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
             mon = SNetMonInfoCreate ( event, descr, DATA_REC( rec, id), parent_id_list, add_data);
           }
           break;
-        case EV_BOX_FINISH:
+        case EV_BOX_WRITE:
           /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr, snet_record_t*, snet_record_t* ) */
           /* action: set single parent_id in record and create moninfo data */
           {
@@ -165,10 +165,38 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           }
           break;
         case EV_SYNC_FIRE:
-          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr, snet_record_t*, snet_record_t* ) */
+          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event,
+           *                             snet_moninfo_descr_t descr,
+           *                             snet_record_t* rec,
+           *                             int num_patterns,
+           *                             snet_record_t** storage,
+           *                             snet_record_t* dummy
+           *                            ) */
           /* action: set parent_id_list in record and create moninfo data */
+          {
+            snet_record_t *rec = va_arg( args, snet_record_t *);
+            int num_patterns = va_arg( args, int);
+            snet_record_t **storage = va_arg( args, snet_record_t *);
+            snet_record_t *dummy = va_arg( args, snet_record_t *);
+            snet_monid_list_t *parent_id_list = SNetMonInfoIdListCreate(0);
+            snet_moninfo_id_t newid = SNetMonInfoCreateID();
+            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninfo_rec_data));
+            int i;
 
-          //FIXME: add code for EV_SYNC_FIRE
+            for (i=num_patterns-1; i>=0; i--)
+              {
+                //snet_moninfo_t monid;
+                if (storage[i] != NULL && storage[i] != dummy)
+                  SNetMonInfoIdListAppend(parent_id_list, DATA_REC( storage[i], id));
+              }
+            /* set the parent id of the record */
+            DATA_REC( rec, parent_ids) = SNetMonInfoIdListCopy(parent_id_list);
+            DATA_REC( rec, id) = newid;
+            mon = SNetMonInfoCreate ( event, descr, newid, parent_id_list, add_data);
+          }
+          break;
+        case EV_BOX_FINISH:
+          /* action: currently just ignored... */
           break;
         default:
           SNetUtilDebugFatal("Unknown monitoring information event. [%d]", event);

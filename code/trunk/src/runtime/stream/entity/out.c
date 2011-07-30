@@ -72,6 +72,9 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
 
+  /* Emit a monitoring message of a record written by a box */
+  SNetMonInfoEvent( EV_BOX_WRITE, MON_RECORD, out_rec, old_rec);
+
   /* write to stream */
   SNetStreamWrite( hnd->out_sd, out_rec);
 
@@ -147,7 +150,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
   }
 
   /* Emit a monitoring message of a record written by a box */
-  SNetMonInfoEvent( EV_BOX_FINISH, MON_RECORD, out_rec, old_rec);
+  SNetMonInfoEvent( EV_BOX_WRITE, MON_RECORD, out_rec, old_rec);
 
   /* write to stream */
   SNetStreamWrite( hnd->out_sd, out_rec);

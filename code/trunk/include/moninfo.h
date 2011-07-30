@@ -41,6 +41,7 @@ typedef struct {
 
 enum moninfo_event {
   EV_BOX_START,
+  EV_BOX_WRITE,
   EV_BOX_FINISH,
   EV_SYNC_FIRST,
   EV_SYNC_FIRE,
@@ -107,6 +108,13 @@ bool SNetMonInfoCmpID (snet_moninfo_id_t monid1, snet_moninfo_id_t monid2);
  * Create a copy of the additional data of record monitoring information
  ****************************************************************************/
 snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAddData(snet_add_moninfo_rec_data_t add_data);
+
+
+/*****************************************************************************
+ * Trigger the output of some monitoring information
+ ****************************************************************************/
+void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,... );
+
 
 
 #endif /* MONINFO_H_ */
