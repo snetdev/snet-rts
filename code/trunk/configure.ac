@@ -246,16 +246,6 @@ AC_SEARCH_LIBS(sem_open,,
       AC_MSG_ERROR( "Cannot find library for semaphores."),)
     )
 
-dnl additionally for LPEL
-AC_SEARCH_LIBS([cap_get_proc],[cap],
-    AC_SUBST( LIB_CAP, "-lcap"),
-    AC_SUBST( LIB_CAP, ""),
-    )
-AC_CHECK_LIB([pcl],[co_create],
-    AC_SUBST( LIB_PCL, "-lpcl"),
-    AC_MSG_WARN( "Cannot find libpcl (GNU Portable Coroutine Library)."),
-    [-lpthread]
-    )
 
 dnl test for compiler flags
 dnl for sac2crc
@@ -340,7 +330,7 @@ else
   AC_SUBST(CPPFILE, ["cpp -C"])
   AC_SUBST(CCMTLINK, [""])
   AC_MSG_RESULT([none found])
-fi   
+fi
 
 dnl generate specific flags for known os
 AC_MSG_CHECKING([sac2crc system flags])
@@ -436,6 +426,17 @@ if test "`echo $MPIROOT`" = ""; then
 else
   AC_MSG_RESULT([yes])
   AC_SUBST(MAKEDISTR, ["yes"])
+fi
+
+dnl check if $LPELROOT is set
+AC_MSG_CHECKING([if LPELROOT is set])
+if test "`echo $LPELROOT`" = ""; then
+  AC_MSG_RESULT([no])
+  AC_SUBST(MAKE_LPEL, ["no"])
+else
+  AC_DEFINE([HAVE_LPEL], [1], [Define to 1 if LPEL backend should be built.])
+  AC_SUBST(MAKE_LPEL, ["yes"])
+  AC_MSG_RESULT([yes: $LPELROOT])
 fi
 
 dnl generate configure dependent files
