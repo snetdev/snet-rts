@@ -25,6 +25,19 @@ typedef union moninfo_types snet_moninfo_types_t;
 
 #define REC_MONINFO( name, component) MONINFOPTR( name) ->moninfo_rec.component
 
+/* data structure of system-wide unique id vector */
+typedef struct {
+  unsigned long ids [3];  /* fields: 0..local_id, 1..thread_id, 2..node_id (distributed snet) */
+} snet_moninfo_id_t;
+
+#include "bool.h"
+#define LIST_NAME_H MonInfoId /* SNetMonInfoIdListFUNC */
+#define LIST_TYPE_NAME_H monid
+#define LIST_VAL_H snet_moninfo_id_t
+#include "list-template.h"
+#undef LIST_VAL_H
+#undef LIST_TYPE_NAME_H
+#undef LIST_NAME_H
 
 enum moninfo_event {
   EV_BOX_START,
@@ -38,18 +51,14 @@ enum moninfo_descr {
 };
 
 
-/* data structure of system-wide unique id vector */
-typedef struct {
-  unsigned long ids [3];  /* fields: 0..local_id, 1..thread_id, 2..node_id (distributed snet) */
-} snet_moninfo_id_t;
-
 /* data structure of additional monitoring information of records (e.g., shape, etc.) */
 typedef char* snet_add_moninfo_rec_data_t;
 
 /* data structure of monitoring information for records */
 typedef struct {
   snet_moninfo_id_t id;
-  snet_moninfo_id_t *parent_ids;
+  //snet_moninfo_id_t *parent_ids;
+  snet_monid_list_t *parent_ids;
   unsigned int time;  /* time stamp of monitoring e */
   snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
 } snet_moninfo_record_t;
@@ -69,7 +78,6 @@ typedef struct snet_moninfo {
 } snet_moninfo_t;
 
 
-
 /*****************************************************************************
  * Create monitoring information (entries depend on monitoring item)
  ****************************************************************************/
@@ -87,6 +95,12 @@ void SNetMonInfoDestroy( snet_moninfo_t *mon);
  * Create unique system-wide id
  ****************************************************************************/
 snet_moninfo_id_t SNetMonInfoCreateID(void);
+
+
+/*****************************************************************************
+ * Compares two monitoring information identifiers
+ ****************************************************************************/
+bool SNetMonInfoCmpID (snet_moninfo_id_t monid1, snet_moninfo_id_t monid2);
 
 
 /*****************************************************************************

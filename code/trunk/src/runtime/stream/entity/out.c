@@ -108,6 +108,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
       );
 #endif
 
+
   // set values from box
   if( variant_num > 0) {
 
@@ -144,6 +145,9 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
   } else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
+
+  /* Emit a monitoring message of a record written by a box */
+  SNetMonInfoEvent( EV_BOX_FINISH, MON_RECORD, out_rec, old_rec);
 
   /* write to stream */
   SNetStreamWrite( hnd->out_sd, out_rec);

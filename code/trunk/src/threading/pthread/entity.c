@@ -27,6 +27,7 @@ static pthread_mutex_t entity_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  entity_cond = PTHREAD_COND_INITIALIZER;
 static pthread_key_t entity_self_key;
 
+
 /* prototype for pthread thread function */
 static void *SNetEntityThread(void *arg);
 
@@ -73,7 +74,6 @@ void SNetThreadingStop(void)
 {
   /* NOP */
 }
-
 
 
 int SNetThreadingProcess(void)
