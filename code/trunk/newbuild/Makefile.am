@@ -1,7 +1,7 @@
 # stuff that gets installed
 pkglib_LTLIBRARIES = \
 	libcommon.la  \
-	librt.la \
+	libruntimestream.la \
 	libc4snet.la \
 	libtbpthread.la \
 	libdistribnodist.la
@@ -28,6 +28,7 @@ pkginclude_HEADERS = \
 	include/map.h \
 	include/memfun.h \
 	include/metadata.h \
+	include/moninfo.h \
 	include/networkinterface.h \
 	include/out.h \
 	include/record.h \
@@ -51,11 +52,12 @@ libcommon_la_SOURCES = \
 	src/util/metadata/metadata.c 
 libcommon_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/src/include
 
-librt_la_SOURCES = \
+libruntimestream_la_SOURCES = \
 	src/runtime/common/expression.c \
 	src/runtime/common/info.c \
 	src/runtime/common/list.c \
 	src/runtime/common/map.c \
+	src/runtime/common/moninfo.c \
 	src/runtime/common/record.c \
 	src/runtime/common/variant.c \
         src/runtime/stream/utils/bitmap.c \
@@ -98,7 +100,7 @@ librt_la_SOURCES = \
 	src/runtime/stream/netif/parserutils.h \
 	src/runtime/stream/netif/parser.y \
 	src/runtime/stream/netif/lexer.l
-librt_la_CPPFLAGS = \
+libruntimestream_la_CPPFLAGS = \
 	-I$(srcdir)/src/runtime/stream/utils \
 	-I$(srcdir)/src/runtime/stream/shared \
 	-I$(srcdir)/src/runtime/stream/observer \
@@ -112,7 +114,9 @@ libtbpthread_la_SOURCES = \
 	src/threading/pthread/entity.c \
 	src/threading/pthread/entity.h \
 	src/threading/pthread/stream.c \
-	src/threading/pthread/stream.h
+	src/threading/pthread/stream.h \
+	src/threading/pthread/monitorer.c \
+	src/threading/pthread/monitorer.h
 
 if HAVE_LPEL
 pkglib_LTLIBRARIES += libtblpel.la 

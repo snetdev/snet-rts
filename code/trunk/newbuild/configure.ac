@@ -50,7 +50,7 @@ AC_SEARCH_LIBS([inet_aton], [resolv])
 
 AC_LANG_POP([C])
 
-LT_PREREQ([2.4])
+LT_PREREQ([2.2])
 LT_INIT([dlopen])
 
 AC_ARG_WITH([lpel-includes], [AC_HELP_STRING([--with-lpel-includes=DIR], [look up lpel.h in DIR])], [], [with_lpel_includes=])
