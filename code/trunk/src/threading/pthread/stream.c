@@ -1,12 +1,14 @@
 
 
-#include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <assert.h>
 
 #include "threading.h"
 
+#include "memfun.h"
+
+/* 'local' includes */
 #include "stream.h"
 #include "entity.h"
 
@@ -25,7 +27,7 @@ snet_locvec_t *SNetStreamGetSource(snet_stream_t *s)
 
 snet_stream_t *SNetStreamCreate(int capacity)
 {
-  snet_stream_t *s = malloc(sizeof(snet_stream_t));
+  snet_stream_t *s = SNetMemAlloc(sizeof(snet_stream_t));
   pthread_mutex_init(&s->lock, NULL);
   pthread_cond_init(&s->notempty, NULL);
   pthread_cond_init(&s->notfull, NULL);
@@ -35,7 +37,7 @@ snet_stream_t *SNetStreamCreate(int capacity)
   s->head = 0;
   s->tail = 0;
   s->count = 0;
-  s->buffer = malloc( s->size*sizeof(void*) );
+  s->buffer = SNetMemAlloc( s->size*sizeof(void*) );
 
   s->producer = NULL;
   s->consumer = NULL;
@@ -56,18 +58,18 @@ void SNetStreamDestroy(snet_stream_t *s)
   pthread_cond_destroy(&s->notfull);
 
   if (s->source != NULL) {
-    free(s->source);
+    SNetMemFree(s->source);
   }
 
-  free(s->buffer);
-  free(s);
+  SNetMemFree(s->buffer);
+  SNetMemFree(s);
 }
 
 
 snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode)
 {
   assert( mode=='w' || mode=='r' );
-  snet_stream_desc_t *sd = malloc(sizeof(snet_stream_t));
+  snet_stream_desc_t *sd = SNetMemAlloc(sizeof(snet_stream_t));
   sd->entity = SNetEntitySelf();
   sd->stream = stream;
   sd->next = NULL;
@@ -87,7 +89,7 @@ void SNetStreamClose(snet_stream_desc_t *sd, int destroy_s)
   if (destroy_s) {
     SNetStreamDestroy(sd->stream);
   }
-  free(sd);
+  SNetMemFree(sd);
 }
 
 

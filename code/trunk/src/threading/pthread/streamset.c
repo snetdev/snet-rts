@@ -3,10 +3,11 @@
  * Functions for maintaining a set of stream descriptors
  */
 
-#include <stdlib.h>
 #include <assert.h>
 
 #include "threading.h"
+
+#include "memfun.h"
 
 #include "stream.h"
 
@@ -114,7 +115,7 @@ int SNetStreamListIsEmpty( snet_streamset_t *set)
 snet_stream_iter_t *SNetStreamIterCreate( snet_streamset_t *set)
 {
   snet_stream_iter_t *iter =
-    (snet_stream_iter_t *) malloc( sizeof( snet_stream_iter_t));
+    (snet_stream_iter_t *) SNetMemAlloc( sizeof( snet_stream_iter_t));
 
   if (set) {
     iter->prev = *set;
@@ -134,7 +135,7 @@ snet_stream_iter_t *SNetStreamIterCreate( snet_streamset_t *set)
  */
 void SNetStreamIterDestroy( snet_stream_iter_t *iter)
 {
-  free(iter);
+  SNetMemFree(iter);
 }
 
 

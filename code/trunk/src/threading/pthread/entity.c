@@ -17,10 +17,12 @@
 
 #include "threading.h"
 
+/* local includes (only for pthread backend) */
 #include "entity.h"
 #include "monitorer.h"
 
 #include "distribution.h"
+#include "memfun.h"
 
 static unsigned int entity_count = 0;
 static pthread_mutex_t entity_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -112,7 +114,7 @@ int SNetEntitySpawn(
   size_t stacksize;
 
   /* create snet_entity_t */
-  snet_entity_t *self = malloc(sizeof(snet_entity_t));
+  snet_entity_t *self = SNetMemAlloc(sizeof(snet_entity_t));
   self->func = func;
   self->inarg = arg;
   pthread_mutex_init( &self->lock, NULL );
@@ -217,7 +219,7 @@ static void SNetEntityExit(snet_entity_t *self)
   /* cleanup */
   pthread_mutex_destroy( &self->lock );
   pthread_cond_destroy( &self->pollcond );
-  free(self);
+  SNetMemFree(self);
 
 
   /* decrement and signal entity counter */

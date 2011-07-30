@@ -1,10 +1,10 @@
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
 #include "locvec.h"
+#include "memfun.h"
 
 #define LOCVEC_INFO_TAG 493
 
@@ -54,27 +54,27 @@ static int SNetLocvecTopval(snet_locvec_t *vec);
 
 snet_locvec_t *SNetLocvecCreate(void)
 {
-  snet_locvec_t *vec = malloc(sizeof(snet_locvec_t));
+  snet_locvec_t *vec = SNetMemAlloc(sizeof(snet_locvec_t));
 
   vec->size = 0;
   vec->capacity = LOCVEC_CAPACITY_DELTA;
-  vec->arr = malloc(LOCVEC_CAPACITY_DELTA * sizeof(snet_locitem_t));
+  vec->arr = SNetMemAlloc(LOCVEC_CAPACITY_DELTA * sizeof(snet_locitem_t));
   return vec;
 }
 
 void SNetLocvecDestroy(snet_locvec_t *vec)
 {
-  free( vec->arr );
-  free( vec );
+  SNetMemFree( vec->arr );
+  SNetMemFree( vec );
 }
 
 snet_locvec_t *SNetLocvecCopy(snet_locvec_t *vec)
 {
-  snet_locvec_t *newvec = malloc(sizeof(snet_locvec_t));
+  snet_locvec_t *newvec = SNetMemAlloc(sizeof(snet_locvec_t));
   /* shallow copy of fields */
   *newvec = *vec;
   /* copy arr */
-  newvec->arr = malloc(newvec->capacity * sizeof(snet_locitem_t));
+  newvec->arr = SNetMemAlloc(newvec->capacity * sizeof(snet_locitem_t));
   (void) memcpy(newvec->arr, vec->arr, newvec->size * sizeof(snet_locitem_t));
   return newvec;
 }
@@ -330,12 +330,12 @@ static void SNetLocvecAppend(snet_locvec_t *vec, snet_loctype_t type, int num)
 {
   if (vec->size == vec->capacity) {
     /* grow */
-    snet_locitem_t *newarr = malloc(
+    snet_locitem_t *newarr = SNetMemAlloc(
         (vec->capacity + LOCVEC_CAPACITY_DELTA) * sizeof(snet_locitem_t)
         );
     vec->capacity += LOCVEC_CAPACITY_DELTA;
     (void) memcpy(newarr, vec->arr, vec->size * sizeof(snet_locitem_t));
-    free(vec->arr);
+    SNetMemFree(vec->arr);
     vec->arr = newarr;
   }
 
