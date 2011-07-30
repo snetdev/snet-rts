@@ -11,7 +11,6 @@
 /* S-Net threading backend interface */
 #include "threading.h"
 
-/* IMPORTANT: following order of includes */
 #include "lpel.h"
 
 /* provisional assignment module */
@@ -39,7 +38,7 @@ static int mon_level = 0;
 static bool dloc_placement = false;
 
 
-static size_t SNetEntityStackSize(snet_entity_type_t type)
+static size_t GetStacksize(snet_entity_type_t type)
 {
   size_t stack_size;
 
@@ -233,7 +232,7 @@ int SNetEntitySpawn(
       worker,
       (lpel_taskfunc_t) func,
       arg,
-      SNetEntityStackSize(type)
+      GetStacksize(type)
       );
 
   /* monitoring levels:

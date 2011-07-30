@@ -7,8 +7,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "arch/timing.h"
-
 #include "mon_snet.h"
 
 #include "locvec.h"
@@ -47,8 +45,8 @@ struct mon_worker_t {
   FILE         *outfile;     /** where to write the monitoring data to */
   unsigned int  disp;        /** count how often a task has been dispatched */
   unsigned int  wait_cnt;
-  timing_t      wait_total;
-  timing_t      wait_current;
+  lpel_timing_t      wait_total;
+  lpel_timing_t      wait_current;
   struct {
     int cnt, size;
     mon_usrevt_t *buffer;
@@ -71,10 +69,10 @@ struct mon_task_t {
   unsigned long flags; /** monitoring flags */
   unsigned long disp;  /** dispatch counter */
   struct {
-    timing_t creat; /** task creation time */
-    timing_t total; /** total execution time of the task */
-    timing_t start; /** start time of last dispatch */
-    timing_t stop;  /** stop time of last dispatch */
+    lpel_timing_t creat; /** task creation time */
+    lpel_timing_t total; /** total execution time of the task */
+    lpel_timing_t start; /** start time of last dispatch */
+    lpel_timing_t stop;  /** stop time of last dispatch */
   } times;
   mon_stream_t *dirty_list; /** head of dirty stream list */
   unsigned long last_in_cnt;  /** last counter of an input stream */
@@ -104,7 +102,7 @@ struct mon_stream_t {
  * Item to log the possible user events of the treading interface
  */
 struct mon_usrevt_t {
-  timing_t ts;
+  lpel_timing_t ts;
   snet_threading_event_t evt;
   unsigned long in_cnt;
   unsigned long out_cnt;
@@ -140,7 +138,7 @@ struct mon_usrevt_t {
 /**
  * Reference timestamp
  */
-static timing_t monitoring_begin = TIMING_INITIALIZER;
+static lpel_timing_t monitoring_begin = TIMING_INITIALIZER;
 
 
 
@@ -160,7 +158,7 @@ static timing_t monitoring_begin = TIMING_INITIALIZER;
 /**
  * Print a time in usec
  */
-static inline void PrintTimingUs( const timing_t *t, FILE *file)
+static inline void PrintTimingUs( const lpel_timing_t *t, FILE *file)
 {
   if (t->tv_sec == 0) {
     (void) fprintf( file, "%lu ", t->tv_nsec / 1000);
@@ -174,7 +172,7 @@ static inline void PrintTimingUs( const timing_t *t, FILE *file)
 /**
  * Print a time in nsec
  */
-static inline void PrintTimingNs( const timing_t *t, FILE *file)
+static inline void PrintTimingNs( const lpel_timing_t *t, FILE *file)
 {
   if (t->tv_sec == 0) {
     (void) fprintf( file, "%lu ", t->tv_nsec);
@@ -188,11 +186,11 @@ static inline void PrintTimingNs( const timing_t *t, FILE *file)
 /**
  * Print a normalized timestamp usec
  */
-static inline void PrintNormTSus( const timing_t *t, FILE *file)
+static inline void PrintNormTSus( const lpel_timing_t *t, FILE *file)
 {
-  timing_t norm_ts;
+  lpel_timing_t norm_ts;
 
-  TimingDiff(&norm_ts, &monitoring_begin, t);
+  LpelTimingDiff(&norm_ts, &monitoring_begin, t);
   (void) fprintf( file,
       "%lu%06lu",
       (unsigned long) norm_ts.tv_sec,
@@ -203,11 +201,11 @@ static inline void PrintNormTSus( const timing_t *t, FILE *file)
 /**
  * Print a normalized timestamp nsec
  */
-static inline void PrintNormTSns( const timing_t *t, FILE *file)
+static inline void PrintNormTSns( const lpel_timing_t *t, FILE *file)
 {
-  timing_t norm_ts;
+  lpel_timing_t norm_ts;
 
-  TimingDiff(&norm_ts, &monitoring_begin, t);
+  LpelTimingDiff(&norm_ts, &monitoring_begin, t);
   (void) fprintf( file,
       "%lu%09lu",
       (unsigned long) norm_ts.tv_sec,
@@ -341,14 +339,14 @@ static void PrintUsrEvt(mon_task_t *mt)
 
 static void MonCbDebug( mon_worker_t *mon, const char *fmt, ...)
 {
-  timing_t tnow;
+  lpel_timing_t tnow;
   va_list ap;
 
   if (!mon) return;
 
   /* print current timestamp */
   //TODO check if timestamping required
-  TIMESTAMP(&tnow);
+  LpelTimingNow(&tnow);
   PrintNormTS(&tnow, mon->outfile);
   fprintf( mon->outfile, " *** ");
 
@@ -387,8 +385,8 @@ static mon_worker_t *MonCbWorkerCreate(int wid)
   /* default values */
   mon->disp = 0;
   mon->wait_cnt = 0;
-  TimingZero(&mon->wait_total);
-  TimingZero(&mon->wait_current);
+  LpelTimingZero(&mon->wait_total);
+  LpelTimingZero(&mon->wait_current);
 
   /* user events */
   mon->events.cnt = 0;
@@ -427,8 +425,8 @@ static mon_worker_t *MonCbWrapperCreate(mon_task_t *mt)
   /* default values */
   mon->disp = 0;
   mon->wait_cnt = 0;
-  TimingZero(&mon->wait_total);
-  TimingZero(&mon->wait_current);
+  LpelTimingZero(&mon->wait_total);
+  LpelTimingZero(&mon->wait_current);
 
   /* user events */
   mon->events.size = 0;
@@ -489,14 +487,14 @@ static void MonCbWorkerDestroy(mon_worker_t *mon)
 static void MonCbWorkerWaitStart(mon_worker_t *mon)
 {
   mon->wait_cnt++;
-  TimingStart(&mon->wait_current);
+  LpelTimingStart(&mon->wait_current);
 }
 
 
 static void MonCbWorkerWaitStop(mon_worker_t *mon)
 {
-  TimingEnd(&mon->wait_current);
-  TimingAdd(&mon->wait_total, &mon->wait_current);
+  LpelTimingEnd(&mon->wait_current);
+  LpelTimingAdd(&mon->wait_total, &mon->wait_current);
 
   MonCbDebug( mon,
       "worker %d waited (%u) for %lu.%09lu\n",
@@ -533,7 +531,7 @@ static void MonCbTaskStart(mon_task_t *mt)
 {
   assert( mt != NULL );
   if FLAG_TIMES(mt) {
-    TIMESTAMP(&mt->times.start);
+    LpelTimingNow(&mt->times.start);
   }
 
   /* set blockon to any */
@@ -553,12 +551,12 @@ static void MonCbTaskStop(mon_task_t *mt, lpel_taskstate_t state)
   if (mt->mw==NULL) return;
 
   FILE *file = mt->mw->outfile;
-  timing_t et;
+  lpel_timing_t et;
   assert( mt != NULL );
 
 
   if FLAG_TIMES(mt) {
-    TIMESTAMP(&mt->times.stop);
+    LpelTimingNow(&mt->times.stop);
     PrintNormTS(&mt->times.stop, file);
   }
 
@@ -575,9 +573,9 @@ static void MonCbTaskStop(mon_task_t *mt, lpel_taskstate_t state)
   if FLAG_TIMES(mt) {
     fprintf( file, "et ");
     /* execution time */
-    TimingDiff(&et, &mt->times.start, &mt->times.stop);
+    LpelTimingDiff(&et, &mt->times.start, &mt->times.stop);
     /* update total execution time */
-    TimingAdd(&mt->times.total, &et);
+    LpelTimingAdd(&mt->times.total, &et);
 
     PrintTiming( &et , file);
     if ( state == TASK_ZOMBIE) {
@@ -760,7 +758,7 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node)
   mon_node = node;
 
   /* initialize timing */
-  TIMESTAMP(&monitoring_begin);
+  LpelTimingNow(&monitoring_begin);
 }
 
 
@@ -795,9 +793,9 @@ mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *name, unsi
   mt->dirty_list = ST_DIRTY_END;
 
   if FLAG_TIMES(mt) {
-    timing_t tnow;
-    TIMESTAMP(&tnow);
-    TimingDiff(&mt->times.creat, &monitoring_begin, &tnow);
+    lpel_timing_t tnow;
+    LpelTimingNow(&tnow);
+    LpelTimingDiff(&mt->times.creat, &monitoring_begin, &tnow);
   }
 
   return mt;
@@ -825,7 +823,7 @@ void SNetThreadingMonEvent(mon_task_t *mt, snet_threading_event_t evt)
     /* get a pointer to a usrevt slot */
     mon_usrevt_t *me = &mw->events.buffer[mw->events.cnt];
     /* set values */
-    if FLAG_TIMES(mt) TIMESTAMP(&me->ts);
+    if FLAG_TIMES(mt) LpelTimingNow(&me->ts);
     me->evt = evt;
     me->in_cnt = mt->last_in_cnt;
     me->out_cnt = mt->last_out_cnt;
