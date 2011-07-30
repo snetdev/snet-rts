@@ -137,5 +137,7 @@ void *SNetRecTakeField( snet_record_t *rec, int id);
 bool SNetRecHasField( snet_record_t *rec, int id);
 void SNetRecRenameField( snet_record_t *rec, int id, int newId);
 
+void SNetRecSerialise( snet_record_t *rec, void (*serialise)(int, int*));
+snet_record_t *SNetRecDeserialise(void (*deserialise)(int, int*));
 
 #endif /* _RECORD_H_ */
