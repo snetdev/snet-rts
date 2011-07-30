@@ -138,7 +138,7 @@ struct mon_usrevt_t {
 /**
  * Reference timestamp
  */
-static lpel_timing_t monitoring_begin = TIMING_INITIALIZER;
+static lpel_timing_t monitoring_begin = LPEL_TIMING_INITIALIZER;
 
 
 

@@ -43,8 +43,8 @@ TARGETDIRS_PROD  := $(patsubst %.o,%.prod.o,$(TARGETDIRS_DEVEL))
 TARGETDIRS_SRC   := $(patsubst %.o,%.c,$(TARGETDIRS_DEVEL))
 
 
-LIB  := -L$(PROJECT_ROOT)/src/lib 
-INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) -I$(MPIROOT)
+LIB  := -L$(PROJECT_ROOT)/src/lib
+INCS := -I$(PROJECT_ROOT)/src/include -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS)) -I$(MPIROOT) -I$(LPELROOT)/include
 COMMONLIBDEV   := $(patsubst lib%.a,%,$(targets_commonlib_devel))
 COMMONLIBPROD  := $(patsubst lib%.a,%,$(targets_commonlib_prod))
 
@@ -61,6 +61,8 @@ RUNTIMEINCS := -I$(PROJECT_ROOT)/src/runtime/include \
                $(GTKFLAGS)
 
 RUNTIMELIB_DEPS      := -lpthread
+
+TBLPEL_DEPS := -L$(LPELROOT)/lib -llpel
 
 UTILLIB  := -L$(PROJECT_ROOT)/lib
 UTILINCS := -I$(PROJECT_ROOT)/include $(patsubst %,-I%,$(SUBPROJECT_DIRS))
@@ -244,6 +246,23 @@ $(PROJECT_ROOT)/lib/libtbpthread.prod.so: $(TARGETDIRS_DEVEL)
 	@$(ECHO) ""
 	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libtbpthread.prod.so (product version)"
 	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^
+	@$(RM) .make_track
+	@$(TOUCH) .done
+
+#
+# TBLPEL LIBRARY
+#
+$(PROJECT_ROOT)/lib/libtblpel.so: $(TARGETDIRS_DEVEL)
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libtblpel.so (developer version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(TBLPEL_DEPS)
+	@$(RM) .make_track
+	@$(TOUCH) .done
+
+$(PROJECT_ROOT)/lib/libtblpel.prod.so: $(TARGETDIRS_DEVEL)
+	@$(ECHO) ""
+	@$(ECHO) "Creating $(PREFIX_ROOT)lib/libtblpel.prod.so (product version)"
+	$(HIDE) $(CC) $(subst %libname%,$(notdir $@),$(LD_DYNAMIC)) -o $@ $^ $(TBLPEL_DEPS)
 	@$(RM) .make_track
 	@$(TOUCH) .done
 
