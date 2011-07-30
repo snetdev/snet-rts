@@ -187,9 +187,15 @@ bool LIST_FUNCTION(LIST_NAME, Contains)(snet_list_t *list, LIST_VAL val)
   LIST_VAL tmp;
 
   LIST_FOR_EACH(list, tmp)
-    if (tmp == val) {
-      return true;
-    }
+    #ifdef LIST_CMP
+      if (LIST_CMP(tmp, val)) {
+        return true;
+      }
+    #else
+      if (tmp == val) {
+        return true;
+      }
+    #endif
   END_FOR
 
   return false;
