@@ -1,6 +1,7 @@
 #include "distribution.h"
 
 static int node_location;
+bool debugWait, outputDistribInfo;
 
 void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 {
@@ -12,6 +13,10 @@ void SNetDistribStart()
 }
 
 void SNetDistribStop()
+{
+}
+
+void SNetDistribDestroy()
 {
 }
 
@@ -31,12 +36,13 @@ bool SNetDistribIsRootNode(void)
   return true;
 }
 
-snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int location)
+snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc,
+                               snet_startup_fun_t start)
 {
     return input;
 }
 
-snet_stream_t *SNetRouteUpdateDynamic(snet_info_t *info, snet_stream_t *input, int location, snet_startup_fun_t start)
+snet_stream_t *SNetRouteUpdateDynamic(snet_info_t *info, snet_stream_t *input, int location, int parentIndex)
 {
   return input;
 }

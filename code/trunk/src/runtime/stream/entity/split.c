@@ -19,7 +19,7 @@
 typedef struct {
   snet_stream_t *input, *output;
   snet_startup_fun_t boxfun;
-  snet_locvec_t *locvec;
+  snet_info_t *info;
   int ltag, utag;
   bool is_det;
   bool is_byloc;
@@ -37,7 +37,9 @@ static void SplitBoxTask(void *arg)
   split_arg_t *sarg = (split_arg_t *)arg;
   snet_stream_desc_t *initial, *instream;
   int ltag_val, utag_val;
+  snet_info_t *info;
   snet_record_t *rec;
+  snet_locvec_t *locvec;
   bool terminate = false;
   /* a list of all outstreams for all yet created instances */
   snet_streamset_t repos_set = NULL;
@@ -77,15 +79,19 @@ static void SplitBoxTask(void *arg)
             SNetStreamsetPut( &repos_set, outstream);
 
             /* create info and location vector for creation of this replica */
-            snet_info_t *info = SNetInfoInit();
-            snet_locvec_t *locvec = SNetLocvecSplitSpawn(sarg->locvec, i);
+            info = SNetInfoCopy(sarg->info);
+            locvec = SNetLocvecSplitSpawn(SNetLocvecGet(sarg->info), i);
             SNetLocvecSet(info, locvec);
 
             snet_stream_t *temp_stream;
             if( sarg->is_byloc) {
+              newstream_addr = SNetRouteUpdateDynamic(info, newstream_addr, i, i);
               temp_stream = sarg->boxfun(newstream_addr, info, i);
+              temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location, NULL);
             } else {
+              newstream_addr = SNetRouteUpdateDynamic(info, newstream_addr, sarg->location, i);
               temp_stream = sarg->boxfun(newstream_addr, info, sarg->location);
+              temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location, NULL);
             }
 
             /* destroy info and location vector */
@@ -216,14 +222,16 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     bool is_det
     )
 {
+  snet_info_t *newInfo = SNetInfoCopy(info);
   snet_stream_t *initial, *output;
   split_arg_t *sarg;
   snet_locvec_t *locvec;
 
   locvec = SNetLocvecGet(info);
   SNetLocvecSplitEnter(locvec);
+  SNetLocvecSet(newInfo, SNetLocvecCopy(locvec));
 
-  input = SNetRouteUpdateDynamic(info, input, location, box_a);
+  input = SNetRouteUpdate(newInfo, input, location, box_a);
   if(SNetDistribIsNodeLocation(location)) {
     initial = SNetStreamCreate(0);
 
@@ -231,7 +239,7 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->input  = input;
     sarg->output = initial;
     sarg->boxfun = box_a;
-    sarg->locvec = SNetLocvecCopy(locvec);
+    sarg->info = newInfo;
     sarg->ltag = ltag;
     sarg->utag = utag;
     sarg->is_det = is_det;
