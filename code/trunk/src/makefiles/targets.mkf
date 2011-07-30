@@ -9,7 +9,7 @@ include $(PROJECT_ROOT)/src/makefiles/targets_distrib_nodist.mkf
 ifdef MPIROOT
 include $(PROJECT_ROOT)/src/makefiles/targets_distrib_mpi.mkf
 endif
-include $(PROJECT_ROOT)/src/makefiles/targets_threading.mkf
+include $(PROJECT_ROOT)/src/makefiles/targets_threading_pthread.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_runtime_common.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_runtime_stream.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_util.mkf

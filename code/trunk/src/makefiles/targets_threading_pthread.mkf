@@ -9,9 +9,9 @@
 # Collection of targets
 #
 
-targets_threading_devel             := libtbpthread.so
-targets_threading_prod              := libtbpthread.prod.so
-targets_threading_default           := $(targets_threading_devel)
+targets_pthread_devel     := libtbpthread.so
+targets_pthread_prod      := libtbpthread.prod.so
+targets_pthread_default   := $(targets_pthread_devel)
 
 
 ###############################################################################
@@ -19,7 +19,7 @@ targets_threading_default           := $(targets_threading_devel)
 # Collection of target directories
 #
 
-targetdir_threading                 := lib
+targetdir_pthread         := lib
 
 
 ###############################################################################
@@ -27,9 +27,9 @@ targetdir_threading                 := lib
 # Collection of additional files to be cleaned
 #
 
-clean_threading             :=
-clean_threading_devel       :=
-clean_threading_prod        :=
+clean_pthread             :=
+clean_pthread_devel       :=
+clean_pthread_prod        :=
 
 
 ###############################################################################
@@ -37,7 +37,7 @@ clean_threading_prod        :=
 # Collection of source directories
 #
 
-threading      = pthread
+pthread      = tbpth
 
 
 ###############################################################################
@@ -47,4 +47,5 @@ threading      = pthread
 # Note that the variable names must coincide with the directory names above.
 #
 
-pthread = entity.o stream.o streamset.o monitorer.o
+tbpth = entity.o stream.o streamset.o monitorer.o
+
