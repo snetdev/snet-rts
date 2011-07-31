@@ -7,7 +7,7 @@ typedef enum record_descr snet_record_descr_t;
 typedef enum record_mode snet_record_mode_t;
 
 enum record_descr {
-  REC_data,
+  REC_data=0,
   REC_sync,
   REC_collect,
   REC_sort_end,

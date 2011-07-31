@@ -220,11 +220,11 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           /* action: currently just ignored... */
           break;
         default:
-          SNetUtilDebugFatal("Unknown monitoring information event. [%d]", event);
+          SNetUtilDebugFatal("Unknown monitoring information event. [event=%d]", event);
         } /* switch(event) */
         break;
       default:
-        SNetUtilDebugFatal("Non-supported monitoring information record. [%d]", event);
+        SNetUtilDebugFatal("Non-supported monitoring information record. [event=%d][record-descr=%d]", event, REC_DESCR( rec));
       } /* REC_DESCR( rec) */
     }
     break;

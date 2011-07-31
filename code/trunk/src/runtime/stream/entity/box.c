@@ -95,9 +95,8 @@ static void BoxTask(void *arg)
 #endif /* SNET_DEBUG_COUNTERS */
 
         /* Emit a monitoring message of a record written by a box */
-        SNetMonInfoEvent( EV_BOX_START, MON_RECORD, rec);
+        if (SNetRecGetDescriptor(rec) == REC_data) SNetMonInfoEvent( EV_BOX_START, MON_RECORD, rec);
 
-        //FIXME(Raimund): Trigger output event of monitoring information (Record Read)
         SNetThreadingEventSignal(EVT_BOXFIRE);
         (*barg->boxfun)( &hnd);
         SNetThreadingEventSignal(EVT_BOXRET);
