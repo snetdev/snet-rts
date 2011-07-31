@@ -116,9 +116,15 @@ bool SNetMonInfoCmpID (snet_moninfo_id_t monid1, snet_moninfo_id_t monid2)
  ****************************************************************************/
 snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_rec_data_t add_data)
 {
-  snet_add_moninfo_rec_data_t new_add_data = (snet_add_moninfo_rec_data_t) strdup ( add_data);
-  if (new_add_data == NULL)
-    SNetUtilDebugFatal("Copy of additional monitoring information for records failed. [%s]", add_data);
+  snet_add_moninfo_rec_data_t new_add_data;
+  if (add_data != NULL) {
+      new_add_data = (snet_add_moninfo_rec_data_t) strdup ( add_data);
+      if (new_add_data == NULL)
+        SNetUtilDebugFatal("Copy of additional monitoring information for records failed. [%s]", add_data);
+  }
+  else {
+      new_add_data = NULL;
+  }
   return new_add_data;
 }
 
@@ -148,6 +154,7 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           {
             snet_moninfo_id_t newid = SNetMonInfoCreateID();
             snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
+            DATA_REC( rec, id) = newid;
             DATA_REC( rec, parent_ids) = NULL;
             mon = SNetMonInfoCreate ( event, descr, DATA_REC( rec, id), NULL, add_data);
           }
@@ -158,7 +165,13 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           /* action: create moninfo data */
           {
             snet_monid_list_t *parent_id_list = SNetMonInfoIdListCopy( DATA_REC( rec, parent_ids));
-            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
+            snet_add_moninfo_rec_data_t add_data;
+            if (DATA_REC( rec, add_moninfo_rec_data) != NULL) {
+                add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
+            }
+            else {
+                add_data = NULL;
+            }
 
             mon = SNetMonInfoCreate ( event, descr, DATA_REC( rec, id), parent_id_list, add_data);
           }
@@ -213,11 +226,11 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           /* action: currently just ignored... */
           break;
         default:
-          SNetUtilDebugFatal("Unknown monitoring information event. [%d]", event);
+          SNetUtilDebugFatal("Unknown monitoring information event. [event=%d]", event);
         } /* switch(event) */
         break;
       default:
-        SNetUtilDebugFatal("Non-supported monitoring information record. [%d]", event);
+        SNetUtilDebugFatal("Non-supported monitoring information record. [event=%d][record-descr=%d]", event, REC_DESCR( rec));
       } /* REC_DESCR( rec) */
     }
     break;

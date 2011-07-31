@@ -319,6 +319,11 @@ static void PrintUsrEvt(mon_task_t *mt)
         evtnames[cur->evt], cur->in_cnt, cur->out_cnt);
     */
     fprintf( file, ",%p;", cur->moninfo);
+
+    /*
+     * According to the treading interface, we destroy the moninfo.
+     */
+    SNetMonInfoDestroy(cur->moninfo);
   }
   fprintf( file,"] " );
   /* reset */
