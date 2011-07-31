@@ -1,0 +1,53 @@
+#
+# $Id$
+#
+#
+
+
+###############################################################################
+#
+# Collection of targets
+#
+
+targets_lpel_devel     := libtblpel.so
+targets_lpel_prod      := libtblpel.prod.so
+targets_lpel_default   := $(targets_lpel_devel)
+
+
+###############################################################################
+#
+# Collection of target directories
+#
+
+targetdir_lpel         := lib
+
+
+###############################################################################
+#
+# Collection of additional files to be cleaned
+#
+
+clean_lpel             :=
+clean_lpel_devel       :=
+clean_lpel_prod        :=
+
+
+###############################################################################
+#
+# Collection of source directories
+#
+
+lpel      =  lpelif lpelmod
+
+
+###############################################################################
+#
+# Collection of util object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+lpelif  = glue_snet.o wrappers.o
+
+lpelmod = mon_snet.o assign.o
+

@@ -184,6 +184,7 @@ static void GlobOutputTask(void* data)
   SNetMemFree(hnd);
 
   /* signal the threading layer */
+  if (SNetDistribIsRootNode()) SNetDistribStop();
   SNetThreadingStop();
 }
 

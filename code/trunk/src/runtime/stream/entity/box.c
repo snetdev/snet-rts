@@ -176,7 +176,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
   box_arg_t *barg;
   snet_locvec_t *locvec;
 
-  input = SNetRouteUpdate(info, input, location);
+  input = SNetRouteUpdate(info, input, location, NULL);
 
   locvec = SNetLocvecGet(info);
 

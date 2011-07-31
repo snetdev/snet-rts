@@ -353,7 +353,7 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
   /* Check for bypass
    * - if it is a bypass, exit out early and do not create any component
    */
-  instream = SNetRouteUpdate(info, instream, location);
+  instream = SNetRouteUpdate(info, instream, location, NULL);
   if(SNetDistribIsNodeLocation(location) &&
       !FilterIsBypass(input_variant, guard_exprs, instr_list)) {
     outstream = SNetStreamCreate(0);

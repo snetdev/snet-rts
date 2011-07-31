@@ -13,6 +13,7 @@
 
 
 
+extern int SNetLocvecTopval(snet_locvec_t *locvec);
 //#define DEBUG_PRINT_GC
 
 
@@ -22,11 +23,11 @@
  * argument of the star function
  */
 typedef struct {
+  snet_info_t *info;
   snet_stream_t *input, *output;
   snet_variant_list_t *exit_patterns;
   snet_startup_fun_t box, selffun;
   snet_expr_list_t *guards;
-  snet_locvec_t *myloc;
   bool is_det, is_incarnate;
   int location;
 } star_arg_t;
@@ -70,9 +71,6 @@ static snet_stream_t *SNetSerialStarchild(snet_stream_t *input,
   locvec = SNetLocvecGet(info);
   (void) SNetLocvecStarSpawn(locvec);
 
-  SNetRouteUpdate(info, input, location);
-
-
   /* create operand A */
   internal_stream = (*box_a)(input, info, location);
 
@@ -95,29 +93,26 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
     star_arg_t *sarg, snet_stream_desc_t *to_coll)
 {
   /* info structure for network creation */
-  snet_info_t *info = SNetInfoInit();
-  SNetLocvecSet(info, sarg->myloc);
   /* The outstream to the collector from a newly created incarnate.
      Nothing is written to this stream, but it has to be registered
      at the collector. */
   snet_stream_t *starstream, *nextstream_addr;
   /* Create the stream to the instance */
   nextstream_addr = SNetStreamCreate(0);
+  SNetRouteUpdateDynamic(sarg->info, nextstream_addr, sarg->location, SNetLocvecTopval(SNetLocvecGet(sarg->info)));
+  *next = SNetStreamOpen(nextstream_addr, 'w');
 
   /* Set the source of the stream to support garbage collection */
-  SNetStreamSetSource(nextstream_addr, SNetLocvecCopy(sarg->myloc));
-  *next = SNetStreamOpen(nextstream_addr, 'w');
+  SNetStreamSetSource(nextstream_addr, SNetLocvecCopy(SNetLocvecGet(sarg->info)));
 
   /* use custom creation function for proper/easier update of locvec */
   starstream = SNetSerialStarchild(
       nextstream_addr,
-      info,
+      sarg->info,
       sarg->location,
       sarg->box,
       sarg->selffun
       );
-
-  SNetInfoDestroy( info);
 
   /* notify collector about the new instance */
   SNetStreamWrite( to_coll, SNetRecCreate(REC_collect, starstream));
@@ -240,7 +235,7 @@ static void StarBoxTask(void *arg)
            * (subsequent) star dispatcher entities of the same star combinator network
            * -> if so, we can clean-up ourselves
            */
-          if ( loc != NULL && SNetLocvecEqualParent(loc, sarg->myloc)) {
+          if ( loc != NULL && SNetLocvecEqualParent(loc, SNetLocvecGet(sarg->info))) {
             /* If the next instance is already created, we can forward the sync-record
              * immediately and terminate.
              * Otherwise we postpone termination to the point when a next data record
@@ -334,7 +329,8 @@ static void StarBoxTask(void *arg)
 
   /* destroy the task argument */
   SNetExprListDestroy( sarg->guards);
-  SNetLocvecDestroy( sarg->myloc );
+  SNetLocvecDestroy(SNetLocvecGet(sarg->info));
+  SNetInfoDestroy(sarg->info);
   SNetVariantListDestroy( sarg->exit_patterns);
   SNetMemFree( sarg);
 } /* STAR BOX TASK END */
@@ -363,32 +359,40 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     bool is_det
     )
 {
+  snet_info_t *newInfo;
   snet_stream_t *output;
   star_arg_t *sarg;
   snet_stream_t *newstream;
   snet_locvec_t *locvec;
 
   locvec = SNetLocvecGet(info);
-  if (!is_incarnate) SNetLocvecStarEnter(locvec);
+  newInfo = SNetInfoCopy(info);
+  if (!is_incarnate) {
+    SNetLocvecStarEnter(locvec);
+    input = SNetRouteUpdate(newInfo, input, location, box_a);
+  } else {
+    input = SNetRouteUpdate(newInfo, input, location, NULL);
+  }
+  locvec = SNetLocvecCopy(locvec);
+  SNetLocvecSet(newInfo, locvec);
 
-  input = SNetRouteUpdateDynamic(info, input, location, box_a);
   if(SNetDistribIsNodeLocation(location)) {
     /* create the task argument */
     sarg = (star_arg_t *) SNetMemAlloc( sizeof(star_arg_t));
     newstream = SNetStreamCreate(0);
     sarg->input = input;
     /* copy location vector */
-    sarg->myloc = SNetLocvecCopy(locvec);
     sarg->output = newstream;
     sarg->box = box_a;
     sarg->selffun = box_b;
     sarg->exit_patterns = exit_patterns;
     sarg->guards = guards;
+    sarg->info = newInfo;
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
     sarg->location = location;
 
-    SNetEntitySpawn( ENTITY_star, sarg->myloc, location,
+    SNetEntitySpawn( ENTITY_star, locvec, location,
         "<star>", StarBoxTask, (void*)sarg);
 
     /* creation function of top level star will return output stream
@@ -407,7 +411,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     output = input;
   }
 
-  if (!is_incarnate) SNetLocvecStarLeave(locvec);
+  if (!is_incarnate) SNetLocvecStarLeave(SNetLocvecGet(info));
 
   return( output);
 }
