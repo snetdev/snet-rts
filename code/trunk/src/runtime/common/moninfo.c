@@ -99,10 +99,14 @@ snet_moninfo_id_t SNetMonInfoCreateID(void)
 bool SNetMonInfoCmpID (snet_moninfo_id_t monid1, snet_moninfo_id_t monid2)
 {
    bool res = true;
-   int i = sizeof(snet_moninfo_id_t) / sizeof (unsigned long);
-   for (i--;i>=0;i--)
-     if (monid1.ids[i] != monid2.ids[i])
-       res = false;
+   /* determine array size */
+   int i;
+   for (i = SNET_MONINFO_ID_VEC_SIZE-1; i>=0; i--) {
+       if (monid1.ids[i] != monid2.ids[i]) {
+           res = false;
+           break;
+       }
+   }
    return res;
 }
 
@@ -110,7 +114,7 @@ bool SNetMonInfoCmpID (snet_moninfo_id_t monid1, snet_moninfo_id_t monid2)
 /*****************************************************************************
  * Create a copy of the additional data of record monitoring information
  ****************************************************************************/
-snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAddData(snet_add_moninfo_rec_data_t add_data)
+snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_rec_data_t add_data)
 {
   snet_add_moninfo_rec_data_t new_add_data = (snet_add_moninfo_rec_data_t) strdup ( add_data);
   if (new_add_data == NULL)
@@ -143,7 +147,7 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           /* action: create minimal moninfo data (no parents) */
           {
             snet_moninfo_id_t newid = SNetMonInfoCreateID();
-            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninfo_rec_data));
+            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
             DATA_REC( rec, parent_ids) = NULL;
             mon = SNetMonInfoCreate ( event, descr, DATA_REC( rec, id), NULL, add_data);
           }
@@ -154,7 +158,7 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           /* action: create moninfo data */
           {
             snet_monid_list_t *parent_id_list = SNetMonInfoIdListCopy( DATA_REC( rec, parent_ids));
-            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninfo_rec_data));
+            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
 
             mon = SNetMonInfoCreate ( event, descr, DATA_REC( rec, id), parent_id_list, add_data);
           }
@@ -165,7 +169,7 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           {
             snet_record_t *parent_rec = va_arg( args, snet_record_t *);
             snet_monid_list_t *parent_id_list = SNetMonInfoIdListCreate(1, parent_rec);
-            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninfo_rec_data));
+            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
             snet_moninfo_id_t newid = SNetMonInfoCreateID();
 
             /* set the parent id of the record */
@@ -186,11 +190,11 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           {
             snet_record_t *rec = va_arg( args, snet_record_t *);
             int num_patterns = va_arg( args, int);
-            snet_record_t **storage = va_arg( args, snet_record_t *);
+            snet_record_t **storage = va_arg( args, snet_record_t **);
             snet_record_t *dummy = va_arg( args, snet_record_t *);
             snet_monid_list_t *parent_id_list = SNetMonInfoIdListCreate(0);
             snet_moninfo_id_t newid = SNetMonInfoCreateID();
-            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninfo_rec_data));
+            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
             int i;
 
             for (i=num_patterns-1; i>=0; i--)

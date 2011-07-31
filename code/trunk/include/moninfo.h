@@ -14,6 +14,9 @@
 #ifndef MONINFO_H_
 #define MONINFO_H_
 
+/* currently location vector + 1 local id (FIXME: couple with generic location vector) */
+#define SNET_MONINFO_ID_VEC_SIZE 3
+
 typedef enum moninfo_event snet_moninfo_event_t;
 typedef enum moninfo_descr snet_moninfo_descr_t;
 typedef union moninfo_types snet_moninfo_types_t;
@@ -27,7 +30,7 @@ typedef union moninfo_types snet_moninfo_types_t;
 
 /* data structure of system-wide unique id vector */
 typedef struct {
-  unsigned long ids [3];  /* fields: 0..local_id, 1..thread_id, 2..node_id (distributed snet) */
+  unsigned long ids [SNET_MONINFO_ID_VEC_SIZE];  /* fields: 0..local_id, 1..thread_id, 2..node_id (distributed snet) */
 } snet_moninfo_id_t;
 
 #include "bool.h"
@@ -59,7 +62,6 @@ typedef char* snet_add_moninfo_rec_data_t;
 /* data structure of monitoring information for records */
 typedef struct {
   snet_moninfo_id_t id;
-  //snet_moninfo_id_t *parent_ids;
   snet_monid_list_t *parent_ids;
   unsigned int time;  /* time stamp of monitoring e */
   snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
@@ -108,7 +110,7 @@ bool SNetMonInfoCmpID (snet_moninfo_id_t monid1, snet_moninfo_id_t monid2);
 /*****************************************************************************
  * Create a copy of the additional data of record monitoring information
  ****************************************************************************/
-snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAddData(snet_add_moninfo_rec_data_t add_data);
+snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_rec_data_t add_data);
 
 
 /*****************************************************************************

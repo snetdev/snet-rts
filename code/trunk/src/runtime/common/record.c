@@ -131,7 +131,7 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
       DATA_REC( new_rec, id) = SNetMonInfoCreateID();  /* system-wide unique id */
       DATA_REC( new_rec, parent_ids) = SNetMonInfoIdListCopy(DATA_REC( rec, parent_ids)); /* ids of parent records */
-      DATA_REC( new_rec, add_moninfo_rec_data) = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninfo_rec_data));
+      DATA_REC( new_rec, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
 
       break;
     case REC_sort_end:
