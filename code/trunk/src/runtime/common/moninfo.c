@@ -18,8 +18,35 @@
 #include "debug.h"
 #include "string.h"
 
+/*
+ * FIXME: introduces false sharing.
+ * better: get thread specific sequence ids
+ * Thread-unsafe, but we don't care, as IDs are
+ * composed by a task-specific id additionally
+ * anyways.
+ */
 static unsigned int moninfo_local_id = 0; /* sequence number to create ids */
 
+
+/**
+ * CAUTION!
+ * Keep following names consistent with header file
+ */
+
+static const char *names_event[] = {
+  "EV_INPUT_ARRIVE",
+  "EV_BOX_START",
+  "EV_BOX_WRITE",
+  "EV_BOX_FINISH",
+  "EV_FILTER_START",
+  "EV_FILTER_WRITE",
+  "EV_SYNC_FIRST",
+  "EV_SYNC_FIRE",
+};
+
+static const char *names_descr[] = {
+  "MON_RECORD",
+};
 
 #define LIST_NAME MonInfoId /* SNetMonInfoIdListFUNC */
 #define LIST_TYPE_NAME monid
@@ -239,3 +266,42 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
 }
 
 
+
+
+static void PrintMonInfoId(FILE *f, snet_moninfo_id_t *id)
+{
+  fprintf(f, "(%lu.%lu.%lu)",
+      id->ids[2], id->ids[1], id->ids[0]
+      );
+}
+
+void SNetMonInfoPrint(FILE *f, snet_moninfo_t *mon)
+{
+  snet_moninfo_id_t par_id;
+
+  fprintf(f,
+      "%s,%s,",
+      names_event[MONINFO_EVENT(mon)],
+      names_descr[MONINFO_DESCR(mon)]
+      );
+
+  switch (mon->mon_descr) {
+    case MON_RECORD: /* monitoring of a record */
+      {
+        PrintMonInfoId( f, &(REC_MONINFO( mon, id)) );
+        fprintf(f, ",");
+        if (REC_MONINFO( mon, parent_ids) != NULL) {
+          LIST_FOR_EACH( REC_MONINFO( mon, parent_ids), par_id)
+            PrintMonInfoId( f, &par_id );
+          END_FOR
+        }
+        if (REC_MONINFO( mon, add_moninfo_rec_data) != NULL) {
+          /*TODO*/
+        }
+      }
+      break;
+    default: /*ignore*/
+      break;
+  }
+
+}

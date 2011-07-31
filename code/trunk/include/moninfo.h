@@ -14,6 +14,10 @@
 #ifndef MONINFO_H_
 #define MONINFO_H_
 
+#include <stdio.h>
+
+#include "bool.h"
+
 /* currently location vector + 1 local id (FIXME: couple with generic location vector) */
 #define SNET_MONINFO_ID_VEC_SIZE 3
 #define MONINFO_USE_RECORD_EVENTS  /* enable processing of record events */
@@ -31,10 +35,10 @@ typedef union moninfo_types snet_moninfo_types_t;
 
 /* data structure of system-wide unique id vector */
 typedef struct {
-  unsigned long ids [SNET_MONINFO_ID_VEC_SIZE];  /* fields: 0..local_id, 1..thread_id, 2..node_id (distributed snet) */
+  /* fields: 0..local_id, 1..thread_id, 2..node_id (distributed snet) */
+  unsigned long ids [SNET_MONINFO_ID_VEC_SIZE];
 } snet_moninfo_id_t;
 
-#include "bool.h"
 #define LIST_NAME_H MonInfoId /* SNetMonInfoIdListFUNC */
 #define LIST_TYPE_NAME_H monid
 #define LIST_VAL_H snet_moninfo_id_t
@@ -55,7 +59,7 @@ enum moninfo_event {
 };
 
 enum moninfo_descr {
-  MON_RECORD,
+  MON_RECORD=0,
 };
 
 
@@ -121,5 +125,9 @@ snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_re
 void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,... );
 
 
+/*****************************************************************************
+ *  Print the monitoring information to a file
+ ****************************************************************************/
+void SNetMonInfoPrint(FILE *f, snet_moninfo_t *moninfo);
 
 #endif /* MONINFO_H_ */

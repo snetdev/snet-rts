@@ -59,7 +59,6 @@ static inline void GetTimestamp(struct timeval *t)
   }
   t->tv_usec = now.tv_usec - t->tv_usec;
   t->tv_sec  = now.tv_sec  - t->tv_sec;
-
 }
 
 
@@ -225,11 +224,14 @@ void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo)
 
 static void ProcessMonInfo(snet_moninfo_t *moninfo, struct timeval *timestamp)
 {
+  /* timestamp */
   fprintf(mon_file,
-      "%lu.%06lu %p\n",
-      timestamp->tv_sec, timestamp->tv_usec,
-      moninfo
+      "%lu.%06lu ",
+      timestamp->tv_sec, timestamp->tv_usec
       );
+  /* moninfo */
+  SNetMonInfoPrint(mon_file, moninfo);
+  fprintf(mon_file,"\n");
 }
 
 
