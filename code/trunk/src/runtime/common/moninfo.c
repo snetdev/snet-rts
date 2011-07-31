@@ -138,9 +138,19 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
       case REC_data: /* currently only data records can be monitored this way */
 
         switch (event) {
+        case EV_INPUT_ARRIVE:
+          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
+          /* action: create minimal moninfo data (no parents) */
+          {
+            snet_moninfo_id_t newid = SNetMonInfoCreateID();
+            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAddData (DATA_REC( rec, add_moninfo_rec_data));
+            DATA_REC( rec, parent_ids) = NULL;
+            mon = SNetMonInfoCreate ( event, descr, DATA_REC( rec, id), NULL, add_data);
+          }
+        break;
         case EV_BOX_START:
         case EV_SYNC_FIRST:
-          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* ) */
+          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
           /* action: create moninfo data */
           {
             snet_monid_list_t *parent_id_list = SNetMonInfoIdListCopy( DATA_REC( rec, parent_ids));
