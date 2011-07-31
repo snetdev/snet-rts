@@ -33,6 +33,7 @@
 #include "distribution.h"
 #include "locvec.h"
 #include "debug.h"
+#include "moninfo.h"
 
 /*
  * needs to be enabled to trigger the garbage collection mechanism
@@ -170,6 +171,10 @@ static void SyncBoxTask(void *arg)
             if (!partial_sync) {
               SNetThreadingEventSignal(EVT_SYNCFIRST);
               partial_sync = true;
+
+              /* Emit a monitoring message of first record entering syncro cell */
+              SNetMonInfoEvent( EV_SYNC_FIRST, MON_RECORD, rec);
+
             }
           }
         END_ZIP
@@ -182,6 +187,9 @@ static void SyncBoxTask(void *arg)
 #ifdef SYNC_SEND_OUTTYPES
           snet_variant_t *outtype;
 #endif
+
+          /* Emit a monitoring message of firing syncro cell */
+          SNetMonInfoEvent( EV_SYNC_FIRE, MON_RECORD, syncrec, num_patterns, storage, &dummy);
 
           /* this is the last sync */
           SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
@@ -198,6 +206,7 @@ static void SyncBoxTask(void *arg)
           SNetRecSetVariant(syncrec, outtype);
           SNetVariantDestroy(outtype);
 #endif
+
           SNetStreamWrite( outstream, syncrec);
 
           /* the receiver of REC_sync will destroy the outstream */

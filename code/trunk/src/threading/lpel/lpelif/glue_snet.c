@@ -141,6 +141,12 @@ int SNetThreadingInit(int argc, char **argv)
 
 
 
+unsigned long SNetThreadingGetId()
+{
+  /* FIXME more convenient way */
+  /* returns the thread id */
+  return (unsigned long) LpelTaskSelf();
+}
 
 
 

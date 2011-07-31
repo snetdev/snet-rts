@@ -29,6 +29,7 @@ static pthread_mutex_t entity_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  entity_cond = PTHREAD_COND_INITIALIZER;
 static pthread_key_t entity_self_key;
 
+
 /* prototype for pthread thread function */
 static void *SNetEntityThread(void *arg);
 
@@ -65,17 +66,16 @@ int SNetThreadingInit(int argc, char **argv)
   return 0;
 }
 
-unsigned int SNetThreadingGetId()
+unsigned long SNetThreadingGetId()
 {
   /* returns the thread id */
-  return pthread_self();
+  return (unsigned long) pthread_self(); /* returns a pointer on Mac */
 }
 
 void SNetThreadingStop(void)
 {
   /* NOP */
 }
-
 
 
 int SNetThreadingProcess(void)

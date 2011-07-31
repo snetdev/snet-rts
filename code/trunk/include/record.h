@@ -37,6 +37,7 @@ enum record_mode {
 #include "bool.h"
 #include "variant.h"
 #include "locvec.h"
+#include "moninfo.h"
 
 typedef struct {
   snet_int_map_t *tags;
@@ -44,6 +45,9 @@ typedef struct {
   snet_void_map_t *fields;
   int interface_id;
   snet_record_mode_t mode;
+  snet_moninfo_id_t id;  /* system-wide unique id */
+  snet_monid_list_t *parent_ids; /* ids of parent records */
+  snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
 } data_rec_t;
 
 typedef struct {
