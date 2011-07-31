@@ -116,9 +116,15 @@ bool SNetMonInfoCmpID (snet_moninfo_id_t monid1, snet_moninfo_id_t monid2)
  ****************************************************************************/
 snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_rec_data_t add_data)
 {
-  snet_add_moninfo_rec_data_t new_add_data = (snet_add_moninfo_rec_data_t) strdup ( add_data);
-  if (new_add_data == NULL)
-    SNetUtilDebugFatal("Copy of additional monitoring information for records failed. [%s]", add_data);
+  snet_add_moninfo_rec_data_t new_add_data;
+  if (add_data != NULL) {
+      new_add_data = (snet_add_moninfo_rec_data_t) strdup ( add_data);
+      if (new_add_data == NULL)
+        SNetUtilDebugFatal("Copy of additional monitoring information for records failed. [%s]", add_data);
+  }
+  else {
+      new_add_data = NULL;
+  }
   return new_add_data;
 }
 
