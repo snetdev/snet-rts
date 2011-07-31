@@ -10,6 +10,7 @@
 #include "mon_snet.h"
 
 #include "locvec.h"
+#include "moninfo.h"
 
 #define MON_ENTNAME_MAXLEN  64
 #define MON_FNAME_MAXLEN  63
@@ -21,13 +22,6 @@ static int mon_node = -1;
 
 static const char *prefix = "mon_";
 static const char *suffix = ".log";
-
-static const char *evtnames[] = {
-  "BF", /*EVT_BOXFIRE*/
-  "BR", /*EVT_BOXRET*/
-  "SF", /*EVT_SYNCFIRST*/
-  "SD", /*EVT_SYNCDONE*/
-};
 
 
 #define MON_USREVT_BUFSIZE_DELTA 64
@@ -103,7 +97,7 @@ struct mon_stream_t {
  */
 struct mon_usrevt_t {
   lpel_timing_t ts;
-  snet_threading_event_t evt;
+  snet_moninfo_t *moninfo;
   unsigned long in_cnt;
   unsigned long out_cnt;
 };
@@ -320,8 +314,16 @@ static void PrintUsrEvt(mon_task_t *mt)
       PrintNormTS(&cur->ts, file);
     }
     /* print event field */
+    /*FIXME
     fprintf( file, ",%s,%lu,%lu;",
         evtnames[cur->evt], cur->in_cnt, cur->out_cnt);
+    */
+    fprintf( file, ",%p;", cur->moninfo);
+
+    /*
+     * According to the treading interface, we destroy the moninfo.
+     */
+    SNetMonInfoDestroy(cur->moninfo);
   }
   fprintf( file,"] " );
   /* reset */
@@ -802,7 +804,7 @@ mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *name, unsi
 }
 
 
-void SNetThreadingMonEvent(mon_task_t *mt, snet_threading_event_t evt)
+void SNetThreadingMonEvent(mon_task_t *mt, snet_moninfo_t *moninfo)
 {
   assert(mt != NULL);
   mon_worker_t *mw = mt->mw;
@@ -824,7 +826,7 @@ void SNetThreadingMonEvent(mon_task_t *mt, snet_threading_event_t evt)
     mon_usrevt_t *me = &mw->events.buffer[mw->events.cnt];
     /* set values */
     if FLAG_TIMES(mt) LpelTimingNow(&me->ts);
-    me->evt = evt;
+    me->moninfo = moninfo;
     me->in_cnt = mt->last_in_cnt;
     me->out_cnt = mt->last_out_cnt;
 

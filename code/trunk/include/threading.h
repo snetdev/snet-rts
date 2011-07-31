@@ -3,6 +3,7 @@
 
 #include "distribution.h" //XXX dependency?
 #include "locvec.h"
+#include "moninfo.h"
 
 /******************************************************************************
  *
@@ -79,14 +80,14 @@ int SNetThreadingCleanup(void);
  * (2) Supporting calls to signal events
  ****************************************************************************/
 
-typedef enum {
-  EVT_BOXFIRE=0,
-  EVT_BOXRET,
-  EVT_SYNCFIRST,
-  EVT_SYNCDONE
-} snet_threading_event_t;
 
-void SNetThreadingEventSignal(snet_threading_event_t);
+/**
+ * Signal a monitoring event
+ *
+ * @param moninfo   the monitoring info, can be NULL
+ * @post  if moninfo != NULL, moninfo is destroyed
+ */
+void SNetThreadingEventSignal(snet_moninfo_t *moninfo);
 
 
 

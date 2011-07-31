@@ -9,7 +9,18 @@ snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode) { return (s
 snet_locvec_t *SNetStreamGetSource(snet_stream_t *s) { return (snet_locvec_t *)LpelStreamGetUsrData((lpel_stream_t *)s); }
 void SNetStreamSetSource(snet_stream_t *s, snet_locvec_t *lv) { LpelStreamSetUsrData((lpel_stream_t *)s, lv); }
 
-void SNetStreamClose(snet_stream_desc_t *sd, int destroy_stream) { LpelStreamClose((lpel_stream_desc_t*)sd, destroy_stream); }
+void SNetStreamClose(snet_stream_desc_t *sd, int destroy_stream)
+{
+  if (destroy_stream) {
+    /* also need to destroy the locvec */
+    snet_locvec_t *locvec = (snet_locvec_t *)LpelStreamGetUsrData(LpelStreamGet((lpel_stream_desc_t*)sd));
+    if (locvec != NULL) {
+      SNetLocvecDestroy(locvec);
+    }
+  }
+  LpelStreamClose((lpel_stream_desc_t*)sd, destroy_stream);
+}
+
 void SNetStreamReplace(snet_stream_desc_t *sd, snet_stream_t *new_stream) { LpelStreamReplace((lpel_stream_desc_t*)sd, (lpel_stream_t*)new_stream); }
 snet_stream_t *SNetStreamGet(snet_stream_desc_t *sd) { return (snet_stream_t*)LpelStreamGet((lpel_stream_desc_t*)sd); }
 void *SNetStreamRead(snet_stream_desc_t *sd) { return LpelStreamRead((lpel_stream_desc_t*)sd); }

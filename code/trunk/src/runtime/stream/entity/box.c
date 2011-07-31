@@ -5,11 +5,8 @@
 #include "debug.h"
 #include "memfun.h"
 #include "locvec.h"
-
+#include "moninfo.h"
 #include "threading.h"
-
-//extern void SNetThreadingEventBoxStart(void);
-//extern void SNetThreadingEventBoxStop(void);
 
 
 
@@ -97,9 +94,12 @@ static void BoxTask(void *arg)
         /* Emit a monitoring message of a record written by a box */
         if (SNetRecGetDescriptor(rec) == REC_data) SNetMonInfoEvent( EV_BOX_START, MON_RECORD, rec);
 
-        SNetThreadingEventSignal(EVT_BOXFIRE);
         (*barg->boxfun)( &hnd);
-        SNetThreadingEventSignal(EVT_BOXRET);
+
+        /*
+         * Emit an event here?
+         * SNetMonInfoEvent( EV_BOX_???, MON_RECORD, rec);
+         */
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_out, NULL);

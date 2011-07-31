@@ -173,10 +173,9 @@ int SNetEntitySpawn(
 }
 
 
-void SNetThreadingEventSignal(snet_threading_event_t evt)
+void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
 {
-  //FIXME replace by sensible data
-  SNetThreadingMonitoringAppend( (struct snet_moninfo_t *) ((void*)0x1000+evt) );
+  SNetThreadingMonitoringAppend( moninfo );
 }
 
 void SNetEntityYield(void)

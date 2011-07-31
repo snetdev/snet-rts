@@ -169,7 +169,6 @@ static void SyncBoxTask(void *arg)
             new_matches += 1;
             /* this is the first sync */
             if (!partial_sync) {
-              SNetThreadingEventSignal(EVT_SYNCFIRST);
               partial_sync = true;
 
               /* Emit a monitoring message of first record entering syncro cell */
@@ -216,7 +215,6 @@ static void SyncBoxTask(void *arg)
 
           terminate = true;
           partial_sync = false;
-          SNetThreadingEventSignal(EVT_SYNCDONE);
         }
         break;
 

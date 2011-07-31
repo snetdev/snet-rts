@@ -19,7 +19,7 @@
 /* monitoring module */
 #include "mon_snet.h"
 
-//FIXME put this into assignment/monitoring module
+/* put this into assignment/monitoring module */
 #include "distribution.h"
 
 
@@ -184,13 +184,13 @@ int SNetThreadingCleanup(void)
 /**
  * Signal an event
  */
-void SNetThreadingEventSignal(snet_threading_event_t evt)
+void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
 {
   lpel_task_t *t = LpelTaskSelf();
   assert(t != NULL);
   mon_task_t *mt = LpelTaskGetMon(t);
   if (mt != NULL) {
-    SNetThreadingMonEvent(mt, evt);
+    SNetThreadingMonEvent(mt, moninfo);
   }
 }
 

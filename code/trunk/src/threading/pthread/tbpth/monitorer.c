@@ -17,7 +17,7 @@
 
 struct mlist_node_t {
   struct mlist_node_t *next;
-  struct snet_moninfo_t *moninfo;
+  snet_moninfo_t *moninfo;
 };
 
 
@@ -183,7 +183,7 @@ void SNetThreadingMonitoringCleanup(void)
 
 
 
-void SNetThreadingMonitoringAppend(struct snet_moninfo_t *moninfo)
+void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo)
 {
   assert(moninfo != NULL);
 
@@ -208,7 +208,7 @@ static void *MonitorThread(void *arg)
 
   while(1) { /* MAIN EVENT LOOP */
     mlist_node_t *node = NULL;
-    struct snet_moninfo_t *moninfo=NULL;
+    snet_moninfo_t *moninfo=NULL;
 
     /* read from the queue */
     node = DequeueWait();
@@ -230,7 +230,7 @@ static void *MonitorThread(void *arg)
     }
 
     /* destroy the moninfo */
-    //FIXME SNetMoninfoDestroy(moninfo);
+    SNetMonInfoDestroy(moninfo);
 
   } /* END MAIN LOOP */
 
