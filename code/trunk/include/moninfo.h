@@ -66,7 +66,6 @@ typedef char* snet_add_moninfo_rec_data_t;
 typedef struct {
   snet_moninfo_id_t id;
   snet_monid_list_t *parent_ids;
-  unsigned int time;  /* time stamp of monitoring e */
   snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
 } snet_moninfo_record_t;
 
