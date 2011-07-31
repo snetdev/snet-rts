@@ -230,7 +230,7 @@ static void *MonitorThread(void *arg)
     }
 
     /* destroy the moninfo */
-    //FIXME SNetMoninfoDestroy(moninfo);
+    SNetMoninfoDestroy(moninfo);
 
   } /* END MAIN LOOP */
 

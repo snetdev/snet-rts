@@ -23,7 +23,7 @@ struct mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid,
 
 
 void SNetThreadingMonEvent(struct mon_task_t *mt,
-    snet_threading_event_t evt);
+    snet_moninfo_t *moninfo);
 
 
 

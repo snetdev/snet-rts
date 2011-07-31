@@ -225,6 +225,10 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
     SNetUtilDebugFatal("Unknown monitoring information description. [%d]", descr);
   } /* switch (descr) */
   va_end( args);
+
+
+  /* Pass the moninfo to the threading layer */
+  SNetThreadingEventSignal(mon);
 }
 
 
