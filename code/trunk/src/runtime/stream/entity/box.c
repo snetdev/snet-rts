@@ -91,8 +91,10 @@ static void BoxTask(void *arg)
         SNetDebugTimeGetTime(&time_in);
 #endif /* SNET_DEBUG_COUNTERS */
 
-        /* Emit a monitoring message of a record written by a box */
+#ifdef MONINFO_USE_RECORD_EVENTS
+        /* Emit a monitoring message of a record read to be processed by a box */
         if (SNetRecGetDescriptor(rec) == REC_data) SNetMonInfoEvent( EV_BOX_START, MON_RECORD, rec);
+#endif
 
         (*barg->boxfun)( &hnd);
 

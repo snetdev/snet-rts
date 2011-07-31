@@ -171,8 +171,10 @@ static void SyncBoxTask(void *arg)
             if (!partial_sync) {
               partial_sync = true;
 
+#ifdef MONINFO_USE_RECORD_EVENTS
               /* Emit a monitoring message of first record entering syncro cell */
               SNetMonInfoEvent( EV_SYNC_FIRST, MON_RECORD, rec);
+#endif
 
             }
           }
@@ -187,8 +189,10 @@ static void SyncBoxTask(void *arg)
           snet_variant_t *outtype;
 #endif
 
+#ifdef MONINFO_USE_RECORD_EVENTS
           /* Emit a monitoring message of firing syncro cell */
           SNetMonInfoEvent( EV_SYNC_FIRE, MON_RECORD, syncrec, num_patterns, storage, &dummy);
+#endif
 
           /* this is the last sync */
           SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));

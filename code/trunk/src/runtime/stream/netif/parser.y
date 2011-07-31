@@ -270,8 +270,10 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 			SNetRecSetDataMode(current.record, MODE_textual);
 		      }
 
+#ifdef MONINFO_USE_RECORD_EVENTS
 		      /* Emit a monitoring message of a record read from input */
 		      SNetMonInfoEvent( EV_INPUT_ARRIVE, MON_RECORD, current.record);
+#endif
 
 		    }
 		  }else if(strcmp(attr->value, SNET_REC_COLLECT) == 0){

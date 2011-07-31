@@ -18,7 +18,6 @@
 #include "debug.h"
 #include "string.h"
 
-
 static unsigned int moninfo_local_id = 0; /* sequence number to create ids */
 
 
@@ -160,6 +159,7 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           }
         break;
         case EV_BOX_START:
+        case EV_FILTER_START:
         case EV_SYNC_FIRST:
           /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
           /* action: create moninfo data */
@@ -172,6 +172,7 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           }
           break;
         case EV_BOX_WRITE:
+        case EV_FILTER_WRITE:
           /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr, snet_record_t*, snet_record_t* ) */
           /* action: set single parent_id in record and create moninfo data */
           {

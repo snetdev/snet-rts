@@ -16,6 +16,7 @@
 
 /* currently location vector + 1 local id (FIXME: couple with generic location vector) */
 #define SNET_MONINFO_ID_VEC_SIZE 3
+#define MONINFO_USE_RECORD_EVENTS  /* enable processing of record events */
 
 typedef enum moninfo_event snet_moninfo_event_t;
 typedef enum moninfo_descr snet_moninfo_descr_t;
@@ -46,7 +47,9 @@ enum moninfo_event {
   EV_INPUT_ARRIVE=0,
   EV_BOX_START,
   EV_BOX_WRITE,
-  EV_BOX_FINISH,
+  EV_BOX_FINISH, /* not yet used, because its not a record event */
+  EV_FILTER_START,
+  EV_FILTER_WRITE,
   EV_SYNC_FIRST,
   EV_SYNC_FIRE,
 };
