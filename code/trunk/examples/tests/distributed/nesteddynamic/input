@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" >
+  <tag label="done">1</tag>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" >
+  <tag label="done">1</tag>
+</record>
+<record type="terminate" />

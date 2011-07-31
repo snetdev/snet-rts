@@ -1,0 +1,26 @@
+<metadata>
+  <default>
+    <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+net nesteddynamic {
+  net buggy {
+    net rename
+    connect [{<T>} -> if <T==1> then {<S=T>} else {<T>}];
+
+    net finished
+    connect [{<done>} -> {<done=1>}];
+
+    net sCase {
+      net sCounter
+      connect [{<S>} -> if <S<100> then {<S=S+1>} else {<done=0>}];
+    } connect (sCounter | (finished@2))*{<done>} if <done==1>;
+
+    net tCase {
+      net tCounter
+      connect [{<T>} -> if <T<100> then {<T=T+1>} else {<done=0>}];
+    } connect (tCounter | (finished@1))*{<done>} if <done==1>;
+
+  } connect rename .. (sCase | tCase);
+} connect buggy!@<T>;
