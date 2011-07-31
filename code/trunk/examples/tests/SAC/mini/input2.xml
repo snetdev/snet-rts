@@ -1,7 +1,7 @@
 <record xmlns="snet-home.org" type="data" mode="textual">
 <field label="A" interface="SAC4SNet">
 :::SACFIBRE: float 1 2  :::
-input2a.inp
+inputs/input2a.inp
 </field>
 </record>
 
