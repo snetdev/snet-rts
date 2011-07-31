@@ -55,7 +55,7 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
   int i, name, value;
   void *field;
   snet_variant_t *pattern;
-  snet_record_t *result = storage[0];
+  snet_record_t *result = SNetRecCopy(storage[0]);
   snet_copy_fun_t copyfun;
 
   LIST_ENUMERATE(patterns, pattern, i)
@@ -73,14 +73,21 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
             SNetRecSetTag(result, name, value);
         }
       END_FOR
-
-      if (storage[i] != NULL) {
-        SNetRecDestroy(storage[i]);
-      }
     }
   END_ENUMERATE
 
   return result;
+}
+
+static void FreeStorage(snet_record_t **storage, int num_patterns)
+{
+  int i;
+  /* free records in storage */
+  for(i=0; i<num_patterns; i++) {
+    if (storage[i] != NULL) {
+      SNetRecDestroy(storage[i]);
+    }
+  }
 }
 
 
@@ -184,18 +191,20 @@ static void SyncBoxTask(void *arg)
         if (new_matches == 0) {
           SNetStreamWrite( outstream, rec);
         } else if (match_cnt == num_patterns) {
-          snet_record_t *syncrec;
 #ifdef SYNC_SEND_OUTTYPES
           snet_variant_t *outtype;
 #endif
+          snet_record_t *syncrec = MergeFromStorage( storage, sarg->patterns);
 
 #ifdef MONINFO_USE_RECORD_EVENTS
           /* Emit a monitoring message of firing syncro cell */
           SNetMonInfoEvent( EV_SYNC_FIRE, MON_RECORD, syncrec, num_patterns, storage, &dummy);
 #endif
 
+          FreeStorage( storage, num_patterns);
+
           /* this is the last sync */
-          SNetStreamWrite( outstream, MergeFromStorage( storage, sarg->patterns));
+          SNetStreamWrite( outstream, syncrec);
 
           /* follow by a sync record */
           syncrec = SNetRecCreate(REC_sync, sarg->input);

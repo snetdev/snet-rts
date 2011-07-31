@@ -197,7 +197,6 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
            *                            ) */
           /* action: set parent_id_list in record and create moninfo data */
           {
-            snet_record_t *rec = va_arg( args, snet_record_t *);
             int num_patterns = va_arg( args, int);
             snet_record_t **storage = va_arg( args, snet_record_t **);
             snet_record_t *dummy = va_arg( args, snet_record_t *);

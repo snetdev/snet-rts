@@ -130,7 +130,8 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
       SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
       DATA_REC( new_rec, id) = SNetMonInfoCreateID();  /* system-wide unique id */
-      DATA_REC( new_rec, parent_ids) = SNetMonInfoIdListCopy(DATA_REC( rec, parent_ids)); /* ids of parent records */
+      DATA_REC( new_rec, parent_ids) = (DATA_REC( rec, parent_ids)==NULL) ?
+        NULL : SNetMonInfoIdListCopy(DATA_REC( rec, parent_ids)); /* ids of parent records */
       DATA_REC( new_rec, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
 
       break;
@@ -448,7 +449,7 @@ void SNetRecSerialise( snet_record_t *rec, void (*serialise)(int, int*))
 snet_record_t *SNetRecDeserialise( void (*deserialise)(int, int*))
 {
   int enumConversion;
-  snet_record_t *result;
+  snet_record_t *result = NULL;
 
   deserialise(1, &enumConversion);
   switch (enumConversion) {
