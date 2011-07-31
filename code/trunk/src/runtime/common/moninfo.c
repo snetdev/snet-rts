@@ -164,14 +164,9 @@ void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,...
           /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
           /* action: create moninfo data */
           {
-            snet_monid_list_t *parent_id_list = SNetMonInfoIdListCopy( DATA_REC( rec, parent_ids));
-            snet_add_moninfo_rec_data_t add_data;
-            if (DATA_REC( rec, add_moninfo_rec_data) != NULL) {
-                add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
-            }
-            else {
-                add_data = NULL;
-            }
+            snet_monid_list_t *parent_id_list = (DATA_REC( rec, parent_ids) != NULL) ?
+                SNetMonInfoIdListCopy( DATA_REC( rec, parent_ids)) : NULL;
+            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
 
             mon = SNetMonInfoCreate ( event, descr, DATA_REC( rec, id), parent_id_list, add_data);
           }
