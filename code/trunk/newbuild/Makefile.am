@@ -111,24 +111,26 @@ BUILT_SOURCES = src/runtime/stream/netif/parser.h
 AM_YFLAGS = -d
 
 libtbpthread_la_SOURCES = \
-	src/threading/pthread/entity.c \
-	src/threading/pthread/entity.h \
-	src/threading/pthread/stream.c \
-	src/threading/pthread/stream.h \
-	src/threading/pthread/monitorer.c \
-	src/threading/pthread/monitorer.h
+	src/threading/pthread/tbpth/entity.c \
+	src/threading/pthread/tbpth/entity.h \
+	src/threading/pthread/tbpth/stream.c \
+	src/threading/pthread/tbpth/stream.h \
+	src/threading/pthread/tbpth/monitorer.c \
+	src/threading/pthread/tbpth/monitorer.h
 
 if HAVE_LPEL
 pkglib_LTLIBRARIES += libtblpel.la 
 libtblpel_la_SOURCES = \
-	src/threading/lpel/assign.c \
-	src/threading/lpel/assign.h \
-	src/threading/lpel/glue_snet.c \
-	src/threading/lpel/lpel4snet.h \
-	src/threading/lpel/mon_snet.c \
-	src/threading/lpel/mon_snet.h \
-	src/threading/lpel/tblpel.h
-libtblpel_la_CPPFLAGS = $(AM_CPPFLAGS) $(LPEL_INCLUDES)
+	src/threading/lpel/lpelmod/assign.c \
+	src/threading/lpel/lpelmod/assign.h \
+	src/threading/lpel/lpelmod/mon_snet.c \
+	src/threading/lpel/lpelmod/mon_snet.h \
+	src/threading/lpel/lpelif/glue_snet.c \
+	src/threading/lpel/lpelif/wrappers.c 
+libtblpel_la_CPPFLAGS = \
+        $(AM_CPPFLAGS) \
+        $(LPEL_INCLUDES) \
+        -I$(srcdir)/src/threading/lpel/lpelmod
 libtblpel_la_LIBADD = $(LIBLPEL_LA)
 endif
 
@@ -150,13 +152,13 @@ libdistribnodist_la_SOURCES = \
 	src/distrib/nodist/distribution.c
 
 if HAVE_MPI
-pkglib_LTLIBRARIES += libdistribmpi.la 
+pkglib_LTLIBRARIES += libdistribmpi.la
 libdistribmpi_la_SOURCES = \
 	src/distrib/mpi/distribmap.c \
 	src/distrib/mpi/distribmap.h \
 	src/distrib/mpi/distribution.c \
 	src/distrib/mpi/imanager.c \
-	src/distrib/mpi/omanager.c
+	src/distrib/mpi/omanager.c 
 libdistribmpi_la_CC = $(MPICC)
 libdistribmpi_la_LIBADD = $(MPILIBS)
 endif
