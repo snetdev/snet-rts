@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 #include "memfun.h"
 #include "moninfo.h"
@@ -17,7 +18,8 @@
 
 struct mlist_node_t {
   struct mlist_node_t *next;
-  snet_moninfo_t *moninfo;
+  snet_moninfo_t      *moninfo;
+  struct timeval       timestamp;
 };
 
 
@@ -38,8 +40,27 @@ static pthread_mutex_t free_list_lock;
 static pthread_t mon_thread;
 
 static FILE *mon_file;
+static struct timeval mon_reftime;
 
 static void *MonitorThread(void *arg);
+
+
+static inline void GetTimestamp(struct timeval *t)
+{
+  struct timeval now;
+
+  t->tv_sec  = mon_reftime.tv_sec;
+  t->tv_usec = mon_reftime.tv_usec;
+
+  gettimeofday(&now, NULL);
+  if (now.tv_usec < mon_reftime.tv_usec) {
+    now.tv_usec -= 1000000L;
+    now.tv_sec  += 1L;
+  }
+  t->tv_usec = now.tv_usec - t->tv_usec;
+  t->tv_sec  = now.tv_sec  - t->tv_sec;
+
+}
 
 
 static mlist_node_t *GetFree(void)
@@ -151,6 +172,9 @@ void SNetThreadingMonitoringInit(char *fname)
   mon_file = fopen(fname, "w");
   assert(mon_file != NULL);
 
+  /* get reference time */
+  gettimeofday(&mon_reftime, NULL);
+
   /* Spawn the monitoring thread */
   (void) pthread_create( &mon_thread, NULL, MonitorThread, NULL/*arg*/);
   //(void) pthread_detach( mon_thread );
@@ -191,10 +215,22 @@ void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo)
 
   /* set the data */
   node->moninfo = moninfo;
+  /* get current timestamp */
+  GetTimestamp(&node->timestamp);
 
   EnqueueSignal(node);
 }
 
+
+
+static void ProcessMonInfo(snet_moninfo_t *moninfo, struct timeval *timestamp)
+{
+  fprintf(mon_file,
+      "%lu.%06lu %p\n",
+      timestamp->tv_sec, timestamp->tv_usec,
+      moninfo
+      );
+}
 
 
 /**
@@ -204,11 +240,10 @@ void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo)
  */
 static void *MonitorThread(void *arg)
 {
-  /* initialize */
+  mlist_node_t *node = NULL;
+  snet_moninfo_t *moninfo = NULL;
 
   while(1) { /* MAIN EVENT LOOP */
-    mlist_node_t *node = NULL;
-    snet_moninfo_t *moninfo=NULL;
 
     /* read from the queue */
     node = DequeueWait();
@@ -216,18 +251,17 @@ static void *MonitorThread(void *arg)
     /* processed all requests and termination signalled */
     if (node==NULL) break;
 
-    /* store the moninfo locally */
+    /* now process the moninfo */
+    ProcessMonInfo(node->moninfo, &node->timestamp);
+
+    /* local copy, to be able to free the node
+     * before destroying moninfo
+     */
     moninfo = node->moninfo;
 
     /* free node */
     node->moninfo = NULL;
     PutFree(node);
-
-    /* now process the moninfo */
-    {
-      //FIXME
-      fprintf(mon_file, "Moninfo %p\n", moninfo);
-    }
 
     /* destroy the moninfo */
     SNetMonInfoDestroy(moninfo);
