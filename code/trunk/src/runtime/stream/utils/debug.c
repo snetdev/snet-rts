@@ -61,7 +61,7 @@ static void PrintDebugMessage(char *msg, char *category,
     ret = snprintf(temp, len, "(SNET %s (NODE %d THREAD %lu) ",
         category,
         SNetDistribGetNodeId(),
-        pthread_self()
+        (unsigned long) pthread_self()
         );
     CheckAndUpdate( &ret, &len, &num);
   }
