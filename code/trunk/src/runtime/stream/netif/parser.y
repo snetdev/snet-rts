@@ -27,6 +27,7 @@
 #include "memfun.h"
 #include "snetentities.h"
 #include "constants.h"
+#include "moninfo.h"
 #include "debug.h"
 
 #include "threading.h"
@@ -268,6 +269,10 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      else {
 			SNetRecSetDataMode(current.record, MODE_textual);
 		      }
+
+		      /* Emit a monitoring message of a record read from input */
+		      SNetMonInfoEvent( EV_INPUT_ARRIVE, MON_RECORD, current.record);
+
 		    }
 		  }else if(strcmp(attr->value, SNET_REC_COLLECT) == 0){
 		    SNetUtilDebugFatal("Input of REC_collect not implemented!");

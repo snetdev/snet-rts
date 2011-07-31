@@ -40,6 +40,7 @@ typedef struct {
 #undef LIST_NAME_H
 
 enum moninfo_event {
+  EV_INPUT_ARRIVE,
   EV_BOX_START,
   EV_BOX_WRITE,
   EV_BOX_FINISH,
