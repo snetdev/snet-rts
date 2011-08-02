@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "parser.h"
+#include "parserutils.h"
 #include "label.h"
 #include "interface.h"
 #include "memfun.h"

@@ -14,13 +14,19 @@ net nesteddynamic {
 
     net sCase {
       net sCounter
-      connect [{<S>} -> if <S<100> then {<S=S+1>} else {<done=0>}];
-    } connect (sCounter | (finished@2))*{<done>} if <done==1>;
+      connect [{<S>} -> if <S<3> then {<S=S+1>} else {<Sdone=0>}];
+
+      net sFinished
+      connect [{<Sdone>} -> {<Sdone=1>}];
+    } connect (sCounter | (sFinished@2))*{<Sdone>} if <Sdone==1>;
 
     net tCase {
       net tCounter
-      connect [{<T>} -> if <T<100> then {<T=T+1>} else {<done=0>}];
-    } connect (tCounter | (finished@1))*{<done>} if <done==1>;
+      connect [{<T>} -> if <T<4> then {<T=T+1>} else {<Tdone=0>}];
+
+      net tFinished
+      connect [{<Tdone>} -> {<Tdone=1>}];
+    } connect (tCounter | (tFinished@1))*{<Tdone>} if <Tdone==1>;
 
   } connect rename .. (sCase | tCase);
 } connect buggy!@<T>;

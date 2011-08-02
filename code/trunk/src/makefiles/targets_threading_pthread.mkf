@@ -1,0 +1,51 @@
+#
+# $Id$
+#
+#
+
+
+###############################################################################
+#
+# Collection of targets
+#
+
+targets_pthread_devel     := libtbpthread.so
+targets_pthread_prod      := libtbpthread.prod.so
+targets_pthread_default   := $(targets_pthread_devel)
+
+
+###############################################################################
+#
+# Collection of target directories
+#
+
+targetdir_pthread         := lib
+
+
+###############################################################################
+#
+# Collection of additional files to be cleaned
+#
+
+clean_pthread             :=
+clean_pthread_devel       :=
+clean_pthread_prod        :=
+
+
+###############################################################################
+#
+# Collection of source directories
+#
+
+pthread      = tbpth
+
+
+###############################################################################
+#
+# Collection of util object files
+#
+# Note that the variable names must coincide with the directory names above.
+#
+
+tbpth = entity.o stream.o streamset.o monitorer.o
+

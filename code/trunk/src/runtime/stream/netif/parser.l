@@ -17,7 +17,11 @@
 
 %{
 #include <string.h>
+#ifdef OLD_BUILD_SYSTEM
 #include "parser.tab.h"
+#else
+#include "parser.h"
+#endif
 #include <memfun.h>
 
 #define LINEBUF_SIZE 256

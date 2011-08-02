@@ -596,6 +596,7 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+MAKE_LPEL
 MAKEDISTR
 SCHEDFLAGS
 LD_FLAGS
@@ -5515,111 +5516,6 @@ fi
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing cap_get_proc" >&5
-$as_echo_n "checking for library containing cap_get_proc... " >&6; }
-if test "${ac_cv_search_cap_get_proc+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char cap_get_proc ();
-int
-main ()
-{
-return cap_get_proc ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' cap; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_cap_get_proc=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_cap_get_proc+set}" = set; then :
-  break
-fi
-done
-if test "${ac_cv_search_cap_get_proc+set}" = set; then :
-
-else
-  ac_cv_search_cap_get_proc=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_cap_get_proc" >&5
-$as_echo "$ac_cv_search_cap_get_proc" >&6; }
-ac_res=$ac_cv_search_cap_get_proc
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  LIB_CAP="-lcap"
-
-else
-  LIB_CAP=""
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for co_create in -lpcl" >&5
-$as_echo_n "checking for co_create in -lpcl... " >&6; }
-if test "${ac_cv_lib_pcl_co_create+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpcl -lpthread
-     $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char co_create ();
-int
-main ()
-{
-return co_create ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pcl_co_create=yes
-else
-  ac_cv_lib_pcl_co_create=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pcl_co_create" >&5
-$as_echo "$ac_cv_lib_pcl_co_create" >&6; }
-if test "x$ac_cv_lib_pcl_co_create" = x""yes; then :
-  LIB_PCL="-lpcl"
-
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"Cannot find libpcl (GNU Portable Coroutine Library).\"" >&5
-$as_echo "$as_me: WARNING: \"Cannot find libpcl (GNU Portable Coroutine Library).\"" >&2;}
-fi
-
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking compiler flags" >&5
 $as_echo_n "checking compiler flags... " >&6; }
@@ -5919,6 +5815,23 @@ else
 $as_echo "yes" >&6; }
   MAKEDISTR="yes"
 
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if LPELROOT is set" >&5
+$as_echo_n "checking if LPELROOT is set... " >&6; }
+if test "`echo $LPELROOT`" = ""; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  MAKE_LPEL="no"
+
+else
+
+$as_echo "#define HAVE_LPEL 1" >>confdefs.h
+
+  MAKE_LPEL="yes"
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: $LPELROOT" >&5
+$as_echo "yes: $LPELROOT" >&6; }
 fi
 
 

@@ -38,6 +38,12 @@
 int SNetThreadingInit(int argc, char **argv);
 
 
+/**
+ * Return the thread id as integer value
+ *
+ */
+unsigned int SNetThreadingGetId();
+
 
 /**
  * Stop the threading backend

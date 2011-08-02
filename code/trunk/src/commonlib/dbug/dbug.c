@@ -214,12 +214,6 @@ LOCAL char *BaseName ();       /* Remove leading pathname components */
  
 
                                /* Supplied in Sys V runtime environ */
-#ifndef HAVE_STRTOK
-LOCAL char *strtok ();         /* Break string into tokens */
-#endif
-#ifndef HAVE_STRRCHR
-LOCAL char *strrchr ();                /* Find last occurance of char */
-#endif
  
 /*
  *     The following local variables are used to hold the state information
@@ -1376,37 +1370,6 @@ LOCAL char *DbugMalloc (int size)
  
 
 /*
- *     This function may be eliminated when strtok is available
- *     in the runtime environment (missing from BSD4.1).
- */
- 
-#ifndef HAVE_STRTOK
-LOCAL char *strtok (char *s1, char *s2)
-{
-    static char *end = NULL;
-    REGISTER char *rtnval;
- 
-    rtnval = NULL;
-    if (s2 != NULL) {
-       if (s1 != NULL) {
-           end = s1;
-           rtnval = strtok ((char *) NULL, s2);
-       } else if (end != NULL) {
-           if (*end != EOS) {
-               rtnval = end;
-               while (*end != *s2 && *end != EOS) {end++;}
-               if (*end != EOS) {
-                   *end++ = EOS;
-               }
-           }
-       } 
-    }
-    return (rtnval);
-}
-#endif
- 
-
-/*
  *  FUNCTION
  *
  *     BaseName    strip leading pathname components from name
@@ -1491,27 +1454,6 @@ LOCAL BOOLEAN Writable (char *pathname)
 #endif
     return (granted);
 }
- 
-
-/*
- *     This function may be eliminated when strrchr is available
- *     in the runtime environment (missing from BSD4.1).
- *     Alternately, you can use rindex() on BSD systems.
- */
- 
-#ifndef HAVE_STRRCHR
-LOCAL char *strrchr (char *s, char c)
-{
-    REGISTER char *scan;
- 
-    for (scan = s; *scan != EOS; scan++) {;}
-    while (scan > s && *--scan != c) {;}
-    if (*scan != c) {
-       scan = NULL;
-    }
-    return (scan);
-}
-#endif
  
 
 #if 0
