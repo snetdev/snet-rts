@@ -131,7 +131,6 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc,
   if (fun != NULL) {
     parentCounter++;
     dest->parent = parentCounter;
-    dest->parentNode = loc;
     SNetDynamicMapSet(dynamicMap, parentCounter, fun);
   }
   current_node = dest->node;
@@ -170,11 +169,14 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc,
   return input;
 }
 
-void SNetRouteUpdateDynamic(snet_info_t *info, int parentIndex)
+void SNetRouteUpdateDynamic(snet_info_t *info, int parentIndex, bool start)
 {
   snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
   counter = 0;
   dest->parentIndex = parentIndex;
+  if (start) {
+    dest->parentNode = node_location;
+  }
 
   if (outputDistribInfo) {
     fprintf(stderr, "SNet (Node #%d) (dynamic):\n  Dest.dest: %d\n  Origin: %d\n  Parent: %d\n  Parent index: %d\n", node_location, dest->dest, dest->node, dest->parent, dest->parentIndex);
