@@ -72,10 +72,13 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
 
+  // set old_rec as parent of out_rec
+  SNetRecAddAsParent( out_rec, old_rec );
+
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
   SNetThreadingEventSignal(
-      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec, old_rec)
+      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec)
       );
 #endif
 
@@ -153,10 +156,12 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
 
+  SNetRecAddAsParent( out_rec, old_rec );
+
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
   SNetThreadingEventSignal(
-      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec, old_rec)
+      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec)
       );
 #endif
 

@@ -193,6 +193,7 @@ static void FilterTask(void *arg)
 
               LIST_FOR_EACH(farg->filter_instructions[i], instr_list)
                 out_rec = SNetRecCreate( REC_data);
+                SNetRecAddAsParent( out_rec, in_rec );
                 SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
                 SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
 
@@ -219,7 +220,7 @@ static void FilterTask(void *arg)
 #ifdef MONINFO_USE_RECORD_EVENTS
                 /* Emit a monitoring message of a record written by a filter */
                   SNetThreadingEventSignal(
-                      SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec, in_rec)
+                      SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec)
                       );
 #endif
 

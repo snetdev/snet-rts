@@ -59,6 +59,7 @@ AC_TRY_RUN( [
     int a = 0;
     (void) __sync_fetch_and_add(&a, 1);
     (void) __sync_fetch_and_sub(&a, 1);
+    (void) __sync_lock_test_and_set(&a, 42);
     return 0;
   }
   ],

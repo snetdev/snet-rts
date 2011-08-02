@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <assert.h>
 #include "interface_functions.h"
 #include "distribution.h"
 #include "record.h"
@@ -6,10 +7,56 @@
 #include "debug.h"
 #include "map.h"
 #include "variant.h"
+/* For some reason, config.h is not included anywhere else.
+ * But we need it for atomiccnt.h!
+ */
+#include "config.h"
+#include "atomiccnt.h"
 
-
+static snet_atomiccnt_t recid_sequencer = SNET_ATOMICCNT_INITIALIZER(0);
 
 /* ***************************************************************************/
+
+/* defines the snet_recid_list_t */
+#define LIST_NAME RecId /* SNetRecIdListFUNC */
+#define LIST_TYPE_NAME recid
+#define LIST_VAL snet_record_id_t
+#define LIST_CMP SNetRecordIdEquals
+#include "list-template.c"
+#undef LIST_CMP
+#undef LIST_VAL
+#undef LIST_TYPE_NAME
+#undef LIST_NAME
+
+
+/*****************************************************************************
+ * Helper functions
+ ****************************************************************************/
+static void GenerateRecId(snet_record_id_t *rid)
+{
+  assert( SNET_REC_SUBID_NUM == 2 );
+  rid->subid[0] = SNetAtomicCntFetchAndInc(&recid_sequencer);
+  rid->subid[1] = SNetDistribGetNodeId();
+}
+
+/*****************************************************************************
+ * Compares two record ids
+ ****************************************************************************/
+bool SNetRecordIdEquals (snet_record_id_t rid1, snet_record_id_t rid2)
+{
+   bool res = true;
+   /* determine array size */
+   int i;
+   for (i=0; i<SNET_REC_SUBID_NUM; i++) {
+       if (rid1.subid[i] != rid2.subid[i]) {
+           res = false;
+           break;
+       }
+   }
+   return res;
+}
+
+
 
 bool SNetRecPatternMatches(snet_variant_t *pat, snet_record_t *rec)
 {
@@ -74,9 +121,8 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       DATA_REC( rec, tags) = SNetIntMapCreate(0);
       DATA_REC( rec, fields) = SNetVoidMapCreate(0);
       DATA_REC( rec, mode) = MODE_binary;
-      DATA_REC( rec, id) = SNetMonInfoCreateID();
-      DATA_REC( rec, parent_ids) = NULL;
-      DATA_REC( rec, add_moninfo_rec_data) = NULL;
+      GenerateRecId( &DATA_REC( rec, rid) );
+      DATA_REC( rec, parent_rids) = NULL;
       DATA_REC( rec, interface_id) = 0;
       break;
     case REC_trigger_initialiser:
@@ -129,11 +175,11 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       DATA_REC( new_rec, btags) = SNetIntMapCopy( DATA_REC( rec, btags));
       SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
       SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
-      DATA_REC( new_rec, id) = SNetMonInfoCreateID();  /* system-wide unique id */
-      DATA_REC( new_rec, parent_ids) = (DATA_REC( rec, parent_ids)==NULL) ?
-        NULL : SNetMonInfoIdListCopy(DATA_REC( rec, parent_ids)); /* ids of parent records */
-      DATA_REC( new_rec, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
-
+      DATA_REC( new_rec, parent_rids) = NULL;
+      /*
+      (DATA_REC( rec, parent_rids)==NULL) ?
+        NULL : SNetRecIdListCopy(DATA_REC( rec, parent_rids));
+      */
       break;
     case REC_sort_end:
       new_rec = SNetRecCreate( REC_DESCR( rec),  SORT_E_REC( rec, level),
@@ -165,8 +211,7 @@ void SNetRecDestroy( snet_record_t *rec)
       SNetVoidMapDestroy( DATA_REC( rec, fields));
       SNetIntMapDestroy( DATA_REC( rec, tags));
       SNetIntMapDestroy( DATA_REC( rec, btags));
-      if (DATA_REC( rec, parent_ids) != NULL) SNetMonInfoIdListDestroy( DATA_REC( rec, parent_ids));
-      if (DATA_REC( rec, add_moninfo_rec_data) != NULL) SNetMemFree( DATA_REC( rec, add_moninfo_rec_data));
+      if (DATA_REC( rec, parent_rids) != NULL) SNetRecIdListDestroy( DATA_REC( rec, parent_rids));
       SNetMemFree( RECORD( rec, data_rec));
       break;
     case REC_sync:
@@ -408,6 +453,85 @@ void SNetRecRenameField( snet_record_t *rec, int oldName, int newName)
 {
   SNetVoidMapRename(DATA_REC( rec, fields), oldName, newName);
 }
+
+/*****************************************************************************/
+
+void SNetRecIdGet(snet_record_id_t *id, snet_record_t *from)
+{
+  if (REC_DESCR( from) != REC_data) {
+    SNetUtilDebugFatal("SNetRecIdGet only accepts data records (%d)",
+                       REC_DESCR(from));
+  }
+  *id = DATA_REC(from, rid);
+}
+
+snet_recid_list_t *SNetRecGetParentListCopy(snet_record_t *rec)
+{
+  snet_recid_list_t *parents;
+  if (REC_DESCR( rec) != REC_data) {
+    SNetUtilDebugFatal("SNetRecGetParentListCopy only accepts data records (%d)",
+                       REC_DESCR(rec));
+  }
+  parents = DATA_REC( rec, parent_rids);
+  return (parents!=NULL) ? SNetRecIdListCopy(parents) : NULL;
+}
+
+#if 0
+void SNetRecAddParentsOf(snet_record_t *rec, snet_record_t *of)
+{
+  snet_record_id_t par_id;
+  snet_recid_list_t *parents;
+  if (REC_DESCR( rec) != REC_data) {
+    SNetUtilDebugFatal("SNetRecAddParentsOf only accepts data records (%d)",
+                       REC_DESCR(rec));
+  }
+
+  parents = DATA_REC( rec, parent_rids);
+  if ( DATA_REC(of, parent_rids) == NULL) {
+    /* nothing to do */
+    return;
+  }
+  /* create the list if needed */
+  if (parents == NULL) {
+    parents = SNetRecIdListCreate(0);
+    DATA_REC(rec, parent_rids) = parents;
+  }
+
+  /* for all parent ids of the other record: */
+  LIST_FOR_EACH( DATA_REC( of, parent_rids), par_id)
+    /* only add if not already contained in own parents */
+    if (!SNetRecIdListContains(parents, par_id)) {
+      SNetRecIdListAppend(parents, par_id);
+    }
+  END_FOR
+}
+#endif
+
+void SNetRecAddAsParent(snet_record_t *rec, snet_record_t *parent)
+{
+  snet_record_id_t par_id;
+  snet_recid_list_t *parents;
+
+  if (REC_DESCR( rec) != REC_data) {
+    SNetUtilDebugFatal("SNetRecAddAsParent only accepts data records (%d)",
+                       REC_DESCR(rec));
+  }
+
+  par_id = DATA_REC(parent, rid);
+  parents = DATA_REC( rec, parent_rids);
+
+  /* create the list with the single parent if needed */
+  if (parents == NULL) {
+    parents = SNetRecIdListCreate(1, par_id);
+    DATA_REC(rec, parent_rids) = parents;
+  } else {
+    /* only add if not already contained in parents */
+    if (!SNetRecIdListContains(parents, par_id)) {
+      SNetRecIdListAppend(parents, par_id);
+    }
+  }
+}
+
 
 /*****************************************************************************/
 

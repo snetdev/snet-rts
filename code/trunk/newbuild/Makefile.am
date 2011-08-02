@@ -61,7 +61,6 @@ libruntimestream_la_SOURCES = \
 	src/runtime/common/moninfo.c \
 	src/runtime/common/record.c \
 	src/runtime/common/variant.c \
-        src/runtime/stream/utils/atomiccnt.c \
         src/runtime/stream/utils/bitmap.c \
         src/runtime/stream/utils/bitmap.h \
         src/runtime/stream/utils/debug.c \

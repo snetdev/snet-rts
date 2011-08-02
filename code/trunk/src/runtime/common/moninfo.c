@@ -19,14 +19,6 @@
 #include "debug.h"
 #include "string.h"
 
-/*
- * FIXME: introduces false sharing.
- * better: get thread specific sequence ids
- * Thread-unsafe, but we don't care, as IDs are
- * composed by a task-specific id additionally
- * anyways.
- */
-static unsigned int moninfo_local_id = 0; /* sequence number to create ids */
 
 
 /**
@@ -49,16 +41,6 @@ static const char *names_descr[] = {
   "MON_RECORD",
 };
 
-#define LIST_NAME MonInfoId /* SNetMonInfoIdListFUNC */
-#define LIST_TYPE_NAME monid
-#define LIST_VAL snet_moninfo_id_t
-#define LIST_CMP SNetMonInfoCmpID
-#include "list-template.c"
-#undef LIST_CMP
-#undef LIST_VAL
-#undef LIST_TYPE_NAME
-#undef LIST_NAME
-
 
 
 /**
@@ -80,14 +62,10 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
           /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
           /* action: create minimal moninfo data (no parents) */
           {
-            snet_moninfo_id_t newid = SNetMonInfoCreateID();
-            /* FIXME this should be set via the record interface! */
-            DATA_REC( rec, id) = newid;
-            DATA_REC( rec, parent_ids) = NULL;
             /* initialize fields */
-            REC_MONINFO( mon, id) = newid;
-            REC_MONINFO( mon, parent_ids) = NULL;
-            REC_MONINFO( mon, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
+            SNetRecIdGet( &REC_MONINFO( mon, id), rec);
+            REC_MONINFO( mon, parent_ids) = SNetRecGetParentListCopy(rec);
+            REC_MONINFO( mon, add_moninfo_rec_data) = NULL; /*FIXME*/
           }
           break;
         case EV_BOX_START:
@@ -96,9 +74,9 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
           /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
           /* action: create moninfo data */
           {
-            REC_MONINFO( mon, id) = DATA_REC( rec, id);
-            REC_MONINFO( mon, parent_ids) = (DATA_REC( rec, parent_ids) != NULL) ?  SNetMonInfoIdListCopy( DATA_REC( rec, parent_ids)) : NULL;
-            REC_MONINFO( mon, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
+            SNetRecIdGet( &REC_MONINFO( mon, id), rec);
+            REC_MONINFO( mon, parent_ids) = SNetRecGetParentListCopy(rec);
+            REC_MONINFO( mon, add_moninfo_rec_data) = NULL; /*FIXME*/
           }
           break;
         case EV_BOX_WRITE:
@@ -106,18 +84,10 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
           /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr, snet_record_t*, snet_record_t* ) */
           /* action: set single parent_id in record and create moninfo data */
           {
-            snet_record_t *parent_rec = va_arg( args, snet_record_t *);
-            snet_moninfo_id_t newid = SNetMonInfoCreateID();
-            snet_monid_list_t *parent_id_list = SNetMonInfoIdListCreate(1, parent_rec); 
+            SNetRecIdGet( &REC_MONINFO( mon, id), rec);
+            REC_MONINFO( mon, parent_ids) = SNetRecGetParentListCopy(rec);
+            REC_MONINFO( mon, add_moninfo_rec_data) = NULL; /*FIXME*/
 
-            /* set the parent id of the record */
-            /* FIXME this should be set via the record interface! */
-            DATA_REC( rec, parent_ids) = SNetMonInfoIdListCopy(parent_id_list);
-            DATA_REC( rec, id) = newid;
-            /* initialize fields */
-            REC_MONINFO( mon, id) = newid;
-            REC_MONINFO( mon, parent_ids) = parent_id_list;
-            REC_MONINFO( mon, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
           }
           break;
         case EV_SYNC_FIRE:
@@ -130,6 +100,7 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
            *                            ) */
           /* action: set parent_id_list in record and create moninfo data */
           {
+            /*
             int num_patterns = va_arg( args, int);
             snet_record_t **storage = va_arg( args, snet_record_t **);
             snet_record_t *dummy = va_arg( args, snet_record_t *);
@@ -143,13 +114,10 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
                 SNetMonInfoIdListAppend(parent_id_list, DATA_REC( storage[i], id));
               }
             }
-            /* set the parent id of the record */
-            DATA_REC( rec, parent_ids) = SNetMonInfoIdListCopy(parent_id_list);
-            DATA_REC( rec, id) = newid;
-            /* initialize fields */
-            REC_MONINFO( mon, id) = newid;
-            REC_MONINFO( mon, parent_ids) = parent_id_list;
-            REC_MONINFO( mon, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData( DATA_REC( rec, add_moninfo_rec_data));
+            */
+            SNetRecIdGet( &REC_MONINFO( mon, id), rec);
+            REC_MONINFO( mon, parent_ids) = SNetRecGetParentListCopy(rec);
+            REC_MONINFO( mon, add_moninfo_rec_data) = NULL; /*FIXME*/
           }
           break;
         case EV_BOX_FINISH:
@@ -201,8 +169,12 @@ void SNetMonInfoDestroy( snet_moninfo_t *mon)
 {
   switch (MONINFO_DESCR( mon)) {
   case MON_RECORD:
-    if (REC_MONINFO( mon, parent_ids) != NULL) SNetMonInfoIdListDestroy( REC_MONINFO( mon, parent_ids));
-    if (REC_MONINFO( mon, add_moninfo_rec_data) != NULL) SNetMemFree( REC_MONINFO( mon, add_moninfo_rec_data));
+    if (REC_MONINFO( mon, parent_ids) != NULL) {
+      SNetRecIdListDestroy( REC_MONINFO( mon, parent_ids));
+    }
+    if (REC_MONINFO( mon, add_moninfo_rec_data) != NULL) {
+      SNetMemFree( REC_MONINFO( mon, add_moninfo_rec_data));
+    }
     SNetMemFree( MONINFOPTR( mon));
     break;
   default:
@@ -211,36 +183,6 @@ void SNetMonInfoDestroy( snet_moninfo_t *mon)
   }
 }
 
-
-/*****************************************************************************
- * Create unique system-wide id
- ****************************************************************************/
-snet_moninfo_id_t SNetMonInfoCreateID(void)
-{
-  snet_moninfo_id_t id;
-  id.ids[0] = moninfo_local_id++;
-  id.ids[1] = SNetThreadingGetId();
-  id.ids[2] = 0;  /* FIXME: add code to get node id (distributed snet) */
-  return id;
-}
-
-
-/*****************************************************************************
- * Compares two monitoring information identifiers
- ****************************************************************************/
-bool SNetMonInfoCmpID (snet_moninfo_id_t monid1, snet_moninfo_id_t monid2)
-{
-   bool res = true;
-   /* determine array size */
-   int i;
-   for (i = SNET_MONINFO_ID_VEC_SIZE-1; i>=0; i--) {
-       if (monid1.ids[i] != monid2.ids[i]) {
-           res = false;
-           break;
-       }
-   }
-   return res;
-}
 
 
 /*****************************************************************************
@@ -263,16 +205,16 @@ snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_re
 
 
 
-static void PrintMonInfoId(FILE *f, snet_moninfo_id_t *id)
+static void PrintMonInfoId(FILE *f, snet_record_id_t *id)
 {
-  fprintf(f, "(%lu.%lu.%lu)",
-      id->ids[2], id->ids[1], id->ids[0]
+  fprintf(f, "(%u.%u)",
+      id->subid[1], id->subid[0]
       );
 }
 
 void SNetMonInfoPrint(FILE *f, snet_moninfo_t *mon)
 {
-  snet_moninfo_id_t par_id;
+  snet_record_id_t par_id;
 
   fprintf(f,
       "%s,%s,",

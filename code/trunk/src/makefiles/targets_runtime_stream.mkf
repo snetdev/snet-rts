@@ -54,7 +54,7 @@ entity          = filter.o syncro.o out.o box.o alias.o \
 
 utils           = debug.o bitmap.o hashtable.o queue.o \
                   debugtime.o debugcounters.o hashtab.o \
-                  locvec.o atomiccnt.o
+                  locvec.o
 
 langif          = interface_functions.o
 

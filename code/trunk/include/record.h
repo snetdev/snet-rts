@@ -21,6 +21,15 @@ enum record_mode {
 };
 
 
+#define SNET_REC_SUBID_NUM  2
+
+typedef struct {
+  int subid[SNET_REC_SUBID_NUM];
+} snet_record_id_t;
+
+
+
+
 /* macros for record datastructure */
 #define REC_DESCR( name) name->rec_descr
 #define RECPTR( name) name->rec
@@ -37,7 +46,18 @@ enum record_mode {
 #include "bool.h"
 #include "variant.h"
 #include "locvec.h"
-#include "moninfo.h"
+
+
+#define LIST_NAME_H RecId /* SNetRecIdListFUNC */
+#define LIST_TYPE_NAME_H recid
+#define LIST_VAL_H snet_record_id_t
+#include "list-template.h"
+#undef LIST_VAL_H
+#undef LIST_TYPE_NAME_H
+#undef LIST_NAME_H
+
+
+
 
 typedef struct {
   snet_int_map_t *tags;
@@ -45,9 +65,8 @@ typedef struct {
   snet_void_map_t *fields;
   int interface_id;
   snet_record_mode_t mode;
-  snet_moninfo_id_t id;  /* system-wide unique id */
-  snet_monid_list_t *parent_ids; /* ids of parent records */
-  snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
+  snet_record_id_t rid;           /* system-wide unique id */
+  snet_recid_list_t *parent_rids; /* ids of parent records */
 } data_rec_t;
 
 typedef struct {
@@ -90,6 +109,9 @@ struct record {
 
 #include "variant.h"
 #include "distribution.h"
+
+/* compares two record ids */
+bool SNetRecordIdEquals (snet_record_id_t rid1, snet_record_id_t rid2);
 
 /* returns true if the record matches the pattern. */
 bool SNetRecPatternMatches(snet_variant_t *pat, snet_record_t *rec);
@@ -136,6 +158,16 @@ void *SNetRecGetField( snet_record_t *rec, int id);
 void *SNetRecTakeField( snet_record_t *rec, int id);
 bool SNetRecHasField( snet_record_t *rec, int id);
 void SNetRecRenameField( snet_record_t *rec, int id, int newId);
+
+
+
+void SNetRecIdGet(snet_record_id_t *id, snet_record_t *from);
+snet_recid_list_t *SNetRecGetParentListCopy(snet_record_t *rec);
+#if 0
+void SNetRecAddParentsOf(snet_record_t *rec, snet_record_t *of);
+#endif
+void SNetRecAddAsParent(snet_record_t *rec, snet_record_t *parent);
+
 
 void SNetRecSerialise( snet_record_t *rec, void (*serialise)(int, int*));
 snet_record_t *SNetRecDeserialise(void (*deserialise)(int, int*));
