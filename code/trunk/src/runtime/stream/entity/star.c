@@ -99,7 +99,7 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
   snet_stream_t *starstream, *nextstream_addr;
   /* Create the stream to the instance */
   nextstream_addr = SNetStreamCreate(0);
-  SNetRouteUpdateDynamic(sarg->info, nextstream_addr, sarg->location, SNetLocvecTopval(SNetLocvecGet(sarg->info)));
+  SNetRouteUpdateDynamic(sarg->info, SNetLocvecTopval(SNetLocvecGet(sarg->info)));
   *next = SNetStreamOpen(nextstream_addr, 'w');
 
   /* Set the source of the stream to support garbage collection */

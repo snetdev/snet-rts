@@ -42,7 +42,7 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc,
     return input;
 }
 
-snet_stream_t *SNetRouteUpdateDynamic(snet_info_t *info, snet_stream_t *input, int location, int parentIndex)
+void SNetRouteUpdateDynamic(snet_info_t *info, int parentIndex)
 {
-  return input;
+  return;
 }

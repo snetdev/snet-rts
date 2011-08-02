@@ -85,11 +85,11 @@ static void SplitBoxTask(void *arg)
 
             snet_stream_t *temp_stream;
             if( sarg->is_byloc) {
-              newstream_addr = SNetRouteUpdateDynamic(info, newstream_addr, i, i);
+              SNetRouteUpdateDynamic(info, i);
               temp_stream = sarg->boxfun(newstream_addr, info, i);
               temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location, NULL);
             } else {
-              newstream_addr = SNetRouteUpdateDynamic(info, newstream_addr, sarg->location, i);
+              SNetRouteUpdateDynamic(info, i);
               temp_stream = sarg->boxfun(newstream_addr, info, sarg->location);
               temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location, NULL);
             }
