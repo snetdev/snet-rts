@@ -15,6 +15,14 @@
 #undef LIST_TYPE_NAME_H
 #undef LIST_NAME_H
 
+#define LIST_NAME_H IntList
+#define LIST_TYPE_NAME_H int_list
+#define LIST_VAL_H snet_int_list_t*
+#include "list-template.h"
+#undef LIST_VAL_H
+#undef LIST_TYPE_NAME_H
+#undef LIST_NAME_H
+
 #include "variant.h"
 
 #define LIST_NAME_H Variant

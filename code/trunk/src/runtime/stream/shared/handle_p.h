@@ -14,9 +14,10 @@ typedef struct {
 
 struct handle {
   snet_record_t *rec;
-  snet_variant_list_t *sign;
+  snet_int_list_list_t *sign;
   name_mapping_t *mapping;
   snet_stream_desc_t *out_sd;
+  snet_variant_list_t *vars;
   snet_locvec_t *boxloc;
 };
 

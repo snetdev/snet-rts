@@ -6,6 +6,7 @@
 #include "memfun.h"
 #include "locvec.h"
 #include "moninfo.h"
+#include "type.h"
 #include "threading.h"
 
 
@@ -26,9 +27,10 @@
 typedef struct {
   snet_stream_t *input, *output;
   void (*boxfun)( snet_handle_t*);
-  snet_variant_list_t *output_variants;
+  snet_int_list_list_t *output_variants;
   snet_locvec_t *myloc;
   const char *boxname;
+  snet_variant_list_t *vars;
 } box_arg_t;
 
 
@@ -67,6 +69,8 @@ static void BoxTask(void *arg)
   hnd.sign = barg->output_variants;
   /* mapping */
   hnd.mapping = NULL;
+  /* set variants */
+  hnd.vars = barg->vars; 
   /* location of box */
   hnd.boxloc = barg->myloc;
 
@@ -157,7 +161,7 @@ static void BoxTask(void *arg)
 
   /* destroy box arg */
   SNetLocvecDestroy(barg->myloc);
-  SNetVariantListDestroy(barg->output_variants);
+  SNetIntListListDestroy(barg->output_variants);
   SNetMemFree( barg);
 }
 
@@ -171,11 +175,13 @@ snet_stream_t *SNetBox( snet_stream_t *input,
                         int location,
                         const char *boxname,
                         snet_box_fun_t boxfun,
-                        snet_variant_list_t *output_variants)
+                        snet_int_list_list_t *output_variants)
 {
+  int i,j;
   snet_stream_t *output;
   box_arg_t *barg;
   snet_locvec_t *locvec;
+  snet_variant_list_t *vlist;
 
   input = SNetRouteUpdate(info, input, location, NULL);
 
@@ -183,6 +189,27 @@ snet_stream_t *SNetBox( snet_stream_t *input,
 
   if(SNetDistribIsNodeLocation(location)) {
     output = SNetStreamCreate(0);
+    vlist = SNetVariantListCreate(0);
+    for( i=0; i<SNetIntListListLength( output_variants); i++) {
+      snet_int_list_t *l = SNetIntListListGet( output_variants, i);
+      snet_variant_t *v = SNetVariantCreateEmpty();
+      for( j=0; j<SNetIntListLength( l); j+=2) {
+        switch( SNetIntListGet( l, j)) {
+          case field:
+            SNetVariantAddField( v, SNetIntListGet( l, j+1));
+            break;
+          case tag:
+            SNetVariantAddTag( v, SNetIntListGet( l, j+1));
+            break;
+          case btag:
+            SNetVariantAddBTag( v, SNetIntListGet( l, j+1));
+            break;
+          default:
+            assert(0);
+        }
+      }
+      SNetVariantListAppend( vlist, v);
+    }
 
     barg = (box_arg_t *) SNetMemAlloc( sizeof( box_arg_t));
     barg->input  = input;
@@ -190,6 +217,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->boxfun = boxfun;
     barg->output_variants = output_variants;
     barg->myloc = SNetLocvecCopy(locvec);
+    barg->vars = vlist;
     barg->boxname = boxname;
 
     SNetEntitySpawn( ENTITY_box, locvec, location,
@@ -197,7 +225,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
 
 
   } else {
-    SNetVariantListDestroy(output_variants);
+    SNetIntListListDestroy(output_variants);
     output = input;
   }
 

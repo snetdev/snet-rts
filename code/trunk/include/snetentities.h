@@ -30,7 +30,7 @@ snet_stream_t *SNetBox(snet_stream_t *instream,
     int location,
     const char *boxname,
     snet_box_fun_t fun,
-    snet_variant_list_t *out_variants);
+    snet_int_list_list_t *out_variants);
 
 
 /****************************************************************************/

@@ -12,6 +12,15 @@
 #undef LIST_TYPE_NAME
 #undef LIST_NAME
 
+#define LIST_NAME IntList
+#define LIST_TYPE_NAME int_list
+#define LIST_VAL snet_int_list_t*
+#include "list-template.c"
+#undef LIST_VAL
+#undef LIST_TYPE_NAME
+#undef LIST_NAME
+
+
 #define LIST_NAME Variant
 #define LIST_TYPE_NAME variant
 #define LIST_VAL snet_variant_t*
@@ -63,6 +72,3 @@
 #undef LIST_TYPE_NAME
 #undef LIST_NAME
 #undef LIST_FREE_FUNCTION
-
-
-

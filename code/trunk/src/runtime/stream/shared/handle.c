@@ -21,6 +21,7 @@ void SNetHndDestroy( snet_handle_t *hnd) {
     SNetMemFree( hnd->mapping->string_names);
     SNetMemFree( hnd->mapping->int_names);
   }
+  SNetVariantListDestroy( hnd->vars);
 }
 
 /**
@@ -31,11 +32,15 @@ snet_record_t *SNetHndGetRecord( snet_handle_t *hnd)
   return hnd->rec;
 }
 
-snet_variant_list_t *SNetHndGetVariants( snet_handle_t *hnd)
+snet_int_list_list_t *SNetHndGetVariants( snet_handle_t *hnd)
 {
   return hnd->sign;
 }
 
+snet_variant_list_t *SNetHndGetVariantList( snet_handle_t *hnd)
+{
+  return( hnd->vars);
+}
 
 void SNetHndSetStringNames( snet_handle_t *hnd, int num, ...)
 {

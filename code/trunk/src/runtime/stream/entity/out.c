@@ -3,7 +3,9 @@
 #include "handle_p.h"
 #include "memfun.h"
 #include "interface_functions.h"
+#include "type.h"
 
+#include <assert.h> 
 
 //#define DBG_RT_TRACE_OUT_TIMINGS
 
@@ -99,8 +101,8 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
                             va_list args)
  {
   snet_record_t *out_rec, *old_rec;
-  snet_variant_t *variant;
-  int name;
+  snet_int_list_t *variant;
+  int i, name;
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
@@ -113,27 +115,31 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
       );
 #endif
 
-
   // set values from box
   if( variant_num > 0) {
 
-    variant = SNetVariantListGet( SNetHndGetVariants( hnd), variant_num - 1);
+    variant = SNetIntListListGet( SNetHndGetVariants( hnd), variant_num - 1);
 
     out_rec = SNetRecCreate( REC_data);
 
     SNetRecSetInterfaceId( out_rec, id);
 
-    VARIANT_FOR_EACH_FIELD(variant, name)
-      SNetRecSetField( out_rec, name, va_arg( args, void*));
-    END_FOR
-
-    VARIANT_FOR_EACH_TAG(variant, name)
-      SNetRecSetTag( out_rec, name, va_arg( args, int));
-    END_FOR
-
-    VARIANT_FOR_EACH_BTAG(variant, name)
-      SNetRecSetBTag( out_rec, name, va_arg( args, int));
-    END_FOR
+    for(i=0; i<SNetIntListLength( variant); i+=2) {
+      name = SNetIntListGet( variant, i+1);
+      switch(SNetIntListGet( variant, i)) {
+        case field:
+          SNetRecSetField( out_rec, name, va_arg( args, void*));
+          break;
+        case tag:
+          SNetRecSetTag( out_rec, name, va_arg( args, int));
+          break;
+        case btag:  
+          SNetRecSetBTag( out_rec, name, va_arg( args, int));
+          break;
+        default: 
+          assert(0);
+      }
+    }
   } else {
     SNetUtilDebugFatalLoc( hnd->boxloc,
         "[BOX] SNetOut: variant_num <= 0"
@@ -145,7 +151,10 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
 
   old_rec = hnd->rec;
   if (SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
-    SNetRecFlowInherit(variant, old_rec, out_rec);
+    SNetRecFlowInherit(
+        SNetVariantListGet( SNetHndGetVariantList( hnd), variant_num -1),
+        old_rec, 
+        out_rec);
     SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
   } else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
