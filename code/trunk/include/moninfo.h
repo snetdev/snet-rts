@@ -119,11 +119,6 @@ bool SNetMonInfoCmpID (snet_moninfo_id_t monid1, snet_moninfo_id_t monid2);
 snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_rec_data_t add_data);
 
 
-/*****************************************************************************
- * Trigger the output of some monitoring information
- ****************************************************************************/
-void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,... );
-
 
 /*****************************************************************************
  *  Print the monitoring information to a file

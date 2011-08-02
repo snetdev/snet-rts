@@ -74,7 +74,9 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
-  SNetMonInfoEvent( EV_BOX_WRITE, MON_RECORD, out_rec, old_rec);
+  SNetThreadingEventSignal(
+      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec, old_rec)
+      );
 #endif
 
   /* write to stream */
@@ -153,7 +155,9 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
 
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
-  SNetMonInfoEvent( EV_BOX_WRITE, MON_RECORD, out_rec, old_rec);
+  SNetThreadingEventSignal(
+      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec, old_rec)
+      );
 #endif
 
   /* write to stream */

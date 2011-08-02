@@ -180,7 +180,9 @@ static void SyncBoxTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
               /* Emit a monitoring message of first record entering syncro cell */
-              SNetMonInfoEvent( EV_SYNC_FIRST, MON_RECORD, rec);
+              SNetThreadingEventSignal(
+                  SNetMonInfoCreate( EV_SYNC_FIRST, MON_RECORD, rec)
+                  );
 #endif
 
             }
@@ -198,7 +200,9 @@ static void SyncBoxTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
           /* Emit a monitoring message of firing syncro cell */
-          SNetMonInfoEvent( EV_SYNC_FIRE, MON_RECORD, syncrec, num_patterns, storage, &dummy);
+          SNetThreadingEventSignal(
+              SNetMonInfoCreate( EV_SYNC_FIRE, MON_RECORD, syncrec, num_patterns, storage, &dummy)
+              );
 #endif
 
           FreeStorage( storage, num_patterns);

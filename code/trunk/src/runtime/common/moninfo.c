@@ -11,6 +11,7 @@
  * (sub)network.
  *
  */
+#include <assert.h>
 
 #include "moninfo.h"
 #include "memfun.h"
@@ -59,6 +60,112 @@ static const char *names_descr[] = {
 #undef LIST_NAME
 
 
+
+/**
+ * Initialize a moninfo for a record descriptor
+ *
+ * Handled differently for different events
+ * @pre MONINFOPTR(mon) is already allocated
+ */
+void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
+{
+  assert( MONINFO_DESCR( mon) == MON_RECORD );
+
+  snet_record_t *rec = va_arg( args, snet_record_t *);
+  switch ( REC_DESCR( rec)) {
+    case REC_data: /* currently only data records can be monitored this way */
+
+      switch ( MONINFO_EVENT(mon) ) {
+        case EV_INPUT_ARRIVE:
+          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
+          /* action: create minimal moninfo data (no parents) */
+          {
+            snet_moninfo_id_t newid = SNetMonInfoCreateID();
+            /* FIXME this should be set via the record interface! */
+            DATA_REC( rec, id) = newid;
+            DATA_REC( rec, parent_ids) = NULL;
+            /* initialize fields */
+            REC_MONINFO( mon, id) = newid;
+            REC_MONINFO( mon, parent_ids) = NULL;
+            REC_MONINFO( mon, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
+          }
+          break;
+        case EV_BOX_START:
+        case EV_FILTER_START:
+        case EV_SYNC_FIRST:
+          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
+          /* action: create moninfo data */
+          {
+            REC_MONINFO( mon, id) = DATA_REC( rec, id);
+            REC_MONINFO( mon, parent_ids) = (DATA_REC( rec, parent_ids) != NULL) ?  SNetMonInfoIdListCopy( DATA_REC( rec, parent_ids)) : NULL;
+            REC_MONINFO( mon, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
+          }
+          break;
+        case EV_BOX_WRITE:
+        case EV_FILTER_WRITE:
+          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr, snet_record_t*, snet_record_t* ) */
+          /* action: set single parent_id in record and create moninfo data */
+          {
+            snet_record_t *parent_rec = va_arg( args, snet_record_t *);
+            snet_moninfo_id_t newid = SNetMonInfoCreateID();
+            snet_monid_list_t *parent_id_list = SNetMonInfoIdListCreate(1, parent_rec); 
+
+            /* set the parent id of the record */
+            /* FIXME this should be set via the record interface! */
+            DATA_REC( rec, parent_ids) = SNetMonInfoIdListCopy(parent_id_list);
+            DATA_REC( rec, id) = newid;
+            /* initialize fields */
+            REC_MONINFO( mon, id) = newid;
+            REC_MONINFO( mon, parent_ids) = parent_id_list;
+            REC_MONINFO( mon, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
+          }
+          break;
+        case EV_SYNC_FIRE:
+          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event,
+           *                             snet_moninfo_descr_t descr,
+           *                             snet_record_t* rec,
+           *                             int num_patterns,
+           *                             snet_record_t** storage,
+           *                             snet_record_t* dummy
+           *                            ) */
+          /* action: set parent_id_list in record and create moninfo data */
+          {
+            int num_patterns = va_arg( args, int);
+            snet_record_t **storage = va_arg( args, snet_record_t **);
+            snet_record_t *dummy = va_arg( args, snet_record_t *);
+            snet_monid_list_t *parent_id_list = SNetMonInfoIdListCreate(0);
+            snet_moninfo_id_t newid = SNetMonInfoCreateID();
+            int i;
+
+            for (i=0; i<num_patterns; i++) {
+              //snet_moninfo_t monid;
+              if (storage[i] != NULL && storage[i] != dummy) {
+                SNetMonInfoIdListAppend(parent_id_list, DATA_REC( storage[i], id));
+              }
+            }
+            /* set the parent id of the record */
+            DATA_REC( rec, parent_ids) = SNetMonInfoIdListCopy(parent_id_list);
+            DATA_REC( rec, id) = newid;
+            /* initialize fields */
+            REC_MONINFO( mon, id) = newid;
+            REC_MONINFO( mon, parent_ids) = parent_id_list;
+            REC_MONINFO( mon, add_moninfo_rec_data) = SNetMonInfoRecCopyAdditionalData( DATA_REC( rec, add_moninfo_rec_data));
+          }
+          break;
+        case EV_BOX_FINISH:
+          /* action: currently just ignored... */
+          break;
+        default:
+          SNetUtilDebugFatal("Unknown monitoring information event. [event=%d]", MONINFO_EVENT(mon));
+      } /* MONINFO_EVENT( mon) */
+      break;
+    default:
+      SNetUtilDebugFatal("Non-supported monitoring information record."
+          "[event=%d][record-descr=%d]", MONINFO_EVENT(mon), REC_DESCR( rec));
+  } /* REC_DESCR( rec) */
+
+}
+
 /*****************************************************************************
  * Create monitoring information (entries depend on monitoring item)
  ****************************************************************************/
@@ -75,9 +182,8 @@ snet_moninfo_t *SNetMonInfoCreate ( snet_moninfo_event_t event, snet_moninfo_des
   switch (descr) {
     case MON_RECORD:
       MONINFOPTR( mon) = SNetMemAlloc( sizeof( snet_moninfo_record_t));
-      REC_MONINFO( mon, id) = va_arg( args, snet_moninfo_id_t);
-      REC_MONINFO( mon, parent_ids) = va_arg( args, snet_monid_list_t *);
-      REC_MONINFO( mon, add_moninfo_rec_data) = va_arg( args, snet_add_moninfo_rec_data_t);
+      /* call function to initialize record monitoring specific data */
+      MonInfoInitRec(mon, args);
       break;
   default:
     SNetUtilDebugFatal("Unknown monitoring information description. [%d]", descr);
@@ -152,117 +258,6 @@ snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_re
       new_add_data = NULL;
   }
   return new_add_data;
-}
-
-
-/*****************************************************************************
- * Trigger the output of some monitoring information
- ****************************************************************************/
-void SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr,... )
-{
-  snet_moninfo_t *mon;
-  va_list args;
-
-  va_start( args, descr);
-  switch (descr) {
-  case MON_RECORD: /* monitoring of a record */
-    {
-      snet_record_t *rec = va_arg( args, snet_record_t *);
-
-      switch ( REC_DESCR( rec)) {
-      case REC_data: /* currently only data records can be monitored this way */
-
-        switch (event) {
-        case EV_INPUT_ARRIVE:
-          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
-          /* action: create minimal moninfo data (no parents) */
-          {
-            snet_moninfo_id_t newid = SNetMonInfoCreateID();
-            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
-            DATA_REC( rec, id) = newid;
-            DATA_REC( rec, parent_ids) = NULL;
-            mon = SNetMonInfoCreate ( event, descr, DATA_REC( rec, id), NULL, add_data);
-          }
-        break;
-        case EV_BOX_START:
-        case EV_FILTER_START:
-        case EV_SYNC_FIRST:
-          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t, snet_record_t* rec) */
-          /* action: create moninfo data */
-          {
-            snet_monid_list_t *parent_id_list = (DATA_REC( rec, parent_ids) != NULL) ?
-                SNetMonInfoIdListCopy( DATA_REC( rec, parent_ids)) : NULL;
-            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
-
-            mon = SNetMonInfoCreate ( event, descr, DATA_REC( rec, id), parent_id_list, add_data);
-          }
-          break;
-        case EV_BOX_WRITE:
-        case EV_FILTER_WRITE:
-          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event, snet_moninfo_descr_t descr, snet_record_t*, snet_record_t* ) */
-          /* action: set single parent_id in record and create moninfo data */
-          {
-            snet_record_t *parent_rec = va_arg( args, snet_record_t *);
-            snet_monid_list_t *parent_id_list = SNetMonInfoIdListCreate(1, parent_rec);
-            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
-            snet_moninfo_id_t newid = SNetMonInfoCreateID();
-
-            /* set the parent id of the record */
-            DATA_REC( rec, parent_ids) = SNetMonInfoIdListCopy(parent_id_list);
-            DATA_REC( rec, id) = newid;
-            mon = SNetMonInfoCreate ( event, descr, newid, parent_id_list, add_data);
-          }
-          break;
-        case EV_SYNC_FIRE:
-          /* signature: SNetMonInfoEvent(snet_moninfo_event_t event,
-           *                             snet_moninfo_descr_t descr,
-           *                             snet_record_t* rec,
-           *                             int num_patterns,
-           *                             snet_record_t** storage,
-           *                             snet_record_t* dummy
-           *                            ) */
-          /* action: set parent_id_list in record and create moninfo data */
-          {
-            int num_patterns = va_arg( args, int);
-            snet_record_t **storage = va_arg( args, snet_record_t **);
-            snet_record_t *dummy = va_arg( args, snet_record_t *);
-            snet_monid_list_t *parent_id_list = SNetMonInfoIdListCreate(0);
-            snet_moninfo_id_t newid = SNetMonInfoCreateID();
-            snet_add_moninfo_rec_data_t add_data = SNetMonInfoRecCopyAdditionalData (DATA_REC( rec, add_moninfo_rec_data));
-            int i;
-
-            for (i=num_patterns-1; i>=0; i--)
-              {
-                //snet_moninfo_t monid;
-                if (storage[i] != NULL && storage[i] != dummy)
-                  SNetMonInfoIdListAppend(parent_id_list, DATA_REC( storage[i], id));
-              }
-            /* set the parent id of the record */
-            DATA_REC( rec, parent_ids) = SNetMonInfoIdListCopy(parent_id_list);
-            DATA_REC( rec, id) = newid;
-            mon = SNetMonInfoCreate ( event, descr, newid, parent_id_list, add_data);
-          }
-          break;
-        case EV_BOX_FINISH:
-          /* action: currently just ignored... */
-          break;
-        default:
-          SNetUtilDebugFatal("Unknown monitoring information event. [event=%d]", event);
-        } /* switch(event) */
-        break;
-      default:
-        SNetUtilDebugFatal("Non-supported monitoring information record. [event=%d][record-descr=%d]", event, REC_DESCR( rec));
-      } /* REC_DESCR( rec) */
-    }
-    break;
-  default:
-    SNetUtilDebugFatal("Unknown monitoring information description. [%d]", descr);
-  } /* switch (descr) */
-  va_end( args);
-
-
-  /* Pass the moninfo to the threading layer */
-  SNetThreadingEventSignal(mon);
 }
 
 
