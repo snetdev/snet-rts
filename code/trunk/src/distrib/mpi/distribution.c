@@ -49,6 +49,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   dest->node = 0;
   dest->dest = counter;
   dest->parent = parentCounter;
+  dest->parentNode = 0;
   dest->parentIndex = 0;
 
   streamMap = SNetStreamDestMapCreate(0);
@@ -130,6 +131,7 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc,
   if (fun != NULL) {
     parentCounter++;
     dest->parent = parentCounter;
+    dest->parentNode = loc;
     SNetDynamicMapSet(dynamicMap, parentCounter, fun);
   }
   current_node = dest->node;
