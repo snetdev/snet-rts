@@ -100,7 +100,6 @@ int SNetThreadingInit(int argc, char **argv)
     }
   }
 
-  config.worker_dbg = (mon_level >= 5)? 1 : 0;
 
   //FIXME
   if ( mon_level > 0) {
@@ -128,7 +127,7 @@ int SNetThreadingInit(int argc, char **argv)
   num_workers = config.num_workers;
 
   /* initialise monitoring module */
-  SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId());
+  SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_level);
   SNetAssignInit(config.num_workers);
 
   LpelInit(&config);
@@ -210,8 +209,6 @@ int SNetEntitySpawn(
   void *arg
   )
 {
-  int mon_flags;
-  int do_mon = 0;
   int worker = -1;
   char locstr[128];
 
@@ -252,51 +249,26 @@ int SNetEntitySpawn(
   /* saturate mon level */
   if (mon_level > 6) mon_level = 6;
 
-  mon_flags = 0;
-  switch(mon_level) {
-    case 4: mon_flags |= SNET_MON_TASK_STREAMS;
-    case 3: mon_flags |= SNET_MON_TASK_TIMES;
-    case 2:
-      if (type==ENTITY_box) {
-
-        mon_task_t *mt = SNetThreadingMonTaskCreate(
-          LpelTaskGetID(t), name, mon_flags
+  /* starting with level 2, we monitor tasks */
+  if (mon_level >= 2) {
+    /* up to level 4, we only monitor boxes */
+    if (mon_level > 4 || type==ENTITY_box) {
+      mon_task_t *mt = SNetThreadingMonTaskCreate(
+          LpelTaskGetID(t), name
           );
-        LpelTaskMonitor(t, mt);
-        do_mon = 1;
+      LpelTaskMonitor(t, mt);
+      /* if we monitor the task, we make an entry in the map file */
+      if (mapfile) {
+        int tid = LpelTaskGetID(t);
+        (void) fprintf(mapfile, "%d %s %s %d\n", tid, locstr, name, worker);
       }
-      break;
-
-    case 6:
-      if (type==ENTITY_box || type==ENTITY_sync) {
-        mon_flags = SNET_MON_TASK_USREVT;
-      }
-    case 5:
-      if (type!=ENTITY_other) {
-        mon_task_t *mt = SNetThreadingMonTaskCreate(
-          LpelTaskGetID(t), name,
-          mon_flags | SNET_MON_TASK_STREAMS | SNET_MON_TASK_TIMES
-          );
-        LpelTaskMonitor(t, mt);
-        do_mon = 1;
-      }
-      break;
-
-    case 1:
-      do_mon = 1;
-      break;
-
-    default: /*NOP*/;
+    }
   }
 
   if (type != ENTITY_box) {
     LpelTaskPrio(t, 1);
   }
 
-  if (do_mon && mapfile) {
-    int tid = LpelTaskGetID(t);
-    (void) fprintf(mapfile, "%d %s %s %d\n", tid, locstr, name, worker);
-  }
 
 //FIXME only for debugging purposes
   //fflush(mapfile);

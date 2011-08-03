@@ -552,6 +552,8 @@ void SNetRecSerialise( snet_record_t *rec, void (*serialise)(int, int*))
 
       enumConversion = DATA_REC( rec, interface_id);
       serialise(1, &enumConversion);
+
+      /* FIXME how to best serialise the id and the parent ids */
       break;
     case REC_sort_end:
       serialise(1, &SORT_E_REC(rec, level));
@@ -588,6 +590,8 @@ snet_record_t *SNetRecDeserialise( void (*deserialise)(int, int*))
 
       enumConversion = DATA_REC( result, interface_id);
       deserialise(1, &enumConversion);
+
+      /* FIXME how to best deserialise the id and the parent ids */
       break;
     case REC_sort_end:
       result = SNetRecCreate(enumConversion, 0, 0);

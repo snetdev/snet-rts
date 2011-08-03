@@ -227,6 +227,28 @@ LIST_VAL LIST_FUNCTION(LIST_NAME, Remove)(snet_list_t *list, int i)
   return result;
 }
 
+
+
+
+void LIST_FUNCTION(LIST_NAME, Serialise)(snet_list_t *list,
+    void (*serialiseInts)(int, int*),
+    void (*serialiseValues)(int, LIST_VAL*))
+{
+  serialiseInts(1, &list->used);
+  serialiseValues(list->used, list->values);
+}
+
+void LIST_FUNCTION(LIST_NAME, Deserialise)(snet_list_t *list,
+    void (*deserialiseInts)(int, int*),
+    void (*deserialiseValues)(int, LIST_VAL*))
+{
+  deserialiseInts(1, &list->used);
+  list->values = SNetMemAlloc(list->used * sizeof(LIST_VAL));
+  deserialiseValues(list->used, list->values);
+}
+
+
+
 #undef snet_list_t
 #undef LIST_FUNCTION
 #undef LIST

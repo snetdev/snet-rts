@@ -84,6 +84,14 @@ bool LIST_FUNCTION(LIST_NAME_H, Contains)(snet_list_t *list, LIST_VAL_H val);
 LIST_VAL_H LIST_FUNCTION(LIST_NAME_H, Get)(snet_list_t *list, int i);
 LIST_VAL_H LIST_FUNCTION(LIST_NAME_H, Remove)(snet_list_t *list, int i);
 
+void LIST_FUNCTION(LIST_NAME_H, Serialise)(snet_list_t *list,
+                                       void (*serialiseInts)(int, int*),
+                                       void (*serialiseValues)(int, LIST_VAL_H*));
+
+void LIST_FUNCTION(LIST_NAME_H, Deserialise)(snet_list_t *list,
+                                       void (*deserialiseInts)(int, int*),
+                                       void (*deserialiseValues)(int, LIST_VAL_H*));
+
 #undef snet_list_t
 #undef LIST_FUNCTION
 #undef LIST
