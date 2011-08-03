@@ -20,6 +20,7 @@ def put_or_add(d, key, val):
 class TaskTrace:
   def __init__(self, mapline):
     tmp = mapline.strip().split()
+    if int(tmp[-1])==-1: raise Exception("cannot handle mapfile task")
     self.tid     = int(tmp[0])
     self.locvec  = tmp[1]
     self.name    = tmp[2]
@@ -211,7 +212,9 @@ if __name__=="__main__":
     loctree = LocTree()
 
     for mapline in f.readlines():
-      task = TaskTrace(mapline)
+      try:
+        task = TaskTrace(mapline)
+      except Exception: continue
       # tasks_map
       tasks_map[task.tid] = task
       # loc tree
