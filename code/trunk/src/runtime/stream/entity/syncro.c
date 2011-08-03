@@ -58,9 +58,13 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
   snet_record_t *result = SNetRecCopy(storage[0]);
   snet_copy_fun_t copyfun;
 
+  SNetRecAddAsParent( result, storage[0]);
+
   LIST_ENUMERATE(patterns, pattern, i)
     if (i > 0 && storage[i] != NULL) {
       copyfun = SNetInterfaceGet(SNetRecGetInterfaceId(storage[i]))->copyfun;
+
+      SNetRecAddAsParent( result, storage[i]);
 
       RECORD_FOR_EACH_FIELD(storage[i], name, field)
         if (SNetVariantHasField(pattern, name)) {
@@ -180,7 +184,9 @@ static void SyncBoxTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
               /* Emit a monitoring message of first record entering syncro cell */
-              SNetMonInfoEvent( EV_SYNC_FIRST, MON_RECORD, rec);
+              SNetThreadingEventSignal(
+                  SNetMonInfoCreate( EV_SYNC_FIRST, MON_RECORD, rec)
+                  );
 #endif
 
             }
@@ -198,7 +204,9 @@ static void SyncBoxTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
           /* Emit a monitoring message of firing syncro cell */
-          SNetMonInfoEvent( EV_SYNC_FIRE, MON_RECORD, syncrec, num_patterns, storage, &dummy);
+          SNetThreadingEventSignal(
+              SNetMonInfoCreate( EV_SYNC_FIRE, MON_RECORD, syncrec)
+              );
 #endif
 
           FreeStorage( storage, num_patterns);

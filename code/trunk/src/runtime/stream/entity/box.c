@@ -97,7 +97,11 @@ static void BoxTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
         /* Emit a monitoring message of a record read to be processed by a box */
-        if (SNetRecGetDescriptor(rec) == REC_data) SNetMonInfoEvent( EV_BOX_START, MON_RECORD, rec);
+        if (SNetRecGetDescriptor(rec) == REC_data) {
+          SNetThreadingEventSignal(
+              SNetMonInfoCreate( EV_BOX_START, MON_RECORD, rec)
+              );
+        }
 #endif
 
         (*barg->boxfun)( &hnd);

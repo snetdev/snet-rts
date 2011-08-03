@@ -182,7 +182,9 @@ static void FilterTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
           /* Emit a monitoring message of a record read to be processed by a filter */
-          SNetMonInfoEvent( EV_FILTER_START, MON_RECORD, in_rec);
+          SNetThreadingEventSignal(
+              SNetMonInfoCreate( EV_FILTER_START, MON_RECORD, in_rec)
+              );
 #endif
 
           LIST_ENUMERATE( farg->guard_exprs, expr, i)
@@ -191,6 +193,7 @@ static void FilterTask(void *arg)
 
               LIST_FOR_EACH(farg->filter_instructions[i], instr_list)
                 out_rec = SNetRecCreate( REC_data);
+                SNetRecAddAsParent( out_rec, in_rec );
                 SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
                 SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
 
@@ -216,7 +219,9 @@ static void FilterTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
                 /* Emit a monitoring message of a record written by a filter */
-                SNetMonInfoEvent( EV_FILTER_WRITE, MON_RECORD, out_rec, in_rec);
+                  SNetThreadingEventSignal(
+                      SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec)
+                      );
 #endif
 
                 SNetRecFlowInherit( farg->input_variant, in_rec, out_rec);

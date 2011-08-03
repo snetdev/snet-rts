@@ -272,7 +272,9 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 
 #ifdef MONINFO_USE_RECORD_EVENTS
 		      /* Emit a monitoring message of a record read from input */
-		      SNetMonInfoEvent( EV_INPUT_ARRIVE, MON_RECORD, current.record);
+                      SNetThreadingEventSignal(
+                          SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record)
+                          );
 #endif
 
 		    }

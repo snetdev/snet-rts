@@ -410,6 +410,28 @@ AC_CHECK_DECLS( [pthread_setaffinity_np, pthread_getaffinity_np],
                 AC_SUBST(SCHEDFLAGS, [""]),
                 [[#include <pthread.h>]])
 
+dnl check for compiler builtins for
+dnl atomic memory access (__sync_fetch_and_add/dec)
+dnl !!! we need to try to link the program, on platforms on which
+dnl !!! these functions are not available, they are undefined references
+AC_MSG_CHECKING([availability of compiler builtins for atomic memory access])
+AC_TRY_RUN( [
+  int main(void) {
+    int a = 0;
+    (void) __sync_fetch_and_add(&a, 1);
+    (void) __sync_fetch_and_sub(&a, 1);
+    (void) __sync_lock_test_and_set(&a, 42);
+    return 0;
+  }
+  ],
+  [
+    AC_DEFINE([HAVE_SYNC_ATOMIC_BUILTINS], [1], [Define to 1 if compiler builtins for atomic memory access are available.])
+    AC_MSG_RESULT([yes])
+  ],
+    AC_MSG_RESULT([no])
+)
+
+
 dnl check if $SNETBASE is set
 AC_MSG_CHECKING([if SNETBASE is set])
 if test "`echo $SNETBASE`" = ""; then

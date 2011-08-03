@@ -7,6 +7,7 @@ pkglib_LTLIBRARIES = \
 	libdistribnodist.la
 
 pkginclude_HEADERS = \
+	include/atomiccnt.h \
 	include/C4SNet.h \
 	include/bool.h \
 	include/constants.h \

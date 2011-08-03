@@ -50,6 +50,9 @@
 /* Define to 1 if you have the `strtok' function. */
 #undef HAVE_STRTOK
 
+/* Define to 1 if compiler builtins for atomic memory access are available. */
+#undef HAVE_SYNC_ATOMIC_BUILTINS
+
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
