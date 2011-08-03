@@ -181,8 +181,8 @@ int SNetInRun(int argc, char **argv,
       printf("\t-O <address:port>\tOutput to socket.\n");
       printf("\t-debugWait\n");
       printf("\t-distribInfo\n");
-      //printf("\t-m <mon_level>\tSet monitoring level.\n");
-      //printf("\t-w <workers>\t\tSet number of workers.\n");
+      printf("\t-m <mon_level>\t\tSet monitoring level (LPEL only).\n");
+      printf("\t-w <workers>\t\tSet number of workers (LPEL) / visible cores (PThread).\n");
       printf("\n");
 
       if(input != stdin && input != NULL) {

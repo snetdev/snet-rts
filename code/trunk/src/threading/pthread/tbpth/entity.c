@@ -2,10 +2,10 @@
 #define USE_CORE_AFFINITY 1
 #endif
 
-#undef USE_CORE_AFFINITY
-
 #ifdef USE_CORE_AFFINITY
 #define _GNU_SOURCE
+#include <stdarg.h>
+#include <string.h>
 #endif
 
 
@@ -43,22 +43,37 @@ typedef enum {
   DEFAULT,
   MASKMOD2,
   STRICTLYFIRST,
-  ALLBUTFIRST
+  ALLBUTFIRST,
+  MAXCORES
 } affinity_type_t;
 
-static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at);
+static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at, ...);
 #endif
 
-
+unsigned long SNetThreadingGetId()
+{
+  /* returns the thread id */
+  return (unsigned long) pthread_self(); /* returns a pointer on Mac */
+}
 
 int SNetThreadingInit(int argc, char **argv)
 {
+  int i, num_cores;
   char fname[32];
   /* initialize the entity counter to 0 */
   entity_count = 0;
   pthread_key_create(&entity_self_key, NULL);
 
-  /* initialize the monitorer */
+#ifdef USE_CORE_AFFINITY
+  for (i=0; i<argc; i++) {
+    if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
+      /* Number of cores */
+      i = i + 1;
+      num_cores = atoi(argv[i]);
+      SNetSetThreadAffinity( (pthread_t*)SNetThreadingGetId(), MAXCORES,  num_cores);
+    }
+  } 
+#endif
 
   snprintf(fname, 31, "mon_n%02u_info.log", SNetDistribGetNodeId());
   SNetThreadingMonitoringInit(fname);
@@ -66,11 +81,6 @@ int SNetThreadingInit(int argc, char **argv)
   return 0;
 }
 
-unsigned long SNetThreadingGetId()
-{
-  /* returns the thread id */
-  return (unsigned long) pthread_self(); /* returns a pointer on Mac */
-}
 
 void SNetThreadingStop(void)
 {
@@ -164,7 +174,7 @@ int SNetEntitySpawn(
   if( type == ENTITY_other) {
     SNetSetThreadAffinity( &p, STRICTLYFIRST);
   } else {
-    SNetSetThreadAffinity( &p, ALLBUTFIRST);
+    SNetSetThreadAffinity( &p, DEFAULT);
   }
 #endif /* USE_CORE_AFFINITY */
 
@@ -263,7 +273,7 @@ static size_t SNetEntityStackSize(snet_entity_type_t type)
 }
 
 #ifdef USE_CORE_AFFINITY
-static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at)
+static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at, ...)
 {
   int i, res, numcpus;
   cpu_set_t cpuset;
@@ -274,7 +284,7 @@ static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at)
   }
 
   numcpus = CPU_COUNT(&cpuset);
-
+ 
   switch(at) {
     case MASKMOD2:
       CPU_ZERO(&cpuset);
@@ -283,11 +293,26 @@ static int SNetSetThreadAffinity( pthread_t *pt, affinity_type_t at)
       }
       break;
     case STRICTLYFIRST:
-      CPU_ZERO(&cpuset);
-      CPU_SET(0, &cpuset);
+      if( numcpus > 1) {
+        CPU_ZERO(&cpuset);
+        CPU_SET(0, &cpuset);
+      }
       break;
     case ALLBUTFIRST:
-      CPU_CLR(0, &cpuset);
+      if( numcpus > 1) {
+        CPU_CLR(0, &cpuset);
+      }
+      break;
+    case MAXCORES: {
+        int j, num_cores;
+        va_list args;
+        va_start( args, at);
+        num_cores = va_arg( args, int);
+        va_end( args);
+        for( j=num_cores; j<numcpus; j++) {
+          CPU_CLR( j, &cpuset);
+        }
+      }
       break;
     default:
       break;
