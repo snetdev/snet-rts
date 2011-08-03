@@ -847,7 +847,7 @@ c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant)
   c = (c4snet_container_t *)SNetMemAlloc( sizeof( c4snet_container_t));
   //variant - 1: Lists are zero indexed, but existing S-Net code defines
   //variants as 1-indexed. Go backwards compatibility!
-  c->variant = SNetVariantListGet( SNetHndGetVariants((struct handle *) hnd), variant - 1);
+  c->variant = SNetVariantListGet( SNetHndGetVariantList((struct handle *) hnd), variant - 1);
 
   c->counter = SNetMemAlloc( 3 * sizeof( int));
 
