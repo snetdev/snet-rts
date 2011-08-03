@@ -14,12 +14,13 @@ struct mon_worker_t;
 struct mon_task_t;
 struct mon_stream_t;
 
-void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node);
+
+
+void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int level);
 void SNetThreadingMonCleanup(void);
 
 
-struct mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid,
-    const char *name, unsigned long flags);
+struct mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *name);
 
 
 void SNetThreadingMonEvent(struct mon_task_t *mt,
