@@ -173,9 +173,9 @@ int SNetEntitySpawn(
 }
 
 
-void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
+void SNetThreadingEventSignal(snet_moninfo_t *moninfo, snet_locvec_t *loc)
 {
-  SNetThreadingMonitoringAppend( moninfo );
+  SNetThreadingMonitoringAppend( moninfo, loc );
 }
 
 void SNetEntityYield(void)

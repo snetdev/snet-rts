@@ -15,7 +15,6 @@
 
 #include "moninfo.h"
 #include "memfun.h"
-#include "threading.h"
 #include "debug.h"
 #include "string.h"
 
@@ -34,6 +33,7 @@ static const char *names_event[] = {
   "EV_FILTER_START",
   "EV_FILTER_WRITE",
   "EV_SYNC_FIRST",
+  "EV_SYNC_NEXT",
   "EV_SYNC_FIRE",
 };
 
@@ -54,6 +54,7 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
   assert( MONINFO_DESCR( mon) == MON_RECORD );
 
   snet_record_t *rec = va_arg( args, snet_record_t *);
+
   switch ( REC_DESCR( rec)) {
     case REC_data: /* currently only data records can be monitored this way */
 
@@ -68,6 +69,7 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
         case EV_BOX_START:
         case EV_FILTER_START:
         case EV_SYNC_FIRST:
+        case EV_SYNC_NEXT:
           break;
         case EV_BOX_WRITE:
         case EV_FILTER_WRITE:

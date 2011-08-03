@@ -11,16 +11,15 @@
  *
  */
 
-#ifndef MONINFO_H_
-#define MONINFO_H_
+#ifndef _MONINFO_H_
+#define _MONINFO_H_
 
 #include <stdio.h>
 
 #include "bool.h"
 #include "record.h"
 
-/* currently location vector + 1 local id (FIXME: couple with generic location vector) */
-#define SNET_MONINFO_ID_VEC_SIZE 3
+
 #define MONINFO_USE_RECORD_EVENTS  /* enable processing of record events */
 
 typedef enum moninfo_event snet_moninfo_event_t;
@@ -43,6 +42,7 @@ enum moninfo_event {
   EV_FILTER_START,
   EV_FILTER_WRITE,
   EV_SYNC_FIRST,
+  EV_SYNC_NEXT,
   EV_SYNC_FIRE,
 };
 
@@ -102,4 +102,4 @@ snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_re
  ****************************************************************************/
 void SNetMonInfoPrint(FILE *f, snet_moninfo_t *moninfo);
 
-#endif /* MONINFO_H_ */
+#endif /* _MONINFO_H_ */

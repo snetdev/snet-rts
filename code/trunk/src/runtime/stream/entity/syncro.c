@@ -78,21 +78,15 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
         }
       END_FOR
     }
+    /* free storage */
+    if (storage[i] != NULL) {
+      SNetRecDestroy(storage[i]);
+    }
   END_ENUMERATE
 
   return result;
 }
 
-static void FreeStorage(snet_record_t **storage, int num_patterns)
-{
-  int i;
-  /* free records in storage */
-  for(i=0; i<num_patterns; i++) {
-    if (storage[i] != NULL) {
-      SNetRecDestroy(storage[i]);
-    }
-  }
-}
 
 
 #ifdef SYNC_SEND_OUTTYPES
@@ -185,10 +179,19 @@ static void SyncBoxTask(void *arg)
 #ifdef MONINFO_USE_RECORD_EVENTS
               /* Emit a monitoring message of first record entering syncro cell */
               SNetThreadingEventSignal(
-                  SNetMonInfoCreate( EV_SYNC_FIRST, MON_RECORD, rec)
+                  SNetMonInfoCreate( EV_SYNC_FIRST, MON_RECORD, rec),
+                  sarg->myloc
                   );
 #endif
 
+            } else {
+#ifdef MONINFO_USE_RECORD_EVENTS
+              /* Emit a monitoring message of another accepted record entering syncro cell */
+              SNetThreadingEventSignal(
+                  SNetMonInfoCreate( EV_SYNC_NEXT, MON_RECORD, rec),
+                  sarg->myloc
+                  );
+#endif
             }
           }
         END_ZIP
@@ -205,12 +208,10 @@ static void SyncBoxTask(void *arg)
 #ifdef MONINFO_USE_RECORD_EVENTS
           /* Emit a monitoring message of firing syncro cell */
           SNetThreadingEventSignal(
-              SNetMonInfoCreate( EV_SYNC_FIRE, MON_RECORD, syncrec)
+              SNetMonInfoCreate( EV_SYNC_FIRE, MON_RECORD, syncrec),
+              sarg->myloc
               );
 #endif
-
-          FreeStorage( storage, num_patterns);
-
           /* this is the last sync */
           SNetStreamWrite( outstream, syncrec);
 

@@ -70,7 +70,7 @@ static void BoxTask(void *arg)
   /* mapping */
   hnd.mapping = NULL;
   /* set variants */
-  hnd.vars = barg->vars; 
+  hnd.vars = barg->vars;
   /* location of box */
   hnd.boxloc = barg->myloc;
 
@@ -99,7 +99,8 @@ static void BoxTask(void *arg)
         /* Emit a monitoring message of a record read to be processed by a box */
         if (SNetRecGetDescriptor(rec) == REC_data) {
           SNetThreadingEventSignal(
-              SNetMonInfoCreate( EV_BOX_START, MON_RECORD, rec)
+              SNetMonInfoCreate( EV_BOX_START, MON_RECORD, rec),
+              barg->myloc
               );
         }
 #endif

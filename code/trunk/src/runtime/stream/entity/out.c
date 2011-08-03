@@ -80,10 +80,10 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
   SNetThreadingEventSignal(
-      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec)
+      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec),
+      hnd->boxloc
       );
 #endif
-
   /* write to stream */
   SNetStreamWrite( hnd->out_sd, out_rec);
 
@@ -138,10 +138,10 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
         case tag:
           SNetRecSetTag( out_rec, name, va_arg( args, int));
           break;
-        case btag:  
+        case btag:
           SNetRecSetBTag( out_rec, name, va_arg( args, int));
           break;
-        default: 
+        default:
           assert(0);
       }
     }
@@ -158,7 +158,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
   if (SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
     SNetRecFlowInherit(
         SNetVariantListGet( SNetHndGetVariantList( hnd), variant_num -1),
-        old_rec, 
+        old_rec,
         out_rec);
     SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
   } else {
@@ -170,13 +170,12 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
   SNetThreadingEventSignal(
-      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec)
+      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec),
+      hnd->boxloc
       );
 #endif
-
   /* write to stream */
   SNetStreamWrite( hnd->out_sd, out_rec);
-
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);

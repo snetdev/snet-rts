@@ -184,7 +184,7 @@ int SNetThreadingCleanup(void)
 /**
  * Signal an event
  */
-void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
+void SNetThreadingEventSignal(snet_moninfo_t *moninfo, snet_locvec_t *loc)
 {
   lpel_task_t *t = LpelTaskSelf();
   assert(t != NULL);

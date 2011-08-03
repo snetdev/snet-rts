@@ -238,7 +238,6 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
               {
 		attrib_t *attr = searchAttribute($2, TYPE);
 		if(attr != NULL) {
-
 		  /* Data record: */
 		  if(strcmp(attr->value, SNET_REC_DATA) == 0) {
 
@@ -271,9 +270,10 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      }
 
 #ifdef MONINFO_USE_RECORD_EVENTS
-		      /* Emit a monitoring message of a record read from input */
+                      /* Emit a monitoring message of a record read from input */
                       SNetThreadingEventSignal(
-                          SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record)
+                          SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record),
+                          NULL
                           );
 #endif
 
@@ -395,6 +395,15 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      yyerror("Error encountered while parsing a record: Unknown interface! Record discarded.");
 		      parser.terminate = SNET_PARSE_CONTINUE;
 		    } else {
+#ifdef MONINFO_USE_RECORD_EVENTS
+                      if(SNetRecGetDescriptor(current.record) == REC_data) {
+                        /* Emit a monitoring message of a record read from input */
+                        SNetThreadingEventSignal(
+                            SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record),
+                            NULL
+                            );
+                      }
+#endif
                       /* write record to stream */
                       SNetStreamWrite( parser.output, current.record);
 
@@ -409,7 +418,6 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		    yyerror("Error encountered while parsing a record. Record discarded (3)!");
 		    parser.terminate = SNET_PARSE_CONTINUE;
 		  }
-		  
 		  current.record = NULL;
 		}
 

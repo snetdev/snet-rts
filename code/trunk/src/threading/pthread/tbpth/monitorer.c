@@ -20,6 +20,7 @@ struct mlist_node_t {
   struct mlist_node_t *next;
   snet_moninfo_t      *moninfo;
   struct timeval       timestamp;
+  snet_locvec_t       *loc;
 };
 
 
@@ -206,7 +207,7 @@ void SNetThreadingMonitoringCleanup(void)
 
 
 
-void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo)
+void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo, snet_locvec_t *loc)
 {
   assert(moninfo != NULL);
 
@@ -214,6 +215,8 @@ void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo)
 
   /* set the data */
   node->moninfo = moninfo;
+  /* copy locvec */
+  node->loc = (loc!=NULL)? SNetLocvecCopy(loc) : NULL;
   /* get current timestamp */
   GetTimestamp(&node->timestamp);
 
@@ -222,13 +225,20 @@ void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo)
 
 
 
-static void ProcessMonInfo(snet_moninfo_t *moninfo, struct timeval *timestamp)
+static void ProcessMonInfo(snet_moninfo_t *moninfo, struct timeval *timestamp, snet_locvec_t *loc)
 {
   /* timestamp */
   fprintf(mon_file,
       "%lu.%06lu ",
       timestamp->tv_sec, timestamp->tv_usec
       );
+  /* locvec */
+  if (loc!=NULL) {
+    char slocvec[64];
+    slocvec[0]='\0';
+    (void) SNetLocvecPrint(slocvec, 63, loc);
+    fprintf(mon_file, "%s ", slocvec);
+  }
   /* moninfo */
   SNetMonInfoPrint(mon_file, moninfo);
   fprintf(mon_file,"\n");
@@ -244,6 +254,7 @@ static void *MonitorThread(void *arg)
 {
   mlist_node_t *node = NULL;
   snet_moninfo_t *moninfo = NULL;
+  snet_locvec_t *loc = NULL;
 
   while(1) { /* MAIN EVENT LOOP */
 
@@ -253,20 +264,25 @@ static void *MonitorThread(void *arg)
     /* processed all requests and termination signalled */
     if (node==NULL) break;
 
-    /* now process the moninfo */
-    ProcessMonInfo(node->moninfo, &node->timestamp);
 
     /* local copy, to be able to free the node
      * before destroying moninfo
      */
     moninfo = node->moninfo;
+    loc = node->loc;
+
+    /* now process the moninfo */
+    ProcessMonInfo(moninfo, &node->timestamp, loc);
 
     /* free node */
     node->moninfo = NULL;
+    node->loc = NULL;
     PutFree(node);
 
     /* destroy the moninfo */
     SNetMonInfoDestroy(moninfo);
+    /* destroy the locvec copy */
+    if (loc!=NULL) SNetLocvecDestroy(loc);
 
   } /* END MAIN LOOP */
 

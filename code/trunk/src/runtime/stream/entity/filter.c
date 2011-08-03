@@ -8,6 +8,8 @@
 #include "memfun.h"
 #include "bool.h"
 #include "record.h"
+#include "moninfo.h"
+#include "locvec.h"
 #include "snetentities.h"
 #include "debug.h"
 #include "interface_functions.h"
@@ -82,6 +84,7 @@ typedef struct {
   snet_variant_t *input_variant;
   snet_expr_list_t *guard_exprs;
   snet_filter_instr_list_list_t **filter_instructions;
+  snet_locvec_t *myloc;
 } filter_arg_t;
 
 static void FilterArgsDestroy( filter_arg_t *farg)
@@ -100,6 +103,7 @@ static void FilterArgsDestroy( filter_arg_t *farg)
   }
 
   SNetExprListDestroy( farg->guard_exprs);
+  SNetLocvecDestroy( farg->myloc);
   SNetMemFree( farg);
 }
 
@@ -183,7 +187,8 @@ static void FilterTask(void *arg)
 #ifdef MONINFO_USE_RECORD_EVENTS
           /* Emit a monitoring message of a record read to be processed by a filter */
           SNetThreadingEventSignal(
-              SNetMonInfoCreate( EV_FILTER_START, MON_RECORD, in_rec)
+              SNetMonInfoCreate( EV_FILTER_START, MON_RECORD, in_rec),
+              farg->myloc
               );
 #endif
 
@@ -217,15 +222,16 @@ static void FilterTask(void *arg)
                   }
                 END_FOR
 
+                SNetRecFlowInherit( farg->input_variant, in_rec, out_rec);
+
 #ifdef MONINFO_USE_RECORD_EVENTS
                 /* Emit a monitoring message of a record written by a filter */
-                  SNetThreadingEventSignal(
-                      SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec)
-                      );
+                SNetThreadingEventSignal(
+                    SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec),
+                    farg->myloc
+                    );
 #endif
-
-                SNetRecFlowInherit( farg->input_variant, in_rec, out_rec);
-                SNetStreamWrite( outstream, out_rec);
+                  SNetStreamWrite( outstream, out_rec);
               END_FOR /* forall instruction lists */
             } /* if a guard is true first time */
           END_ENUMERATE
@@ -380,6 +386,7 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
     farg->input_variant = input_variant;
     farg->guard_exprs = guard_exprs;
     farg->filter_instructions = instr_list;
+    farg->myloc = SNetLocvecCopy(SNetLocvecGet(info));
 
     SNetEntitySpawn( ENTITY_filter, SNetLocvecGet(info), location,
       name, FilterTask, (void*)farg);
@@ -486,6 +493,7 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
     farg->input_variant = untouched;
     farg->guard_exprs = SNetExprListCreate( 1, SNetEconsti( offset));
     farg->filter_instructions = NULL; /* instructions */
+    farg->myloc = SNetLocvecCopy(SNetLocvecGet(info));
 
     SNetEntitySpawn( ENTITY_filter, SNetLocvecGet(info), location,
       "<nameshift>", NameshiftTask, (void*)farg);

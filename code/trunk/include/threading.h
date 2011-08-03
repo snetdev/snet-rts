@@ -85,9 +85,10 @@ int SNetThreadingCleanup(void);
  * Signal a monitoring event
  *
  * @param moninfo   the monitoring info, can be NULL
+ * @param source    the source (entity) of the event, can be NULL
  * @post  if moninfo != NULL, moninfo is destroyed
  */
-void SNetThreadingEventSignal(snet_moninfo_t *moninfo);
+void SNetThreadingEventSignal(snet_moninfo_t *moninfo, snet_locvec_t *source);
 
 
 
