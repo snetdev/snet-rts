@@ -5,12 +5,14 @@ CCFLAGS   = -Wall -g -DFILTER_VERSION_2
 AR        = ar
 INCDIRS   = -I. -I$(SNETBASE)/include -I./include 
 LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib -L$(SNETBASE)/interfaces/SAC
-LIBS      = -lSAC4SNet -lpthread -lsnetutil -ltbpthread -ldistribnodist -lruntimestream
+#THREADING = pthread
+THREADING = lpel
+LIBS      = -lSAC4SNet -lpthread -lsnetutil -ltb${THREADING} -ldistribnodist -lruntimestream
 
 SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__mini=main
 
 SNETC      = snetc
-SNETCFLAGS = -b7
+SNETCFLAGS = -b7 -threading $(THREADING)
 
 # - - - - - - - - - - - - - - - - - - - -
 SACTARGET = mini
