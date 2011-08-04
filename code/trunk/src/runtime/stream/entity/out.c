@@ -70,12 +70,12 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
   if (SNetRecGetDescriptor( old_rec) != REC_trigger_initialiser) {
     SNetRecFlowInherit(variant, old_rec, out_rec);
     SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
+    // set old_rec as parent of out_rec
+    SNetRecAddAsParent( out_rec, old_rec );
   } else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
 
-  // set old_rec as parent of out_rec
-  SNetRecAddAsParent( out_rec, old_rec );
 
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
@@ -161,11 +161,12 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
         old_rec,
         out_rec);
     SNetRecSetDataMode( out_rec,  SNetRecGetDataMode( old_rec));
+    // set old_rec as parent of out_rec
+    SNetRecAddAsParent( out_rec, old_rec );
   } else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
   }
 
-  SNetRecAddAsParent( out_rec, old_rec );
 
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
