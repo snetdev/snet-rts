@@ -20,6 +20,7 @@
  * @param labels Set of labels to use.
  * @param interfaces Set of interfaces to use.
  * @param output stream descriptor where the parsed records are put.
+ * @param ent entity in which context the parser runs
  *
  * @notice parserInit should be the first call to the parser!
  */
@@ -27,7 +28,9 @@
 extern void SNetInParserInit(FILE *file,
 			     snetin_label_t *labels,
 			     snetin_interface_t *interfaces,
-                             snet_stream_desc_t *output);
+                             snet_stream_desc_t *output,
+                             snet_entity_t *ent
+                             );
 
 
 /* Parse the next data element from standard input stream 

@@ -13,6 +13,7 @@ pkginclude_HEADERS = \
 	include/constants.h \
 	include/debug.h \
 	include/distribution.h \
+	include/entities.h \
 	include/expression.h \
 	include/filter.h \
 	include/handle.h \
@@ -81,6 +82,7 @@ libruntimestream_la_SOURCES = \
         src/runtime/stream/entity/box.c \
         src/runtime/stream/entity/collector.c \
         src/runtime/stream/entity/collector.h \
+        src/runtime/stream/entity/entities.c \
         src/runtime/stream/entity/feedback.c \
         src/runtime/stream/entity/filter.c \
         src/runtime/stream/entity/out.c \

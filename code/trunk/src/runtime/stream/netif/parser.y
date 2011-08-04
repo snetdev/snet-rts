@@ -26,6 +26,7 @@
 #include "interface.h"
 #include "memfun.h"
 #include "snetentities.h"
+#include "entities.h"
 #include "constants.h"
 #include "moninfo.h"
 #include "debug.h"
@@ -85,6 +86,9 @@
 
    /* SNetStream where all the parsed data should be written to */
    snet_stream_desc_t *output;
+
+   /* Entity in which context the parser runs */
+   snet_entity_t *ent;
  }parser;
 
  /* Data values for record currently under parsing  */
@@ -271,9 +275,8 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 
 #ifdef MONINFO_USE_RECORD_EVENTS
                       /* Emit a monitoring message of a record read from input */
-                      SNetThreadingEventSignal(
-                          SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record),
-                          NULL
+                      SNetThreadingEventSignal( parser.ent,
+                          SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record)
                           );
 #endif
 
@@ -398,9 +401,8 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 #ifdef MONINFO_USE_RECORD_EVENTS
                       if(SNetRecGetDescriptor(current.record) == REC_data) {
                         /* Emit a monitoring message of a record read from input */
-                        SNetThreadingEventSignal(
-                            SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record),
-                            NULL
+                        SNetThreadingEventSignal( parser.ent,
+                            SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record)
                             );
                       }
 #endif
@@ -736,15 +738,17 @@ void yyerror(char *error)
 void SNetInParserInit(FILE *file,
 		      snetin_label_t *labels,
 		      snetin_interface_t *interfaces,
-                      snet_stream_desc_t *output)
-{  
-  yyin = file; 
+                      snet_stream_desc_t *output,
+                      snet_entity_t *ent)
+{
+  yyin = file;
   parser.labels = labels;
   parser.interface = interfaces;
   parser.output = output;
+  parser.ent = ent;
 
   parser.terminate = SNET_PARSE_CONTINUE;
-}  
+}
 
 int SNetInParserParse()
 {

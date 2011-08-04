@@ -70,7 +70,7 @@ snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode)
 {
   assert( mode=='w' || mode=='r' );
   snet_stream_desc_t *sd = SNetMemAlloc(sizeof(snet_stream_t));
-  sd->entity = SNetEntitySelf();
+  sd->thr = SNetThreadingSelf();
   sd->stream = stream;
   sd->next = NULL;
   sd->mode = mode;
@@ -171,7 +171,7 @@ void SNetStreamWrite(snet_stream_desc_t *sd, void *item)
   assert(s->is_poll == 0 || s->is_poll == 1);
   if (s->is_poll) {
     s->is_poll = 0;
-    snet_entity_t *cons = s->consumer->entity;
+    snet_thread_t *cons = s->consumer->thr;
 
     pthread_mutex_lock( &cons->lock );
     if (cons->wakeup_sd == NULL) {
@@ -207,14 +207,14 @@ snet_stream_desc_t *SNetStreamPoll(snet_streamset_t *set)
   assert( *set != NULL);
 
   snet_stream_desc_t *result = NULL;
-  snet_entity_t *self;
+  snet_thread_t *self;
   snet_stream_iter_t *iter;
   int cnt = 0;
 
   /* get 'self', i.e. the task calling SNetStreamPoll()
    * the set is a simple pointer to the last element
    */
-  self = (*set)->entity;
+  self = (*set)->thr;
 
   iter = SNetStreamIterCreate(set);
 

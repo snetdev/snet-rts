@@ -157,7 +157,7 @@ static bool FilterIsBypass(
 /**
  * Filter task
  */
-static void FilterTask(void *arg)
+static void FilterTask(snet_entity_t *ent, void *arg)
 {
   filter_arg_t *farg = (filter_arg_t *)arg;
   snet_expr_t *expr;
@@ -186,9 +186,8 @@ static void FilterTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
           /* Emit a monitoring message of a record read to be processed by a filter */
-          SNetThreadingEventSignal(
-              SNetMonInfoCreate( EV_FILTER_START, MON_RECORD, in_rec),
-              farg->myloc
+          SNetThreadingEventSignal( ent,
+              SNetMonInfoCreate( EV_FILTER_START, MON_RECORD, in_rec)
               );
 #endif
 
@@ -226,9 +225,8 @@ static void FilterTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
                 /* Emit a monitoring message of a record written by a filter */
-                SNetThreadingEventSignal(
-                    SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec),
-                    farg->myloc
+                SNetThreadingEventSignal( ent,
+                    SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec)
                     );
 #endif
                   SNetStreamWrite( outstream, out_rec);
@@ -276,7 +274,7 @@ static void FilterTask(void *arg)
 /**
  * Nameshift task
  */
-static void NameshiftTask(void *arg)
+static void NameshiftTask(snet_entity_t *ent, void *arg)
 {
   filter_arg_t *farg = (filter_arg_t *)arg;
   snet_stream_desc_t *outstream, *instream;
@@ -388,8 +386,10 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
     farg->filter_instructions = instr_list;
     farg->myloc = SNetLocvecCopy(SNetLocvecGet(info));
 
-    SNetEntitySpawn( ENTITY_filter, SNetLocvecGet(info), location,
-      name, FilterTask, (void*)farg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_filter, location, SNetLocvecGet(info),
+          name, FilterTask, (void*)farg)
+        );
   } else {
     SNetVariantDestroy(input_variant);
     SNetExprListDestroy(guard_exprs);
@@ -495,8 +495,10 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
     farg->filter_instructions = NULL; /* instructions */
     farg->myloc = SNetLocvecCopy(SNetLocvecGet(info));
 
-    SNetEntitySpawn( ENTITY_filter, SNetLocvecGet(info), location,
-      "<nameshift>", NameshiftTask, (void*)farg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_nameshift, location, SNetLocvecGet(info),
+          "<nameshift>", NameshiftTask, (void*)farg)
+        );
   } else {
     SNetVariantDestroy( untouched);
     outstream = instream;

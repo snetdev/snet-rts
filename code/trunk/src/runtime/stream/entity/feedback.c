@@ -16,6 +16,7 @@
 #include "memfun.h"
 #include "locvec.h"
 #include "queue.h"
+#include "entities.h"
 
 #include "threading.h"
 #include "distribution.h"
@@ -185,7 +186,7 @@ static void FbCollReadFbi(struct fbcoll_state *state)
  * The feedback collector, the entry point of the
  * feedback combinator loop
  */
-static void FeedbackCollTask(void *arg)
+static void FeedbackCollTask(snet_entity_t *ent, void *arg)
 {
   fbcoll_arg_t *fbcarg = (fbcoll_arg_t *)arg;
   struct fbcoll_state state;
@@ -238,7 +239,7 @@ typedef struct {
  * The feedback dispatcher, at the end of the
  * feedback combinator loop
  */
-static void FeedbackDispTask(void *arg)
+static void FeedbackDispTask(snet_entity_t *ent, void *arg)
 {
   fbdisp_arg_t *fbdarg = (fbdisp_arg_t *)arg;
 
@@ -330,7 +331,7 @@ typedef struct{
 
 #ifdef FEEDBACK_STREAM_EMITTER
 
-static void FeedbackBufTask(void *arg)
+static void FeedbackBufTask(snet_entity_t *ent, void *arg)
 {
   fbbuf_arg_t *fbbarg = (fbbuf_arg_t *)arg;
 
@@ -381,7 +382,7 @@ static void FeedbackBufTask(void *arg)
 /**
  * The feedback buffer, in the back-loop
  */
-static void FeedbackBufTask(void *arg)
+static void FeedbackBufTask(snet_entity_t *ent, void *arg)
 {
   fbbuf_arg_t *fbbarg = (fbbuf_arg_t *)arg;
 
@@ -417,7 +418,7 @@ static void FeedbackBufTask(void *arg)
         goto feedback_buf_epilogue;
       }
     } else {
-      SNetEntityYield();
+      SNetThreadingYield();
       if ( SNetStreamPeek(instream) != NULL ) {
         rec = SNetStreamRead(instream);
         assert( REC_terminate != SNetRecGetDescriptor( rec) );
@@ -529,8 +530,10 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     fbbarg->in  = back_bufin;
     fbbarg->out = back_bufout;
     fbbarg->out_capacity = FEEDBACK_BACKCHAN_CAPACITY;
-    SNetEntitySpawn( ENTITY_fbbuf, locvec, location,
-        "<fbbuf>", FeedbackBufTask, (void*)fbbarg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_fbbuf, location, locvec,
+          "<fbbuf>", FeedbackBufTask, (void*)fbbarg)
+        );
 #else
     back_bufin = back_bufout;
 #endif
@@ -540,8 +543,10 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     fbcarg->in = input;
     fbcarg->fbi = back_bufout;
     fbcarg->out = into_op;
-    SNetEntitySpawn( ENTITY_fbcoll, locvec, location,
-        "<fbcoll>", FeedbackCollTask, (void*)fbcarg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_fbcoll, location, locvec,
+          "<fbcoll>", FeedbackCollTask, (void*)fbcarg)
+        );
 
     /* create the instance network */
     from_op = box_a(into_op, info, location);
@@ -554,8 +559,10 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     fbdarg->out = output;
     fbdarg->back_patterns = back_patterns;
     fbdarg->guards = guards;
-    SNetEntitySpawn( ENTITY_fbdisp, locvec, location,
-        "<fbdisp>", FeedbackDispTask, (void*)fbdarg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_fbdisp, location, locvec,
+          "<fbdisp>", FeedbackDispTask, (void*)fbdarg)
+        );
 
   } else {
     SNetVariantListDestroy(back_patterns);

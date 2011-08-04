@@ -184,7 +184,7 @@ static void PutToBuffers( snet_stream_desc_t **outstreams, int num,
 /**
  * Main Parallel Box Task
  */
-static void ParallelBoxTask(void *arg)
+static void ParallelBoxTask(snet_entity_t *ent, void *arg)
 {
   parallel_arg_t *parg = (parallel_arg_t *) arg;
   /* the number of outputs */
@@ -456,8 +456,10 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     parg->myloc = SNetLocvecCopy(locvec);
     parg->is_det = is_det;
 
-    SNetEntitySpawn( ENTITY_parallel, locvec, location,
-        "<parallel>", ParallelBoxTask, (void*)parg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_parallel, location, locvec,
+          "<parallel>", ParallelBoxTask, (void*)parg)
+        );
 
     /* create collector with collstreams */
     outstream = CollectorCreateStatic(num, collstreams, location, info);

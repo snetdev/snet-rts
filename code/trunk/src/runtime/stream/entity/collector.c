@@ -91,7 +91,7 @@ static int DestroyTermInWaitingSet(snet_stream_iter_t *wait_iter,
 /**
  * Collector Task
  */
-void CollectorTask(void *arg)
+void CollectorTask(snet_entity_t *ent, void *arg)
 {
   coll_arg_t *carg = (coll_arg_t *)arg;
   snet_streamset_t readyset, waitingset;
@@ -368,8 +368,10 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, int lo
   carg->dynamic = false;
 
   /* spawn collector task */
-  SNetEntitySpawn( ENTITY_collect, SNetLocvecGet(info), location,
-      "<collect>", CollectorTask, (void*)carg);
+  SNetThreadingSpawn(
+      SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
+        "<collect>", CollectorTask, (void*)carg)
+      );
   return outstream;
 }
 
@@ -395,8 +397,10 @@ snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, int location, sn
   carg->dynamic = true;
 
   /* spawn collector task */
-  SNetEntitySpawn( ENTITY_collect, SNetLocvecGet(info), location,
-      "<collect>", CollectorTask, (void*)carg);
+  SNetThreadingSpawn(
+      SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
+        "<collect>", CollectorTask, (void*)carg)
+      );
   return outstream;
 }
 

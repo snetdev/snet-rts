@@ -18,7 +18,7 @@ struct handle {
   name_mapping_t *mapping;
   snet_stream_desc_t *out_sd;
   snet_variant_list_t *vars;
-  snet_locvec_t *boxloc;
+  snet_entity_t *ent;
 };
 
 void SNetHndDestroy( snet_handle_t *hnd);

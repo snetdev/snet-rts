@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "info.h"
 #include "memfun.h"
+#include "entities.h"
 #include "distribution.h"
 #include "distribmap.h"
 
@@ -71,7 +72,7 @@ void RecvRecord(MPI_Status status)
   SNetStreamWrite(sdc, rec);
 }
 
-void SNetInputManager(void *args)
+void SNetInputManager(snet_entity_t *ent, void *args)
 {
   MPI_Status status;
 

@@ -124,7 +124,7 @@ typedef struct {
 /**
  * Sync box task
  */
-static void SyncBoxTask(void *arg)
+static void SyncBoxTask(snet_entity_t *ent, void *arg)
 {
   snet_expr_t *expr;
   snet_record_t *rec;
@@ -178,18 +178,16 @@ static void SyncBoxTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
               /* Emit a monitoring message of first record entering syncro cell */
-              SNetThreadingEventSignal(
-                  SNetMonInfoCreate( EV_SYNC_FIRST, MON_RECORD, rec),
-                  sarg->myloc
+              SNetThreadingEventSignal( ent,
+                  SNetMonInfoCreate( EV_SYNC_FIRST, MON_RECORD, rec)
                   );
 #endif
 
             } else {
 #ifdef MONINFO_USE_RECORD_EVENTS
               /* Emit a monitoring message of another accepted record entering syncro cell */
-              SNetThreadingEventSignal(
-                  SNetMonInfoCreate( EV_SYNC_NEXT, MON_RECORD, rec),
-                  sarg->myloc
+              SNetThreadingEventSignal( ent,
+                  SNetMonInfoCreate( EV_SYNC_NEXT, MON_RECORD, rec)
                   );
 #endif
             }
@@ -207,9 +205,8 @@ static void SyncBoxTask(void *arg)
 
 #ifdef MONINFO_USE_RECORD_EVENTS
           /* Emit a monitoring message of firing syncro cell */
-          SNetThreadingEventSignal(
-              SNetMonInfoCreate( EV_SYNC_FIRE, MON_RECORD, syncrec),
-              sarg->myloc
+          SNetThreadingEventSignal( ent,
+              SNetMonInfoCreate( EV_SYNC_FIRE, MON_RECORD, syncrec)
               );
 #endif
           /* this is the last sync */
@@ -311,8 +308,10 @@ snet_stream_t *SNetSync( snet_stream_t *input,
     sarg->guard_exprs = guard_exprs;
     sarg->myloc = SNetLocvecCopy(locvec);
 
-    SNetEntitySpawn( ENTITY_sync, locvec, location,
-      "<sync>", SyncBoxTask, (void*)sarg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_sync, location, locvec,
+          "<sync>", SyncBoxTask, (void*)sarg)
+        );
   } else {
     SNetVariantListDestroy( patterns);
     SNetExprListDestroy( guard_exprs);

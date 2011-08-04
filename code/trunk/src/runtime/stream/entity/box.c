@@ -39,7 +39,7 @@ typedef struct {
 /*  SNetBox                                                                  */
 /* ------------------------------------------------------------------------- */
 
-static void BoxTask(void *arg)
+static void BoxTask(snet_entity_t *ent, void *arg)
 {
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
   static struct timeval tv_in;
@@ -71,8 +71,8 @@ static void BoxTask(void *arg)
   hnd.mapping = NULL;
   /* set variants */
   hnd.vars = barg->vars;
-  /* location of box */
-  hnd.boxloc = barg->myloc;
+  /* box entity */
+  hnd.ent = ent;
 
   /* MAIN LOOP */
   while( !terminate) {
@@ -98,9 +98,8 @@ static void BoxTask(void *arg)
 #ifdef MONINFO_USE_RECORD_EVENTS
         /* Emit a monitoring message of a record read to be processed by a box */
         if (SNetRecGetDescriptor(rec) == REC_data) {
-          SNetThreadingEventSignal(
-              SNetMonInfoCreate( EV_BOX_START, MON_RECORD, rec),
-              barg->myloc
+          SNetThreadingEventSignal( ent,
+              SNetMonInfoCreate( EV_BOX_START, MON_RECORD, rec)
               );
         }
 #endif
@@ -130,7 +129,7 @@ static void BoxTask(void *arg)
         SNetRecDestroy( rec);
 
         /* restrict to one data record per execution */
-        SNetEntityYield();
+        //SNetThreadingYield();
         break;
 
       case REC_sync:
@@ -225,8 +224,10 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->vars = vlist;
     barg->boxname = boxname;
 
-    SNetEntitySpawn( ENTITY_box, locvec, location,
-      barg->boxname, BoxTask, (void*)barg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_box, location, locvec,
+          barg->boxname, BoxTask, (void*)barg)
+        );
 
 
   } else {

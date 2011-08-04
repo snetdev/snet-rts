@@ -854,7 +854,7 @@ static int ObserverSend(obs_handle_t *hnd, snet_record_t *rec)
  *
  ******************************************************************************/
 
-static void ObserverBoxTask(void *arg)
+static void ObserverBoxTask(snet_entity_t *ent, void *arg)
 {
   obs_handle_t *hnd = (obs_handle_t*)arg;
   snet_record_t *rec = NULL;
@@ -903,8 +903,10 @@ static void CreateObserverTask( obs_handle_t *hnd)
   char name[16];
   (void) snprintf(name, 16, "observer%02d", hnd->id);
   /* create a detached wrapper thread */
-  SNetEntitySpawn( ENTITY_other, NULL, -1,
-      name, ObserverBoxTask, (void*)hnd);
+  SNetThreadingSpawn(
+      SNetEntityCreate( ENTITY_other, -1, NULL,
+        name, ObserverBoxTask, (void*)hnd)
+      );
 }
 
 

@@ -22,6 +22,7 @@
 #include "memfun.h"
 #include "output.h"
 #include "snetentities.h"
+#include "entities.h"
 #include "label.h"
 #include "interface.h"
 #include "bool.h"
@@ -138,7 +139,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 /**
  * This is the task doing the global output
  */
-static void GlobOutputTask(void* data)
+static void GlobOutputTask(snet_entity_t *ent, void* data)
 {
   bool terminate = false;
   handle_t *hnd = (handle_t *)data;
@@ -201,6 +202,8 @@ void SNetInOutputInit(FILE *file,
   hnd->interfaces = interfaces;
   hnd->buffer = out_buf;
 
-  SNetEntitySpawn( ENTITY_other, NULL, -1,
-    "glob_output", GlobOutputTask, (void*)hnd);
+  SNetThreadingSpawn(
+      SNetEntityCreate( ENTITY_other, -1, NULL,
+        "glob_output", GlobOutputTask, (void*)hnd)
+      );
 }

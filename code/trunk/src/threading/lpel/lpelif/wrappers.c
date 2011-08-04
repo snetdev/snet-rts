@@ -1,7 +1,7 @@
 #include "lpel.h"
 #include "threading.h"
 
-void SNetEntityYield(void) {  LpelTaskYield(); }
+void SNetThreadingYield(void) {  LpelTaskYield(); }
 
 snet_stream_t* SNetStreamCreate(int cap) { return (snet_stream_t*) LpelStreamCreate(cap); }
 snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode) { return (snet_stream_desc_t *)LpelStreamOpen((lpel_stream_t*)stream, mode); }

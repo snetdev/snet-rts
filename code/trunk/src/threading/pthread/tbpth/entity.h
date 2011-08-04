@@ -1,22 +1,20 @@
 #ifndef _ENTITY_H_
 #define _ENTITY_H_
 
-#include <pthread.h>
+//#include <pthread.h>
 
 #include "threading.h"
 
 
-typedef struct snet_entity_t snet_entity_t;
-
-struct snet_entity_t {
-  snet_entityfunc_t   func;
-  void               *inarg;
+typedef struct {
+  snet_entity_t      *entity;
+  // void               *inarg;
   //pthread_t           thread;
   pthread_mutex_t     lock;
   pthread_cond_t      pollcond;
   snet_stream_desc_t *wakeup_sd;
-};
+} snet_thread_t;
 
-snet_entity_t *SNetEntitySelf(void);
+extern snet_thread_t *SNetThreadingSelf(void);
 
 #endif /* _ENTITY_H_ */

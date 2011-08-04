@@ -79,9 +79,8 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
-  SNetThreadingEventSignal(
-      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec),
-      hnd->boxloc
+  SNetThreadingEventSignal( hnd->ent,
+      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec)
       );
 #endif
   /* write to stream */
@@ -146,7 +145,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
       }
     }
   } else {
-    SNetUtilDebugFatalLoc( hnd->boxloc,
+    SNetUtilDebugFatalLoc( SNetEntityGetLocvec(hnd->ent),
         "[BOX] SNetOut: variant_num <= 0"
         );
   }
@@ -170,9 +169,8 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
 
 #ifdef MONINFO_USE_RECORD_EVENTS
   /* Emit a monitoring message of a record written by a box */
-  SNetThreadingEventSignal(
-      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec),
-      hnd->boxloc
+  SNetThreadingEventSignal( hnd->ent,
+      SNetMonInfoCreate( EV_BOX_WRITE, MON_RECORD, out_rec)
       );
 #endif
   /* write to stream */

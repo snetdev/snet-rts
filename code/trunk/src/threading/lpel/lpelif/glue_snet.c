@@ -38,11 +38,11 @@ static int mon_level = 0;
 static bool dloc_placement = false;
 
 
-static size_t GetStacksize(snet_entity_type_t type)
+static size_t GetStacksize(snet_entity_descr_t descr)
 {
   size_t stack_size;
 
-  switch(type) {
+  switch(descr) {
     case ENTITY_parallel:
     case ENTITY_star:
     case ENTITY_split:
@@ -51,6 +51,7 @@ static size_t GetStacksize(snet_entity_type_t type)
     case ENTITY_fbbuf:
     case ENTITY_sync:
     case ENTITY_filter:
+    case ENTITY_nameshift:
     case ENTITY_collect:
       stack_size = 256*1024; /* 256KB, HIGHLY EXPERIMENTAL! */
       break;
@@ -66,6 +67,15 @@ static size_t GetStacksize(snet_entity_type_t type)
  return( stack_size);
 }
 
+
+static void *EntityTask(void *arg)
+{
+  snet_entity_t *ent = (snet_entity_t *)arg;
+
+  SNetEntityCall(ent);
+
+  return NULL;
+}
 
 int SNetThreadingInit(int argc, char **argv)
 {
@@ -183,7 +193,7 @@ int SNetThreadingCleanup(void)
 /**
  * Signal an event
  */
-void SNetThreadingEventSignal(snet_moninfo_t *moninfo, snet_locvec_t *loc)
+void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 {
   lpel_task_t *t = LpelTaskSelf();
   assert(t != NULL);
@@ -200,7 +210,8 @@ void SNetThreadingEventSignal(snet_moninfo_t *moninfo, snet_locvec_t *loc)
 /*****************************************************************************
  * Spawn a new task
  ****************************************************************************/
-int SNetEntitySpawn(
+int SNetThreadingSpawn(snet_entity_t *ent)
+/*
   snet_entity_type_t type,
   snet_locvec_t *locvec,
   int location,
@@ -208,19 +219,12 @@ int SNetEntitySpawn(
   snet_entityfunc_t func,
   void *arg
   )
+  */
 {
   int worker = -1;
-  char locstr[128];
-
-
-  // if locvec is NULL then entity_other
-  assert(locvec != NULL || type == ENTITY_other);
-
-  if (locvec != NULL) {
-    (void) SNetLocvecPrint(locstr, 128, locvec);
-  } else {
-    locstr[0] = '\0';
-  }
+  snet_entity_descr_t type = SNetEntityDescr(ent);
+  int location = SNetEntityNode(ent);
+  const char *name = SNetEntityName(ent);
 
   if ( type != ENTITY_other) {
     if (dloc_placement) {
@@ -233,8 +237,9 @@ int SNetEntitySpawn(
 
   lpel_task_t *t = LpelTaskCreate(
       worker,
-      (lpel_taskfunc_t) func,
-      arg,
+      //(lpel_taskfunc_t) func,
+      EntityTask,
+      ent,
       GetStacksize(type)
       );
 
@@ -254,13 +259,14 @@ int SNetEntitySpawn(
     /* up to level 4, we only monitor boxes */
     if (mon_level > 4 || type==ENTITY_box) {
       mon_task_t *mt = SNetThreadingMonTaskCreate(
-          LpelTaskGetID(t), name
+          LpelTaskGetID(t),
+          name //SNetEntityStr(ent)
           );
       LpelTaskMonitor(t, mt);
       /* if we monitor the task, we make an entry in the map file */
       if (mapfile) {
         int tid = LpelTaskGetID(t);
-        (void) fprintf(mapfile, "%d %s %s %d\n", tid, locstr, name, worker);
+        (void) fprintf(mapfile, "%d %s %d\n", tid, SNetEntityStr(ent), worker);
       }
     }
   }

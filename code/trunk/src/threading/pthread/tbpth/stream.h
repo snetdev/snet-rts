@@ -29,7 +29,7 @@ struct snet_stream_t {
 
 
 struct snet_stream_desc_t {
-  snet_entity_t *entity;
+  snet_thread_t *thr;
   snet_stream_t *stream;
   char mode;
   struct snet_stream_desc_t *next;

@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/time.h>
 
 #include "memfun.h"
@@ -20,7 +21,7 @@ struct mlist_node_t {
   struct mlist_node_t *next;
   snet_moninfo_t      *moninfo;
   struct timeval       timestamp;
-  snet_locvec_t       *loc;
+  const char          *label;
 };
 
 
@@ -207,7 +208,7 @@ void SNetThreadingMonitoringCleanup(void)
 
 
 
-void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo, snet_locvec_t *loc)
+void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo, const char *label)
 {
   assert(moninfo != NULL);
 
@@ -215,8 +216,12 @@ void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo, snet_locvec_t *loc)
 
   /* set the data */
   node->moninfo = moninfo;
-  /* copy locvec */
-  node->loc = (loc!=NULL)? SNetLocvecCopy(loc) : NULL;
+  /* copy str */
+  node->label = strcpy(
+      SNetMemAlloc( (strlen(label)+1) * sizeof(char) ),
+      label
+      );
+
   /* get current timestamp */
   GetTimestamp(&node->timestamp);
 
@@ -225,20 +230,14 @@ void SNetThreadingMonitoringAppend(snet_moninfo_t *moninfo, snet_locvec_t *loc)
 
 
 
-static void ProcessMonInfo(snet_moninfo_t *moninfo, struct timeval *timestamp, snet_locvec_t *loc)
+static void ProcessMonInfo(snet_moninfo_t *moninfo, struct timeval *timestamp, const char *label)
 {
   /* timestamp */
   fprintf(mon_file,
-      "%lu.%06lu ",
-      timestamp->tv_sec, timestamp->tv_usec
+      "%lu.%06lu %s ",
+      timestamp->tv_sec, timestamp->tv_usec,
+      label
       );
-  /* locvec */
-  if (loc!=NULL) {
-    char slocvec[64];
-    slocvec[0]='\0';
-    (void) SNetLocvecPrint(slocvec, 63, loc);
-    fprintf(mon_file, "%s ", slocvec);
-  }
   /* moninfo */
   SNetMonInfoPrint(mon_file, moninfo);
   fprintf(mon_file,"\n");
@@ -253,8 +252,6 @@ static void ProcessMonInfo(snet_moninfo_t *moninfo, struct timeval *timestamp, s
 static void *MonitorThread(void *arg)
 {
   mlist_node_t *node = NULL;
-  snet_moninfo_t *moninfo = NULL;
-  snet_locvec_t *loc = NULL;
 
   while(1) { /* MAIN EVENT LOOP */
 
@@ -265,24 +262,17 @@ static void *MonitorThread(void *arg)
     if (node==NULL) break;
 
 
-    /* local copy, to be able to free the node
-     * before destroying moninfo
-     */
-    moninfo = node->moninfo;
-    loc = node->loc;
-
     /* now process the moninfo */
-    ProcessMonInfo(moninfo, &node->timestamp, loc);
-
-    /* free node */
-    node->moninfo = NULL;
-    node->loc = NULL;
-    PutFree(node);
+    ProcessMonInfo(node->moninfo, &node->timestamp, node->label);
 
     /* destroy the moninfo */
-    SNetMonInfoDestroy(moninfo);
-    /* destroy the locvec copy */
-    if (loc!=NULL) SNetLocvecDestroy(loc);
+    SNetMonInfoDestroy(node->moninfo);
+    /* free the label */
+    SNetMemFree( (void*) node->label);
+
+    /* free node */
+    PutFree(node);
+
 
   } /* END MAIN LOOP */
 

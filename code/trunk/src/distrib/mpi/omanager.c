@@ -2,6 +2,7 @@
 #include <mpi.h>
 #include <pthread.h>
 #include <stdio.h>
+#include "entities.h"
 #include "record.h"
 #include "memfun.h"
 #include "distribmap.h"
@@ -31,7 +32,7 @@ static void SendRecord(snet_dest_t dest, snet_record_t *rec)
   MPI_Send(buf, offset, MPI_PACKED, dest.node, dest.parent, MPI_COMM_WORLD);
 }
 
-void SNetOutputManager(void *args)
+void SNetOutputManager(snet_entity_t *ent, void *args)
 {
   snet_dest_t dest;
   snet_record_t *rec;

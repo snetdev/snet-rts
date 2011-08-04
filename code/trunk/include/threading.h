@@ -3,6 +3,7 @@
 
 #include "distribution.h" //XXX dependency?
 #include "locvec.h"
+#include "entities.h"
 #include "moninfo.h"
 
 /******************************************************************************
@@ -84,11 +85,11 @@ int SNetThreadingCleanup(void);
 /**
  * Signal a monitoring event
  *
+ * @param ent       the entity generating the event
  * @param moninfo   the monitoring info, can be NULL
- * @param source    the source (entity) of the event, can be NULL
  * @post  if moninfo != NULL, moninfo is destroyed
  */
-void SNetThreadingEventSignal(snet_moninfo_t *moninfo, snet_locvec_t *source);
+void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo);
 
 
 
@@ -104,59 +105,25 @@ void SNetThreadingEventSignal(snet_moninfo_t *moninfo, snet_locvec_t *source);
  ****************************************************************************/
 
 
-typedef void (*snet_entityfunc_t)(void *arg);
-
-
-/*
- * Following entities exist and must be handled by the backends
- * (can be extended in future implementations):
- */
-typedef enum {
-  ENTITY_box,
-  ENTITY_parallel,
-  ENTITY_star,
-  ENTITY_split,
-  ENTITY_fbcoll,
-  ENTITY_fbdisp,
-  ENTITY_fbbuf,
-  ENTITY_sync,
-  ENTITY_filter,
-  ENTITY_collect,
-  ENTITY_other
-} snet_entity_type_t;
-
-
 
 
 
 /**
  * Spawn a new thread
  *
- * @param type     the entity type
- * @param locvec   the location vector
- * @param location the location passed to the creation function
- * @param name     optional name of entity
- * @param func     the entity thread function
- * @param arg      the argument for the entity thread
+ * @param ent     the entity to spawn
  *
  * @return 0 on success
  */
-int SNetEntitySpawn(
-  snet_entity_type_t type,
-  snet_locvec_t *locvec,
-  int location,
-  const char *name,
-  snet_entityfunc_t func,
-  void *arg
-  );
+int SNetThreadingSpawn(snet_entity_t *ent);
 
 
 
 
 /**
- * Let the current entity give up execution
+ * Let the current entity thread/task give up execution
  */
-void SNetEntityYield(void);
+void SNetThreadingYield(void);
 
 
 
@@ -170,6 +137,7 @@ void SNetEntityYield(void);
  * Stream
  */
 //typedef struct snet_stream_t snet_stream_t;
+struct snet_stream_t;
 
 
 /**

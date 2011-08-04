@@ -83,11 +83,15 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 void SNetDistribStart()
 {
 
-  SNetEntitySpawn( ENTITY_other, NULL, -1,
-    "output_manager", &SNetOutputManager, stream);
+  SNetThreadingSpawn(
+      SNetEntityCreate( ENTITY_other, -1, NULL,
+        "output_manager", &SNetOutputManager, stream)
+      );
 
-  SNetEntitySpawn( ENTITY_other, NULL, -1,
-    "input_manager", &SNetInputManager, NULL);
+  SNetThreadingSpawn(
+      SNetEntityCreate( ENTITY_other, -1, NULL,
+        "input_manager", &SNetInputManager, NULL)
+      );
 }
 
 void SNetDistribStop()
