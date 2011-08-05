@@ -84,7 +84,6 @@ typedef struct {
   snet_variant_t *input_variant;
   snet_expr_list_t *guard_exprs;
   snet_filter_instr_list_list_t **filter_instructions;
-  snet_locvec_t *myloc;
 } filter_arg_t;
 
 static void FilterArgsDestroy( filter_arg_t *farg)
@@ -103,7 +102,6 @@ static void FilterArgsDestroy( filter_arg_t *farg)
   }
 
   SNetExprListDestroy( farg->guard_exprs);
-  SNetLocvecDestroy( farg->myloc);
   SNetMemFree( farg);
 }
 
@@ -384,7 +382,6 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
     farg->input_variant = input_variant;
     farg->guard_exprs = guard_exprs;
     farg->filter_instructions = instr_list;
-    farg->myloc = SNetLocvecCopy(SNetLocvecGet(info));
 
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_filter, location, SNetLocvecGet(info),
@@ -493,7 +490,6 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
     farg->input_variant = untouched;
     farg->guard_exprs = SNetExprListCreate( 1, SNetEconsti( offset));
     farg->filter_instructions = NULL; /* instructions */
-    farg->myloc = SNetLocvecCopy(SNetLocvecGet(info));
 
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_nameshift, location, SNetLocvecGet(info),

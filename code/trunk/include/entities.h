@@ -2,7 +2,7 @@
 #define _ENTITIES_H_
 
 
-
+#include "locvec.h"
 
 
 /*

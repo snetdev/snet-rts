@@ -16,7 +16,7 @@
 
 void SNetStreamSetSource(snet_stream_t *s, snet_locvec_t *lv)
 {
-  s->source = lv;
+  s->source = SNetLocvecCopy(lv);
 }
 
 snet_locvec_t *SNetStreamGetSource(snet_stream_t *s)
@@ -58,7 +58,7 @@ void SNetStreamDestroy(snet_stream_t *s)
   pthread_cond_destroy(&s->notfull);
 
   if (s->source != NULL) {
-    SNetMemFree(s->source);
+    SNetLocvecDestroy(s->source);
   }
 
   SNetMemFree(s->buffer);

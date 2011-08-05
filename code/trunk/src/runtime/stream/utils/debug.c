@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "locvec.h"
+#include "entities.h"
 #include "debug.h"
 #include "bool.h"
 #include "memfun.h"
@@ -30,7 +30,7 @@ static inline void CheckAndUpdate(int *ret, int *len, int *num)
 
 
 static void PrintDebugMessage(char *msg, char *category,
-  va_list arg, snet_locvec_t *locvec)
+  va_list arg, snet_entity_t *ent)
 {
   char *temp;
   int num, ret, len;
@@ -45,17 +45,12 @@ static void PrintDebugMessage(char *msg, char *category,
   temp = SNetMemAlloc(sizeof(char) * len);
   //memset(temp, 0, len);
 
-  if (locvec != NULL) {
-    ret = snprintf(temp, len, "(SNET %s (NODE %d in ",
+  if (ent != NULL) {
+    ret = snprintf(temp, len, "(SNET %s (NODE %d in %s)",
         category,
-        SNetDistribGetNodeId()
+        SNetDistribGetNodeId(),
+        SNetEntityStr(ent)
         );
-    CheckAndUpdate( &ret, &len, &num);
-
-    ret = SNetLocvecPrint(temp+num, len, locvec);
-    CheckAndUpdate( &ret, &len, &num);
-
-    ret = snprintf(temp+num, len, ") ");
     CheckAndUpdate( &ret, &len, &num);
   } else {
     ret = snprintf(temp, len, "(SNET %s (NODE %d THREAD %lu) ",
@@ -110,12 +105,12 @@ void SNetUtilDebugNotice(char *msg, ...)
 /**
  * Print an error message on stderr and abort the program.
  */
-void SNetUtilDebugFatalLoc(snet_locvec_t *locvec, char* msg, ...)
+void SNetUtilDebugFatalEnt(snet_entity_t *ent, char* msg, ...)
 {
   va_list arg;
 
   va_start(arg, msg);
-  PrintDebugMessage(msg, "FATAL", arg, locvec);
+  PrintDebugMessage(msg, "FATAL", arg, ent);
   va_end(arg);
   abort();
 }
@@ -123,12 +118,12 @@ void SNetUtilDebugFatalLoc(snet_locvec_t *locvec, char* msg, ...)
 /**
  * Print a warning/notice message on stderr
  */
-void SNetUtilDebugNoticeLoc(snet_locvec_t *locvec, char *msg, ...)
+void SNetUtilDebugNoticeEnt(snet_entity_t *ent, char *msg, ...)
 {
   va_list arg;
 
   va_start(arg, msg);
-  PrintDebugMessage(msg, "NOTICE", arg, locvec);
+  PrintDebugMessage(msg, "NOTICE", arg, ent);
   va_end(arg);
 }
 

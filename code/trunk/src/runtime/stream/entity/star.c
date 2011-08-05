@@ -103,7 +103,7 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
   *next = SNetStreamOpen(nextstream_addr, 'w');
 
   /* Set the source of the stream to support garbage collection */
-  SNetStreamSetSource(nextstream_addr, SNetLocvecCopy(SNetLocvecGet(sarg->info)));
+  SNetStreamSetSource(nextstream_addr, SNetLocvecGet(sarg->info));
 
   /* use custom creation function for proper/easier update of locvec */
   starstream = SNetSerialStarchild(
@@ -151,14 +151,14 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
         if( MatchesExitPattern( rec, sarg->exit_patterns, sarg->guards)) {
           assert(!sync_cleanup);
 #ifdef DEBUG_PRINT_GC
-          SNetUtilDebugNoticeLoc( sarg->myloc,
+          SNetUtilDebugNoticeEnt( ent,
               "[STAR] Notice: Data leaves replication network.");
 #endif
           /* send rec to collector */
           SNetStreamWrite( outstream, rec);
         } else {
 #ifdef DEBUG_PRINT_GC
-          SNetUtilDebugNoticeLoc( sarg->myloc,
+          SNetUtilDebugNoticeEnt( ent,
               "[STAR] Notice: Sending data into next instance.");
 #endif
           /* if instance has not been created yet, create it */
@@ -204,7 +204,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
           terminate = true;
 #ifdef DEBUG_PRINT_GC
           /* terminating due to GC */
-          SNetUtilDebugNoticeLoc( sarg->myloc,
+          SNetUtilDebugNoticeEnt( ent,
               "[STAR] Notice: Destroying star dispatcher due to GC, "
               "delayed until new data record!"
               );
@@ -223,9 +223,8 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
 #ifdef DEBUG_PRINT_GC
           if (loc != NULL) {
             char srecloc[64];
-            srecloc[0] = '\0';
             SNetLocvecPrint(srecloc, 64, loc);
-            SNetUtilDebugNoticeLoc( sarg->myloc,
+            SNetUtilDebugNoticeEnt( ent,
                   "[STAR] Notice: Received sync record with a stream with source %s.",
                   srecloc
                   );
@@ -251,7 +250,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
               terminate = true;
 #ifdef DEBUG_PRINT_GC
               /* terminating due to GC */
-              SNetUtilDebugNoticeLoc( sarg->myloc,
+              SNetUtilDebugNoticeEnt( ent,
                   "[STAR] Notice: Destroying star dispatcher due to GC, "
                   "immediately on sync!"
                   );
@@ -262,7 +261,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
             } else {
               sync_cleanup = true;
 #ifdef DEBUG_PRINT_GC
-              SNetUtilDebugNoticeLoc( sarg->myloc,
+              SNetUtilDebugNoticeEnt( ent,
                   "[STAR] Notice: Remembering delayed destruction.");
 #endif
               /* handle sync record as usual */

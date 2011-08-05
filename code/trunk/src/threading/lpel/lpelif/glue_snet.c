@@ -73,6 +73,7 @@ static void *EntityTask(void *arg)
   snet_entity_t *ent = (snet_entity_t *)arg;
 
   SNetEntityCall(ent);
+  SNetEntityDestroy(ent);
 
   return NULL;
 }

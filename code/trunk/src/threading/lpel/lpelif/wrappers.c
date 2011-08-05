@@ -7,7 +7,11 @@ snet_stream_t* SNetStreamCreate(int cap) { return (snet_stream_t*) LpelStreamCre
 snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode) { return (snet_stream_desc_t *)LpelStreamOpen((lpel_stream_t*)stream, mode); }
 
 snet_locvec_t *SNetStreamGetSource(snet_stream_t *s) { return (snet_locvec_t *)LpelStreamGetUsrData((lpel_stream_t *)s); }
-void SNetStreamSetSource(snet_stream_t *s, snet_locvec_t *lv) { LpelStreamSetUsrData((lpel_stream_t *)s, lv); }
+
+void SNetStreamSetSource(snet_stream_t *s, snet_locvec_t *lv)
+{
+  LpelStreamSetUsrData((lpel_stream_t *)s, SNetLocvecCopy(lv));
+}
 
 void SNetStreamClose(snet_stream_desc_t *sd, int destroy_stream)
 {

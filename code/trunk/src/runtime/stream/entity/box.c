@@ -20,7 +20,11 @@
 #endif /* SNET_DEBUG_COUNTERS  */
 
 
-//#define DBG_RT_TRACE_OUT_TIMINGS
+//#define DBG_RT_TRACE_BOX_TIMINGS
+
+#ifdef DBG_RT_TRACE_BOX_TIMINGS
+#include <sys/time.h>
+#endif
 
 
 
@@ -28,7 +32,6 @@ typedef struct {
   snet_stream_t *input, *output;
   void (*boxfun)( snet_handle_t*);
   snet_int_list_list_t *output_variants;
-  snet_locvec_t *myloc;
   const char *boxname;
   snet_variant_list_t *vars;
 } box_arg_t;
@@ -86,7 +89,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_in, NULL);
-        SNetUtilDebugNoticeLoc( barg->myloc,
+        SNetUtilDebugNoticeEnt( ent,
             "[BOX] Firing box function at %lf.",
             tv_in.tv_sec + tv_in.tv_usec / 1000000.0
             );
@@ -113,7 +116,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
         gettimeofday( &tv_out, NULL);
-        SNetUtilDebugNoticeLoc( barg->myloc,
+        SNetUtilDebugNoticeEnt( ent,
             "[BOX] Return from box function after %lf sec.",
             (tv_out.tv_sec - tv_in.tv_sec) + (tv_out.tv_usec - tv_in.tv_usec) / 1000000.0
             );
@@ -164,7 +167,6 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   SNetHndDestroy( &hnd);
 
   /* destroy box arg */
-  SNetLocvecDestroy(barg->myloc);
   SNetIntListListDestroy(barg->output_variants);
   SNetMemFree( barg);
 }
@@ -184,12 +186,9 @@ snet_stream_t *SNetBox( snet_stream_t *input,
   int i,j;
   snet_stream_t *output;
   box_arg_t *barg;
-  snet_locvec_t *locvec;
   snet_variant_list_t *vlist;
 
   input = SNetRouteUpdate(info, input, location, NULL);
-
-  locvec = SNetLocvecGet(info);
 
   if(SNetDistribIsNodeLocation(location)) {
     output = SNetStreamCreate(0);
@@ -220,12 +219,11 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->output = output;
     barg->boxfun = boxfun;
     barg->output_variants = output_variants;
-    barg->myloc = SNetLocvecCopy(locvec);
     barg->vars = vlist;
     barg->boxname = boxname;
 
     SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_box, location, locvec,
+        SNetEntityCreate( ENTITY_box, location, SNetLocvecGet(info),
           barg->boxname, BoxTask, (void*)barg)
         );
 

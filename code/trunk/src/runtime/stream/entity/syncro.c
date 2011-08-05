@@ -118,7 +118,6 @@ typedef struct {
   snet_stream_t *input, *output;
   snet_variant_list_t *patterns;
   snet_expr_list_t *guard_exprs;
-  snet_locvec_t *myloc;
 } sync_arg_t;
 
 /**
@@ -252,7 +251,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 
       case REC_terminate:
         if (partial_sync) {
-          SNetUtilDebugNoticeLoc( sarg->myloc,
+          SNetUtilDebugNoticeEnt( ent,
           "[SYNC] Warning: Destroying partially synchronized sync-cell!");
         }
         terminate = true;
@@ -270,7 +269,6 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
     }
   } /* MAIN LOOP END */
 
-  SNetLocvecDestroy(sarg->myloc);
 
   SNetVariantListDestroy( sarg->patterns);
   SNetExprListDestroy( sarg->guard_exprs);
@@ -306,7 +304,6 @@ snet_stream_t *SNetSync( snet_stream_t *input,
     sarg->output = output;
     sarg->patterns = patterns;
     sarg->guard_exprs = guard_exprs;
-    sarg->myloc = SNetLocvecCopy(locvec);
 
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_sync, location, locvec,

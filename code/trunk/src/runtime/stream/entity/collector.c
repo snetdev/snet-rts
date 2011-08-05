@@ -31,7 +31,6 @@ typedef struct {
   snet_stream_t *output;
   void* inputs; /* either snet_stream_t* or snet_stream_t** */
   int num;
-  snet_locvec_t *myloc;
   bool dynamic;
 } coll_arg_t;
 
@@ -159,7 +158,7 @@ void CollectorTask(snet_entity_t *ent, void *arg)
              * check that level & counter match
              */
             if( !SortRecEqual(rec, sort_rec) ) {
-              SNetUtilDebugNoticeLoc( carg->myloc,
+              SNetUtilDebugNoticeEnt( ent,
                   "[COLL] Warning: Received sort records do not match! "
                   "expected (l%d,c%d) got (l%d,c%d)", /*TROLLFACE*/
                   SNetRecGetLevel(sort_rec), SNetRecGetNum(sort_rec),
@@ -171,7 +170,7 @@ void CollectorTask(snet_entity_t *ent, void *arg)
           } else {
             sort_rec = rec;
 #ifdef DEBUG_PRINT_GC
-            SNetUtilDebugNoticeLoc( carg->myloc,
+            SNetUtilDebugNoticeEnt( ent,
                 "[COLL] Info: Received first sort record: (l%d,c%d)",
                 SNetRecGetLevel(sort_rec), SNetRecGetNum(sort_rec)
                 );
@@ -192,11 +191,10 @@ void CollectorTask(snet_entity_t *ent, void *arg)
           if (!carg->dynamic) {
             snet_locvec_t *str_source = SNetStreamGetSource( SNetRecGetStream(rec) );
             char slocvec[64];
-            slocvec[0] = '\0';
             if (str_source != NULL) {
               (void) SNetLocvecPrint(slocvec, 64, str_source);
             }
-            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_sync on %p with source %s!", cur_stream, slocvec);
+            SNetUtilDebugNoticeEnt( ent, "[COLL] received REC_sync on %p with source %s!", cur_stream, slocvec);
           }
 #endif
           /* sync: replace stream */
@@ -238,7 +236,7 @@ void CollectorTask(snet_entity_t *ent, void *arg)
 #ifdef DEBUG_PRINT_GC
           //FIXME FIXME FIXME
           if (!carg->dynamic) {
-            SNetUtilDebugNoticeLoc(carg->myloc, "[COLL] received REC_terminate on %p!", cur_stream);
+            SNetUtilDebugNoticeEnt(ent, "[COLL] received REC_terminate on %p!", cur_stream);
           }
 #endif
           res = SNetStreamsetRemove( &readyset, cur_stream);
@@ -297,7 +295,7 @@ void CollectorTask(snet_entity_t *ent, void *arg)
         terminate = true;
 #ifdef DEBUG_PRINT_GC
         if (!carg->dynamic) {
-          SNetUtilDebugNoticeLoc( carg->myloc,
+          SNetUtilDebugNoticeEnt( ent,
               "[COLL] Terminate static collector as no inputs left!"
               );
         }
@@ -319,7 +317,7 @@ void CollectorTask(snet_entity_t *ent, void *arg)
       terminate = true;
 #ifdef DEBUG_PRINT_GC
       /* terminating due to GC */
-      SNetUtilDebugNoticeLoc( carg->myloc,
+      SNetUtilDebugNoticeEnt( ent,
           "[COLL] Terminate static collector as only one branch left!"
           );
 #endif
@@ -333,7 +331,6 @@ void CollectorTask(snet_entity_t *ent, void *arg)
   /* destroy iterator */
   SNetStreamIterDestroy( wait_iter);
 
-  SNetLocvecDestroy(carg->myloc);
 
   SNetMemFree( carg);
 
@@ -364,7 +361,6 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, int lo
   }
   carg->output = outstream;
   carg->num = num;
-  carg->myloc = SNetLocvecCopy(SNetLocvecGet(info));
   carg->dynamic = false;
 
   /* spawn collector task */
@@ -393,7 +389,6 @@ snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, int location, sn
   carg->inputs = instream;
   carg->output = outstream;
   carg->num = 1;
-  carg->myloc = SNetLocvecCopy(SNetLocvecGet(info));
   carg->dynamic = true;
 
   /* spawn collector task */

@@ -121,10 +121,16 @@ snet_entity_t *SNetEntityCopy(snet_entity_t *ent)
 }
 
 
+/**
+ * Call the entity funciton.
+ *
+ * This function must be called from within the threading layer,
+ * on a separate thread of execution.
+ *
+ */
 void SNetEntityCall(snet_entity_t *ent)
 {
   ENT(ent,func)( ent, ENT(ent,arg) );
-  SNetEntityDestroy(ent);
 }
 
 
@@ -153,6 +159,19 @@ const char *SNetEntityName(snet_entity_t *ent)
   return (name!=NULL) ? name : "";
 }
 
+
+/**
+ * Return the string representation of the entity.
+ *
+ * It is of the format "<locvec> <name" or only "<name>",
+ * depending on whether locvec is NULL or not.
+ * The string is cached internally such that it is not recomputed
+ * every time SNetEntityStr is called.
+ *
+ * @note The caller must not free the returned pointer.
+ *       If the string needs to be used past the lifetime of the entity,
+ *       the caller must make a copy of the string.
+ */
 const char *SNetEntityStr(snet_entity_t *ent)
 {
   const char *name = ENT(ent, name);
@@ -164,6 +183,7 @@ const char *SNetEntityStr(snet_entity_t *ent)
 
       if (name==NULL) { name = ""; }
       namelen = strlen(name);
+      /* initial size of the buffer */
       size = 32;
 
       while(1) {
@@ -180,8 +200,7 @@ const char *SNetEntityStr(snet_entity_t *ent)
         }
       }
       len = strlen(buf)+1;
-      ENT(ent, str) = SNetMemAlloc( len);
-      strncpy( (char*) ENT(ent, str), buf, len);
+      ENT(ent, str) =  strncpy( SNetMemAlloc(len), buf, len);
       SNetMemFree(buf);
     }
     return ENT(ent, str);

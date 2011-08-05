@@ -1,3 +1,6 @@
+#include <assert.h>
+
+
 #include "out.h"
 #include "debug.h"
 #include "handle_p.h"
@@ -5,7 +8,6 @@
 #include "interface_functions.h"
 #include "type.h"
 
-#include <assert.h> 
 
 //#define DBG_RT_TRACE_OUT_TIMINGS
 
@@ -33,7 +35,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
   struct timeval tv_out;
 
   gettimeofday( &tv_in, NULL);
-  SNetUtilDebugNoticeLoc( hnd->boxloc,
+  SNetUtilDebugNoticeEnt( hnd->ent,
       "[BOX] SNetOut called at %lf.",
       tv_in.tv_sec + tv_in.tv_usec / 1000000.0
       );
@@ -88,7 +90,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
-  SNetUtilDebugNoticeLoc( hnd->boxloc,
+  SNetUtilDebugNoticeEnt( hnd->ent,
       "[BOX] SNetOut finished after %lf sec.",
       (tv_out.tv_sec-tv_in.tv_sec)+(tv_out.tv_usec-tv_in.tv_usec)/1000000.0
       );
@@ -113,7 +115,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
   struct timeval tv_out;
 
   gettimeofday( &tv_in, NULL);
-  SNetUtilDebugNoticeLoc( hnd->boxloc,
+  SNetUtilDebugNoticeEnt( hnd->ent,
       "[BOX] SNetOut called at %lf.",
       tv_in.tv_sec + tv_in.tv_usec / 1000000.0
       );
@@ -145,7 +147,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
       }
     }
   } else {
-    SNetUtilDebugFatalLoc( SNetEntityGetLocvec(hnd->ent),
+    SNetUtilDebugFatalEnt( hnd->ent,
         "[BOX] SNetOut: variant_num <= 0"
         );
   }
@@ -178,7 +180,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
-  SNetUtilDebugNoticeLoc( hnd->boxloc,
+  SNetUtilDebugNoticeEnt( hnd->ent,
       "[BOX] SNetOut finished after %lf sec.",
       (tv_out.tv_sec-tv_in.tv_sec)+(tv_out.tv_usec-tv_in.tv_usec)/1000000.0
       );

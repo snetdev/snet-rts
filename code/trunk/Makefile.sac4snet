@@ -1,0 +1,5 @@
+
+.PHONY: all
+
+all:
+	make -C $(SNETBASE)/src/interfaces/sac4snet

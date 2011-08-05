@@ -213,6 +213,7 @@ static void *EntityThread(void *arg)
   pthread_setspecific(thread_self_key, thr);
 
   SNetEntityCall(thr->entity);
+  SNetEntityDestroy(thr->entity);
 
   /* call entity function */
   ThreadDestroy(thr);
