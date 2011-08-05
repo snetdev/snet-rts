@@ -42,8 +42,8 @@ static bool MatchesExitPattern( snet_record_t *rec,
   snet_variant_t *pattern;
 
   LIST_ENUMERATE(exit_patterns, pattern, i)
-    if( SNetEevaluateBool( SNetExprListGet( guards, i), rec) &&
-        SNetRecPatternMatches(pattern, rec)) {
+    if (SNetRecPatternMatches(pattern, rec) &&
+        SNetEevaluateBool( SNetExprListGet( guards, i), rec)) {
       return true;
     }
   END_ENUMERATE
@@ -99,7 +99,7 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
   snet_stream_t *starstream, *nextstream_addr;
   /* Create the stream to the instance */
   nextstream_addr = SNetStreamCreate(0);
-  SNetRouteUpdateDynamic(sarg->info, nextstream_addr, sarg->location, SNetLocvecTopval(SNetLocvecGet(sarg->info)));
+  SNetRouteUpdateDynamic(sarg->info, SNetLocvecTopval(SNetLocvecGet(sarg->info)), true);
   *next = SNetStreamOpen(nextstream_addr, 'w');
 
   /* Set the source of the stream to support garbage collection */
@@ -358,22 +358,18 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     bool is_det
     )
 {
-  snet_info_t *newInfo;
   snet_stream_t *output;
   star_arg_t *sarg;
   snet_stream_t *newstream;
   snet_locvec_t *locvec;
 
   locvec = SNetLocvecGet(info);
-  newInfo = SNetInfoCopy(info);
   if (!is_incarnate) {
     SNetLocvecStarEnter(locvec);
-    input = SNetRouteUpdate(newInfo, input, location, box_a);
+    input = SNetRouteUpdate(info, input, location, box_a);
   } else {
-    input = SNetRouteUpdate(newInfo, input, location, NULL);
+    input = SNetRouteUpdate(info, input, location, NULL);
   }
-  locvec = SNetLocvecCopy(locvec);
-  SNetLocvecSet(newInfo, locvec);
 
   if(SNetDistribIsNodeLocation(location)) {
     /* create the task argument */
@@ -386,7 +382,8 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->selffun = box_b;
     sarg->exit_patterns = exit_patterns;
     sarg->guards = guards;
-    sarg->info = newInfo;
+    sarg->info = SNetInfoCopy(info);
+    SNetLocvecSet(sarg->info, SNetLocvecCopy(locvec));
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
     sarg->location = location;

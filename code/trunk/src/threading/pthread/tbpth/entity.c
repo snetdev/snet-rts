@@ -1,6 +1,6 @@
-//#if defined(__linux__) && defined(HAVE_PTHREAD_SETAFFINITY_NP)
+#if defined(__linux__) && defined(HAVE_PTHREAD_SETAFFINITY_NP)
 #define USE_CORE_AFFINITY 1
-//#endif
+#endif
 
 #ifdef USE_CORE_AFFINITY
 #define _GNU_SOURCE

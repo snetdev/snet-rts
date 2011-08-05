@@ -84,15 +84,13 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
             SNetLocvecSet(info, locvec);
 
             snet_stream_t *temp_stream;
+            SNetRouteUpdateDynamic(info, i, true);
             if( sarg->is_byloc) {
-              newstream_addr = SNetRouteUpdateDynamic(info, newstream_addr, i, i);
               temp_stream = sarg->boxfun(newstream_addr, info, i);
-              temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location, NULL);
             } else {
-              newstream_addr = SNetRouteUpdateDynamic(info, newstream_addr, sarg->location, i);
               temp_stream = sarg->boxfun(newstream_addr, info, sarg->location);
-              temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location, NULL);
             }
+            temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location, NULL);
 
             /* destroy info and location vector */
             SNetLocvecDestroy(locvec);

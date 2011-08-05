@@ -54,13 +54,17 @@ void SNetOutputManager(snet_entity_t *ent, void *args)
       SNetStreamsetPut(&outgoing, sd);
       SNetRecDestroy(rec);
     } else if (rec != NULL) {
-      if (REC_DESCR(rec) == REC_terminate) {
-        dest = SNetStreamDestMapTake(streamMap, sd);
-        SNetStreamsetRemove(&outgoing, sd);
+      if (REC_DESCR(rec) == REC_sync) {
+        SNetStreamReplace(sd, SNetRecGetStream(rec));
       } else {
-        dest = SNetStreamDestMapGet(streamMap, sd);
+        if (REC_DESCR(rec) == REC_terminate) {
+          dest = SNetStreamDestMapTake(streamMap, sd);
+          SNetStreamsetRemove(&outgoing, sd);
+        } else {
+          dest = SNetStreamDestMapGet(streamMap, sd);
+        }
+        SendRecord(dest, rec);
       }
-      SendRecord(dest, rec);
       SNetRecDestroy(rec);
     }
   }

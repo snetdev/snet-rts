@@ -59,7 +59,7 @@ void RecvRecord(MPI_Status status)
     SNetLocvecSet(info, SNetLocvecCreate());
     snet_stream_t *str = SNetStreamCreate(0);
     SNetDestStreamMapSet(destMap, dest, SNetStreamOpen(str, 'w'));
-    SNetRouteUpdateDynamic(info, str, node_location, dest.parentIndex);
+    SNetRouteUpdateDynamic(info, dest.parentIndex, false);
     str = fun(str, info, node_location);
     str = SNetRouteUpdate(info, str, dest.parentNode, NULL);
     SNetInfoDestroy(info);

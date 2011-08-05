@@ -25,8 +25,6 @@ snet_stream_t *SNetSerial(snet_stream_t *input,
   snet_locvec_t *locvec;
   bool enterstate;
 
-  input = SNetRouteUpdate(info, input, location, NULL);
-
   locvec = SNetLocvecGet(info);
   enterstate = SNetLocvecSerialEnter(locvec);
 
