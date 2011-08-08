@@ -264,7 +264,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
           }
           stream_index = BestMatch( matchcounter, num);
           if (stream_index == -1) {
-            SNetUtilDebugNoticeEnt( ent,
+            SNetUtilDebugFatalEnt( ent,
                 "[PAR] Cannot route data record, no matching branch!");
           }
           PutToBuffers( outstreams, num, stream_index, rec, (parg->is_det)? &counter : NULL);

@@ -98,6 +98,7 @@ void CollectorTask(snet_entity_t *ent, void *arg)
   snet_stream_desc_t *outstream;
   snet_record_t *sort_rec = NULL;
   snet_record_t *term_rec = NULL;
+  snet_record_t *sync_rec = NULL;
   int incount;
   bool terminate = false;
 
@@ -138,7 +139,7 @@ void CollectorTask(snet_entity_t *ent, void *arg)
     bool do_next = false;
 
 
-    /* process stream until empty or next sort record or empty */
+    /* process stream until empty or next sort record */
     while ( !do_next && SNetStreamPeek( cur_stream) != NULL) {
       snet_record_t *rec = SNetStreamRead( cur_stream);
       int res = -1;
@@ -160,9 +161,10 @@ void CollectorTask(snet_entity_t *ent, void *arg)
             if( !SortRecEqual(rec, sort_rec) ) {
               SNetUtilDebugNoticeEnt( ent,
                   "[COLL] Warning: Received sort records do not match! "
-                  "expected (l%d,c%d) got (l%d,c%d)", /*TROLLFACE*/
+                  "expected (l%d,c%d) got (l%d,c%d) on %p", /*TROLLFACE*/
                   SNetRecGetLevel(sort_rec), SNetRecGetNum(sort_rec),
-                  SNetRecGetLevel(rec),      SNetRecGetNum(rec)
+                  SNetRecGetLevel(rec),      SNetRecGetNum(rec),
+                  cur_stream
                   );
             }
             /* destroy record */
@@ -171,7 +173,8 @@ void CollectorTask(snet_entity_t *ent, void *arg)
             sort_rec = rec;
 #ifdef DEBUG_PRINT_GC
             SNetUtilDebugNoticeEnt( ent,
-                "[COLL] Info: Received first sort record: (l%d,c%d)",
+                "[COLL] Info: Received first sort record on %p: (l%d,c%d)",
+                cur_stream,
                 SNetRecGetLevel(sort_rec), SNetRecGetNum(sort_rec)
                 );
 #endif
@@ -186,21 +189,42 @@ void CollectorTask(snet_entity_t *ent, void *arg)
           break;
 
         case REC_sync:
-#ifdef DEBUG_PRINT_GC
-          //FIXME FIXME FIXME
           if (!carg->dynamic) {
-            snet_locvec_t *str_source = SNetStreamGetSource( SNetRecGetStream(rec) );
-            char slocvec[64];
-            if (str_source != NULL) {
-              (void) SNetLocvecPrint(slocvec, 64, str_source);
+            snet_locvec_t *source = SNetStreamGetSource( SNetRecGetStream(rec) );
+#ifdef DEBUG_PRINT_GC
+            if (source != NULL) {
+              char slocvec[64];
+              (void) SNetLocvecPrint(slocvec, 64, source);
+              SNetUtilDebugNoticeEnt( ent, "[COLL] received REC_sync on %p with source %s!", cur_stream, slocvec);
             }
-            SNetUtilDebugNoticeEnt( ent, "[COLL] received REC_sync on %p with source %s!", cur_stream, slocvec);
-          }
 #endif
-          /* sync: replace stream */
-          SNetStreamReplace( cur_stream, SNetRecGetStream( rec));
-          /* destroy record */
-          SNetRecDestroy( rec);
+
+            /* following check only succeeds if source is the corresponding
+               parallel dispatcher entity */
+            if (source!=NULL && !SNetLocvecEqual(source, SNetEntityGetLocvec(ent))) {
+              /* store the sync rec */
+              assert(sync_rec == NULL);
+              sync_rec = rec;
+              /* remove stream from readyset */
+              res = SNetStreamsetRemove( &readyset, cur_stream);
+              assert(res == 0);
+              /* close the stream */
+              SNetStreamClose( cur_stream, false);
+              incount--;
+              /* stop processing this stream */
+              do_next = true;
+            } else {
+              /* sync: replace stream */
+              SNetStreamReplace( cur_stream, SNetRecGetStream( rec));
+              /* destroy record */
+              SNetRecDestroy( rec);
+            }
+          } else {
+            /* sync: replace stream */
+            SNetStreamReplace( cur_stream, SNetRecGetStream( rec));
+            /* destroy record */
+            SNetRecDestroy( rec);
+          }
           break;
 
         case REC_collect:
@@ -278,6 +302,14 @@ void CollectorTask(snet_entity_t *ent, void *arg)
         /* check sort record: if level > 0,
            decrement and forward to outstream */
         assert( sort_rec != NULL);
+#ifdef DEBUG_PRINT_GC
+        if (!carg->dynamic) {
+          SNetUtilDebugNoticeEnt( ent,
+              "[COLL] Static collector received all sort records of (l%d,c%d)",
+              SNetRecGetLevel(sort_rec), SNetRecGetNum(sort_rec)
+              );
+        }
+#endif
         {
           int level = SNetRecGetLevel( sort_rec);
           if( level > 0) {
@@ -288,6 +320,18 @@ void CollectorTask(snet_entity_t *ent, void *arg)
           }
           sort_rec = NULL;
         }
+      } else if (sync_rec != NULL) {
+        /* relay the sync record */
+        SNetStreamWrite( outstream, sync_rec);
+        sync_rec = NULL;
+        terminate = true;
+#ifdef DEBUG_PRINT_GC
+        if (!carg->dynamic) {
+          SNetUtilDebugNoticeEnt( ent,
+              "[COLL] Terminate static collector with sending sync rec!"
+              );
+        }
+#endif
       } else {
         /* send a terminate record */
         SNetStreamWrite( outstream, term_rec);
@@ -302,7 +346,8 @@ void CollectorTask(snet_entity_t *ent, void *arg)
 #endif
       }
 
-    } else if (!carg->dynamic && incount==1) {
+    } else if (!carg->dynamic && incount==1 && sync_rec==NULL) {
+
       /* static collector has only one incoming stream left
        * -> this input stream can be sent to the collectors
        *    successor via a sync record
@@ -325,6 +370,8 @@ void CollectorTask(snet_entity_t *ent, void *arg)
 
   } /* MAIN LOOP END*/
 
+  assert(sync_rec == NULL);
+
   /* close outstream */
   SNetStreamClose( outstream, false);
 
@@ -334,7 +381,20 @@ void CollectorTask(snet_entity_t *ent, void *arg)
 
   SNetMemFree( carg);
 
-} /* Collector task end*/
+} /* COLLECTOR TASK END */
+
+
+
+
+
+
+
+/*****************************************************************************/
+/* CREATION FUNCTIONS                                                        */
+/*****************************************************************************/
+
+
+
 
 
 
