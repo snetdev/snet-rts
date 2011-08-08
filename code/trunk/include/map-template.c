@@ -247,6 +247,7 @@ void MAP_FUNCTION(MAP_NAME, Deserialise)(snet_map_t *map,
                                        void (*deserialiseValues)(int, MAP_VAL*))
 {
   deserialiseInts(1, &map->used);
+  map->size = map->used;
   map->keys = SNetMemAlloc(map->used * sizeof(MAP_KEY));
   deserialiseInts(map->used, map->keys);
   map->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));
@@ -269,6 +270,7 @@ void MAP_FUNCTION(MAP_NAME, Deserialise)(snet_map_t *map,
                                        void (*deserialiseValues)(int, MAP_VAL*))
 {
   deserialiseInts(1, &map->used);
+  map->size = map->used;
   map->keys = SNetMemAlloc(map->used * sizeof(MAP_KEY));
   deserialiseKeys(map->used, map->keys);
   map->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));

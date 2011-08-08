@@ -58,7 +58,9 @@ unsigned long SNetThreadingGetId()
 
 int SNetThreadingInit(int argc, char **argv)
 {
+#ifdef USE_CORE_AFFINITY
   int i, num_cores;
+#endif
   char fname[32];
   /* initialize the entity counter to 0 */
   entity_count = 0;

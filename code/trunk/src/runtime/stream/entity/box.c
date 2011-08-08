@@ -188,7 +188,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
   box_arg_t *barg;
   snet_variant_list_t *vlist;
 
-  input = SNetRouteUpdate(info, input, location, NULL);
+  input = SNetRouteUpdate(info, input, location);
 
   if(SNetDistribIsNodeLocation(location)) {
     output = SNetStreamCreate(0);
