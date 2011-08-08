@@ -426,7 +426,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   locvec = SNetLocvecGet(info);
   SNetLocvecParallelEnter(locvec);
 
-  instream = SNetRouteUpdate(info, instream, location, NULL);
+  instream = SNetRouteUpdate(info, instream, location);
   if(SNetDistribIsNodeLocation(location)) {
     transits    = SNetMemAlloc( num * sizeof( snet_stream_t*));
     collstreams = SNetMemAlloc( num * sizeof( snet_stream_t*));
@@ -438,7 +438,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
       SNetLocvecParallelNext(locvec);
       fun = funs[i];
       collstreams[i] = (*fun)(transits[i], newInfo, location);
-      collstreams[i] = SNetRouteUpdate(newInfo, collstreams[i], location, NULL);
+      collstreams[i] = SNetRouteUpdate(newInfo, collstreams[i], location);
       SNetInfoDestroy(newInfo);
     END_ENUMERATE
 
@@ -470,7 +470,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
       SNetLocvecParallelNext(locvec);
       fun = funs[i];
       instream = (*fun)( instream, newInfo, location);
-      instream = SNetRouteUpdate(newInfo, instream, location, NULL);
+      instream = SNetRouteUpdate(newInfo, instream, location);
       SNetInfoDestroy(newInfo);
     END_ENUMERATE
 

@@ -72,7 +72,12 @@ static snet_stream_t *SNetSerialStarchild(snet_stream_t *input,
   (void) SNetLocvecStarSpawn(locvec);
 
   /* create operand A */
+  SNetRouteDynamicEnter(info, SNetLocvecTopval(SNetLocvecGet(info)),
+                        location, box_a);
   internal_stream = (*box_a)(input, info, location);
+  internal_stream = SNetRouteUpdate(info, internal_stream, location);
+  SNetRouteDynamicExit(info, SNetLocvecTopval(SNetLocvecGet(info)),
+                       location, box_a);
 
   assert( SNetLocvecStarWithin(SNetLocvecGet(info)) );
 
@@ -99,7 +104,6 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
   snet_stream_t *starstream, *nextstream_addr;
   /* Create the stream to the instance */
   nextstream_addr = SNetStreamCreate(0);
-  SNetRouteUpdateDynamic(sarg->info, SNetLocvecTopval(SNetLocvecGet(sarg->info)), true);
   *next = SNetStreamOpen(nextstream_addr, 'w');
 
   /* Set the source of the stream to support garbage collection */
@@ -366,9 +370,9 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
   locvec = SNetLocvecGet(info);
   if (!is_incarnate) {
     SNetLocvecStarEnter(locvec);
-    input = SNetRouteUpdate(info, input, location, box_a);
+    input = SNetRouteUpdate(info, input, location);
   } else {
-    input = SNetRouteUpdate(info, input, location, NULL);
+    input = SNetRouteUpdate(info, input, location);
   }
 
   if(SNetDistribIsNodeLocation(location)) {

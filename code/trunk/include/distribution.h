@@ -15,6 +15,9 @@ int SNetDistribGetNodeId(void);
 bool SNetDistribIsNodeLocation(int location);
 bool SNetDistribIsRootNode(void);
 
-snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc, snet_startup_fun_t start);
-void SNetRouteUpdateDynamic(snet_info_t *info, int parentIndex, bool start);
+snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc);
+void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
+                           snet_startup_fun_t fun);
+void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
+                          snet_startup_fun_t fun);
 #endif /* _SNET_DISTRIBUTION_H_ */

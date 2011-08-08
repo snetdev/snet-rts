@@ -70,6 +70,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
           snet_stream_desc_t *outstream = HashtabGet( repos_tab, i);
 
           if( outstream == NULL) {
+            snet_stream_t *temp_stream;
             snet_stream_t *newstream_addr = SNetStreamCreate(0);
             /* instance does not exist yet, create it */
             outstream = SNetStreamOpen(newstream_addr, 'w');
@@ -83,14 +84,17 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
             locvec = SNetLocvecSplitSpawn(SNetLocvecGet(sarg->info), i);
             SNetLocvecSet(info, locvec);
 
-            snet_stream_t *temp_stream;
-            SNetRouteUpdateDynamic(info, i, true);
             if( sarg->is_byloc) {
+              SNetRouteDynamicEnter(info, i, i, sarg->boxfun);
               temp_stream = sarg->boxfun(newstream_addr, info, i);
+              temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location);
+              SNetRouteDynamicExit(info, i, i, sarg->boxfun);
             } else {
+              SNetRouteDynamicEnter(info, i, sarg->location, sarg->boxfun);
               temp_stream = sarg->boxfun(newstream_addr, info, sarg->location);
+              temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location);
+              SNetRouteDynamicExit(info, i, sarg->location, sarg->boxfun);
             }
-            temp_stream = SNetRouteUpdate(info, temp_stream, sarg->location, NULL);
 
             /* destroy info and location vector */
             SNetLocvecDestroy(locvec);
@@ -229,7 +233,7 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
   SNetLocvecSplitEnter(locvec);
   SNetLocvecSet(newInfo, SNetLocvecCopy(locvec));
 
-  input = SNetRouteUpdate(newInfo, input, location, box_a);
+  input = SNetRouteUpdate(newInfo, input, location);
   if(SNetDistribIsNodeLocation(location)) {
     initial = SNetStreamCreate(0);
 
