@@ -157,10 +157,6 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
           /* send rec to collector */
           SNetStreamWrite( outstream, rec);
         } else {
-#ifdef DEBUG_PRINT_GC
-          SNetUtilDebugNoticeEnt( ent,
-              "[STAR] Notice: Sending data into next instance.");
-#endif
           /* if instance has not been created yet, create it */
           if( nextstream == NULL) {
             CreateOperandNetwork(&nextstream, sarg, outstream);
