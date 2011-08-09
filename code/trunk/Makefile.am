@@ -46,12 +46,9 @@ pkginclude_HEADERS = \
 # How to build the stuff
 
 libcommon_la_SOURCES = \
-	src/include/dbug.h \
-	src/include/getoptions.h \
-	src/commonlib/dbug/dbug.c \
-	src/commonlib/getoptions/getoptions.c \
 	src/util/core/memfun.c \
 	src/util/metadata/metadata.c 
+
 libcommon_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/src/include
 
 libruntimestream_la_SOURCES = \
