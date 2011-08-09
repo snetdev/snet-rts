@@ -243,8 +243,11 @@ AC_SEARCH_LIBS(sem_open,,
     AC_SUBST( LIB_RT, ""),
     AC_CHECK_LIB( rt, sem_open,
       AC_SUBST( LIB_RT, "-lrt"),
-      AC_MSG_ERROR( "Cannot find library for semaphores."),)
+      AC_CHECK_LIB( pthread, sem_open,
+        AC_SUBST( LIB_RT, "-lpthread"),
+        AC_MSG_ERROR( "Cannot find library for semaphores."),)
     )
+)
 
 
 dnl test for compiler flags
