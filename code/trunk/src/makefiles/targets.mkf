@@ -3,7 +3,6 @@
 #
 #
 
-include $(PROJECT_ROOT)/src/makefiles/targets_commonlib.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_snetc.mkf
 include $(PROJECT_ROOT)/src/makefiles/targets_distrib_nodist.mkf
 

@@ -50,23 +50,9 @@ include $(PROJECT_ROOT)/src/makefiles/config.mkf
 # Start rules
 #
 # The definition of these rules deliberately enforces a sequence in compilation
-# rather than expressing the dependencies properly by makefile rules.
-#
-# The rationale is that commonlib and maketools rather seldomly require
-# recompilation. With proper dependencies, however, they would require a
-# dependency from every compilation rule. This would lead to extensive
-# rechecking at compile time that is absolutely superfluous.
-#
-# XXX dlp: commonlib and maketools are gone - what does this imply?
-#
-# The runtime system may require the compiler and, likewise, the tools may
-# need the runtime system or parts thereof. Expressing all this by dependencies
-# would lead to a system in which the tools form the main target. This seems
-# unnatural.
-#
-# Furthermore, the current solution allows us to rebuild locally without 
-# enforcing dependency checks.
-#
+# rather than expressing the dependencies properly by makefile rules, because
+# the author of this Makefile finds the dependency tracking difficult to
+# implement.
 
 default devel prod: checks
 	@$(ECHO) ""
@@ -74,12 +60,10 @@ default devel prod: checks
 	@$(ECHO) "* Building S-Net"
 	@$(ECHO) "************************************************************"
 	$(HIDE) mkdir -p lib src/bin src/lib
-	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/commonlib/" PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/util   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/snetc  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/snetc/"  PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/util   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime/ DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime/stream  DEPS="$(DEPS)" HIDE="$(HIDE)" \
@@ -103,12 +87,10 @@ clean cleandevel cleanprod:
 	@$(ECHO) "************************************************************"
 	@$(ECHO) "* Cleaning S-Net"
 	@$(ECHO) "************************************************************"
-	$(HIDE) $(MAKE) -C src/commonlib DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/commonlib/" PREFIX_ROOT="" $@
-	$(HIDE) $(MAKE) -C src/util   DEPS="$(DEPS)" HIDE="$(HIDE)" \
-                        PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/snetc  DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/snetc/"  PREFIX_ROOT="" $@
+	$(HIDE) $(MAKE) -C src/util   DEPS="$(DEPS)" HIDE="$(HIDE)" \
+                        PREFIX_LOCAL="src/util/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime/ DEPS="$(DEPS)" HIDE="$(HIDE)" \
                         PREFIX_LOCAL="src/runtime/"   PREFIX_ROOT="" $@
 	$(HIDE) $(MAKE) -C src/runtime/stream  DEPS="$(DEPS)" HIDE="$(HIDE)" \
@@ -137,9 +119,7 @@ efence:
 #
 
 config:
-	#svn lock configure $(AUTOHEADERED)
 	autoreconf -v -f -i -I config
-	#svn commit configure $(AUTOHEADERED)
 
 
 ###############################################################################
