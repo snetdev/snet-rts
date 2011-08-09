@@ -56,8 +56,8 @@ static inline void GetTimestamp(struct timeval *t)
 
   gettimeofday(&now, NULL);
   if (now.tv_usec < mon_reftime.tv_usec) {
-    now.tv_usec -= 1000000L;
-    now.tv_sec  += 1L;
+    now.tv_usec += 1000000L;
+    now.tv_sec  -= 1L;
   }
   t->tv_usec = now.tv_usec - t->tv_usec;
   t->tv_sec  = now.tv_sec  - t->tv_sec;
