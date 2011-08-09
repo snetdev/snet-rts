@@ -235,7 +235,7 @@ static void ProcessMonInfo(snet_moninfo_t *moninfo, struct timeval *timestamp, c
   /* timestamp */
   fprintf(mon_file,
       "%lu.%06lu %s ",
-      timestamp->tv_sec, timestamp->tv_usec,
+      timestamp->tv_sec, (unsigned long) timestamp->tv_usec,
       label
       );
   /* moninfo */
