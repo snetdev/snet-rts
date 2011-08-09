@@ -1,414 +1,53 @@
-dnl
-dnl $Id$
-dnl
+AC_INIT([SNet], [1.x], [info@snet-home.org])
+AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([build-aux])
+AC_CONFIG_HEADERS([config.h])
 
-dnl configure script (based on SAC scripts) for building snet compiler 
-dnl on different hosts and os
+AM_INIT_AUTOMAKE([1.11 tar-ustar no-define foreign dist-bzip2 subdir-objects
+                  parallel-tests color-tests silent-rules])
+AM_SILENT_RULES([yes])
 
-dnl tell configure who we are
-dnl parameters: package name, version, where to send bugreports, tarball-name
-AC_INIT(SNet, dev, info@snet-home.org, snet)
+AC_PROG_CC_C99
+AC_USE_SYSTEM_EXTENSIONS
 
-dnl set source directory and scripting directory
-AC_CONFIG_SRCDIR(.)
-AC_CONFIG_AUX_DIR(./config)
+AC_PROG_CPP
 
-dnl we use C as our compiler language
-AC_LANG(C)
-
-dnl and which files to create
-AC_CONFIG_FILES(src/makefiles/config.mkf)
-AC_CONFIG_HEADER(src/include/config.h)
-
-dnl check for host type
-AC_CANONICAL_BUILD()
-AC_CANONICAL_HOST()
-AC_CANONICAL_TARGET()
-
-dnl set OS and ARCH flags
-AC_DEFINE_UNQUOTED(OS,"$target_os",set to the os type)
-AC_SUBST(OS,$target_os)
-AC_DEFINE_UNQUOTED(ARCH,"$target_cpu",set to the architecture)
-AC_SUBST(ARCH,$target_cpu)
-
-dnl allow GNU extensions if present
-AC_USE_SYSTEM_EXTENSIONS( _GNU_SOURCE)
-
-dnl search for a C compiler
-AC_PROG_CC(gcc cc)
-
-dnl check whether its suns cc
-AC_MSG_CHECKING(whether cc is a Sun Pro C compiler)
-AC_TRY_COMPILE(,
-[#ifndef __SUNPRO_C
-  choke me
-#endif],
-AC_MSG_RESULT(yes)
-SUNC=yes,
-AC_MSG_RESULT(no)
-SUNC=no
-)
-
-dnl check whether its compaqs (or dec) cc
-AC_MSG_CHECKING(whether cc is a Compaq/DEC C compiler)
-AC_TRY_COMPILE(,
-[#ifndef __DECC
-  choke me
-#endif],
-AC_MSG_RESULT(yes)
-DECC=yes,
-AC_MSG_RESULT(no)
-DECC=no
-)
-
-dnl check whether its apples cc
-AC_MSG_CHECKING(whether cc is a Apple compiler)
-AC_TRY_COMPILE(,
-[#ifndef __APPLE__
-  choke me
-  #endif],
-  AC_MSG_RESULT(yes)
-  MACC=yes
-  GCC=no,
-  AC_MSG_RESULT(no)
-  MACC=no
-)
-  
-dnl check whether popen is an extension
-AC_MSG_CHECKING([need of _EXTENSIONS_ flag])
-AC_TRY_COMPILE([#include <stdio.h>],[popen("rw","testfile")],
-AC_MSG_RESULT(no)
-need_ext_flags=no,
-AC_MSG_RESULT(yes)
-need_ext_flags=yes)
-
-dnl check for C preprocessor
-AC_PROG_CPP()
-
-dnl check for ranlib
-AC_PROG_RANLIB()
-
-dnl check, whether we need -traditional flag
-AC_PROG_GCC_TRADITIONAL
-
-
-dnl search for bison, byacc or yacc
 AC_PROG_YACC
-AC_CHECK_PROG(HAVE_YACC, $YACC, yes, no)
-if [[ "$HAVE_YACC" = "no" ]]; then
-       AC_MSG_ERROR(cannot find bison/yacc)
-fi
-
-
-dnl
-dnl check whether a non yacc works
-dnl
-
-if [ test "$YACC" != "yacc" ]; then
-  AC_MSG_CHECKING([whether $YACC works])
-  mkdir .ac_yacc_test
-  cd .ac_yacc_test  
-  cp ../src/snetc/parse/snet.y .
-  if [ $YACC snet.y >/dev/null 2>/dev/null ]; then
-    AC_MSG_RESULT(ok)
-  else
-    AC_MSG_RESULT(failed)
-    AC_CHECK_PROG(YACC, [yacc], [yacc], [!fail])
-    if [ test "$YACC" != "yacc" ]; then
-      AC_MSG_ERROR([cannot find working bison/yacc], 10)
-    else
-      AC_MSG_NOTICE([using yacc instead])
-    fi
-  fi
-  cd ..
-  rm -rf .ac_yacc_test
-fi
-dnl search for flex or lex
 AC_PROG_LEX
-AC_CHECK_PROGS(LEX, flex lex, no)
-if test x"$LEX" = x"no" ; then
-       AC_MSG_ERROR(cannot find flex/lex)
-fi
 
-
-
-dnl search for xlst engine
-AC_CHECK_PROGS(XSLT, [xsltproc sabcmd])
-
+AC_CHECK_PROGS([XSLT], [xsltproc sabcmd])
 if test x"$XSLT" = xno; then
-  AC_MSG_ERROR( [Cannot find a usable xslt processor.])
+  AC_MSG_ERROR([Cannot find a usable XSLT processor.])
 fi
 
+AC_LANG_PUSH([C])
 
-dnl search for malloc.h
-AC_CHECK_HEADERS(malloc.h)
+AX_PTHREAD
+LIBS="$LIBS $PTHREAD_LIBS"
+CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 
-dnl check for mkdtemp
-AC_CHECK_FUNCS(mkdtemp)
+AC_CHECK_FUNCS([pthread_setaffinity_np])
 
-dnl search for pthread.h
-AC_ARG_ENABLE([mt], [AC_HELP_STRING([--disable-mt], [disable multi threading (default is try to enable)])], [], [enable_mt=yes])
-if test x$enable_mt = xyes; then
- AX_PTHREAD
- if test x$ax_pthread_ok = xno; then
-     enable_mt=no
-     AC_MSG_WARN([pthreads not available, disabling MT])
- fi
-fi
-if test x$enable_mt = xyes; then
-   AC_DEFINE([HAVE_PTHREAD_H], [1], [set to 1 if pthreads are available])
-   DISABLE_MT=no
-   LIBS="$LIBS $PTHREAD_LIBS"
-   CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-else
-   DISABLE_MT=yes
-fi
-AC_SUBST([DISABLE_MT])
+AC_SEARCH_LIBS([sqrt], [m])
 
-if test x$enable_mt = xyes; then
-   AC_CHECK_FUNCS(pthread_setaffinity_np)
-fi
+AC_MSG_CHECKING([for 0x prefix when printing pointers])
+AC_EGREP_CPP([0x0*], dnl
+             [#include <stdio.h>
+              int main()
+              {
+               printf("%p", (void*) 0);
+              }
+             ], 
+             [AC_MSG_RESULT([yes])], 
+             [AC_MSG_RESULT([no])
+              AC_DEFINE([NEED_PTR_PREFIX], [1], [set to 1 if printf does not print a leading 0x in front of pointers])
+              ])
 
+# check network functions
+AC_SEARCH_LIBS([socket], [socket])
+AC_SEARCH_LIBS([gethostbyname], [nsl])
+AC_SEARCH_LIBS([inet_aton], [resolv])
 
-dnl check whether to link math library
-AC_SEARCH_LIBS(sqrt, m)
-
-dnl check whether to link dlopen library
-AC_SEARCH_LIBS(dlopen, dl)
-
-dnl checking for presence of strtok and strrchr
-AC_CHECK_FUNCS([strtok strrchr])
-
-
-dnl check if printf generates leading 0x for pointers
-AC_MSG_CHECKING(for 0x prefix when printing pointers)
-AC_EGREP_CPP(0x0*,
-[#include <stdio.h>
-int main()
-{
-printf("%p", (void*) 0);
-}
-], has_ptr_prefix=yes, has_ptr_prefix=no)
-if [ test $has_ptr_prefix = yes ]; then
-  AC_MSG_RESULT(yes)
-else
-  AC_MSG_RESULT(no)
-  AC_DEFINE(NEED_PTR_PREFIX, 1, set to 1 if printf does not print a leading
-0x in front of pointers)
-fi
-
-dnl check if stderr is a constant (needed for dbug.c)
-AC_MSG_CHECKING(whether stderr is a constant)
-AC_TRY_COMPILE([
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-
-FILE *_db_fp_ = stderr;
-],[],stderr_is_constant=yes,stderr_is_constant=no)
-if [ test $stderr_is_constant = yes ]; then
-  AC_MSG_RESULT(yes)
-  AC_DEFINE(STDERR_IS_CONSTANT, 1, set to 1 if stderr is a constant)
-else
-  AC_MSG_RESULT(no)
-fi
-
-
-dnl
-dnl when not using bison, we need to reference YYLABELS
-dnl
-
-if test "$YACC" = "obsolete_yacc"; then
-  AC_DEFINE(MUST_REFERENCE_YYLABELS, 1, set to 1 if gcc complains about unused labels)
-fi
-dnl check for pthread flag on gcc
-if test "$GCC" = yes; then
-  AC_MSG_CHECKING([existence of pthread flag])
-  echo "int main(){return 0;}" > .snet_configure_temp.c
-  if test "`gcc -o .snet_configure_temp -pthread .snet_configure_temp.c 2>&1 | grep unrecognized `" = ""; then
-    AC_MSG_RESULT([supported])
-    GCC_PTHREADS="-pthread"
-  else
-    AC_MSG_RESULT([unsupported])
-    GCC_PTHREADS="-lpthread"
-  fi
-  rm -f .snet_configure_temp.c .snet_configure_temp
-fi
-
-AC_SEARCH_LIBS(socket,,
-    AC_SUBST( LIB_SOCKET, ""),
-    AC_SUBST( LIB_SOCKET, "-lsocket -lnsl -lresolv"),
-    )
-AC_SEARCH_LIBS(sem_open,,
-    AC_SUBST( LIB_RT, ""),
-    AC_CHECK_LIB( rt, sem_open,
-      AC_SUBST( LIB_RT, "-lrt"),
-      AC_MSG_ERROR( "Cannot find library for semaphores."),)
-    )
-
-
-dnl test for compiler flags
-dnl for sac2crc
-AC_MSG_CHECKING([compiler flags])
-if [ test "$GCC" = yes ]; then
-  AC_SUBST(OPT_O0, [""])
-  AC_SUBST(OPT_O1, [-O1])
-  AC_SUBST(OPT_O2, [-O2])
-  AC_SUBST(OPT_O3, [-O3])
-  AC_SUBST(OPT_g, [-g])
-  AC_SUBST(RCLDFLAGS, [""])
-  AC_SUBST(SOFLAGS, ["-shared"])
-  AC_SUBST(RCCCFLAGS, ["-Wall -Wno-unused -fno-builtin -std=c99"])
-  AC_SUBST(MKCCFLAGS, ["-Wall -g -std=c99"])
-  AC_SUBST(PDCCFLAGS, ["-Wall -O3 -std=c99"])
-  AC_SUBST(GENPIC, ["-fPIC -DPIC"])
-  AC_SUBST(DEPSFLAG, ["-M"])
-  AC_SUBST(CPPFILE, ["gcc -E -C -x c"])
-  AC_SUBST(CCMTLINK, [$GCC_PTHREADS])
-  AC_MSG_RESULT([gcc settings])
-elif [ test "$SUNC" = yes ]; then
-  AC_SUBST(OPT_O0, [""])
-  AC_SUBST(OPT_O1, [-xO2])
-  AC_SUBST(OPT_O2, [-xO4])
-  AC_SUBST(OPT_O3, [-xO5])
-  AC_SUBST(OPT_g, [-g])
-  AC_SUBST(RCLDFLAGS, [""])
-  AC_SUBST(SOFLAGS, ["-shared"])
-  AC_SUBST(RCCCFLAGS, ["-dalign -fsimple -xsafe=mem"])
-  AC_SUBST(MKCCFLAGS, ["-erroff=E_CAST_DOESNT_YIELD_LVALUE -g -xc99=all"])
-  AC_SUBST(PDCCFLAGS, ["-erroff=E_CAST_DOESNT_YIELD_LVALUE -xO4 -xc99=all -KPIC"])
-  AC_SUBST(GENPIC, ["-KPIC"])
-  AC_SUBST(DEPSFLAG, ["-xM"])
-  AC_SUBST(CPPFILE, ["cc -E -C -x c"])
-  AC_SUBST(CCMTLINK, ["-lpthread"])
-  AC_MSG_RESULT([Sun cc settings])
-elif [ test "$DECC" = yes ]; then
-  AC_SUBST(OPT_O0, [""])
-  AC_SUBST(OPT_O1, [-O1])
-  AC_SUBST(OPT_O2, [-O2])
-  AC_SUBST(OPT_O3, [-O3])
-  AC_SUBST(OPT_g, [-g])
-  AC_SUBST(RCLDFLAGS, [""])
-  AC_SUBST(SOFLAGS, ["-shared"])
-  AC_SUBST(RCCCFLAGS, [""])
-  AC_SUBST(MKCCFLAGS, ["-g"])
-  AC_SUBST(PDCCFLAGS, ["-g3"])
-  AC_SUBST(GENPIC, [""])
-  AC_SUBST(DEPSFLAG, ["-M"])
-  AC_SUBST(CPPFILE, ["cc -E -C -x c"])
-  AC_SUBST(CCMTLINK, ["-pthread"])
-  AC_MSG_RESULT([Compaq/DEC cc settings])
-elif [ test "$MACC" = yes ]; then
-  AC_SUBST(OPT_O0, [""])
-  AC_SUBST(OPT_O1, [-O1])
-  AC_SUBST(OPT_O2, [-O2])
-  AC_SUBST(OPT_O3, [-O3])
-  AC_SUBST(OPT_g, [-g])
-  AC_SUBST(RCLDFLAGS, [""])
-  AC_SUBST(SOFLAGS, ["-dynamiclib"])
-  AC_SUBST(RCCCFLAGS, ["-Wall -no-cpp-precomp -Wno-unused -fno-builtin"])
-  AC_SUBST(MKCCFLAGS, ["-Wall -std=c99 -g"])
-  AC_SUBST(PDCCFLAGS, ["-std=c99"])
-  AC_SUBST(GENPIC, [""])
-  AC_SUBST(DEPSFLAG, ["-M"])
-  AC_SUBST(CPPFILE, ["gcc -E -C -x c"])
-  AC_SUBST(CCMTLINK, [""])
-  AC_MSG_RESULT([Apple cc settings])
-else
-  AC_SUBST(OPT_O0, [""])
-  AC_SUBST(OPT_O1, [""])
-  AC_SUBST(OPT_O2, [""])
-  AC_SUBST(OPT_O3, [""])
-  AC_SUBST(OPT_g, [""])
-  AC_SUBST(RCLDFLAGS, [""])
-  AC_SUBST(SOFLAGS, ["-shared"])
-  AC_SUBST(RCCCFLAGS, [""])
-  AC_SUBST(MKCCFLAGS, [""])
-  AC_SUBST(PDCCFLAGS, [""])
-  AC_SUBST(GENPIC, [""])
-  AC_SUBST(DEPSFLAG, ["-M"])
-  AC_SUBST(CPPFILE, ["cpp -C"])
-  AC_SUBST(CCMTLINK, [""])
-  AC_MSG_RESULT([none found])
-fi
-
-dnl generate specific flags for known os
-AC_MSG_CHECKING([sac2crc system flags])
-OSFLAGS=""
-case "$target_os" in
-  solaris*)     
-    OSFLAGS=["-D__EXTENSIONS__ -DMUST_INIT_YY -DPIC"]
-    LD_DYNAMIC=["-G -dy"]
-    LD_PATH=["-R"]
-    LD_FLAGS="-Wl,-z,nodefs,-z,lazyload"
-    AC_MSG_RESULT([solaris settings])
-    ;;
-  *linux*)      
-dnl OSFLAGS=["-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint"]
-    OSFLAGS=["-fPIC -DPIC -D_POSIX_SOURCE -D_SVID_SOURCE -D_BSD_SOURCE -Dlint -D_POSIX_C_SOURCE=200112L"]
-    LD_DYNAMIC=["-dy -shared -allow-shlib-undefined"]
-    LD_PATH=["-Wl,-rpath,"]
-    LD_FLAGS="-Wl,-allow-shlib-undefined"
-    AC_MSG_RESULT([linux settings])
-    ;;
-  *osf*)	
-    OSFLAGS=["-D_OSF_SOURCE"]
-    LD_DYNAMIC=[""]
-    LD_PATH=[""]
-    LD_FLAGS=""
-    AC_MSG_RESULT([OSF settings])
-    ;;
-  *darwin*)      
-    dnl darwin needs some extra flags
-    RANLIB="$RANLIB -c"
-    case "$target_os" in
-      *darwin10\.*)
-        OSFLAGS=["-no-cpp-precomp"]
-        LD_DYNAMIC=["-undefined suppress -flat_namespace -dynamiclib -install_name '@rpath/%libname%' "]
-        LD_PATH=["-Wl,-rpath,"]
-        LD_FLAGS=""
-        AC_MSG_RESULT([darwin 10.x settings])
-        ;;
-      *darwin9\.*)
-        OSFLAGS=["-no-cpp-precomp -Wno-long-double"]
-        LD_DYNAMIC=["-undefined suppress -flat_namespace -dynamiclib -install_name '@rpath/%libname%' "]
-        LD_PATH=["-Wl,-rpath,"]
-        LD_FLAGS=""
-        AC_MSG_RESULT([darwin 9.x settings])
-        ;;
-      [*darwin[6-8]\.*)]
-        OSFLAGS=["-no-cpp-precomp -Wno-long-double"]
-        LD_DYNAMIC=["-undefined suppress -flat_namespace -bundle"]
-        LD_PATH=["-L"]
-        LD_FLAGS=""
-        AC_MSG_RESULT([darwin 7.x/8.x settings])
-      ;;
-      *)
-        AC_MSG_RESULT([unknown darwin system])
-    esac
-    ;;
-  *bsd*)
-    OSFLAGS=["-fpic"]
-    LD_DYNAMIC=["ld -dy -shared -symbolic"]
-    LD_PATH=["-Wl,-rpath,"]
-    LD_FLAGS=""
-    AC_MSG_RESULT([BSD settings])
-    ;;
-  *)
-    AC_MSG_RESULT([unknown])
-    ;;
-esac
-AC_SUBST(OSFLAGS)
-AC_SUBST(LD_DYNAMIC)
-AC_SUBST(LD_PATH)
-AC_SUBST(LD_FLAGS)
-
-
-dnl check for GNU pthread extensions
-AC_CHECK_DECLS( [pthread_setaffinity_np, pthread_getaffinity_np],
-                AC_SUBST(SCHEDFLAGS, ["-DUSE_CORE_AFFINITY"]),
-                AC_SUBST(SCHEDFLAGS, [""]),
-                [[#include <pthread.h>]])
 
 dnl check for compiler builtins for
 dnl atomic memory access (__sync_fetch_and_add/dec)
@@ -432,35 +71,46 @@ AC_TRY_RUN( [
 )
 
 
-dnl check if $SNETBASE is set
-AC_MSG_CHECKING([if SNETBASE is set])
-if test "`echo $SNETBASE`" = ""; then
-  AC_MSG_RESULT([no \n\n!!!Please set environment variable SNETBASE!!!\n])
+AC_LANG_POP([C])
+
+LT_PREREQ([2.2])
+LT_INIT([dlopen])
+
+AC_ARG_WITH([lpel-includes], [AC_HELP_STRING([--with-lpel-includes=DIR], [look up lpel.h in DIR])], [], [with_lpel_includes=])
+AC_MSG_CHECKING([for lpel.h in $with_lpel_includes])
+if test -r "$with_lpel_includes/lpel.h"; then
+   with_lpel_includes=`(cd "$with_lpel_includes"; pwd)`
+   AC_MSG_RESULT([yes])
 else
-  AC_MSG_RESULT([yes])
+   AC_MSG_RESULT([no])
+   AC_MSG_WARN([unable to find $with_lpel_includes/lpel.h, cannot use LPEL])
+   with_lpel_includes=
 fi
 
-dnl check if $MPIROOT is set
-AC_MSG_CHECKING([if MPIROOT is set])
-if test "`echo $MPIROOT`" = ""; then
-  AC_MSG_RESULT([no])
-  AC_SUBST(MAKEDISTR, ["no"])
+AC_ARG_WITH([lpel-libs], [AC_HELP_STRING([--with-lpel-libs=DIR], [look up liblpel.la in DIR])], [], [with_lpel_libs=])
+AC_MSG_CHECKING([for liblpel.la in $with_lpel_libs])
+if test -r "$with_lpel_libs/liblpel.la"; then
+   with_lpel_libs=`(cd "$with_lpel_libs"; pwd)`
+   AC_MSG_RESULT([yes])
 else
-  AC_MSG_RESULT([yes])
-  AC_SUBST(MAKEDISTR, ["yes"])
+   AC_MSG_RESULT([no])
+   AC_MSG_WARN([unable to find $with_lpel_libs/liblpel.la, cannot use LPEL])
+   with_lpel_libs=
 fi
-
-dnl check if $LPELROOT is set
-AC_MSG_CHECKING([if LPELROOT is set])
-if test "`echo $LPELROOT`" = ""; then
-  AC_MSG_RESULT([no])
-  AC_SUBST(MAKE_LPEL, ["no"])
-else
-  AC_DEFINE([HAVE_LPEL], [1], [Define to 1 if LPEL backend should be built.])
-  AC_SUBST(MAKE_LPEL, ["yes"])
-  AC_MSG_RESULT([yes: $LPELROOT])
+have_lpel=no
+if test -n "$with_lpel_includes" -a -n "$with_lpel_libs"; then
+   LPEL_INCLUDES=-I$with_lpel_includes
+   LIBLPEL_LA=$with_lpel_libs/liblpel.la
+   AC_SUBST([LIBLPEL_LA])
+   AC_SUBST([LPEL_INCLUDES])
+   have_lpel=yes
 fi
+AM_CONDITIONAL([HAVE_LPEL], [test $have_lpel = yes])
 
-dnl generate configure dependent files
+AX_MPI([have_mpi=yes],[have_mpi=no])
+AM_CONDITIONAL([HAVE_MPI], [test $have_mpi = yes])
 
-AC_OUTPUT()
+AC_CHECK_PROGS([SAC2C], [sac2c])
+
+
+AC_OUTPUT([Makefile])

@@ -49,6 +49,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   dest->node = 0;
   dest->dest = counter;
   dest->parent = parentCounter;
+  dest->parentNode = 0;
   dest->parentIndex = 0;
 
   streamMap = SNetStreamDestMapCreate(0);
@@ -172,18 +173,16 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc,
   return input;
 }
 
-snet_stream_t *SNetRouteUpdateDynamic(snet_info_t *info, snet_stream_t *input,
-                                      int loc, int parentIndex)
+void SNetRouteUpdateDynamic(snet_info_t *info, int parentIndex, bool start)
 {
-  int current_node;
   snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
   counter = 0;
   dest->parentIndex = parentIndex;
-  current_node = dest->node;
-
-  if (outputDistribInfo) {
-    fprintf(stderr, "SNet (Node #%d) (dynamic):\n  Dest.dest: %d\n  Origin: %d\n  Destination: %d\n  Parent: %d\n  Parent index: %d\n", node_location, dest->dest, current_node, loc, dest->parent, dest->parentIndex);
+  if (start) {
+    dest->parentNode = node_location;
   }
 
-  return input;
+  if (outputDistribInfo) {
+    fprintf(stderr, "SNet (Node #%d) (dynamic):\n  Dest.dest: %d\n  Origin: %d\n  Parent: %d\n  Parent index: %d\n", node_location, dest->dest, dest->node, dest->parent, dest->parentIndex);
+  }
 }

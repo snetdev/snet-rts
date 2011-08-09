@@ -42,8 +42,8 @@ static bool MatchesExitPattern( snet_record_t *rec,
   snet_variant_t *pattern;
 
   LIST_ENUMERATE(exit_patterns, pattern, i)
-    if( SNetEevaluateBool( SNetExprListGet( guards, i), rec) &&
-        SNetRecPatternMatches(pattern, rec)) {
+    if (SNetRecPatternMatches(pattern, rec) &&
+        SNetEevaluateBool( SNetExprListGet( guards, i), rec)) {
       return true;
     }
   END_ENUMERATE
@@ -72,7 +72,12 @@ static snet_stream_t *SNetSerialStarchild(snet_stream_t *input,
   (void) SNetLocvecStarSpawn(locvec);
 
   /* create operand A */
+  SNetRouteDynamicEnter(info, SNetLocvecTopval(SNetLocvecGet(info)),
+                        location, box_a);
   internal_stream = (*box_a)(input, info, location);
+  internal_stream = SNetRouteUpdate(info, internal_stream, location);
+  SNetRouteDynamicExit(info, SNetLocvecTopval(SNetLocvecGet(info)),
+                       location, box_a);
 
   assert( SNetLocvecStarWithin(SNetLocvecGet(info)) );
 
@@ -99,7 +104,6 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
   snet_stream_t *starstream, *nextstream_addr;
   /* Create the stream to the instance */
   nextstream_addr = SNetStreamCreate(0);
-  SNetRouteUpdateDynamic(sarg->info, nextstream_addr, sarg->location, SNetLocvecTopval(SNetLocvecGet(sarg->info)));
   *next = SNetStreamOpen(nextstream_addr, 'w');
 
   /* Set the source of the stream to support garbage collection */
@@ -354,22 +358,18 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     bool is_det
     )
 {
-  snet_info_t *newInfo;
   snet_stream_t *output;
   star_arg_t *sarg;
   snet_stream_t *newstream;
   snet_locvec_t *locvec;
 
   locvec = SNetLocvecGet(info);
-  newInfo = SNetInfoCopy(info);
   if (!is_incarnate) {
     SNetLocvecStarEnter(locvec);
-    input = SNetRouteUpdate(newInfo, input, location, box_a);
+    input = SNetRouteUpdate(info, input, location);
   } else {
-    input = SNetRouteUpdate(newInfo, input, location, NULL);
+    input = SNetRouteUpdate(info, input, location);
   }
-  locvec = SNetLocvecCopy(locvec);
-  SNetLocvecSet(newInfo, locvec);
 
   if(SNetDistribIsNodeLocation(location)) {
     /* create the task argument */
@@ -382,7 +382,8 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->selffun = box_b;
     sarg->exit_patterns = exit_patterns;
     sarg->guards = guards;
-    sarg->info = newInfo;
+    sarg->info = SNetInfoCopy(info);
+    SNetLocvecSet(sarg->info, SNetLocvecCopy(locvec));
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
     sarg->location = location;

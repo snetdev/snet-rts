@@ -1,0 +1,16 @@
+syntax: glob
+.DS_store
+*autom4te*
+.*.d
+.make_track
+*.so
+*.orig
+config.h
+config.h.in
+config.log
+config.status
+aclocal.m4
+build-aux
+configure
+Makefile.in
+makefiles/config.mkf
