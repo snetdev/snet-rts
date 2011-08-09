@@ -1,4 +1,6 @@
 AC_INIT([SNet], [1.x], [info@snet-home.org])
+AC_PREREQ([2.68])
+
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
@@ -15,11 +17,6 @@ AC_PROG_CPP
 AC_PROG_YACC
 AC_PROG_LEX
 
-AC_CHECK_PROGS([XSLT], [xsltproc sabcmd])
-if test x"$XSLT" = xno; then
-  AC_MSG_ERROR([Cannot find a usable XSLT processor.])
-fi
-
 AC_LANG_PUSH([C])
 
 AX_PTHREAD
@@ -30,20 +27,7 @@ AC_CHECK_FUNCS([pthread_setaffinity_np])
 
 AC_SEARCH_LIBS([sqrt], [m])
 
-AC_MSG_CHECKING([for 0x prefix when printing pointers])
-AC_EGREP_CPP([0x0*], dnl
-             [#include <stdio.h>
-              int main()
-              {
-               printf("%p", (void*) 0);
-              }
-             ], 
-             [AC_MSG_RESULT([yes])], 
-             [AC_MSG_RESULT([no])
-              AC_DEFINE([NEED_PTR_PREFIX], [1], [set to 1 if printf does not print a leading 0x in front of pointers])
-              ])
-
-# check network functions
+dnl check network functions
 AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([inet_aton], [resolv])
@@ -53,23 +37,19 @@ dnl check for compiler builtins for
 dnl atomic memory access (__sync_fetch_and_add/dec)
 dnl !!! we need to try to link the program, on platforms on which
 dnl !!! these functions are not available, they are undefined references
-AC_MSG_CHECKING([availability of compiler builtins for atomic memory access])
-AC_TRY_RUN( [
-  int main(void) {
+AC_MSG_CHECKING([atomic compiler builtins])
+have_compiler_atomics=no
+AC_TRY_LINK([], [
     int a = 0;
     (void) __sync_fetch_and_add(&a, 1);
     (void) __sync_fetch_and_sub(&a, 1);
     (void) __sync_lock_test_and_set(&a, 42);
-    return 0;
-  }
   ],
-  [
-    AC_DEFINE([HAVE_SYNC_ATOMIC_BUILTINS], [1], [Define to 1 if compiler builtins for atomic memory access are available.])
-    AC_MSG_RESULT([yes])
-  ],
-    AC_MSG_RESULT([no])
-)
-
+  [have_compiler_atomics=yes])
+AC_MSG_RESULT([$have_compiler_atomics])
+if test $have_compiler_atomics = yes; then
+  AC_DEFINE([HAVE_SYNC_ATOMIC_BUILTINS], [1], [Define to 1 if compiler builtins for atomic memory access are available.])
+fi
 
 AC_LANG_POP([C])
 
@@ -111,6 +91,6 @@ AX_MPI([have_mpi=yes],[have_mpi=no])
 AM_CONDITIONAL([HAVE_MPI], [test $have_mpi = yes])
 
 AC_CHECK_PROGS([SAC2C], [sac2c])
-
+AC_CHECK_PROGS([SAC4C], [sac4c])
 
 AC_OUTPUT([Makefile])
