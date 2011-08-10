@@ -5,7 +5,7 @@ pkglib_DATA = \
 	libtool
 
 pkglib_LTLIBRARIES = \
-	libcommon.la  \
+	libsnetutil.la  \
 	libruntimestream.la \
 	libc4snet.la \
 	libtbpthread.la \
@@ -53,11 +53,11 @@ pkginclude_HEADERS = \
 
 # How to build the stuff
 
-libcommon_la_SOURCES = \
+libsnetutil_la_SOURCES = \
 	src/util/core/memfun.c \
 	src/util/metadata/metadata.c 
 
-libcommon_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/src/include
+libsnetutil_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/src/include
 
 libruntimestream_la_SOURCES = \
 	src/runtime/common/expression.c \
