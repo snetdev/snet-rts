@@ -6,7 +6,7 @@ pkglib_DATA = \
 pkglib_LTLIBRARIES = \
 	libsnetutil.la  \
 	libruntimestream.la \
-	libc4snet.la \
+	libC4SNet.la \
 	libtbpthread.la \
 	libdistribnodist.la
 
@@ -48,7 +48,7 @@ pkginclude_HEADERS = \
 	include/type.h \
 	include/variant.h
 
-#	libsac4snet.la 
+#	libsaC4SNet.la 
 
 # How to build the stuff
 
@@ -141,7 +141,7 @@ libtblpel_la_CPPFLAGS = \
 libtblpel_la_LIBADD = $(LIBLPEL_LA)
 endif
 
-libc4snet_la_SOURCES = \
+libC4SNet_la_SOURCES = \
 	src/interfaces/c4snet/C4SNet.c \
 	src/interfaces/c4snet/C4SNetc.c \
 	src/interfaces/c4snet/base64.h \

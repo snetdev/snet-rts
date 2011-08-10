@@ -1,7 +1,7 @@
 
-include $(SNETBASE)/src/makefiles/config.mkf
+include $(SNETBASE)/src/snetc/makefiles/config.mkf
 
-SNETLIBS = $(SNETBASE)/lib/*.so
+SNETLIBS = $(SNET_LIBS)/*.la
 INCLUDES  = -I. -I$(SNETBASE)/include
 LIBRARIES = $(SOCKETLIBS)
 SNETCFLAGS+= $(SNETTESTFLAGS)
