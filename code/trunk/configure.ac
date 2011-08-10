@@ -12,7 +12,7 @@ AM_SILENT_RULES([yes])
 # If --enable-dist-mpi=yes is used, try to find MPI and fail if it isn't found.
 # If --enable-dist-mpi=no is used, use a standard C compiler instead.
 AC_ARG_ENABLE([dist-mpi], [AS_HELP_STRING([--enable-dist-mpi],
-    [compile with MPI (parallelization) support. If none is found, MPI is not used. Default: auto])],
+    [Enable the distribution layer using MPI. Set to "yes", "no" (or --disable), or "auto" (default). If "auto", enable if MPI is available.])],
     [], [enable_dist_mpi=auto])
 
 dnl try to detect the MPI compiler before any other C tests are run. This 
@@ -45,6 +45,8 @@ LIBS="$LIBS $PTHREAD_LIBS"
 CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 
 AC_CHECK_FUNCS([pthread_setaffinity_np])
+AC_CHECK_FUNCS([pthread_yield_np])
+AC_CHECK_FUNCS([pthread_yield])
 
 AC_SEARCH_LIBS([sqrt], [m])
 
@@ -76,6 +78,7 @@ AC_LANG_POP([C])
 
 LT_PREREQ([2.2])
 LT_INIT([dlopen])
+AC_SUBST([LIBTOOL_DEPS])
 
 AC_ARG_WITH([lpel-includes], [AC_HELP_STRING([--with-lpel-includes=DIR], [look up lpel.h in DIR])], [], [with_lpel_includes=])
 AC_MSG_CHECKING([for lpel.h in $with_lpel_includes])

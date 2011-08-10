@@ -1,4 +1,9 @@
 # stuff that gets installed
+pkglib_DATA = \
+	compile_cmd link_cmd \
+	ltcompile_prefix ltlink_prefix \
+	libtool
+
 pkglib_LTLIBRARIES = \
 	libcommon.la  \
 	libruntimestream.la \
@@ -161,9 +166,17 @@ libdistribmpi_la_SOURCES = \
 endif
 
 # common flags
-CPPFLAGS = $(AM_CPPFLAGS) \
-	-I$(srcdir)/src/include \
-	-I$(srcdir)/include
+INCLUDES = -I$(srcdir)/include
+
+compile_cmd: Makefile
+	rm -f $@
+	echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
+	     $(CC) $(DEFS) $(AM_CPPFLAGS) -I'$${SNET_INCLUDES:-$$SNETBASE/include}' $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c >$@
+
+link_cmd: Makefile
+	rm -f $@
+	echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
+	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS:-$$SNETBASE/lib}' >$@
 
 # re-generate the "libtool" script when it becomes deprecated
 LIBTOOL_DEPS = @LIBTOOL_DEPS@
