@@ -1,14 +1,21 @@
 # stuff that gets installed
+pkglib_DATA = \
+	compile_cmd link_cmd \
+	libtool
+
 pkglib_LTLIBRARIES = \
-	libcommon.la  \
+	libsnetutil.la  \
 	libruntimestream.la \
-	libc4snet.la \
+	libC4SNet.la \
 	libtbpthread.la \
 	libdistribnodist.la
 
 pkginclude_HEADERS = \
-	include/atomiccnt.h \
 	include/C4SNet.h \
+	include/C4SNetc.h \
+	include/SAC4SNet.h \
+	include/SAC4SNetc.h \
+	include/atomiccnt.h \
 	include/bool.h \
 	include/constants.h \
 	include/debug.h \
@@ -41,15 +48,15 @@ pkginclude_HEADERS = \
 	include/type.h \
 	include/variant.h
 
-#	libsac4snet.la 
+#	libsaC4SNet.la 
 
 # How to build the stuff
 
-libcommon_la_SOURCES = \
+libsnetutil_la_SOURCES = \
 	src/util/core/memfun.c \
 	src/util/metadata/metadata.c 
 
-libcommon_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/src/include
+libsnetutil_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/src/include
 
 libruntimestream_la_SOURCES = \
 	src/runtime/common/expression.c \
@@ -91,6 +98,7 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/observer/observers.c \
 	src/runtime/stream/observer/observers.h \
 	src/runtime/stream/langif/interface_functions.c \
+	src/runtime/stream/netif/interface.c \
 	src/runtime/stream/netif/input.c \
 	src/runtime/stream/netif/input.h \
 	src/runtime/stream/netif/output.c \
@@ -115,10 +123,11 @@ libtbpthread_la_SOURCES = \
 	src/threading/pthread/tbpth/entity.h \
 	src/threading/pthread/tbpth/stream.c \
 	src/threading/pthread/tbpth/stream.h \
+	src/threading/pthread/tbpth/streamset.c \
 	src/threading/pthread/tbpth/monitorer.c \
 	src/threading/pthread/tbpth/monitorer.h
 
-if HAVE_LPEL
+if ENABLE_TH_LPEL
 pkglib_LTLIBRARIES += libtblpel.la 
 libtblpel_la_SOURCES = \
 	src/threading/lpel/lpelmod/assign.c \
@@ -134,24 +143,20 @@ libtblpel_la_CPPFLAGS = \
 libtblpel_la_LIBADD = $(LIBLPEL_LA)
 endif
 
-libc4snet_la_SOURCES = \
-	src/interfaces/c4snet/C4SNet.h \
+libC4SNet_la_SOURCES = \
 	src/interfaces/c4snet/C4SNet.c \
-	src/interfaces/c4snet/C4SNetc.h \
 	src/interfaces/c4snet/C4SNetc.c \
 	src/interfaces/c4snet/base64.h \
 	src/interfaces/c4snet/base64.c
 
 libsac4snet_la_SOURCES = \
-	src/interfaces/sac4snet/SAC4SNet.h \
 	src/interfaces/sac4snet/SAC4SNet.c \
-	src/interfaces/sac4snet/SAC4SNetc.h \
 	src/interfaces/sac4snet/SAC4SNetc.c 
 
 libdistribnodist_la_SOURCES = \
 	src/distrib/nodist/distribution.c
 
-if HAVE_MPI
+if ENABLE_DIST_MPI
 pkglib_LTLIBRARIES += libdistribmpi.la
 libdistribmpi_la_SOURCES = \
 	src/distrib/mpi/distribmap.c \
@@ -159,14 +164,20 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/mpi/distribution.c \
 	src/distrib/mpi/imanager.c \
 	src/distrib/mpi/omanager.c 
-libdistribmpi_la_CC = $(MPICC)
-libdistribmpi_la_LIBADD = $(MPILIBS)
 endif
 
 # common flags
-CPPFLAGS = $(AM_CPPFLAGS) \
-	-I$(srcdir)/src/include \
-	-I$(srcdir)/include
+INCLUDES = -I$(srcdir)/include
+
+compile_cmd: Makefile
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
+	     $(CC) $(DEFS) $(AM_CPPFLAGS) -I'$${SNET_INCLUDES:-$$SNETBASE/include}' $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c >$@
+
+link_cmd: Makefile
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
+	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS:-$$SNETBASE/lib}' >$@
 
 # re-generate the "libtool" script when it becomes deprecated
 LIBTOOL_DEPS = @LIBTOOL_DEPS@

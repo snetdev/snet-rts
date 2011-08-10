@@ -2,12 +2,8 @@
 #define USE_CORE_AFFINITY 1
 #endif
 
-#ifdef USE_CORE_AFFINITY
-#define _GNU_SOURCE
 #include <stdarg.h>
 #include <string.h>
-#endif
-
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -192,8 +188,12 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 
 void SNetThreadingYield(void)
 {
-#ifdef _GNU_SOURCE
+#ifdef HAVE_PTHREAD_YIELD_NP
+  (void) pthread_yield_np();
+#else
+#ifdef HAVE_PTHREAD_YIELD
   (void) pthread_yield();
+#endif
 #endif
 }
 

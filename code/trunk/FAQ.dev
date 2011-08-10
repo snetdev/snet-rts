@@ -1,0 +1,69 @@
+Frequently asked questions for S-NET developers (not users!)
+============================================================
+
+Q: Where is the `configure' script? How do I get started?
+
+A: Use the script `bootstrap'. This runs `autoreconf' which will copy
+   the latest versions of all the necessary tools and then invoke
+   Automake and Autoconf to generate `configure' and `Makefile.in'.
+
+   Note that you should only need to use `bootstrap' once. After a
+   build tree is configured, dependency tracking should pick up any
+   changes to `configure.ac' and `Makefile.am' automatically.
+
+   After you have generated `configure', check out `configure
+   --help'. It really helps.
+
+--
+
+Q: I ran `make' and there is no `snetc'. What then?
+
+A: `snetc' will ultimately be distributed separately. In the meantime, go
+   to `src/snetc' and run `configure' and `make' from there.
+  
+--
+
+Q: What does the following message mean?
+
+   configure.ac:10: warning: macro `AM_SILENT_RULES' not found in library
+
+A: Your Automake is too old. Upgrade to 1.11.1 or later.
+
+--
+
+Q: What does the following message mean?
+
+   configure.ac:57: warning: AC_LANG_CONFTEST: no AC_LANG_SOURCE call detected in body
+   [...]
+   build-aux/libtool.m4:67: LT_INIT is expanded from...
+   configure.ac:57: the top level
+
+A: Your Libtool is too old. Upgrade to 2.2 or later.
+
+--
+
+Q: What does the following message mean?
+
+   BUG.am: `install.sh' is an anachronism; use `install-sh' instead
+ 
+A: Remove the file `build-aux/install.sh'. It should not be
+   there. "autoreconf -i" will copy a fresh version of `install-sh'
+   instead.
+
+--
+
+Q: What does the following message mean?
+
+   configure.ac:35: warning: AC_COMPILE_IFELSE was called before AC_USE_SYSTEM_EXTENSIONS
+   ../../lib/autoconf/specific.m4:364: AC_USE_SYSTEM_EXTENSIONS is expanded from...
+   configure.ac:35: the top level
+
+A: This warning can be safely ignored.
+   Autoconf complains that some check is using the C compiler before
+   AC_USE_SYSTEM_EXTENSIONS had a chance to add compiler flags to
+   enable API extensions. The "offending" check is the check for MPI
+   when --enable-dist-mpi is set to "yes" or "auto". The MPI check
+   *must* appear before other C checks or compiler configurations so
+   that the MPI compiler wrapper is picked up instead of the regular
+   compiler name. Although AC_USE_SYSTEM_EXTENSIONS appears later
+   this is innocuous as it should have no effect on MPI detection.

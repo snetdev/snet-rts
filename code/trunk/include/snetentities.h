@@ -9,7 +9,8 @@
 #include "interface_functions.h"
 #include "snettypes.h"
 
-
+int SNetNetToId(snet_startup_fun_t fun);
+snet_startup_fun_t SNetIdToNet(int id);
 
 
 /****************************************************************************/

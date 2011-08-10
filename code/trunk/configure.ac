@@ -3,13 +3,34 @@ AC_PREREQ([2.68])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux])
-AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([1.11 tar-ustar no-define foreign dist-bzip2 subdir-objects
                   parallel-tests color-tests silent-rules])
 AM_SILENT_RULES([yes])
 
-AC_PROG_CC_C99
+# If --enable-dist-mpi=auto is used, try to find MPI, but use standard C compiler if it is not found.
+# If --enable-dist-mpi=yes is used, try to find MPI and fail if it isn't found.
+# If --enable-dist-mpi=no is used, use a standard C compiler instead.
+AC_ARG_ENABLE([dist-mpi], [AS_HELP_STRING([--enable-dist-mpi],
+    [Enable the distribution layer using MPI. Set to "yes", "no" (or --disable), or "auto" (default). If "auto", enable if MPI is available.])],
+    [], [enable_dist_mpi=auto])
+
+dnl try to detect the MPI compiler before any other C tests are run. This 
+dnl MUST appear before other C tests / configurations so that they can
+dnl pick `mpicc' as compiler name.
+
+use_mpi=no
+AX_PROG_CC_MPI([test x"$enable_dist_mpi" != xno], [use_mpi=yes],
+               [if test x"$with_mpi" = xyes; then
+  AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
+else
+  AC_MSG_WARN([No MPI compiler found, won't use MPI.])
+fi])
+AM_CONDITIONAL([ENABLE_DIST_MPI], [test $use_mpi = yes])
+
+dnl ensure that either mpicc or cc detected above are configured in c99 mode
+AC_PROG_CC_C99 
+dnl and API extensions are available. 
 AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CPP
@@ -24,6 +45,8 @@ LIBS="$LIBS $PTHREAD_LIBS"
 CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 
 AC_CHECK_FUNCS([pthread_setaffinity_np])
+AC_CHECK_FUNCS([pthread_yield_np])
+AC_CHECK_FUNCS([pthread_yield])
 
 AC_SEARCH_LIBS([sqrt], [m])
 
@@ -55,6 +78,7 @@ AC_LANG_POP([C])
 
 LT_PREREQ([2.2])
 LT_INIT([dlopen])
+AC_SUBST([LIBTOOL_DEPS])
 
 AC_ARG_WITH([lpel-includes], [AC_HELP_STRING([--with-lpel-includes=DIR], [look up lpel.h in DIR])], [], [with_lpel_includes=])
 AC_MSG_CHECKING([for lpel.h in $with_lpel_includes])
@@ -85,10 +109,7 @@ if test -n "$with_lpel_includes" -a -n "$with_lpel_libs"; then
    AC_SUBST([LPEL_INCLUDES])
    have_lpel=yes
 fi
-AM_CONDITIONAL([HAVE_LPEL], [test $have_lpel = yes])
-
-AX_MPI([have_mpi=yes],[have_mpi=no])
-AM_CONDITIONAL([HAVE_MPI], [test $have_mpi = yes])
+AM_CONDITIONAL([ENABLE_TH_LPEL], [test $have_lpel = yes])
 
 AC_CHECK_PROGS([SAC2C], [sac2c])
 AC_CHECK_PROGS([SAC4C], [sac4c])
