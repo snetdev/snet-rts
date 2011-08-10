@@ -3,7 +3,6 @@ AC_PREREQ([2.68])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux])
-AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([1.11 tar-ustar no-define foreign dist-bzip2 subdir-objects
                   parallel-tests color-tests silent-rules])
@@ -17,6 +16,9 @@ AC_ARG_ENABLE([dist-mpi], [AS_HELP_STRING([--enable-dist-mpi],
     [], [enable_dist_mpi=auto])
 use_mpi=no
 if test "x$enable_dist_mpi" = xyes -o "x$enable_dist_mpi" = xauto; then
+  dnl try to detect the MPI compiler before any other C tests are run. This 
+  dnl MUST appear before other C tests / configurations so that they can
+  dnl pick `mpicc' as compiler name.
   AX_PROG_CC_MPI([test x"$enable_dist_mpi" != xno], [use_mpi=yes],
                  [if test x"$with_mpi" = xyes; then
     AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
@@ -31,7 +33,7 @@ AM_CONDITIONAL([ENABLE_DIST_MPI], [test $use_mpi = yes])
 
 dnl ensure that either mpicc or cc detected above are configured in c99 mode
 AC_PROG_CC_C99 
-dnl and API extensions are available
+dnl and API extensions are available. 
 AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CPP

@@ -7,10 +7,6 @@
 #include "debug.h"
 #include "map.h"
 #include "variant.h"
-/* For some reason, config.h is not included anywhere else.
- * But we need it for atomiccnt.h!
- */
-#include "config.h"
 #include "atomiccnt.h"
 
 static snet_atomiccnt_t recid_sequencer = SNET_ATOMICCNT_INITIALIZER(0);
