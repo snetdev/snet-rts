@@ -14,21 +14,18 @@ AM_SILENT_RULES([yes])
 AC_ARG_ENABLE([dist-mpi], [AS_HELP_STRING([--enable-dist-mpi],
     [compile with MPI (parallelization) support. If none is found, MPI is not used. Default: auto])],
     [], [enable_dist_mpi=auto])
+
+dnl try to detect the MPI compiler before any other C tests are run. This 
+dnl MUST appear before other C tests / configurations so that they can
+dnl pick `mpicc' as compiler name.
+
 use_mpi=no
-if test "x$enable_dist_mpi" = xyes -o "x$enable_dist_mpi" = xauto; then
-  dnl try to detect the MPI compiler before any other C tests are run. This 
-  dnl MUST appear before other C tests / configurations so that they can
-  dnl pick `mpicc' as compiler name.
-  AX_PROG_CC_MPI([test x"$enable_dist_mpi" != xno], [use_mpi=yes],
-                 [if test x"$with_mpi" = xyes; then
-    AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
-  else
-    AC_MSG_WARN([No MPI compiler found, won't use MPI.])
-  fi])
-fi
-if test $use_mpi = xno; then
-  AC_PROG_CC
-fi
+AX_PROG_CC_MPI([test x"$enable_dist_mpi" != xno], [use_mpi=yes],
+               [if test x"$with_mpi" = xyes; then
+  AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
+else
+  AC_MSG_WARN([No MPI compiler found, won't use MPI.])
+fi])
 AM_CONDITIONAL([ENABLE_DIST_MPI], [test $use_mpi = yes])
 
 dnl ensure that either mpicc or cc detected above are configured in c99 mode

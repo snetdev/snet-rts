@@ -8,7 +8,6 @@ pkglib_LTLIBRARIES = \
 
 pkginclude_HEADERS = \
 	include/atomiccnt.h \
-	include/C4SNet.h \
 	include/bool.h \
 	include/constants.h \
 	include/debug.h \
