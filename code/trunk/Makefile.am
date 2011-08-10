@@ -1,7 +1,6 @@
 # stuff that gets installed
 pkglib_DATA = \
 	compile_cmd link_cmd \
-	ltcompile_prefix ltlink_prefix \
 	libtool
 
 pkglib_LTLIBRARIES = \
