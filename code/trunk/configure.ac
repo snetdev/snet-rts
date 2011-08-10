@@ -9,7 +9,29 @@ AM_INIT_AUTOMAKE([1.11 tar-ustar no-define foreign dist-bzip2 subdir-objects
                   parallel-tests color-tests silent-rules])
 AM_SILENT_RULES([yes])
 
-AC_PROG_CC_C99
+# If --enable-dist-mpi=auto is used, try to find MPI, but use standard C compiler if it is not found.
+# If --enable-dist-mpi=yes is used, try to find MPI and fail if it isn't found.
+# If --enable-dist-mpi=no is used, use a standard C compiler instead.
+AC_ARG_ENABLE([dist-mpi], [AS_HELP_STRING([--enable-dist-mpi],
+    [compile with MPI (parallelization) support. If none is found, MPI is not used. Default: auto])],
+    [], [enable_dist_mpi=auto])
+use_mpi=no
+if test "x$enable_dist_mpi" = xyes -o "x$enable_dist_mpi" = xauto; then
+  AX_PROG_CC_MPI([test x"$enable_dist_mpi" != xno], [use_mpi=yes],
+                 [if test x"$with_mpi" = xyes; then
+    AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
+  else
+    AC_MSG_WARN([No MPI compiler found, won't use MPI.])
+  fi])
+fi
+if test $use_mpi = xno; then
+  AC_PROG_CC
+fi
+AM_CONDITIONAL([ENABLE_DIST_MPI], [test $use_mpi = yes])
+
+dnl ensure that either mpicc or cc detected above are configured in c99 mode
+AC_PROG_CC_C99 
+dnl and API extensions are available
 AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CPP
@@ -85,10 +107,7 @@ if test -n "$with_lpel_includes" -a -n "$with_lpel_libs"; then
    AC_SUBST([LPEL_INCLUDES])
    have_lpel=yes
 fi
-AM_CONDITIONAL([HAVE_LPEL], [test $have_lpel = yes])
-
-AX_MPI([have_mpi=yes],[have_mpi=no])
-AM_CONDITIONAL([HAVE_MPI], [test $have_mpi = yes])
+AM_CONDITIONAL([ENABLE_TH_LPEL], [test $have_lpel = yes])
 
 AC_CHECK_PROGS([SAC2C], [sac2c])
 AC_CHECK_PROGS([SAC4C], [sac4c])

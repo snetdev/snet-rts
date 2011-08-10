@@ -118,7 +118,7 @@ libtbpthread_la_SOURCES = \
 	src/threading/pthread/tbpth/monitorer.c \
 	src/threading/pthread/tbpth/monitorer.h
 
-if HAVE_LPEL
+if ENABLE_TH_LPEL
 pkglib_LTLIBRARIES += libtblpel.la 
 libtblpel_la_SOURCES = \
 	src/threading/lpel/lpelmod/assign.c \
@@ -151,7 +151,7 @@ libsac4snet_la_SOURCES = \
 libdistribnodist_la_SOURCES = \
 	src/distrib/nodist/distribution.c
 
-if HAVE_MPI
+if ENABLE_DIST_MPI
 pkglib_LTLIBRARIES += libdistribmpi.la
 libdistribmpi_la_SOURCES = \
 	src/distrib/mpi/distribmap.c \
@@ -159,8 +159,6 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/mpi/distribution.c \
 	src/distrib/mpi/imanager.c \
 	src/distrib/mpi/omanager.c 
-libdistribmpi_la_CC = $(MPICC)
-libdistribmpi_la_LIBADD = $(MPILIBS)
 endif
 
 # common flags
