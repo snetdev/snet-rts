@@ -11,6 +11,16 @@ A: Use the script `bootstrap'. This runs `autoreconf' which will copy
    build tree is configured, dependency tracking should pick up any
    changes to `configure.ac' and `Makefile.am' automatically.
 
+   After you have generated `configure', check out `configure
+   --help'. It really helps.
+
+--
+
+Q: I ran `make' and there is no `snetc'. What then?
+
+A: `snetc' will ultimately be distributed separately. In the meantime, go
+   to `src/snetc' and run `configure' and `make' from there.
+  
 --
 
 Q: What does the following message mean?
