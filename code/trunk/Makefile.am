@@ -7,6 +7,7 @@ pkglib_LTLIBRARIES = \
 	libsnetutil.la  \
 	libruntimestream.la \
 	libC4SNet.la \
+	libC4SNetc.la \
 	libtbpthread.la \
 	libdistribnodist.la
 
@@ -145,9 +146,13 @@ endif
 
 libC4SNet_la_SOURCES = \
 	src/interfaces/c4snet/C4SNet.c \
-	src/interfaces/c4snet/C4SNetc.c \
+	src/interfaces/c4snet/C4SNet.h \
 	src/interfaces/c4snet/base64.h \
 	src/interfaces/c4snet/base64.c
+
+libC4SNetc_la_SOURCES = \
+	src/interfaces/c4snet/C4SNetc.c \
+	src/interfaces/c4snet/C4SNetc.h
 
 libsac4snet_la_SOURCES = \
 	src/interfaces/sac4snet/SAC4SNet.c \
