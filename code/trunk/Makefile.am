@@ -98,6 +98,7 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/observer/observers.c \
 	src/runtime/stream/observer/observers.h \
 	src/runtime/stream/langif/interface_functions.c \
+	src/runtime/stream/netif/interface.c \
 	src/runtime/stream/netif/input.c \
 	src/runtime/stream/netif/input.h \
 	src/runtime/stream/netif/output.c \
@@ -122,6 +123,7 @@ libtbpthread_la_SOURCES = \
 	src/threading/pthread/tbpth/entity.h \
 	src/threading/pthread/tbpth/stream.c \
 	src/threading/pthread/tbpth/stream.h \
+	src/threading/pthread/tbpth/streamset.c \
 	src/threading/pthread/tbpth/monitorer.c \
 	src/threading/pthread/tbpth/monitorer.h
 
