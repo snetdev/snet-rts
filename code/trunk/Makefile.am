@@ -7,6 +7,10 @@ pkglib_LTLIBRARIES = \
 	libdistribnodist.la
 
 pkginclude_HEADERS = \
+	include/C4SNet.h \
+	include/C4SNetc.h \
+	include/SAC4SNet.h \
+	include/SAC4SNetc.h \
 	include/atomiccnt.h \
 	include/bool.h \
 	include/constants.h \
@@ -134,17 +138,13 @@ libtblpel_la_LIBADD = $(LIBLPEL_LA)
 endif
 
 libc4snet_la_SOURCES = \
-	src/interfaces/c4snet/C4SNet.h \
 	src/interfaces/c4snet/C4SNet.c \
-	src/interfaces/c4snet/C4SNetc.h \
 	src/interfaces/c4snet/C4SNetc.c \
 	src/interfaces/c4snet/base64.h \
 	src/interfaces/c4snet/base64.c
 
 libsac4snet_la_SOURCES = \
-	src/interfaces/sac4snet/SAC4SNet.h \
 	src/interfaces/sac4snet/SAC4SNet.c \
-	src/interfaces/sac4snet/SAC4SNetc.h \
 	src/interfaces/sac4snet/SAC4SNetc.c 
 
 libdistribnodist_la_SOURCES = \
