@@ -169,13 +169,13 @@ endif
 INCLUDES = -I$(srcdir)/include
 
 compile_cmd: Makefile
-	rm -f $@
-	echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
 	     $(CC) $(DEFS) $(AM_CPPFLAGS) -I'$${SNET_INCLUDES:-$$SNETBASE/include}' $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c >$@
 
 link_cmd: Makefile
-	rm -f $@
-	echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
 	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS:-$$SNETBASE/lib}' >$@
 
 # re-generate the "libtool" script when it becomes deprecated
