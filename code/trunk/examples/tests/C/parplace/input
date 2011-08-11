@@ -1,0 +1,1 @@
+<?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="B" interface="C4SNet">(int)6</field></record><?xml version="1.0" ?><record xmlns="snet-home.org" type="data" mode="textual" ><field label="A" interface="C4SNet">(int)9</field></record><?xml version="1.0" ?><record type="terminate" />
