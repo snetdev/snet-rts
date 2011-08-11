@@ -1,10 +1,23 @@
 syntax: glob
-.DS_store
+.DS_Store
 *autom4te*
+*~
+\#*\#
 .*.d
 .make_track
+libtool
+stamp-h1
+link_cmd
+compile_cmd
+*.lo
+*.o
+*.la
 *.so
 *.orig
+*.log
+.deps
+.dirstamp
+.libs
 config.h
 config.h.in
 config.log
@@ -14,3 +27,7 @@ build-aux
 configure
 Makefile.in
 makefiles/config.mkf
+netif/lexer.c
+netif/parser.h
+netif/parser.c
+Makefile
