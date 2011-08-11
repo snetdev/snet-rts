@@ -1,6 +1,6 @@
 
 
-SNET_EXTRA_LDFLAGS += $(BOXES)
+export SNET_EXTRA_LDFLAGS+=$(BOXES)
 
 .PHONY: clean all lpel
 
