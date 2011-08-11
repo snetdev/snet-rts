@@ -1,5 +1,7 @@
 
 
+SNET_EXTRA_LDFLAGS += $(BOXES)
+
 .PHONY: clean all lpel
 
 all: $(TARGET)
