@@ -377,7 +377,7 @@ static void FeedbackBufTask(snet_entity_t *ent, void *arg)
   SNetStreamClose(outstream, false);
 }
 
-#else
+#else /* FEEDBACK_STREAM_EMITTER */
 
 /**
  * The feedback buffer, in the back-loop
@@ -487,7 +487,7 @@ feedback_buf_epilogue:
   SNetStreamClose(outstream,  false);
 }
 
-#endif
+#endif /* FEEDBACK_STREAM_EMITTER */
 
 
 

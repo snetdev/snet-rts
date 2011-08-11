@@ -272,7 +272,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
     }
   }
 
-  if (type != ENTITY_box) {
+  if (type != ENTITY_box && type != ENTITY_fbbuf) {
     LpelTaskPrio(t, 1);
   }
 
