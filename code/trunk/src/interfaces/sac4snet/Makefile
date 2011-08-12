@@ -39,8 +39,9 @@ default: libSNetMod.so libSAC4SNetInputGenMod.so sac_lib/lib$(IFNAME)FibreIO.so
 	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) -c *.c
 	$(CC) $(subst %libname%,$(TARGET),$(LD_DYNAMIC)) $(S4CLIBS) -o $(TARGET) $(OBJECTS) 
 	$(CC) $(subst %libname%,$(WRAPTARGET),$(LD_DYNAMIC)) -o $(WRAPTARGET) $(WRAPOBJECTS) 
+	mkdir -p $(TARGETDIR)
 	$(COPY) *.so $(LIBDIR)/lib$(LIB).so $(TARGETDIR)
-	$(COPY) $(IFNAME).h $(SNETBASE)/include
+	#$(COPY) $(IFNAME).h $(SNETBASE)/include
 
 lib%Mod.so: %.sac
 	$(SAC2C) $(SACFLAGS) $<
