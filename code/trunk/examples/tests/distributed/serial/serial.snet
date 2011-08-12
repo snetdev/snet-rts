@@ -5,4 +5,8 @@
 </metadata>
 
 net serial
-connect ([{<T>} -> {<T=T+1>}]@1 .. [{<S>} -> {<S=S+2>}]@2)@3;
+{ 
+  net a 
+  {
+  } connect ([{<T>} -> {<T=T+1>}]@1 .. [{<S>} -> {<S=S+2>}]@2)@3;
+} connect a;
