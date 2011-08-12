@@ -33,6 +33,7 @@
 #include "locvec.h"
 #include "distribution.h"
 #include "threading.h"
+#include "limits.h"
 
 //#define DEBUG_PRINT_GC
 
@@ -102,6 +103,7 @@ static void CheckMatch( snet_record_t *rec,
 }
 
 
+
 #ifdef ENABLE_GC_STATE
 
 static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
@@ -129,6 +131,49 @@ static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
 
 #endif /* ENABLE_GC_STATE */
 
+
+/**
+ * Using weighted round robin to decide which buffer to dispatch to:
+ *   among all best match branches, choose the least-used one
+ */
+static int WeightedRoundRobin( match_count_t **counter, int *usedcounter, int num)
+{
+  int i, j;
+  int max, min;
+  int *best;
+  int num_best;
+  int res;
+
+  max = -1;
+  num_best = 0;
+  best = SNetMemAlloc( num * sizeof(int));
+
+  for( i=0; i<num; i++) {
+    if( counter[i]->is_match) {
+      if( counter[i] ->count > max) {
+        best[0] = i;
+        num_best = 1;
+        max = counter[i]->count;
+      }
+      if( counter[i]->count == max) {
+        best[num_best] = i;
+        num_best += 1;
+      }
+    }
+  }
+
+  min = INT_MAX;
+  res = -1;
+  for( i=0; i<num_best; i++){
+    j = best[i];
+    if( usedcounter[j] < min) {
+      res = j;
+      min = usedcounter[j];
+    }
+  }
+  SNetMemFree( best);
+  return res;
+}
 
 /**
  * Check for "best match" and decide which buffer to dispatch to
@@ -196,7 +241,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
   int num_init_branches = 0;
   bool terminate = false;
   int counter = 0;
-
+  int *usedcounter; /* to keep track how many times the branch is used */
 
   /* open instream for reading */
   instream = SNetStreamOpen(parg->input, 'r');
@@ -245,8 +290,10 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
   }
 
   matchcounter = SNetMemAlloc( num * sizeof( match_count_t*));
+  usedcounter = SNetMemAlloc( num * sizeof( int));
   for( i=0; i<num; i++) {
     matchcounter[i] = SNetMemAlloc( sizeof( match_count_t));
+    usedcounter[i] = 0;
   }
 
   /* MAIN LOOP START */
@@ -262,12 +309,19 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
           for( i=0; i<num; i++) {
             CheckMatch( rec, SNetVariantListListGet( parg->variant_lists, i), matchcounter[i]);
           }
+          // used first match stategy
           stream_index = BestMatch( matchcounter, num);
+
+         // use Weighted Round Robin strategy
+         // stream_index = WeightedRoundRobin( matchcounter, usedcounter, num);
+
           if (stream_index == -1) {
             SNetUtilDebugFatalEnt( ent,
                 "[PAR] Cannot route data record, no matching branch!");
           }
           PutToBuffers( outstreams, num, stream_index, rec, (parg->is_det)? &counter : NULL);
+          usedcounter[stream_index] += 1;  // increase the number of usage
+
         }
         break;
 
@@ -388,7 +442,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
     SNetMemFree( matchcounter[i]);
   }
   SNetMemFree( matchcounter);
-
+  SNetMemFree( usedcounter);
 
   SNetVariantListListDestroy( parg->variant_lists);
   SNetMemFree( parg);
