@@ -13,11 +13,13 @@ static char buf[1000];
 static bool running = true;
 extern int node_location;
 extern bool outputDistribInfo;
-extern snet_dynamic_map_t *dynamicMap;
 extern snet_dest_stream_map_t *destMap;
 extern snet_info_tag_t prevDest;
 extern snet_stream_desc_t *sd;
 extern void *SNetDestCopy(void *d);
+extern int SNetNetToId(snet_startup_fun_t fun);
+extern snet_startup_fun_t SNetIdToNet(int id);
+extern bool outputDistribInfo;
 
 static void MPIUnpackWrapper(int foo, int *bar)
 {
@@ -27,7 +29,7 @@ static void MPIUnpackWrapper(int foo, int *bar)
 void RecvRecord(MPI_Status status)
 {
   snet_stream_desc_t *sdc;
-  snet_dest_t dest = {SNetDistribGetNodeId(), 0, status.MPI_TAG, 0, 0};
+  snet_dest_t dest = {SNetDistribGetNodeId(), 0, status.MPI_TAG, 0, 0, 0};
   snet_record_t *rec;
 
   MPI_Get_count(&status, MPI_PACKED, &offset);
@@ -44,24 +46,32 @@ void RecvRecord(MPI_Status status)
   MPIUnpackWrapper(1, &dest.dest);
   MPIUnpackWrapper(1, &dest.parentIndex);
   MPIUnpackWrapper(1, &dest.parentNode);
+  MPIUnpackWrapper(1, &dest.blaat);
   rec = SNetRecDeserialise(&MPIUnpackWrapper);
+  if (outputDistribInfo) {
+    if (REC_DESCR(rec) == REC_terminate) {
+      fprintf(stderr, "#%d: Recieved terminate message for: %d, %d, %d, %d\n", node_location, dest.node, dest.dest, dest.parent, dest.parentIndex);
+    } else {
+      fprintf(stderr, "#%d: Recieved message for: %d, %d, %d, %d\n", node_location, dest.node, dest.dest, dest.parent, dest.parentIndex);
+    }
+    fflush(stderr);
+  }
 
-  //fprintf(stderr, "#%d: Recieved message for: %d, %d, %d, %d\n", node_location, dest.node, dest.dest, dest.parent, dest.parentIndex);
-  //fflush(stderr);
   if (!SNetDestStreamMapContains(destMap, dest)) {
     snet_dest_t *dst = SNetMemAlloc(sizeof(snet_dest_t));
     *dst = dest;
     dst->node = status.MPI_SOURCE;
-    snet_startup_fun_t fun = SNetDynamicMapGet(dynamicMap, dest.parent);
+    snet_startup_fun_t fun = SNetIdToNet(dest.parent);
 
     snet_info_t *info = SNetInfoInit();
     SNetInfoSetTag(info, prevDest, (uintptr_t) dst, &SNetDestCopy);
     SNetLocvecSet(info, SNetLocvecCreate());
     snet_stream_t *str = SNetStreamCreate(0);
     SNetDestStreamMapSet(destMap, dest, SNetStreamOpen(str, 'w'));
-    SNetRouteUpdateDynamic(info, dest.parentIndex, false);
-    str = fun(str, info, node_location);
-    str = SNetRouteUpdate(info, str, dest.parentNode, NULL);
+    SNetRouteDynamicEnter(info, dest.parentIndex, dest.blaat, NULL);
+    str = fun(str, info, dest.blaat);
+    str = SNetRouteUpdate(info, str, dest.parentNode);
+    SNetRouteDynamicExit(info, dest.parentIndex, dest.blaat, NULL);
     SNetInfoDestroy(info);
   }
   if (REC_DESCR(rec) == REC_terminate) {

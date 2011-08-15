@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "distribution.h"
+#include "snetentities.h"
 #include "threading.h"
 #include "memfun.h"
 #include "info.h"
@@ -14,17 +15,20 @@ bool debugWait = false;
 bool outputDistribInfo = false;
 extern snet_stream_dest_map_t *streamMap;
 
+typedef struct {
+  snet_dest_t dest;
+  snet_stream_t *stream;
+} tmp_t;
+
 extern void SNetOutputManager(void *);
 extern void SNetInputManager(void *);
 
 snet_dest_stream_map_t *destMap;
-snet_dynamic_map_t *dynamicMap;
 
 bool globalRunning = true;
 int node_location;
-int counter = 0;
-int parentCounter = 1;
 snet_info_tag_t prevDest;
+snet_info_tag_t infoCounter;
 snet_stream_t *stream;
 snet_stream_desc_t *sd;
 
@@ -43,18 +47,21 @@ void *SNetDestCopy(void *d)
 
 void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 {
+  int i = 0;
   int level;
   snet_dest_t *dest = SNetMemAlloc(sizeof(snet_dest_t));
+  int *counter = SNetMemAlloc(sizeof(int));
+  *counter = 0;
 
   dest->node = 0;
-  dest->dest = counter;
-  dest->parent = parentCounter;
+  dest->dest = *counter;
+  dest->parent = 1;
   dest->parentNode = 0;
   dest->parentIndex = 0;
+  dest->blaat = 0;
 
   streamMap = SNetStreamDestMapCreate(0);
   destMap = SNetDestStreamMapCreate(0);
-  dynamicMap = SNetDynamicMapCreate(0);
 
   stream = SNetStreamCreate(0);
   sd = SNetStreamOpen(stream, 'w');
@@ -69,9 +76,14 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 
   prevDest = SNetInfoCreateTag();
   SNetInfoSetTag(info, prevDest, (uintptr_t) dest, &SNetDestCopy);
+  infoCounter = SNetInfoCreateTag();
+  SNetInfoSetTag(info, infoCounter, (uintptr_t) counter, NULL);
+}
 
+void SNetDistribStart()
+{
+  volatile int i = 0;
   if (debugWait) {
-    int i = 0;
     char hostname[256];
     gethostname(hostname, sizeof(hostname));
     printf("PID %d (rank #%d) ready for attach\n", getpid(), node_location);
@@ -79,10 +91,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
     while (0 == i)
         sleep(5);
   }
-}
 
-void SNetDistribStart()
-{
 
   SNetThreadingSpawn(
       SNetEntityCreate( ENTITY_other, -1, NULL,
@@ -126,24 +135,22 @@ bool SNetDistribIsRootNode(void)
   return node_location == 0;
 }
 
-snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc, snet_startup_fun_t fun)
+snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
 {
   int current_node;
   snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
-  counter++;
-  dest->dest = counter;
-  if (fun != NULL) {
-    parentCounter++;
-    dest->parent = parentCounter;
-    SNetDynamicMapSet(dynamicMap, parentCounter, fun);
-  }
+  int *counter = (int*) SNetInfoGetTag(info, infoCounter);
+  *counter = *counter + 1;
+  dest->dest = *counter;
   current_node = dest->node;
 
   if (dest->node != loc) {
     if (dest->node == node_location) {
+      tmp_t *blaat = SNetMemAlloc(sizeof(tmp_t));
       dest->node = loc;
-      SNetStreamDestMapSet(streamMap, input, *dest);
-      SNetStreamWrite(sd, SNetRecCreate(REC_collect, input));
+      blaat->dest = *dest;
+      blaat->stream = input;
+      SNetStreamWrite(sd, blaat);
 
       if (outputDistribInfo) {
         fprintf(stderr, "Node #%d: Added outgoing #%d.\n", node_location,
@@ -167,22 +174,33 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc,
   }
 
   if (outputDistribInfo) {
-    fprintf(stderr, "SNet (Node #%d):\n  Dest.dest: %d\n  Origin: %d\n  Destination: %d\n  Parent: %d\n  Parent index: %d\n", node_location, dest->dest, current_node, loc, dest->parent, dest->parentIndex);
+    fprintf(stderr, "Node #%d: D: %d ON: %d DN: %d P: %d PI: %d\n", node_location, dest->dest, current_node, loc, dest->parent, dest->parentIndex);
   }
 
   return input;
 }
 
-void SNetRouteUpdateDynamic(snet_info_t *info, int parentIndex, bool start)
+void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
+                           snet_startup_fun_t fun)
 {
   snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
-  counter = 0;
-  dest->parentIndex = parentIndex;
-  if (start) {
+  int *tmp = SNetMemAlloc(sizeof(int));
+  *tmp = 0;
+  SNetInfoSetTag(info, infoCounter, (uintptr_t) tmp, NULL);
+  dest->parentIndex = dynamicIndex;
+  if (fun != NULL) {
+    dest->parent = SNetNetToId(fun);
     dest->parentNode = node_location;
+    dest->blaat = dynamicLoc;
   }
 
   if (outputDistribInfo) {
-    fprintf(stderr, "SNet (Node #%d) (dynamic):\n  Dest.dest: %d\n  Origin: %d\n  Parent: %d\n  Parent index: %d\n", node_location, dest->dest, dest->node, dest->parent, dest->parentIndex);
+    fprintf(stderr, "Dyn #%d: D: %d ON: %d P: %d PI: %d\n", node_location, dest->dest, dest->node, dest->parent, dest->parentIndex);
   }
+}
+
+void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
+                          snet_startup_fun_t fun)
+{
+  return;
 }

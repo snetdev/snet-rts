@@ -9,7 +9,8 @@ typedef struct {
       dest,
       parent,
       parentNode,
-      parentIndex;
+      parentIndex,
+      blaat;
 } snet_dest_t;
 
 #define MAP_NAME_H DestStream
