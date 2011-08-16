@@ -4,8 +4,8 @@
 
 IFNAME := SAC4SNet
 
-WRAPLIBDIR  = sac_lib
-WRAPINCDIR  = sac_inc
+WRAPLIBDIR  := sac_lib
+WRAPINCDIR  := sac_inc
 
 SAC2CFLAGS  = -v0
 
@@ -64,7 +64,7 @@ lib%Mod.so: %.sac
 	$(SAC2C) $(SAC2CFLAGS) $<
 
 $(WRAPLIBDIR)/lib$(IFNAME)FibreIO.so: $(IFNAME)FibreIO.sac
-	$(SAC2C) $(SACFLAGS) $(SACTARGET).sac
+	$(SAC2C) $(SAC2CFLAGS) $(SACTARGET).sac
 	mkdir -p $(WRAPINCDIR) $(WRAPLIBDIR)
 	$(SAC4C) $(S4CFLAGS) $(SACTARGET)
 
