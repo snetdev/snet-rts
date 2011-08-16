@@ -27,29 +27,30 @@ pkginclude_HEADERS = \
 	SAC4SNet.h \
 	SAC4SNetc.h
 
+
+# runtime interface library
 libSAC4SNet_la_SOURCES = \
 	SAC4SNet.c \
 	SAC4SNet.h \
         sacinterface.h \
-        $(WRAPINCDIR)/SAC4SNetFibreIO.h
+        $(WRAPINCDIR)/$(IFNAME)FibreIO.h
 libSAC4SNet_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
         -I$(top_srcdir)/include \
         -I$(SAC2CBASE)/include \
         -I$(SAC2CBASE)/src/include \
         $(S4CINCS)
-        #-I$(srcdir)/sac_include
 libSAC4SNet_la_LDFLAGS = \
         $(S4CLIBS)
 
+
+# compiler plugin
 libSAC4SNetc_la_SOURCES = \
 	SAC4SNetc.c \
 	SAC4SNetc.h
 libSAC4SNetc_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
-        -I$(top_srcdir)/include \
-       #-I$(SAC2CBASE)/include \
-       #-I$(SAC2CBASE)/src/include
+        -I$(top_srcdir)/include
 libSAC4SNetc_la_LIBADD = \
         -L$(top_srcdir) -lsnetutil
 
@@ -58,17 +59,19 @@ libSAC4SNetc_la_LIBADD = \
 
 sacmodules: libSNetMod.so libSAC4SNetInputGenMod.so $(WRAPLIBDIR)/lib$(IFNAME)FibreIO.so
 
+$(WRAPINCDIR)/$(IFNAME)FibreIO.h: sacmodules
 
 # these are built by sac2c
 lib%Mod.so: %.sac
-	$(SAC2C) $(SAC2CFLAGS) $<
+	$(AM_V_GEN) $(SAC2C) $(SAC2CFLAGS) $<
 
-$(WRAPLIBDIR)/lib$(IFNAME)FibreIO.so: $(IFNAME)FibreIO.sac
-	$(SAC2C) $(SAC2CFLAGS) $(SACTARGET).sac
-	mkdir -p $(WRAPINCDIR) $(WRAPLIBDIR)
-	$(SAC4C) $(S4CFLAGS) $(SACTARGET)
+# the sac4c wrapper
+$(WRAPLIBDIR)/lib$(IFNAME)FibreIO.so: lib$(SACTARGET)Mod.so $(IFNAME)FibreIO.sac
+	$(AM_V_at)mkdir -p $(WRAPINCDIR) $(WRAPLIBDIR)
+	$(AM_V_GEN) $(SAC4C) $(S4CFLAGS) $(SACTARGET)
 
-$(WRAPINCDIR)/SAC4SNetFibreIO.h: sacmodules
+
+
 
 clean-local:
 	-rm -f *.o *.a *.so

@@ -8,9 +8,9 @@ AM_INIT_AUTOMAKE([1.11 tar-ustar no-define foreign dist-bzip2 subdir-objects
                   parallel-tests color-tests silent-rules])
 AM_SILENT_RULES([yes])
 
-# If --enable-dist-mpi=auto is used, try to find MPI, but use standard C compiler if it is not found.
-# If --enable-dist-mpi=yes is used, try to find MPI and fail if it isn't found.
-# If --enable-dist-mpi=no is used, use a standard C compiler instead.
+dnl If --enable-dist-mpi=auto is used, try to find MPI, but use standard C compiler if it is not found.
+dnl If --enable-dist-mpi=yes is used, try to find MPI and fail if it isn't found.
+dnl If --enable-dist-mpi=no is used, use a standard C compiler instead.
 AC_ARG_ENABLE([dist-mpi], [AS_HELP_STRING([--enable-dist-mpi],
     [Enable the distribution layer using MPI. Set to "yes", "no" (or --disable), or "auto" (default). If "auto", enable if MPI is available.])],
     [], [enable_dist_mpi=auto])
@@ -80,6 +80,10 @@ LT_PREREQ([2.2])
 LT_INIT([dlopen])
 AC_SUBST([LIBTOOL_DEPS])
 
+
+
+dnl check for building lpel threading backend
+
 AC_ARG_WITH([lpel-includes], [AC_HELP_STRING([--with-lpel-includes=DIR], [look up lpel.h in DIR])], [], [with_lpel_includes=])
 AC_MSG_CHECKING([for lpel.h in $with_lpel_includes])
 if test -r "$with_lpel_includes/lpel.h"; then
@@ -111,7 +115,21 @@ if test -n "$with_lpel_includes" -a -n "$with_lpel_libs"; then
 fi
 AM_CONDITIONAL([ENABLE_TH_LPEL], [test $have_lpel = yes])
 
+
+
+dnl check for sac compiler in order to build sac4snet interface
+
 AC_CHECK_PROGS([SAC2C], [sac2c])
 AC_CHECK_PROGS([SAC4C], [sac4c])
+have_sac=no
+if test -n "$SAC2C" -a -n "$SAC4C"; then
+  have_sac=yes
+fi
+AM_CONDITIONAL([ENABLE_SAC4SNET], [test $have_sac = yes])
+
+
+
+dnl generate output
 
 AC_OUTPUT([Makefile src/interfaces/sac4snet/Makefile])
+

@@ -1,5 +1,7 @@
 
+if ENABLE_SAC4SNET
 SUBDIRS = . src/interfaces/sac4snet
+endif
 
 # stuff that gets installed
 pkglib_DATA = \
