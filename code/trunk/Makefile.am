@@ -1,3 +1,6 @@
+
+SUBDIRS = . src/interfaces/sac4snet
+
 # stuff that gets installed
 pkglib_DATA = \
 	compile_cmd link_cmd \
@@ -14,8 +17,6 @@ pkglib_LTLIBRARIES = \
 pkginclude_HEADERS = \
 	include/C4SNet.h \
 	include/C4SNetc.h \
-	include/SAC4SNet.h \
-	include/SAC4SNetc.h \
 	include/atomiccnt.h \
 	include/bool.h \
 	include/constants.h \
@@ -49,7 +50,6 @@ pkginclude_HEADERS = \
 	include/type.h \
 	include/variant.h
 
-#	libsaC4SNet.la 
 
 # How to build the stuff
 
@@ -154,9 +154,6 @@ libC4SNetc_la_SOURCES = \
 	src/interfaces/c4snet/C4SNetc.c \
 	src/interfaces/c4snet/C4SNetc.h
 
-libsac4snet_la_SOURCES = \
-	src/interfaces/sac4snet/SAC4SNet.c \
-	src/interfaces/sac4snet/SAC4SNetc.c 
 
 libdistribnodist_la_SOURCES = \
 	src/distrib/nodist/distribution.c
@@ -172,7 +169,7 @@ libdistribmpi_la_SOURCES = \
 endif
 
 # common flags
-INCLUDES = -I$(srcdir)/include
+INCLUDES = -I$(top_srcdir)/include
 
 compile_cmd: Makefile
 	$(AM_V_at)rm -f $@

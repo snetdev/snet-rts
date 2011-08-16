@@ -1,5 +1,5 @@
 AC_INIT([SNet], [1.x], [info@snet-home.org])
-AC_PREREQ([2.68])
+AC_PREREQ([2.65])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux])
@@ -114,4 +114,4 @@ AM_CONDITIONAL([ENABLE_TH_LPEL], [test $have_lpel = yes])
 AC_CHECK_PROGS([SAC2C], [sac2c])
 AC_CHECK_PROGS([SAC4C], [sac4c])
 
-AC_OUTPUT([Makefile])
+AC_OUTPUT([Makefile src/interfaces/sac4snet/Makefile])

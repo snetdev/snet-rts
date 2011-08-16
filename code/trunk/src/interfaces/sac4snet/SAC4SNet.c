@@ -38,7 +38,7 @@
 #include <string.h>
 #include <assert.h>
 #include "SAC4SNet.h"
-#include "sac_include/SAC4SNetFibreIO.h"
+#include "SAC4SNetFibreIO.h"
 #include "snetentities.h"
 #include "memfun.h"
 #include "variant.h"
