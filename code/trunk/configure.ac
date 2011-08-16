@@ -1,5 +1,5 @@
 AC_INIT([SNet], [1.x], [info@snet-home.org])
-AC_PREREQ([2.65])
+AC_PREREQ([2.68])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux])

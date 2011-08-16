@@ -161,11 +161,13 @@ libdistribnodist_la_SOURCES = \
 if ENABLE_DIST_MPI
 pkglib_LTLIBRARIES += libdistribmpi.la
 libdistribmpi_la_SOURCES = \
+	src/distrib/common/imanager.c \
+	src/distrib/common/omanager.c \
 	src/distrib/mpi/distribmap.c \
 	src/distrib/mpi/distribmap.h \
-	src/distrib/mpi/distribution.c \
-	src/distrib/mpi/imanager.c \
-	src/distrib/mpi/omanager.c 
+	src/distrib/mpi/distribution.c
+libdistribmpi_la_CPPFLAGS = \
+	-I$(srcdir)/src/distrib/mpi
 endif
 
 # common flags
