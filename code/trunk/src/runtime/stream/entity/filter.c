@@ -481,6 +481,7 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
   snet_stream_t *outstream;
   filter_arg_t *farg;
 
+  instream = SNetRouteUpdate(info, instream, location);
   if(SNetDistribIsNodeLocation(location)) {
     outstream = SNetStreamCreate(0);
 
