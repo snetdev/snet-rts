@@ -9,17 +9,16 @@ all: $(TARGET)
 %.c: %.h
 
 %.o: %.c
-	gcc -c $< -o $@ $(INCLUDES)
+	gcc -g -c $< -o $@ $(INCLUDES)
 
 all: $(TARGET)
 
 $(TARGET):  $(TARGET).snet $(BOXES)
-	snetc -g $(SNETCFLAGS) $< -o $@
-
+	snetc -g $(SNETCFLAGS) $< -o $@ $(INCLUDES)
 lpel: $(TARGET).lpel
 
 $(TARGET).lpel: $(TARGET).snet $(BOXES)
-	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel
+	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel $(INCLUDES)
 
 clean:
 	rm -f $(TARGET) $(TARGET).lpel $(TARGET).[och] $(TARGET).lo $(BOXES) mon_*.log *tasks.map

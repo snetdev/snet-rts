@@ -1,6 +1,10 @@
 
 
-INCLUDES  = -I. -I$(SNET_INCLUDES)
+INCLUDES  = -I.
+
+ifdef SNET_INCLUDES
+INCLUDES += -I$(SNET_INCLUDES)
+endif
 
 # following should go at some point in time
 INCLUDES += -I$(SNETBASE)/include
