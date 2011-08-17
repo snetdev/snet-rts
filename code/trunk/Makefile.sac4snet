@@ -1,8 +1,0 @@
-
-.PHONY: all clean
-
-all:
-	make -C ./src/interfaces/sac4snet
-
-clean:
-	make -C ./src/interfaces/sac4snet clean

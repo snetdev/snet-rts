@@ -13,13 +13,13 @@ all: $(TARGET)
 
 all: $(TARGET)
 
-$(TARGET):  $(TARGET).snet $(BOXES) $(SNETLIBS)
+$(TARGET):  $(TARGET).snet $(BOXES)
 	snetc -g $(SNETCFLAGS) $< -o $@
 
 lpel: $(TARGET).lpel
 
-$(TARGET).lpel: $(TARGET).snet $(BOXES) $(SNETLIBS)
+$(TARGET).lpel: $(TARGET).snet $(BOXES)
 	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel
 
 clean:
-	rm -f $(TARGET) $(TARGET).lpel $(TARGET).[och] $(BOXES) mon_*.log *tasks.map
+	rm -f $(TARGET) $(TARGET).lpel $(TARGET).[och] $(TARGET).lo $(BOXES) mon_*.log *tasks.map

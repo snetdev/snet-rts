@@ -1,8 +1,0 @@
-
-.PHONY: all clean
-
-all:
-	make -C ./src/snetc
-
-clean:
-	make -C ./src/snetc clean

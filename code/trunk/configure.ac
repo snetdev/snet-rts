@@ -76,8 +76,8 @@ fi
 
 AC_LANG_POP([C])
 
-LT_PREREQ([2.2])
-LT_INIT([dlopen])
+LT_PREREQ([2.4])
+LT_INIT()
 AC_SUBST([LIBTOOL_DEPS])
 
 

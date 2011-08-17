@@ -1,13 +1,9 @@
-include $(SNETBASE)/src/makefiles/config.mkf
 
-CC        = gcc
-CCFLAGS   = -Wall -g -DFILTER_VERSION_2
-AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include -I./include 
-LIBDIRS   = -L. -L$(SNETBASE)/lib -L./lib -L$(SNETBASE)/interfaces/SAC
+INCDIRS   = -I. -I$(SNET_INCLUDES) -I./include
+LIBDIRS   = -L. -L$(SNET_LIBS)     -L./lib
 #THREADING = pthread
 THREADING = lpel
-LIBS      = -lSAC4SNet -lpthread -lsnetutil -ltb${THREADING} -ldistribnodist -lruntimestream
+LIBS      = -lSAC4SNet -lpthread -lsnetutil -ltb$(THREADING) -ldistribnodist -lruntimestream
 
 SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__mini=main
 
@@ -18,12 +14,13 @@ SNETCFLAGS = -b7 -threading $(THREADING)
 SACTARGET = mini
 # - - - - - - - - - - - - - - - - - - - -
 
+CC        = gcc
 SAC2C     = sac2c
 S2CFLAGS  = -v1 -g
 SAC4C     = sac4c
-S4CFLAGS  = -v3 -incdir include -libdir lib -g $(LIBDIRS) 
+S4CFLAGS  = -v3 -incdir include -libdir lib -g $(LIBDIRS)
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
-S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)` 
+S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)`
 
 
 # = = = = = = = = = = = = = = = = = = = =
@@ -32,7 +29,9 @@ TARGET    = mini
 
 
 
-all: lib$(SACTARGET)Mod.so $(TARGET).c
+all: $(TARGET)
+
+$(TARGET): lib$(SACTARGET)Mod.so $(TARGET).c
 	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c *.c
 	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(S4CLIBS) $(LIBS)
 
@@ -45,4 +44,5 @@ $(TARGET).c: $(TARGET).snet
 	$(SNETC) $(SNETCFLAGS) $(TARGET).snet
 
 clean:
-	rm -f *.o *.so *.a  lib/*.so lib/*.a  include/cwrapper.h $(TARGET) cwrapper.sac2c $(TARGET).?
+	rm -f *.o *.so *.a $(TARGET) cwrapper.sac2c $(TARGET).?
+	rm -fr lib include
