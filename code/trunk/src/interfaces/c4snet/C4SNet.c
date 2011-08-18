@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
+#include <errno.h>
 
 #include "C4SNet.h"
 #include "memfun.h"
@@ -645,11 +647,14 @@ static int C4SNetDataDeserializeDataPart( FILE *file, c4snet_type_t type, c4snet
     char * buffer=NULL;
     int size=0, cur=0;
     char symbol;
-    fscanf(file, "%c", &symbol);
+    int res;
+    res = fscanf(file, "%c", &symbol);
+    assert(res != EOF || errno == 0);
 
     if (symbol != '\"') return 0;
     while (symbol != 0) {
-        fscanf(file, "%c", &symbol);
+        res = fscanf(file, "%c", &symbol);
+        assert(res != EOF || errno == 0);
         if (symbol == '\"') symbol = 0;
         if (cur == size) {
             size += SIZE;

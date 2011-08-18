@@ -151,6 +151,7 @@ static obs_socket_t *ObserverInitSocket(const char *addr, int port)
 {
   obs_socket_t *new = SNetMemAlloc(sizeof(obs_socket_t));
   int i = 0;
+  int res;
 
   if(new == NULL){
     SNetUtilDebugNotice("Observer: socket initialization error");
@@ -207,7 +208,10 @@ static obs_socket_t *ObserverInitSocket(const char *addr, int port)
   }
 
   /* Wake up the dispatcher thread in select. A new file has to be added! */
-  write(notification_pipe[1], "?", 1);
+  res = write(notification_pipe[1], "?", 1);
+  if (res != -1) {
+    SNetUtilDebugFatal("Observer: write to notification pipe failed (%s)", strerror(errno));
+  }
 
   new->next = open_sockets;
   open_sockets = new;
@@ -383,10 +387,14 @@ static void *ObserverDispatch(void *arg)
       }
       else if(FD_ISSET(notification_pipe[0], &fdr_set)){
 	char buffer[NOTIFICATION_BUFFER_SIZE];
+        int res;
 
 	/* Something changed. What is written to the ontification pipe is meaningles. */
 
-	read(notification_pipe[0], buffer, NOTIFICATION_BUFFER_SIZE);
+	res = read(notification_pipe[0], buffer, NOTIFICATION_BUFFER_SIZE);
+        if (res != -1) {
+          SNetUtilDebugFatal("Observer: read from notification pipe failed (%s)", strerror(errno));
+        }
       }
       else{
 	/* Incoming message(s). Go through all the changed files and parse messages */
@@ -1141,6 +1149,7 @@ void SNetObserverDestroy()
   obs_socket_t *socket;
   obs_file_t *file;
   obs_wait_queue_t *queue;
+  int res;
 
   /* Don't close connections before the dispatcher stops using them! */
 
@@ -1148,7 +1157,10 @@ void SNetObserverDestroy()
   mustTerminate = true;
   pthread_mutex_unlock(&connection_mutex);
 
-  write(notification_pipe[1], "?", 1);
+  res = write(notification_pipe[1], "?", 1);
+  if (res != -1) {
+    SNetUtilDebugFatal("Observer: write to notification pipe failed (%s)", strerror(errno));
+  }
 
   if(pthread_join(dispatcher_thread, NULL) != 0)
   {

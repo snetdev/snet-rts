@@ -75,11 +75,13 @@ S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags SAC4SNetFibreIO`
 
 # these are built by sac2c
 lib%Mod.so lib%Mod.a lib%Tree.so: %.sac
+	$(AM_V_at) printf "[%s]" $(SAC2C)
 	$(AM_V_GEN) $(SAC2C) $(SAC2CFLAGS) $<
 
 # the sac4c wrapper
 $(WRAPINCDIR)/SAC4SNetFibreIO.h $(WRAPLIBDIR)/libSAC4SNetFibreIO.a $(WRAPLIBDIR)/libSAC4SNetFibreIO.so: SAC4SNetFibreIO.sac $(SACMODLIBS) $(SACMODLIBS:.so=.a)
 	$(AM_V_at)  $(MKDIR_P) $(WRAPINCDIR) $(WRAPLIBDIR)
+	$(AM_V_at) printf "[%s]" $(SAC4C)
 	$(AM_V_GEN) $(SAC4C) $(S4CFLAGS) -o SAC4SNetFibreIO SAC4SNetFibreIO
 
 CLEANFILES = $(SACMODLIBS) $(SACMODLIBS:.so=.a) $(SACTREELIBS)
