@@ -17,6 +17,12 @@ pkglib_DATA = \
          $(SACTREELIBS) \
          $(WRAPLIBDIR)/libSAC4SNetFibreIO.so $(WRAPLIBDIR)/libSAC4SNetFibreIO.a
 
+BUILT_SOURCES = \
+        $(WRAPINCDIR)/SAC4SNetFibreIO.h
+
+install-exec-hook:
+	chmod +x $(pkglibdir)/*.so
+
 endif
 
 EXTRA_DIST = \
@@ -25,8 +31,6 @@ EXTRA_DIST = \
 	SNet.sac
 
 ### source code ###
-BUILT_SOURCES = \
-        $(WRAPINCDIR)/SAC4SNetFibreIO.h
 
 # runtime interface library
 libSAC4SNet_la_SOURCES = \
@@ -79,7 +83,6 @@ $(WRAPINCDIR)/SAC4SNetFibreIO.h $(WRAPLIBDIR)/libSAC4SNetFibreIO.a $(WRAPLIBDIR)
 	$(AM_V_GEN) $(SAC4C) $(S4CFLAGS) -o SAC4SNetFibreIO SAC4SNetFibreIO
 
 CLEANFILES = $(SACMODLIBS) $(SACMODLIBS:.so=.a) $(SACTREELIBS)
-
 
 clean-local:
 	rm -rf $(WRAPINCDIR) $(WRAPLIBDIR)
