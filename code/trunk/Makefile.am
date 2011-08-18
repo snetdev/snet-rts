@@ -15,8 +15,8 @@ pkglib_LTLIBRARIES = \
 	libdistribnodist.la
 
 pkginclude_HEADERS = \
-	include/C4SNet.h \
-	include/C4SNetc.h \
+	src/interfaces/c4snet/C4SNet.h \
+	src/interfaces/c4snet/C4SNetc.h \
 	include/atomiccnt.h \
 	include/bool.h \
 	include/constants.h \
@@ -182,6 +182,12 @@ link_cmd: Makefile
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
 	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS:-$$SNETBASE/lib}' >$@
+
+
+CLEANFILES = \
+        compile_cmd \
+        link_cmd
+
 
 # re-generate the "libtool" script when it becomes deprecated
 LIBTOOL_DEPS = @LIBTOOL_DEPS@

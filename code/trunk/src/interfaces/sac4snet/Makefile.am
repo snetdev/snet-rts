@@ -14,7 +14,7 @@ SACTREELIBS = libSNetTree.so libSAC4SNetInputGenTree.so libSAC4SNetFibreIOTree.s
 
 pkglib_DATA = \
 	 $(SACMODLIBS) $(SACMODLIBS:.so=.a) \
-         $(SACTREELIBS) $(SACTREELIBS:.so=.a) \
+         $(SACTREELIBS) \
          $(WRAPLIBDIR)/libSAC4SNetFibreIO.so $(WRAPLIBDIR)/libSAC4SNetFibreIO.a
 
 endif
@@ -25,13 +25,14 @@ EXTRA_DIST = \
 	SNet.sac
 
 ### source code ###
+BUILT_SOURCES = \
+        $(WRAPINCDIR)/SAC4SNetFibreIO.h
 
 # runtime interface library
 libSAC4SNet_la_SOURCES = \
 	SAC4SNet.c \
 	SAC4SNet.h \
-        $(WRAPINCDIR)/SAC4SNetFibreIO.h \
-        sacinterface.h
+        $(WRAPINCDIR)/SAC4SNetFibreIO.h
 
 libSAC4SNet_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
@@ -63,7 +64,7 @@ WRAPLIBDIR = sac_lib
 WRAPINCDIR = sac_inc
 
 SAC2CFLAGS  = -v0
-S4CFLAGS  = -v0 -incdir $(WRAPINCDIR) -libdir $(WRAPLIBDIR)
+S4CFLAGS  = -v0 -incdir $(WRAPINCDIR) -libdir $(WRAPLIBDIR) -o SAC4SNetFibreIO
 
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags SAC4SNetFibreIO`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags SAC4SNetFibreIO`
@@ -77,7 +78,9 @@ $(WRAPINCDIR)/SAC4SNetFibreIO.h $(WRAPLIBDIR)/libSAC4SNetFibreIO.a $(WRAPLIBDIR)
 	$(AM_V_at)  $(MKDIR_P) $(WRAPINCDIR) $(WRAPLIBDIR)
 	$(AM_V_GEN) $(SAC4C) $(S4CFLAGS) -o SAC4SNetFibreIO SAC4SNetFibreIO
 
-CLEANFILES = 
+CLEANFILES = $(SACMODLIBS) $(SACMODLIBS:.so=.a) $(SACTREELIBS)
+
+
 clean-local:
 	rm -rf $(WRAPINCDIR) $(WRAPLIBDIR)
 
