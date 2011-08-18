@@ -1,84 +1,58 @@
 #include <assert.h>
-#include <mpi.h>
-#include <pthread.h>
-#include <stdio.h>
-#include "entities.h"
-#include "record.h"
-#include "memfun.h"
+
 #include "distribmap.h"
+#include "entities.h"
+#include "iomanager.h"
+#include "memfun.h"
+#include "record.h"
 
-typedef struct {
-  snet_dest_t dest;
-  snet_stream_t *stream;
-} tmp_t;
-
-snet_stream_dest_map_t *streamMap;
-static snet_streamset_t outgoing = NULL;
-
-static int offset;
-static size_t size = 1000;
-static char buf[1000];
-extern int node_location;
-extern bool outputDistribInfo;
-
-static void MPIPackWrapper(int foo, int *bar)
+void SNetOutputManager(snet_entity_t *ent, snet_stream_t *instream)
 {
-  MPI_Pack(bar, foo, MPI_INT, buf, size, &offset, MPI_COMM_WORLD);
-}
-
-static void SendRecord(snet_dest_t dest, snet_record_t *rec)
-{
-  offset = 0;
-  MPIPackWrapper(1, &dest.dest);
-  MPIPackWrapper(1, &dest.parentIndex);
-  MPIPackWrapper(1, &dest.parentNode);
-  MPIPackWrapper(1, &dest.blaat);
-  SNetRecSerialise(rec, &MPIPackWrapper);
-  if (outputDistribInfo) {
-    if (REC_DESCR(rec) == REC_terminate) {
-      fprintf(stderr, "#%d: Sending terminate record to: %d, %d, %d, %d\n", node_location, dest.node, dest.dest, dest.parent, dest.parentIndex);
-    } else {
-      fprintf(stderr, "#%d: Sending record to: %d, %d, %d, %d\n", node_location, dest.node, dest.dest, dest.parent, dest.parentIndex);
-    }
-    fflush(stderr);
-  }
-  MPI_Send(buf, offset, MPI_PACKED, dest.node, dest.parent, MPI_COMM_WORLD);
-}
-
-void SNetOutputManager(snet_entity_t *ent, void *args)
-{
-  snet_dest_t dest;
-  snet_record_t *rec;
-  snet_stream_desc_t *sd;
-  snet_stream_desc_t *input = SNetStreamOpen((snet_stream_t*) args, 'r');
+  snet_streamset_t outgoing = NULL;
+  snet_stream_desc_t *input = SNetStreamOpen(instream, 'r');
+  snet_stream_dest_map_t *streamMap = SNetStreamDestMapCreate(0);
 
   SNetStreamsetPut(&outgoing, input);
 
   while (true) {
-    sd = SNetStreamPoll(&outgoing);
-    rec = (snet_record_t*) SNetStreamRead(sd);
+    snet_stream_desc_t *sd = SNetStreamPoll(&outgoing);
+
     if (sd == input) {
-      tmp_t *blaat = (tmp_t*) rec;
-      if (rec == NULL) {
+      snet_dest_stream_tuple_t *tuple = SNetStreamRead(sd);
+
+      if (tuple == NULL) {
+        SNetStreamClose(input, true);
+        SNetStreamsetRemove(&outgoing, input);
+
         assert(SNetStreamDestMapSize(streamMap) == 0);
+        assert(outgoing == NULL);
         return;
       }
-      sd = SNetStreamOpen(blaat->stream, 'r');
-      SNetStreamDestMapSet(streamMap, sd, blaat->dest);
+
+      sd = SNetStreamOpen(tuple->stream, 'r');
+      SNetStreamDestMapSet(streamMap, sd, tuple->dest);
       SNetStreamsetPut(&outgoing, sd);
-      SNetMemFree(blaat);
-    } else if (rec != NULL) {
-      if (REC_DESCR(rec) == REC_sync) {
-        SNetStreamReplace(sd, SNetRecGetStream(rec));
-      } else {
-        if (REC_DESCR(rec) == REC_terminate) {
+
+      SNetMemFree(tuple);
+    } else {
+      snet_dest_t *dest = NULL;
+      snet_record_t *rec = SNetStreamRead(sd);
+
+      switch (SNetRecGetDescriptor(rec)) {
+        case REC_sync:
+          SNetStreamReplace(sd, SNetRecGetStream(rec));
+          break;
+        case REC_terminate:
           dest = SNetStreamDestMapTake(streamMap, sd);
           SNetStreamsetRemove(&outgoing, sd);
-        } else {
-          dest = SNetStreamDestMapGet(streamMap, sd);
-        }
-        SendRecord(dest, rec);
+          SendRecord(dest, rec);
+          SNetDestFree(dest);
+          break;
+        default:
+          SendRecord(SNetStreamDestMapGet(streamMap, sd), rec);
+          break;
       }
+
       SNetRecDestroy(rec);
     }
   }

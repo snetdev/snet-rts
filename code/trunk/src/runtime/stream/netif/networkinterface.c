@@ -35,7 +35,7 @@
 #include "distribution.h"
 #include "locvec.h"
 
-extern bool debugWait, outputDistribInfo;
+extern bool debugWait;
 
 static FILE *SNetInOpenFile(const char *file, const char *args)
 {
@@ -180,7 +180,6 @@ int SNetInRun(int argc, char **argv,
       printf("\t-o <filename>\t\tOutput to file.\n");
       printf("\t-O <address:port>\tOutput to socket.\n");
       printf("\t-debugWait\n");
-      printf("\t-distribInfo\n");
       printf("\t-m <mon_level>\t\tSet monitoring level (LPEL only).\n");
       printf("\t-w <workers>\t\tSet number of workers (LPEL) / visible cores (PThread).\n");
       printf("\n");
@@ -226,8 +225,6 @@ int SNetInRun(int argc, char **argv,
       output = SNetInOpenOutputSocket(addr, port);
     } else if (strcmp(argv[i], "-debugWait") == 0) {
       debugWait = true;
-    } else if (strcmp(argv[i], "-distribInfo") == 0) {
-      outputDistribInfo = true;
     }
   }
 

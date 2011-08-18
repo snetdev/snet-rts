@@ -165,11 +165,14 @@ pkglib_LTLIBRARIES += libdistribmpi.la
 libdistribmpi_la_SOURCES = \
 	src/distrib/common/imanager.c \
 	src/distrib/common/omanager.c \
-	src/distrib/mpi/distribmap.c \
-	src/distrib/mpi/distribmap.h \
-	src/distrib/mpi/distribution.c
+	src/distrib/common/distribmap.c \
+	src/distrib/common/distribmap.h \
+	src/distrib/mpi/distribution.c \
+	src/distrib/mpi/send-recv.c \
+	src/distrib/mpi/dest.c
 libdistribmpi_la_CPPFLAGS = \
-	-I$(srcdir)/src/distrib/mpi
+	-I$(srcdir)/src/distrib/mpi \
+	-I$(srcdir)/src/distrib/common
 endif
 
 # common flags

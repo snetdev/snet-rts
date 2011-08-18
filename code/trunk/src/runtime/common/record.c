@@ -164,8 +164,8 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
     case REC_data:
       copyfun = SNetInterfaceGet(DATA_REC( rec, interface_id))->copyfun;
       new_rec = SNetRecCreate( REC_data);
-      DATA_REC( new_rec, fields) = SNetVoidMapDeepCopy(DATA_REC( rec, fields),
-                                                       copyfun);
+      DATA_REC( new_rec, fields) = SNetVoidMapManualCopy(DATA_REC(rec, fields),
+                                                         copyfun);
 
       DATA_REC( new_rec, tags) = SNetIntMapCopy( DATA_REC( rec, tags));
       DATA_REC( new_rec, btags) = SNetIntMapCopy( DATA_REC( rec, btags));

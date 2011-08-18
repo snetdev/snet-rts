@@ -50,14 +50,11 @@ typedef struct snet_map_t {
 
 snet_map_t *MAP_FUNCTION(MAP_NAME_H, Create)(int size, ...);
 snet_map_t *MAP_FUNCTION(MAP_NAME_H, Copy)(snet_map_t *map);
+snet_map_t *MAP_FUNCTION(MAP_NAME_H, ManualCopy)(
+    snet_map_t *map,
+    MAP_VAL_H (*copyFun)(MAP_VAL_H)
+);
 void MAP_FUNCTION(MAP_NAME_H, Destroy)(snet_map_t *map);
-
-snet_map_t *MAP_FUNCTION(MAP_NAME_H, DeepCopy)(
-        snet_map_t *map,
-    #ifndef MAP_CANARY_H
-        MAP_KEY_H (*keyCopyFun)(MAP_KEY_H),
-    #endif
-        MAP_VAL_H (*valCopyFun)(MAP_VAL_H));
 
 int MAP_FUNCTION(MAP_NAME_H, Size)(snet_map_t *map);
 
@@ -67,29 +64,26 @@ MAP_VAL_H MAP_FUNCTION(MAP_NAME_H, Take)(snet_map_t *map, MAP_KEY_H key);
 bool MAP_FUNCTION(MAP_NAME_H, Contains)(snet_map_t *map, MAP_KEY_H key);
 
 void MAP_FUNCTION(MAP_NAME_H, Rename)(
-        snet_map_t *map,
-        MAP_KEY_H oldKey,
-        MAP_KEY_H newKey);
+    snet_map_t *map,
+    MAP_KEY_H oldKey,
+    MAP_KEY_H newKey
+);
 
-#ifdef MAP_CANARY_H
-void MAP_FUNCTION(MAP_NAME_H, Serialise)(snet_map_t *map,
-                                       void (*serialiseInts)(int, int*),
-                                       void (*serialiseValues)(int, MAP_VAL_H*));
+void MAP_FUNCTION(MAP_NAME_H, Serialise)(
+    snet_map_t *map, void (*serialiseInts)(int, int*),
+    #ifndef MAP_CANARY_H
+    void (*serialiseKeys)(int, MAP_KEY_H*),
+    #endif
+    void (*serialiseValues)(int, MAP_VAL_H*)
+);
 
-void MAP_FUNCTION(MAP_NAME_H, Deserialise)(snet_map_t *map,
-                                       void (*deserialiseInts)(int, int*),
-                                       void (*deserialiseValues)(int, MAP_VAL_H*));
-#else /* MAP_CANARY_H */
-void MAP_FUNCTION(MAP_NAME_H, Serialise)(snet_map_t *map,
-                                       void (*serialiseInts)(int, int*),
-                                       void (*serialiseKeys)(int, MAP_KEY_H*),
-                                       void (*serialiseValues)(int, MAP_VAL_H*));
-
-void MAP_FUNCTION(MAP_NAME_H, Deserialise)(snet_map_t *map,
-                                       void (*deserialiseInts)(int, int*),
-                                       void (*deserialiseKeys)(int, MAP_KEY_H*),
-                                       void (*deserialiseValues)(int, MAP_VAL_H*));
-#endif /* MAP_CANARY_H */
+void MAP_FUNCTION(MAP_NAME_H, Deserialise)(
+    snet_map_t *map, void (*deserialiseInts)(int, int*),
+    #ifndef MAP_CANARY_H
+    void (*deserialiseKeys)(int, MAP_KEY_H*),
+    #endif
+    void (*deserialiseValues)(int, MAP_VAL_H*)
+);
 
 #ifdef MAP_CANARY_H
 #undef MAP_KEY_H

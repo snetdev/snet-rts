@@ -63,52 +63,40 @@ snet_map_t *MAP_FUNCTION(MAP_NAME, Create)(int size, ...)
 
 snet_map_t *MAP_FUNCTION(MAP_NAME, Copy)(snet_map_t *map)
 {
+  #ifdef MAP_KEY_COPY_FUN
+    int i;
+  #endif
+  #ifdef MAP_VAL_COPY_FUN
+    int j;
+  #endif
   snet_map_t *result = SNetMemAlloc(sizeof(snet_map_t));
 
   result->size = map->used;
   result->used = map->used;
 
   result->keys = SNetMemAlloc(map->used * sizeof(MAP_KEY));
-  memcpy(result->keys, map->keys, map->used * sizeof(MAP_KEY));
+  #ifdef MAP_KEY_COPY_FUN
+    for (i = 0; i < map->used; i++) {
+      result->keys[i] = MAP_KEY_COPY_FUN(map->keys[i]);
+    }
+  #else
+    memcpy(result->keys, map->keys, map->used * sizeof(MAP_KEY));
+  #endif
 
   result->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));
-  memcpy(result->values, map->values, map->used * sizeof(MAP_VAL));
+  #ifdef MAP_VAL_COPY_FUN
+    for (i = 0; i < map->used; i++) {
+      result->values[i] = MAP_KEY_COPY_FUN(map->values[i]);
+    }
+  #else
+    memcpy(result->values, map->values, map->used * sizeof(MAP_VAL));
+  #endif
 
   return result;
 }
 
-void MAP_FUNCTION(MAP_NAME, Destroy)(snet_map_t *map)
-{
-  #ifdef MAP_KEY_FREE_FUNCTION
-    int i;
-  #endif
-  #ifdef MAP_VAL_FREE_FUNCTION
-    int j;
-  #endif
-
-  #ifdef MAP_KEY_FREE_FUNCTION
-    for (i = 0; i < map->used; i++) {
-      MAP_KEY_FREE_FUNCTION(map->keys[i]);
-    }
-  #endif
-  #ifdef MAP_VAL_FREE_FUNCTION
-    for (j = 0; j < map->used; j++) {
-      MAP_VAL_FREE_FUNCTION(map->values[j]);
-    }
-  #endif
-
-  SNetMemFree(map->keys);
-  SNetMemFree(map->values);
-  SNetMemFree(map);
-}
-
-
-
-snet_map_t *MAP_FUNCTION(MAP_NAME, DeepCopy)(snet_map_t *map,
-                                          #ifndef MAP_CANARY
-                                             MAP_KEY (*keyCopyFun)(MAP_KEY),
-                                          #endif
-                                             MAP_VAL (*valCopyFun)(MAP_VAL))
+snet_map_t *MAP_FUNCTION(MAP_NAME, ManualCopy)(snet_map_t *map,
+                                             MAP_VAL (*copyFun)(MAP_VAL))
 {
   int i;
   snet_map_t *result = SNetMemAlloc(sizeof(snet_map_t));
@@ -117,18 +105,46 @@ snet_map_t *MAP_FUNCTION(MAP_NAME, DeepCopy)(snet_map_t *map,
   result->used = map->used;
 
   result->keys = SNetMemAlloc(map->used * sizeof(MAP_KEY));
-  result->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));
+  #ifdef MAP_KEY_COPY_FUN
+    for (i = 0; i < map->used; i++) {
+      result->keys[i] = MAP_KEY_COPY_FUN(map->keys[i]);
+    }
+  #else
+    memcpy(result->keys, map->keys, map->used * sizeof(MAP_KEY));
+  #endif
 
-  for (i = 0; i < result->used; i++) {
-    #ifndef MAP_CANARY
-      result->keys[i] = (*keyCopyFun)(map->keys[i]);
-    #else
-      result->keys[i] = map->keys[i];
-    #endif
-    result->values[i] = (*valCopyFun)(map->values[i]);
+  result->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));
+  for (i = 0; i < map->used; i++) {
+    result->values[i] = copyFun(map->values[i]);
   }
 
   return result;
+}
+
+
+void MAP_FUNCTION(MAP_NAME, Destroy)(snet_map_t *map)
+{
+  #ifdef MAP_KEY_FREE_FUN
+    int i;
+  #endif
+  #ifdef MAP_VAL_FREE_FUN
+    int j;
+  #endif
+
+  #ifdef MAP_KEY_FREE_FUN
+    for (i = 0; i < map->used; i++) {
+      MAP_KEY_FREE_FUN(map->keys[i]);
+    }
+  #endif
+  #ifdef MAP_VAL_FREE_FUN
+    for (j = 0; j < map->used; j++) {
+      MAP_VAL_FREE_FUN(map->values[j]);
+    }
+  #endif
+
+  SNetMemFree(map->keys);
+  SNetMemFree(map->values);
+  SNetMemFree(map);
 }
 
 
@@ -203,6 +219,9 @@ MAP_VAL MAP_FUNCTION(MAP_NAME, Take)(snet_map_t *map, MAP_KEY key)
   int i = MAP_FUNCTION(MAP_NAME, Find)(map, key);
   assert(i != -1); //FIXME: Desired behaviour?
 
+  #ifdef MAP_KEY_FREE_FUN
+    MAP_KEY_FREE_FUN(map->keys[i]);
+  #endif
   result = map->values[i];
 
   map->used--;
@@ -214,13 +233,7 @@ MAP_VAL MAP_FUNCTION(MAP_NAME, Take)(snet_map_t *map, MAP_KEY key)
 
 bool MAP_FUNCTION(MAP_NAME, Contains)(snet_map_t *map, MAP_KEY key)
 {
-  int i = MAP_FUNCTION(MAP_NAME, Find)(map, key);
-
-  if (i == -1) {
-    return false;
-  }
-
-  return true;
+  return MAP_FUNCTION(MAP_NAME, Find)(map, key) != -1;
 }
 
 
@@ -229,54 +242,52 @@ void MAP_FUNCTION(MAP_NAME, Rename)(snet_map_t *map, MAP_KEY oldKey, MAP_KEY new
 {
   int i = MAP_FUNCTION(MAP_NAME, Find)(map, oldKey);
   assert(i != -1); //FIXME: Desired behavior?
+
+  #ifdef MAP_KEY_FREE_FUN
+    MAP_KEY_FREE_FUN(map->keys[i]);
+  #endif
+
   map->keys[i] = newKey;
 }
 
-#ifdef MAP_CANARY
-void MAP_FUNCTION(MAP_NAME, Serialise)(snet_map_t *map,
-                                       void (*serialiseInts)(int, int*),
-                                       void (*serialiseValues)(int, MAP_VAL*))
-{
-  serialiseInts(1, &map->used);
-  serialiseInts(map->used, map->keys);
-  serialiseValues(map->used, map->values);
-}
 
-void MAP_FUNCTION(MAP_NAME, Deserialise)(snet_map_t *map,
-                                       void (*deserialiseInts)(int, int*),
-                                       void (*deserialiseValues)(int, MAP_VAL*))
-{
-  deserialiseInts(1, &map->used);
-  map->size = map->used;
-  map->keys = SNetMemAlloc(map->used * sizeof(MAP_KEY));
-  deserialiseInts(map->used, map->keys);
-  map->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));
-  deserialiseValues(map->used, map->values);
-}
-#else /* MAP_CANARY */
+
 void MAP_FUNCTION(MAP_NAME, Serialise)(snet_map_t *map,
                                        void (*serialiseInts)(int, int*),
+                                       #ifndef MAP_CANARY
                                        void (*serialiseKeys)(int, MAP_KEY*),
+                                       #endif
                                        void (*serialiseValues)(int, MAP_VAL*))
 {
   serialiseInts(1, &map->used);
-  serialiseKeys(map->used, map->keys);
+  #ifndef MAP_CANARY
+    serialiseKeys(map->used, map->keys);
+  #else
+    serialiseInts(map->used, map->keys);
+  #endif
   serialiseValues(map->used, map->values);
 }
 
 void MAP_FUNCTION(MAP_NAME, Deserialise)(snet_map_t *map,
                                        void (*deserialiseInts)(int, int*),
+                                       #ifndef MAP_CANARY
                                        void (*deserialiseKeys)(int, MAP_KEY*),
+                                       #endif
                                        void (*deserialiseValues)(int, MAP_VAL*))
 {
   deserialiseInts(1, &map->used);
   map->size = map->used;
+
   map->keys = SNetMemAlloc(map->used * sizeof(MAP_KEY));
-  deserialiseKeys(map->used, map->keys);
+  #ifndef MAP_CANARY
+    deserialiseKeys(map->used, map->keys);
+  #else
+    deserialiseInts(map->used, map->keys);
+  #endif
+
   map->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));
   deserialiseValues(map->used, map->values);
 }
-#endif /* MAP_CANARY */
 
 #ifdef MAP_CANARY
 #undef MAP_KEY
