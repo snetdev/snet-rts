@@ -211,7 +211,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
             assert(0);
         }
       }
-      SNetVariantListAppend( vlist, v);
+      SNetVariantListAppendEnd( vlist, v);
     }
 
     barg = (box_arg_t *) SNetMemAlloc( sizeof( box_arg_t));
