@@ -163,8 +163,7 @@ pkglib_LTLIBRARIES += libdistribmpi.la
 libdistribmpi_la_SOURCES = \
 	src/distrib/common/imanager.c \
 	src/distrib/common/omanager.c \
-	src/distrib/common/distribmap.c \
-	src/distrib/common/distribmap.h \
+	src/distrib/common/distribcollections.c \
 	src/distrib/mpi/distribution.c \
 	src/distrib/mpi/send-recv.c \
 	src/distrib/mpi/dest.c

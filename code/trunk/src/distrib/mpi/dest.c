@@ -1,6 +1,6 @@
 #include "bool.h"
 #include "dest.h"
-#include "iomanager.h"
+#include "iomanagers.h"
 #include "memfun.h"
 
 bool SNetDestCompare(snet_dest_t *d1, snet_dest_t *d2)
