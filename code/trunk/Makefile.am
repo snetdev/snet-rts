@@ -165,7 +165,8 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/common/omanager.c \
 	src/distrib/common/distribcollections.c \
 	src/distrib/mpi/distribution.c \
-	src/distrib/mpi/send-recv.c \
+	src/distrib/mpi/send.c \
+	src/distrib/mpi/recv.c \
 	src/distrib/mpi/dest.c
 libdistribmpi_la_CPPFLAGS = \
 	-I$(srcdir)/src/distrib/mpi \

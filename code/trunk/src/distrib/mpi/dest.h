@@ -6,8 +6,8 @@ struct snet_dest {
       dest,
       parent,
       parentNode,
-      parentIndex,
-      blaat;
+      dynamicIndex,
+      dynamicLoc;
 };
 
 #endif

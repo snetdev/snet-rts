@@ -36,12 +36,13 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   dest->dest = *counter;
   dest->parent = 1;
   dest->parentNode = 0;
-  dest->parentIndex = 0;
-  dest->blaat = 0;
+  dest->dynamicIndex = 0;
+  dest->dynamicLoc = 0;
 
   prevDest = SNetInfoCreateTag();
   SNetInfoSetTag(info, prevDest, (uintptr_t) dest,
                  (void* (*)(void*)) &SNetDestCopy);
+
   infoCounter = SNetInfoCreateTag();
   SNetInfoSetTag(info, infoCounter, (uintptr_t) counter, NULL);
 
@@ -131,12 +132,13 @@ void SNetDistribNewDynamicCon(snet_dest_t *dest)
     snet_info_t *info = SNetInfoInit();
     SNetInfoSetTag(info, prevDest, (uintptr_t) dst,
                   (void* (*)(void*)) &SNetDestCopy);
+
     SNetLocvecSet(info, SNetLocvecCreate());
-    snet_stream_t *str = SNetStreamCreate(0);
-    SNetRouteDynamicEnter(info, dest->parentIndex, dest->blaat, NULL);
-    str = fun(str, info, dest->blaat);
-    str = SNetRouteUpdate(info, str, dest->parentNode);
-    SNetRouteDynamicExit(info, dest->parentIndex, dest->blaat, NULL);
+
+    SNetRouteDynamicEnter(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
+    SNetRouteUpdate(info, fun(NULL, info, dest->dynamicLoc), dest->parentNode);
+    SNetRouteDynamicExit(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
+
     SNetInfoDestroy(info);
 }
 
@@ -144,7 +146,7 @@ void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
                            snet_startup_fun_t fun)
 {
   snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
-  dest->parentIndex = dynamicIndex;
+  dest->dynamicIndex = dynamicIndex;
 
   int *counter = SNetMemAlloc(sizeof(int));
   *counter = 0;
@@ -153,7 +155,7 @@ void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
   if (fun != NULL) {
     dest->parent = SNetNetToId(fun);
     dest->parentNode = node_location;
-    dest->blaat = dynamicLoc;
+    dest->dynamicLoc = dynamicLoc;
   }
 }
 
