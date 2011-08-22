@@ -4,10 +4,9 @@
 #include <unistd.h>
 
 #include "dest.h"
-#include "distribmap.h"
 #include "distribution.h"
 #include "info.h"
-#include "iomanager.h"
+#include "iomanagers.h"
 #include "memfun.h"
 #include "snetentities.h"
 #include "threading.h"
@@ -15,10 +14,6 @@
 int node_location;
 snet_info_tag_t prevDest;
 snet_info_tag_t infoCounter;
-
-snet_stream_t *stream;
-snet_stream_desc_t *sd;
-snet_dest_stream_map_t *destMap;
 
 bool debugWait = false;
 
@@ -29,7 +24,6 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level);
   if (level < MPI_THREAD_MULTIPLE) {
-    //FIXME: error
     MPI_Abort(MPI_COMM_WORLD, 2);
   }
   MPI_Comm_rank(MPI_COMM_WORLD, &node_location);
@@ -42,16 +36,13 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   dest->dest = *counter;
   dest->parent = 1;
   dest->parentNode = 0;
-  dest->parentIndex = 0;
-  dest->blaat = 0;
-
-  destMap = SNetDestStreamMapCreate(0);
-  stream = SNetStreamCreate(0);
-  sd = SNetStreamOpen(stream, 'w');
+  dest->dynamicIndex = 0;
+  dest->dynamicLoc = 0;
 
   prevDest = SNetInfoCreateTag();
   SNetInfoSetTag(info, prevDest, (uintptr_t) dest,
                  (void* (*)(void*)) &SNetDestCopy);
+
   infoCounter = SNetInfoCreateTag();
   SNetInfoSetTag(info, infoCounter, (uintptr_t) counter, NULL);
 
@@ -69,7 +60,7 @@ void SNetDistribStart()
 {
   SNetThreadingSpawn(
     SNetEntityCreate( ENTITY_other, -1, NULL,
-      "output_manager", &SNetOutputManager, stream));
+      "output_manager", &SNetOutputManager, NULL));
 
   SNetThreadingSpawn(
     SNetEntityCreate( ENTITY_other, -1, NULL,
@@ -116,21 +107,15 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
     dest->dest = (*counter)++;
 
     if (dest->node == node_location) {
-      snet_dest_stream_tuple_t *tuple = SNetMemAlloc(sizeof(snet_dest_stream_tuple_t));
       dest->node = loc;
-      tuple->dest = SNetDestCopy(dest);
-      tuple->stream = input;
-      SNetStreamWrite(sd, tuple);
+      SNetDistribNewOut(SNetDestCopy(dest), input);
 
       input = NULL;
     } else if (loc == node_location) {
-      if (input == NULL) {
-        input = SNetStreamCreate(0);
-      }
+      if (input == NULL) input = SNetStreamCreate(0);
 
+      SNetDistribNewIn(SNetDestCopy(dest), input);
       dest->node = loc;
-      SNetDestStreamMapSet(destMap, SNetDestCopy(dest),
-                           SNetStreamOpen(input, 'w'));
     } else {
       dest->node = loc;
     }
@@ -139,11 +124,29 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
   return input;
 }
 
+void SNetDistribNewDynamicCon(snet_dest_t *dest)
+{
+    snet_dest_t *dst = SNetDestCopy(dest);
+    snet_startup_fun_t fun = SNetIdToNet(dest->parent);
+
+    snet_info_t *info = SNetInfoInit();
+    SNetInfoSetTag(info, prevDest, (uintptr_t) dst,
+                  (void* (*)(void*)) &SNetDestCopy);
+
+    SNetLocvecSet(info, SNetLocvecCreate());
+
+    SNetRouteDynamicEnter(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
+    SNetRouteUpdate(info, fun(NULL, info, dest->dynamicLoc), dest->parentNode);
+    SNetRouteDynamicExit(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
+
+    SNetInfoDestroy(info);
+}
+
 void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
                            snet_startup_fun_t fun)
 {
   snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
-  dest->parentIndex = dynamicIndex;
+  dest->dynamicIndex = dynamicIndex;
 
   int *counter = SNetMemAlloc(sizeof(int));
   *counter = 0;
@@ -152,14 +155,15 @@ void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
   if (fun != NULL) {
     dest->parent = SNetNetToId(fun);
     dest->parentNode = node_location;
-    dest->blaat = dynamicLoc;
+    dest->dynamicLoc = dynamicLoc;
   }
 }
 
 void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
                           snet_startup_fun_t fun)
 {
-  int *counter = (int*) SNetInfoGetTag(info, infoCounter);
+  int *counter = (int*) SNetInfoDelTag(info, infoCounter);
   SNetMemFree(counter);
+  SNetInfoSetTag(info, infoCounter, (uintptr_t) NULL, NULL);
   return;
 }

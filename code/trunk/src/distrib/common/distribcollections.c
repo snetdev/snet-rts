@@ -1,5 +1,5 @@
-#include "iomanager.h"
-#include "distribmap.h"
+#include "iomanagers.h"
+#include "distribcollections.h"
 
 #define MAP_NAME DestStream
 #define MAP_TYPE_NAME dest_stream
@@ -24,3 +24,18 @@
 #undef MAP_KEY
 #undef MAP_TYPE_NAME
 #undef MAP_NAME
+
+bool SNetTupleCompare(snet_tuple_t t1, snet_tuple_t t2)
+{
+  return false;
+}
+
+#define LIST_NAME Tuple
+#define LIST_TYPE_NAME tuple
+#define LIST_VAL snet_tuple_t
+#define LIST_CMP SNetTupleCompare
+#include "list-template.c"
+#undef LIST_CMP
+#undef LIST_VAL
+#undef LIST_TYPE_NAME
+#undef LIST_NAME

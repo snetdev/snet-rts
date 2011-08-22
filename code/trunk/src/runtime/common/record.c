@@ -523,7 +523,7 @@ void SNetRecAddAsParent(snet_record_t *rec, snet_record_t *parent)
   } else {
     /* only add if not already contained in parents */
     if (!SNetRecIdListContains(parents, par_id)) {
-      SNetRecIdListAppend(parents, par_id);
+      SNetRecIdListAppendEnd(parents, par_id);
     }
   }
 }

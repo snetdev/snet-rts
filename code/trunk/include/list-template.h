@@ -74,10 +74,10 @@ snet_list_t *LIST_FUNCTION(LIST_NAME_H, DeepCopy)(
 
 int LIST_FUNCTION(LIST_NAME_H, Length)(snet_list_t *list);
 
-void LIST_FUNCTION(LIST_NAME_H, Push)(snet_list_t *list, LIST_VAL_H val);
-void LIST_FUNCTION(LIST_NAME_H, Append)(snet_list_t *list, LIST_VAL_H val);
-LIST_VAL_H LIST_FUNCTION(LIST_NAME_H, Pop)(snet_list_t *list);
-LIST_VAL_H LIST_FUNCTION(LIST_NAME_H, Unappend)(snet_list_t *list);
+void LIST_FUNCTION(LIST_NAME_H, AppendStart)(snet_list_t *list, LIST_VAL_H val);
+void LIST_FUNCTION(LIST_NAME_H, AppendEnd)(snet_list_t *list, LIST_VAL_H val);
+LIST_VAL_H LIST_FUNCTION(LIST_NAME_H, PopStart)(snet_list_t *list);
+LIST_VAL_H LIST_FUNCTION(LIST_NAME_H, PopEnd)(snet_list_t *list);
 
 bool LIST_FUNCTION(LIST_NAME_H, Contains)(snet_list_t *list, LIST_VAL_H val);
 

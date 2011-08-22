@@ -118,38 +118,16 @@ int LIST_FUNCTION(LIST_NAME, Length)(snet_list_t *list)
 
 
 
-void LIST_FUNCTION(LIST_NAME, Push)(snet_list_t *list, LIST_VAL val)
+void LIST_FUNCTION(LIST_NAME, AppendStart)(snet_list_t *list, LIST_VAL val)
 {
   if (list->used == list->size) {
     LIST_VAL *values = SNetMemAlloc((list->size + 1) * sizeof(LIST_VAL));
 
-    int startToArrayEnd = list->size - list->start;
-    memcpy(values, list->values + list->start,
-           startToArrayEnd * sizeof(LIST_VAL));
-    memcpy(values + startToArrayEnd, list->values,
-           (list->size - startToArrayEnd) * sizeof(LIST_VAL));
-
-    SNetMemFree(list->values);
-
-    list->values = values;
-    list->size++;
-    list->start = 0;
-  }
-
-  list->values[(list->start + list->used) % list->size] = val;
-  list->used++;
-}
-
-void LIST_FUNCTION(LIST_NAME, Append)(snet_list_t *list, LIST_VAL val)
-{
-  if (list->used == list->size) {
-    LIST_VAL *values = SNetMemAlloc((list->size + 1) * sizeof(LIST_VAL));
-
-    int startToArrayEnd = list->size - list->start;
+    int startToArrayEnd = list->used - list->start;
     memcpy(values + 1, list->values + list->start,
            startToArrayEnd * sizeof(LIST_VAL));
     memcpy(values + 1 + startToArrayEnd, list->values,
-           (list->size - startToArrayEnd) * sizeof(LIST_VAL));
+           (list->used - startToArrayEnd) * sizeof(LIST_VAL));
 
     SNetMemFree(list->values);
     list->values = values;
@@ -163,21 +141,43 @@ void LIST_FUNCTION(LIST_NAME, Append)(snet_list_t *list, LIST_VAL val)
   list->used++;
 }
 
-LIST_VAL LIST_FUNCTION(LIST_NAME, Pop)(snet_list_t *list)
+void LIST_FUNCTION(LIST_NAME, AppendEnd)(snet_list_t *list, LIST_VAL val)
+{
+  if (list->used == list->size) {
+    LIST_VAL *values = SNetMemAlloc((list->size + 1) * sizeof(LIST_VAL));
+
+    int startToArrayEnd = list->used - list->start;
+    memcpy(values, list->values + list->start,
+           startToArrayEnd * sizeof(LIST_VAL));
+    memcpy(values + startToArrayEnd, list->values,
+           (list->used - startToArrayEnd) * sizeof(LIST_VAL));
+
+    SNetMemFree(list->values);
+
+    list->values = values;
+    list->size++;
+    list->start = 0;
+  }
+
+  list->values[(list->start + list->used) % list->size] = val;
+  list->used++;
+}
+
+LIST_VAL LIST_FUNCTION(LIST_NAME, PopStart)(snet_list_t *list)
+{
+  assert(list->used > 0); //FIXME: Desired behaviour?
+
+  list->used--;
+  list->start = (list->start + 1) % list->size;
+  return list->values[(list->start + list->size - 1) % list->size];
+}
+
+LIST_VAL LIST_FUNCTION(LIST_NAME, PopEnd)(snet_list_t *list)
 {
   assert(list->used > 0); //FIXME: Desired behaviour?
 
   list->used--;
   return list->values[(list->start + list->used) % list->size];
-}
-
-LIST_VAL LIST_FUNCTION(LIST_NAME, Unappend)(snet_list_t *list)
-{
-  assert(list->used > 0); //FIXME: Desired behaviour?
-
-  list->used--;
-  list->start++;
-  return list->values[list->start - 1];
 }
 
 

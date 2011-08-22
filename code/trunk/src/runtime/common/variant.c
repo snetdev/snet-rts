@@ -55,7 +55,7 @@ static void IntlistAddAll(snet_int_list_t *dst, snet_int_list_t *src, bool ow)
       SNetIntListRemove(dst, name);
     }
     if (!cont || ow) {
-      SNetIntListPush(dst, name);
+      SNetIntListAppendEnd(dst, name);
     }
   END_FOR
 }
@@ -80,7 +80,7 @@ bool SNetVariantIsEmpty( snet_variant_t *var)
 void SNetVariantAddTag( snet_variant_t *var, int name)
 {
   //FIXME: Already exists?
-  return SNetIntListPush(var->tags, name);
+  return SNetIntListAppendEnd(var->tags, name);
 }
 
 void SNetVariantRemoveTag( snet_variant_t *var, int name)
@@ -104,7 +104,7 @@ int SNetVariantNumTags( snet_variant_t *var)
 void SNetVariantAddBTag( snet_variant_t *var, int name)
 {
   //FIXME: Already exists?
-  return SNetIntListPush(var->btags, name);
+  return SNetIntListAppendEnd(var->btags, name);
 }
 
 void SNetVariantRemoveBTag( snet_variant_t *var, int name)
@@ -128,7 +128,7 @@ int SNetVariantNumBTags( snet_variant_t *var)
 void SNetVariantAddField( snet_variant_t *var, int name)
 {
   //FIXME: Already exists?
-  return SNetIntListPush(var->fields, name);
+  return SNetIntListAppendEnd(var->fields, name);
 }
 
 void SNetVariantRemoveField( snet_variant_t *var, int name)
