@@ -209,7 +209,7 @@ static obs_socket_t *ObserverInitSocket(const char *addr, int port)
 
   /* Wake up the dispatcher thread in select. A new file has to be added! */
   res = write(notification_pipe[1], "?", 1);
-  if (res != -1) {
+  if (res == -1) {
     SNetUtilDebugFatal("Observer: write to notification pipe failed (%s)", strerror(errno));
   }
 
@@ -392,7 +392,7 @@ static void *ObserverDispatch(void *arg)
 	/* Something changed. What is written to the ontification pipe is meaningles. */
 
 	res = read(notification_pipe[0], buffer, NOTIFICATION_BUFFER_SIZE);
-        if (res != -1) {
+        if (res == -1) {
           SNetUtilDebugFatal("Observer: read from notification pipe failed (%s)", strerror(errno));
         }
       }
@@ -1158,7 +1158,7 @@ void SNetObserverDestroy()
   pthread_mutex_unlock(&connection_mutex);
 
   res = write(notification_pipe[1], "?", 1);
-  if (res != -1) {
+  if (res == -1) {
     SNetUtilDebugFatal("Observer: write to notification pipe failed (%s)", strerror(errno));
   }
 
