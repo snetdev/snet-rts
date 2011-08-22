@@ -37,7 +37,7 @@ void SNetDistribStopOutputManager()
   running = false;
   if (wakeupStream != NULL) {
     snet_stream_desc_t *sd = SNetStreamOpen(wakeupStream, 'w');
-    SNetStreamTryWrite(sd, NULL);
+    SNetStreamTryWrite(sd, (void*)1);
     SNetStreamClose(sd, false);
   }
 
