@@ -82,7 +82,7 @@ int SNetThreadingInit(int argc, char **argv)
 {
   lpel_config_t config;
   char fname[20+1];
-  int i;
+  int i, res;
 
   memset(&config, 0, sizeof(lpel_config_t));
 
@@ -131,7 +131,7 @@ int SNetThreadingInit(int argc, char **argv)
     config.num_workers = num_cpus;
     config.proc_others = num_others;
   } else {
-    config.proc_workers = num_workers;
+    config.proc_workers = num_cpus;
     config.num_workers = num_workers;
     config.proc_others = num_others;
   }
@@ -141,8 +141,10 @@ int SNetThreadingInit(int argc, char **argv)
   SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_level);
   SNetAssignInit(config.num_workers);
 
-  LpelInit(&config);
-
+  res = LpelInit(&config);
+  if (res != LPEL_ERR_SUCCESS) {
+    SNetUtilDebugFatal("Could not initialize LPEL!\n");
+  }
   LpelStart();
 
   return 0;
