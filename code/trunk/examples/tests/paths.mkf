@@ -8,6 +8,8 @@ endif
 
 # following should go at some point in time
 INCLUDES += -I$(SNETBASE)/include
+INCLUDES += -I$(SNETBASE)/src/interfaces/c4snet
+INCLUDES += -I$(SNETBASE)/src/interfaces/sac4snet
 
 LIBRARIES = $(SOCKETLIBS)
 SNETCFLAGS+= $(SNETTESTFLAGS)
