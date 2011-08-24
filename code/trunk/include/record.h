@@ -41,10 +41,11 @@ typedef struct {
 #define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
 #define COLL_REC( name, component) RECORD( name, coll_rec)->component
 
-#include "stream.h"
+#include "distribution.h"
 #include "map.h"
-#include "bool.h"
 #include "variant.h"
+#include "stream.h"
+#include "bool.h"
 #include "locvec.h"
 
 
@@ -62,7 +63,7 @@ typedef struct {
 typedef struct {
   snet_int_map_t *tags;
   snet_int_map_t *btags;
-  snet_void_map_t *fields;
+  snet_ref_map_t *fields;
   int interface_id;
   snet_record_mode_t mode;
   snet_record_id_t rid;           /* system-wide unique id */
@@ -105,10 +106,6 @@ struct record {
 #define RECORD_FOR_EACH_TAG(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, tags), name, val)
 #define RECORD_FOR_EACH_BTAG(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, btags), name, val)
 #define RECORD_FOR_EACH_FIELD(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, fields), name, val)
-
-
-#include "variant.h"
-#include "distribution.h"
 
 /* compares two record ids */
 bool SNetRecordIdEquals (snet_record_id_t rid1, snet_record_id_t rid2);

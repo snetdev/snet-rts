@@ -8,6 +8,7 @@
 struct handle;
 typedef struct handle snet_handle_t;
 
+#include "list.h"
 #include "record.h"
 
 extern snet_record_t *SNetHndGetRecord( snet_handle_t *hndl);

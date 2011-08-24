@@ -161,9 +161,10 @@ libdistribnodist_la_SOURCES = \
 if ENABLE_DIST_MPI
 pkglib_LTLIBRARIES += libdistribmpi.la
 libdistribmpi_la_SOURCES = \
+	src/distrib/common/distribcollections.c \
 	src/distrib/common/imanager.c \
 	src/distrib/common/omanager.c \
-	src/distrib/common/distribcollections.c \
+	src/distrib/common/dsmanager.c \
 	src/distrib/mpi/distribution.c \
 	src/distrib/mpi/send.c \
 	src/distrib/mpi/recv.c \

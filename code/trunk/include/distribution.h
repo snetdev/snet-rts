@@ -1,10 +1,16 @@
 #ifndef _SNET_DISTRIBUTION_H_
 #define _SNET_DISTRIBUTION_H_
 
+#include <stdint.h>
+
+typedef struct {
+  int node;
+  uintptr_t data;
+} snet_ref_t;
+
 #include "info.h"
 #include "stream.h"
 #include "bool.h"
-#include "snettypes.h"
 
 void SNetDistribInit(int argc, char** argv, snet_info_t *info);
 void SNetDistribStart();

@@ -60,6 +60,10 @@ void SNetDistribStart()
 {
   SNetThreadingSpawn(
     SNetEntityCreate( ENTITY_other, -1, NULL,
+      "datastorage_manager", &SNetDataStorageManager, NULL));
+
+  SNetThreadingSpawn(
+    SNetEntityCreate( ENTITY_other, -1, NULL,
       "output_manager", &SNetOutputManager, NULL));
 
   SNetThreadingSpawn(
