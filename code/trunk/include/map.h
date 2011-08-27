@@ -19,7 +19,7 @@
 
 #define MAP_NAME_H Ref
 #define MAP_TYPE_NAME_H ref
-#define MAP_VAL_H snet_ref_t
+#define MAP_VAL_H snet_ref_t*
 #include "map-template.h"
 #undef MAP_VAL_H
 #undef MAP_TYPE_NAME_H

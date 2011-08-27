@@ -47,7 +47,8 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
   i = 0;
   VARIANT_FOR_EACH_FIELD(variant, name)
-    SNetRecSetField( out_rec, name, copyfun(fields[i]));
+    SNetRecSetField( out_rec, name,
+        SNetDistribRefCopy(SNetDistribRefCreate(fields[i], if_id)));
     i++;
   END_FOR
 
@@ -134,7 +135,8 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
       name = SNetIntListGet( variant, i+1);
       switch(SNetIntListGet( variant, i)) {
         case field:
-          SNetRecSetField( out_rec, name, va_arg( args, void*));
+          SNetRecSetField( out_rec, name,
+              SNetDistribRefCreate(va_arg( args, void*), id));
           break;
         case tag:
           SNetRecSetTag( out_rec, name, va_arg( args, int));

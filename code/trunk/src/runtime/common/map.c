@@ -14,8 +14,10 @@
 
 #define MAP_NAME Ref
 #define MAP_TYPE_NAME ref
-#define MAP_VAL snet_ref_t
+#define MAP_VAL snet_ref_t*
+#define MAP_VAL_COPY_FUN SNetDistribRefCopy
 #include "map-template.c"
+#undef MAP_VAL_COPY_FUN
 #undef MAP_VAL
 #undef MAP_TYPE_NAME
 #undef MAP_NAME

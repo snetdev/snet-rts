@@ -150,9 +150,9 @@ int SNetRecTakeBTag( snet_record_t *rec, int id);
 bool SNetRecHasBTag( snet_record_t *rec, int id);
 void SNetRecRenameBTag( snet_record_t *rec, int id, int newId);
 
-void SNetRecSetField( snet_record_t *rec, int id, void *val);
-void *SNetRecGetField( snet_record_t *rec, int id);
-void *SNetRecTakeField( snet_record_t *rec, int id);
+void SNetRecSetField( snet_record_t *rec, int id, snet_ref_t *val);
+snet_ref_t *SNetRecGetField( snet_record_t *rec, int id);
+snet_ref_t *SNetRecTakeField( snet_record_t *rec, int id);
 bool SNetRecHasField( snet_record_t *rec, int id);
 void SNetRecRenameField( snet_record_t *rec, int id, int newId);
 
