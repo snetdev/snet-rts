@@ -73,7 +73,7 @@ void SNetDistribStop()
 
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   for (i = 0; i < size; i++) {
-    MPI_Send(&i, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+    MPI_Send(&i, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
   }
 }
 

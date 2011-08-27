@@ -29,9 +29,10 @@ void SendRecord(snet_dest_t *dest, snet_record_t *rec)
 {
   offset = 0;
   MPIPackWrapper(1, &dest->dest);
+  MPIPackWrapper(1, &dest->parent);
   MPIPackWrapper(1, &dest->dynamicIndex);
   MPIPackWrapper(1, &dest->parentNode);
   MPIPackWrapper(1, &dest->dynamicLoc);
   SNetRecSerialise(rec, &MPIPackWrapper);
-  MPI_Send(buf, offset, MPI_PACKED, dest->node, dest->parent, MPI_COMM_WORLD);
+  MPI_Send(buf, offset, MPI_PACKED, dest->node, 0, MPI_COMM_WORLD);
 }
