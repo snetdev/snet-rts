@@ -13,12 +13,8 @@ typedef int (*snet_serialise_fun_t)( FILE *, void*);
 typedef void* (*snet_deserialise_fun_t)( FILE *);
 typedef int (*snet_encode_fun_t)( FILE *, void*);
 typedef void* (*snet_decode_fun_t)( FILE *);
-
-typedef int (*snet_serialise_type_fun_t)(void *data, void *buffer, int size);
-typedef int (*snet_pack_fun_t)(void *data, void** result, void**, void**);
-typedef void (*snet_cleanup_fun_t)(void *, void*);
-typedef int (*snet_deserialise_type_fun_t)(void *buffer, int size, void**, void**);
-typedef void* (*snet_unpack_fun_t)(void*, void*, int, void*);
+typedef void (*snet_dist_send_fun_t)(void *data);
+typedef void *(*snet_dist_recv_fun_t)(void);
 
 #define SNET_INTERFACE_ERR     -1
 #define SNET_INTERFACE_ERR_BUF -2
@@ -32,13 +28,8 @@ typedef struct SNET_INTERFACE {
   snet_deserialise_fun_t deserialisefun;
   snet_encode_fun_t encodefun;
   snet_decode_fun_t decodefun;
-
-  snet_serialise_type_fun_t serialise_type_fun;
-  snet_deserialise_type_fun_t deserialise_type_fun;
-  snet_pack_fun_t packfun;
-  snet_unpack_fun_t unpackfun;
-  snet_cleanup_fun_t cleanupfun;
-
+  snet_dist_send_fun_t distSendFun;
+  snet_dist_recv_fun_t distRecvFun;
 } snet_interface_functions_t;
 
 void SNetInterfaceRegister( int id,
@@ -47,7 +38,9 @@ void SNetInterfaceRegister( int id,
                             snet_serialise_fun_t serialisefun,
                             snet_deserialise_fun_t deserialisefun,
                             snet_encode_fun_t encodefun,
-                            snet_decode_fun_t decodefun);
+                            snet_decode_fun_t decodefun,
+                            snet_dist_send_fun_t distSendFun,
+                            snet_dist_recv_fun_t dist_RecvFun);
 
 snet_interface_functions_t *SNetInterfaceGet(int id);
 void SNetInterfacesDestroy();

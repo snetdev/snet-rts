@@ -10,7 +10,9 @@ void SNetInterfaceRegister( int id,
                             snet_serialise_fun_t serialisefun,
                             snet_deserialise_fun_t deserialisefun,
                             snet_encode_fun_t encodefun,
-                            snet_decode_fun_t decodefun)
+                            snet_decode_fun_t decodefun,
+                            snet_dist_send_fun_t distSendFun,
+                            snet_dist_recv_fun_t distRecvFun)
 {
   snet_interface_functions_t *new = SNetMemAlloc(sizeof(snet_interface_functions_t));
   new->id = id;
@@ -21,12 +23,8 @@ void SNetInterfaceRegister( int id,
   new->deserialisefun = deserialisefun;
   new->encodefun = encodefun;
   new->decodefun = decodefun;
-
-  new->serialise_type_fun = NULL;
-  new->deserialise_type_fun = NULL;
-  new->packfun = NULL;
-  new->unpackfun = NULL;
-  new->cleanupfun = NULL;
+  new->distSendFun = distSendFun;
+  new->distRecvFun = distRecvFun;
 
   if (snet_interfaces == NULL) {
       snet_interfaces = new;

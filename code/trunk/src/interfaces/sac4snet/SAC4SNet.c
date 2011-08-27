@@ -172,13 +172,29 @@ void SAC4SNet_out( void *hnd, int variant_num, ...)
 void SAC4SNetInit( int id, snet_distrib_t distImpl)
 {
   my_interface_id = id;
+  snet_dist_send_fun_t sendFun = NULL;
+  snet_dist_recv_fun_t recvFun = NULL;
+
+  switch (distImpl) {
+    case nodist:
+      break;
+    case mpi:
+    case scc:
+    default:
+      SNetUtilDebugFatal("SAC4SNet doesn't support the selected distribution "
+                         "layer (%d).\n", distImpl);
+      break;
+  }
+
   SNetInterfaceRegister( id,
                          &SACARGfree,
                          &SACARGcopy,
                          &SAC4SNetDataSerialise,
                          &SAC4SNetDataDeserialise,
                          &SAC4SNetDataEncode,
-                         &SAC4SNetDataDecode);
+                         &SAC4SNetDataDecode,
+                         sendFun,
+                         recvFun);
 }
 
 /******************************************************************************/

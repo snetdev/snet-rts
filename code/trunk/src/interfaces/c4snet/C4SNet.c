@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <errno.h>
 
+#include "debug.h"
 #include "C4SNet.h"
 #include "memfun.h"
 #include "snettypes.h"
@@ -138,13 +139,29 @@ int C4SNetSizeof(c4snet_data_t *data)
 void C4SNetInit( int id, snet_distrib_t distImpl)
 {
   interface_id = id;
+  snet_dist_send_fun_t sendFun = NULL;
+  snet_dist_recv_fun_t recvFun = NULL;
+
+  switch (distImpl) {
+    case nodist:
+      break;
+    case mpi:
+    case scc:
+    default:
+      SNetUtilDebugFatal("C4SNet doesn't support the selected distribution "
+                         "layer (%d).\n", distImpl);
+      break;
+  }
+
   SNetInterfaceRegister( id,
                          &C4SNetDataFree,
                          &C4SNetDataShallowCopy,
                          &C4SNetDataSerialize,
                          &C4SNetDataDeserialize,
                          &C4SNetDataEncode,
-                         &C4SNetDataDecode);
+                         &C4SNetDataDecode,
+                         sendFun,
+                         recvFun);
 }
 
 /* Communicates back the results of the box. */
