@@ -75,10 +75,10 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 
             if(mode == MODE_textual) {
               SNetInterfaceGet(id)->serialisefun(hnd->file,
-                                                 SNetDistribRefGetData(field));
+                                                 SNetRefGetData(field));
             } else {
               SNetInterfaceGet(id)->encodefun(hnd->file,
-                                              SNetDistribRefGetData(field));
+                                              SNetRefGetData(field));
             }
 
             fprintf(hnd->file, "</field>");

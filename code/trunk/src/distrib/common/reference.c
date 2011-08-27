@@ -11,7 +11,7 @@
 static snet_ref_data_map_t *dataMap = NULL;
 static pthread_mutex_t dsMutex = PTHREAD_MUTEX_INITIALIZER;
 
-snet_ref_t *SNetDistribRefCreate(void *data, int interface)
+snet_ref_t *SNetRefCreate(void *data, int interface)
 {
   snet_ref_t *result = SNetMemAlloc(sizeof(snet_ref_t));
 
@@ -22,7 +22,7 @@ snet_ref_t *SNetDistribRefCreate(void *data, int interface)
   return result;
 }
 
-snet_ref_t *SNetDistribRefCopy(snet_ref_t *ref)
+snet_ref_t *SNetRefCopy(snet_ref_t *ref)
 {
   snet_ref_t *result = SNetMemAlloc(sizeof(snet_ref_t));
   snet_copy_fun_t copyfun= SNetInterfaceGet(ref->interface)->copyfun;
@@ -48,7 +48,7 @@ snet_ref_t *SNetDistribRefCopy(snet_ref_t *ref)
   return result;
 }
 
-void *SNetDistribRefGetData(snet_ref_t *ref)
+void *SNetRefGetData(snet_ref_t *ref)
 {
   void *result;
   if (SNetDistribIsNodeLocation(ref->node)) {
@@ -80,7 +80,7 @@ void *SNetDistribRefGetData(snet_ref_t *ref)
   return result;
 }
 
-void *SNetDistribRefTakeData(snet_ref_t *ref)
+void *SNetRefTakeData(snet_ref_t *ref)
 {
   void *result;
   if (SNetDistribIsNodeLocation(ref->node)) {
@@ -111,7 +111,7 @@ void *SNetDistribRefTakeData(snet_ref_t *ref)
   return result;
 }
 
-void SNetDistribRefDestroy(snet_ref_t *ref)
+void SNetRefDestroy(snet_ref_t *ref)
 {
   snet_free_fun_t freefun = SNetInterfaceGet(ref->interface)->freefun;
 

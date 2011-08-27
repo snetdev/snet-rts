@@ -66,7 +66,7 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
 
       RECORD_FOR_EACH_FIELD(storage[i], name, field)
         if (SNetVariantHasField(pattern, name)) {
-            SNetRecSetField(result, name, SNetDistribRefCopy(field));
+            SNetRecSetField(result, name, SNetRefCopy(field));
         }
       END_FOR
 

@@ -88,7 +88,7 @@ void SNetRecFlowInherit( snet_variant_t *pat, snet_record_t *in_rec,
 
   RECORD_FOR_EACH_FIELD(in_rec, name, field)
     if (!SNetVariantHasField( pat, name)) {
-      SNetRecSetField( out_rec, name, SNetDistribRefCopy(field));
+      SNetRecSetField( out_rec, name, SNetRefCopy(field));
     }
   END_FOR
 
@@ -196,7 +196,7 @@ void SNetRecDestroy( snet_record_t *rec)
   switch (REC_DESCR( rec)) {
     case REC_data:
       RECORD_FOR_EACH_FIELD(rec, name, field)
-        SNetDistribRefDestroy(field);
+        SNetRefDestroy(field);
       END_FOR
       SNetRefMapDestroy( DATA_REC( rec, fields));
       SNetIntMapDestroy( DATA_REC( rec, tags));
@@ -425,7 +425,7 @@ void SNetRecSetField( snet_record_t *rec, int name, snet_ref_t *val)
 
 snet_ref_t *SNetRecGetField( snet_record_t *rec, int name)
 {
-  return SNetDistribRefCopy(SNetRefMapGet(DATA_REC(rec, fields), name));
+  return SNetRefCopy(SNetRefMapGet(DATA_REC(rec, fields), name));
 }
 
 snet_ref_t *SNetRecTakeField( snet_record_t *rec, int name)
