@@ -70,7 +70,6 @@ void SNetDistribStart()
 void SNetDistribStop()
 {
   int i, size;
-  if (node_location != 0) return;
 
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   for (i = 0; i < size; i++) {
