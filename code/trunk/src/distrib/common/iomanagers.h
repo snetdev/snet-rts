@@ -14,6 +14,7 @@ void SNetDistribNewOut(snet_dest_t *dest, snet_stream_t *stream);
 
 void SNetOutputManager(snet_entity_t *ent, void *args);
 void SNetInputManager(snet_entity_t *ent, void *args);
+void SNetDataStorageManager(snet_entity_t *ent, void *args);
 
 /* To be implemented by distrib/implementation */
 void SNetDistribNewDynamicCon(snet_dest_t *dest);

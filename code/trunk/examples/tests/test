@@ -26,7 +26,7 @@ function runTests {
             # If the test exited succesfully, verify the output
             if ! ./compare ${input%.xml} out.bak; then
               echo "Results differ for $dir with ${input#$base/$dir/}"
-              mv out.bak $dir-${input#$base/$dir}.out
+              mv out.bak $dir-${input#$base/$dir\/}.out
             else
               echo "OK: $dir with ${input#$base/$dir/}"
               rm -f out.bak

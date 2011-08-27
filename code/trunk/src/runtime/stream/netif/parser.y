@@ -518,7 +518,8 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	      }
 
 	      if(data != NULL) {
-	      	SNetRecSetField(current.record, label, data);
+	      	SNetRecSetField(current.record, label,
+                  SNetDistribRefCreate(data, iid));
 	      } else {
 		      yyerror("Could not decode data!");
 	      }
