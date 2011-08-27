@@ -18,6 +18,7 @@
 #include "C4SNet.h"
 #include "memfun.h"
 #include "snettypes.h"
+#include "type.h"
 #include "interface_functions.h"
 #include "out.h"
 #include "base64.h"
@@ -134,7 +135,7 @@ int C4SNetSizeof(c4snet_data_t *data)
 /***************************** Common functions ****************************/
 
 /* Language interface initialization function. */
-void C4SNetInit( int id)
+void C4SNetInit( int id, snet_distrib_t distImpl)
 {
   interface_id = id;
   SNetInterfaceRegister( id,

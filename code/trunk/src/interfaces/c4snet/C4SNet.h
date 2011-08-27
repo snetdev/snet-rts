@@ -1,6 +1,8 @@
 #ifndef _C4SNET_H_
 #define _C4SNET_H_
 
+#include "type.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif 
@@ -88,7 +90,7 @@ typedef enum{
 
 /** <!--********************************************************************-->
  *
- * @fn void C4SNetInit(int id)
+ * @fn void C4SNetInit(int id, snet_distrib_t distImpl)
  *
  *   @brief  Language interface initialization function.
  *
@@ -104,9 +106,13 @@ typedef enum{
  *   @param id    identifier of the language interface. The identifier must 
  *                have value of 0 or more.
  *
+ *   @param distImpl    identifier of the distribution layer in use, determines
+ *                      which serialize/deserialize functions the distribution
+ *                      layer uses.
+ *
  *****************************************************************************/
 
-void C4SNetInit( int id);
+void C4SNetInit( int id, snet_distrib_t distImpl);
 
 /** <!--********************************************************************-->
  *

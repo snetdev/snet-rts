@@ -169,7 +169,7 @@ void SAC4SNet_out( void *hnd, int variant_num, ...)
   SNetOutRawArray( hnd, my_interface_id, v, fields, tags, btags);
 }
 
-void SAC4SNetInit( int id)
+void SAC4SNetInit( int id, snet_distrib_t distImpl)
 {
   my_interface_id = id;
   SNetInterfaceRegister( id,
