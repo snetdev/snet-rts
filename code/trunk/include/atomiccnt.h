@@ -31,7 +31,7 @@
 #ifdef HAVE_SYNC_ATOMIC_BUILTINS
 
 typedef struct {
-  volatile int counter;
+  volatile unsigned int counter;
   unsigned char padding[64-sizeof(int)];
 } snet_atomiccnt_t;
 
@@ -55,7 +55,7 @@ static inline int SNetAtomicCntFetchAndDec(snet_atomiccnt_t *cnt)
 #include <pthread.h>
 
 typedef struct {
-  int counter;
+  unsigned int counter;
   pthread_mutex_t lock;
 } snet_atomiccnt_t;
 
