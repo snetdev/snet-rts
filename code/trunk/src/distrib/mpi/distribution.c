@@ -34,7 +34,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   dest = SNetMemAlloc(sizeof(snet_dest_t));
   dest->node = 0;
   dest->dest = *counter;
-  dest->parent = 1;
+  dest->parent = 0;
   dest->parentNode = 0;
   dest->dynamicIndex = 0;
   dest->dynamicLoc = 0;
