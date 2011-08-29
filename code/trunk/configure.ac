@@ -8,6 +8,15 @@ AM_INIT_AUTOMAKE([1.11 tar-ustar no-define foreign dist-bzip2 subdir-objects
                   parallel-tests color-tests silent-rules])
 AM_SILENT_RULES([yes])
 
+
+AC_ARG_ENABLE([dist-scc], [AS_HELP_STRING([--enable-dist-scc],
+    [Enable the custom distribution layer for the SCC (default is disabled)])],
+    [], [enable_dist_scc=no])
+if test x$enable_dist_scc = xyes; then
+  AC_DEFINE([ENABLE_DIST_SCC], [1], [Set to 1 to enable the SCC distribution layer])
+fi
+AM_CONDITIONAL([ENABLE_DIST_SCC], [test x$enable_dist_scc = xyes])
+
 dnl If --enable-dist-mpi=auto is used, try to find MPI, but use standard C compiler if it is not found.
 dnl If --enable-dist-mpi=yes is used, try to find MPI and fail if it isn't found.
 dnl If --enable-dist-mpi=no is used, use a standard C compiler instead.
@@ -26,6 +35,9 @@ AX_PROG_CC_MPI([test x"$enable_dist_mpi" != xno], [use_mpi=yes],
 else
   AC_MSG_WARN([No MPI compiler found, won't use MPI.])
 fi])
+if test $use_mpi = yes; then
+  AC_DEFINE([ENABLE_DIST_MPI], [1], [Set to 1 to enable the MPI distribution layer])
+fi
 AM_CONDITIONAL([ENABLE_DIST_MPI], [test $use_mpi = yes])
 
 dnl ensure that either mpicc or cc detected above are configured in c99 mode
