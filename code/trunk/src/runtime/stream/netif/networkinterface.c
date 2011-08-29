@@ -281,11 +281,12 @@ int SNetInRun(int argc, char **argv,
     SNetInInputInit(input, labels, interfaces, input_stream);
   }
 
+  SNetDistribWaitExit();
+  SNetThreadingStop();
+
   (void) SNetThreadingProcess();
 
   (void) SNetThreadingCleanup();
-
-  SNetDistribDestroy();
 
   SNetInfoDestroy(info);
 

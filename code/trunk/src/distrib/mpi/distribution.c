@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <mpi.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -16,6 +17,10 @@ snet_info_tag_t prevDest;
 snet_info_tag_t infoCounter;
 
 bool debugWait = false;
+
+static bool running = true;
+static pthread_cond_t exitCond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t exitMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 {
@@ -67,18 +72,29 @@ void SNetDistribStart()
       "input_manager", &SNetInputManager, NULL));
 }
 
-void SNetDistribStop()
+void SNetDistribStop(bool global)
 {
   int i, size;
 
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  for (i = 0; i < size; i++) {
-    MPI_Send(&i, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+  if (global) {
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    for (i = 0; i < size; i++) {
+      MPI_Send(&i, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+    }
+  } else {
+    pthread_mutex_lock(&exitMutex);
+    running = false;
+    pthread_cond_signal(&exitCond);
+    pthread_mutex_unlock(&exitMutex);
   }
 }
 
-void SNetDistribDestroy()
+void SNetDistribWaitExit()
 {
+  pthread_mutex_lock(&exitMutex);
+  while (running) pthread_cond_wait(&exitCond, &exitMutex);
+  pthread_mutex_unlock(&exitMutex);
+
   MPI_Finalize();
 }
 

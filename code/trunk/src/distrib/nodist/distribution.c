@@ -1,7 +1,13 @@
+#include <pthread.h>
+
 #include "distribution.h"
 
+bool debugWait = false;
+
 static int node_location;
-bool debugWait, outputDistribInfo;
+static bool running = true;
+static pthread_cond_t exitCond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t exitMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 {
@@ -12,12 +18,19 @@ void SNetDistribStart()
 {
 }
 
-void SNetDistribStop()
+void SNetDistribStop(bool global)
 {
+  pthread_mutex_lock(&exitMutex);
+  running = false;
+  pthread_cond_signal(&exitCond);
+  pthread_mutex_unlock(&exitMutex);
 }
 
-void SNetDistribDestroy()
+void SNetDistribWaitExit()
 {
+  pthread_mutex_lock(&exitMutex);
+  while (running) pthread_cond_wait(&exitCond, &exitMutex);
+  pthread_mutex_unlock(&exitMutex);
 }
 
 int SNetDistribGetNodeId(void)

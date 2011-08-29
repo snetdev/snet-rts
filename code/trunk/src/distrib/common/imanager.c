@@ -65,5 +65,6 @@ void SNetInputManager(snet_entity_t *ent, void *args)
   assert(SNetDestStreamMapSize(destMap) == 0);
   SNetDistribStopOutputManager();
   pthread_mutex_destroy(&newStreamsMutex);
+  SNetDistribStop(false);
   return;
 }

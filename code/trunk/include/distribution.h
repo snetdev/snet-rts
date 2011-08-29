@@ -14,8 +14,8 @@ typedef struct {
 
 void SNetDistribInit(int argc, char** argv, snet_info_t *info);
 void SNetDistribStart();
-void SNetDistribStop();
-void SNetDistribDestroy();
+void SNetDistribStop(bool global);
+void SNetDistribWaitExit();
 
 int SNetDistribGetNodeId(void);
 bool SNetDistribIsNodeLocation(int location);
