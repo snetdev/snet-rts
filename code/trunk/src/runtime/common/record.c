@@ -574,11 +574,11 @@ snet_record_t *SNetRecDeserialise( void (*deserialise)(int, int*))
       SNetIntMapDeserialise(DATA_REC(result, tags), deserialise, deserialise);
       //DATA_REC( rec, fields)
 
-      enumConversion = DATA_REC( result, mode);
       deserialise(1, &enumConversion);
+      DATA_REC( result, mode) = enumConversion;
 
-      enumConversion = DATA_REC( result, interface_id);
       deserialise(1, &enumConversion);
+      DATA_REC( result, mode) = enumConversion;
 
       /* FIXME how to best deserialise the id and the parent ids */
       break;
