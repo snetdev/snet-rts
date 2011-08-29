@@ -173,8 +173,10 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/mpi/recv.c \
 	src/distrib/mpi/dest.c
 libdistribmpi_la_CPPFLAGS = \
+        $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/distrib/mpi \
 	-I$(srcdir)/src/distrib/common
+
 endif
 
 # common flags
