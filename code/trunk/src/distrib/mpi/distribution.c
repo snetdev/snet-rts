@@ -12,6 +12,8 @@
 #include "snetentities.h"
 #include "threading.h"
 
+extern void SNetRefStart(void);
+
 int node_location;
 snet_info_tag_t prevDest;
 snet_info_tag_t infoCounter;
@@ -63,6 +65,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 
 void SNetDistribStart()
 {
+  SNetRefStart();
   SNetThreadingSpawn(
     SNetEntityCreate( ENTITY_other, -1, NULL,
       "output_manager", &SNetOutputManager, NULL));

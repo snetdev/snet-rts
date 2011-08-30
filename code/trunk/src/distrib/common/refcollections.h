@@ -4,9 +4,18 @@
 #include "bool.h"
 #include "distribution.h"
 
+#define LIST_NAME_H Stream
+#define LIST_TYPE_NAME_H stream
+#define LIST_VAL_H snet_stream_t*
+#include "list-template.h"
+#undef LIST_VAL_H
+#undef LIST_TYPE_NAME_H
+#undef LIST_NAME_H
+
 typedef struct {
   int refs;
   void *data;
+  snet_stream_list_t *list;
 } data_t;
 
 #define MAP_NAME_H RefData

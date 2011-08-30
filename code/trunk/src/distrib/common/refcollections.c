@@ -1,4 +1,12 @@
-#include "refmap.h"
+#include "refcollections.h"
+
+#define LIST_NAME Stream
+#define LIST_TYPE_NAME stream
+#define LIST_VAL snet_stream_t*
+#include "list-template.c"
+#undef LIST_VAL
+#undef LIST_TYPE_NAME
+#undef LIST_NAME
 
 bool SNetRefCompare(snet_ref_t r1, snet_ref_t r2)
 {
