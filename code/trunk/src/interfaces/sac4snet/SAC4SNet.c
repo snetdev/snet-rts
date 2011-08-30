@@ -172,8 +172,8 @@ void SAC4SNet_out( void *hnd, int variant_num, ...)
 void SAC4SNetInit( int id, snet_distrib_t distImpl)
 {
   my_interface_id = id;
-  snet_dist_send_fun_t sendFun = NULL;
-  snet_dist_recv_fun_t recvFun = NULL;
+  snet_pack_fun_t packfun = NULL;
+  snet_unpack_fun_t unpackfun = NULL;
 
   switch (distImpl) {
     case nodist:
@@ -193,8 +193,8 @@ void SAC4SNetInit( int id, snet_distrib_t distImpl)
                          &SAC4SNetDataDeserialise,
                          &SAC4SNetDataEncode,
                          &SAC4SNetDataDecode,
-                         sendFun,
-                         recvFun);
+                         packfun,
+                         unpackfun);
 }
 
 /******************************************************************************/

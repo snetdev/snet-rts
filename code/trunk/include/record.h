@@ -166,7 +166,9 @@ void SNetRecAddParentsOf(snet_record_t *rec, snet_record_t *of);
 void SNetRecAddAsParent(snet_record_t *rec, snet_record_t *parent);
 
 
-void SNetRecSerialise( snet_record_t *rec, void (*serialise)(int, int*));
-snet_record_t *SNetRecDeserialise(void (*deserialise)(int, int*));
+void SNetRecSerialise( snet_record_t *rec, void (*packInts)(int, int*),
+                       void (*packRefs)(int, snet_ref_t**));
+snet_record_t *SNetRecDeserialise(void (*unpackInts)(int, int*),
+                                  void (*unpackRefs)(int, snet_ref_t**));
 
 #endif /* _RECORD_H_ */

@@ -157,7 +157,7 @@ libC4SNetc_la_SOURCES = \
 
 libdistribnodist_la_SOURCES = \
 	src/distrib/common/reference.c \
-	src/distrib/common/refmap.c \
+	src/distrib/common/refcollections.c \
 	src/distrib/nodist/distribution.c
 
 if ENABLE_DIST_MPI
@@ -167,10 +167,10 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/common/imanager.c \
 	src/distrib/common/omanager.c \
 	src/distrib/common/reference.c \
-	src/distrib/common/refmap.c \
+	src/distrib/common/refcollections.c \
 	src/distrib/mpi/distribution.c \
-	src/distrib/mpi/send.c \
-	src/distrib/mpi/recv.c \
+	src/distrib/mpi/pack.c \
+	src/distrib/mpi/transmit.c \
 	src/distrib/mpi/dest.c
 libdistribmpi_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
