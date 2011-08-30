@@ -212,14 +212,19 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
           /* follow by a sync record */
           syncrec = SNetRecCreate(REC_sync, sarg->input);
 #ifdef SYNC_SEND_OUTTYPES
-          /*
-           * To trigger garbage collection at a following parallel dispatcher
-           * within a state-modeling network, the dispatcher needs knowledge about the
-           * type of the merged record ('outtype' of the synchrocell).
-           */
-          outtype = GetMergedTypeVariant(sarg->patterns);
-          SNetRecSetVariant(syncrec, outtype);
-          SNetVariantDestroy(outtype);
+          /* if we read from a star entity, we store the outtype along
+             with the sync record */
+          if( SNetStreamGetSource( sarg->input) != NULL ) {
+            /*
+             * To trigger garbage collection at a following parallel dispatcher
+             * within a state-modeling network, the dispatcher needs knowledge about the
+             * type of the merged record ('outtype' of the synchrocell).
+             */
+            outtype = GetMergedTypeVariant(sarg->patterns);
+            /* is copied internally */
+            SNetRecSetVariant(syncrec, outtype);
+            SNetVariantDestroy(outtype);
+          }
 #endif
 
           SNetStreamWrite( outstream, syncrec);

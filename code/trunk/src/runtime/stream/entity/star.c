@@ -104,10 +104,12 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
   snet_stream_t *starstream, *nextstream_addr;
   /* Create the stream to the instance */
   nextstream_addr = SNetStreamCreate(0);
-  *next = SNetStreamOpen(nextstream_addr, 'w');
 
   /* Set the source of the stream to support garbage collection */
   SNetStreamSetSource(nextstream_addr, SNetLocvecGet(sarg->info));
+
+  /* open the stream for the caller */
+  *next = SNetStreamOpen(nextstream_addr, 'w');
 
   /* use custom creation function for proper/easier update of locvec */
   starstream = SNetSerialStarchild(
@@ -230,11 +232,19 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
                   );
           }
 #endif
-          /* check if the source (location) of the stream and the own location are
+          /* TODO
+           * It is not necessary to carry the whole location vector in the
+           * next stream of a star-entity, only a flag. As a prerequisite,
+           * non_incarnates must not clean themselves up!
+           */
+          /*
+           * Only incarnates are eligible for cleanup!
+           * check if the source (location) of the stream and the own location are
            * (subsequent) star dispatcher entities of the same star combinator network
            * -> if so, we can clean-up ourselves
            */
-          if ( loc != NULL && SNetLocvecEqualParent(loc, SNetLocvecGet(sarg->info))) {
+          if ( sarg->is_incarnate && loc != NULL ) {
+            assert( true == SNetLocvecEqualParent(loc, SNetLocvecGet(sarg->info)) );
             /* If the next instance is already created, we can forward the sync-record
              * immediately and terminate.
              * Otherwise we postpone termination to the point when a next data record
