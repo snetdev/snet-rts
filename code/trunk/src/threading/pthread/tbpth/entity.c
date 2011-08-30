@@ -80,13 +80,7 @@ int SNetThreadingInit(int argc, char **argv)
 }
 
 
-void SNetThreadingStop(void)
-{
-  /* NOP */
-}
-
-
-int SNetThreadingProcess(void)
+int SNetThreadingStop(void)
 {
   /* Wait for the entities */
   pthread_mutex_lock( &entity_lock );

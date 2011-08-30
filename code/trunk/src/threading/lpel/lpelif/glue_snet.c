@@ -162,20 +162,14 @@ unsigned long SNetThreadingGetId()
 
 
 
-void SNetThreadingStop(void)
+int SNetThreadingStop(void)
 {
+  /* send a stop signal to LPEL */
   LpelStop();
-}
-
-
-int SNetThreadingProcess(void)
-{
   /* following call will block until the workers have finished */
   LpelCleanup();
   return 0;
 }
-
-
 
 
 int SNetThreadingCleanup(void)

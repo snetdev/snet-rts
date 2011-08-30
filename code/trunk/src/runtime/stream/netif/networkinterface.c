@@ -282,9 +282,10 @@ int SNetInRun(int argc, char **argv,
   }
 
   SNetDistribWaitExit();
-  SNetThreadingStop();
 
-  (void) SNetThreadingProcess();
+  /* tell the threading layer that it is ok to shutdown,
+     and wait until it has stopped such that it can be cleaned up */
+  (void) SNetThreadingStop();
 
   (void) SNetThreadingCleanup();
 

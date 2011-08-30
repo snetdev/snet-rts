@@ -48,21 +48,14 @@ unsigned long SNetThreadingGetId();
 
 
 /**
- * Stop the threading backend
+ * Stop the threading backend.
  *
- */
-void SNetThreadingStop(void);
-
-
-/**
- * Process the S-Net network.
- * This function blocks the calling (main) thread after calling
- * SNetThreadingStop() until the entity threads have finished and
- * it is safe to shutdown.
+ * This function blocks the calling (main) thread until the entity threads
+ * have finished and it is safe to shutdown.
  *
  * @return 0 on success
  */
-int SNetThreadingProcess(void);
+int SNetThreadingStop(void);
 
 
 
