@@ -21,4 +21,5 @@ $(TARGET).lpel: $(TARGET).snet $(BOXES)
 	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel $(INCLUDES)
 
 clean:
-	rm -f $(TARGET) $(TARGET).lpel $(TARGET).[och] $(TARGET).lo $(BOXES) mon_*.log *tasks.map
+	rm -f $(TARGET).[och] $(BOXES) mon_*.log *tasks.map
+	libtool --mode=clean rm -f $(TARGET) $(TARGET).lo $(TARGET).lpel
