@@ -41,6 +41,7 @@
 #include "SAC4SNetFibreIO.h"
 #include "snetentities.h"
 #include "memfun.h"
+#include "debug.h"
 #include "variant.h"
 #include "type.h"
 #include "out.h"

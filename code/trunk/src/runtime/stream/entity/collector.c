@@ -142,7 +142,7 @@ static void ProcessSortRecord(
     if( !SortRecEqual(rec, *sort_rec) ) {
       SNetUtilDebugNoticeEnt( ent,
           "[COLL] Warning: Received sort records do not match! "
-          "expected (l%d,c%d) got (l%d,c%d) on %p", /*TROLLFACE*/
+          "expected (l%d,c%d) got (l%d,c%d) on %p", /* *trollface* PROBLEM? */
           SNetRecGetLevel(*sort_rec), SNetRecGetNum(*sort_rec),
           SNetRecGetLevel(rec),       SNetRecGetNum(rec),
           cur_stream
@@ -383,6 +383,8 @@ void CollectorTaskStatic(snet_entity_t *ent, void *arg)
         {
           snet_locvec_t *source = SNetStreamGetSource( SNetRecGetStream(rec) );
           /*
+           * IMPORTANT!
+           *
            * If source is set, the source is a star dispatcher.
            * We must not treat the sync record as usual, otherwise
            * we might result in decrementing the level of subsequent sort
@@ -390,7 +392,10 @@ void CollectorTaskStatic(snet_entity_t *ent, void *arg)
            * messing up the protocol completely.
            */
           if (source!=NULL) {
-            assert( SNetLocvecEqual(source, SNetEntityGetLocvec(ent)) == false );
+            /* current locvec is that of a static network,
+             * source is only set at stars (dynamic network)
+             */
+            assert( false == SNetLocvecEqual(source, SNetEntityGetLocvec(ent)) );
             int res;
 #ifdef DEBUG_PRINT_GC
             char slocvec[64];

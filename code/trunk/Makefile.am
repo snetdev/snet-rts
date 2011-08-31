@@ -149,6 +149,10 @@ libC4SNet_la_SOURCES = \
 	src/interfaces/c4snet/C4SNet.h \
 	src/interfaces/c4snet/base64.h \
 	src/interfaces/c4snet/base64.c
+if ENABLE_DIST_MPI
+libC4SNet_la_LIBADD = \
+    libdistribmpi.la
+endif
 
 libC4SNetc_la_SOURCES = \
 	src/interfaces/c4snet/C4SNetc.c \
@@ -159,6 +163,7 @@ libdistribnodist_la_SOURCES = \
 	src/distrib/common/reference.c \
 	src/distrib/common/refcollections.c \
 	src/distrib/nodist/distribution.c
+
 
 if ENABLE_DIST_MPI
 pkglib_LTLIBRARIES += libdistribmpi.la
