@@ -15,11 +15,18 @@
 static snet_ref_data_map_t *dataMap = NULL;
 static pthread_mutex_t dsMutex = PTHREAD_MUTEX_INITIALIZER;
 
-void SNetRefStart(void)
+void SNetDataStorageInit(void)
 {
   pthread_mutex_lock(&dsMutex);
   dataMap = SNetRefDataMapCreate(0);
   pthread_mutex_unlock(&dsMutex);
+}
+
+void SNetDataStorageDestroy(void)
+{
+  pthread_mutex_destroy(&dsMutex);
+  assert(SNetRefDataMapSize(dataMap) == 0);
+  SNetRefDataMapDestroy(dataMap);
 }
 
 snet_ref_t *SNetRefCreate(void *data, int interface)

@@ -166,6 +166,9 @@ libdistribnodist_la_SOURCES = \
 	src/distrib/common/reference.c \
 	src/distrib/common/refcollections.c \
 	src/distrib/nodist/distribution.c
+libdistribnodist_la_CPPFLAGS = \
+        $(AM_CPPFLAGS) \
+	-I$(srcdir)/src/distrib/common
 
 
 if ENABLE_DIST_MPI

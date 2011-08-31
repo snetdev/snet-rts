@@ -1,6 +1,7 @@
 #include <pthread.h>
 
 #include "distribution.h"
+#include "iomanagers.h"
 
 bool debugWait = false;
 
@@ -12,9 +13,10 @@ static pthread_mutex_t exitMutex = PTHREAD_MUTEX_INITIALIZER;
 void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 {
     node_location = 0;
+    SNetDataStorageInit();
 }
 
-void SNetDistribStart()
+void SNetDistribStart(void)
 {
 }
 
@@ -26,11 +28,12 @@ void SNetDistribStop(bool global)
   pthread_mutex_unlock(&exitMutex);
 }
 
-void SNetDistribWaitExit()
+void SNetDistribWaitExit(void)
 {
   pthread_mutex_lock(&exitMutex);
   while (running) pthread_cond_wait(&exitCond, &exitMutex);
   pthread_mutex_unlock(&exitMutex);
+  SNetDataStorageDestroy();
 }
 
 int SNetDistribGetNodeId(void)

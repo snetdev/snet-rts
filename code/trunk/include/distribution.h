@@ -13,9 +13,9 @@ typedef struct {
 #include "bool.h"
 
 void SNetDistribInit(int argc, char** argv, snet_info_t *info);
-void SNetDistribStart();
+void SNetDistribStart(void);
 void SNetDistribStop(bool global);
-void SNetDistribWaitExit();
+void SNetDistribWaitExit(void);
 
 int SNetDistribGetNodeId(void);
 bool SNetDistribIsNodeLocation(int location);

@@ -12,8 +12,6 @@
 #include "snetentities.h"
 #include "threading.h"
 
-extern void SNetRefStart(void);
-
 int node_location;
 snet_info_tag_t prevDest;
 snet_info_tag_t infoCounter;
@@ -61,18 +59,16 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
       while (0 == i) sleep(5);
     }
   }
+
+  SNetDataStorageInit();
+  SNetOutputManagerInit();
+  SNetInputManagerInit();
 }
 
-void SNetDistribStart()
+void SNetDistribStart(void)
 {
-  SNetRefStart();
-  SNetThreadingSpawn(
-    SNetEntityCreate( ENTITY_other, -1, NULL,
-      "output_manager", &SNetOutputManager, NULL));
-
-  SNetThreadingSpawn(
-    SNetEntityCreate( ENTITY_other, -1, NULL,
-      "input_manager", &SNetInputManager, NULL));
+  SNetOutputManagerStart();
+  SNetInputManagerStart();
 }
 
 void SNetDistribStop(bool global)
@@ -92,7 +88,7 @@ void SNetDistribStop(bool global)
   }
 }
 
-void SNetDistribWaitExit()
+void SNetDistribWaitExit(void)
 {
   pthread_mutex_lock(&exitMutex);
   while (running) pthread_cond_wait(&exitCond, &exitMutex);

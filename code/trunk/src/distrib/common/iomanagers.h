@@ -7,14 +7,16 @@ typedef struct snet_dest snet_dest_t;
 #include "record.h"
 
 /* Provided by distrib/common */
-void SNetDistribStopOutputManager();
-
 void SNetDistribNewIn(snet_dest_t *dest, snet_stream_t *stream);
 void SNetDistribNewOut(snet_dest_t *dest, snet_stream_t *stream);
 
-void SNetOutputManager(snet_entity_t *ent, void *args);
-void SNetInputManager(snet_entity_t *ent, void *args);
-void SNetDataStorageManager(snet_entity_t *ent, void *args);
+void SNetInputManagerInit(void);
+void SNetInputManagerStart(void);
+void SNetOutputManagerInit(void);
+void SNetOutputManagerStart(void);
+void SNetOutputManagerStop(void);
+void SNetDataStorageInit(void);
+void SNetDataStorageDestroy(void);
 
 snet_ref_t *SNetRefIncoming(snet_ref_t ref);
 void SNetRefOutgoing(snet_ref_t *ref);
