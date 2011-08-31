@@ -16,7 +16,7 @@ void SNetOutputManager(snet_entity_t *ent, void *args);
 void SNetInputManager(snet_entity_t *ent, void *args);
 void SNetDataStorageManager(snet_entity_t *ent, void *args);
 
-snet_ref_t *SNetRefIncoming(int node, int interface, uintptr_t data);
+snet_ref_t *SNetRefIncoming(snet_ref_t ref);
 void SNetRefOutgoing(snet_ref_t *ref);
 void *SNetRefFetch(snet_ref_t *ref);
 void SNetRefUpdate(snet_ref_t *ref, int value);
