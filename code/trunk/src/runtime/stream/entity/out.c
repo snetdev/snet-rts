@@ -28,7 +28,6 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 {
   int i, name;
   snet_record_t *out_rec, *old_rec;
-  snet_copy_fun_t copyfun = SNetInterfaceGet(if_id)->copyfun;
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   struct timeval tv_in;
