@@ -65,3 +65,11 @@ void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
 {
   return;
 }
+
+void SNetDistribRemoteFetch(snet_ref_t *ref)
+{
+}
+
+void SNetDistribRemoteUpdate(snet_ref_t *ref, int count)
+{
+}

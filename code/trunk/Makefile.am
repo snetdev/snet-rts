@@ -150,8 +150,11 @@ libC4SNet_la_SOURCES = \
 	src/interfaces/c4snet/base64.h \
 	src/interfaces/c4snet/base64.c
 if ENABLE_DIST_MPI
-libC4SNet_la_LIBADD = \
-    libdistribmpi.la
+# FIXME: following can't be done because that results in linking
+#        any c4snet interfaced application
+#        to libdistribmpi even when -distrib nodist is selected
+#libC4SNet_la_LIBADD = \
+#    libdistribmpi.la
 endif
 
 libC4SNetc_la_SOURCES = \
