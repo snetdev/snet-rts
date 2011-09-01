@@ -138,10 +138,12 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       break;
     case REC_terminate:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+      RECORD( rec, terminate_rec) = SNetMemAlloc( sizeof( terminate_rec_t));
+      TERM_REC( rec, local) = false;
       break;
     case REC_sort_end:
       RECPTR( rec) = SNetMemAlloc( sizeof( snet_record_types_t));
-      RECORD( rec, sort_end_rec) = SNetMemAlloc( sizeof( sort_end_t));
+      RECORD( rec, sort_end_rec) = SNetMemAlloc( sizeof( sort_end_rec_t));
       SORT_E_REC( rec, level) = va_arg( args, int);
       SORT_E_REC( rec, num) = va_arg( args, int);
       break;
@@ -178,6 +180,7 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       break;
     case REC_terminate:
       new_rec = SNetRecCreate( REC_terminate);
+      TERM_REC(new_rec, local) = TERM_REC(rec, local);
       break;
     default:
       SNetUtilDebugFatal("Can't copy record of type %d", REC_DESCR( rec));
@@ -283,6 +286,18 @@ snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec)
   return DATA_REC( rec, mode);
 }
 
+/*****************************************************************************/
+
+void SNetRecSetFlag( snet_record_t *rec)
+{
+  switch( REC_DESCR( rec)) {
+  case REC_terminate:
+    TERM_REC( rec, local) = true;
+    break;
+  default:
+    SNetUtilDebugFatal("Wrong type in SNetRecSetFlag() (%d)", REC_DESCR(rec));
+  }
+}
 /*****************************************************************************/
 
 snet_stream_t *SNetRecGetStream( snet_record_t *rec)
@@ -549,6 +564,8 @@ void SNetRecSerialise( snet_record_t *rec, void (*packInts)(int, int*),
       packInts(1, &SORT_E_REC(rec, num));
       break;
     case REC_terminate:
+      packInts(1, &TERM_REC(rec, local));
+      break;
     case REC_trigger_initialiser:
       break;
     case REC_sync:
@@ -589,6 +606,9 @@ snet_record_t *SNetRecDeserialise( void (*unpackInts)(int, int*),
       unpackInts(1, &SORT_E_REC(result, num));
       break;
     case REC_terminate:
+      result = SNetRecCreate(enumConversion);
+      unpackInts(1, &TERM_REC(result, local));
+      break;
     case REC_trigger_initialiser:
       result = SNetRecCreate(enumConversion);
       break;

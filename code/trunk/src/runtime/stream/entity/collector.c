@@ -161,6 +161,7 @@ static void ProcessSortRecord(
  */
 static void ProcessTermRecord(
     snet_record_t *rec,
+    snet_record_t **term_rec,
     snet_stream_desc_t *cur_stream,
     snet_streamset_t *readyset,
     int *incount)
@@ -171,8 +172,13 @@ static void ProcessTermRecord(
   SNetStreamClose( cur_stream, true);
   /* update incoming counter */
   *incount -= 1;
-  /* destroy record */
-  SNetRecDestroy( rec);
+
+  if (*term_rec == NULL) {
+    *term_rec = rec;
+  } else {
+    /* destroy record */
+    SNetRecDestroy( rec);
+  }
 }
 
 
@@ -221,6 +227,7 @@ void CollectorTaskDynamic(snet_entity_t *ent, void *arg)
   snet_stream_desc_t *outstream;
   snet_stream_desc_t *curstream = NULL;
   snet_record_t *sort_rec = NULL;
+  snet_record_t *term_rec = NULL;
   int incount = 1;
   bool terminate = false;
 
@@ -282,7 +289,7 @@ void CollectorTaskDynamic(snet_entity_t *ent, void *arg)
 
       case REC_terminate:
         /* termination record: close stream and remove from ready set */
-        ProcessTermRecord(rec, curstream, &readyset, &incount);
+        ProcessTermRecord(rec, &term_rec, curstream, &readyset, &incount);
         /* stop processing this stream */
         curstream = NULL;
         break;
@@ -300,13 +307,18 @@ void CollectorTaskDynamic(snet_entity_t *ent, void *arg)
         RestoreFromWaitingset(&waitingset, &readyset, &sort_rec, outstream);
       } else {
         /* both ready set and waitingset are empty */
+        assert(term_rec != NULL);
+        SNetStreamWrite( outstream, term_rec);
+        term_rec = NULL;
         terminate = true;
-        SNetStreamWrite( outstream, SNetRecCreate( REC_terminate));
       }
     }
     /************* end of termination conditions **********/
   } /* MAIN LOOP END */
 
+  if (term_rec != NULL) {
+    SNetRecDestroy(term_rec);
+  }
   /* close outstream */
   SNetStreamClose( outstream, false);
   /* destroy iterator */
@@ -331,6 +343,7 @@ void CollectorTaskStatic(snet_entity_t *ent, void *arg)
   snet_stream_desc_t *outstream;
   snet_stream_desc_t *curstream = NULL;
   snet_record_t *sort_rec = NULL;
+  snet_record_t *term_rec = NULL;
   snet_record_t *sync_rec = NULL;
   int incount;
   bool terminate = false;
@@ -423,7 +436,7 @@ void CollectorTaskStatic(snet_entity_t *ent, void *arg)
 
       case REC_terminate:
         /* termination record: close stream and remove from ready set */
-        ProcessTermRecord(rec, curstream, &readyset, &incount);
+        ProcessTermRecord(rec, &term_rec, curstream, &readyset, &incount);
         /* stop processing this stream */
         curstream = NULL;
         break;
@@ -455,7 +468,9 @@ void CollectorTaskStatic(snet_entity_t *ent, void *arg)
           SNetStreamWrite( outstream, sync_rec);
           sync_rec = NULL;
         } else {
-          SNetStreamWrite( outstream, SNetRecCreate( REC_terminate));
+          assert(term_rec != NULL);
+          SNetStreamWrite( outstream, term_rec);
+          term_rec = NULL;
         }
       }
     } else if (incount==1 && sync_rec==NULL) {
@@ -483,6 +498,10 @@ void CollectorTaskStatic(snet_entity_t *ent, void *arg)
   } /* MAIN LOOP END */
 
   assert(sync_rec == NULL);
+
+  if (term_rec != NULL) {
+    SNetRecDestroy(term_rec);
+  }
   /* close outstream */
   SNetStreamClose( outstream, false);
   /* destroy iterator */
