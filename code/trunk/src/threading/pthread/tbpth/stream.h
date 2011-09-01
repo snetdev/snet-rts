@@ -25,6 +25,11 @@ struct snet_stream_t {
   int is_poll;
 
   snet_locvec_t *source;
+
+  struct {
+    void (*func)(void*);
+    void *arg;
+  } callback_read;
 };
 
 

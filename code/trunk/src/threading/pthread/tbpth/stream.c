@@ -25,6 +25,14 @@ snet_locvec_t *SNetStreamGetSource(snet_stream_t *s)
 }
 
 
+void SNetStreamRegisterReadCallback(snet_stream_t *s,
+    void (*callback)(void *), void *cbarg)
+{
+  s->callback_read.func = callback;
+  s->callback_read.arg = cbarg;
+}
+
+
 snet_stream_t *SNetStreamCreate(int capacity)
 {
   snet_stream_t *s = SNetMemAlloc(sizeof(snet_stream_t));
@@ -44,7 +52,11 @@ snet_stream_t *SNetStreamCreate(int capacity)
   s->is_poll = 0;
 
   memset( s->buffer, 0, s->size*sizeof(void*) );
+
   s->source = NULL;
+
+  s->callback_read.func = NULL;
+  s->callback_read.arg = NULL;
   return s;
 }
 
@@ -128,6 +140,11 @@ void *SNetStreamRead(snet_stream_desc_t *sd)
   s->count--;
 
   if (s->count == s->size-1) pthread_cond_signal(&s->notfull);
+
+  /* call the read callback function */
+  if (s->callback_read.func) {
+    s->callback_read.func(s->callback_read.arg);
+  }
 
   pthread_mutex_unlock( &s->lock);
 

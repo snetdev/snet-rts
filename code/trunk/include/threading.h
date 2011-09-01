@@ -169,6 +169,22 @@ void SNetStreamSetSource(snet_stream_t *s, snet_locvec_t *lv);
 snet_locvec_t *SNetStreamGetSource(snet_stream_t *s);
 
 
+
+/**
+ * Register a callback function for the stream that is called
+ * by the consumer after every read, with a specified argument.
+ *
+ * @param s         the stream
+ * @param callback  the callback function
+ * @param cbarg     the argument that is passed to callback
+ *
+ * @note IMPORTANT: Make sure you register the callback before you
+ *       need it, i.e., before the consumer reads from it!
+ */
+void SNetStreamRegisterReadCallback(snet_stream_t *s,
+    void (*callback)(void *), void *cbarg);
+
+
 /**
  * Open a stream for usage within an entity
  *
