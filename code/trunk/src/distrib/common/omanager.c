@@ -19,9 +19,11 @@ void SNetDistribNewOut(snet_dest_t *dest, snet_stream_t *stream)
   pthread_mutex_lock(&newStreamsMutex);
 
   SNetTupleListAppendEnd(newStreams, tuple);
-  snet_stream_desc_t *sd = SNetStreamOpen(wakeupStream, 'w');
-  SNetStreamTryWrite(sd, (void*)1);
-  SNetStreamClose(sd, false);
+  if (wakeupStream != NULL) {
+    snet_stream_desc_t *sd = SNetStreamOpen(wakeupStream, 'w');
+    SNetStreamTryWrite(sd, (void*)1);
+    SNetStreamClose(sd, false);
+  }
 
   pthread_mutex_unlock(&newStreamsMutex);
 }
@@ -46,11 +48,11 @@ void SNetOutputManager(snet_entity_t *ent, void *args);
 void SNetOutputManagerInit(void)
 {
   newStreams = SNetTupleListCreate(0);
-  wakeupStream = SNetStreamCreate(1);
 }
 
 void SNetOutputManagerStart(void)
 {
+  wakeupStream = SNetStreamCreate(1);
   SNetThreadingSpawn(
     SNetEntityCreate( ENTITY_other, -1, NULL,
       "output_manager", &SNetOutputManager, NULL));
