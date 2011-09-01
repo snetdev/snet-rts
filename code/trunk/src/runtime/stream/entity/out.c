@@ -148,6 +148,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
       }
     }
   } else {
+    out_rec = NULL;
     SNetUtilDebugFatalEnt( hnd->ent,
         "[BOX] SNetOut: variant_num <= 0"
         );

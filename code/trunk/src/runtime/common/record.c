@@ -180,6 +180,7 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       new_rec = SNetRecCreate( REC_terminate);
       break;
     default:
+      new_rec = NULL;
       SNetUtilDebugFatal("Can't copy record of type %d", REC_DESCR( rec));
       break;
   }
@@ -297,6 +298,7 @@ snet_stream_t *SNetRecGetStream( snet_record_t *rec)
     result = COLL_REC( rec, output);
     break;
   default:
+    result = NULL;
     SNetUtilDebugFatal("Wrong type in SNetRecGetStream() (%d)", REC_DESCR(rec));
     break;
   }

@@ -476,9 +476,8 @@ static int C4SNetDataSerialize( FILE *file, void *ptr)
 
 static int C4SNetDataDeserializeTypePart(const char *buf, int size, c4snet_vtype_t *vtype, c4snet_type_t *type) 
 {
-  int count = 0;
   char *c;
-  int n;
+  int n = 0, count = 0;
   (void) size; /* NOT USED */
 
   c = strchr(buf, '[');

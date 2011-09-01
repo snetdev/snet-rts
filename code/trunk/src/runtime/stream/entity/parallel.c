@@ -330,7 +330,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
 #ifdef ENABLE_GC_STATE
           snet_variant_t *synctype = SNetRecGetVariant(rec);
           if (synctype!=NULL) {
-            snet_stream_desc_t *last;
+            snet_stream_desc_t *last = NULL;
             int cnt = 0;
 
             /* terminate affected branches */

@@ -464,6 +464,7 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	    if(attr != NULL) {
 	      label = SNetInLabelToId(parser.labels, attr->value);
 	    } else{
+              label = -1;
 	      yyerror("Field without label found!");
 	    }
 
