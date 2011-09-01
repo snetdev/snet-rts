@@ -22,4 +22,4 @@ $(TARGET).lpel: $(TARGET).snet $(BOXES)
 
 clean:
 	rm -f $(TARGET).[och] $(BOXES) mon_*.log *tasks.map
-	libtool --mode=clean rm -f $(TARGET) $(TARGET).lo $(TARGET).lpel
+	$(SNET_LIBS)/libtool --mode=clean rm -f $(TARGET) $(TARGET).lo $(TARGET).lpel
