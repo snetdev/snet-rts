@@ -264,10 +264,9 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
           (parg->is_det) ? &counter : NULL
           );
       /* after terminate, it is not necessary to send a sort record */
-      PutToBuffers( outstreams, num, i,
-          SNetRecCreate( REC_terminate),
-          NULL
-          );
+      rec = SNetRecCreate( REC_terminate);
+      SNetRecSetFlag(rec);
+      PutToBuffers( outstreams, num, i, rec, NULL);
       SNetStreamClose( outstreams[i], false);
       outstreams[i] = NULL;
       num_init_branches += 1;
@@ -337,11 +336,13 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
             for( i=0; i<num; i++) {
               if ( VariantIsSupertypeOfAllOthers( synctype,
                     SNetVariantListListGet( parg->variant_lists, i)) ) {
+                snet_record_t *term_rec = SNetRecCreate(REC_terminate);
 #ifdef DEBUG_PRINT_GC
                 SNetUtilDebugNoticeEnt( ent,
                     "[PAR] Terminate branch %d due to outtype of synchrocell!", i);
 #endif
-                SNetStreamWrite(outstreams[i], SNetRecCreate(REC_terminate));
+                SNetRecSetFlag(term_rec);
+                SNetStreamWrite(outstreams[i], term_rec);
                 SNetStreamClose(outstreams[i], false);
                 outstreams[i] = NULL;
               }

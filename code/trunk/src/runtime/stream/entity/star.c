@@ -189,6 +189,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
         }
 #ifdef ENABLE_GC
         else if (sync_cleanup) {
+          snet_record_t *term_rec;
           /*
            * If sync_cleanup is set, we decided to postpone termination
            * due to garbage collection triggered by a sync record until now.
@@ -200,9 +201,12 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
           SNetStreamWrite( nextstream,
               SNetRecCreate( REC_sync, sarg->input) );
 
+
           /* send a terminate record to collector, it will close and
              destroy the stream */
-          SNetStreamWrite( outstream, SNetRecCreate(REC_terminate));
+          term_rec = SNetRecCreate(REC_terminate);
+          SNetRecSetFlag(term_rec);
+          SNetStreamWrite( outstream, term_rec);
 
           terminate = true;
 #ifdef DEBUG_PRINT_GC
@@ -252,11 +256,14 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
              * is received, as we create the operand network then.
              */
             if (nextstream != NULL) {
+              snet_record_t *term_rec;
               /* forward the sync record  */
               SNetStreamWrite( nextstream, rec);
               /* send a terminate record to collector, it will close and
                  destroy the stream */
-              SNetStreamWrite( outstream, SNetRecCreate(REC_terminate));
+              term_rec = SNetRecCreate(REC_terminate);
+              SNetRecSetFlag(term_rec);
+              SNetStreamWrite( outstream, term_rec);
 
               terminate = true;
 #ifdef DEBUG_PRINT_GC

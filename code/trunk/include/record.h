@@ -36,7 +36,7 @@ typedef struct {
 #define DATA_REC( name, component) RECORD( name, data_rec)->component
 #define SYNC_REC( name, component) RECORD( name, sync_rec)->component
 #define SORT_E_REC( name, component) RECORD( name, sort_end_rec)->component
-#define TERMINATE_REC( name, component) RECORD( name, terminate_hnd)->component
+#define TERM_REC( name, component) RECORD( name, terminate_rec)->component
 #define COLL_REC( name, component) RECORD( name, coll_rec)->component
 
 #include "distribution.h"
@@ -76,10 +76,10 @@ typedef struct {
 typedef struct {
   int num;
   int level;
-} sort_end_t;
+} sort_end_rec_t;
 
 typedef struct {
-  /* empty */
+  bool local; /* a flag that is set only at a local GC cleanup */
 } terminate_rec_t;
 
 typedef struct {
@@ -92,7 +92,7 @@ union record_types {
   data_rec_t *data_rec;
   sync_rec_t *sync_rec;
   coll_rec_t *coll_rec;
-  sort_end_t *sort_end_rec;
+  sort_end_rec_t *sort_end_rec;
   terminate_rec_t *terminate_rec;
 };
 
@@ -124,6 +124,8 @@ snet_record_t *SNetRecSetInterfaceId( snet_record_t *rec, int id);
 
 snet_record_mode_t SNetRecGetDataMode( snet_record_t *rec);
 snet_record_t *SNetRecSetDataMode( snet_record_t *rec, snet_record_mode_t mode);
+
+void SNetRecSetFlag( snet_record_t *rec);
 
 snet_stream_t *SNetRecGetStream( snet_record_t *rec);
 
