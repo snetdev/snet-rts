@@ -35,7 +35,7 @@ typedef struct {
   unsigned char padding[64-sizeof(int)];
 } snet_atomiccnt_t;
 
-#define SNET_ATOMICCNT_INITIALIZER(i)  {(i)}
+#define SNET_ATOMICCNT_INITIALIZER(i)  {(i), {0}}
 
 static inline void SNetAtomicCntSet(snet_atomiccnt_t *cnt, int val)
 { (void) __sync_lock_test_and_set(&cnt->counter, val); }

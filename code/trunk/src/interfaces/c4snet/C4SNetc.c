@@ -60,12 +60,15 @@ char *C4SNetGenBoxWrapper( char *box_name,
 {
   int i;
   char *wrapper_code, *tmp_str, *c_fqn;
-  
+  (void) num_out_types; /* NOT USED */
+  (void) out_types; /* NOT USED */
+  (void) meta_data; /* NOT USED */
+
   /* construct full SAC function name */
   c_fqn = box_name;
-  
+
   /* generate prototype of SAC function */
-  wrapper_code = 
+  wrapper_code =
     (char *)malloc( ( strlen( "extern void *") + 1) * sizeof( char)); 
   strcpy( wrapper_code, "extern void *");
 

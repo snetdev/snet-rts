@@ -150,7 +150,7 @@ static snetin_interface_t *interfaces = NULL;
 static obs_socket_t *ObserverInitSocket(const char *addr, int port)
 {
   obs_socket_t *new = SNetMemAlloc(sizeof(obs_socket_t));
-  int i = 0;
+  unsigned int i = 0;
   int res;
 
   if(new == NULL){
@@ -351,7 +351,8 @@ static void *ObserverDispatch(void *arg)
   int ret;
   obs_socket_t *temp = NULL;
   int len = 0;
-  int i = 0;
+  unsigned int i = 0;
+  (void) arg; /* NOT USED */
   pthread_mutex_lock(&connection_mutex);
 
   /* Loop until the observer system is terminated */
@@ -406,7 +407,7 @@ static void *ObserverDispatch(void *arg)
 	    char buf[BUF_SIZE];
 	    int buflen;
 
-	    for(i = 0; i < strlen(temp->buffer); i++){
+	    for (i = 0; i < strlen(temp->buffer); i++){
 	      buf[i] = temp->buffer[i];
 	    }
 
@@ -868,6 +869,7 @@ static void ObserverBoxTask(snet_entity_t *ent, void *arg)
   snet_record_t *rec = NULL;
   bool terminate = false;
   snet_stream_desc_t *instream, *outstream;
+  (void) ent; /* NOT USED */
 
   instream  = SNetStreamOpen(hnd->inbuf,  'r');
   outstream = SNetStreamOpen(hnd->outbuf, 'w');

@@ -142,6 +142,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
   bool sync_cleanup = false;
   snet_record_t *rec;
   int counter = 0;
+  (void) ent; /* NOT USED */
 
   instream  = SNetStreamOpen(sarg->input, 'r');
   outstream = SNetStreamOpen(sarg->output, 'w');

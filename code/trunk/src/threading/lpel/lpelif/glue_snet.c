@@ -192,6 +192,7 @@ int SNetThreadingCleanup(void)
  */
 void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 {
+  (void) ent; /* NOT USED */
   lpel_task_t *t = LpelTaskSelf();
   assert(t != NULL);
   mon_task_t *mt = LpelTaskGetMon(t);

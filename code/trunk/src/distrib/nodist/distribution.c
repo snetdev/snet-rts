@@ -12,8 +12,11 @@ static pthread_mutex_t exitMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 {
-    node_location = 0;
-    SNetDataStorageInit();
+  (void) argc; /* NOT USED */
+  (void) argv; /* NOT USED */
+  (void) info; /* NOT USED */
+  node_location = 0;
+  SNetDataStorageInit();
 }
 
 void SNetDistribStart(void)
@@ -22,6 +25,8 @@ void SNetDistribStart(void)
 
 void SNetDistribStop(bool global)
 {
+  (void) global; /* NOT USED */
+
   pthread_mutex_lock(&exitMutex);
   running = false;
   pthread_cond_signal(&exitCond);
@@ -43,6 +48,7 @@ int SNetDistribGetNodeId(void)
 
 bool SNetDistribIsNodeLocation(int location)
 {
+  (void) location; /* NOT USED */
   /* with nodist, all entities should be built */
   return true;
 }
@@ -54,33 +60,50 @@ bool SNetDistribIsRootNode(void)
 
 snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
 {
-    return input;
+  (void) info; /* NOT USED */
+  (void) input; /* NOT USED */
+  (void) loc; /* NOT USED */
+
+  return input;
 }
 
 void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
                            snet_startup_fun_t fun)
 {
+  (void) info; /* NOT USED */
+  (void) dynamicIndex; /* NOT USED */
+  (void) dynamicLoc; /* NOT USED */
+  (void) fun; /* NOT USED */
   return;
 }
 
 void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
                            snet_startup_fun_t fun)
 {
+  (void) info; /* NOT USED */
+  (void) dynamicIndex; /* NOT USED */
+  (void) dynamicLoc; /* NOT USED */
+  (void) fun; /* NOT USED */
   return;
 }
 
 void SNetDistribPack(void *src, ...)
 {
+  (void) src; /* NOT USED */
 }
 
 void SNetDistribUnpack(void *dst, ...)
 {
+  (void) dst; /* NOT USED */
 }
 
 void SNetDistribRemoteFetch(snet_ref_t *ref)
 {
+  (void) ref; /* NOT USED */
 }
 
 void SNetDistribRemoteUpdate(snet_ref_t *ref, int count)
 {
+  (void) ref; /* NOT USED */
+  (void) count; /* NOT USED */
 }

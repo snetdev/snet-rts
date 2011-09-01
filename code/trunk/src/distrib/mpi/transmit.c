@@ -65,7 +65,7 @@ snet_record_t *RecvRecord(snet_dest_t **recordDest)
     MPI_Get_count(&status, MPI_PACKED, &count);
 
     MPI_Pack_size(count, MPI_PACKED, MPI_COMM_WORLD, &recvBuf.offset);
-    if (recvBuf.offset > recvBuf.size) {
+    if ((unsigned) recvBuf.offset > recvBuf.size) {
       SNetMemFree(recvBuf.data);
       recvBuf.data = SNetMemAlloc(recvBuf.offset);
       recvBuf.size = recvBuf.offset;

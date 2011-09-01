@@ -10,7 +10,7 @@ void MPIPack(mpi_buf_t *buf, void *src, MPI_Datatype type, int count)
   char *newBuf;
 
   MPI_Pack_size(count, type, MPI_COMM_WORLD, &size);
-  if (size > buf->size - buf->offset) {
+  if ((unsigned) size > buf->size - buf->offset) {
     newBuf = SNetMemAlloc(buf->offset + size);
     memcpy(newBuf, buf->data, buf->offset);
     SNetMemFree(buf->data);

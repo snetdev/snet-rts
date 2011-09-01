@@ -174,7 +174,7 @@ int SNetUtilBitmapSize(snet_util_bitmap_t *map)
  *
  ******************************************************************************/
 
-int SNetUtilBitmapSet(snet_util_bitmap_t *map, int bit)
+int SNetUtilBitmapSet(snet_util_bitmap_t *map, unsigned int bit)
 {
   int old;
 
@@ -206,11 +206,11 @@ int SNetUtilBitmapSet(snet_util_bitmap_t *map, int bit)
  *
  ******************************************************************************/
 
-int SNetUtilBitmapClear(snet_util_bitmap_t *map, int bit)
+int SNetUtilBitmapClear(snet_util_bitmap_t *map, unsigned int bit)
 {
   int old;
 
-  if(bit < 0 && bit >= map->size) {
+  if(bit >= map->size) {
     return SNET_BITMAP_ERR;
   }
 
@@ -278,9 +278,9 @@ int SNetUtilBitmapFindNSet(snet_util_bitmap_t *map)
  *
  ******************************************************************************/
 
-int SNetUtilBitmapGet(snet_util_bitmap_t *map, int bit)
+int SNetUtilBitmapGet(snet_util_bitmap_t *map, unsigned int bit)
 {
-  if(bit < 0 && bit >= map->size) {
+  if(bit >= map->size) {
     return SNET_BITMAP_ERR;
   }
   

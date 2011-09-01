@@ -668,13 +668,17 @@ static void MonCbStreamReplace(mon_stream_t *ms, unsigned int new_sid)
  * @pre ms != NULL
  */
 static void MonCbStreamReadPrepare(mon_stream_t *ms)
-{ return; }
+{
+  (void) ms; /* NOT USED */
+  return;
+}
 
 /**
  * @pre ms != NULL
  */
 static void MonCbStreamReadFinish(mon_stream_t *ms, void *item)
 {
+  (void) item; /* NOT USED */
   assert( ms != NULL );
 
   ms->counter++;
@@ -686,7 +690,11 @@ static void MonCbStreamReadFinish(mon_stream_t *ms, void *item)
  * @pre ms != NULL
  */
 static void MonCbStreamWritePrepare(mon_stream_t *ms, void *item)
-{ return; }
+{
+  (void) ms; /* NOT USED */
+  (void) item; /* NOT USED */
+  return;
+}
 
 /**
  * @pre ms != NULL

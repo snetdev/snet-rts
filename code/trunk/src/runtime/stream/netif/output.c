@@ -146,6 +146,7 @@ static void GlobOutputTask(snet_entity_t *ent, void* data)
   bool terminate = false;
   handle_t *hnd = (handle_t *)data;
   snet_record_t *rec = NULL;
+  (void) ent; /* NOT USED */
 
   if(hnd->buffer != NULL) {
     snet_stream_desc_t *instream = SNetStreamOpen(hnd->buffer, 'r');

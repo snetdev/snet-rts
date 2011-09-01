@@ -178,6 +178,10 @@ void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
                           snet_startup_fun_t fun)
 {
   int *counter = (int*) SNetInfoDelTag(info, infoCounter);
+  (void) dynamicIndex; /* NOT USED */
+  (void) dynamicLoc; /* NOT USED */
+  (void) fun; /* NOT USED */
+
   SNetMemFree(counter);
   SNetInfoSetTag(info, infoCounter, (uintptr_t) NULL, NULL);
   return;

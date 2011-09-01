@@ -281,6 +281,7 @@ static void NameshiftTask(snet_entity_t *ent, void *arg)
   bool terminate = false;
   int name, offset, val;
   snet_ref_t *field;
+  (void) ent; /* NOT USED */
 
   instream  = SNetStreamOpen(farg->input, 'r');
   outstream = SNetStreamOpen(farg->output, 'w');

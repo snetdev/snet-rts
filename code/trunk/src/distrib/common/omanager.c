@@ -75,6 +75,8 @@ void SNetOutputManager(snet_entity_t *ent, void *args)
   snet_streamset_t outgoing = NULL;
   snet_stream_dest_map_t *streamMap = SNetStreamDestMapCreate(0);
   snet_stream_desc_t *wakeupDesc = SNetStreamOpen(wakeupStream, 'r');
+  (void) ent; /* NOT USED */
+  (void) args; /* NOT USED */
 
   SNetStreamsetPut(&outgoing, wakeupDesc);
 

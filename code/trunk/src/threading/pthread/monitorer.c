@@ -252,6 +252,7 @@ static void ProcessMonInfo(snet_moninfo_t *moninfo, struct timeval *timestamp, c
 static void *MonitorThread(void *arg)
 {
   mlist_node_t *node = NULL;
+  (void) arg; /* NOT USED */
 
   while(1) { /* MAIN EVENT LOOP */
 

@@ -51,7 +51,7 @@ snet_hashtable_t *SNetHashtableCreate(int size, snet_hashtable_compare_fun_t com
 
 void SNetHashtableDestroy(snet_hashtable_t *table)
 {
-  int i;
+  unsigned int i;
   hashtable_entry_t *next;
 
   for(i = 0; i < table->size; i++) {
@@ -99,7 +99,7 @@ void *SNetHashtableGet(snet_hashtable_t *table, uint64_t key)
 uint64_t SNetHashtableGetKey(snet_hashtable_t *table, 
 			     void *value) 
 {
-  int i;
+  unsigned int i;
   hashtable_entry_t *temp;
 
   if(table->elements > 0) {

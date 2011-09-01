@@ -190,6 +190,7 @@ static void FeedbackCollTask(snet_entity_t *ent, void *arg)
 {
   fbcoll_arg_t *fbcarg = (fbcoll_arg_t *)arg;
   struct fbcoll_state state;
+  (void) ent; /* NOT USED */
 
   /* initialise state */
   state.terminate = false;
@@ -248,6 +249,7 @@ static void FeedbackDispTask(snet_entity_t *ent, void *arg)
   snet_stream_desc_t *backstream;
   bool terminate = false;
   snet_record_t *rec;
+  (void) ent; /* NOT USED */
 
   instream   = SNetStreamOpen(fbdarg->in,  'r');
   outstream  = SNetStreamOpen(fbdarg->out, 'w');
@@ -331,7 +333,7 @@ typedef struct{
 
 #ifdef FEEDBACK_STREAM_EMITTER
 
-static void FeedbackBufTask(snet_entity_t *ent, void *arg)
+static void FeedbackBufTask(snet_entity_t *, void *arg)
 {
   fbbuf_arg_t *fbbarg = (fbbuf_arg_t *)arg;
 
@@ -392,6 +394,7 @@ static void FeedbackBufTask(snet_entity_t *ent, void *arg)
   snet_record_t *rec;
   int out_capacity;
   int max_read;
+  (void) ent; /* NOT USED */
 
   instream   = SNetStreamOpen(fbbarg->in,  'r');
   outstream  = SNetStreamOpen(fbbarg->out, 'w');

@@ -60,6 +60,9 @@ int SNetThreadingInit(int argc, char **argv)
   char fname[32];
   /* initialize the entity counter to 0 */
   entity_count = 0;
+  (void) argc; /* NOT USED */
+  (void) argv; /* NOT USED */
+
   pthread_key_create(&thread_self_key, NULL);
 
 #ifdef USE_CORE_AFFINITY

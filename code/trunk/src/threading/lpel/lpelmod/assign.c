@@ -1,6 +1,7 @@
 
 
 #include <string.h>
+#include <limits.h>
 #include <pthread.h>
 
 #include "snettypes.h"
@@ -28,7 +29,8 @@ static nameround_t *head = NULL;
 
 static int findMinBoxes( void)
 {
-  unsigned int i, i_min=0, minval=-1;
+  int i;
+  unsigned int i_min=0, minval=UINT_MAX;
   for (i=0; i<num_workers; i++) {
     if (boxcnt[i] < minval) {
       minval = boxcnt[i];

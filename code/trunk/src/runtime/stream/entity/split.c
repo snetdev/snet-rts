@@ -46,6 +46,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
   snet_stream_iter_t *iter = SNetStreamIterCreate( &repos_set);
   /* a hashtable for fast lookup, initial capacity = 2^4 = 16 */
   hashtab_t *repos_tab = HashtabCreate( 4);
+  (void) ent; /* NOT USED */
 
   /* for deterministic variant: */
   int counter = 0;

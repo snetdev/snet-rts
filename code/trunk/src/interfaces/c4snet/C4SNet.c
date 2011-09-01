@@ -479,6 +479,7 @@ static int C4SNetDataDeserializeTypePart(const char *buf, int size, c4snet_vtype
   int count = 0;
   char *c;
   int n;
+  (void) size; /* NOT USED */
 
   c = strchr(buf, '[');
 

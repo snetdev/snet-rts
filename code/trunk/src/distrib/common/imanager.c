@@ -45,6 +45,8 @@ void SNetInputManagerStart(void)
 void SNetInputManager(snet_entity_t *ent, void *args)
 {
   snet_dest_stream_map_t *destMap = SNetDestStreamMapCreate(0);
+  (void) ent; /* NOT USED */
+  (void) args; /* NOT USED */
 
   while (true) {
     snet_dest_t *dest;
