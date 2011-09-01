@@ -258,6 +258,7 @@ int SNetInRun(int argc, char **argv,
   interfaces = SNetInInterfaceInit(static_interfaces, number_of_interfaces);
 
   info = SNetInfoInit();
+
   SNetDistribInit(argc, argv, info);
 
   (void) SNetThreadingInit(argc, argv);

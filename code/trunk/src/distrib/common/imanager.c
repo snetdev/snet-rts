@@ -14,10 +14,7 @@ void SNetDistribNewIn(snet_dest_t *dest, snet_stream_t *stream)
   snet_tuple_t tuple = {dest, stream};
 
   pthread_mutex_lock(&newStreamsMutex);
-
-  if (newStreams == NULL) newStreams = SNetTupleListCreate(0);
   SNetTupleListAppendEnd(newStreams, tuple);
-
   pthread_mutex_unlock(&newStreamsMutex);
 }
 
@@ -31,13 +28,23 @@ static void UpdateMap(snet_dest_stream_map_t *map)
   pthread_mutex_unlock(&newStreamsMutex);
 }
 
+void SNetInputManager(snet_entity_t *ent, void *args);
+
+void SNetInputManagerInit(void)
+{
+  newStreams = SNetTupleListCreate(0);
+}
+
+void SNetInputManagerStart(void)
+{
+  SNetThreadingSpawn(
+    SNetEntityCreate( ENTITY_other, -1, NULL,
+      "input_manager", &SNetInputManager, NULL));
+}
+
 void SNetInputManager(snet_entity_t *ent, void *args)
 {
   snet_dest_stream_map_t *destMap = SNetDestStreamMapCreate(0);
-
-  pthread_mutex_lock(&newStreamsMutex);
-  if (newStreams == NULL) newStreams = SNetTupleListCreate(0);
-  pthread_mutex_unlock(&newStreamsMutex);
 
   while (true) {
     snet_dest_t *dest;
@@ -63,7 +70,8 @@ void SNetInputManager(snet_entity_t *ent, void *args)
   }
 
   assert(SNetDestStreamMapSize(destMap) == 0);
-  SNetDistribStopOutputManager();
+  SNetOutputManagerStop();
+  SNetDataStorageDestroy();
   pthread_mutex_destroy(&newStreamsMutex);
   SNetDistribStop(false);
   return;

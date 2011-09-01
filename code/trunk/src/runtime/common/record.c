@@ -191,7 +191,6 @@ void SNetRecDestroy( snet_record_t *rec)
 {
   int name;
   snet_ref_t *field;
-  snet_free_fun_t freefun;
 
   switch (REC_DESCR( rec)) {
     case REC_data:

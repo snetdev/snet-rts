@@ -9,10 +9,9 @@
 #include "info.h"
 #include "iomanagers.h"
 #include "memfun.h"
+#include "pack.h"
 #include "snetentities.h"
 #include "threading.h"
-
-extern void SNetRefStart(void);
 
 int node_location;
 snet_info_tag_t prevDest;
@@ -61,18 +60,16 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
       while (0 == i) sleep(5);
     }
   }
+
+  SNetDataStorageInit();
+  SNetOutputManagerInit();
+  SNetInputManagerInit();
 }
 
-void SNetDistribStart()
+void SNetDistribStart(void)
 {
-  SNetRefStart();
-  SNetThreadingSpawn(
-    SNetEntityCreate( ENTITY_other, -1, NULL,
-      "output_manager", &SNetOutputManager, NULL));
-
-  SNetThreadingSpawn(
-    SNetEntityCreate( ENTITY_other, -1, NULL,
-      "input_manager", &SNetInputManager, NULL));
+  SNetOutputManagerStart();
+  SNetInputManagerStart();
 }
 
 void SNetDistribStop(bool global)
@@ -92,7 +89,7 @@ void SNetDistribStop(bool global)
   }
 }
 
-void SNetDistribWaitExit()
+void SNetDistribWaitExit(void)
 {
   pthread_mutex_lock(&exitMutex);
   while (running) pthread_cond_wait(&exitCond, &exitMutex);
@@ -184,4 +181,36 @@ void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
   SNetMemFree(counter);
   SNetInfoSetTag(info, infoCounter, (uintptr_t) NULL, NULL);
   return;
+}
+
+void SNetDistribPack(void *src, ...)
+{
+  va_list args;
+  mpi_buf_t *buf;
+  MPI_Datatype type;
+  int count;
+
+  va_start(args, src);
+  buf = va_arg(args, mpi_buf_t *);
+  type = va_arg(args, MPI_Datatype);
+  count = va_arg(args, int);
+  va_end(args);
+
+  MPIPack(buf, src, type, count);
+}
+
+void SNetDistribUnpack(void *dst, ...)
+{
+  va_list args;
+  mpi_buf_t *buf;
+  MPI_Datatype type;
+  int count;
+
+  va_start(args, dst);
+  buf = va_arg(args, mpi_buf_t *);
+  type = va_arg(args, MPI_Datatype);
+  count = va_arg(args, int);
+  va_end(args);
+
+  MPIUnpack(buf, dst, type, count);
 }
