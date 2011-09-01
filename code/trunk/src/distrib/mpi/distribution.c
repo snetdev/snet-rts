@@ -9,6 +9,7 @@
 #include "info.h"
 #include "iomanagers.h"
 #include "memfun.h"
+#include "pack.h"
 #include "snetentities.h"
 #include "threading.h"
 
@@ -180,4 +181,36 @@ void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
   SNetMemFree(counter);
   SNetInfoSetTag(info, infoCounter, (uintptr_t) NULL, NULL);
   return;
+}
+
+void SNetDistribPack(void *src, ...)
+{
+  va_list args;
+  mpi_buf_t *buf;
+  MPI_Datatype type;
+  int count;
+
+  va_start(args, src);
+  buf = va_arg(args, mpi_buf_t *);
+  type = va_arg(args, MPI_Datatype);
+  count = va_arg(args, int);
+  va_end(args);
+
+  MPIPack(buf, src, type, count);
+}
+
+void SNetDistribUnpack(void *dst, ...)
+{
+  va_list args;
+  mpi_buf_t *buf;
+  MPI_Datatype type;
+  int count;
+
+  va_start(args, dst);
+  buf = va_arg(args, mpi_buf_t *);
+  type = va_arg(args, MPI_Datatype);
+  count = va_arg(args, int);
+  va_end(args);
+
+  MPIUnpack(buf, dst, type, count);
 }

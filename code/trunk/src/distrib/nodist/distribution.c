@@ -69,6 +69,14 @@ void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
   return;
 }
 
+void SNetDistribPack(void *src, ...)
+{
+}
+
+void SNetDistribUnpack(void *dst, ...)
+{
+}
+
 void SNetDistribRemoteFetch(snet_ref_t *ref)
 {
 }

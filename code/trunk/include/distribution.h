@@ -27,6 +27,9 @@ void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
 void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
                           snet_startup_fun_t fun);
 
+void SNetDistribPack(void *src, ...);
+void SNetDistribUnpack(void *dst, ...);
+
 snet_ref_t *SNetRefCreate(void *data, int interface);
 snet_ref_t *SNetRefCopy(snet_ref_t *ref);
 void *SNetRefGetData(snet_ref_t *ref);
