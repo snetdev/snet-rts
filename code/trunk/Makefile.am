@@ -120,13 +120,13 @@ BUILT_SOURCES = src/runtime/stream/netif/parser.h
 AM_YFLAGS = -d
 
 libtbpthread_la_SOURCES = \
-	src/threading/pthread/tbpth/entity.c \
-	src/threading/pthread/tbpth/entity.h \
-	src/threading/pthread/tbpth/stream.c \
-	src/threading/pthread/tbpth/stream.h \
-	src/threading/pthread/tbpth/streamset.c \
-	src/threading/pthread/tbpth/monitorer.c \
-	src/threading/pthread/tbpth/monitorer.h
+	src/threading/pthread/entity.c \
+	src/threading/pthread/entity.h \
+	src/threading/pthread/stream.c \
+	src/threading/pthread/stream.h \
+	src/threading/pthread/streamset.c \
+	src/threading/pthread/monitorer.c \
+	src/threading/pthread/monitorer.h
 
 if ENABLE_TH_LPEL
 pkglib_LTLIBRARIES += libtblpel.la 
