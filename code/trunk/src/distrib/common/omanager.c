@@ -18,23 +18,7 @@ void SNetDistribNewOut(snet_dest_t *dest, snet_stream_t *stream)
 
   pthread_mutex_lock(&newStreamsMutex);
 
-  if (newStreams == NULL) newStreams = SNetTupleListCreate(0);
-
   SNetTupleListAppendEnd(newStreams, tuple);
-  if (wakeupStream != NULL) {
-    snet_stream_desc_t *sd = SNetStreamOpen(wakeupStream, 'w');
-    SNetStreamTryWrite(sd, (void*)1);
-    SNetStreamClose(sd, false);
-  }
-
-  pthread_mutex_unlock(&newStreamsMutex);
-}
-
-void SNetDistribStopOutputManager()
-{
-  pthread_mutex_lock(&newStreamsMutex);
-
-  running = false;
   if (wakeupStream != NULL) {
     snet_stream_desc_t *sd = SNetStreamOpen(wakeupStream, 'w');
     SNetStreamTryWrite(sd, (void*)1);
@@ -59,20 +43,40 @@ static void UpdateMap(snet_stream_dest_map_t *map, snet_streamset_t *set)
   pthread_mutex_unlock(&newStreamsMutex);
 }
 
+void SNetOutputManager(snet_entity_t *ent, void *args);
+
+void SNetOutputManagerInit(void)
+{
+  newStreams = SNetTupleListCreate(0);
+}
+
+void SNetOutputManagerStart(void)
+{
+  wakeupStream = SNetStreamCreate(1);
+  SNetThreadingSpawn(
+    SNetEntityCreate( ENTITY_other, -1, NULL,
+      "output_manager", &SNetOutputManager, NULL));
+}
+
+void SNetOutputManagerStop(void)
+{
+  pthread_mutex_lock(&newStreamsMutex);
+
+  running = false;
+  snet_stream_desc_t *sd = SNetStreamOpen(wakeupStream, 'w');
+  SNetStreamTryWrite(sd, (void*)1);
+  SNetStreamClose(sd, false);
+
+  pthread_mutex_unlock(&newStreamsMutex);
+}
+
 void SNetOutputManager(snet_entity_t *ent, void *args)
 {
-  snet_stream_desc_t *wakeupDesc;
   snet_streamset_t outgoing = NULL;
   snet_stream_dest_map_t *streamMap = SNetStreamDestMapCreate(0);
-
-  wakeupStream = SNetStreamCreate(1);
-  wakeupDesc = SNetStreamOpen(wakeupStream, 'r');
+  snet_stream_desc_t *wakeupDesc = SNetStreamOpen(wakeupStream, 'r');
 
   SNetStreamsetPut(&outgoing, wakeupDesc);
-
-  pthread_mutex_lock(&newStreamsMutex);
-  if (newStreams == NULL) newStreams = SNetTupleListCreate(0);
-  pthread_mutex_unlock(&newStreamsMutex);
 
   UpdateMap(streamMap, &outgoing);
   while (running) {

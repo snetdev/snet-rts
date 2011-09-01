@@ -56,7 +56,6 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
   snet_ref_t *field;
   snet_variant_t *pattern;
   snet_record_t *result = SNetRecCopy(storage[0]);
-  snet_copy_fun_t copyfun;
 
   SNetRecAddAsParent( result, storage[0]);
 

@@ -22,8 +22,6 @@
 
 #define MONINFO_USE_RECORD_EVENTS  /* enable processing of record events */
 
-typedef enum moninfo_event snet_moninfo_event_t;
-typedef enum moninfo_descr snet_moninfo_descr_t;
 typedef union moninfo_types snet_moninfo_types_t;
 
 /* macros for monitoring information */
@@ -34,7 +32,7 @@ typedef union moninfo_types snet_moninfo_types_t;
 #define REC_MONINFO( name, component) MONINFOPTR( name) ->moninfo_rec.component
 
 
-enum moninfo_event {
+typedef enum {
   EV_INPUT_ARRIVE=0,
   EV_BOX_START,
   EV_BOX_WRITE,
@@ -44,11 +42,11 @@ enum moninfo_event {
   EV_SYNC_FIRST,
   EV_SYNC_NEXT,
   EV_SYNC_FIRE,
-};
+} snet_moninfo_event_t;
 
-enum moninfo_descr {
+typedef enum {
   MON_RECORD=0,
-};
+} snet_moninfo_descr_t;
 
 
 /* data structure of additional monitoring information of records (e.g., shape, etc.) */

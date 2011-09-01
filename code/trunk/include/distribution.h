@@ -13,9 +13,9 @@ typedef struct {
 #include "bool.h"
 
 void SNetDistribInit(int argc, char** argv, snet_info_t *info);
-void SNetDistribStart();
+void SNetDistribStart(void);
 void SNetDistribStop(bool global);
-void SNetDistribWaitExit();
+void SNetDistribWaitExit(void);
 
 int SNetDistribGetNodeId(void);
 bool SNetDistribIsNodeLocation(int location);
@@ -26,6 +26,9 @@ void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
                            snet_startup_fun_t fun);
 void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
                           snet_startup_fun_t fun);
+
+void SNetDistribPack(void *src, ...);
+void SNetDistribUnpack(void *dst, ...);
 
 snet_ref_t *SNetRefCreate(void *data, int interface);
 snet_ref_t *SNetRefCopy(snet_ref_t *ref);

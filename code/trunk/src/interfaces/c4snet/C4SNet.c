@@ -948,14 +948,15 @@ static void C4SNetMPIPackFun(void *cdata, void *buf)
   vtype = data->vtype;
   type = data->type;
 
-  MPIPack(buf, &vtype, MPI_INT, 1);
-  MPIPack(buf, &data->size, MPI_INT, 1);
-  MPIPack(buf, &type, MPI_INT, 1);
+  SNetDistribPack(&vtype, buf, MPI_INT, 1);
+  SNetDistribPack(&data->size, buf, MPI_INT, 1);
+  SNetDistribPack(&type, buf, MPI_INT, 1);
 
   if (data->vtype == VTYPE_array) {
-    MPIPack(buf, data->data.ptr, C4SNetTypeToMPIType(data->type), data->size);
+    SNetDistribPack(data->data.ptr, buf, C4SNetTypeToMPIType(data->type),
+                    data->size);
   } else {
-    MPIPack(buf, &data->data, C4SNetTypeToMPIType(data->type), 1);
+    SNetDistribPack(&data->data, buf, C4SNetTypeToMPIType(data->type), 1);
   }
 }
 
@@ -965,16 +966,16 @@ static void *C4SNetMPIUnpackFun(void *buf)
   int vtype, type, count;
   c4snet_primary_type_t data;
 
-  MPIUnpack(buf, &vtype, MPI_INT, 1);
-  MPIUnpack(buf, &count, MPI_INT, 1);
-  MPIUnpack(buf, &type, MPI_INT, 1);
+  SNetDistribUnpack(&vtype, buf, MPI_INT, 1);
+  SNetDistribUnpack(&count, buf, MPI_INT, 1);
+  SNetDistribUnpack(&type, buf, MPI_INT, 1);
 
   if (vtype == VTYPE_array) {
     data.ptr = SNetMemAlloc(count * sizeOfType(type));
-    MPIUnpack(buf, &data.ptr, C4SNetTypeToMPIType(type), count);
+    SNetDistribUnpack(&data.ptr, buf, C4SNetTypeToMPIType(type), count);
     result = C4SNetDataCreateArray(type, count, data.ptr);
   } else {
-    MPIUnpack(buf, &data, C4SNetTypeToMPIType(type), 1);
+    SNetDistribUnpack(&data, buf, C4SNetTypeToMPIType(type), 1);
     result = C4SNetDataCreate(type, &data);
   }
 

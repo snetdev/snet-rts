@@ -463,7 +463,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     snet_info_t *info,
     int location,
     snet_variant_list_list_t *variant_lists,
-    void **funs, bool is_det)
+    snet_startup_fun_t *funs, bool is_det)
 {
   int i;
   int num;
@@ -553,13 +553,13 @@ snet_stream_t *SNetParallel( snet_stream_t *instream,
 {
   va_list args;
   int i, num;
-  void **funs;
+  snet_startup_fun_t *funs;
 
   num = SNetVariantListListLength( variant_lists);
-  funs = SNetMemAlloc( num * sizeof( void*));
+  funs = SNetMemAlloc( num * sizeof( snet_startup_fun_t));
   va_start( args, variant_lists);
   for( i=0; i<num; i++) {
-    funs[i] = va_arg( args, void*);
+    funs[i] = va_arg( args, snet_startup_fun_t);
   }
   va_end( args);
 
@@ -578,13 +578,13 @@ snet_stream_t *SNetParallelDet( snet_stream_t *inbuf,
 {
   va_list args;
   int i, num;
-  void **funs;
+  snet_startup_fun_t *funs;
 
   num = SNetVariantListListLength( variant_lists);
-  funs = SNetMemAlloc( num * sizeof( void*));
+  funs = SNetMemAlloc( num * sizeof( snet_startup_fun_t));
   va_start( args, variant_lists);
   for( i=0; i<num; i++) {
-    funs[i] = va_arg( args, void*);
+    funs[i] = va_arg( args, snet_startup_fun_t);
   }
   va_end( args);
 

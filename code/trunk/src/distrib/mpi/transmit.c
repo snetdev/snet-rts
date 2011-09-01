@@ -51,7 +51,7 @@ static void MPIUnpackRef(int count, snet_ref_t **dst)
   int i;
   for (i = 0; i < count; i++) {
     snet_ref_t ref = UnpackRef(&recvBuf);
-    dst[i] = SNetRefIncoming(ref.node, ref.interface, ref.data);
+    dst[i] = SNetRefIncoming(ref);
   }
 }
 
