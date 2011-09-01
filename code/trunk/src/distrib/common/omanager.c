@@ -113,8 +113,8 @@ void SNetOutputManager(snet_entity_t *ent, void *args)
 
   pthread_mutex_destroy(&newStreamsMutex);
 
-  SNetStreamClose(wakeupDesc, true);
   SNetStreamsetRemove(&outgoing, wakeupDesc);
+  SNetStreamClose(wakeupDesc, true);
 
   assert(SNetStreamDestMapSize(streamMap) == 0);
   assert(outgoing == NULL);
