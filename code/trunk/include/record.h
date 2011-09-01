@@ -3,22 +3,20 @@
 
 typedef struct record snet_record_t;
 typedef union record_types snet_record_types_t;
-typedef enum record_descr snet_record_descr_t;
-typedef enum record_mode snet_record_mode_t;
 
-enum record_descr {
+typedef enum {
   REC_data=0,
   REC_sync,
   REC_collect,
   REC_sort_end,
   REC_terminate,
   REC_trigger_initialiser,
-};
+} snet_record_descr_t;
 
-enum record_mode {
+typedef enum {
   MODE_textual,
   MODE_binary,
-};
+} snet_record_mode_t;
 
 
 #define SNET_REC_SUBID_NUM  2
