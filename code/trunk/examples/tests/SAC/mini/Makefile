@@ -30,6 +30,8 @@ S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)`
 
 
+LT = $(SNET_LIBS)/libtool
+
 # = = = = = = = = = = = = = = = = = = = =
 TARGET    = mini
 # = = = = = = = = = = = = = = = = = = = =
@@ -38,8 +40,8 @@ TARGET    = mini
 all: $(TARGET)
 
 $(TARGET): lib$(SACTARGET)Mod.so $(TARGET).c
-	libtool --mode=compile $(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c *.c
-	libtool --mode=link    $(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(S4CLIBS) $(LIBSAC4SNET_LA) $(LIBS_LA:%=$(SNETBASE)/%)
+	$(LT) --mode=compile $(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c *.c
+	$(LT) --mode=link    $(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(S4CLIBS) $(LIBSAC4SNET_LA) $(LIBS_LA:%=$(SNETBASE)/%)
 
 lib$(SACTARGET)Mod.so: $(SACTARGET).sac
 	mkdir -p lib include
@@ -51,6 +53,6 @@ $(TARGET).c: $(TARGET).snet
           $(SNETC) $(SNETCFLAGS) $(TARGET).snet
 
 clean:
-	libtool --mode=clean rm -f $(TARGET) $(TARGET).lo
+	$(LT) --mode=clean rm -f $(TARGET) $(TARGET).lo
 	rm -f *.o *.so *.a cwrapper.sac2c $(TARGET).?
 	rm -fr lib include
