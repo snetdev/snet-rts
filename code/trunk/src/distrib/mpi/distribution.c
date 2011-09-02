@@ -78,7 +78,7 @@ void SNetDistribStop(bool global)
 
   if (global) {
     MPI_Comm_size(MPI_COMM_WORLD, &i);
-    for (; i >= 0; i--) {
+    for (i--; i >= 0; i--) {
       MPI_Send(&i, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
     }
   } else {
