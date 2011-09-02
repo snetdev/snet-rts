@@ -74,11 +74,11 @@ void SNetDistribStart(void)
 
 void SNetDistribStop(bool global)
 {
-  int i, size;
+  int i;
 
   if (global) {
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    for (i = 0; i < size; i++) {
+    MPI_Comm_size(MPI_COMM_WORLD, &i);
+    for (; i >= 0; i--) {
       MPI_Send(&i, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
     }
   } else {
