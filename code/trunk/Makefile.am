@@ -183,6 +183,25 @@ libdistribmpi_la_CPPFLAGS = \
 
 endif
 
+
+if ENABLE_DIST_SCC
+pkglib_LTLIBRARIES += libdistribscc.la
+libdistribscc_la_SOURCES = \
+	src/distrib/common/distribcollections.c \
+	src/distrib/common/imanager.c \
+	src/distrib/common/omanager.c \
+	src/distrib/common/reference.c \
+	src/distrib/common/refcollections.c \
+	src/distrib/scc/distribution.c \
+	src/distrib/scc/dest.c
+libdistribscc_la_CPPFLAGS = \
+        $(AM_CPPFLAGS) \
+	-I$(srcdir)/src/distrib/scc \
+	-I$(srcdir)/src/distrib/common \
+	-I$(srcdir)/../../../scc-hg/rcce/include
+
+endif
+
 # common flags
 INCLUDES = -I$(top_srcdir)/include
 
