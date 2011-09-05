@@ -32,6 +32,13 @@ void SNetStreamRegisterReadCallback(snet_stream_t *s,
   s->callback_read.arg = cbarg;
 }
 
+void *SNetStreamGetCallbackArg(snet_stream_desc_t *sd)
+{
+  snet_stream_t *s = sd->stream;
+  assert(s != NULL);
+  return s->callback_read.arg;
+}
+
 
 snet_stream_t *SNetStreamCreate(int capacity)
 {
