@@ -183,9 +183,9 @@ void SNetMonInfoPrint(FILE *f, snet_moninfo_t *mon)
         PrintMonInfoId( f, &(REC_MONINFO( mon, id)) );
         fprintf(f, ",");
         if (REC_MONINFO( mon, parent_ids) != NULL) {
-          LIST_FOR_EACH( REC_MONINFO( mon, parent_ids), par_id)
+          LIST_FOR_EACH( REC_MONINFO( mon, parent_ids), par_id) {
             PrintMonInfoId( f, &par_id );
-          END_FOR
+          }
         }
         if (REC_MONINFO( mon, add_moninfo_rec_data) != NULL) {
           /*TODO*/

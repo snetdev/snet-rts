@@ -230,11 +230,11 @@ void SNetRefSet(snet_ref_t *ref, void *data)
   data_t *tmp = SNetRefDataMapGet(dataMap, *ref);
   tmp->data = data;
 
-  LIST_FOR_EACH(tmp->list, str)
+  LIST_FOR_EACH(tmp->list, str) {
     snet_stream_desc_t *sd = SNetStreamOpen(str, 'w');
     SNetStreamWrite(sd, (void*) 1);
     SNetStreamClose(sd, false);
-  END_FOR
+  }
 
   SNetStreamListDestroy(tmp->list);
   tmp->list = NULL;

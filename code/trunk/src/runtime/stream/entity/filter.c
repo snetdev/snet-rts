@@ -94,9 +94,9 @@ static void FilterArgsDestroy( filter_arg_t *farg)
     int i;
     snet_expr_t *expr;
 
-    LIST_ENUMERATE(farg->guard_exprs, expr, i)
+    LIST_ENUMERATE(farg->guard_exprs, i, expr) {
       SNetFilterInstrListListDestroy( farg->filter_instructions[i]);
-    END_ENUMERATE
+    }
 
     SNetMemFree( farg->filter_instructions);
   }
@@ -189,17 +189,17 @@ static void FilterTask(snet_entity_t *ent, void *arg)
               );
 #endif
 
-          LIST_ENUMERATE( farg->guard_exprs, expr, i)
+          LIST_ENUMERATE( farg->guard_exprs, i, expr) {
             if (SNetEevaluateBool( expr, in_rec) && !done) {
               done = true;
 
-              LIST_FOR_EACH(farg->filter_instructions[i], instr_list)
+              LIST_FOR_EACH(farg->filter_instructions[i], instr_list) {
                 out_rec = SNetRecCreate( REC_data);
                 SNetRecAddAsParent( out_rec, in_rec );
                 SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
                 SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
 
-                LIST_FOR_EACH(instr_list, instr)
+                LIST_FOR_EACH(instr_list, instr) {
                   switch (instr->opcode) {
                     case snet_tag:
                       SNetRecSetTag( out_rec, instr->name,
@@ -217,7 +217,7 @@ static void FilterTask(snet_entity_t *ent, void *arg)
                       break;
                     default: assert(0);
                   }
-                END_FOR
+                }
 
                 SNetRecFlowInherit( farg->input_variant, in_rec, out_rec);
 
@@ -228,9 +228,9 @@ static void FilterTask(snet_entity_t *ent, void *arg)
                     );
 #endif
                   SNetStreamWrite( outstream, out_rec);
-              END_FOR /* forall instruction lists */
+              } /* forall instruction lists */
             } /* if a guard is true first time */
-          END_ENUMERATE
+          }
 
           SNetRecDestroy( in_rec);
           assert(done);
@@ -296,23 +296,23 @@ static void NameshiftTask(snet_entity_t *ent, void *arg)
 
     switch (SNetRecGetDescriptor( rec)) {
       case REC_data:
-        RECORD_FOR_EACH_FIELD(rec, name, field)
+        RECORD_FOR_EACH_FIELD(rec, name, field) {
           if (!SNetVariantHasField(untouched, name)) {
             SNetRecRenameField( rec, name, name + offset);
           }
-        END_FOR
+        }
 
-        RECORD_FOR_EACH_TAG(rec, name, val)
+        RECORD_FOR_EACH_TAG(rec, name, val) {
           if (!SNetVariantHasTag(untouched, name)) {
             SNetRecRenameTag( rec, name, name + offset);
           }
-        END_FOR
+        }
 
-        RECORD_FOR_EACH_BTAG(rec, name, val)
+        RECORD_FOR_EACH_BTAG(rec, name, val) {
           if (!SNetVariantHasBTag(untouched, name)) {
             SNetRecRenameBTag( rec, name, name + offset);
           }
-        END_FOR
+        }
 
         SNetStreamWrite( outstream, rec);
         break;

@@ -45,12 +45,12 @@ static bool MatchesBackPattern( snet_record_t *rec,
   snet_expr_t *expr;
   snet_variant_t *pattern;
 
-  LIST_ZIP_EACH(guards, expr, back_patterns, pattern)
+  LIST_ZIP_EACH(guards, back_patterns, expr, pattern) {
     if (SNetEevaluateBool( expr, rec) &&
         SNetRecPatternMatches(pattern, rec)) {
       return true;
     }
-  END_ZIP
+  }
 
   return false;
 }

@@ -41,12 +41,12 @@ static bool MatchesExitPattern( snet_record_t *rec,
   int i;
   snet_variant_t *pattern;
 
-  LIST_ENUMERATE(exit_patterns, pattern, i)
+  LIST_ENUMERATE(exit_patterns, i, pattern) {
     if (SNetRecPatternMatches(pattern, rec) &&
         SNetEevaluateBool( SNetExprListGet( guards, i), rec)) {
       return true;
     }
-  END_ENUMERATE
+  }
 
   return false;
 }

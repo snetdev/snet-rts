@@ -45,23 +45,23 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
   SNetRecSetInterfaceId( out_rec, if_id);
 
   i = 0;
-  VARIANT_FOR_EACH_FIELD(variant, name)
+  VARIANT_FOR_EACH_FIELD(variant, name) {
     SNetRecSetField( out_rec, name,
         SNetRefCopy(SNetRefCreate(fields[i], if_id)));
     i++;
-  END_FOR
+  }
 
   i = 0;
-  VARIANT_FOR_EACH_TAG(variant, name)
+  VARIANT_FOR_EACH_TAG(variant, name) {
     SNetRecSetTag( out_rec, name, tags[i]);
     i++;
-  END_FOR
+  }
 
   i = 0;
-  VARIANT_FOR_EACH_BTAG(variant, name)
+  VARIANT_FOR_EACH_BTAG(variant, name) {
     SNetRecSetBTag( out_rec, name, btags[i]);
     i++;
-  END_FOR
+  }
 
   SNetMemFree( fields);
   SNetMemFree( tags);
