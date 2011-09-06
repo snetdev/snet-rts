@@ -95,6 +95,7 @@ void SNetDistribWaitExit(void)
   while (running) pthread_cond_wait(&exitCond, &exitMutex);
   pthread_mutex_unlock(&exitMutex);
 
+  SNetDataStorageDestroy();
   MPI_Finalize();
 }
 

@@ -61,6 +61,8 @@ void MAP_FUNCTION(MAP_NAME_H, Destroy)(snet_map_t *map);
 
 int MAP_FUNCTION(MAP_NAME_H, Size)(snet_map_t *map);
 
+MAP_KEY_H MAP_FUNCTION(MAP_NAME_H, FindVal)(snet_map_t *map, MAP_VAL_H val);
+
 void MAP_FUNCTION(MAP_NAME_H, Set)(snet_map_t *map, MAP_KEY_H key, MAP_VAL_H val);
 MAP_VAL_H MAP_FUNCTION(MAP_NAME_H, Get)(snet_map_t *map, MAP_KEY_H key);
 MAP_VAL_H MAP_FUNCTION(MAP_NAME_H, Take)(snet_map_t *map, MAP_KEY_H key);

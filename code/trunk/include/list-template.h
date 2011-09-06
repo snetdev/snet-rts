@@ -1,5 +1,3 @@
-#include <stdint.h>
-
 #ifndef LIST_NAME_H
 #error List requires LIST_NAME_H to be set. Function prefix will be
 #error SNetLIST_NAME_H

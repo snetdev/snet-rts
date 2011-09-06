@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "lpel.h"
 #include "threading.h"
 #include "memfun.h"
@@ -75,6 +77,19 @@ void SNetStreamRegisterReadCallback(snet_stream_t * s,
   dat->callback_read.func = callback;
   dat->callback_read.arg = cbarg;
 }
+
+
+void *SNetStreamGetCallbackArg(snet_stream_desc_t *sd)
+{
+  lpel_stream_t *ls = LpelStreamGet((lpel_stream_desc_t *) sd);
+  usrdata_t *dat;
+
+  assert(ls != NULL);
+
+  dat = LpelStreamGetUsrData(ls);
+  return dat->callback_read.arg;
+}
+
 
 void SNetStreamClose(snet_stream_desc_t * sd, int destroy_stream)
 {

@@ -186,6 +186,16 @@ void SNetStreamRegisterReadCallback(snet_stream_t *s,
 
 
 /**
+ * Get the callback argument from a stream descriptor
+ * @param sd    the stream descriptor
+ * @return  the callabck argument registered previously
+ *          with SNetStreamRegisterReadCallback
+ */
+void *SNetStreamGetCallbackArg(snet_stream_desc_t *sd);
+
+
+
+/**
  * Open a stream for usage within an entity
  *
  * @param stream  the stream to open
