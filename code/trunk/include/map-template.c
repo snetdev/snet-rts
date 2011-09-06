@@ -171,6 +171,21 @@ static int MAP_FUNCTION(MAP_NAME, Find)(snet_map_t *map, MAP_KEY key)
   return -1;
 }
 
+MAP_KEY MAP_FUNCTION(MAP_NAME, FindVal)(snet_map_t *map, MAP_VAL val)
+{
+  int i;
+  for (i = 0; i < map->used; i++) {
+    #ifdef MAP_VAL_CMP
+      if (MAP_VAL_CMP(map->values[i], val)) return map->keys[i];
+    #else
+      if (map->values[i] == val) return map->keys[i];
+    #endif
+  }
+
+  /* Should never get here! */
+  assert(0);
+}
+
 void MAP_FUNCTION(MAP_NAME, Set)(snet_map_t *map, MAP_KEY key, MAP_VAL val)
 {
   int i = MAP_FUNCTION(MAP_NAME, Find)(map, key);
