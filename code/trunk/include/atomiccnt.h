@@ -43,9 +43,14 @@ static inline void SNetAtomicCntSet(snet_atomiccnt_t *cnt, int val)
 static inline unsigned int SNetAtomicCntFetchAndInc(snet_atomiccnt_t *cnt)
 { return __sync_fetch_and_add(&cnt->counter, 1); }
 
+static inline unsigned int SNetAtomicCntIncAndFetch(snet_atomiccnt_t *cnt)
+{ return __sync_add_and_fetch(&cnt->counter, 1); }
 
 static inline unsigned int SNetAtomicCntFetchAndDec(snet_atomiccnt_t *cnt)
 { return __sync_fetch_and_sub(&cnt->counter, 1); }
+
+static inline unsigned int SNetAtomicCntDecAndFetch(snet_atomiccnt_t *cnt)
+{ return __sync_sub_and_fetch(&cnt->counter, 1); }
 
 static inline unsigned int SNetAtomicCntGet(snet_atomiccnt_t *cnt)
 { return __sync_fetch_and_or(&cnt->counter, 0); }
@@ -82,12 +87,32 @@ static inline unsigned int SNetAtomicCntFetchAndInc(snet_atomiccnt_t *cnt)
   return tmp;
 }
 
+static inline unsigned int SNetAtomicCntIncAndFetch(snet_atomiccnt_t *cnt)
+{
+  int tmp;
+  (void) pthread_mutex_lock( &cnt->lock);
+  cnt->counter += 1;
+  tmp = cnt->counter;
+  (void) pthread_mutex_unlock( &cnt->lock);
+  return tmp;
+}
+
 static inline unsigned int SNetAtomicCntFetchAndDec(snet_atomiccnt_t *cnt)
 {
   int tmp;
   (void) pthread_mutex_lock( &cnt->lock);
   tmp = cnt->counter;
   cnt->counter -= 1;
+  (void) pthread_mutex_unlock( &cnt->lock);
+  return tmp;
+}
+
+static inline unsigned int SNetAtomicCntDecAndFetch(snet_atomiccnt_t *cnt)
+{
+  int tmp;
+  (void) pthread_mutex_lock( &cnt->lock);
+  cnt->counter -= 1;
+  tmp = cnt->counter;
   (void) pthread_mutex_unlock( &cnt->lock);
   return tmp;
 }
