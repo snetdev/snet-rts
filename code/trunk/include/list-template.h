@@ -68,6 +68,14 @@
        index < list1->used && index < list2->used; \
        index++)
 
+#define LIST_DEQUEUE_EACH(list, val) \
+  for (int size = 0; \
+       size = list->used, \
+       val = size != 0 ? list->values[list->start] : val, \
+       list->start = size ? (list->start + 1) % list->size : list->start, \
+       list->used = size ? list->used - 1 : list->used, \
+       size != 0;)
+
 typedef struct snet_list_t {
   int size, used, start;
   LIST_VAL_H *values;
