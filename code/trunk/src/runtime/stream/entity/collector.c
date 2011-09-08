@@ -29,16 +29,20 @@
 
 typedef struct {
   snet_stream_t *output;
-  snet_stream_t *input;
-} coll_dyn_arg_t;
+  bool is_static;
+  union {
+    struct {
+      int num;
+      snet_stream_t **inputs;
+    } st;
+    struct {
+      snet_stream_t *input;
+    } dyn;
+  } in;
+} coll_arg_t;
 
-
-typedef struct {
-  snet_stream_t *output;
-  snet_stream_t **inputs;
-  int num;
-} coll_st_arg_t;
-
+#define CARG_ST( carg,name) (carg->in.st.name)
+#define CARG_DYN(carg,name) (carg->in.dyn.name)
 
 
 //FIXME in threading layer?
@@ -212,23 +216,24 @@ static void RestoreFromWaitingset(
 
 
 /*****************************************************************************/
-/* COLLECTOR TASKS                                                           */
+/* COLLECTOR TASK                                                            */
 /*****************************************************************************/
 
 
 /**
- * Collector task for dynamic networks (star/split)
+ * Collector task for dynamic combinators (star/split)
+ * and the static parallel combinator
  */
-void CollectorTaskDynamic(snet_entity_t *ent, void *arg)
+void CollectorTask(snet_entity_t *ent, void *arg)
 {
-  coll_dyn_arg_t *carg = (coll_dyn_arg_t *)arg;
+  coll_arg_t *carg = (coll_arg_t *)arg;
   snet_streamset_t readyset, waitingset;
   snet_stream_iter_t *wait_iter;
   snet_stream_desc_t *outstream;
   snet_stream_desc_t *curstream = NULL;
   snet_record_t *sort_rec = NULL;
   snet_record_t *term_rec = NULL;
-  int incount = 1;
+  int incount;
   bool terminate = false;
 
 
@@ -237,10 +242,26 @@ void CollectorTaskDynamic(snet_entity_t *ent, void *arg)
 
   readyset = waitingset = NULL;
 
-  /* Open initial stream and put into readyset */
-  SNetStreamsetPut( &readyset,
-      SNetStreamOpen(carg->input, 'r')
-      );
+  if (carg->is_static) {
+    int i;
+    incount = CARG_ST(carg, num);
+    /* fill initial readyset of collector */
+    for (i=0; i<incount; i++) {
+      snet_stream_desc_t *tmp;
+      /* open each stream in listening set for reading */
+      tmp = SNetStreamOpen( CARG_ST(carg, inputs[i]), 'r');
+      /* add each stream instreams[i] to listening set of collector */
+      SNetStreamsetPut( &readyset, tmp);
+    }
+    SNetMemFree( CARG_ST(carg, inputs) );
+  } else {
+    incount = 1;
+    /* Open initial stream and put into readyset */
+    SNetStreamsetPut( &readyset,
+        SNetStreamOpen(CARG_DYN(carg, input), 'r')
+        );
+  }
+
   /* create an iterator for waiting set, is reused within main loop*/
   wait_iter = SNetStreamIterCreate( &waitingset);
 
@@ -257,8 +278,7 @@ void CollectorTaskDynamic(snet_entity_t *ent, void *arg)
         break;
 
       case REC_sort_end:
-        ProcessSortRecord(ent, rec, &sort_rec, curstream,
-            &readyset, &waitingset);
+        ProcessSortRecord(ent, rec, &sort_rec, curstream, &readyset, &waitingset);
         /* end processing this stream */
         curstream = NULL;
         break;
@@ -268,7 +288,9 @@ void CollectorTaskDynamic(snet_entity_t *ent, void *arg)
         SNetRecDestroy( rec);
         break;
 
-      case REC_collect: /* only for dynamic collectors! */
+      case REC_collect:
+        /* only for dynamic collectors! */
+        assert( false == carg->is_static );
         /* collect: add new stream to ready set */
 #ifdef DESTROY_TERM_IN_WAITING_UPON_COLLECT
         /* but first, check if we can free resources by checking the
@@ -304,9 +326,37 @@ void CollectorTaskDynamic(snet_entity_t *ent, void *arg)
     if ( SNetStreamsetIsEmpty( &readyset)) {
       /* the streams which had a sort record are in the waitingset */
       if ( !SNetStreamsetIsEmpty( &waitingset)) {
-        RestoreFromWaitingset(&waitingset, &readyset, &sort_rec, outstream);
+        /* check incount */
+        if ( carg->is_static && (1 == incount) ) {
+          /* static collector has only one incoming stream left
+           * -> this input stream can be sent to the collectors
+           *    successor via a sync record
+           * -> collector can terminate
+           */
+          snet_stream_desc_t *in = waitingset;
+
+          SNetStreamWrite( outstream,
+              SNetRecCreate( REC_sync, SNetStreamGet(in))
+              );
+          SNetStreamClose( in, false);
+          terminate = true;
+#ifdef DEBUG_PRINT_GC
+          /* terminating due to GC */
+          SNetUtilDebugNoticeEnt( ent,
+              "[COLL] Terminate static collector as only one branch left!"
+              );
+#endif
+        } else {
+          RestoreFromWaitingset(&waitingset, &readyset, &sort_rec, outstream);
+        }
       } else {
         /* both ready set and waitingset are empty */
+#ifdef DEBUG_PRINT_GC
+        if (carg->is_static) {
+          SNetUtilDebugNoticeEnt( ent,
+              "[COLL] Terminate static collector as no inputs left!");
+        }
+#endif
         assert(term_rec != NULL);
         SNetStreamWrite( outstream, term_rec);
         term_rec = NULL;
@@ -323,193 +373,9 @@ void CollectorTaskDynamic(snet_entity_t *ent, void *arg)
   SNetStreamClose( outstream, false);
   /* destroy iterator */
   SNetStreamIterDestroy( wait_iter);
-  SNetMemFree( carg);
-} /* END of DYNAMIC COLLECTOR TASK */
-
-
-
-
-/*****************************************************************************/
-
-
-/**
- * Collector task for static network (parallel choice)
- */
-void CollectorTaskStatic(snet_entity_t *ent, void *arg)
-{
-  coll_st_arg_t *carg = (coll_st_arg_t *)arg;
-  snet_streamset_t readyset, waitingset;
-  snet_stream_iter_t *wait_iter;
-  snet_stream_desc_t *outstream;
-  snet_stream_desc_t *curstream = NULL;
-  snet_record_t *sort_rec = NULL;
-  snet_record_t *term_rec = NULL;
-  snet_record_t *sync_rec = NULL;
-  int incount;
-  bool terminate = false;
-
-  /* open outstream for writing */
-  outstream = SNetStreamOpen(carg->output, 'w');
-
-  /* initialize input stream counter*/
-  incount = carg->num;
-
-  readyset = waitingset = NULL;
-
-  /* open all (static) input streams */
-  {
-    int i;
-    /* fill initial readyset of collector */
-    for (i=0; i<incount; i++) {
-      snet_stream_desc_t *tmp;
-      /* open each stream in listening set for reading */
-      tmp = SNetStreamOpen( ((snet_stream_t **)carg->inputs)[i], 'r');
-      /* add each stream instreams[i] to listening set of collector */
-      SNetStreamsetPut( &readyset, tmp);
-    }
-    SNetMemFree( carg->inputs );
-  }
-
-  /* create an iterator for waiting set, is reused within main loop*/
-  wait_iter = SNetStreamIterCreate( &waitingset);
-
-
-  /* MAIN LOOP */
-  while( !terminate) {
-    /* get a record */
-    snet_record_t *rec = GetRecord(&readyset, incount, &curstream);
-    /* process the record */
-    switch( SNetRecGetDescriptor( rec)) {
-
-      case REC_data:
-        /* data record: forward to output */
-        SNetStreamWrite( outstream, rec);
-        break;
-
-      case REC_sort_end:
-        ProcessSortRecord(ent, rec, &sort_rec, curstream, &readyset, &waitingset);
-        /* end processing this stream */
-        curstream = NULL;
-        break;
-
-      case REC_sync:
-        {
-          snet_locvec_t *source = SNetStreamGetSource( SNetRecGetStream(rec) );
-          /*
-           * IMPORTANT!
-           *
-           * If source is set, the source is a star dispatcher.
-           * We must not treat the sync record as usual, otherwise
-           * we might result in decrementing the level of subsequent sort
-           * record which has not been incremented by the parallel dispatcher,
-           * messing up the protocol completely.
-           */
-          if (source!=NULL) {
-            /* current locvec is that of a static network,
-             * source is only set at stars (dynamic network)
-             */
-            assert( false == SNetLocvecEqual(source, SNetEntityGetLocvec(ent)) );
-            int res;
-#ifdef DEBUG_PRINT_GC
-            char slocvec[64];
-            (void) SNetLocvecPrint(slocvec, 64, source);
-            SNetUtilDebugNoticeEnt( ent, "[COLL] received REC_sync on %p with source %s!", curstream, slocvec);
-#endif
-            /* store the sync rec */
-            assert(sync_rec == NULL);
-            sync_rec = rec;
-            /* remove stream from readyset */
-            res = SNetStreamsetRemove( &readyset, curstream);
-            assert(res == 0);
-            /* close the stream */
-            SNetStreamClose( curstream, false);
-            incount--;
-            /* stop processing this stream */
-            curstream = NULL;
-          } else {
-            /* handle as usually */
-            SNetStreamReplace( curstream, SNetRecGetStream( rec));
-            SNetRecDestroy( rec);
-          }
-        }
-        break;
-
-      case REC_terminate:
-        /* termination record: close stream and remove from ready set */
-        ProcessTermRecord(rec, &term_rec, curstream, &readyset, &incount);
-        /* stop processing this stream */
-        curstream = NULL;
-        break;
-
-      default:
-        assert(0);
-        /* if ignore, at least destroy ... */
-        SNetRecDestroy( rec);
-    } /* end switch */
-
-
-    /************* termination conditions *****************/
-    /* check if all sort records are received */
-    if ( SNetStreamsetIsEmpty( &readyset)) {
-      /* the streams which had a sort record are in the waitingset */
-      if ( !SNetStreamsetIsEmpty( &waitingset)) {
-        RestoreFromWaitingset(&waitingset, &readyset, &sort_rec, outstream);
-      } else {
-        /* both ready set and waitingset are empty */
-#ifdef DEBUG_PRINT_GC
-        SNetUtilDebugNoticeEnt( ent,
-            "[COLL] Terminate static collector as no inputs left!%s",
-            (sync_rec != NULL) ? " (sending sync)" : ""
-            );
-#endif
-        terminate = true;
-        if (sync_rec != NULL) {
-          /* There is a sync record pending that needs to be forwarded */
-          SNetStreamWrite( outstream, sync_rec);
-          sync_rec = NULL;
-        } else {
-          assert(term_rec != NULL);
-          SNetStreamWrite( outstream, term_rec);
-          term_rec = NULL;
-        }
-      }
-    } else if (incount==1 && sync_rec==NULL) {
-      /* static collector has only one incoming stream left
-       * and no pending sync record
-       * -> this input stream can be sent to the collectors
-       *    successor via a sync record
-       */
-      snet_stream_desc_t *in = readyset;
-      assert( SNetStreamsetIsEmpty(&waitingset) );
-
-      SNetStreamWrite( outstream,
-          SNetRecCreate( REC_sync, SNetStreamGet(in))
-          );
-      SNetStreamClose( in, false);
-      terminate = true;
-#ifdef DEBUG_PRINT_GC
-      /* terminating due to GC */
-      SNetUtilDebugNoticeEnt( ent,
-          "[COLL] Terminate static collector as only one branch left!"
-          );
-#endif
-    }
-    /************* end of termination conditions **********/
-  } /* MAIN LOOP END */
-
-  assert(sync_rec == NULL);
-
-  if (term_rec != NULL) {
-    SNetRecDestroy(term_rec);
-  }
-  /* close outstream */
-  SNetStreamClose( outstream, false);
-  /* destroy iterator */
-  SNetStreamIterDestroy( wait_iter);
   /* destroy argument */
   SNetMemFree( carg);
-} /* END of STATIC COLLECTOR TASK */
-
+} /* END of DYNAMIC COLLECTOR TASK */
 
 
 
@@ -526,7 +392,7 @@ void CollectorTaskStatic(snet_entity_t *ent, void *arg)
 snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, int location, snet_info_t *info)
 {
   snet_stream_t *outstream;
-  coll_st_arg_t *carg;
+  coll_arg_t *carg;
   int i;
 
   assert(num >= 1);
@@ -534,19 +400,20 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, int lo
   outstream =  SNetStreamCreate(0);
 
   /* create collector handle */
-  carg = (coll_st_arg_t *) SNetMemAlloc( sizeof( coll_st_arg_t));
-  /* copy instreams */
-  carg->inputs = SNetMemAlloc(num * sizeof(snet_stream_t *));
-  for(i=0; i<num; i++) {
-    ((snet_stream_t **)carg->inputs)[i] = instreams[i];
-  }
+  carg = (coll_arg_t *) SNetMemAlloc( sizeof( coll_arg_t));
   carg->output = outstream;
-  carg->num = num;
+  carg->is_static = true;
+  CARG_ST(carg, num) = num;
+  /* copy instreams */
+  CARG_ST(carg, inputs) = SNetMemAlloc(num * sizeof(snet_stream_t *));
+  for(i=0; i<num; i++) {
+    CARG_ST(carg, inputs[i]) = instreams[i];
+  }
 
   /* spawn collector task */
   SNetThreadingSpawn(
       SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
-        "<collect>", CollectorTaskStatic, (void*)carg)
+        "<collect>", CollectorTask, (void*)carg)
       );
   return outstream;
 }
@@ -559,20 +426,21 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, int lo
 snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, int location, snet_info_t *info)
 {
   snet_stream_t *outstream;
-  coll_dyn_arg_t *carg;
+  coll_arg_t *carg;
 
   /* create outstream */
   outstream = SNetStreamCreate(0);
 
   /* create collector handle */
-  carg = (coll_dyn_arg_t *) SNetMemAlloc( sizeof( coll_dyn_arg_t));
-  carg->input = instream;
+  carg = (coll_arg_t *) SNetMemAlloc( sizeof( coll_arg_t));
   carg->output = outstream;
+  carg->is_static = false;
+  CARG_DYN(carg, input) = instream;
 
   /* spawn collector task */
   SNetThreadingSpawn(
       SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
-        "<collect>", CollectorTaskDynamic, (void*)carg)
+        "<collect>", CollectorTask, (void*)carg)
       );
   return outstream;
 }

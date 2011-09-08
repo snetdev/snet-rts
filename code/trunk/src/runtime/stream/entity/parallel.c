@@ -270,8 +270,16 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
       SNetStreamClose( outstreams[i], false);
       outstreams[i] = NULL;
       num_init_branches += 1;
+#ifdef DEBUG_PRINT_GC
+      SNetUtilDebugNoticeEnt( ent,
+          "[PAR] Terminate initialiser branch %d!", i);
+#endif
+    } else {
+      /* on non-initialiser branches, send a sort record */
+      SNetStreamWrite( outstreams[i], SNetRecCreate( REC_sort_end, 0, counter));
     }
   }
+  counter++;
 
   switch( num - num_init_branches) {
     case 1: /* remove dispatcher from network ... */
@@ -354,13 +362,11 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
                 cnt++;
                 last = outstreams[i];
                 /* send sort records through */
-                /*
                 SNetStreamWrite( outstreams[i],
                     SNetRecCreate( REC_sort_end, 0, counter));
-                */
               }
             }
-            //counter += 1;
+            counter++;
 
             /* if only one branch left, we can terminate ourselves*/
             if (cnt == 1) {
