@@ -102,7 +102,7 @@ snet_record_t *SNetDistribRecvRecord(snet_dest_t **recordDest)
       MPIUnpackInt(1, &dest.dynamicIndex);
       MPIUnpackInt(1, &dest.parentNode);
       MPIUnpackInt(1, &dest.dynamicLoc);
-      SNetOutputManagerUnblockDest(&dest);
+      SNetOutputManagerUnblock(&dest);
     } else if (status.MPI_TAG == 8) {
       snet_dest_t dest;
       dest.node = status.MPI_SOURCE;
@@ -111,7 +111,7 @@ snet_record_t *SNetDistribRecvRecord(snet_dest_t **recordDest)
       MPIUnpackInt(1, &dest.dynamicIndex);
       MPIUnpackInt(1, &dest.parentNode);
       MPIUnpackInt(1, &dest.dynamicLoc);
-      SNetOutputManagerBlockDest(&dest);
+      SNetOutputManagerBlock(&dest);
     } else {
       void *tmp;
       snet_ref_t ref = UnpackRef(&recvBuf);
