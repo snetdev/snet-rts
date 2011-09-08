@@ -148,12 +148,12 @@ void *SNetStreamRead(snet_stream_desc_t *sd)
 
   if (s->count == s->size-1) pthread_cond_signal(&s->notfull);
 
+  pthread_mutex_unlock( &s->lock);
+
   /* call the read callback function */
   if (s->callback_read.func) {
     s->callback_read.func(s->callback_read.arg);
   }
-
-  pthread_mutex_unlock( &s->lock);
 
   return item;
 }

@@ -65,7 +65,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
       }
 
       /* Fields */
-      RECORD_FOR_EACH_FIELD(rec, name, field)
+      RECORD_FOR_EACH_FIELD(rec, name, field) {
         int id = SNetRecGetInterfaceId(rec);
 
         if((label = SNetInIdToLabel(hnd->labels, name)) != NULL){
@@ -89,10 +89,10 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
         } else{
           SNetUtilDebugFatal("Unknown field %d at output!", name);
         }
-      END_FOR
+      }
 
        /* Tags */
-      RECORD_FOR_EACH_TAG(rec, name, val)
+      RECORD_FOR_EACH_TAG(rec, name, val) {
         if ((label = SNetInIdToLabel(hnd->labels, name)) != NULL) {
           fprintf(hnd->file, "<tag label=\"%s\">%d</tag>", label, val);
         } else{
@@ -100,10 +100,10 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
         }
 
         SNetMemFree(label);
-      END_FOR
+      }
 
       /* BTags */
-      RECORD_FOR_EACH_BTAG(rec, name, val)
+      RECORD_FOR_EACH_BTAG(rec, name, val) {
         if ((label = SNetInIdToLabel(hnd->labels, name)) != NULL){
           fprintf(hnd->file, "<btag label=\"%s\">%d</btag>", label, val);
         } else{
@@ -111,7 +111,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
         }
 
         SNetMemFree(label);
-      END_FOR
+      }
 
       fprintf(hnd->file, "</record>");
       break;

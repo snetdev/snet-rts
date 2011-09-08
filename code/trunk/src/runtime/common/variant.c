@@ -49,7 +49,7 @@ void SNetVariantDestroy( snet_variant_t *var)
 static void IntlistAddAll(snet_int_list_t *dst, snet_int_list_t *src, bool ow)
 {
   int name;
-  LIST_FOR_EACH(src, name)
+  LIST_FOR_EACH(src, name) {
     bool cont = SNetIntListContains(dst, name);
     if (cont && ow) {
       SNetIntListRemove(dst, name);
@@ -57,7 +57,7 @@ static void IntlistAddAll(snet_int_list_t *dst, snet_int_list_t *src, bool ow)
     if (!cont || ow) {
       SNetIntListAppendEnd(dst, name);
     }
-  END_FOR
+  }
 }
 
 void SNetVariantAddAll( snet_variant_t *to, snet_variant_t *from, bool overwrite)

@@ -59,27 +59,27 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
 
   SNetRecAddAsParent( result, storage[0]);
 
-  LIST_ENUMERATE(patterns, pattern, i)
+  LIST_ENUMERATE(patterns, i, pattern) {
     if (i > 0 && storage[i] != NULL) {
       SNetRecAddAsParent( result, storage[i]);
 
-      RECORD_FOR_EACH_FIELD(storage[i], name, field)
+      RECORD_FOR_EACH_FIELD(storage[i], name, field) {
         if (SNetVariantHasField(pattern, name)) {
             SNetRecSetField(result, name, SNetRefCopy(field));
         }
-      END_FOR
+      }
 
-      RECORD_FOR_EACH_TAG(storage[i], name, value)
+      RECORD_FOR_EACH_TAG(storage[i], name, value) {
         if (SNetVariantHasTag(pattern, name)) {
             SNetRecSetTag(result, name, value);
         }
-      END_FOR
+      }
     }
     /* free storage */
     if (storage[i] != NULL) {
       SNetRecDestroy(storage[i]);
     }
-  END_ENUMERATE
+  }
 
   return result;
 }
@@ -98,9 +98,9 @@ static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
   snet_variant_t *res, *var;
 
   res = SNetVariantCreateEmpty();
-  LIST_FOR_EACH(patterns, var)
+  LIST_FOR_EACH(patterns, var) {
     SNetVariantAddAll(res, var, false);
-  END_FOR
+  }
 
   return res;
 }
@@ -157,7 +157,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
     switch (SNetRecGetDescriptor( rec)) {
       case REC_data:
         new_matches = 0;
-        LIST_ZIP_ENUMERATE(sarg->patterns, pattern, sarg->guard_exprs, expr, i)
+        LIST_ZIP_ENUMERATE(sarg->patterns, sarg->guard_exprs, i, pattern, expr) {
           /* storage empty and guard accepts => store record*/
           if (storage[i] == &dummy && SNetRecPatternMatches(pattern, rec) &&
               SNetEevaluateBool(expr, rec)) {
@@ -188,7 +188,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 #endif
             }
           }
-        END_ZIP
+        }
 
         match_cnt += new_matches;
         if (new_matches == 0) {

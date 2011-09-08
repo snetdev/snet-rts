@@ -75,26 +75,26 @@ static void CheckMatch( snet_record_t *rec,
   assert(mc != NULL);
 
   /* for all variants */
-  LIST_FOR_EACH(variant_list, variant)
+  LIST_FOR_EACH(variant_list, variant) {
     mc->count = 0;
     mc->is_match = true;
 
-    VARIANT_FOR_EACH_FIELD(variant, name)
+    VARIANT_FOR_EACH_FIELD(variant, name) {
       MatchCountUpdate(mc, SNetRecHasField(rec, name));
-    END_FOR
+    }
 
-    VARIANT_FOR_EACH_TAG(variant, name)
+    VARIANT_FOR_EACH_TAG(variant, name) {
       MatchCountUpdate(mc, SNetRecHasTag(rec, name));
-    END_FOR
+    }
 
-    RECORD_FOR_EACH_BTAG(rec, name, val)
+    RECORD_FOR_EACH_BTAG(rec, name, val) {
       MatchCountUpdate(mc, SNetVariantHasBTag(variant, name));
-    END_FOR
+    }
 
     if (mc->is_match) {
       max = mc->count > max ? mc->count : max;
     }
-  END_FOR
+  }
 
   if( max >= 0) {
     mc->is_match = true;
@@ -113,19 +113,19 @@ static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
   int name;
 
   /* for all variants in the list */
-  LIST_FOR_EACH(variant_list, other)
-    VARIANT_FOR_EACH_FIELD(var, name)
+  LIST_FOR_EACH(variant_list, other) {
+    VARIANT_FOR_EACH_FIELD(var, name) {
       if (!SNetVariantHasField(other, name)) return false;
-    END_FOR
+    }
 
-    VARIANT_FOR_EACH_TAG(var, name)
+    VARIANT_FOR_EACH_TAG(var, name) {
       if (!SNetVariantHasTag(other, name)) return false;
-    END_FOR
+    }
 
-    VARIANT_FOR_EACH_BTAG(var, name)
+    VARIANT_FOR_EACH_BTAG(var, name) {
       if (!SNetVariantHasBTag(other, name)) return false;
-    END_FOR
-  END_FOR
+    }
+  }
   return true;
 }
 
@@ -493,7 +493,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     collstreams = SNetMemAlloc( num * sizeof( snet_stream_t*));
 
     /* create branches */
-    LIST_ENUMERATE(variant_lists, variants, i)
+    LIST_ENUMERATE(variant_lists, i, variants) {
       snet_info_t *newInfo = SNetInfoCopy(info);
       transits[i] = SNetStreamCreate(0);
       SNetLocvecParallelNext(locvec);
@@ -501,7 +501,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
       collstreams[i] = (*fun)(transits[i], newInfo, location);
       collstreams[i] = SNetRouteUpdate(newInfo, collstreams[i], location);
       SNetInfoDestroy(newInfo);
-    END_ENUMERATE
+    }
 
     SNetLocvecParallelReset(locvec);
 
@@ -526,14 +526,14 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 
 
   } else {
-    LIST_ENUMERATE(variant_lists, variants, i)
+    LIST_ENUMERATE(variant_lists, i, variants) {
       snet_info_t *newInfo = SNetInfoCopy(info);
       SNetLocvecParallelNext(locvec);
       fun = funs[i];
       instream = (*fun)( instream, newInfo, location);
       instream = SNetRouteUpdate(newInfo, instream, location);
       SNetInfoDestroy(newInfo);
-    END_ENUMERATE
+    }
 
     SNetVariantListListDestroy( variant_lists);
 

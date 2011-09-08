@@ -3,10 +3,13 @@
 #include "debug.h"
 #include "dest.h"
 #include "memfun.h"
+#include "imanager.h"
 #include "iomanagers.h"
 #include "interface_functions.h"
+#include "omanager.h"
 #include "pack.h"
 #include "record.h"
+#include "reference.h"
 
 static mpi_buf_t recvBuf = {0, 0, NULL};
 static mpi_buf_t sendBuf = {0, 0, NULL};
@@ -51,11 +54,11 @@ static void MPIUnpackRef(int count, snet_ref_t **dst)
   int i;
   for (i = 0; i < count; i++) {
     snet_ref_t ref = UnpackRef(&recvBuf);
-    dst[i] = SNetRefIncoming(ref);
+    dst[i] = SNetRefIncoming(&ref);
   }
 }
 
-snet_record_t *RecvRecord(snet_dest_t **recordDest)
+snet_record_t *SNetDistribRecvRecord(snet_dest_t **recordDest)
 {
   MPI_Status status;
 
@@ -89,6 +92,26 @@ snet_record_t *RecvRecord(snet_dest_t **recordDest)
       return rec;
     } else if (status.MPI_TAG == 1) {
       return NULL;
+    } else if (status.MPI_TAG == 6) {
+      SNetInputManagerUpdate();
+    } else if (status.MPI_TAG == 7) {
+      snet_dest_t dest;
+      dest.node = status.MPI_SOURCE;
+      MPIUnpackInt(1, &dest.dest);
+      MPIUnpackInt(1, &dest.parent);
+      MPIUnpackInt(1, &dest.dynamicIndex);
+      MPIUnpackInt(1, &dest.parentNode);
+      MPIUnpackInt(1, &dest.dynamicLoc);
+      SNetOutputManagerUnblockDest(&dest);
+    } else if (status.MPI_TAG == 8) {
+      snet_dest_t dest;
+      dest.node = status.MPI_SOURCE;
+      MPIUnpackInt(1, &dest.dest);
+      MPIUnpackInt(1, &dest.parent);
+      MPIUnpackInt(1, &dest.dynamicIndex);
+      MPIUnpackInt(1, &dest.parentNode);
+      MPIUnpackInt(1, &dest.dynamicLoc);
+      SNetOutputManagerBlockDest(&dest);
     } else {
       void *tmp;
       snet_ref_t ref = UnpackRef(&recvBuf);
@@ -112,7 +135,7 @@ snet_record_t *RecvRecord(snet_dest_t **recordDest)
   }
 }
 
-void SendRecord(snet_dest_t *dest, snet_record_t *rec)
+void SNetDistribSendRecord(snet_dest_t *dest, snet_record_t *rec)
 {
   sendBuf.offset = 0;
   MPIPackInt(1, &dest->dest);
@@ -138,4 +161,31 @@ void SNetDistribRemoteUpdate(snet_ref_t *ref, int count)
   PackRef(&buf, *ref);
   MPIPack(&buf, &count, MPI_INT, 1);
   MPI_Send(buf.data, buf.offset, MPI_PACKED, ref->node, 3, MPI_COMM_WORLD);
+}
+
+extern int node_location;
+void SNetDistribRemoteDestUnblock(snet_dest_t *dest)
+{
+  mpi_buf_t buf = {0, 0, NULL};
+  if (dest == NULL) {
+    MPI_Send(buf.data, buf.offset, MPI_PACKED, node_location, 6, MPI_COMM_WORLD);
+  } else {
+    MPIPack(&buf, &dest->dest, MPI_INT, 1);
+    MPIPack(&buf, &dest->parent, MPI_INT, 1);
+    MPIPack(&buf, &dest->parentNode, MPI_INT, 1);
+    MPIPack(&buf, &dest->dynamicIndex, MPI_INT, 1);
+    MPIPack(&buf, &dest->dynamicLoc, MPI_INT, 1);
+    MPI_Send(buf.data, buf.offset, MPI_PACKED, dest->node, 7, MPI_COMM_WORLD);
+  }
+}
+
+void SNetDistribRemoteDestBlock(snet_dest_t *dest)
+{
+  mpi_buf_t buf = {0, 0, NULL};
+  MPIPack(&buf, &dest->dest, MPI_INT, 1);
+  MPIPack(&buf, &dest->parent, MPI_INT, 1);
+  MPIPack(&buf, &dest->parentNode, MPI_INT, 1);
+  MPIPack(&buf, &dest->dynamicIndex, MPI_INT, 1);
+  MPIPack(&buf, &dest->dynamicLoc, MPI_INT, 1);
+  MPI_Send(buf.data, buf.offset, MPI_PACKED, dest->node, 8, MPI_COMM_WORLD);
 }

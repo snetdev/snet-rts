@@ -79,9 +79,9 @@ void LIST_FUNCTION(LIST_NAME, Destroy)(snet_list_t *list)
   #ifdef LIST_FREE_FUNCTION
   LIST_VAL val;
 
-  LIST_FOR_EACH(list, val)
+  LIST_FOR_EACH(list, val) {
     LIST_FREE_FUNCTION(val);
-  END_FOR
+  }
   #endif
 
   SNetMemFree(list->values);
@@ -102,9 +102,9 @@ snet_list_t *LIST_FUNCTION(LIST_NAME, DeepCopy)(snet_list_t *list,
   result->start = 0;
 
   result->values = SNetMemAlloc(list->used * sizeof(LIST_VAL));
-  LIST_ENUMERATE(list, val, i)
+  LIST_ENUMERATE(list, i, val) {
     result->values[i] = (*copyfun)(val);
-  END_ENUMERATE
+  }
 
   return result;
 }
@@ -186,7 +186,7 @@ bool LIST_FUNCTION(LIST_NAME, Contains)(snet_list_t *list, LIST_VAL val)
 {
   LIST_VAL tmp;
 
-  LIST_FOR_EACH(list, tmp)
+  LIST_FOR_EACH(list, tmp) {
     #ifdef LIST_CMP
       if (LIST_CMP(tmp, val)) {
         return true;
@@ -196,7 +196,7 @@ bool LIST_FUNCTION(LIST_NAME, Contains)(snet_list_t *list, LIST_VAL val)
         return true;
       }
     #endif
-  END_FOR
+  }
 
   return false;
 }

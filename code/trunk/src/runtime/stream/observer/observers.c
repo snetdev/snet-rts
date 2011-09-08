@@ -717,7 +717,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
 
     int id = SNetRecGetInterfaceId(rec);
     /* fields */
-    RECORD_FOR_EACH_FIELD(rec, name, field)
+    RECORD_FOR_EACH_FIELD(rec, name, field) {
       if((label = SNetInIdToLabel(labels, name)) != NULL){
         if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_ALLVALUES
            && (interface = SNetInIdToInterface(interfaces, id)) != NULL){
@@ -734,10 +734,10 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
           fprintf(file,"<field label=\"%s\" />", label);
         }
       }
-    END_FOR
+    }
 
     /* tags */
-    RECORD_FOR_EACH_TAG(rec, name, val)
+    RECORD_FOR_EACH_TAG(rec, name, val) {
       if((label = SNetInIdToLabel(labels, val)) != NULL){
         if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_LABELS) {
           fprintf(file,"<tag label=\"%s\" />", label);
@@ -746,10 +746,10 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
         }
       }
       SNetMemFree(label);
-    END_FOR
+    }
 
     /* btags */
-    RECORD_FOR_EACH_BTAG(rec, name, val)
+    RECORD_FOR_EACH_BTAG(rec, name, val) {
       if((label = SNetInIdToLabel(labels, name)) != NULL){
         if(hnd->data_level == SNET_OBSERVERS_DATA_LEVEL_LABELS) {
           fprintf(file,"<btag label=\"%s\" />", label);
@@ -758,7 +758,7 @@ static int ObserverPrintRecordToFile(FILE *file, obs_handle_t *hnd, snet_record_
         }
       }
       SNetMemFree(label);
-    END_FOR
+    }
 
     fprintf(file,"</record>");
     break;

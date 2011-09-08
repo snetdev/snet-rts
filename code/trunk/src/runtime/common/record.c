@@ -58,23 +58,23 @@ bool SNetRecPatternMatches(snet_variant_t *pat, snet_record_t *rec)
 {
   int val;
 
-  VARIANT_FOR_EACH_FIELD(pat, val)
+  VARIANT_FOR_EACH_FIELD(pat, val) {
     if (!SNetRecHasField(rec, val)) {
       return false;
     }
-  END_FOR
+  }
 
-  VARIANT_FOR_EACH_TAG(pat, val)
+  VARIANT_FOR_EACH_TAG(pat, val) {
     if (!SNetRecHasTag(rec, val)) {
       return false;
     }
-  END_FOR
+  }
 
-  VARIANT_FOR_EACH_BTAG(pat, val)
+  VARIANT_FOR_EACH_BTAG(pat, val) {
     if (!SNetRecHasBTag(rec, val)) {
       return false;
     }
-  END_FOR
+  }
 
   return true;
 }
@@ -86,17 +86,17 @@ void SNetRecFlowInherit( snet_variant_t *pat, snet_record_t *in_rec,
   int name, val;
   snet_ref_t *field;
 
-  RECORD_FOR_EACH_FIELD(in_rec, name, field)
+  RECORD_FOR_EACH_FIELD(in_rec, name, field) {
     if (!SNetVariantHasField( pat, name)) {
       SNetRecSetField( out_rec, name, SNetRefCopy(field));
     }
-  END_FOR
+  }
 
-  RECORD_FOR_EACH_TAG(in_rec, name, val)
+  RECORD_FOR_EACH_TAG(in_rec, name, val) {
     if (!SNetVariantHasTag( pat, name)) {
       SNetRecSetTag( out_rec, name, val);
     }
-  END_FOR
+  }
 }
 
 snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
@@ -198,9 +198,9 @@ void SNetRecDestroy( snet_record_t *rec)
 
   switch (REC_DESCR( rec)) {
     case REC_data:
-      RECORD_FOR_EACH_FIELD(rec, name, field)
+      RECORD_FOR_EACH_FIELD(rec, name, field) {
         SNetRefDestroy(field);
-      END_FOR
+      }
       SNetRefMapDestroy( DATA_REC( rec, fields));
       SNetIntMapDestroy( DATA_REC( rec, tags));
       SNetIntMapDestroy( DATA_REC( rec, btags));

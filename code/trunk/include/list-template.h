@@ -31,33 +31,50 @@
 #define LIST_FUNCTION(name, funName)    CONCAT(SNet, name, List, funName)
 #define snet_list_t                     LIST(LIST_TYPE_NAME_H)
 
-#define LIST_FOR_EACH(list, val) {\
-  int snet_list_ctr;\
-  for (snet_list_ctr = 0; snet_list_ctr < list->used; snet_list_ctr++) {\
-    val = list->values[(list->start + snet_list_ctr) % list->size];
+#define LIST_FOR_EACH(list, val) \
+  for (int snet_list_ctr = 0; \
+       (val = list->used \
+              ? list->values[(list->start + snet_list_ctr) % list->size] \
+              : val), \
+       snet_list_ctr < list->used; \
+       snet_list_ctr++)
 
-#define END_FOR                     } }
+#define LIST_ENUMERATE(list, index, val) \
+  for (index = 0; \
+       (val = list->used \
+              ? list->values[(list->start + index) % list->size] \
+              : val), \
+        index < list->used; index++)
 
-#define LIST_ENUMERATE(list, val, index) \
-  for (index = 0; index < list->used; index++) {\
-    val = list->values[(list->start + index) % list->size];
+#define LIST_ZIP_EACH(list1, list2, val1, val2) \
+  for (int snet_list_ctr = 0; \
+       (val1 = list1->used \
+               ? list1->values[(list1->start + snet_list_ctr) % list1->size] \
+               : val1), \
+       (val2 = list2->used \
+               ? list2->values[(list2->start + snet_list_ctr) % list2->size] \
+               : val2), \
+       snet_list_ctr < list1->used && snet_list_ctr < list2->used; \
+       snet_list_ctr++)
 
-#define END_ENUMERATE               }
+#define LIST_ZIP_ENUMERATE(list1, list2, index, val1, val2) \
+  for (index = 0; \
+       (val1 = list1->used \
+               ? list1->values[(list1->start + index) % list1->size] \
+               : val1), \
+       (val2 = list2->used \
+               ? list2->values[(list2->start + index) % list2->size] \
+               : val2),\
+       index < list1->used && index < list2->used; \
+       index++)
 
-#define LIST_ZIP_EACH(list1, val1, list2, val2) {\
-  int snet_list_ctr;\
-  for (snet_list_ctr = 0;\
-       snet_list_ctr < list1->used && snet_list_ctr < list2->used;\
-       snet_list_ctr++) {\
-    val1 = list1->values[(list1->start + snet_list_ctr) % list1->size];\
-    val2 = list2->values[(list2->start + snet_list_ctr) % list2->size];
-
-#define LIST_ZIP_ENUMERATE(list1, val1, list2, val2, index) {\
-  for (index = 0; index < list1->used && index < list2->used; index++) {\
-    val1 = list1->values[(list1->start + index) % list1->size];\
-    val2 = list2->values[(list2->start + index) % list2->size];
-
-#define END_ZIP                     } }
+#define LIST_DEQUEUE_EACH(list, val) \
+  for (int size = 0; \
+       size = list->used, \
+       val = size != 0 ? list->values[list->start] : val, \
+       list->start = size ? (list->start + 1) % list->size : list->start, \
+       list->used = size ? list->used - 1 : list->used, \
+       size != 0;)
 
 typedef struct snet_list_t {
   int size, used, start;

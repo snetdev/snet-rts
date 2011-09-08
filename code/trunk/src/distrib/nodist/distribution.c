@@ -1,7 +1,7 @@
 #include <pthread.h>
 
 #include "distribution.h"
-#include "iomanagers.h"
+#include "reference.h"
 
 bool debugWait = false;
 
@@ -16,7 +16,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   (void) argv; /* NOT USED */
   (void) info; /* NOT USED */
   node_location = 0;
-  SNetDataStorageInit();
+  SNetReferenceInit();
 }
 
 void SNetDistribStart(void)
@@ -38,7 +38,7 @@ void SNetDistribWaitExit(void)
   pthread_mutex_lock(&exitMutex);
   while (running) pthread_cond_wait(&exitCond, &exitMutex);
   pthread_mutex_unlock(&exitMutex);
-  SNetDataStorageDestroy();
+  SNetReferenceDestroy();
 }
 
 int SNetDistribGetNodeId(void)

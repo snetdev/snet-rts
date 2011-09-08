@@ -34,13 +34,16 @@
 #define snet_map_t                      MAP(MAP_TYPE_NAME_H)
 #define MAP_FUNCTION(name, funName)     CONCAT(SNet, name, Map, funName)
 
-#define MAP_FOR_EACH(map, key, val) {\
-  int snet_map_ctr;\
-  for (snet_map_ctr = 0; snet_map_ctr < map->used; snet_map_ctr++) {\
-    key = map->keys[snet_map_ctr];\
-    val = map->values[snet_map_ctr];
-
-#define END_FOR                     } }
+#define MAP_FOR_EACH(map, key, val) \
+  for (int snet_map_ctr = 0; \
+       (key = map->used \
+              ? map->keys[snet_map_ctr] \
+              : key), \
+       (val = map->used \
+              ? map->values[snet_map_ctr] \
+              : val), \
+       snet_map_ctr < map->used; \
+       snet_map_ctr++)
 
 typedef struct snet_map_t {
   int size, used;
@@ -57,6 +60,8 @@ snet_map_t *MAP_FUNCTION(MAP_NAME_H, ManualCopy)(
 void MAP_FUNCTION(MAP_NAME_H, Destroy)(snet_map_t *map);
 
 int MAP_FUNCTION(MAP_NAME_H, Size)(snet_map_t *map);
+
+MAP_KEY_H MAP_FUNCTION(MAP_NAME_H, FindVal)(snet_map_t *map, MAP_VAL_H val);
 
 void MAP_FUNCTION(MAP_NAME_H, Set)(snet_map_t *map, MAP_KEY_H key, MAP_VAL_H val);
 MAP_VAL_H MAP_FUNCTION(MAP_NAME_H, Get)(snet_map_t *map, MAP_KEY_H key);

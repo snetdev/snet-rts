@@ -13,10 +13,10 @@ bool SNetRefCompare(snet_ref_t r1, snet_ref_t r2)
   return r1.node == r2.node && r1.data == r2.data;
 }
 
-#define MAP_NAME RefData
-#define MAP_TYPE_NAME ref_data
+#define MAP_NAME RefRefcount
+#define MAP_TYPE_NAME ref_refcount
 #define MAP_KEY snet_ref_t
-#define MAP_VAL data_t*
+#define MAP_VAL snet_refcount_t*
 #define MAP_KEY_CMP SNetRefCompare
 #include "map-template.c"
 #undef MAP_KEY_CMP
