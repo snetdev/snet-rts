@@ -97,12 +97,12 @@ void SNetDistribUnpack(void *dst, ...)
   (void) dst; /* NOT USED */
 }
 
-void SNetDistribRemoteFetch(snet_ref_t *ref)
+void SNetDistribRemoteRefFetch(snet_ref_t *ref)
 {
   (void) ref; /* NOT USED */
 }
 
-void SNetDistribRemoteUpdate(snet_ref_t *ref, int count)
+void SNetDistribRemoteRefUpdate(snet_ref_t *ref, int count)
 {
   (void) ref; /* NOT USED */
   (void) count; /* NOT USED */

@@ -148,14 +148,14 @@ void SNetDistribSendRecord(snet_dest_t *dest, snet_record_t *rec)
            MPI_COMM_WORLD);
 }
 
-void SNetDistribRemoteFetch(snet_ref_t *ref)
+void SNetDistribRemoteRefFetch(snet_ref_t *ref)
 {
   mpi_buf_t buf = {0, 0, NULL};
   PackRef(&buf, *ref);
   MPI_Send(buf.data, buf.offset, MPI_PACKED, ref->node, 2, MPI_COMM_WORLD);
 }
 
-void SNetDistribRemoteUpdate(snet_ref_t *ref, int count)
+void SNetDistribRemoteRefUpdate(snet_ref_t *ref, int count)
 {
   mpi_buf_t buf = {0, 0, NULL};
   PackRef(&buf, *ref);
