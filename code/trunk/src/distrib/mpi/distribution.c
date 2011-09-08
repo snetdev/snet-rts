@@ -7,9 +7,12 @@
 #include "dest.h"
 #include "distribution.h"
 #include "info.h"
+#include "imanager.h"
 #include "iomanagers.h"
 #include "memfun.h"
+#include "omanager.h"
 #include "pack.h"
+#include "reference.h"
 #include "snetentities.h"
 #include "threading.h"
 
@@ -61,7 +64,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
     }
   }
 
-  SNetDataStorageInit();
+  SNetReferenceInit();
   SNetOutputManagerInit();
   SNetInputManagerInit();
 }
@@ -95,7 +98,6 @@ void SNetDistribWaitExit(void)
   while (running) pthread_cond_wait(&exitCond, &exitMutex);
   pthread_mutex_unlock(&exitMutex);
 
-  SNetDataStorageDestroy();
   MPI_Finalize();
 }
 
@@ -124,13 +126,13 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
 
     if (dest->node == node_location) {
       dest->node = loc;
-      SNetDistribNewOut(SNetDestCopy(dest), input);
+      SNetOutputManagerNewOut(SNetDestCopy(dest), input);
 
       input = NULL;
     } else if (loc == node_location) {
       if (input == NULL) input = SNetStreamCreate(0);
 
-      SNetDistribNewIn(SNetDestCopy(dest), input);
+      SNetInputManagerNewIn(SNetDestCopy(dest), input);
       dest->node = loc;
     } else {
       dest->node = loc;
