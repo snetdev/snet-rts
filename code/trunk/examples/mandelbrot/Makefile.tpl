@@ -1,31 +1,31 @@
-include $(SNETBASE)/src/makefiles/config.mkf
 
 
 ifdef MPIMODE
-CC        = mpicc
-LANGIFLIB = -lSAC4SNetMPI
-DISTLIB   =  -ldistribmpi
+DISTLIB_LA =  $(SNET_LIBS)/libdistribmpi.la
 else
-CC        = gcc
-LANGIFLIB = -lSAC4SNet
-DISTLIB   = -ldistribnodist
+DISTLIB_LA =  $(SNET_LIBS)/libdistribnodist.la
 endif
 
-COMMONLIB = $(LANGIFLIB) $(DISTLIB) -lsnetutil -lruntimestream
-TBLPELLIB = -ltblpel
-TBPTLIB   = -lpthread -ltbpthread
+SAC4SNETLIBS := -L$(SNETBASE)/src/interfaces/sac4snet \
+                # -L$(SNET_LIBS) \
 
-CCFLAGS   = -Wall -O3
-AR        = ar
-INCDIRS   = -I. -I$(SNETBASE)/include -I./include
-LIBDIRS   = -L. -Lboxes -Lboxes/src -L$(SNETBASE)/lib -L./lib
+BOXDIR := boxes
+
+WRAPPERLIBDIR := lib
+WRAPPERINCDIR := include
+
+CCFLAGS   = -Wall -O2
+INCDIRS   = -I. -I$(SNET_INCLUDES) -I./$(WRAPPERINCDIR)
+LIBDIRS   = -L. -L$(BOXDIR) -L$(BOXDIR)/src \
+            -L$(SNETBASE) \
+            $(SAC4SNETLIBS) \
+            -L./$(WRAPPERLIBDIR)
 
 
 SACNAMES  = -DSACTYPE_SNet_SNet=23 -DSNetMain__$(TARGET)=main
 TMAPIDS   = -DCID=24 -DCPXID=20 -DDISPID=26
 
 SNETC      = snetc
-SNETCFLAGS = -b7 -v1 # linking is done separately
 
 # - - - - - - - - - - - - - - - - - - - -
 SACTARGET = boxes
@@ -37,20 +37,30 @@ SACMANDEL = mandelbrot
 SAC2C     = sac2c
 S2CFLAGS  = -v1 -O3
 SAC4C     = sac4c
-S4CFLAGS  = -v3 -incdir include -libdir lib $(LIBDIRS)
+S4CFLAGS  = -v0 \
+            $(SAC4SNETLIBS) -L$(BOXDIR) \
+            -incdir $(WRAPPERINCDIR) \
+            -libdir $(WRAPPERLIBDIR) \
+
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags -o $(SACTARGET) $(SACTARGET)`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags -o $(SACTARGET) $(SACTARGET)`
 
+LT = $(SNET_LIBS)/libtool
+
+export SNET_EXTRA_CFLAGS = \
+    -I$(SNETBASE)/src/interfaces/sac4snet \
+    $(S4CINCS) \
+    $(SACNAMES)
+
+export SNET_EXTRA_LDFLAGS += $(LIBDIRS) $(S4CLIBS)
 
 
 .PHONY: all clean
 
+#########################################################
 ifdef TARGET
 
-all:  include/$(SACTARGET).h $(TARGET).c
-	$(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c $(TARGET).c
-	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) $(TARGET).o $(S4CLIBS) $(COMMONLIB) $(TBPTLIB)
-	$(CC) $(LIBDIRS) $(RPATH) -o $(TARGET).lpel $(TARGET).o $(S4CLIBS) $(COMMONLIB) $(TBLPELLIB)
+all: $(TARGET)
 
 else
 
@@ -59,35 +69,45 @@ all:
 	@echo "TARGET not defined (use 'make -f Makefile.xxx')"
 	@echo ""
 endif
+#########################################################
 
-boxes/lib$(SACTARGET)Mod.so: boxes/$(SACTARGET).sac \
-                             boxes/lib$(SACDISP)Mod.so \
-                             boxes/lib$(SACMANDEL)Mod.so 
-	$(SAC2C) $(TMAPIDS) $(S2CFLAGS) $(LIBDIRS) -o boxes boxes/$(SACTARGET).sac
 
-include/$(SACTARGET).h: boxes/lib$(SACTARGET)Mod.so 
-	mkdir -p include lib
-	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) -o $(SACTARGET) -Lboxes $(SACTARGET)
-  
-boxes/lib$(SACFRAC)Mod.so: boxes/$(SACFRAC).sac
-	$(SAC2C) $(TMAPIDS) $(S2CFLAGS) $(LIBDIRS) -o boxes boxes/$(SACFRAC).sac
 
-boxes/lib$(SACDISP)Mod.so: boxes/$(SACDISP).sac boxes/src/lib/src.a
-	cd boxes; $(SAC2C) $(TMAPIDS) $(S2CFLAGS) $(LIBDIRS) -o . $(SACDISP).sac; cd ..;
 
-boxes/src/lib/src.a:
-	cd boxes/src; make; cd ../..;
+$(BOXDIR)/lib$(SACTARGET)Mod.so:  $(BOXDIR)/$(SACTARGET).sac \
+                                  $(BOXDIR)/lib$(SACDISP)Mod.so \
+                                  $(BOXDIR)/lib$(SACMANDEL)Mod.so
+	$(SAC2C) $(S2CFLAGS) $(TMAPIDS) $(LIBDIRS) \
+            -o $(BOXDIR) $(BOXDIR)/$(SACTARGET).sac
 
-boxes/lib$(SACMANDEL)Mod.so: boxes/$(SACMANDEL).sac \
-                             boxes/lib$(SACFRAC)Mod.so 
-	$(SAC2C) $(TMAPIDS) $(S2CFLAGS) $(LIBDIRS) -o boxes boxes/$(SACMANDEL).sac
+$(WRAPPERINCDIR)/$(SACTARGET).h: $(BOXDIR)/lib$(SACTARGET)Mod.so
+	mkdir -p $(WRAPPERINCDIR) $(WRAPPERLIBDIR)
+	$(SAC4C) $(S4CFLAGS) $(SAC4SNETLIBS) -o $(SACTARGET) -L$(BOXDIR) $(SACTARGET)
 
-$(TARGET).c: $(TARGET).snet
-	$(SNETC) $(SNETCFLAGS) $(TARGET).snet
+$(BOXDIR)/lib$(SACFRAC)Mod.so: $(BOXDIR)/$(SACFRAC).sac
+	$(SAC2C) $(TMAPIDS) $(S2CFLAGS) $(LIBDIRS) -o $(BOXDIR) $(BOXDIR)/$(SACFRAC).sac
+
+$(BOXDIR)/lib$(SACDISP)Mod.so: $(BOXDIR)/$(SACDISP).sac $(BOXDIR)/src/lib/src.a
+	cd $(BOXDIR); $(SAC2C) $(TMAPIDS) $(S2CFLAGS) $(LIBDIRS) -o . $(SACDISP).sac; cd ..;
+
+$(BOXDIR)/src/lib/src.a:
+	cd $(BOXDIR)/src; make; cd ../..;
+
+$(BOXDIR)/lib$(SACMANDEL)Mod.so: $(BOXDIR)/$(SACMANDEL).sac \
+                             $(BOXDIR)/lib$(SACFRAC)Mod.so
+	$(SAC2C) $(TMAPIDS) $(S2CFLAGS) $(LIBDIRS) -o $(BOXDIR) $(BOXDIR)/$(SACMANDEL).sac
+
+$(TARGET): $(TARGET).snet $(WRAPPERINCDIR)/$(SACTARGET).h
+	LD_LIBRARY_PATH=$(SNETBASE)/src/interfaces/sac4snet:$(BOXDIR):$(LD_LIBRARY_PATH) && \
+	  $(SNETC) $(SNETCFLAGS) -threading lpel    -o $@.lpel $<
+	LD_LIBRARY_PATH=$(SNETBASE)/src/interfaces/sac4snet:$(BOXDIR):$(LD_LIBRARY_PATH) && \
+	  $(SNETC) $(SNETCFLAGS) -threading pthread -o $@      $<
 
 clean:
-	rm -f  $(TARGET) $(TARGET).[oach] 
+	$(LT) --mode=clean rm -f $(TARGET) $(TARGET).lpel $(TARGET).lo $(TARGET).[och]
 
-allclean:
-	cd boxes/src; make clean; cd ../..
-	rm -f *.o *.so *.a  lib/*.so lib/*.a  include/$(SACTARGET).h $(TARGET) $(TARGET).? boxes/*.so boxes/*.a
+allclean: clean
+	make -C boxes/src clean
+	rm -f *.o *.so *.a
+	rm -f $(WRAPPERLIBDIR)/*.so $(WRAPPERLIBDIR)/*.a  $(WRAPPERINCDIR)/$(SACTARGET).h
+	rm -f $(BOXDIR)/*.so $(BOXDIR)/*.a

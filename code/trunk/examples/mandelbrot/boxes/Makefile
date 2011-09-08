@@ -15,4 +15,4 @@ CCFLAGS := $(CCFLAGS) $(SDLCFLAGS)
 
 #lib/libSDLdisplayTree.so: SDLdisplay.sac src/$(patsubst %.c,%.o,)
 
-SAC2CFLAGS := $(SAC2CFLAGS) -L lib
+SAC2CFLAGS := $(SAC2CFLAGS)  -L./lib
