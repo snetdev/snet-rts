@@ -33,6 +33,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level);
   if (level < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Required threading level not supported by MPI!\n");
     MPI_Abort(MPI_COMM_WORLD, 2);
   }
   MPI_Comm_rank(MPI_COMM_WORLD, &node_location);
