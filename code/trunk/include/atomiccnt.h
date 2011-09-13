@@ -122,7 +122,7 @@ static inline unsigned int SNetAtomicCntGet(snet_atomiccnt_t *cnt)
   int tmp;
   (void) pthread_mutex_lock( &cnt->lock);
   tmp = cnt->counter;
-  (void) pthread_mutex_unlock( &cnt->counter);
+  (void) pthread_mutex_unlock( &cnt->lock);
   return tmp;
 }
 
