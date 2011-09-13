@@ -36,14 +36,12 @@
 
 #define MAP_FOR_EACH(map, key, val) \
   for (int snet_map_ctr = 0; \
-       (key = map->used \
-              ? map->keys[snet_map_ctr] \
-              : key), \
-       (val = map->used \
-              ? map->values[snet_map_ctr] \
-              : val), \
-       snet_map_ctr < map->used; \
-       snet_map_ctr++)
+    snet_map_ctr < map->used && (\
+      (key = map->keys[snet_map_ctr]), \
+      (val = map->values[snet_map_ctr]), \
+      true \
+    ); \
+    snet_map_ctr++)
 
 typedef struct snet_map_t {
   int size, used;
