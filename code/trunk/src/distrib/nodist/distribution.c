@@ -3,8 +3,6 @@
 #include "distribution.h"
 #include "reference.h"
 
-bool debugWait = false;
-
 static int node_location;
 static bool running = true;
 static pthread_cond_t exitCond = PTHREAD_COND_INITIALIZER;

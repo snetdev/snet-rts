@@ -2,6 +2,7 @@
 #include <mpi.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "dest.h"
@@ -20,9 +21,8 @@ int node_location;
 snet_info_tag_t prevDest;
 snet_info_tag_t infoCounter;
 
-bool debugWait = false;
-
 static bool running = true;
+static bool debugWait = false;
 static pthread_cond_t exitCond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t exitMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -31,9 +31,14 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   int level, *counter;
   snet_dest_t *dest;
 
+  for (int i = 0; i < argc; i++) {
+    if (strcmp(argv[i], "-debugWait") == 0) debugWait = true;
+  }
+
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &level);
   if (level < MPI_THREAD_MULTIPLE) {
-    fprintf(stderr, "Required threading level not supported by MPI!\n");
+    fprintf(stderr, "Required threading level not supported!\nDesired level: "
+            "%d\nAvailable: %d\n", MPI_THREAD_MULTIPLE, level);
     MPI_Abort(MPI_COMM_WORLD, 2);
   }
   MPI_Comm_rank(MPI_COMM_WORLD, &node_location);
