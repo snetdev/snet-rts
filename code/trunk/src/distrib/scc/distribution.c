@@ -1,46 +1,47 @@
 #include <assert.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "SCC_API.h"
 #include "dest.h"
 #include "distribution.h"
+#include "imanager.h"
 #include "iomanagers.h"
 #include "memfun.h"
+#include "omanager.h"
+#include "reference.h"
+#include "scc.h"
 #include "snetentities.h"
 
-#define CORES               (NUM_ROWS * NUM_COLS * NUM_CORES)
-#define IRQ_BIT             (0x01 << GLCFG_XINTR_BIT)
+int node_location;
+t_vcharp mpbs[CORES];
+t_vcharp locks[CORES];
+volatile int *irq_pins[CORES];
 
-bool debugWait = false;
-
-static int *irq_pins[CORES];
-static int node_location;
+static int num_nodes;
+static bool running = true;
 static snet_info_tag_t prevDest;
 static snet_info_tag_t infoCounter;
-static bool running = true;
 static pthread_cond_t exitCond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t exitMutex = PTHREAD_MUTEX_INITIALIZER;
-
-static void write_pid(void)
-{
-    FILE *file = fopen("/sys/module/async_scc/parameters/pid", "w");
-    if (file == NULL) {
-        perror("Could not open module parameter");
-        exit(EXIT_FAILURE);
-    }
-    fprintf(file, "%d", getpid());
-    fclose(file);
-}
 
 void SNetDistribInit(int argc, char **argv, snet_info_t *info)
 {
   snet_dest_t *dest;
-  int cpu, my_x, my_y, my_z, *counter;
-  (void) argc; /* NOT USED */
-  (void) argv; /* NOT USED */
+  sigset_t signal_mask;
+  int my_x, my_y, my_z, *counter;
   (void) info; /* NOT USED */
+
+  for (int i = 0; i < argc; i++) {
+    if (strcmp(argv[i], "-np") == 0 && ++i < argc) num_nodes = atoi(argv[i]);
+  }
+
+  sigemptyset(&signal_mask);
+  sigaddset(&signal_mask, SIGUSR1);
+  pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
 
   InitAPI(0);
   node_location = ReadConfigReg(CRB_OWN+MYTILEID);
@@ -48,11 +49,9 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   my_y = (node_location >> 7) & 0x0f; // bits 10:07
   my_z = node_location & 7; // bits 02:00
 
-  for (cpu = 0; cpu < CORES; cpu++) {
+  for (int cpu = 0; cpu < CORES; cpu++) {
     int address;
-    int x = X_PID(cpu);
-    int y = Y_PID(cpu);
-    int z = Z_PID(cpu);
+    int x = X_PID(cpu), y = Y_PID(cpu), z = Z_PID(cpu);
 
     if (x == my_x && y == my_y) {
       address = CRB_OWN;
@@ -62,9 +61,18 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
     }
 
     irq_pins[cpu] = MallocConfigReg(address + (z ? GLCFG1 : GLCFG0));
+    locks[cpu] = (t_vcharp) MallocConfigReg(address + (z ? LOCK1 : LOCK0));
+    MPBalloc(&mpbs[cpu], x, y, z, x == my_x && y == my_y && z == my_z);
   }
 
-  write_pid();
+  flush();
+  START(mpbs[node_location]) = 0;
+  END(mpbs[node_location]) = 0;
+  /* Start with an initial handling run to avoid a cross-core race. */
+  HANDLING(mpbs[node_location]) = 1;
+  WRITING(mpbs[node_location]) = 0;
+  FOOL_WRITE_COMBINE;
+  unlock(node_location);
 
   counter = SNetMemAlloc(sizeof(int));
   *counter = 0;
@@ -84,7 +92,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   infoCounter = SNetInfoCreateTag();
   SNetInfoSetTag(info, infoCounter, (uintptr_t) counter, NULL);
 
-  SNetDataStorageInit();
+  SNetReferenceInit();
   SNetOutputManagerInit();
   SNetInputManagerInit();
 }
@@ -98,12 +106,24 @@ void SNetDistribStart(void)
 void SNetDistribStop(bool global)
 {
   if (global) {
-    assert(0);
+    int exit_status = 1;
+
+    for (num_nodes = num_nodes - 1; num_nodes >= 0; num_nodes--) {
+      start_write_node(num_nodes);
+      cpy_mem_to_mpb(mpbs[num_nodes], &exit_status, sizeof(int));
+      stop_write_node(num_nodes);
+    }
   } else {
     pthread_mutex_lock(&exitMutex);
     running = false;
     pthread_cond_signal(&exitCond);
     pthread_mutex_unlock(&exitMutex);
+
+    for (int cpu = 0; cpu < CORES; cpu++) {
+      FreeConfigReg((int*)irq_pins[cpu]);
+      FreeConfigReg((int *) locks[cpu]);
+      MPBunalloc(&mpbs[cpu]);
+    }
   }
 }
 
@@ -112,7 +132,6 @@ void SNetDistribWaitExit(void)
   pthread_mutex_lock(&exitMutex);
   while (running) pthread_cond_wait(&exitCond, &exitMutex);
   pthread_mutex_unlock(&exitMutex);
-  SNetDataStorageDestroy();
 }
 
 int SNetDistribGetNodeId(void)
@@ -140,13 +159,13 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
 
     if (dest->node == node_location) {
       dest->node = loc;
-      SNetDistribNewOut(SNetDestCopy(dest), input);
+      SNetOutputManagerNewOut(SNetDestCopy(dest), input);
 
       input = NULL;
     } else if (loc == node_location) {
       if (input == NULL) input = SNetStreamCreate(0);
 
-      SNetDistribNewIn(SNetDestCopy(dest), input);
+      SNetInputManagerNewIn(SNetDestCopy(dest), input);
       dest->node = loc;
     } else {
       dest->node = loc;
@@ -158,20 +177,20 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
 
 void SNetDistribNewDynamicCon(snet_dest_t *dest)
 {
-    snet_dest_t *dst = SNetDestCopy(dest);
-    snet_startup_fun_t fun = SNetIdToNet(dest->parent);
+  snet_dest_t *dst = SNetDestCopy(dest);
+  snet_startup_fun_t fun = SNetIdToNet(dest->parent);
 
-    snet_info_t *info = SNetInfoInit();
-    SNetInfoSetTag(info, prevDest, (uintptr_t) dst,
-                  (void* (*)(void*)) &SNetDestCopy);
+  snet_info_t *info = SNetInfoInit();
+  SNetInfoSetTag(info, prevDest, (uintptr_t) dst,
+                (void* (*)(void*)) &SNetDestCopy);
 
-    SNetLocvecSet(info, SNetLocvecCreate());
+  SNetLocvecSet(info, SNetLocvecCreate());
 
-    SNetRouteDynamicEnter(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
-    SNetRouteUpdate(info, fun(NULL, info, dest->dynamicLoc), dest->parentNode);
-    SNetRouteDynamicExit(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
+  SNetRouteDynamicEnter(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
+  SNetRouteUpdate(info, fun(NULL, info, dest->dynamicLoc), dest->parentNode);
+  SNetRouteDynamicExit(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
 
-    SNetInfoDestroy(info);
+  SNetInfoDestroy(info);
 }
 
 void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,

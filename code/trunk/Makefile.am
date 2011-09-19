@@ -193,6 +193,7 @@ libdistribscc_la_SOURCES = \
 	src/distrib/common/reference.c \
 	src/distrib/common/refcollections.c \
 	src/distrib/scc/distribution.c \
+	src/distrib/scc/transmit.c \
 	src/distrib/scc/dest.c
 libdistribscc_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \

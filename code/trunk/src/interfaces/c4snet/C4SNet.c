@@ -138,6 +138,9 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
       #endif
       break;
     case scc:
+      packfun = NULL;
+      unpackfun = NULL;
+      break;
     default:
       SNetUtilDebugFatal("C4SNet doesn't support the selected distribution "
                          "layer (%d).\n", distImpl);
