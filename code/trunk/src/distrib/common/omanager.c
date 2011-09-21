@@ -62,16 +62,18 @@ static void UpdateDests(snet_stream_dest_map_t *map, snet_streamset_t *waitSet,
   }
 
   LIST_DEQUEUE_EACH(newBlocked, dest) {
-    sd = SNetStreamDestMapFindVal(map, dest);
-    SNetStreamsetRemove(waitSet, sd);
-    SNetStreamsetPut(blockSet, sd);
+    if ((sd = SNetStreamDestMapFindVal(map, dest, NULL)) != NULL) {
+      SNetStreamsetRemove(waitSet, sd);
+      SNetStreamsetPut(blockSet, sd);
+    }
     SNetDestFree(dest);
   }
 
   LIST_DEQUEUE_EACH(newUnblocked, dest) {
-    sd = SNetStreamDestMapFindVal(map, dest);
-    SNetStreamsetRemove(blockSet, sd);
-    SNetStreamsetPut(waitSet, sd);
+    if ((sd = SNetStreamDestMapFindVal(map, dest, NULL)) != NULL) {
+      SNetStreamsetRemove(blockSet, sd);
+      SNetStreamsetPut(waitSet, sd);
+    }
     SNetDestFree(dest);
   }
   pthread_mutex_unlock(&newStreamsMutex);
@@ -138,14 +140,13 @@ void SNetOutputManager(snet_entity_t *ent, void *args)
         dest = SNetStreamDestMapTake(streamMap, sd);
         SNetStreamsetRemove(&waiting, sd);
         SNetDistribSendRecord(dest, rec);
+        SNetStreamClose(sd, true);
         SNetDestFree(dest);
         break;
       default:
         SNetDistribSendRecord(SNetStreamDestMapGet(streamMap, sd), rec);
         break;
     }
-
-    SNetRecDestroy(rec);
   }
 
   pthread_mutex_destroy(&newStreamsMutex);
