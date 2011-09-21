@@ -1,8 +1,10 @@
 <metadata>
-  <default>
+  <boxdefault>
     <interface value="C4SNet"/>
-  </default>
+  </boxdefault>
 </metadata>
+ 
 
-net singlebox
-connect [{<T>} -> {<T=T+1>}]@1;
+net singlebox {
+  box dec((A) -> (A));
+} connect dec@1;

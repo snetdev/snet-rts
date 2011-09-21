@@ -1,6 +1,6 @@
 include ../../paths.mkf
 
 TARGET = singlebox
-BOXES  =
+BOXES  = dec.o
 
 include ../../rules.mkf
