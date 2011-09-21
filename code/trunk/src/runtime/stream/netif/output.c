@@ -53,15 +53,15 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
 
   if (rec != NULL) {
 
-    fprintf(hnd->file, "<?xml version=\"1.0\" ?>");
+    fprintf(hnd->file, "<?xml version=\"1.0\" ?>\n");
 
     switch( SNetRecGetDescriptor( rec)) {
     case REC_data:
       mode = SNetRecGetDataMode(rec);
       if (mode == MODE_textual) {
-	fprintf(hnd->file, "<record xmlns=\"snet-home.org\" type=\"data\" mode=\"textual\" >");
+	fprintf(hnd->file, "<record xmlns=\"snet-home.org\" type=\"data\" mode=\"textual\" >\n");
       } else {
-	fprintf(hnd->file, "<record xmlns=\"snet-home.org\" type=\"data\" mode=\"binary\" >");
+	fprintf(hnd->file, "<record xmlns=\"snet-home.org\" type=\"data\" mode=\"binary\" >\n");
       }
 
       /* Fields */
@@ -81,7 +81,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
                                               SNetRefGetData(field));
             }
 
-            fprintf(hnd->file, "</field>");
+            fprintf(hnd->file, "</field>\n");
             SNetMemFree(interface);
           }
 
@@ -94,7 +94,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
        /* Tags */
       RECORD_FOR_EACH_TAG(rec, name, val) {
         if ((label = SNetInIdToLabel(hnd->labels, name)) != NULL) {
-          fprintf(hnd->file, "<tag label=\"%s\">%d</tag>", label, val);
+          fprintf(hnd->file, "<tag label=\"%s\">%d</tag>\n", label, val);
         } else{
           SNetUtilDebugFatal("Unknown tag %d at output!", name);
         }
@@ -105,7 +105,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
       /* BTags */
       RECORD_FOR_EACH_BTAG(rec, name, val) {
         if ((label = SNetInIdToLabel(hnd->labels, name)) != NULL){
-          fprintf(hnd->file, "<btag label=\"%s\">%d</btag>", label, val);
+          fprintf(hnd->file, "<btag label=\"%s\">%d</btag>\n", label, val);
         } else{
           SNetUtilDebugFatal("Unknown binding tag %d at output!", name);
         }
@@ -113,7 +113,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
         SNetMemFree(label);
       }
 
-      fprintf(hnd->file, "</record>");
+      fprintf(hnd->file, "</record>\n");
       break;
     case REC_sync:
       SNetUtilDebugFatal("REC_sync in output! This should not happen.");
