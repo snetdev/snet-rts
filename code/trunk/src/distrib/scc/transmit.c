@@ -46,8 +46,8 @@ void SCCPackRef(int count, snet_ref_t **src)
 {
   int i;
   for (i = 0; i < count; i++) {
-    SNetRefOutgoing(src[i]);
     cpy_mem_to_mpb(sendMPB, src[i], sizeof(snet_ref_t));
+    SNetRefOutgoing(src[i]);
   }
 }
 
@@ -114,11 +114,11 @@ snet_record_t *SNetDistribRecvRecord(snet_dest_t **recordDest)
     } else if (status == 7) {
       snet_dest_t dest;
       cpy_mpb_to_mem(recvMPB, &dest, sizeof(snet_dest_t));
-      SNetOutputManagerUnblock(&dest);
+      SNetOutputManagerUnblock(SNetDestCopy(&dest));
     } else if (status == 8) {
       snet_dest_t dest;
       cpy_mpb_to_mem(recvMPB, &dest, sizeof(snet_dest_t));
-      SNetOutputManagerBlock(&dest);
+      SNetOutputManagerBlock(SNetDestCopy(&dest));
     }
     unlock(node_location);
   }
