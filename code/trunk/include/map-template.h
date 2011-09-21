@@ -43,6 +43,15 @@
     ); \
     snet_map_ctr++)
 
+#define MAP_DEQUEUE_EACH(map, key, val) \
+  for (; \
+    map->used && ( \
+      map->used--, \
+      (key = map->keys[map->used]), \
+      (val = map->values[map->used]), \
+      true \
+    );)
+
 typedef struct snet_map_t {
   int size, used;
   MAP_KEY_H *keys;
@@ -59,7 +68,7 @@ void MAP_FUNCTION(MAP_NAME_H, Destroy)(snet_map_t *map);
 
 int MAP_FUNCTION(MAP_NAME_H, Size)(snet_map_t *map);
 
-MAP_KEY_H MAP_FUNCTION(MAP_NAME_H, FindVal)(snet_map_t *map, MAP_VAL_H val);
+MAP_KEY_H MAP_FUNCTION(MAP_NAME_H, FindVal)(snet_map_t *map, MAP_VAL_H val, MAP_KEY_H key);
 
 void MAP_FUNCTION(MAP_NAME_H, Set)(snet_map_t *map, MAP_KEY_H key, MAP_VAL_H val);
 MAP_VAL_H MAP_FUNCTION(MAP_NAME_H, Get)(snet_map_t *map, MAP_KEY_H key);

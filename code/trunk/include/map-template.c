@@ -171,7 +171,7 @@ static int MAP_FUNCTION(MAP_NAME, Find)(snet_map_t *map, MAP_KEY key)
   return -1;
 }
 
-MAP_KEY MAP_FUNCTION(MAP_NAME, FindVal)(snet_map_t *map, MAP_VAL val)
+MAP_KEY MAP_FUNCTION(MAP_NAME, FindVal)(snet_map_t *map, MAP_VAL val, MAP_KEY key)
 {
   int i;
   for (i = 0; i < map->used; i++) {
@@ -182,8 +182,7 @@ MAP_KEY MAP_FUNCTION(MAP_NAME, FindVal)(snet_map_t *map, MAP_VAL val)
     #endif
   }
 
-  /* Should never get here! */
-  assert(0);
+  return key;
 }
 
 void MAP_FUNCTION(MAP_NAME, Set)(snet_map_t *map, MAP_KEY key, MAP_VAL val)
