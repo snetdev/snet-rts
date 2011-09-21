@@ -380,7 +380,7 @@ static int C4SNetDataSerializeDataPart( FILE *file, c4snet_type_t type, void *da
     ret += fprintf(file, "%ld", *(long *)data);
     break;
   case CTYPE_float: 
-    ret += fprintf(file, "%.32e", *(double *)data);	
+    ret += fprintf(file, "%.32f", *(float *)data);	
     break;
   case CTYPE_double: 
     ret += fprintf(file, "%.32le", *(double *)data);
