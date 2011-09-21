@@ -544,7 +544,9 @@ void SNetRecAddAsParent(snet_record_t *rec, snet_record_t *parent)
 void SNetRecSerialise( snet_record_t *rec, void (*packInts)(int, int*),
                        void (*packRefs)(int, snet_ref_t**))
 {
-  int enumConversion;
+  snet_ref_t *val;
+  int key, enumConversion;
+
   enumConversion = REC_DESCR(rec);
   packInts(1, &enumConversion);
   switch (REC_DESCR(rec)) {
@@ -558,6 +560,10 @@ void SNetRecSerialise( snet_record_t *rec, void (*packInts)(int, int*),
 
       enumConversion = DATA_REC( rec, interface_id);
       packInts(1, &enumConversion);
+
+      MAP_DEQUEUE_EACH( DATA_REC( rec, fields), key, val) {
+        SNetMemFree(val);
+      }
 
       /* FIXME how to best serialise the id and the parent ids */
       break;
@@ -578,6 +584,8 @@ void SNetRecSerialise( snet_record_t *rec, void (*packInts)(int, int*),
       SNetUtilDebugFatal("Unknown control record description. [%d]", REC_DESCR(rec));
       break;
   }
+
+  SNetRecDestroy(rec);
 }
 
 snet_record_t *SNetRecDeserialise( void (*unpackInts)(int, int*),
