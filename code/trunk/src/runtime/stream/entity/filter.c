@@ -222,12 +222,18 @@ static void FilterTask(snet_entity_t *ent, void *arg)
                 SNetRecFlowInherit( farg->input_variant, in_rec, out_rec);
 
 #ifdef MONINFO_USE_RECORD_EVENTS
-                /* Emit a monitoring message of a record written by a filter */
+                /* Emit a monitoring message of a record write by a filter started */
                 SNetThreadingEventSignal( ent,
                     SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec)
                     );
 #endif
                   SNetStreamWrite( outstream, out_rec);
+#ifdef MONINFO_USE_RECORD_EVENTS
+                /* Emit a monitoring message of a record write by a filter finished */
+                SNetThreadingEventSignal( ent,
+                    SNetMonInfoCreate( EV_FILTER_WRITE_FINISH, MON_RECORD, out_rec)
+                    );
+#endif
               } /* forall instruction lists */
             } /* if a guard is true first time */
           }
