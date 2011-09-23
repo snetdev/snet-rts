@@ -228,12 +228,6 @@ static void FilterTask(snet_entity_t *ent, void *arg)
                     );
 #endif
                   SNetStreamWrite( outstream, out_rec);
-#ifdef MONINFO_USE_RECORD_EVENTS
-                /* Emit a monitoring message of a record write by a filter finished */
-                SNetThreadingEventSignal( ent,
-                    SNetMonInfoCreate( EV_FILTER_WRITE_FINISH, MON_RECORD, out_rec)
-                    );
-#endif
               } /* forall instruction lists */
             } /* if a guard is true first time */
           }

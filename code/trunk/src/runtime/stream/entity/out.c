@@ -89,13 +89,6 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
   /* write to stream */
   SNetStreamWrite( hnd->out_sd, out_rec);
 
-  #ifdef MONINFO_USE_RECORD_EVENTS
-  /* Emit a monitoring message of a record write by a box finished */
-  SNetThreadingEventSignal( hnd->ent,
-      SNetMonInfoCreate( EV_BOX_WRITE_FINISH, MON_RECORD, out_rec)
-      );
-#endif
-
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
   SNetUtilDebugNoticeEnt( hnd->ent,
@@ -188,13 +181,6 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
 
   /* write to stream */
   SNetStreamWrite( hnd->out_sd, out_rec);
-
-#ifdef MONINFO_USE_RECORD_EVENTS
-/* Emit a monitoring message of a record write by a box finished */
-SNetThreadingEventSignal( hnd->ent,
-    SNetMonInfoCreate( EV_BOX_WRITE_FINISH, MON_RECORD, out_rec)
-    );
-#endif
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);

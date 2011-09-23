@@ -40,11 +40,9 @@ typedef enum {
   EV_INPUT_ARRIVE=0,
   EV_BOX_START,
   EV_BOX_WRITE,
-  EV_BOX_WRITE_FINISH,
   EV_BOX_FINISH, /* not yet used, because its not a record event */
   EV_FILTER_START,
   EV_FILTER_WRITE,
-  EV_FILTER_WRITE_FINISH,
   EV_SYNC_FIRST,
   EV_SYNC_NEXT,
   EV_SYNC_FIRE,

@@ -29,11 +29,9 @@ static const char *names_event[] = {
   "EV_INPUT_ARRIVE",
   "EV_BOX_START",
   "EV_BOX_WRITE",
-  "EV_BOX_WRITE_FINISH",
   "EV_BOX_FINISH",
   "EV_FILTER_START",
   "EV_FILTER_WRITE",
-  "EV_FILTER_WRITE_FINISH",
   "EV_SYNC_FIRST",
   "EV_SYNC_NEXT",
   "EV_SYNC_FIRE",
@@ -74,9 +72,7 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
         case EV_SYNC_NEXT:
           break;
         case EV_BOX_WRITE:
-        case EV_BOX_WRITE_FINISH:
         case EV_FILTER_WRITE:
-        case EV_FILTER_WRITE_FINISH:
           break;
         case EV_SYNC_FIRE:
           break;
