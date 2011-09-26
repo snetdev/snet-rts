@@ -92,31 +92,6 @@ snet_map_t *MAP_FUNCTION(MAP_NAME, Copy)(snet_map_t *map)
   return result;
 }
 
-snet_map_t *MAP_FUNCTION(MAP_NAME, ManualCopy)(snet_map_t *map,
-                                             MAP_VAL (*copyFun)(MAP_VAL))
-{
-  int i;
-  snet_map_t *result = SNetMemAlloc(sizeof(snet_map_t));
-
-  result->size = map->used;
-  result->used = map->used;
-
-  result->keys = SNetMemAlloc(map->used * sizeof(MAP_KEY));
-  #ifdef MAP_KEY_COPY_FUN
-    for (i = 0; i < map->used; i++) {
-      result->keys[i] = MAP_KEY_COPY_FUN(map->keys[i]);
-    }
-  #else
-    memcpy(result->keys, map->keys, map->used * sizeof(MAP_KEY));
-  #endif
-
-  result->values = SNetMemAlloc(map->used * sizeof(MAP_VAL));
-  for (i = 0; i < map->used; i++) {
-    result->values[i] = copyFun(map->values[i]);
-  }
-
-  return result;
-}
 
 
 void MAP_FUNCTION(MAP_NAME, Destroy)(snet_map_t *map)

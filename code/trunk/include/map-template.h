@@ -60,10 +60,6 @@ typedef struct snet_map_t {
 
 snet_map_t *MAP_FUNCTION(MAP_NAME_H, Create)(int size, ...);
 snet_map_t *MAP_FUNCTION(MAP_NAME_H, Copy)(snet_map_t *map);
-snet_map_t *MAP_FUNCTION(MAP_NAME_H, ManualCopy)(
-    snet_map_t *map,
-    MAP_VAL_H (*copyFun)(MAP_VAL_H)
-);
 void MAP_FUNCTION(MAP_NAME_H, Destroy)(snet_map_t *map);
 
 int MAP_FUNCTION(MAP_NAME_H, Size)(snet_map_t *map);
