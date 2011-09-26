@@ -172,10 +172,10 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/common/omanager.c \
 	src/distrib/common/reference.c \
 	src/distrib/common/refcollections.c \
+	src/distrib/common/dest.c \
 	src/distrib/mpi/distribution.c \
 	src/distrib/mpi/pack.c \
-	src/distrib/mpi/transmit.c \
-	src/distrib/mpi/dest.c
+	src/distrib/mpi/transmit.c
 libdistribmpi_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/distrib/mpi \
@@ -192,9 +192,9 @@ libdistribscc_la_SOURCES = \
 	src/distrib/common/omanager.c \
 	src/distrib/common/reference.c \
 	src/distrib/common/refcollections.c \
+	src/distrib/common/dest.c \
 	src/distrib/scc/distribution.c \
-	src/distrib/scc/transmit.c \
-	src/distrib/scc/dest.c
+	src/distrib/scc/transmit.c
 libdistribscc_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/distrib/scc \

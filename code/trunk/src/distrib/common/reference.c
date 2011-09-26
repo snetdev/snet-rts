@@ -11,8 +11,8 @@
 #include "stream.h"
 #include "threading.h"
 
-#define COPYFUN(interface, data)    (SNetInterfaceGet(interface)->copyfun(data))
-#define FREEFUN(interface, data)    (SNetInterfaceGet(interface)->freefun(data))
+#define COPYFUN(interface, data)    (SNetInterfaceGet(interface)->copyfun((void*) (data)))
+#define FREEFUN(interface, data)    (SNetInterfaceGet(interface)->freefun((void*) (data)))
 
 struct snet_refcount {
   int count;
@@ -54,25 +54,26 @@ snet_ref_t *SNetRefCopy(snet_ref_t *ref)
   *result = *ref;
 
   if (SNetDistribIsNodeLocation(ref->node)) {
-    result->data = (uintptr_t) COPYFUN(ref->interface, (void*) ref->data);
-    return result;
-  }
-
-  pthread_mutex_lock(&refMutex);
-  snet_refcount_t *tmp = SNetRefRefcountMapGet(refcountMap, *ref);
-  if (tmp->data) {
-    result->node = SNetDistribGetNodeId();
-    result->data = (uintptr_t) COPYFUN(ref->interface, tmp->data);
+    result->data = (uintptr_t) COPYFUN(ref->interface, ref->data);
   } else {
-    tmp->count++;
-    SNetDistribRemoteRefUpdate(ref, 1);
+    pthread_mutex_lock(&refMutex);
+    snet_refcount_t *tmp = SNetRefRefcountMapGet(refcountMap, *ref);
+
+    if (tmp->data) {
+      result->node = SNetDistribGetNodeId();
+      result->data = (uintptr_t) COPYFUN(result->interface, tmp->data);
+    } else {
+      tmp->count++;
+      SNetDistribUpdateRef(ref, 1);
+    }
+
+    pthread_mutex_unlock(&refMutex);
   }
-  pthread_mutex_unlock(&refMutex);
 
   return result;
 }
 
-static void *getData(snet_ref_t *ref)
+static void *GetData(snet_ref_t *ref)
 {
   void *result;
   if (SNetDistribIsNodeLocation(ref->node)) return (void*) ref->data;
@@ -81,7 +82,7 @@ static void *getData(snet_ref_t *ref)
   snet_refcount_t *tmp = SNetRefRefcountMapGet(refcountMap, *ref);
 
   if (tmp->data) {
-    SNetDistribRemoteRefUpdate(ref, -1);
+    SNetDistribUpdateRef(ref, -1);
   } else {
     snet_stream_t *str = SNetStreamCreate(1);
     snet_stream_desc_t *sd = SNetStreamOpen(str, 'r');
@@ -90,7 +91,7 @@ static void *getData(snet_ref_t *ref)
       SNetStreamListAppendEnd(tmp->list, str);
     } else {
       tmp->list = SNetStreamListCreate(1, str);
-      SNetDistribRemoteRefFetch(ref);
+      SNetDistribFetchRef(ref);
     }
 
     pthread_mutex_unlock(&refMutex);
@@ -113,14 +114,14 @@ static void *getData(snet_ref_t *ref)
 
 void *SNetRefGetData(snet_ref_t *ref)
 {
-  ref->data = (uintptr_t) getData(ref);
+  ref->data = (uintptr_t) GetData(ref);
   ref->node = SNetDistribGetNodeId();
   return (void*) ref->data;
 }
 
 void *SNetRefTakeData(snet_ref_t *ref)
 {
-  void *result = getData(ref);
+  void *result = GetData(ref);
   SNetMemFree(ref);
   return result;
 }
@@ -128,7 +129,7 @@ void *SNetRefTakeData(snet_ref_t *ref)
 void SNetRefDestroy(snet_ref_t *ref)
 {
   if (SNetDistribIsNodeLocation(ref->node)) {
-    FREEFUN(ref->interface, (void*) ref->data);
+    FREEFUN(ref->interface, ref->data);
     SNetMemFree(ref);
     return;
   }
@@ -136,7 +137,7 @@ void SNetRefDestroy(snet_ref_t *ref)
   pthread_mutex_lock(&refMutex);
   snet_refcount_t *tmp = SNetRefRefcountMapGet(refcountMap, *ref);
 
-  SNetDistribRemoteRefUpdate(ref, -1);
+  SNetDistribUpdateRef(ref, -1);
   if (--tmp->count == 0) {
     if (tmp->data) FREEFUN(ref->interface, tmp->data);
     SNetMemFree(SNetRefRefcountMapTake(refcountMap, *ref));
@@ -155,21 +156,21 @@ snet_ref_t *SNetRefIncoming(snet_ref_t *ref)
   pthread_mutex_lock(&refMutex);
   if (SNetRefRefcountMapContains(refcountMap, *ref)) {
     tmp = SNetRefRefcountMapGet(refcountMap, *ref);
+
+    if (!SNetDistribIsNodeLocation(ref->node)) {
+      tmp->count++;
+    } else if (--tmp->count == 0) {
+      SNetMemFree(SNetRefRefcountMapTake(refcountMap, *ref));
+    } else {
+      result->data = (uintptr_t) COPYFUN(result->interface, result->data);
+    }
   } else {
     tmp = SNetMemAlloc(sizeof(snet_refcount_t));
-    tmp->count = 0;
+    tmp->count = 1;
     tmp->data = tmp->list = NULL;
     SNetRefRefcountMapSet(refcountMap, *result, tmp);
   }
 
-  if (!SNetDistribIsNodeLocation(ref->node)) {
-    tmp->count++;
-  } else if (--tmp->count == 0) {
-    result->data = (uintptr_t) tmp->data;
-    SNetMemFree(SNetRefRefcountMapTake(refcountMap, *ref));
-  } else {
-    result->data = (uintptr_t) COPYFUN(ref->interface, tmp->data);
-  }
   pthread_mutex_unlock(&refMutex);
 
   return result;
@@ -181,42 +182,29 @@ void SNetRefOutgoing(snet_ref_t *ref)
   pthread_mutex_lock(&refMutex);
   if (SNetRefRefcountMapContains(refcountMap, *ref)) {
     tmp = SNetRefRefcountMapGet(refcountMap, *ref);
+
+    if (SNetDistribIsNodeLocation(ref->node)) {
+      tmp->count++;
+      FREEFUN(ref->interface, ref->data);
+    } else if (--tmp->count == 0) {
+      SNetMemFree(SNetRefRefcountMapTake(refcountMap, *ref));
+    }
   } else {
     tmp = SNetMemAlloc(sizeof(snet_refcount_t));
-    tmp->count = 0;
+    tmp->count = 1;
     tmp->data = (void*) ref->data;
     tmp->list = NULL;
     SNetRefRefcountMapSet(refcountMap, *ref, tmp);
   }
 
-  if (SNetDistribIsNodeLocation(ref->node)) {
-    tmp->count++;
-  } else if (--tmp->count == 0) {
-    SNetMemFree(SNetRefRefcountMapTake(refcountMap, *ref));
-  }
   pthread_mutex_unlock(&refMutex);
-}
-
-void *SNetRefFetch(snet_ref_t *ref)
-{
-  void *result;
-  pthread_mutex_lock(&refMutex);
-  snet_refcount_t *tmp = SNetRefRefcountMapGet(refcountMap, *ref);
-  if (--tmp->count == 0) {
-    result = tmp->data;
-    SNetMemFree(SNetRefRefcountMapTake(refcountMap, *ref));
-  } else {
-    result = COPYFUN(ref->interface, tmp->data);
-  }
-  pthread_mutex_unlock(&refMutex);
-  return result;
 }
 
 void SNetRefUpdate(snet_ref_t *ref, int value)
 {
   pthread_mutex_lock(&refMutex);
   snet_refcount_t *tmp = SNetRefRefcountMapGet(refcountMap, *ref);
-  tmp->count = tmp->count + value;
+  tmp->count += value;
   if (tmp->count == 0) {
     FREEFUN(ref->interface, tmp->data);
     SNetMemFree(SNetRefRefcountMapTake(refcountMap, *ref));
