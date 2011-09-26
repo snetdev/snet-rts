@@ -88,7 +88,7 @@ void SNetDistribStop(bool global)
   if (global) {
     MPI_Comm_size(MPI_COMM_WORLD, &i);
     for (i--; i >= 0; i--) {
-      MPI_Send(&i, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+      MPI_Send(&i, 1, MPI_INT, i, snet_stop, MPI_COMM_WORLD);
     }
   } else {
     pthread_mutex_lock(&exitMutex);
