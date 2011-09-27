@@ -1,22 +1,16 @@
-#include <assert.h>
 #include <signal.h>
 #include <string.h>
-#include <unistd.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 
-#include "debug.h"
+#include "SCC_API.h"
 #include "dest.h"
+#include "distribcommon.h"
 #include "memfun.h"
-#include "imanager.h"
-#include "iomanagers.h"
 #include "interface_functions.h"
-#include "omanager.h"
 #include "record.h"
 #include "reference.h"
 #include "scc.h"
-
-#include "SCC_API.h"
 
 static t_vcharp sendMPB;
 static t_vcharp recvMPB;
@@ -33,14 +27,10 @@ static void write_pid(void)
 }
 
 void SCCPackInt(int count, int *src)
-{
-  cpy_mem_to_mpb(sendMPB, src, count * sizeof(int));
-}
+{ cpy_mem_to_mpb(sendMPB, src, count * sizeof(int)); }
 
 void SCCUnpackInt(int count, int *dst)
-{
-  cpy_mpb_to_mem(recvMPB, dst, count * sizeof(int));
-}
+{ cpy_mpb_to_mem(recvMPB, dst, count * sizeof(int)); }
 
 void SCCPackRef(int count, snet_ref_t **src)
 {
@@ -63,30 +53,34 @@ void SCCUnpackRef(int count, snet_ref_t **dst)
 
 snet_msg_t SNetDistribRecvMsg(void)
 {
+  int sig;
   snet_msg_t result;
-  int sig, start, end;
-  static int pid = 0;
   static sigset_t sigmask;
-  static bool handling = true;
+  static bool handling = true, set = false;
 
-  if (!pid) {
-    pid = 1;
+  if (!set) {
+    set = true;
     write_pid();
     sigemptyset(&sigmask);
     sigaddset(&sigmask, SIGUSR1);
+    sigaddset(&sigmask, SIGUSR2);
   }
 
   recvMPB = mpbs[node_location];
 
 start:
-  if (!handling) sigwait(&sigmask, &sig);
+  if (!handling) {
+    sigwait(&sigmask, &sig);
+    if (sig == SIGUSR2) {
+      result.type = snet_update;
+      return result;
+    }
+  }
+
   lock(node_location);
 
   flush();
-  start = START(recvMPB);
-  end = END(recvMPB);
-
-  if (start == end) {
+  if (START(recvMPB) == END(recvMPB)) {
     handling = false;
     HANDLING(recvMPB) = 0;
     FOOL_WRITE_COMBINE;
@@ -101,13 +95,11 @@ start:
   cpy_mpb_to_mem(recvMPB, &result.type, sizeof(snet_comm_type_t));
   switch (result.type) {
     case snet_rec:
+      result.rec = SNetRecDeserialise(&SCCUnpackInt, &SCCUnpackRef);
     case snet_block:
     case snet_unblock:
       result.dest = SNetMemAlloc(sizeof(snet_dest_t));
       cpy_mpb_to_mem(recvMPB, result.dest, sizeof(snet_dest_t));
-      if (result.type == snet_rec) {
-        result.rec = SNetRecDeserialise(&SCCUnpackInt, &SCCUnpackRef);
-      }
       break;
     case snet_ref_set:
       cpy_mpb_to_mem(recvMPB, &result.ref, sizeof(snet_ref_t));
@@ -131,18 +123,18 @@ start:
 
 void SNetDistribSendRecord(snet_dest_t *dest, snet_record_t *rec)
 {
-  snet_comm_type_t type = snet_rec;
   int node = dest->node;
+  snet_comm_type_t type = snet_rec;
   sendMPB = mpbs[node];
 
   start_write_node(node);
+  SNetRecSerialise(rec, &SCCPackInt, &SCCPackRef);
   cpy_mem_to_mpb(sendMPB, &type, sizeof(snet_comm_type_t));
 
   dest->node = node_location;
   cpy_mem_to_mpb(sendMPB, dest, sizeof(snet_dest_t));
   dest->node = node;
 
-  SNetRecSerialise(rec, &SCCPackInt, &SCCPackRef);
   stop_write_node(node);
 }
 

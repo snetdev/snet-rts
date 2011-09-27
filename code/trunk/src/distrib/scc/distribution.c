@@ -1,22 +1,13 @@
-#include <assert.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <unistd.h>
 
 #include "SCC_API.h"
-#include "dest.h"
 #include "distribution.h"
-#include "imanager.h"
-#include "iomanagers.h"
-#include "memfun.h"
-#include "omanager.h"
-#include "reference.h"
+#include "distribcommon.h"
 #include "scc.h"
-#include "snetentities.h"
 
 #define SIZE_16MB   (16*1024*1024)
 
@@ -27,20 +18,12 @@ t_vcharp locks[CORES];
 volatile int *irq_pins[CORES];
 volatile uint64_t *luts[CORES];
 
-static int fd;
+static int fd, num_nodes;
 
-static int num_nodes;
-static bool running = true;
-static snet_info_tag_t prevDest;
-static snet_info_tag_t infoCounter;
-static pthread_cond_t exitCond = PTHREAD_COND_INITIALIZER;
-static pthread_mutex_t exitMutex = PTHREAD_MUTEX_INITIALIZER;
-
-void SNetDistribInit(int argc, char **argv, snet_info_t *info)
+void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
 {
-  snet_dest_t *dest;
   sigset_t signal_mask;
-  int my_x, my_y, my_z, *counter;
+  int my_x, my_y, my_z;
   (void) info; /* NOT USED */
 
   for (int i = 0; i < argc; i++) {
@@ -93,54 +76,29 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   *((volatile uint32_t*) (localSpace + 4)) = 0;
   FOOL_WRITE_COMBINE;
   unlock(node_location);
-
-  counter = SNetMemAlloc(sizeof(int));
-  *counter = 0;
-
-  dest = SNetMemAlloc(sizeof(snet_dest_t));
-  dest->node = 0;
-  dest->dest = *counter;
-  dest->parent = 0;
-  dest->parentNode = 0;
-  dest->dynamicIndex = 0;
-  dest->dynamicLoc = 0;
-
-  prevDest = SNetInfoCreateTag();
-  SNetInfoSetTag(info, prevDest, (uintptr_t) dest,
-                 (void* (*)(void*)) &SNetDestCopy);
-
-  infoCounter = SNetInfoCreateTag();
-  SNetInfoSetTag(info, infoCounter, (uintptr_t) counter, NULL);
-
-  SNetReferenceInit();
-  SNetOutputManagerInit();
-  SNetInputManagerInit();
 }
 
-void SNetDistribStop(bool global)
+void SNetDistribGlobalStop(void)
 {
-  if (global) {
-    snet_comm_type_t exit_status = snet_stop;
+  snet_comm_type_t exit_status = snet_stop;
 
-    for (int i = num_nodes - 1; i >= 0; i--) {
-      start_write_node(i);
-      cpy_mem_to_mpb(mpbs[i], &exit_status, sizeof(snet_comm_type_t));
-      stop_write_node(i);
-    }
-  } else {
-    pthread_mutex_lock(&exitMutex);
-    running = false;
-    pthread_cond_signal(&exitCond);
-    pthread_mutex_unlock(&exitMutex);
-
-    for (int cpu = 0; cpu < num_nodes; cpu++) {
-      FreeConfigReg((int*) irq_pins[cpu]);
-      FreeConfigReg((int*) locks[cpu]);
-      FreeConfigReg((int*) luts[cpu]);
-      MPBunalloc(&mpbs[cpu]);
-    }
-    munmap(localSpace, min(106, (32 * 1024) / (16 * num_nodes)) * SIZE_16MB);
+  for (int i = num_nodes - 1; i >= 0; i--) {
+    start_write_node(i);
+    cpy_mem_to_mpb(mpbs[i], &exit_status, sizeof(snet_comm_type_t));
+    stop_write_node(i);
   }
+}
+
+void SNetDistribLocalStop(void)
+{
+  for (int cpu = 0; cpu < num_nodes; cpu++) {
+    FreeConfigReg((int*) irq_pins[cpu]);
+    FreeConfigReg((int*) locks[cpu]);
+    FreeConfigReg((int*) luts[cpu]);
+    MPBunalloc(&mpbs[cpu]);
+  }
+
+  munmap(localSpace, min(106, (32 * 1024) / (16 * num_nodes)) * SIZE_16MB);
 }
 
 int SNetDistribGetNodeId(void) { return node_location; }
