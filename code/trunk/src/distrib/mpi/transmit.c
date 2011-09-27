@@ -1,7 +1,6 @@
 #include <mpi.h>
 
 #include "debug.h"
-#include "dest.h"
 #include "memfun.h"
 #include "imanager.h"
 #include "distribcommon.h"
@@ -98,9 +97,8 @@ snet_msg_t SNetDistribRecvMsg(void)
         result.rec = SNetRecDeserialise(&MPIUnpackInt, &MPIUnpackRef);
     case snet_block:
     case snet_unblock:
-      result.dest = SNetMemAlloc(sizeof(snet_dest_t));
-      result.dest->node = status.MPI_SOURCE;
-      MPIUnpackDest(&recvBuf, result.dest);
+      result.dest.node = status.MPI_SOURCE;
+      MPIUnpackDest(&recvBuf, &result.dest);
       break;
     case snet_ref_set:
       result.ref = SNetMemAlloc(sizeof(snet_ref_t));
@@ -124,12 +122,12 @@ snet_msg_t SNetDistribRecvMsg(void)
   return result;
 }
 
-void SNetDistribSendRecord(snet_dest_t *dest, snet_record_t *rec)
+void SNetDistribSendRecord(snet_dest_t dest, snet_record_t *rec)
 {
   sendBuf.offset = 0;
   SNetRecSerialise(rec, &MPIPackInt, &MPIPackRef);
-  MPIPackDest(&sendBuf, dest);
-  MPI_Send(sendBuf.data, sendBuf.offset, MPI_PACKED, dest->node, snet_rec,
+  MPIPackDest(&sendBuf, &dest);
+  MPI_Send(sendBuf.data, sendBuf.offset, MPI_PACKED, dest.node, snet_rec,
            MPI_COMM_WORLD);
 }
 
@@ -155,18 +153,18 @@ void SNetDistribUpdateBlocked(void)
   MPI_Send(buf.data, buf.offset, MPI_PACKED, node_location, snet_update, MPI_COMM_WORLD);
 }
 
-void SNetDistribUnblockDest(snet_dest_t *dest)
+void SNetDistribUnblockDest(snet_dest_t dest)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  MPIPackDest(&buf, dest);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, dest->node, snet_unblock, MPI_COMM_WORLD);
+  MPIPackDest(&buf, &dest);
+  MPI_Send(buf.data, buf.offset, MPI_PACKED, dest.node, snet_unblock, MPI_COMM_WORLD);
 }
 
-void SNetDistribBlockDest(snet_dest_t *dest)
+void SNetDistribBlockDest(snet_dest_t dest)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  MPIPackDest(&buf, dest);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, dest->node, snet_block, MPI_COMM_WORLD);
+  MPIPackDest(&buf, &dest);
+  MPI_Send(buf.data, buf.offset, MPI_PACKED, dest.node, snet_block, MPI_COMM_WORLD);
 }
 
 void SNetDistribSendData(snet_ref_t *ref, void *data, int node)

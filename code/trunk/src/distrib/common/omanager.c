@@ -6,7 +6,6 @@
 #include "entities.h"
 #include "memfun.h"
 #include "record.h"
-#include "tuple.h"
 
 static bool running = true;
 static snet_stream_t *wakeupStream = NULL;
@@ -15,7 +14,7 @@ static snet_dest_list_t *newBlocked = NULL;
 static snet_dest_list_t *newUnblocked = NULL;
 static pthread_mutex_t outputManagerMutex = PTHREAD_MUTEX_INITIALIZER;
 
-void SNetOutputManagerNewOut(snet_dest_t *dest, snet_stream_t *stream)
+void SNetOutputManagerNewOut(snet_dest_t dest, snet_stream_t *stream)
 {
   snet_tuple_t tuple = {dest, stream};
 
@@ -31,7 +30,7 @@ void SNetOutputManagerNewOut(snet_dest_t *dest, snet_stream_t *stream)
   pthread_mutex_unlock(&outputManagerMutex);
 }
 
-static void UpdateState(snet_dest_t *dest, bool block)
+static void UpdateState(snet_dest_t dest, bool block)
 {
   pthread_mutex_lock(&outputManagerMutex);
   SNetDestListAppendEnd(block ? newBlocked : newUnblocked, dest);
@@ -41,8 +40,8 @@ static void UpdateState(snet_dest_t *dest, bool block)
   pthread_mutex_unlock(&outputManagerMutex);
 }
 
-void SNetOutputManagerBlock(snet_dest_t *dest) { UpdateState(dest, true); }
-void SNetOutputManagerUnblock(snet_dest_t *dest) { UpdateState(dest, false); }
+void SNetOutputManagerBlock(snet_dest_t dest) { UpdateState(dest, true); }
+void SNetOutputManagerUnblock(snet_dest_t dest) { UpdateState(dest, false); }
 
 static void UpdateOutgoing(snet_stream_dest_map_t *map, snet_streamset_t *set)
 {
@@ -61,7 +60,7 @@ static void UpdateOutgoing(snet_stream_dest_map_t *map, snet_streamset_t *set)
 static void UpdateBlocked(snet_stream_dest_map_t *map, snet_dest_list_t *list,
                           snet_streamset_t *oldSet, snet_streamset_t *newSet)
 {
-  snet_dest_t *dest;
+  snet_dest_t dest;
   snet_stream_desc_t *sd;
 
   pthread_mutex_lock(&outputManagerMutex);
@@ -70,7 +69,6 @@ static void UpdateBlocked(snet_stream_dest_map_t *map, snet_dest_list_t *list,
       SNetStreamsetRemove(oldSet, sd);
       SNetStreamsetPut(newSet, sd);
     }
-    SNetMemFree(dest);
   }
   pthread_mutex_unlock(&outputManagerMutex);
 }
@@ -117,7 +115,7 @@ void SNetOutputManager(snet_entity_t *ent, void *args)
 
   UpdateOutgoing(streamMap, &waiting);
   while (running) {
-    snet_dest_t *dest;
+    snet_dest_t dest;
     snet_record_t *rec;
     snet_stream_desc_t *sd = SNetStreamPoll(&waiting);
 
@@ -140,7 +138,6 @@ void SNetOutputManager(snet_entity_t *ent, void *args)
         SNetStreamsetRemove(&waiting, sd);
         SNetDistribSendRecord(dest, rec);
         SNetStreamClose(sd, true);
-        SNetMemFree(dest);
         break;
       default:
         SNetDistribSendRecord(SNetStreamDestMapGet(streamMap, sd), rec);

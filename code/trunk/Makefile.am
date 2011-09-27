@@ -177,7 +177,6 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/common/omanager.c \
 	src/distrib/common/reference.c \
 	src/distrib/common/refcollections.c \
-	src/distrib/common/dest.c \
 	src/distrib/common/distribcommon.c \
 	src/distrib/mpi/distribution.c \
 	src/distrib/mpi/transmit.c
@@ -197,7 +196,6 @@ libdistribscc_la_SOURCES = \
 	src/distrib/common/omanager.c \
 	src/distrib/common/reference.c \
 	src/distrib/common/refcollections.c \
-	src/distrib/common/dest.c \
 	src/distrib/common/distribcommon.c \
 	src/distrib/scc/distribution.c \
 	src/distrib/scc/transmit.c

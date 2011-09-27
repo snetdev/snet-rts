@@ -8,5 +8,5 @@ typedef struct snet_buffer snet_buffer_t;
 
 void SNetInputManagerInit(void);
 void SNetInputManagerStart(void);
-void SNetInputManagerNewIn(snet_dest_t *dest, snet_stream_t *stream);
+void SNetInputManagerNewIn(snet_dest_t dest, snet_stream_t *stream);
 #endif

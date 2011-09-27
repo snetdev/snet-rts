@@ -1,6 +1,5 @@
 #include <pthread.h>
 
-#include "dest.h"
 #include "distribcommon.h"
 #include "imanager.h"
 #include "info.h"
@@ -76,13 +75,13 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *in, int loc)
 
     if (SNetDistribIsNodeLocation(dest->node)) {
       dest->node = loc;
-      SNetOutputManagerNewOut(SNetDestCopy(dest), in);
+      SNetOutputManagerNewOut(*dest, in);
 
       in = NULL;
     } else if (SNetDistribIsNodeLocation(loc)) {
       if (in == NULL) in = SNetStreamCreate(0);
 
-      SNetInputManagerNewIn(SNetDestCopy(dest), in);
+      SNetInputManagerNewIn(*dest, in);
       dest->node = loc;
     } else {
       dest->node = loc;
@@ -92,20 +91,19 @@ snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *in, int loc)
   return in;
 }
 
-void SNetRouteNewDynamic(snet_dest_t *dest)
+void SNetRouteNewDynamic(snet_dest_t dest)
 {
-  snet_dest_t *dst = SNetDestCopy(dest);
-  snet_startup_fun_t fun = SNetIdToNet(dest->parent);
+  snet_startup_fun_t fun = SNetIdToNet(dest.parent);
 
   snet_info_t *info = SNetInfoInit();
-  SNetInfoSetTag(info, prevDest, (uintptr_t) dst,
+  SNetInfoSetTag(info, prevDest, (uintptr_t) SNetDestCopy(&dest),
                 (void* (*)(void*)) &SNetDestCopy);
 
   SNetLocvecSet(info, SNetLocvecCreate());
 
-  SNetRouteDynamicEnter(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
-  SNetRouteUpdate(info, fun(NULL, info, dest->dynamicLoc), dest->parentNode);
-  SNetRouteDynamicExit(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
+  SNetRouteDynamicEnter(info, dest.dynamicIndex, dest.dynamicLoc, NULL);
+  SNetRouteUpdate(info, fun(NULL, info, dest.dynamicLoc), dest.parentNode);
+  SNetRouteDynamicExit(info, dest.dynamicIndex, dest.dynamicLoc, NULL);
 
   SNetInfoDestroy(info);
 }

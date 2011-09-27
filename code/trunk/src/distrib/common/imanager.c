@@ -8,15 +8,14 @@
 #include "memfun.h"
 #include "omanager.h"
 #include "reference.h"
-#include "tuple.h"
 
-extern void SNetRouteNewDynamic(snet_dest_t *dest);
+extern void SNetRouteNewDynamic(snet_dest_t dest);
 
 struct snet_buffer {
   bool done;
   unsigned int counter;
   pthread_mutex_t mutex;
-  snet_dest_t *dest;
+  snet_dest_t dest;
   snet_record_list_t *list;
   snet_stream_desc_t *sd;
 };
@@ -98,7 +97,7 @@ static void UpdateIncoming(snet_dest_stream_map_t *destMap)
 }
 
 static void HandleRecord(snet_dest_stream_map_t *destMap, snet_record_t *rec,
-                         snet_dest_t *dest)
+                         snet_dest_t dest)
 {
   snet_buffer_t *buf;
   snet_stream_desc_t *sd;
@@ -132,7 +131,7 @@ static void HandleRecord(snet_dest_stream_map_t *destMap, snet_record_t *rec,
 
 void SNetInputManager(snet_entity_t *ent, void *args);
 
-void SNetInputManagerNewIn(snet_dest_t *dest, snet_stream_t *stream)
+void SNetInputManagerNewIn(snet_dest_t dest, snet_stream_t *stream)
 {
   snet_tuple_t tuple = {dest, stream};
   pthread_mutex_lock(&newStreamsMutex);
@@ -164,7 +163,6 @@ void SNetInputManager(snet_entity_t *ent, void *args)
     switch (msg.type) {
       case snet_rec:
         HandleRecord(destMap, msg.rec, msg.dest);
-        SNetMemFree(msg.dest);
         break;
 
       case snet_update:
