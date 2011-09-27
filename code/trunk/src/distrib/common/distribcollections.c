@@ -6,7 +6,7 @@
 #define MAP_KEY snet_dest_t*
 #define MAP_VAL snet_stream_desc_t*
 #define MAP_KEY_CMP SNetDestCompare
-#define MAP_KEY_FREE_FUN SNetDestFree
+#define MAP_KEY_FREE_FUN SNetMemFree
 #include "map-template.c"
 #undef MAP_KEY_FREE_FUN
 #undef MAP_KEY_CMP
@@ -67,7 +67,7 @@
 #define MAP_TYPE_NAME dest_buffer
 #define MAP_KEY snet_dest_t*
 #define MAP_KEY_CMP SNetDestCompare
-#define MAP_KEY_FREE_FUN SNetDestFree
+#define MAP_KEY_FREE_FUN SNetMemFree
 #define MAP_VAL snet_buffer_t*
 #include "map-template.c"
 #undef MAP_VAL

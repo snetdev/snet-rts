@@ -151,11 +151,9 @@ void SNetRefDestroy(snet_ref_t *ref)
   SNetMemFree(ref);
 }
 
-snet_ref_t *SNetRefIncoming(snet_ref_t *ref)
+void SNetRefIncoming(snet_ref_t *ref)
 {
   snet_refcount_t *refInfo;
-  snet_ref_t *result = SNetMemAlloc(sizeof(snet_ref_t));
-  *result = *ref;
 
   if (SNetDistribIsNodeLocation(ref->node)) {
     pthread_mutex_lock(&localRefMutex);
@@ -164,7 +162,7 @@ snet_ref_t *SNetRefIncoming(snet_ref_t *ref)
     if (--refInfo->count == 0) {
       SNetMemFree(SNetRefRefcountMapTake(localRefMap, *ref));
     } else {
-      result->data = (uintptr_t) COPYFUN(result->interface, result->data);
+      ref->data = (uintptr_t) COPYFUN(ref->interface, ref->data);
     }
 
     pthread_mutex_unlock(&localRefMutex);
@@ -178,13 +176,11 @@ snet_ref_t *SNetRefIncoming(snet_ref_t *ref)
       refInfo = SNetMemAlloc(sizeof(snet_refcount_t));
       refInfo->count = 1;
       refInfo->data = refInfo->list = NULL;
-      SNetRefRefcountMapSet(remoteRefMap, *result, refInfo);
+      SNetRefRefcountMapSet(remoteRefMap, *ref, refInfo);
     }
 
     pthread_mutex_unlock(&remoteRefMutex);
   }
-
-  return result;
 }
 
 void SNetRefOutgoing(snet_ref_t *ref)

@@ -19,7 +19,7 @@ typedef struct {
   snet_comm_type_t type;
   snet_record_t *rec;
   snet_dest_t *dest;
-  snet_ref_t ref;
+  snet_ref_t *ref;
   void *data;
   int val;
 } snet_msg_t;
@@ -35,5 +35,5 @@ void SNetDistribBlockDest(snet_dest_t *dest);
 void SNetDistribUnblockDest(snet_dest_t *dest);
 
 void SNetDistribUpdateBlocked(void);
-void SNetDistribSendData(snet_ref_t ref, void *data, int node);
+void SNetDistribSendData(snet_ref_t *ref, void *data, int node);
 #endif

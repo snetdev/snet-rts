@@ -14,6 +14,4 @@ typedef struct snet_dest {
 
 bool SNetDestCompare(snet_dest_t *d1, snet_dest_t *d2);
 snet_dest_t *SNetDestCopy(snet_dest_t *dest);
-void SNetDestFree(snet_dest_t *dest);
-
 #endif

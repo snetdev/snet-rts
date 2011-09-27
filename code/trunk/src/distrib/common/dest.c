@@ -14,5 +14,3 @@ snet_dest_t *SNetDestCopy(snet_dest_t *d)
   *result = *d;
   return result;
 }
-
-void SNetDestFree(snet_dest_t *d) { SNetMemFree(d); }

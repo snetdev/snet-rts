@@ -70,7 +70,7 @@ static void UpdateBlocked(snet_stream_dest_map_t *map, snet_dest_list_t *list,
       SNetStreamsetRemove(oldSet, sd);
       SNetStreamsetPut(newSet, sd);
     }
-    SNetDestFree(dest);
+    SNetMemFree(dest);
   }
   pthread_mutex_unlock(&outputManagerMutex);
 }
@@ -140,7 +140,7 @@ void SNetOutputManager(snet_entity_t *ent, void *args)
         SNetStreamsetRemove(&waiting, sd);
         SNetDistribSendRecord(dest, rec);
         SNetStreamClose(sd, true);
-        SNetDestFree(dest);
+        SNetMemFree(dest);
         break;
       default:
         SNetDistribSendRecord(SNetStreamDestMapGet(streamMap, sd), rec);

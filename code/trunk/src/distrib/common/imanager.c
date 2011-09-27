@@ -126,7 +126,6 @@ static void HandleRecord(snet_dest_stream_map_t *destMap, snet_record_t *rec,
     if (SNetRecordListLength(buf->list) == 1) SNetDistribBlockDest(dest);
   }
   pthread_mutex_unlock(&buf->mutex);
-  SNetMemFree(dest);
 }
 
 
@@ -165,6 +164,7 @@ void SNetInputManager(snet_entity_t *ent, void *args)
     switch (msg.type) {
       case snet_rec:
         HandleRecord(destMap, msg.rec, msg.dest);
+        SNetMemFree(msg.dest);
         break;
 
       case snet_update:
@@ -180,16 +180,19 @@ void SNetInputManager(snet_entity_t *ent, void *args)
         break;
 
       case snet_ref_set:
-        SNetRefSet(&msg.ref, msg.data);
+        SNetRefSet(msg.ref, msg.data);
+        SNetMemFree(msg.ref);
         break;
 
       case snet_ref_update:
-        SNetRefUpdate(&msg.ref, msg.val);
+        SNetRefUpdate(msg.ref, msg.val);
+        SNetMemFree(msg.ref);
         break;
 
       case snet_ref_fetch:
-        SNetDistribSendData(msg.ref, SNetRefGetData(&msg.ref), msg.val);
-        SNetRefUpdate(&msg.ref, -1);
+        SNetDistribSendData(msg.ref, SNetRefGetData(msg.ref), msg.val);
+        SNetRefUpdate(msg.ref, -1);
+        SNetMemFree(msg.ref);
         break;
 
       case snet_stop:
