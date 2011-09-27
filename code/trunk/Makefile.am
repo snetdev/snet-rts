@@ -180,7 +180,6 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/common/dest.c \
 	src/distrib/common/distribcommon.c \
 	src/distrib/mpi/distribution.c \
-	src/distrib/mpi/pack.c \
 	src/distrib/mpi/transmit.c
 libdistribmpi_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
@@ -199,6 +198,7 @@ libdistribscc_la_SOURCES = \
 	src/distrib/common/reference.c \
 	src/distrib/common/refcollections.c \
 	src/distrib/common/dest.c \
+	src/distrib/common/distribcommon.c \
 	src/distrib/scc/distribution.c \
 	src/distrib/scc/transmit.c
 libdistribscc_la_CPPFLAGS = \
@@ -206,7 +206,6 @@ libdistribscc_la_CPPFLAGS = \
 	-I$(srcdir)/src/distrib/scc \
 	-I$(srcdir)/src/distrib/common \
 	-I$(srcdir)/../../../scc-hg/rcce/include
-
 endif
 
 # common flags

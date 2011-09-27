@@ -15,14 +15,10 @@ static mpi_buf_t recvBuf = {0, 0, NULL};
 static mpi_buf_t sendBuf = {0, 0, NULL};
 
 static void MPIPackInt(int count, int *src)
-{
-  MPIPack(&sendBuf, src, MPI_INT, count);
-}
+{ MPIPack(&sendBuf, src, MPI_INT, count); }
 
 static void MPIUnpackInt(int count, int *dst)
-{
-  MPIUnpack(&recvBuf, dst, MPI_INT, count);
-}
+{ MPIUnpack(&recvBuf, dst, MPI_INT, count); }
 
 static void PackRef(mpi_buf_t *buf, snet_ref_t ref)
 {
@@ -82,6 +78,7 @@ snet_msg_t SNetDistribRecvMsg(void)
 
   switch (result.type) {
     case snet_rec:
+        result.rec = SNetRecDeserialise(&MPIUnpackInt, &MPIUnpackRef);
     case snet_block:
     case snet_unblock:
       result.dest = SNetMemAlloc(sizeof(snet_dest_t));
@@ -91,9 +88,6 @@ snet_msg_t SNetDistribRecvMsg(void)
       MPIUnpackInt(1, &result.dest->dynamicIndex);
       MPIUnpackInt(1, &result.dest->parentNode);
       MPIUnpackInt(1, &result.dest->dynamicLoc);
-      if (result.type == snet_rec) {
-        result.rec = SNetRecDeserialise(&MPIUnpackInt, &MPIUnpackRef);
-      }
       break;
     case snet_ref_set:
       result.ref = UnpackRef(&recvBuf);
@@ -117,12 +111,12 @@ snet_msg_t SNetDistribRecvMsg(void)
 void SNetDistribSendRecord(snet_dest_t *dest, snet_record_t *rec)
 {
   sendBuf.offset = 0;
+  SNetRecSerialise(rec, &MPIPackInt, &MPIPackRef);
   MPIPackInt(1, &dest->dest);
   MPIPackInt(1, &dest->parent);
   MPIPackInt(1, &dest->dynamicIndex);
   MPIPackInt(1, &dest->parentNode);
   MPIPackInt(1, &dest->dynamicLoc);
-  SNetRecSerialise(rec, &MPIPackInt, &MPIPackRef);
   MPI_Send(sendBuf.data, sendBuf.offset, MPI_PACKED, dest->node, snet_rec,
            MPI_COMM_WORLD);
 }
