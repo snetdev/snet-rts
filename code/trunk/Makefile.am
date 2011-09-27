@@ -149,6 +149,11 @@ libC4SNet_la_SOURCES = \
 	src/interfaces/c4snet/C4SNet.h \
 	src/interfaces/c4snet/base64.h \
 	src/interfaces/c4snet/base64.c
+if ENABLE_DIST_SCC
+libC4SNet_la_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	-I$(srcdir)/../../../scc-hg/rcce/include
+endif
 
 libC4SNetc_la_SOURCES = \
 	src/interfaces/c4snet/C4SNetc.c \

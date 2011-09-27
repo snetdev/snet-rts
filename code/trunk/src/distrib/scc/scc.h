@@ -1,6 +1,8 @@
 #ifndef SCC_H
 #define SCC_H
 
+#include <unistd.h>
+
 #include "debug.h"
 #include "SCC_API.h"
 
@@ -16,27 +18,19 @@
 #define B_START                 (B_OFFSET + 32)
 #define B_SIZE                  (MPBSIZE - B_START)
 
+extern char *localSpace;
 extern int node_location;
 extern t_vcharp mpbs[CORES];
 extern t_vcharp locks[CORES];
 extern volatile int *irq_pins[CORES];
+extern volatile uint64_t *luts[CORES];
 
 /* Flush MPBT from L1. */
-static inline void flush()
-{
-    /* Flush instruction. */
-    __asm__ volatile ( ".byte 0x0f; .byte 0x0a;\n" ); // CL1FLUSHMB
-}
+static inline void flush() { __asm__ volatile ( ".byte 0x0f; .byte 0x0a;\n" ); }
 
-static inline void lock(int core)
-{
-    while (!(*locks[core] & 0x01));
-}
+static inline void lock(int core) { while (!(*locks[core] & 0x01)); }
 
-static inline void unlock(int core)
-{
-      *locks[core] = 0;
-}
+static inline void unlock(int core) { *locks[core] = 0; }
 
 static inline void interrupt(int core)
 {
@@ -47,10 +41,7 @@ static inline void interrupt(int core)
   *irq_pins[core] &= ~IRQ_BIT;
 }
 
-static inline int min(int x, int y)
-{
-  return x < y ? x : y;
-}
+static inline int min(int x, int y) { return x < y ? x : y; }
 
 static inline void start_write_node(unsigned int node)
 {

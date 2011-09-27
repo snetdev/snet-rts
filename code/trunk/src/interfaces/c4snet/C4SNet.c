@@ -84,6 +84,10 @@ static void *C4SNetDataDecode(FILE *file);
 static void C4SNetMPIPackFun(void *cdata, void *buf);
 static void *C4SNetMPIUnpackFun(void *buf);
 #endif
+#ifdef ENABLE_DIST_SCC
+static void C4SNetSCCPackFun(void *cdata, void *dest);
+static void *C4SNetSCCUnpackFun(void *localBuf);
+#endif
 
 /***************************** Auxiliary functions ****************************/
 
@@ -138,8 +142,13 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
       #endif
       break;
     case scc:
-      packfun = NULL;
-      unpackfun = NULL;
+      #ifdef ENABLE_DIST_SCC
+        packfun = &C4SNetSCCPackFun;
+        unpackfun = &C4SNetSCCUnpackFun;
+      #else
+        SNetUtilDebugFatal("C4SNet supports SCC, but is not configured to use "
+                           "it.\n");
+      #endif
       break;
     default:
       SNetUtilDebugFatal("C4SNet doesn't support the selected distribution "
@@ -980,6 +989,31 @@ static void *C4SNetMPIUnpackFun(void *buf)
   } else {
     SNetDistribUnpack(&data, buf, C4SNetTypeToMPIType(type), 1);
     result = C4SNetDataCreate(type, &data);
+  }
+
+  return result;
+}
+#endif
+
+#ifdef ENABLE_DIST_SCC
+#include "src/distrib/scc/scc.h"
+
+static void C4SNetSCCPackFun(void *cdata, void *dest)
+{
+  c4snet_data_t *data = (c4snet_data_t*) cdata;
+  SNetDistribPack(cdata, *(int*)dest, sizeof(c4snet_data_t));
+
+  if (data->vtype == VTYPE_array) SNetDistribPack(data->data.ptr, *(int*)dest, data->size * sizeOfType(data->type));
+}
+
+static void *C4SNetSCCUnpackFun(void *localBuf)
+{
+  c4snet_data_t *result = SNetMemAlloc(sizeof(c4snet_data_t));
+  SNetDistribUnpack(result, localBuf, sizeof(c4snet_data_t));
+
+  if (result->vtype == VTYPE_array) {
+    result->data.ptr = SNetMemAlloc(result->size * sizeOfType(result->type));
+    SNetDistribUnpack(result->data.ptr, localBuf, result->size * sizeOfType(result->type));
   }
 
   return result;

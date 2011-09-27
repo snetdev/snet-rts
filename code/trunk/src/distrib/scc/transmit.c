@@ -61,14 +61,13 @@ void SCCUnpackRef(int count, snet_ref_t **dst)
   }
 }
 
-snet_record_t *SNetDistribRecvRecord(snet_dest_t **recordDest)
+snet_msg_t SNetDistribRecvMsg(void)
 {
-  int sig, start, end, status;
+  snet_msg_t result;
+  int sig, start, end;
   static int pid = 0;
   static sigset_t sigmask;
   static bool handling = true;
-
-  recvMPB = mpbs[node_location];
 
   if (!pid) {
     pid = 1;
@@ -77,61 +76,67 @@ snet_record_t *SNetDistribRecvRecord(snet_dest_t **recordDest)
     sigaddset(&sigmask, SIGUSR1);
   }
 
-  while (true) {
-    if (!handling) sigwait(&sigmask, &sig);
+  recvMPB = mpbs[node_location];
 
-    lock(node_location);
+start:
+  if (!handling) sigwait(&sigmask, &sig);
+  lock(node_location);
 
-    flush();
-    start = START(recvMPB);
-    end = END(recvMPB);
+  flush();
+  start = START(recvMPB);
+  end = END(recvMPB);
 
-    if (start == end) {
-      handling = false;
-      HANDLING(recvMPB) = 0;
-      FOOL_WRITE_COMBINE;
-      unlock(node_location);
-      continue;
-    } else {
-      handling = true;
-      HANDLING(recvMPB) = 1;
-      FOOL_WRITE_COMBINE;
-    }
-
-    cpy_mpb_to_mem(recvMPB, &status, sizeof(int));
-    if (status == 0) {
-      snet_dest_t dest;
-      cpy_mpb_to_mem(recvMPB, &dest, sizeof(snet_dest_t));
-      snet_record_t *rec = SNetRecDeserialise(&SCCUnpackInt, &SCCUnpackRef);
-      *recordDest = SNetDestCopy(&dest);
-      unlock(node_location);
-      return rec;
-    } else if (status == 1) {
-      unlock(node_location);
-      return NULL;
-    } else if (status == 6) {
-      SNetInputManagerUpdate();
-    } else if (status == 7) {
-      snet_dest_t dest;
-      cpy_mpb_to_mem(recvMPB, &dest, sizeof(snet_dest_t));
-      SNetOutputManagerUnblock(SNetDestCopy(&dest));
-    } else if (status == 8) {
-      snet_dest_t dest;
-      cpy_mpb_to_mem(recvMPB, &dest, sizeof(snet_dest_t));
-      SNetOutputManagerBlock(SNetDestCopy(&dest));
-    }
+  if (start == end) {
+    handling = false;
+    HANDLING(recvMPB) = 0;
+    FOOL_WRITE_COMBINE;
     unlock(node_location);
+    goto start;
+  } else {
+    handling = true;
+    HANDLING(recvMPB) = 1;
+    FOOL_WRITE_COMBINE;
   }
+
+  cpy_mpb_to_mem(recvMPB, &result.type, sizeof(snet_comm_type_t));
+  switch (result.type) {
+    case snet_rec:
+    case snet_block:
+    case snet_unblock:
+      result.dest = SNetMemAlloc(sizeof(snet_dest_t));
+      cpy_mpb_to_mem(recvMPB, result.dest, sizeof(snet_dest_t));
+      if (result.type == snet_rec) {
+        result.rec = SNetRecDeserialise(&SCCUnpackInt, &SCCUnpackRef);
+      }
+      break;
+    case snet_ref_set:
+      cpy_mpb_to_mem(recvMPB, &result.ref, sizeof(snet_ref_t));
+      result.data = SNetInterfaceGet(result.ref.interface)->unpackfun(localSpace);
+      break;
+    case snet_ref_fetch:
+      cpy_mpb_to_mem(recvMPB, &result.ref, sizeof(snet_ref_t));
+      cpy_mpb_to_mem(recvMPB, &result.val, sizeof(int));
+      break;
+    case snet_ref_update:
+      cpy_mpb_to_mem(recvMPB, &result.ref, sizeof(snet_ref_t));
+      cpy_mpb_to_mem(recvMPB, &result.val, sizeof(int));
+      break;
+    default:
+      break;
+  }
+
+  unlock(node_location);
+  return result;
 }
 
 void SNetDistribSendRecord(snet_dest_t *dest, snet_record_t *rec)
 {
-  int handling = 0;
+  snet_comm_type_t type = snet_rec;
   int node = dest->node;
   sendMPB = mpbs[node];
 
   start_write_node(node);
-  cpy_mem_to_mpb(sendMPB, &handling, sizeof(int));
+  cpy_mem_to_mpb(sendMPB, &type, sizeof(snet_comm_type_t));
 
   dest->node = node_location;
   cpy_mem_to_mpb(sendMPB, dest, sizeof(snet_dest_t));
@@ -141,51 +146,58 @@ void SNetDistribSendRecord(snet_dest_t *dest, snet_record_t *rec)
   stop_write_node(node);
 }
 
-void SNetDistribRemoteRefFetch(snet_ref_t *ref)
+void SNetDistribFetchRef(snet_ref_t *ref)
 {
-  assert(0);
-/*
-  mpi_buf_t buf = {0, 0, NULL};
-  PackRef(&buf, *ref);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, ref->node, 2, MPI_COMM_WORLD);
-*/
+  snet_comm_type_t type = snet_ref_fetch;
+  start_write_node(ref->node);
+  cpy_mem_to_mpb(mpbs[ref->node], &type, sizeof(snet_comm_type_t));
+  cpy_mem_to_mpb(mpbs[ref->node], ref, sizeof(snet_ref_t));
+  cpy_mem_to_mpb(mpbs[ref->node], &node_location, sizeof(int));
+  stop_write_node(ref->node);
 }
 
-void SNetDistribRemoteRefUpdate(snet_ref_t *ref, int count)
+void SNetDistribUpdateRef(snet_ref_t *ref, int count)
 {
-  assert(0);
-/*
-  mpi_buf_t buf = {0, 0, NULL};
-  PackRef(&buf, *ref);
-  MPIPack(&buf, &count, MPI_INT, 1);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, ref->node, 3, MPI_COMM_WORLD);
-*/
+  snet_comm_type_t type = snet_ref_update;
+  start_write_node(ref->node);
+  cpy_mem_to_mpb(mpbs[ref->node], &type, sizeof(snet_comm_type_t));
+  cpy_mem_to_mpb(mpbs[ref->node], ref, sizeof(snet_ref_t));
+  cpy_mem_to_mpb(mpbs[ref->node], &count, sizeof(int));
+  stop_write_node(ref->node);
 }
 
-void SNetDistribRemoteDestUnblock(snet_dest_t *dest)
+void SNetDistribUpdateBlocked(void)
 {
-  int node, status;
-
-  node = dest ? dest->node : node_location;
-
-  start_write_node(node);
-  if (dest == NULL) {
-    status = 6;
-    cpy_mem_to_mpb(mpbs[node], &status, sizeof(int));
-  } else {
-    status = 7;
-    cpy_mem_to_mpb(mpbs[node], &status, sizeof(int));
-    cpy_mem_to_mpb(mpbs[node], dest, sizeof(snet_dest_t));
-  }
-  stop_write_node(node);
+  snet_comm_type_t type = snet_update;
+  start_write_node(node_location);
+  cpy_mem_to_mpb(mpbs[node_location], &type, sizeof(int));
+  stop_write_node(node_location);
 }
 
-void SNetDistribRemoteDestBlock(snet_dest_t *dest)
+void SNetDistribUnblockDest(snet_dest_t *dest)
 {
-  int status = 8;
-
+  snet_comm_type_t type = snet_unblock;
   start_write_node(dest->node);
-  cpy_mem_to_mpb(mpbs[dest->node], &status, sizeof(int));
+  cpy_mem_to_mpb(mpbs[dest->node], &type, sizeof(snet_comm_type_t));
   cpy_mem_to_mpb(mpbs[dest->node], dest, sizeof(snet_dest_t));
   stop_write_node(dest->node);
+}
+
+void SNetDistribBlockDest(snet_dest_t *dest)
+{
+  snet_comm_type_t type = snet_block;
+  start_write_node(dest->node);
+  cpy_mem_to_mpb(mpbs[dest->node], &type, sizeof(snet_comm_type_t));
+  cpy_mem_to_mpb(mpbs[dest->node], dest, sizeof(snet_dest_t));
+  stop_write_node(dest->node);
+}
+
+void SNetDistribSendData(snet_ref_t ref, void *data, int node)
+{
+  snet_comm_type_t type = snet_ref_set;
+  start_write_node(node);
+  cpy_mem_to_mpb(mpbs[node], &type, sizeof(snet_comm_type_t));
+  cpy_mem_to_mpb(mpbs[node], &ref, sizeof(snet_ref_t));
+  SNetInterfaceGet(ref.interface)->packfun(data, &node);
+  stop_write_node(node);
 }
