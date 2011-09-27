@@ -1,4 +1,4 @@
-#include "iomanagers.h"
+#include "dest.h"
 #include "distribcollections.h"
 
 #define MAP_NAME DestStream
@@ -27,12 +27,7 @@
 #undef MAP_TYPE_NAME
 #undef MAP_NAME
 
-bool SNetTupleCompare(snet_tuple_t t1, snet_tuple_t t2)
-{
-  (void) t1; /* NOT USED */
-  (void) t2; /* NOT USED */
-  return false;
-}
+#include "tuple.h"
 
 #define LIST_NAME Tuple
 #define LIST_TYPE_NAME tuple

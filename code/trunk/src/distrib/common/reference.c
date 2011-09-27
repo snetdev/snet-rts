@@ -1,10 +1,10 @@
 #include <assert.h>
 #include <pthread.h>
 
+#include "distribcommon.h"
 #include "distribution.h"
 #include "entities.h"
 #include "interface_functions.h"
-#include "iomanagers.h"
 #include "memfun.h"
 #include "refcollections.h"
 #include "reference.h"

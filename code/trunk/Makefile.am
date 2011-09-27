@@ -178,6 +178,7 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/common/reference.c \
 	src/distrib/common/refcollections.c \
 	src/distrib/common/dest.c \
+	src/distrib/common/distribcommon.c \
 	src/distrib/mpi/distribution.c \
 	src/distrib/mpi/pack.c \
 	src/distrib/mpi/transmit.c

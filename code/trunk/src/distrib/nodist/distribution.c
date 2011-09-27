@@ -17,14 +17,10 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   SNetReferenceInit();
 }
 
-void SNetDistribStart(void)
-{
-}
+void SNetDistribStart(void) { }
 
-void SNetDistribStop(bool global)
+void SNetDistribGlobalStop(void)
 {
-  (void) global; /* NOT USED */
-
   pthread_mutex_lock(&exitMutex);
   running = false;
   pthread_cond_signal(&exitCond);
@@ -39,10 +35,7 @@ void SNetDistribWaitExit(void)
   SNetReferenceDestroy();
 }
 
-int SNetDistribGetNodeId(void)
-{
-  return node_location;
-}
+int SNetDistribGetNodeId(void) { return node_location; }
 
 bool SNetDistribIsNodeLocation(int location)
 {
@@ -51,10 +44,7 @@ bool SNetDistribIsNodeLocation(int location)
   return true;
 }
 
-bool SNetDistribIsRootNode(void)
-{
-  return true;
-}
+bool SNetDistribIsRootNode(void) { return true; }
 
 snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
 {
@@ -85,22 +75,13 @@ void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
   return;
 }
 
-void SNetDistribPack(void *src, ...)
-{
-  (void) src; /* NOT USED */
-}
+void SNetDistribPack(void *src, ...) { (void) src; /* NOT USED */ }
 
-void SNetDistribUnpack(void *dst, ...)
-{
-  (void) dst; /* NOT USED */
-}
+void SNetDistribUnpack(void *dst, ...) { (void) dst; /* NOT USED */ }
 
-void SNetDistribRemoteRefFetch(snet_ref_t *ref)
-{
-  (void) ref; /* NOT USED */
-}
+void SNetDistribFetchRef(snet_ref_t *ref) { (void) ref; /* NOT USED */ }
 
-void SNetDistribRemoteRefUpdate(snet_ref_t *ref, int count)
+void SNetDistribUpdateRef(snet_ref_t *ref, int count)
 {
   (void) ref; /* NOT USED */
   (void) count; /* NOT USED */

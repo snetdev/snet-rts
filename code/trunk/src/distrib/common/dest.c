@@ -1,6 +1,5 @@
 #include "bool.h"
 #include "dest.h"
-#include "iomanagers.h"
 #include "memfun.h"
 
 bool SNetDestCompare(snet_dest_t *d1, snet_dest_t *d2)
@@ -16,7 +15,4 @@ snet_dest_t *SNetDestCopy(snet_dest_t *d)
   return result;
 }
 
-void SNetDestFree(snet_dest_t *d)
-{
-  SNetMemFree(d);
-}
+void SNetDestFree(snet_dest_t *d) { SNetMemFree(d); }

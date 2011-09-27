@@ -1,7 +1,7 @@
 #ifndef IMANAGER_H
 #define IMANAGER_H
 
-#include "iomanagers.h"
+#include "distribcommon.h"
 #include "threading.h"
 
 typedef struct snet_buffer snet_buffer_t;

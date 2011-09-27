@@ -117,12 +117,6 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   SNetInputManagerInit();
 }
 
-void SNetDistribStart(void)
-{
-  SNetOutputManagerStart();
-  SNetInputManagerStart();
-}
-
 void SNetDistribStop(bool global)
 {
   if (global) {
@@ -149,102 +143,11 @@ void SNetDistribStop(bool global)
   }
 }
 
-void SNetDistribWaitExit(void)
-{
-  pthread_mutex_lock(&exitMutex);
-  while (running) pthread_cond_wait(&exitCond, &exitMutex);
-  pthread_mutex_unlock(&exitMutex);
-}
+int SNetDistribGetNodeId(void) { return node_location; }
 
-int SNetDistribGetNodeId(void)
-{
-  return node_location;
-}
+bool SNetDistribIsNodeLocation(int loc) { return node_location == loc; }
 
-bool SNetDistribIsNodeLocation(int location)
-{
-  return node_location == location;
-}
-
-bool SNetDistribIsRootNode(void)
-{
-  return node_location == 0;
-}
-
-snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
-{
-  int *counter = (int*) SNetInfoGetTag(info, infoCounter);
-  snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
-
-  if (dest->node != loc) {
-    dest->dest = (*counter)++;
-
-    if (dest->node == node_location) {
-      dest->node = loc;
-      SNetOutputManagerNewOut(SNetDestCopy(dest), input);
-
-      input = NULL;
-    } else if (loc == node_location) {
-      if (input == NULL) input = SNetStreamCreate(0);
-
-      SNetInputManagerNewIn(SNetDestCopy(dest), input);
-      dest->node = loc;
-    } else {
-      dest->node = loc;
-    }
-  }
-
-  return input;
-}
-
-void SNetDistribNewDynamicCon(snet_dest_t *dest)
-{
-  snet_dest_t *dst = SNetDestCopy(dest);
-  snet_startup_fun_t fun = SNetIdToNet(dest->parent);
-
-  snet_info_t *info = SNetInfoInit();
-  SNetInfoSetTag(info, prevDest, (uintptr_t) dst,
-                (void* (*)(void*)) &SNetDestCopy);
-
-  SNetLocvecSet(info, SNetLocvecCreate());
-
-  SNetRouteDynamicEnter(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
-  SNetRouteUpdate(info, fun(NULL, info, dest->dynamicLoc), dest->parentNode);
-  SNetRouteDynamicExit(info, dest->dynamicIndex, dest->dynamicLoc, NULL);
-
-  SNetInfoDestroy(info);
-}
-
-void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
-                           snet_startup_fun_t fun)
-{
-  snet_dest_t *dest = (snet_dest_t*) SNetInfoGetTag(info, prevDest);
-  dest->dynamicIndex = dynamicIndex;
-
-  int *counter = SNetMemAlloc(sizeof(int));
-  *counter = 0;
-  SNetInfoSetTag(info, infoCounter, (uintptr_t) counter, NULL);
-
-  if (fun != NULL) {
-    dest->parent = SNetNetToId(fun);
-    dest->parentNode = node_location;
-    dest->dynamicLoc = dynamicLoc;
-  }
-  return;
-}
-
-void SNetRouteDynamicExit(snet_info_t *info, int dynamicIndex, int dynamicLoc,
-                           snet_startup_fun_t fun)
-{
-  int *counter = (int*) SNetInfoDelTag(info, infoCounter);
-  (void) dynamicIndex; /* NOT USED */
-  (void) dynamicLoc; /* NOT USED */
-  (void) fun; /* NOT USED */
-
-  SNetMemFree(counter);
-  SNetInfoSetTag(info, infoCounter, (uintptr_t) NULL, NULL);
-  return;
-}
+bool SNetDistribIsRootNode(void) { return node_location == 0; }
 
 void SNetDistribPack(void *src, ...)
 {

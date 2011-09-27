@@ -1,7 +1,7 @@
 #ifndef OMANAGER_H
 #define OMANAGER_H
 
-#include "iomanagers.h"
+#include "distribcommon.h"
 #include "threading.h"
 
 void SNetOutputManagerInit(void);

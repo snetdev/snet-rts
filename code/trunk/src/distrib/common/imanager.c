@@ -2,13 +2,15 @@
 #include <pthread.h>
 
 #include "debug.h"
+#include "distribcommon.h"
 #include "distribcollections.h"
 #include "entities.h"
-#include "iomanagers.h"
 #include "memfun.h"
 #include "omanager.h"
 #include "reference.h"
 #include "tuple.h"
+
+extern void SNetRouteNewDynamic(snet_dest_t *dest);
 
 struct snet_buffer {
   bool done;
@@ -103,7 +105,7 @@ static void HandleRecord(snet_dest_stream_map_t *destMap, snet_record_t *rec,
 
   UpdateIncoming(destMap);
   if (!SNetDestStreamMapContains(destMap, dest)) {
-    SNetDistribNewDynamicCon(dest);
+    SNetRouteNewDynamic(dest);
     UpdateIncoming(destMap);
   }
 
@@ -205,6 +207,6 @@ exit:
   SNetReferenceDestroy();
   pthread_mutex_destroy(&newStreamsMutex);
   pthread_mutex_destroy(&unblockedMutex);
-  SNetDistribStop(false);
+  SNetDistribStop();
   return;
 }

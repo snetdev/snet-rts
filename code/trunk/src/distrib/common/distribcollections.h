@@ -2,7 +2,7 @@
 #define DISTRIBMAP_H
 
 #include "bool.h"
-#include "iomanagers.h"
+#include "dest.h"
 #include "threading.h"
 
 #define MAP_NAME_H DestStream
