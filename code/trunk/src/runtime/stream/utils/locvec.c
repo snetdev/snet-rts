@@ -14,6 +14,7 @@
 
 
 typedef enum {
+  LOC_UNDEFINED = '?',
   LOC_SERIAL = 'S',
   LOC_PARALLEL = 'P',
   LOC_SPLIT = 'I',
@@ -355,7 +356,8 @@ static void SNetLocvecPop(snet_locvec_t *vec)
 
 static snet_loctype_t SNetLocvecToptype(snet_locvec_t *vec)
 {
-  return vec->arr[vec->size-1].type;
+  if (vec->size > 0) return vec->arr[vec->size-1].type;
+  else return LOC_UNDEFINED;
 }
 
 int SNetLocvecTopval(snet_locvec_t *vec)
