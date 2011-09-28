@@ -136,6 +136,7 @@ void SNetMonInfoDestroy( snet_moninfo_t *mon)
     SNetUtilDebugFatal("Unknown monitoring information description. [%d]", MONINFO_DESCR( mon));
     break;
   }
+  SNetMemFree(mon);
 }
 
 
