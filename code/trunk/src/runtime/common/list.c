@@ -15,7 +15,9 @@
 #define LIST_NAME IntList
 #define LIST_TYPE_NAME int_list
 #define LIST_VAL snet_int_list_t*
+#define LIST_FREE_FUNCTION SNetIntListDestroy
 #include "list-template.c"
+#undef LIST_FREE_FUNCTION
 #undef LIST_VAL
 #undef LIST_TYPE_NAME
 #undef LIST_NAME

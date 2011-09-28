@@ -46,8 +46,7 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
   i = 0;
   VARIANT_FOR_EACH_FIELD(variant, name) {
-    SNetRecSetField( out_rec, name,
-        SNetRefCopy(SNetRefCreate(fields[i], if_id)));
+    SNetRecSetField( out_rec, name, SNetRefCreate(fields[i], if_id));
     i++;
   }
 

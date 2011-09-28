@@ -223,6 +223,7 @@ void SNetRecDestroy( snet_record_t *rec)
       SNetMemFree( RECORD( rec, sort_end_rec));
       break;
     case REC_terminate:
+      SNetMemFree( RECORD( rec, terminate_rec));
       break;
     case REC_trigger_initialiser:
       break;
