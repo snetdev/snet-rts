@@ -162,7 +162,11 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
 
   switch (REC_DESCR( rec)) {
     case REC_data:
-      new_rec = SNetRecCreate( REC_data);
+      new_rec = SNetMemAlloc( sizeof( snet_record_t));
+      REC_DESCR( new_rec) = REC_data;
+      RECPTR( new_rec) = SNetMemAlloc( sizeof( snet_record_types_t));
+      RECORD( new_rec, data_rec) = SNetMemAlloc( sizeof( data_rec_t));
+
       DATA_REC( new_rec, fields) = SNetRefMapCopy(DATA_REC(rec, fields));
       DATA_REC( new_rec, tags) = SNetIntMapCopy( DATA_REC( rec, tags));
       DATA_REC( new_rec, btags) = SNetIntMapCopy( DATA_REC( rec, btags));
