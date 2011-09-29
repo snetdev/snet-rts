@@ -376,7 +376,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
               SNetStreamWrite(last, rec);
 
               /* close instream */
-              SNetStreamClose( instream, false);
+              SNetStreamClose( instream, true);
               terminate = true;
 #ifdef DEBUG_PRINT_GC
               SNetUtilDebugNoticeEnt( ent,
