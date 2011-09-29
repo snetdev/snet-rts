@@ -99,18 +99,18 @@ void SNetExprDestroy( snet_expr_t *expr) {
       break;
     case COND:
       for( i=0; i<3; i++) {
-        SNetMemFree( expr->content.expr[i]);
+        SNetExprDestroy( expr->content.expr[i]);
       }
       SNetMemFree(expr->content.expr);
       break;
     case NOT:
     case ABS:
-      SNetMemFree( expr->content.expr[0]);
+      SNetExprDestroy( expr->content.expr[0]);
       SNetMemFree(expr->content.expr);
       break;
     default:
       for( i=0; i<2; i++) {
-        SNetMemFree( expr->content.expr[i]);
+        SNetExprDestroy( expr->content.expr[i]);
       }
       SNetMemFree(expr->content.expr);
   }
