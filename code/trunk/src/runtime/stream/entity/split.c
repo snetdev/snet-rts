@@ -199,6 +199,8 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
   /* close instream */
   SNetStreamClose( instream, true);
 
+  SNetLocvecDestroy(SNetLocvecGet(sarg->info));
+  SNetInfoDestroy(sarg->info);
   /* destroy the argument */
   SNetMemFree( sarg);
 } /* END of SPLIT BOX TASK */
@@ -256,6 +258,8 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     output = CollectorCreateDynamic( initial, location, info);
 
   } else {
+    SNetLocvecDestroy(SNetLocvecGet(newInfo));
+    SNetInfoDestroy(newInfo);
     output = input;
   }
   SNetLocvecSplitLeave(locvec);
