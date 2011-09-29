@@ -369,6 +369,9 @@ void CollectorTask(snet_entity_t *ent, void *arg)
   if (term_rec != NULL) {
     SNetRecDestroy(term_rec);
   }
+  if (sort_rec != NULL) {
+    SNetRecDestroy(sort_rec);
+  }
   /* close outstream */
   SNetStreamClose( outstream, false);
   /* destroy iterator */
