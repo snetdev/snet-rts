@@ -151,6 +151,7 @@ void SNetOutputManager(snet_entity_t *ent, void *args)
   SNetStreamClose(wakeupDesc, true);
 
   assert(SNetStreamDestMapSize(streamMap) == 0);
+  SNetStreamDestMapDestroy(streamMap);
   assert(waiting == NULL);
   assert(blocked == NULL);
   return;

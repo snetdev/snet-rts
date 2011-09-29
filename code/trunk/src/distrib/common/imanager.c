@@ -204,6 +204,7 @@ void SNetInputManager(snet_entity_t *ent, void *args)
 
 exit:
   assert(SNetDestStreamMapSize(destMap) == 0);
+  SNetDestStreamMapDestroy(destMap);
   SNetOutputManagerStop();
   SNetReferenceDestroy();
   pthread_mutex_destroy(&newStreamsMutex);
