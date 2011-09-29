@@ -78,13 +78,27 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
     /* free storage */
     if (storage[i] != NULL) {
       SNetRecDestroy(storage[i]);
+      storage[i] = NULL;
     }
   }
 
   return result;
 }
 
+static void DestroyStorage( snet_record_t **storage,
+    snet_variant_list_t *patterns,
+    snet_record_t *dummy)
+{
+  int i;
+  snet_variant_t *pattern;
 
+  LIST_ENUMERATE(patterns, i, pattern) {
+    /* free storage */
+    if (storage[i] != NULL && storage[i] != dummy) {
+      SNetRecDestroy(storage[i]);
+    }
+  }
+}
 
 #ifdef SYNC_SEND_OUTTYPES
 /**
@@ -253,6 +267,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 
       case REC_terminate:
         if (partial_sync) {
+          DestroyStorage(storage, sarg->patterns, &dummy);
           SNetUtilDebugNoticeEnt( ent,
           "[SYNC] Warning: Destroying partially synchronized sync-cell!");
         }
