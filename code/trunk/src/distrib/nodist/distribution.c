@@ -27,7 +27,7 @@ void SNetDistribGlobalStop(void)
   pthread_mutex_unlock(&exitMutex);
 }
 
-void SNetDistribWaitExit(void)
+void SNetDistribWaitExit(snet_info_t *info)
 {
   pthread_mutex_lock(&exitMutex);
   while (running) pthread_cond_wait(&exitCond, &exitMutex);

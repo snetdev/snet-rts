@@ -16,7 +16,7 @@ typedef struct {
 void SNetDistribInit(int argc, char** argv, snet_info_t *info);
 void SNetDistribStart(void);
 void SNetDistribStop(void);
-void SNetDistribWaitExit(void);
+void SNetDistribWaitExit(snet_info_t *info);
 
 snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *in, int loc);
 void SNetRouteDynamicEnter(snet_info_t *info, int dynamicIndex, int dynamicLoc,
