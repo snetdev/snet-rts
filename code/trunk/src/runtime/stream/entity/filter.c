@@ -389,9 +389,16 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
           name, FilterTask, (void*)farg)
         );
   } else {
+    int i;
+    snet_expr_t *expr;
+
     SNetVariantDestroy(input_variant);
+    LIST_ENUMERATE(guard_exprs, i, expr) {
+      SNetFilterInstrListListDestroy( instr_list[i]);
+    }
+
+    SNetMemFree( instr_list);
     SNetExprListDestroy(guard_exprs);
-    SNetMemFree(instr_list);
     outstream = instream;
   }
 
