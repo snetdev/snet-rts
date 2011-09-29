@@ -136,6 +136,7 @@ void SNetDistribFetchRef(snet_ref_t *ref)
   mpi_buf_t buf = {0, 0, NULL};
   PackRef(&buf, ref);
   MPI_Send(buf.data, buf.offset, MPI_PACKED, ref->node, snet_ref_fetch, MPI_COMM_WORLD);
+  SNetMemFree(buf.data);
 }
 
 void SNetDistribUpdateRef(snet_ref_t *ref, int count)
@@ -144,6 +145,7 @@ void SNetDistribUpdateRef(snet_ref_t *ref, int count)
   PackRef(&buf, ref);
   MPIPack(&buf, &count, MPI_INT, 1);
   MPI_Send(buf.data, buf.offset, MPI_PACKED, ref->node, snet_ref_update, MPI_COMM_WORLD);
+  SNetMemFree(buf.data);
 }
 
 extern int node_location;
@@ -158,6 +160,7 @@ void SNetDistribUnblockDest(snet_dest_t dest)
   mpi_buf_t buf = {0, 0, NULL};
   MPIPackDest(&buf, &dest);
   MPI_Send(buf.data, buf.offset, MPI_PACKED, dest.node, snet_unblock, MPI_COMM_WORLD);
+  SNetMemFree(buf.data);
 }
 
 void SNetDistribBlockDest(snet_dest_t dest)
@@ -165,6 +168,7 @@ void SNetDistribBlockDest(snet_dest_t dest)
   mpi_buf_t buf = {0, 0, NULL};
   MPIPackDest(&buf, &dest);
   MPI_Send(buf.data, buf.offset, MPI_PACKED, dest.node, snet_block, MPI_COMM_WORLD);
+  SNetMemFree(buf.data);
 }
 
 void SNetDistribSendData(snet_ref_t *ref, void *data, int node)
@@ -173,4 +177,5 @@ void SNetDistribSendData(snet_ref_t *ref, void *data, int node)
   PackRef(&buf, ref);
   SNetInterfaceGet(ref->interface)->packfun(data, &buf);
   MPI_Send(buf.data, buf.offset, MPI_PACKED, node, snet_ref_set, MPI_COMM_WORLD);
+  SNetMemFree(buf.data);
 }
