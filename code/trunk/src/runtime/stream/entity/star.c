@@ -274,7 +274,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
                   );
 #endif
               SNetStreamClose(nextstream, false);
-              SNetStreamClose(instream, false);
+              SNetStreamClose(instream, true);
 
             } else {
               sync_cleanup = true;
