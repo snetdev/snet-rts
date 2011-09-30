@@ -58,11 +58,13 @@ void SNetDistribStop(void)
   pthread_mutex_unlock(&exitMutex);
 }
 
-void SNetDistribWaitExit(void)
+void SNetDistribWaitExit(snet_info_t *info)
 {
   pthread_mutex_lock(&exitMutex);
   while (running) pthread_cond_wait(&exitCond, &exitMutex);
   pthread_mutex_unlock(&exitMutex);
+
+  SNetMemFree((int*) SNetInfoDelTag(info, infoCounter));
 }
 
 snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *in, int loc)
