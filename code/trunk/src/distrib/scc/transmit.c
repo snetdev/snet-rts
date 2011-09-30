@@ -44,7 +44,7 @@ void SCCUnpackRef(int count, snet_ref_t **dst)
 {
   int i;
   for (i = 0; i < count; i++) {
-    cpy_mpb_to_mem(recvMPB, &dst[i], sizeof(snet_ref_t));
+    cpy_mpb_to_mem(recvMPB, dst[i], sizeof(snet_ref_t));
     SNetRefIncoming(dst[i]);
   }
 }
@@ -128,9 +128,9 @@ void SNetDistribSendRecord(snet_dest_t dest, snet_record_t *rec)
   sendMPB = mpbs[node];
 
   start_write_node(node);
-  SNetRecSerialise(rec, &SCCPackInt, &SCCPackRef);
   cpy_mem_to_mpb(sendMPB, &type, sizeof(snet_comm_type_t));
 
+  SNetRecSerialise(rec, &SCCPackInt, &SCCPackRef);
   dest.node = node_location;
   cpy_mem_to_mpb(sendMPB, &dest, sizeof(snet_dest_t));
   dest.node = node;
