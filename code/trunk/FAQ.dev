@@ -67,3 +67,18 @@ A: This warning can be safely ignored.
    that the MPI compiler wrapper is picked up instead of the regular
    compiler name. Although AC_USE_SYSTEM_EXTENSIONS appears later
    this is innocuous as it should have no effect on MPI detection.
+
+--
+
+Q: ./bootstrap fails with
+    > configure.ac:96: error: Libtool version 2.4 or higher is required
+    > /usr/share/aclocal/libtool.m4:46: LT_PREREQ is expanded from...
+    > configure.ac:96: the top level
+    > autom4te: /usr/bin/m4 failed with exit status: 63
+    > aclocal: /opt/local/bin/autom4te failed with exit status: 63
+    > autoreconf: aclocal failed with exit status: 63
+    although an appropriate version of libtool is in $PATH.
+
+A: (not an answer but a workaround) try running
+   >  autoreconf -v -f -i -I/path/to/share/aclocal/
+   Change "/path/to/ to the installation root of libtool.
