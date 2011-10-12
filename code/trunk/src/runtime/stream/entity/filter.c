@@ -182,7 +182,7 @@ static void FilterTask(snet_entity_t *ent, void *arg)
         {
           done = false;
 
-#ifdef MONINFO_USE_RECORD_EVENTS
+#ifdef USE_USER_EVENT_LOGGING
           /* Emit a monitoring message of a record read to be processed by a filter */
           SNetThreadingEventSignal( ent,
               SNetMonInfoCreate( EV_FILTER_START, MON_RECORD, in_rec)
@@ -221,7 +221,7 @@ static void FilterTask(snet_entity_t *ent, void *arg)
 
                 SNetRecFlowInherit( farg->input_variant, in_rec, out_rec);
 
-#ifdef MONINFO_USE_RECORD_EVENTS
+#ifdef USE_USER_EVENT_LOGGING
                 /* Emit a monitoring message of a record write by a filter started */
                 SNetThreadingEventSignal( ent,
                     SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec)

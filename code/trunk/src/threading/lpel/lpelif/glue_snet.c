@@ -22,7 +22,7 @@
 /* put this into assignment/monitoring module */
 #include "distribution.h"
 
-
+#include "monitor.h"
 
 static int num_cpus = 0;
 static int num_workers = 0;
@@ -112,13 +112,13 @@ int SNetThreadingInit(int argc, char **argv)
   }
 
 
-  //FIXME
-  if ( mon_level > 0) {
+#ifdef USE_LOGGING
+  if ( mon_level >= MON_MAP_LEVEL) {
     snprintf(fname, 20, "n%02d_tasks.map", SNetDistribGetNodeId() );
     /* create a map file */
     mapfile = fopen(fname, "w");
   }
-
+#endif
   /* determine number of cpus */
   if ( 0 != LpelGetNumCores( &num_cpus) ) {
     SNetUtilDebugFatal("Could not determine number of cores!\n");
@@ -137,8 +137,11 @@ int SNetThreadingInit(int argc, char **argv)
   }
   num_workers = config.num_workers;
 
+#ifdef USE_LOGGING
   /* initialise monitoring module */
   SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_level);
+#endif
+
   SNetAssignInit(config.num_workers);
 
   res = LpelInit(&config);
@@ -176,19 +179,20 @@ int SNetThreadingCleanup(void)
 {
   SNetAssignCleanup();
 
+#ifdef USE_LOGGING
   /* Cleanup monitoring module */
   SNetThreadingMonCleanup();
-
   if (mapfile) {
     (void) fclose(mapfile);
   }
+#endif
 
   return 0;
 }
 
 
 /**
- * Signal an event
+ * Signal an user event
  */
 void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 {
@@ -241,33 +245,27 @@ int SNetThreadingSpawn(snet_entity_t *ent)
       GetStacksize(type)
       );
 
-  /* monitoring levels:
-   * 2: collect information for boxes
-   * 3: .. with timestamps
-   * 4: .. and stream events
-   * 5: like 4, for all (but _other) entities
-   * 6: like 5, also with usrevents
-   */
 
+#ifdef USE_LOGGING
   /* saturate mon level */
-  if (mon_level > 6) mon_level = 6;
-
-  /* starting with level 2, we monitor tasks */
-  if (mon_level >= 2) {
-    /* up to level 4, we only monitor boxes */
-    if (mon_level > 4 || type==ENTITY_box) {
-      mon_task_t *mt = SNetThreadingMonTaskCreate(
-          LpelTaskGetID(t),
-          name //SNetEntityStr(ent)
-          );
-      LpelTaskMonitor(t, mt);
-      /* if we monitor the task, we make an entry in the map file */
-      if (mapfile) {
-        int tid = LpelTaskGetID(t);
-        (void) fprintf(mapfile, "%d %s %d\n", tid, SNetEntityStr(ent), worker);
-      }
-    }
+  if (mon_level > MON_NUM_LEVEL) mon_level = MON_NUM_LEVEL;
+  if (mon_level >= MON_BOX_LEVEL) {
+	  if (mon_level >= MON_ALL_ENTITY_LEVEL  || type == ENTITY_box) {
+		  mon_task_t *mt = SNetThreadingMonTaskCreate(
+				  LpelTaskGetID(t),
+				  name
+		  );
+		  LpelTaskMonitor(t, mt);
+		  /* if we monitor the task, we make an entry in the map file */
+	  }
   }
+  if (mon_level >= MON_MAP_LEVEL && mapfile) {
+	  int tid = LpelTaskGetID(t);
+	  (void) fprintf(mapfile, "%d %s %d\n", tid, SNetEntityStr(ent), worker);
+  }
+
+
+#endif
 
   if (type != ENTITY_box && type != ENTITY_fbbuf) {
     LpelTaskPrio(t, 1);

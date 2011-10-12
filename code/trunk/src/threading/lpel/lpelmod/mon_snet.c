@@ -1,6 +1,3 @@
-
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -11,13 +8,7 @@
 
 #include "locvec.h"
 #include "moninfo.h"
-
-
-
-
-
-#define MON_ENTNAME_MAXLEN  64
-#define MON_FNAME_MAXLEN  63
+#include "monitor.h"
 
 #define PrintTiming(t, file)  PrintTimingNs((t),(file))
 #define PrintNormTS(t, file)  PrintNormTSns((t),(file))
@@ -27,7 +18,7 @@ static int mon_level = 0;
 static int mon_task_flags = 0;
 
 
-#define MON_WORKERDBG_TIMESTAMP (mon_level>2)
+#define MON_WORKERDBG_TIMESTAMP (mon_level>1)
 
 static const char *prefix = "mon_";
 static const char *suffix = ".log";
@@ -36,7 +27,6 @@ static const char *suffix = ".log";
 #define MON_USREVT_BUFSIZE_DELTA 64
 
 typedef struct mon_usrevt_t mon_usrevt_t;
-
 
 
 /**
@@ -156,9 +146,7 @@ static lpel_timing_t monitoring_begin = LPEL_TIMING_INITIALIZER;
  */
 #define FLAG_TIMES(mt)    (mt->flags & SNET_MON_TASK_TIMES)
 #define FLAG_STREAMS(mt)  (mt->flags & SNET_MON_TASK_STREAMS)
-#define FLAG_EVENTS(mt)   (mt->flags & SNET_MON_TASK_USREVT)
-
-
+#define FLAG_USREVT(mt)   (mt->flags & SNET_MON_USREVT)
 
 
 /**
@@ -611,7 +599,7 @@ static void MonCbTaskStop(mon_task_t *mt, lpel_taskstate_t state)
   }
 
   /* print user events */
-  if FLAG_EVENTS(mt) {
+  if FLAG_USREVT(mt) {
     PrintUsrEvt(mt);
   }
 
@@ -758,23 +746,27 @@ static void MonCbStreamWakeup(mon_stream_t *ms)
  */
 void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int level)
 {
+
+#ifdef USE_LOGGING
   mon_node = node;
   mon_level = level;
 
-  if (mon_level == 0) return;
-
+  if (mon_level < MON_WORKER_LEVEL) return;
   /* compute task flags from level */
   mon_task_flags = 0;
   switch(mon_level) {
-    case 6: mon_task_flags |= SNET_MON_TASK_USREVT;
-    case 5:
-    case 4: mon_task_flags |= SNET_MON_TASK_STREAMS;
-    case 3: mon_task_flags |= SNET_MON_TASK_TIMES;
-            break;
+    case MON_USREVT_LEVEL: mon_task_flags |= SNET_MON_USREVT;
+    case MON_ALL_ENTITY_LEVEL:
+    case MON_STREAM_LEVEL: mon_task_flags |= SNET_MON_TASK_STREAMS;
+    case MON_TIMESTAMP_LEVEL: mon_task_flags |= SNET_MON_TASK_TIMES;
+    case MON_BOX_LEVEL:
+    case MON_WORKER_LEVEL:
+
+    break;
   }
 
-
   /* register callbacks */
+
   cb->worker_create         = MonCbWorkerCreate;
   cb->worker_create_wrapper = MonCbWrapperCreate;
   cb->worker_destroy        = MonCbWorkerDestroy;
@@ -797,10 +789,9 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int level)
   cb->stream_blockon      = MonCbStreamBlockon;
   cb->stream_wakeup       = MonCbStreamWakeup;
 
-
-
   /* initialize timing */
   LpelTimingNow(&monitoring_begin);
+#endif
 }
 
 
@@ -850,7 +841,7 @@ void SNetThreadingMonEvent(mon_task_t *mt, snet_moninfo_t *moninfo)
   mon_worker_t *mw = mt->mw;
 
 
-  if (FLAG_EVENTS(mt) && mw) {
+  if (FLAG_USREVT(mt) && mw) {
     /* grow events buffer if needed */
     if (mw->events.cnt == mw->events.size) {
         /* grow */

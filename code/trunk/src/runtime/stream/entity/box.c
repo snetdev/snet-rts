@@ -98,7 +98,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
         SNetDebugTimeGetTime(&time_in);
 #endif /* SNET_DEBUG_COUNTERS */
 
-#ifdef MONINFO_USE_RECORD_EVENTS
+#ifdef USE_USER_EVENT_LOGGING
         /* Emit a monitoring message of a record read to be processed by a box */
         if (SNetRecGetDescriptor(rec) == REC_data) {
           SNetThreadingEventSignal( ent,

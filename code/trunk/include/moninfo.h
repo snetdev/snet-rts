@@ -18,9 +18,7 @@
 
 #include "bool.h"
 #include "record.h"
-
-
-#define MONINFO_USE_RECORD_EVENTS  /* enable processing of record events */
+#include "monitor.h"
 
 typedef union moninfo_types snet_moninfo_types_t;
 
