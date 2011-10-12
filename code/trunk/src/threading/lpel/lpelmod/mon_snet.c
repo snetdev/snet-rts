@@ -18,8 +18,6 @@ static int mon_level = 0;
 static int mon_task_flags = 0;
 
 
-//#define MON_WORKERDBG_TIMESTAMP (mon_level>1)
-
 static const char *prefix = "mon_";
 static const char *suffix = ".log";
 
@@ -58,10 +56,8 @@ struct mon_task_t {
 	mon_worker_t *mw;
 	unsigned long tid;
 	unsigned long flags; /** monitoring flags */
-	unsigned long disp;  /** dispatch counter */
 	struct {
 		lpel_timing_t creat; /** task creation time */
-		lpel_timing_t total; /** total execution time of the task */
 		lpel_timing_t start; /** start time of last dispatch */
 		lpel_timing_t stop;  /** stop time of last dispatch */
 	} times;
@@ -493,6 +489,33 @@ static void MonCbTaskAssign(mon_task_t *mt, mon_worker_t *mw)
 	mt->mw = mw;
 }
 
+mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *name)
+{
+	mon_task_t *mt = malloc( sizeof(mon_task_t) );
+
+	/* zero out everything */
+	memset(mt, 0, sizeof(mon_task_t));
+
+	/* copy name and 0-terminate */
+	if ( name != NULL ) {
+		(void) strncpy(mt->name, name, MON_ENTNAME_MAXLEN);
+		mt->name[MON_ENTNAME_MAXLEN-1] = '\0';
+	}
+
+	mt->mw = NULL;
+	mt->tid = tid;
+	mt->flags = mon_task_flags;
+
+	mt->dirty_list = ST_DIRTY_END;
+
+	if FLAG_TIMES(mt) {
+		lpel_timing_t tnow;
+		LpelTimingNow(&tnow);
+		LpelTimingDiff(&mt->times.creat, &monitoring_begin, &tnow);
+	}
+
+	return mt;
+}
 
 
 static void MonCbTaskStart(mon_task_t *mt)
@@ -504,11 +527,6 @@ static void MonCbTaskStart(mon_task_t *mt)
 
 	/* set blockon to any */
 	mt->blockon = 'a';
-
-	/* increment dispatch counter of task */
-	mt->disp++;
-	/* increment task dispatched counter of monitoring context */
-	if (mt->mw) mt->mw->disp++;
 }
 
 
@@ -528,31 +546,23 @@ static void MonCbTaskStop(mon_task_t *mt, lpel_taskstate_t state)
 		PrintNormTS(&mt->times.stop, file);
 	}
 
-	/* print general info: tid, disp.cnt, state */
-	fprintf( file, " %lu disp %lu ", mt->tid, mt->disp);
+	/* print general info: tid, status */
+	fprintf( file, " %lu ", mt->tid);
 
 	if ( state==TASK_BLOCKED) {
-		fprintf( file, "st B%c ", mt->blockon);
+		fprintf( file, "%c ", mt->blockon);
 	} else {
-		fprintf( file, "st %c ", state);
+		fprintf( file, "%c ", state);
 	}
 
 	/* print times */
 	if FLAG_TIMES(mt) {
-		fprintf( file, "et ");
 		/* execution time */
 		LpelTimingDiff(&et, &mt->times.start, &mt->times.stop);
-		/* update total execution time */
-		LpelTimingAdd(&mt->times.total, &et);
 
 		PrintTiming( &et , file);
-		if ( state == TASK_ZOMBIE) {
-			fprintf( file, "creat ");
+		if ( state == TASK_ZOMBIE)	// task finish
 			PrintTiming( &mt->times.creat, file);
-			if (strlen(mt->name) > 0) {
-				fprintf( file, "'%s' ", mt->name);
-			}
-		}
 	}
 
 	/* print stream info */
@@ -764,37 +774,6 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int level)
 void SNetThreadingMonCleanup(void)
 {
 	/* NOP */
-}
-
-
-
-mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *name)
-{
-	mon_task_t *mt = malloc( sizeof(mon_task_t) );
-
-	/* zero out everything */
-	memset(mt, 0, sizeof(mon_task_t));
-
-	/* copy name and 0-terminate */
-	if ( name != NULL ) {
-		(void) strncpy(mt->name, name, MON_ENTNAME_MAXLEN);
-		mt->name[MON_ENTNAME_MAXLEN-1] = '\0';
-	}
-
-	mt->mw = NULL;
-	mt->tid = tid;
-	mt->flags = mon_task_flags;
-	mt->disp = 0;
-
-	mt->dirty_list = ST_DIRTY_END;
-
-	if FLAG_TIMES(mt) {
-		lpel_timing_t tnow;
-		LpelTimingNow(&tnow);
-		LpelTimingDiff(&mt->times.creat, &monitoring_begin, &tnow);
-	}
-
-	return mt;
 }
 
 
