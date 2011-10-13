@@ -81,7 +81,6 @@ struct mon_stream_t {
 	char          state;       /** one if IOCR */
 	unsigned int  sid;         /** copy of the stream uid */
 	unsigned long counter;     /** number of items processed */
-	unsigned int  strevt_flags;/** events "?!*" */
 };
 
 
@@ -105,19 +104,10 @@ struct mon_usrevt_t {
 #define ST_REPLACED 'R'
 
 /**
- * The strevt_flags of a stream descriptor
- */
-#define ST_MOVED    (1<<0)
-#define ST_WAKEUP   (1<<1)
-#define ST_BLOCKON  (1<<2)
-
-/**
  * This special value indicates the end of the dirty list chain.
  * NULL cannot be used as NULL indicates that the SD is not dirty.
  */
 #define ST_DIRTY_END   ((mon_stream_t *)-1)
-
-
 
 
 
@@ -249,13 +239,8 @@ static void PrintDirtyList(mon_task_t *mt)
 
 		/* now print */
 		(void) fprintf( file,
-				"%u,%c,%c,%lu,%c%c%c;",
-				ms->sid, ms->mode, ms->state, ms->counter,
-				( ms->strevt_flags & ST_BLOCKON) ? '?':'-',
-						( ms->strevt_flags & ST_WAKEUP) ? '!':'-',
-								( ms->strevt_flags & ST_MOVED ) ? '*':'-'
-		);
-
+				"%u,%c,%lu;",			//print [stream id, r/w, num of mess]
+				ms->sid, ms->mode, ms->counter);
 
 		/* get the next dirty entry, and clear the link in the current entry */
 		next = ms->dirty;
@@ -268,7 +253,6 @@ static void PrintDirtyList(mon_task_t *mt)
 			/* fall-through */
 		case ST_INUSE:
 			ms->dirty = NULL;
-			ms->strevt_flags = 0;
 			break;
 
 		case ST_CLOSED:
@@ -595,7 +579,6 @@ static mon_stream_t *MonCbStreamOpen(mon_task_t *mt, unsigned int sid, char mode
 	ms->mode = mode;
 	ms->state = ST_OPENED;
 	ms->counter = 0;
-	ms->strevt_flags = 0;
 	ms->dirty = NULL;
 
 	MarkDirty(ms);
@@ -643,7 +626,6 @@ static void MonCbStreamReadFinish(mon_stream_t *ms, void *item)
 	assert( ms != NULL );
 
 	ms->counter++;
-	ms->strevt_flags |= ST_MOVED;
 	MarkDirty(ms);
 }
 
@@ -665,7 +647,6 @@ static void MonCbStreamWriteFinish(mon_stream_t *ms)
 	assert( ms != NULL );
 
 	ms->counter++;
-	ms->strevt_flags |= ST_MOVED;
 	MarkDirty(ms);
 }
 
@@ -678,7 +659,6 @@ static void MonCbStreamWriteFinish(mon_stream_t *ms)
 static void MonCbStreamBlockon(mon_stream_t *ms)
 {
 	assert( ms != NULL );
-	ms->strevt_flags |= ST_BLOCKON;
 	MarkDirty(ms);
 
 	/* track if blocked on reading or writing */
@@ -696,7 +676,6 @@ static void MonCbStreamBlockon(mon_stream_t *ms)
 static void MonCbStreamWakeup(mon_stream_t *ms)
 {
 	assert( ms != NULL );
-	ms->strevt_flags |= ST_WAKEUP;
 
 	/* MarkDirty() not needed, as Moved()
 	 * event is called anyway
@@ -745,7 +724,6 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int level)
 	cb->worker_destroy        = MonCbWorkerDestroy;
 	cb->worker_waitstart      = MonCbWorkerWaitStart;
 	cb->worker_waitstop       = MonCbWorkerWaitStop;
-	// cb->worker_debug          = MonCbWorkerDebug;
 
 	cb->task_destroy = MonCbTaskDestroy;
 	cb->task_assign  = MonCbTaskAssign;
