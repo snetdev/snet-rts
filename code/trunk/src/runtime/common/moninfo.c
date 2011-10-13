@@ -191,9 +191,9 @@ void SNetMonInfoPrint( FILE *f, snet_moninfo_t *mon)
 //				PrintMonInfoId( f, &par_id );
 //			}
 //		}
-		if (REC_MONINFO( mon, add_moninfo_rec_data) != NULL) {
-			/*TODO*/
-		}
+//		if (REC_MONINFO( mon, add_moninfo_rec_data) != NULL) {
+//			/*TODO*/
+//		}
 	}
 	break;
 	default: /*ignore*/
