@@ -185,7 +185,7 @@ static void FilterTask(snet_entity_t *ent, void *arg)
 #ifdef USE_USER_EVENT_LOGGING
           /* Emit a monitoring message of a record read to be processed by a filter */
           SNetThreadingEventSignal( ent,
-              SNetMonInfoCreate( EV_FILTER_START, MON_RECORD, in_rec)
+              SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, in_rec)
               );
 #endif
 
@@ -224,7 +224,7 @@ static void FilterTask(snet_entity_t *ent, void *arg)
 #ifdef USE_USER_EVENT_LOGGING
                 /* Emit a monitoring message of a record write by a filter started */
                 SNetThreadingEventSignal( ent,
-                    SNetMonInfoCreate( EV_FILTER_WRITE, MON_RECORD, out_rec)
+                    SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, out_rec)
                     );
 #endif
                   SNetStreamWrite( outstream, out_rec);

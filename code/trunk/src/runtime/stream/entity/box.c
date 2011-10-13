@@ -102,7 +102,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
         /* Emit a monitoring message of a record read to be processed by a box */
         if (SNetRecGetDescriptor(rec) == REC_data) {
           SNetThreadingEventSignal( ent,
-              SNetMonInfoCreate( EV_BOX_START, MON_RECORD, rec)
+              SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
               );
         }
 #endif

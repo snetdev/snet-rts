@@ -222,7 +222,7 @@ static inline void MarkDirty( mon_stream_t *ms)
 
 
 /**
- * Print the dirty list of the task
+ * Print the dirty list of the task: stream trace
  */
 static void PrintDirtyList(mon_task_t *mt)
 {

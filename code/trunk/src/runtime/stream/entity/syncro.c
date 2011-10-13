@@ -189,7 +189,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 #ifdef USE_USER_EVENT_LOGGING
               /* Emit a monitoring message of first record entering syncro cell */
               SNetThreadingEventSignal( ent,
-                  SNetMonInfoCreate( EV_SYNC_FIRST, MON_RECORD, rec)
+                  SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
                   );
 #endif
 
@@ -197,7 +197,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 #ifdef USE_USER_EVENT_LOGGING
               /* Emit a monitoring message of another accepted record entering syncro cell */
               SNetThreadingEventSignal( ent,
-                  SNetMonInfoCreate( EV_SYNC_NEXT, MON_RECORD, rec)
+                  SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
                   );
 #endif
             }
@@ -216,7 +216,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 #ifdef USE_USER_EVENT_LOGGING
           /* Emit a monitoring message of firing syncro cell */
           SNetThreadingEventSignal( ent,
-              SNetMonInfoCreate( EV_SYNC_FIRE, MON_RECORD, syncrec)
+              SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, syncrec)
               );
 #endif
           /* this is the last sync */
