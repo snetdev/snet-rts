@@ -74,7 +74,6 @@ struct cdata {
 /* Interface functions that are needed by the runtime environment,
  * but are not given to the box programmer.
  */
-static void *C4SNetDataShallowCopy( void *ptr);
 static int C4SNetDataSerialize( FILE *file, void *ptr);
 static void *C4SNetDataDeserialize(FILE *file);
 static int C4SNetDataEncode( FILE *file, void *ptr);
@@ -239,7 +238,7 @@ c4snet_data_t *C4SNetDataCreateArray( c4snet_type_t type, int size, void *data)
  * This copy function should be used inside S-Net runtime
  * to avoid needles copying.
  */
-static void *C4SNetDataShallowCopy( void *ptr)
+void *C4SNetDataShallowCopy( void *ptr)
 {
   c4snet_data_t *temp = (c4snet_data_t *)ptr;
 
