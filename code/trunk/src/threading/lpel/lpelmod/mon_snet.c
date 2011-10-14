@@ -229,7 +229,7 @@ static void PrintDirtyList(mon_task_t *mt)
 	mon_stream_t *ms, *next;
 	FILE *file = mt->mw->outfile;
 
-	fprintf( file,"[" );
+	//fprintf( file,"[" );
 
 	ms = mt->dirty_list;
 
@@ -268,7 +268,7 @@ static void PrintDirtyList(mon_task_t *mt)
 	/* dirty list of task is empty */
 	mt->dirty_list = ST_DIRTY_END;
 
-	fprintf( file,"] " );
+	//fprintf( file,"] " );
 }
 
 
@@ -284,7 +284,7 @@ static void PrintUsrEvt(mon_task_t *mt)
 
 	FILE *file = mw->outfile;
 
-	fprintf( file,"[");
+	fprintf( file,"|");
 	for (i=0; i<mw->events.cnt; i++) {
 		mon_usrevt_t *cur = &mw->events.buffer[i];
 		/* print cur */
@@ -305,7 +305,7 @@ static void PrintUsrEvt(mon_task_t *mt)
 		 */
 		SNetMonInfoDestroy(cur->moninfo);
 	}
-	fprintf( file,"] " );
+	//fprintf( file,"] " );
 	/* reset */
 	mw->events.cnt = 0;
 }
