@@ -32,7 +32,6 @@ extern "C" {
  *****************************************************************************/
 
 typedef struct cdata c4snet_data_t;
-
 /** <!--********************************************************************-->
  *
  * @typedef c4snet_container_t;
@@ -208,6 +207,21 @@ c4snet_data_t *C4SNetDataCreateArray( c4snet_type_t type, int size, void *data);
  *****************************************************************************/
 
 void *C4SNetDataCopy( void *ptr);
+
+/** <!--********************************************************************-->
+ *
+ * @fn void *C4SNetDataShallowCopy( void *ptr)
+ *
+ *   @brief Increases the internal reference counter
+ *
+ *   @param ptr Pointer to type c4snet_data_t struct 
+ *
+ *   @return Pointer to the modified struct, or NULL in case of error.   
+ *
+ *****************************************************************************/
+
+void *C4SNetDataShallowCopy( void *ptr);
+
 
 /** <!--********************************************************************-->
  *
