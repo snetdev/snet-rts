@@ -20,7 +20,8 @@ static int mon_task_flags = 0;
 
 static const char *prefix = "mon_";
 static const char *suffix = ".log";
-
+static const char end_entry = END_LOG_ENTRY;
+static const char end_stream = END_STREAM_TRACE;
 
 #define MON_USREVT_BUFSIZE_DELTA 64
 
@@ -159,6 +160,7 @@ static inline void PrintTimingNs( const lpel_timing_t *t, FILE *file)
 				(unsigned long) t->tv_sec, (t->tv_nsec)
 		);
 	}
+
 }
 
 /**
@@ -184,11 +186,16 @@ static inline void PrintNormTSns( const lpel_timing_t *t, FILE *file)
 	lpel_timing_t norm_ts;
 
 	LpelTimingDiff(&norm_ts, &monitoring_begin, t);
+#ifdef BINARY_FORMAT
+	fwrite(&norm_ts, sizeof(lpel_timing_t), 1, file);
+#else
 	(void) fprintf( file,
 			"%lu%09lu",
 			(unsigned long) norm_ts.tv_sec,
 			(norm_ts.tv_nsec)
 	);
+#endif
+
 }
 
 
@@ -238,9 +245,15 @@ static void PrintDirtyList(mon_task_t *mt)
 		assert( ms->montask == mt );
 
 		/* now print */
+#ifdef BINARY_FORMAT
+		fwrite(&ms->sid, sizeof(unsigned int), 1, file);
+		fwrite(&ms->mode, 1, 1, file);
+		fwrite(&ms->counter, sizeof(unsigned long), 1, file);
+#else
 		(void) fprintf( file,
 				"%u,%c,%lu;",			//print [stream id, r/w, num of mess]
 				ms->sid, ms->mode, ms->counter);
+#endif
 
 		/* get the next dirty entry, and clear the link in the current entry */
 		next = ms->dirty;
@@ -267,8 +280,6 @@ static void PrintDirtyList(mon_task_t *mt)
 
 	/* dirty list of task is empty */
 	mt->dirty_list = ST_DIRTY_END;
-
-	//fprintf( file,"] " );
 }
 
 
@@ -284,22 +295,25 @@ static void PrintUsrEvt(mon_task_t *mt)
 
 	FILE *file = mw->outfile;
 
-	fprintf( file,"|");
+#ifdef BINARY_FORMAT
+	fwrite(&end_stream, 1, 1, file);
+#else
+	fprintf( file, "%c", end_stream);
+#endif
 	for (i=0; i<mw->events.cnt; i++) {
 		mon_usrevt_t *cur = &mw->events.buffer[i];
 		/* print cur */
 		if FLAG_TIMES(mt) {
 			PrintNormTS(&cur->ts, file);
 		}
-		/* print event field */
-		/*FIXME
-    fprintf( file, ",%s,%lu,%lu;",
-        evtnames[cur->evt], cur->in_cnt, cur->out_cnt);
-		 */
-		fprintf( file, ",");
+#ifndef BINARY_FORMAT
+		fprintf( file, " ");
+#endif
 		SNetMonInfoPrint(file, cur->moninfo);
-		fprintf( file, ";");
 
+#ifndef BINARY_FORMAT
+		fprintf( file, ";");
+#endif
 		/*
 		 * According to the treading interface, we destroy the moninfo.
 		 */
@@ -356,7 +370,12 @@ static mon_worker_t *MonCbWorkerCreate( int wid)
 	lpel_timing_t tnow;
 	LpelTimingNow(&tnow);
 	PrintNormTS(&tnow, mon->outfile);
-	fprintf(mon->outfile, " S\n");
+
+#ifndef BINARY_FORMAT
+	fwrite(&end_entry, 1, 1, mon->outfile);
+#else
+	fprintf(mon->outfile, " S%c", END_LOG_ENTRY);
+#endif
 
 	return mon;
 }
@@ -397,7 +416,12 @@ static mon_worker_t *MonCbWrapperCreate( mon_task_t *mt)
 	lpel_timing_t tnow;
 	LpelTimingNow(&tnow);
 	PrintNormTS(&tnow, mon->outfile);
-	fprintf(mon->outfile, " S\n");
+
+#ifndef BINARY_FORMAT
+	fwrite(&end_entry, 1, 1, mon->outfile);
+#else
+	fprintf(mon->outfile, " S%c", END_LOG_ENTRY);
+#endif
 	return mon;
 }
 
@@ -415,7 +439,8 @@ static void MonCbWorkerDestroy( mon_worker_t *mon)
 	lpel_timing_t tnow;
 	LpelTimingNow( &tnow);
 	PrintNormTS( &tnow, mon->outfile);
-	fprintf( mon->outfile, " E\n");
+	//	fprintf( mon->outfile, " E%c", END_LOG_ENTRY);
+	fwrite(&end_entry, 1, 1, mon->outfile);
 
 
 	if ( mon->outfile != NULL) {
@@ -437,6 +462,10 @@ static void MonCbWorkerDestroy( mon_worker_t *mon)
 static void MonCbWorkerWaitStart( mon_worker_t *mon)
 {
 	LpelTimingStart(&mon->wait_current);
+	// LOAD BALANCE
+//	fprintf(mon->outfile, "W ");
+
+
 }
 
 
@@ -446,12 +475,15 @@ static void MonCbWorkerWaitStop(mon_worker_t *mon)
 	lpel_timing_t tnow;
 	LpelTimingNow(&tnow);
 	PrintNormTS(&tnow, mon->outfile);
-	fprintf(mon->outfile, " W %lu.%09lu\n",
-			(unsigned long) mon->wait_current.tv_sec, (mon->wait_current.tv_nsec)
+
+#ifdef BINARY_FORMAT
+	fwrite(&mon->wait_current, sizeof(lpel_timing_t), 1, mon->outfile);
+	fwrite(&end_entry, 1, 1, mon->outfile);
+#else
+	fprintf(mon->outfile, " W %lu.%09lu%c",
+			(unsigned long) mon->wait_current.tv_sec, (mon->wait_current.tv_nsec), END_LOG_ENTRY
 	);
-
-	// TODO: trying for load balance approach
-
+#endif
 }
 
 
@@ -519,9 +551,9 @@ static void MonCbTaskStart(mon_task_t *mt)
 
 
 
-static void MonCbTaskStop(mon_task_t *mt, lpel_taskstate_t state)
+static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 {
-	if (mt->mw==NULL) return;
+	if ( mt->mw==NULL) return;
 
 	FILE *file = mt->mw->outfile;
 	lpel_timing_t et;
@@ -534,22 +566,38 @@ static void MonCbTaskStop(mon_task_t *mt, lpel_taskstate_t state)
 	}
 
 	/* print general info: tid, status */
+#ifdef BINARY_FORMAT
+	fwrite( &mt->tid, sizeof(unsigned long), 1, file);
+	if ( state==TASK_BLOCKED) {
+		fwrite( &mt->blockon, 1, 1, file);
+	} else {
+		fwrite( &state, 1, 1, file);
+	}
+#else
 	fprintf( file, " %lu ", mt->tid);
-
 	if ( state==TASK_BLOCKED) {
 		fprintf( file, "%c ", mt->blockon);
 	} else {
 		fprintf( file, "%c ", state);
 	}
-
+#endif
 	/* print times */
 	if FLAG_TIMES(mt) {
 		/* execution time */
 		LpelTimingDiff(&et, &mt->times.start, &mt->times.stop);
 
+#ifdef BINARY_FORMAT
+		fwrite(&et, sizeof(lpel_timing_t), 1, file);
+#else
 		PrintTiming( &et , file);
+#endif
+
 		if ( state == TASK_ZOMBIE)	// task finish
+#ifdef BINARY_FORMAT
+			fwrite(&mt->times.creat, sizeof(lpel_timing_t), 1, file);
+#else
 			PrintTiming( &mt->times.creat, file);
+#endif
 	}
 
 	/* print stream info */
@@ -562,8 +610,11 @@ static void MonCbTaskStop(mon_task_t *mt, lpel_taskstate_t state)
 	if FLAG_USREVT(mt) {
 		PrintUsrEvt(mt);
 	}
-
-	fprintf( file, "\n");
+#ifdef BINARY_FORMAT
+	fwrite(&end_entry, 1, 1, file);
+#else
+	fprintf( file, "%c", END_LOG_ENTRY);
+#endif
 
 	//FIXME only for debugging purposes
 	//fflush( file);

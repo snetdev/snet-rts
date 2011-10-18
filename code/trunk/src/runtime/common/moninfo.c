@@ -25,7 +25,7 @@
  * Keep following names consistent with header file
  */
 
-static const char *names_event[] = {
+static const char names_event[] = {
 		//  "EV_INPUT_ARRIVE",
 		//  "EV_BOX_START",
 		//  "EV_BOX_WRITE",
@@ -35,8 +35,8 @@ static const char *names_event[] = {
 		//  "EV_SYNC_FIRST",
 		//  "EV_SYNC_NEXT",
 		//  "EV_SYNC_FIRE",
-		"I",
-		"O",
+		'I',
+		'O',
 };
 
 /* do not need yet, when use --> should use a compressed way, e.g, "r" for record */
@@ -166,20 +166,29 @@ snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData( snet_add_moninfo_r
 
 static void PrintMonInfoId( FILE *f, snet_record_id_t *id)
 {
+#ifdef BINARY_FORMAT
+	fwrite(&id->subid[1], sizeof(int), 1, f);
+	fwrite(&id->subid[2], sizeof(int), 1, f);
+#else
 	fprintf(f, "%u.%u",
 			id->subid[1], id->subid[0]
 	);
+#endif
 }
 
 void SNetMonInfoPrint( FILE *f, snet_moninfo_t *mon)
 {
 //	snet_record_id_t par_id;
-
+#ifdef BINARY_FORMAT
+	fwrite(&names_event[MONINFO_EVENT(mon)], 1, 1, f);
+#else
 	fprintf(f,
-			"%s ",
+			"%c ",
 			names_event[MONINFO_EVENT(mon)]
 			//, names_descr[MONINFO_DESCR(mon)] 	/* do not need print the description, since there is only one type
 	);
+#endif
+
 
 	switch (mon->mon_descr) {
 	case MON_RECORD: /* monitoring of a record */

@@ -207,8 +207,6 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 
 
 
-
-
 /*****************************************************************************
  * Spawn a new task
  ****************************************************************************/
@@ -261,7 +259,8 @@ int SNetThreadingSpawn(snet_entity_t *ent)
   }
   if (mon_level >= MON_MAP_LEVEL && mapfile) {
 	  int tid = LpelTaskGetID(t);
-	  (void) fprintf(mapfile, "%d %s %d\n", tid, SNetEntityStr(ent), worker);
+	  // FIXME: change to binary format
+	  (void) fprintf(mapfile, "%d %s %d%c", tid, SNetEntityStr(ent), worker, END_LOG_ENTRY);
   }
 
 
