@@ -37,13 +37,23 @@ void SNetThreadingMonEvent(struct mon_task_t *mt,
  box, timestamp, stream, entity are activated by USE_TASK_EVENT_LOGGING
  message is activated by USE_USER_EVENT_LOGGING
 */
-#define MON_NUM_LEVEL 7
-#define MON_MAP_LEVEL 1
-#define MON_WORKER_LEVEL 2
-#define MON_BOX_LEVEL 3
-#define MON_TIMESTAMP_LEVEL 4
-#define MON_STREAM_LEVEL 5
-#define MON_ALL_ENTITY_LEVEL 6
-#define MON_USREVT_LEVEL 7 //message event
+#define MON_NUM_LEVEL 			7
+#define MON_MAP_LEVEL 			1
+#define MON_WORKER_LEVEL 		2
+#define MON_BOX_LEVEL 			3
+#define MON_TIMESTAMP_LEVEL 	4
+#define MON_STREAM_LEVEL 		5
+#define MON_ALL_ENTITY_LEVEL 	6
+#define MON_USREVT_LEVEL 		7 //message event
+
+
+/* special characters */
+//#define END_LOG_ENTRY '\n'		// for separate each log entry by one line --> for testing
+#define END_LOG_ENTRY 			'#'			// more efficient for file writing, just send when the buffer is full
+#define END_STREAM_TRACE 		'|'
+#define TRACE_SEPARATOR 		';'			// used to separate stream traces, message traces
+#define WORKER_START_EVENT 		'S'
+#define WORKER_WAIT_EVENT 		'W'
+#define WORKER_END_EVENT 		'E'
 
 #endif /* _MON_SNET_H_ */

@@ -104,9 +104,4 @@ snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_re
  ****************************************************************************/
 void SNetMonInfoPrint(FILE *f, snet_moninfo_t *moninfo);
 
-
-
-//#define END_LOG_ENTRY '\n'		// for separate each log entry by one line --> for testing
-#define END_LOG_ENTRY '#'			// more efficient for file writing, just send when the buffer is full
-#define END_STREAM_TRACE '|'
 #endif /* _MONINFO_H_ */

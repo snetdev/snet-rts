@@ -22,6 +22,10 @@ static const char *prefix = "mon_";
 static const char *suffix = ".log";
 static const char end_entry = END_LOG_ENTRY;
 static const char end_stream = END_STREAM_TRACE;
+static const char trace_sep = TRACE_SEPARATOR;
+static const char worker_start = WORKER_START_EVENT;
+static const char worker_end = WORKER_END_EVENT;
+static const char worker_wait = WORKER_WAIT_EVENT;
 
 #define MON_USREVT_BUFSIZE_DELTA 64
 
@@ -82,6 +86,7 @@ struct mon_stream_t {
 	char          state;       /** one if IOCR */
 	unsigned int  sid;         /** copy of the stream uid */
 	unsigned long counter;     /** number of items processed */
+	unsigned int  strevt_flags;/** events "?!*" */
 };
 
 
@@ -103,6 +108,14 @@ struct mon_usrevt_t {
 #define ST_OPENED   'O'
 #define ST_CLOSED   'C'
 #define ST_REPLACED 'R'
+
+/*
+* The strevt_flags of a stream descriptor
+*/
+#define ST_MOVED    (1<<0)
+#define ST_WAKEUP   (1<<1)
+#define ST_BLOCKON  (1<<2)
+
 
 /**
  * This special value indicates the end of the dirty list chain.
@@ -153,6 +166,9 @@ static inline void PrintTimingUs( const lpel_timing_t *t, FILE *file)
  */
 static inline void PrintTimingNs( const lpel_timing_t *t, FILE *file)
 {
+#ifdef BINARY_FORMAT
+	fwrite(t, sizeof(lpel_timing_t), 1, file);
+#else
 	if (t->tv_sec == 0) {
 		(void) fprintf( file, "%lu ", t->tv_nsec);
 	} else {
@@ -160,7 +176,7 @@ static inline void PrintTimingNs( const lpel_timing_t *t, FILE *file)
 				(unsigned long) t->tv_sec, (t->tv_nsec)
 		);
 	}
-
+#endif
 }
 
 /**
@@ -190,7 +206,7 @@ static inline void PrintNormTSns( const lpel_timing_t *t, FILE *file)
 	fwrite(&norm_ts, sizeof(lpel_timing_t), 1, file);
 #else
 	(void) fprintf( file,
-			"%lu%09lu",
+			"%lu%09lu ",
 			(unsigned long) norm_ts.tv_sec,
 			(norm_ts.tv_nsec)
 	);
@@ -236,8 +252,6 @@ static void PrintDirtyList(mon_task_t *mt)
 	mon_stream_t *ms, *next;
 	FILE *file = mt->mw->outfile;
 
-	//fprintf( file,"[" );
-
 	ms = mt->dirty_list;
 
 	while (ms != ST_DIRTY_END) {
@@ -246,13 +260,29 @@ static void PrintDirtyList(mon_task_t *mt)
 
 		/* now print */
 #ifdef BINARY_FORMAT
-		fwrite(&ms->sid, sizeof(unsigned int), 1, file);
-		fwrite(&ms->mode, 1, 1, file);
-		fwrite(&ms->counter, sizeof(unsigned long), 1, file);
+		fwrite( &ms->sid, sizeof(int), 1, file);
+		fwrite( &ms->mode, 1, 1, file);
+		fwrite( &ms->state, 1, 1, file);
+		fwrite( &ms->counter, sizeof(long), 1, file);
+		char a = ( ms->strevt_flags & ST_BLOCKON) ? '?':'-';
+		fwrite( &a, 1, 1, file);
+		char b = ( ms->strevt_flags & ST_WAKEUP) ? '!':'-';
+		fwrite( &b, 1, 1, file);
+		char c = ( ms->strevt_flags & ST_MOVED ) ? '*':'-';
+		fwrite( &c, 1, 1, file);
 #else
+
 		(void) fprintf( file,
-				"%u,%c,%lu;",			//print [stream id, r/w, num of mess]
-				ms->sid, ms->mode, ms->counter);
+		"%u,%c,%c,%lu,%c%c%c;",
+		ms->sid, ms->mode, ms->state, ms->counter,
+		( ms->strevt_flags & ST_BLOCKON) ? '?':'-',
+		( ms->strevt_flags & ST_WAKEUP) ? '!':'-',
+		( ms->strevt_flags & ST_MOVED ) ? '*':'-'
+		);
+
+		//(void) fprintf( file,
+		//		"%u,%c,%c,%lu%c",			//print [stream id, r/w, num of mess]
+		//		ms->sid, ms->mode, ms->state, ms->counter, trace_sep);
 #endif
 
 		/* get the next dirty entry, and clear the link in the current entry */
@@ -266,6 +296,7 @@ static void PrintDirtyList(mon_task_t *mt)
 			/* fall-through */
 		case ST_INUSE:
 			ms->dirty = NULL;
+			ms->strevt_flags = 0;
 			break;
 
 		case ST_CLOSED:
@@ -277,6 +308,7 @@ static void PrintDirtyList(mon_task_t *mt)
 		}
 		ms = next;
 	}
+
 
 	/* dirty list of task is empty */
 	mt->dirty_list = ST_DIRTY_END;
@@ -306,20 +338,17 @@ static void PrintUsrEvt(mon_task_t *mt)
 		if FLAG_TIMES(mt) {
 			PrintNormTS(&cur->ts, file);
 		}
-#ifndef BINARY_FORMAT
-		fprintf( file, " ");
-#endif
+
 		SNetMonInfoPrint(file, cur->moninfo);
 
 #ifndef BINARY_FORMAT
-		fprintf( file, ";");
+		fprintf( file, "%c", trace_sep);
 #endif
 		/*
 		 * According to the treading interface, we destroy the moninfo.
 		 */
 		SNetMonInfoDestroy(cur->moninfo);
 	}
-	//fprintf( file,"] " );
 	/* reset */
 	mw->events.cnt = 0;
 }
@@ -372,9 +401,10 @@ static mon_worker_t *MonCbWorkerCreate( int wid)
 	PrintNormTS(&tnow, mon->outfile);
 
 #ifndef BINARY_FORMAT
-	fwrite(&end_entry, 1, 1, mon->outfile);
+	fwrite( &worker_start, 1, 1, mon->outfile);
+	fwrite( &end_entry, 1, 1, mon->outfile);
 #else
-	fprintf(mon->outfile, " S%c", END_LOG_ENTRY);
+	fprintf( mon->outfile, "%c%c", worker_start, end_entry);
 #endif
 
 	return mon;
@@ -418,9 +448,10 @@ static mon_worker_t *MonCbWrapperCreate( mon_task_t *mt)
 	PrintNormTS(&tnow, mon->outfile);
 
 #ifndef BINARY_FORMAT
+	fwrite( &worker_start, 1, 1, mon->outfile);
 	fwrite(&end_entry, 1, 1, mon->outfile);
 #else
-	fprintf(mon->outfile, " S%c", END_LOG_ENTRY);
+	fprintf(mon->outfile, "%c%c", worker_start, end_entry);
 #endif
 	return mon;
 }
@@ -439,9 +470,13 @@ static void MonCbWorkerDestroy( mon_worker_t *mon)
 	lpel_timing_t tnow;
 	LpelTimingNow( &tnow);
 	PrintNormTS( &tnow, mon->outfile);
-	//	fprintf( mon->outfile, " E%c", END_LOG_ENTRY);
-	fwrite(&end_entry, 1, 1, mon->outfile);
 
+#ifdef BINARY_FORMAT
+	fwrite(&worker_end, 1, 1, mon->outfile);
+	fwrite(&end_entry, 1, 1, mon->outfile);
+#else
+	fprintf( mon->outfile, "%c%c", worker_end, end_entry);
+#endif
 
 	if ( mon->outfile != NULL) {
 		int ret;
@@ -462,10 +497,6 @@ static void MonCbWorkerDestroy( mon_worker_t *mon)
 static void MonCbWorkerWaitStart( mon_worker_t *mon)
 {
 	LpelTimingStart(&mon->wait_current);
-	// LOAD BALANCE
-//	fprintf(mon->outfile, "W ");
-
-
 }
 
 
@@ -477,11 +508,12 @@ static void MonCbWorkerWaitStop(mon_worker_t *mon)
 	PrintNormTS(&tnow, mon->outfile);
 
 #ifdef BINARY_FORMAT
+	fwrite( &worker_wait, 1, 1, mon->outfile);
 	fwrite(&mon->wait_current, sizeof(lpel_timing_t), 1, mon->outfile);
 	fwrite(&end_entry, 1, 1, mon->outfile);
 #else
-	fprintf(mon->outfile, " W %lu.%09lu%c",
-			(unsigned long) mon->wait_current.tv_sec, (mon->wait_current.tv_nsec), END_LOG_ENTRY
+	fprintf(mon->outfile, "%c %lu.%09lu%c", worker_wait,
+			(unsigned long) mon->wait_current.tv_sec, (mon->wait_current.tv_nsec), end_entry
 	);
 #endif
 }
@@ -545,7 +577,7 @@ static void MonCbTaskStart(mon_task_t *mt)
 	}
 
 	/* set blockon to any */
-	mt->blockon = 'a';
+	mt->blockon = 'A';
 }
 
 
@@ -565,39 +597,30 @@ static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 		PrintNormTS(&mt->times.stop, file);
 	}
 
-	/* print general info: tid, status */
+	/* print general info: status, id */
 #ifdef BINARY_FORMAT
-	fwrite( &mt->tid, sizeof(unsigned long), 1, file);
 	if ( state==TASK_BLOCKED) {
 		fwrite( &mt->blockon, 1, 1, file);
 	} else {
 		fwrite( &state, 1, 1, file);
 	}
+	fwrite( &mt->tid, sizeof(long), 1, file);
 #else
-	fprintf( file, " %lu ", mt->tid);
 	if ( state==TASK_BLOCKED) {
 		fprintf( file, "%c ", mt->blockon);
 	} else {
 		fprintf( file, "%c ", state);
 	}
+	fprintf( file, "%lu ", mt->tid);
 #endif
 	/* print times */
 	if FLAG_TIMES(mt) {
 		/* execution time */
 		LpelTimingDiff(&et, &mt->times.start, &mt->times.stop);
-
-#ifdef BINARY_FORMAT
-		fwrite(&et, sizeof(lpel_timing_t), 1, file);
-#else
 		PrintTiming( &et , file);
-#endif
 
 		if ( state == TASK_ZOMBIE)	// task finish
-#ifdef BINARY_FORMAT
-			fwrite(&mt->times.creat, sizeof(lpel_timing_t), 1, file);
-#else
 			PrintTiming( &mt->times.creat, file);
-#endif
 	}
 
 	/* print stream info */
@@ -613,7 +636,7 @@ static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 #ifdef BINARY_FORMAT
 	fwrite(&end_entry, 1, 1, file);
 #else
-	fprintf( file, "%c", END_LOG_ENTRY);
+	fprintf( file, "%c", end_entry);
 #endif
 
 	//FIXME only for debugging purposes
@@ -633,6 +656,7 @@ static mon_stream_t *MonCbStreamOpen(mon_task_t *mt, unsigned int sid, char mode
 	ms->mode = mode;
 	ms->state = ST_OPENED;
 	ms->counter = 0;
+	ms->strevt_flags = 0;
 	ms->dirty = NULL;
 
 	MarkDirty(ms);
@@ -680,6 +704,7 @@ static void MonCbStreamReadFinish(mon_stream_t *ms, void *item)
 	assert( ms != NULL );
 
 	ms->counter++;
+	ms->strevt_flags |= ST_MOVED;
 	MarkDirty(ms);
 }
 
@@ -701,6 +726,7 @@ static void MonCbStreamWriteFinish(mon_stream_t *ms)
 	assert( ms != NULL );
 
 	ms->counter++;
+	ms->strevt_flags |= ST_MOVED;
 	MarkDirty(ms);
 }
 
@@ -713,12 +739,13 @@ static void MonCbStreamWriteFinish(mon_stream_t *ms)
 static void MonCbStreamBlockon(mon_stream_t *ms)
 {
 	assert( ms != NULL );
+	ms->strevt_flags |= ST_BLOCKON;
 	MarkDirty(ms);
 
 	/* track if blocked on reading or writing */
 	switch(ms->mode) {
-	case 'r': ms->montask->blockon = 'i'; break;
-	case 'w': ms->montask->blockon = 'o'; break;
+	case 'r': ms->montask->blockon = 'I'; break;
+	case 'w': ms->montask->blockon = 'O'; break;
 	default: assert(0);
 	}
 }
@@ -730,6 +757,7 @@ static void MonCbStreamBlockon(mon_stream_t *ms)
 static void MonCbStreamWakeup(mon_stream_t *ms)
 {
 	assert( ms != NULL );
+	ms->strevt_flags |= ST_WAKEUP;
 
 	/* MarkDirty() not needed, as Moved()
 	 * event is called anyway

@@ -178,7 +178,7 @@ static void PrintMonInfoId( FILE *f, snet_record_id_t *id)
 
 void SNetMonInfoPrint( FILE *f, snet_moninfo_t *mon)
 {
-//	snet_record_id_t par_id;
+//	snet_record_id_t
 #ifdef BINARY_FORMAT
 	fwrite(&names_event[MONINFO_EVENT(mon)], 1, 1, f);
 #else
@@ -192,19 +192,8 @@ void SNetMonInfoPrint( FILE *f, snet_moninfo_t *mon)
 
 	switch (mon->mon_descr) {
 	case MON_RECORD: /* monitoring of a record */
-	{
 		PrintMonInfoId( f, &(REC_MONINFO( mon, id)) );
-//		fprintf(f, ",");
-//		if (REC_MONINFO( mon, parent_ids) != NULL) {
-//			LIST_FOR_EACH( REC_MONINFO( mon, parent_ids), par_id) {
-//				PrintMonInfoId( f, &par_id );
-//			}
-//		}
-//		if (REC_MONINFO( mon, add_moninfo_rec_data) != NULL) {
-//			/*TODO*/
-//		}
-	}
-	break;
+		break;
 	default: /*ignore*/
 		break;
 	}
