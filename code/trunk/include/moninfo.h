@@ -18,7 +18,6 @@
 
 #include "bool.h"
 #include "record.h"
-#include "monitor.h"
 
 typedef union moninfo_types snet_moninfo_types_t;
 

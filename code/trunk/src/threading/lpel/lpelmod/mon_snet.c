@@ -8,7 +8,7 @@
 
 #include "locvec.h"
 #include "moninfo.h"
-#include "monitor.h"
+#include <lpel/monitor.h>
 
 #define PrintTiming(t, file)  PrintTimingNs((t),(file))
 #define PrintNormTS(t, file)  PrintNormTSns((t),(file))

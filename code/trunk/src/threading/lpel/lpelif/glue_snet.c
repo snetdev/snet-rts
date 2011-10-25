@@ -22,7 +22,7 @@
 /* put this into assignment/monitoring module */
 #include "distribution.h"
 
-#include "monitor.h"
+#include <lpel/monitor.h>
 
 static int num_cpus = 0;
 static int num_workers = 0;
