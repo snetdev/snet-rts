@@ -173,12 +173,19 @@ if ENABLE_DIST_MPI
 pkglib_LTLIBRARIES += libdistribmpi.la
 libdistribmpi_la_SOURCES = \
 	src/distrib/common/distribcollections.c \
+	src/distrib/common/distribcollections.h \
 	src/distrib/common/imanager.c \
+	src/distrib/common/imanager.h \
 	src/distrib/common/omanager.c \
+	src/distrib/common/omanager.h \
 	src/distrib/common/reference.c \
+	src/distrib/common/reference.h \
 	src/distrib/common/refcollections.c \
+	src/distrib/common/refcollections.h \
 	src/distrib/common/distribcommon.c \
+	src/distrib/common/distribcommon.h \
 	src/distrib/mpi/distribution.c \
+	src/distrib/mpi/pack.h \
 	src/distrib/mpi/transmit.c
 libdistribmpi_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \

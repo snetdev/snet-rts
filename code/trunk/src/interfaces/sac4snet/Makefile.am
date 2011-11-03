@@ -35,8 +35,7 @@ EXTRA_DIST = \
 # runtime interface library
 libSAC4SNet_la_SOURCES = \
 	SAC4SNet.c \
-	SAC4SNet.h \
-        $(WRAPINCDIR)/SAC4SNetFibreIO.h
+	SAC4SNet.h
 
 libSAC4SNet_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
@@ -73,6 +72,8 @@ S4CFLAGS  = -v0 -incdir $(WRAPINCDIR) -libdir $(WRAPLIBDIR) -o SAC4SNetFibreIO
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags SAC4SNetFibreIO`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags SAC4SNetFibreIO`
 
+if ENABLE_SAC4SNET
+
 # these are built by sac2c
 lib%Mod.so lib%Mod.a lib%Tree.so: %.sac
 	$(AM_V_at) printf "[%s]" $(SAC2C)
@@ -84,6 +85,9 @@ $(WRAPINCDIR)/SAC4SNetFibreIO.h $(WRAPLIBDIR)/libSAC4SNetFibreIO.a $(WRAPLIBDIR)
 	$(AM_V_at) printf "[%s]" $(SAC4C)
 	$(AM_V_GEN) $(SAC4C) $(S4CFLAGS) -o SAC4SNetFibreIO SAC4SNetFibreIO
 
+endif
+
+DISTCLEANFILES = $(WRAPINCDIR)/*
 CLEANFILES = $(SACMODLIBS) $(SACMODLIBS:.so=.a) $(SACTREELIBS)
 
 clean-local:

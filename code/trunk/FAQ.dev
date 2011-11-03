@@ -82,3 +82,27 @@ Q: ./bootstrap fails with
 A: (not an answer but a workaround) try running
    >  autoreconf -v -f -i -I/path/to/share/aclocal/
    Change "/path/to/ to the installation root of libtool.
+
+-- 
+
+Q. How to make a distribution of the source that users can use without
+   requiring development tools like Autoconf/Automake installed?
+
+A.
+     1. ensure you have a working build tree
+
+     2. run:
+
+       make distcheck  distdir=snet-VERSION  \
+              DISTCHECK_CONFIGURE_FLAGS="-with-lpel-includes=... \
+                         --with-lpel-libs=..."
+
+       for example:
+
+       make distcheck  distdir=snet-1.x.20111103 \
+              DISTCHECK_CONFIGURE_FLAGS="--with-lpel-includes=/tmp/lpel/include --with-lpel-libs=/tmp/lpel/lib"
+
+     3. fix any errors and repeat #2 until it succeeds.
+
+     4. retrieve the generated snet-VERSION.tar.bz2 and distribute.
+
