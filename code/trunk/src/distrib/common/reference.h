@@ -10,6 +10,7 @@ void SNetRefIncoming(snet_ref_t *ref);
 void SNetRefOutgoing(snet_ref_t *ref);
 void SNetRefUpdate(snet_ref_t *ref, int value);
 void SNetRefSet(snet_ref_t *ref, void *data);
+void SNetRefFetch(snet_ref_t *ref, int node);
 
 /* To be implemented by distrib/implementation */
 void SNetDistribFetchRef(snet_ref_t *ref);

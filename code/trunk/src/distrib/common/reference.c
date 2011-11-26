@@ -256,3 +256,9 @@ void SNetRefSet(snet_ref_t *ref, void *data)
 
   pthread_mutex_unlock(&remoteRefMutex);
 }
+
+void SNetRefFetch(snet_ref_t *ref, int node)
+{
+  SNetDistribSendData(ref, SNetRefGetData(ref), node);
+  SNetRefUpdate(ref, -1);
+}
