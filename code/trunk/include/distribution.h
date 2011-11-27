@@ -3,10 +3,7 @@
 
 #include <stdint.h>
 
-typedef struct {
-  int node, interface;
-  uintptr_t data;
-} snet_ref_t;
+typedef struct snet_ref snet_ref_t;
 
 #include "info.h"
 #include "stream.h"

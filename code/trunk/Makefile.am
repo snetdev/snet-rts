@@ -162,7 +162,6 @@ libC4SNetc_la_SOURCES = \
 
 libdistribnodist_la_SOURCES = \
 	src/distrib/common/reference.c \
-	src/distrib/common/refcollections.c \
 	src/distrib/nodist/distribution.c
 libdistribnodist_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
@@ -180,8 +179,6 @@ libdistribmpi_la_SOURCES = \
 	src/distrib/common/omanager.h \
 	src/distrib/common/reference.c \
 	src/distrib/common/reference.h \
-	src/distrib/common/refcollections.c \
-	src/distrib/common/refcollections.h \
 	src/distrib/common/distribcommon.c \
 	src/distrib/common/distribcommon.h \
 	src/distrib/mpi/distribution.c \
@@ -202,7 +199,6 @@ libdistribscc_la_SOURCES = \
 	src/distrib/common/imanager.c \
 	src/distrib/common/omanager.c \
 	src/distrib/common/reference.c \
-	src/distrib/common/refcollections.c \
 	src/distrib/common/distribcommon.c \
 	src/distrib/scc/distribution.c \
 	src/distrib/scc/transmit.c

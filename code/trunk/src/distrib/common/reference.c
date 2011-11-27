@@ -6,7 +6,6 @@
 #include "entities.h"
 #include "interface_functions.h"
 #include "memfun.h"
-#include "refcollections.h"
 #include "reference.h"
 #include "stream.h"
 #include "threading.h"
@@ -14,11 +13,59 @@
 #define COPYFUN(interface, data)    (SNetInterfaceGet(interface)->copyfun((void*) (data)))
 #define FREEFUN(interface, data)    (SNetInterfaceGet(interface)->freefun((void*) (data)))
 
+#define LIST_NAME_H Stream
+#define LIST_TYPE_NAME_H stream
+#define LIST_VAL_H snet_stream_t*
+#include "list-template.h"
+#undef LIST_VAL_H
+#undef LIST_TYPE_NAME_H
+#undef LIST_NAME_H
+
+#define MAP_NAME_H RefRefcount
+#define MAP_TYPE_NAME_H ref_refcount
+#define MAP_KEY_H snet_ref_t
+#define MAP_VAL_H snet_refcount_t*
+#include "map-template.h"
+#undef MAP_VAL_H
+#undef MAP_KEY_H
+#undef MAP_TYPE_NAME_H
+#undef MAP_NAME_H
+
+struct snet_ref {
+    int node, interface;
+    uintptr_t data;
+};
+
 struct snet_refcount {
   int count;
   void *data;
   snet_stream_list_t *list;
 };
+
+#define LIST_NAME Stream
+#define LIST_TYPE_NAME stream
+#define LIST_VAL snet_stream_t*
+#include "list-template.c"
+#undef LIST_VAL
+#undef LIST_TYPE_NAME
+#undef LIST_NAME
+
+bool SNetRefCompare(snet_ref_t r1, snet_ref_t r2)
+{
+  return r1.node == r2.node && r1.data == r2.data;
+}
+
+#define MAP_NAME RefRefcount
+#define MAP_TYPE_NAME ref_refcount
+#define MAP_KEY snet_ref_t
+#define MAP_VAL snet_refcount_t*
+#define MAP_KEY_CMP SNetRefCompare
+#include "map-template.c"
+#undef MAP_KEY_CMP
+#undef MAP_VAL
+#undef MAP_KEY
+#undef MAP_TYPE_NAME
+#undef MAP_NAME
 
 static snet_ref_refcount_map_t *localRefMap = NULL;
 static snet_ref_refcount_map_t *remoteRefMap = NULL;
@@ -76,6 +123,33 @@ snet_ref_t *SNetRefCopy(snet_ref_t *ref)
 
   return result;
 }
+
+void SNetRefSerialise(snet_ref_t *ref, void *buf,
+                      void (*serialiseInt)(void*, int, int*),
+                      void (*serialiseByte)(void*, int, char*))
+{
+    serialiseInt(buf, 1, &ref->node);
+    serialiseInt(buf, 1, &ref->interface);
+    serialiseByte(buf, sizeof(uintptr_t), (char*) &ref->data);
+}
+
+void SNetRefDeserialise(snet_ref_t *ref, void *buf,
+                        void (*deserialiseInt)(void*, int, int*),
+                        void (*deserialiseByte)(void*, int, char*))
+{
+    deserialiseInt(buf, 1, &ref->node);
+    deserialiseInt(buf, 1, &ref->interface);
+    deserialiseByte(buf, sizeof(uintptr_t), (char*) &ref->data);
+}
+
+snet_ref_t *SNetRefAlloc(int count)
+{ return SNetMemAlloc(count * sizeof(snet_ref_t)); }
+
+int SNetRefInterface(snet_ref_t *ref)
+{ return ref->interface; };
+
+int SNetRefNode(snet_ref_t *ref)
+{ return ref->node; };
 
 static void *GetData(snet_ref_t *ref)
 {

@@ -13,31 +13,29 @@
 static mpi_buf_t recvBuf = {0, 0, NULL};
 static mpi_buf_t sendBuf = {0, 0, NULL};
 
+static void PackInt(void *buf, int count, int *src)
+{ MPIPack(buf, src, MPI_INT, count); }
+
+static void UnpackInt(void *buf, int count, int *dst)
+{ MPIUnpack(buf, dst, MPI_INT, count); }
+
+static void PackByte(void *buf, int count, char *src)
+{ MPIPack(buf, src, MPI_BYTE, count); }
+
+static void UnpackByte(void *buf, int count, char *dst)
+{ MPIUnpack(buf, dst, MPI_BYTE, count); }
+
 static void MPIPackInt(int count, int *src)
-{ MPIPack(&sendBuf, src, MPI_INT, count); }
+{ PackInt(&sendBuf, count, src); }
 
-static void MPIUnpackInt(int count, int *dst)
-{ MPIUnpack(&recvBuf, dst, MPI_INT, count); }
-
-static void PackRef(mpi_buf_t *buf, snet_ref_t *ref)
-{
-  MPIPack(buf, &ref->node, MPI_INT, 1);
-  MPIPack(buf, &ref->interface, MPI_INT, 1);
-  MPIPack(buf, &ref->data, MPI_BYTE, sizeof(uintptr_t));
-}
-
-static void UnpackRef(mpi_buf_t *buf, snet_ref_t *ref)
-{
-  MPIUnpack(buf, &ref->node, MPI_INT, 1);
-  MPIUnpack(buf, &ref->interface, MPI_INT, 1);
-  MPIUnpack(buf, &ref->data, MPI_BYTE, sizeof(uintptr_t));
-}
+static void MPIUnpackInt(int count, int *src)
+{ UnpackInt(&recvBuf, count, src); }
 
 static void MPIPackRef(int count, snet_ref_t **src)
 {
   int i;
   for (i = 0; i < count; i++) {
-    PackRef(&sendBuf, src[i]);
+    SNetRefSerialise(src[i], (void*) &sendBuf, &PackInt, &PackByte);
     SNetRefOutgoing(src[i]);
   }
 }
@@ -46,8 +44,8 @@ static void MPIUnpackRef(int count, snet_ref_t **dst)
 {
   int i;
   for (i = 0; i < count; i++) {
-    dst[i] = SNetMemAlloc(sizeof(snet_ref_t));
-    UnpackRef(&recvBuf, dst[i]);
+    dst[i] = SNetRefAlloc(count);
+    SNetRefDeserialise(dst[i], (void*) &recvBuf, &UnpackInt, &UnpackByte);
     SNetRefIncoming(dst[i]);
   }
 }
@@ -101,18 +99,18 @@ snet_msg_t SNetDistribRecvMsg(void)
       MPIUnpackDest(&recvBuf, &result.dest);
       break;
     case snet_ref_set:
-      result.ref = SNetMemAlloc(sizeof(snet_ref_t));
-      UnpackRef(&recvBuf, result.ref);
-      result.data = SNetInterfaceGet(result.ref->interface)->unpackfun(&recvBuf);
+      result.ref = SNetRefAlloc(1);
+      SNetRefDeserialise(result.ref, (void*) &recvBuf, &UnpackInt, &UnpackByte);
+      result.data = SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun(&recvBuf);
       break;
     case snet_ref_fetch:
-      result.ref = SNetMemAlloc(sizeof(snet_ref_t));
-      UnpackRef(&recvBuf, result.ref);
+      result.ref = SNetRefAlloc(1);
+      SNetRefDeserialise(result.ref, (void*) &recvBuf, &UnpackInt, &UnpackByte);
       result.val = status.MPI_SOURCE;
       break;
     case snet_ref_update:
-      result.ref = SNetMemAlloc(sizeof(snet_ref_t));
-      UnpackRef(&recvBuf, result.ref);
+      result.ref = SNetRefAlloc(1);
+      SNetRefDeserialise(result.ref, (void*) &recvBuf, &UnpackInt, &UnpackByte);
       MPIUnpackInt(1, &result.val);
       break;
     default:
@@ -134,17 +132,17 @@ void SNetDistribSendRecord(snet_dest_t dest, snet_record_t *rec)
 void SNetDistribFetchRef(snet_ref_t *ref)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  PackRef(&buf, ref);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, ref->node, snet_ref_fetch, MPI_COMM_WORLD);
+  SNetRefSerialise(ref, (void*) &buf, &PackInt, &PackByte);
+  MPI_Send(buf.data, buf.offset, MPI_PACKED, SNetRefNode(ref), snet_ref_fetch, MPI_COMM_WORLD);
   SNetMemFree(buf.data);
 }
 
 void SNetDistribUpdateRef(snet_ref_t *ref, int count)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  PackRef(&buf, ref);
+  SNetRefSerialise(ref, (void*) &buf, &PackInt, &PackByte);
   MPIPack(&buf, &count, MPI_INT, 1);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, ref->node, snet_ref_update, MPI_COMM_WORLD);
+  MPI_Send(buf.data, buf.offset, MPI_PACKED, SNetRefNode(ref), snet_ref_update, MPI_COMM_WORLD);
   SNetMemFree(buf.data);
 }
 
@@ -174,8 +172,8 @@ void SNetDistribBlockDest(snet_dest_t dest)
 void SNetDistribSendData(snet_ref_t *ref, void *data, int node)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  PackRef(&buf, ref);
-  SNetInterfaceGet(ref->interface)->packfun(data, &buf);
+  SNetRefSerialise(ref, (void*) &buf, &PackInt, &PackByte);
+  SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, &buf);
   MPI_Send(buf.data, buf.offset, MPI_PACKED, node, snet_ref_set, MPI_COMM_WORLD);
   SNetMemFree(buf.data);
 }
