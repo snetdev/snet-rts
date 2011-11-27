@@ -189,19 +189,15 @@ c4snet_data_t *C4SNetDataCreate( c4snet_type_t type, const void *data)
     return NULL;
   }
 
-  if((c = (c4snet_data_t *)SNetMemAlloc( sizeof( c4snet_data_t))) == NULL) {
-    return NULL;
-  }
+  c = SNetMemAlloc( sizeof( c4snet_data_t));
 
-  //if (type == CTYPE_int) printf("%s, the address: %i\n", __func__, data);
-  
   c->vtype = VTYPE_simple;
   c->size = -1;
   c->type = type;
   c->ref_count = 1;
 
   size = C4SNetSizeof(c);
-  
+
   if (type == CTYPE_string) {
     c->data.str = strdup((char *)data);
   }
@@ -220,9 +216,7 @@ c4snet_data_t *C4SNetDataCreateArray( c4snet_type_t type, int size, void *data)
     return NULL;
   }
 
-  if((c = (c4snet_data_t *)SNetMemAlloc( sizeof( c4snet_data_t))) == NULL) {
-    return NULL;
-  }
+  c = SNetMemAlloc( sizeof( c4snet_data_t));
 
   c->vtype = VTYPE_array;
   c->size = size;
