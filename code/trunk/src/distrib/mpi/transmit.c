@@ -44,7 +44,7 @@ static void MPIUnpackRef(int count, snet_ref_t **dst)
 {
   int i;
   for (i = 0; i < count; i++) {
-    dst[i] = SNetRefAlloc(count);
+    dst[i] = SNetRefAlloc();
     SNetRefDeserialise(dst[i], (void*) &recvBuf, &UnpackInt, &UnpackByte);
     SNetRefIncoming(dst[i]);
   }
@@ -99,17 +99,17 @@ snet_msg_t SNetDistribRecvMsg(void)
       MPIUnpackDest(&recvBuf, &result.dest);
       break;
     case snet_ref_set:
-      result.ref = SNetRefAlloc(1);
+      result.ref = SNetRefAlloc();
       SNetRefDeserialise(result.ref, (void*) &recvBuf, &UnpackInt, &UnpackByte);
       result.data = SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun(&recvBuf);
       break;
     case snet_ref_fetch:
-      result.ref = SNetRefAlloc(1);
+      result.ref = SNetRefAlloc();
       SNetRefDeserialise(result.ref, (void*) &recvBuf, &UnpackInt, &UnpackByte);
       result.val = status.MPI_SOURCE;
       break;
     case snet_ref_update:
-      result.ref = SNetRefAlloc(1);
+      result.ref = SNetRefAlloc();
       SNetRefDeserialise(result.ref, (void*) &recvBuf, &UnpackInt, &UnpackByte);
       MPIUnpackInt(1, &result.val);
       break;

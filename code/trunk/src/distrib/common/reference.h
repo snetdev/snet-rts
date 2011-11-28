@@ -6,7 +6,7 @@ typedef struct snet_refcount snet_refcount_t;
 void SNetReferenceInit(void);
 void SNetReferenceDestroy(void);
 
-snet_ref_t *SNetRefAlloc(int count);
+snet_ref_t *SNetRefAlloc(void);
 int SNetRefInterface(snet_ref_t *ref);
 int SNetRefNode(snet_ref_t *ref);
 void SNetRefSerialise(snet_ref_t *ref, void *buf, void (*)(void*, int, int*),

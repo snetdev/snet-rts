@@ -142,8 +142,8 @@ void SNetRefDeserialise(snet_ref_t *ref, void *buf,
     deserialiseByte(buf, sizeof(uintptr_t), (char*) &ref->data);
 }
 
-snet_ref_t *SNetRefAlloc(int count)
-{ return SNetMemAlloc(count * sizeof(snet_ref_t)); }
+snet_ref_t *SNetRefAlloc(void)
+{ return SNetMemAlloc(sizeof(snet_ref_t)); }
 
 int SNetRefInterface(snet_ref_t *ref)
 { return ref->interface; };
