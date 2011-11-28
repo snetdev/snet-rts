@@ -6,19 +6,21 @@
 #include "debug.h"
 #include "SCC_API.h"
 
-#define CORES               (NUM_ROWS * NUM_COLS * NUM_CORES)
-#define IRQ_BIT             (0x01 << GLCFG_XINTR_BIT)
+#define CORES                   (NUM_ROWS * NUM_COLS * NUM_CORES)
+#define IRQ_BIT                 (0x01 << GLCFG_XINTR_BIT)
 
 #define B_OFFSET                64
 #define FOOL_WRITE_COMBINE      (mpbs[node_location][0] = 1)
-#define START(mpb)              (*((volatile uint16_t *) (mpb + B_OFFSET)))
-#define END(mpb)                (*((volatile uint16_t *) (mpb + B_OFFSET + 2)))
+#define START(mpb)              (*((volatile uint16_t *) ((mpb) + B_OFFSET)))
+#define END(mpb)                (*((volatile uint16_t *) ((mpb) + B_OFFSET + 2)))
 #define HANDLING(mpb)           (*(mpb + B_OFFSET + 4))
 #define WRITING(mpb)            (*(mpb + B_OFFSET + 5))
 #define B_START                 (B_OFFSET + 32)
 #define B_SIZE                  (MPBSIZE - B_START)
 
-extern char *localSpace;
+#define LUT(loc, idx)           (*((volatile uint32_t*)(&luts[loc][idx])))
+
+extern char *localSpace, *remoteSpace;
 extern int node_location;
 extern t_vcharp mpbs[CORES];
 extern t_vcharp locks[CORES];

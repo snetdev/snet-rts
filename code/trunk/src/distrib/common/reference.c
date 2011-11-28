@@ -13,6 +13,11 @@
 #define COPYFUN(interface, data)    (SNetInterfaceGet(interface)->copyfun((void*) (data)))
 #define FREEFUN(interface, data)    (SNetInterfaceGet(interface)->freefun((void*) (data)))
 
+struct snet_ref {
+    int node, interface;
+    uintptr_t data;
+};
+
 #define LIST_NAME_H Stream
 #define LIST_TYPE_NAME_H stream
 #define LIST_VAL_H snet_stream_t*
@@ -20,6 +25,12 @@
 #undef LIST_VAL_H
 #undef LIST_TYPE_NAME_H
 #undef LIST_NAME_H
+
+struct snet_refcount {
+  int count;
+  void *data;
+  snet_stream_list_t *list;
+};
 
 #define MAP_NAME_H RefRefcount
 #define MAP_TYPE_NAME_H ref_refcount
@@ -30,17 +41,6 @@
 #undef MAP_KEY_H
 #undef MAP_TYPE_NAME_H
 #undef MAP_NAME_H
-
-struct snet_ref {
-    int node, interface;
-    uintptr_t data;
-};
-
-struct snet_refcount {
-  int count;
-  void *data;
-  snet_stream_list_t *list;
-};
 
 #define LIST_NAME Stream
 #define LIST_TYPE_NAME stream
