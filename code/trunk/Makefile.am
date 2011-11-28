@@ -159,7 +159,6 @@ libC4SNetc_la_SOURCES = \
 	src/interfaces/c4snet/C4SNetc.c \
 	src/interfaces/c4snet/C4SNetc.h
 
-
 libdistribnodist_la_SOURCES = \
 	src/distrib/common/reference.c \
 	src/distrib/nodist/distribution.c
@@ -188,7 +187,6 @@ libdistribmpi_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/distrib/mpi \
 	-I$(srcdir)/src/distrib/common
-
 endif
 
 
@@ -219,7 +217,7 @@ compile_cmd: Makefile
 
 link_cmd: Makefile
 	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
+	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --preserve-dup-deps --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
 	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS:-$$SNETBASE/lib}' >$@
 
 
