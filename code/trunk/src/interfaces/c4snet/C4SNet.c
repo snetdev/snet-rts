@@ -140,7 +140,8 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
                            "it.\n");
       #endif
       break;
-    case scc:
+    case sccbasic:
+    case scclutmapping:
       #ifdef ENABLE_DIST_SCC
         packfun = &C4SNetSCCPackFun;
         unpackfun = &C4SNetSCCUnpackFun;
