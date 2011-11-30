@@ -114,7 +114,7 @@ start:
     case snet_ref_set:
       result.ref = SNetRefAlloc();
       SNetRefDeserialise(result.ref, (void*) recvMPB, &UnpackInt, &UnpackByte);
-      result.data = SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun(localSpace);
+      result.data = SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun((void*) mpbs[node_location]);
       break;
     case snet_ref_fetch:
       result.ref = SNetRefAlloc();
@@ -206,6 +206,6 @@ void SNetDistribSendData(snet_ref_t *ref, void *data, int node)
   start_write_node(node);
   cpy_mem_to_mpb(mpbs[node], &type, sizeof(snet_comm_type_t));
   SNetRefSerialise(ref, (void*) mpbs[node], &PackInt, &PackByte);
-  SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, &node);
+  SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, (void*) mpbs[node]);
   stop_write_node(node);
 }

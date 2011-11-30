@@ -991,22 +991,22 @@ static void *C4SNetMPIUnpackFun(void *buf)
 #ifdef ENABLE_DIST_SCC
 #include "src/distrib/scc/scc.h"
 
-static void C4SNetSCCPackFun(void *cdata, void *dest)
+static void C4SNetSCCPackFun(void *cdata, void *buf)
 {
   c4snet_data_t *data = (c4snet_data_t*) cdata;
-  SNetDistribPack(cdata, *(int*)dest, sizeof(c4snet_data_t));
+  SNetDistribPack(cdata, buf, sizeof(c4snet_data_t));
 
-  if (data->vtype == VTYPE_array) SNetDistribPack(data->data.ptr, *(int*)dest, data->size * sizeOfType(data->type));
+  if (data->vtype == VTYPE_array) SNetDistribPack(data->data.ptr, buf, data->size * sizeOfType(data->type));
 }
 
-static void *C4SNetSCCUnpackFun(void *localBuf)
+static void *C4SNetSCCUnpackFun(void *buf)
 {
   c4snet_data_t *result = SNetMemAlloc(sizeof(c4snet_data_t));
-  SNetDistribUnpack(result, localBuf, sizeof(c4snet_data_t));
+  SNetDistribUnpack(result, buf, sizeof(c4snet_data_t));
 
   if (result->vtype == VTYPE_array) {
     result->data.ptr = SNetMemAlloc(result->size * sizeOfType(result->type));
-    SNetDistribUnpack(result->data.ptr, localBuf, result->size * sizeOfType(result->type));
+    SNetDistribUnpack(result->data.ptr, buf, result->size * sizeOfType(result->type));
   }
 
   return result;
