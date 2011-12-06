@@ -10,16 +10,15 @@
 #include "scc.h"
 
 #define SIZE_16MB   (16*1024*1024)
-#define FIXME    0x14
 
-char *localSpace, *remoteSpace;
 int node_location;
 t_vcharp mpbs[CORES];
 t_vcharp locks[CORES];
 volatile int *irq_pins[CORES];
 volatile uint64_t *luts[CORES];
 
-static int mem, cache, num_nodes = 0;
+static char *local, *remote;
+static int mem, cache, num_nodes = 0, num_pages = 0;
 
 void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
 {
@@ -28,7 +27,10 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
   (void) info; /* NOT USED */
 
   for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "-np") == 0 && ++i < argc) num_nodes = atoi(argv[i]);
+    if (strcmp(argv[i], "-np") == 0 && ++i < argc) {
+      num_nodes = atoi(argv[i]);
+      num_pages = min(171, 2048/num_nodes - 20);
+    }
   }
 
   if (num_nodes == 0) {
@@ -37,6 +39,7 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
 
   sigemptyset(&signal_mask);
   sigaddset(&signal_mask, SIGUSR1);
+  sigaddset(&signal_mask, SIGUSR2);
   pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
 
   InitAPI(0);
@@ -66,7 +69,6 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
   END(mpbs[node_location]) = 0;
   /* Start with an initial handling run to avoid a cross-core race. */
   HANDLING(mpbs[node_location]) = 1;
-  WRITING(mpbs[node_location]) = 0;
   FOOL_WRITE_COMBINE;
 
   /* Open driver device "/dev/rckdyn110" to map memory in write-through mode */
@@ -75,11 +77,11 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
   cache = open("/dev/rckdcm", O_RDWR|O_SYNC);
   if (cache < 0) SNetUtilDebugFatal("Opening /dev/rckdcm failed!");
 
-  localSpace = mmap(NULL, SIZE_16MB, PROT_READ | PROT_WRITE, MAP_SHARED, mem, 0x14 << 24);
-  if (localSpace == NULL) SNetUtilDebugFatal("Couldn't map memory!");
+  remote = mmap(NULL, SIZE_16MB, PROT_READ | PROT_WRITE, MAP_SHARED, mem, 0x14 << 24);
+  if (remote == NULL) SNetUtilDebugFatal("Couldn't map memory!");
 
-  remoteSpace = mmap(NULL, SIZE_16MB, PROT_READ | PROT_WRITE, MAP_SHARED, mem, FIXME << 24);
-  if (remoteSpace == NULL) SNetUtilDebugFatal("Couldn't map memory!");
+  local = mmap(NULL, num_pages * SIZE_16MB, PROT_READ | PROT_WRITE, MAP_SHARED, mem, 0x15 << 24);
+  if (local == NULL) SNetUtilDebugFatal("Couldn't map memory!");
 
   FOOL_WRITE_COMBINE;
   unlock(node_location);
@@ -105,8 +107,9 @@ void SNetDistribLocalStop(void)
     MPBunalloc(&mpbs[cpu]);
   }
 
-  munmap(localSpace, SIZE_16MB);
-  munmap(remoteSpace, SIZE_16MB);
+  munmap(remote, SIZE_16MB);
+  munmap(local, num_pages * SIZE_16MB);
+
   close(mem);
   close(cache);
 }

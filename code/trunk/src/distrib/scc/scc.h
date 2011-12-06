@@ -20,7 +20,6 @@
 
 #define LUT(loc, idx)           (*((volatile uint32_t*)(&luts[loc][idx])))
 
-extern char *localSpace, *remoteSpace;
 extern int node_location;
 extern t_vcharp mpbs[CORES];
 extern t_vcharp locks[CORES];
@@ -48,23 +47,19 @@ static inline int min(int x, int y) { return x < y ? x : y; }
 static inline void start_write_node(unsigned int node)
 {
   lock(node);
-  flush();
-  WRITING(mpbs[node]) = 1;
-  FOOL_WRITE_COMBINE;
 }
 
 static inline void stop_write_node(unsigned int node)
 {
   int handling;
-
   flush();
   handling = HANDLING(mpbs[node]);
-  WRITING(mpbs[node]) = 0;
-  FOOL_WRITE_COMBINE;
-
-  if (!handling) interrupt(node);
 
   unlock(node);
+
+  if (!handling) {
+    interrupt(node);
+  }
 }
 
 static inline void cpy_mpb_to_mem(t_vcharp mpb, void *dst, int size)

@@ -211,7 +211,7 @@ libdistribscclutmapping_la_SOURCES = \
 	src/distrib/common/distribcollections.c \
 	src/distrib/common/imanager.c \
 	src/distrib/common/omanager.c \
-	src/distrib/common/reference.c \
+	src/distrib/scc/reference.c \
 	src/distrib/common/distribcommon.c \
 	src/distrib/scc/distribution.c \
 	src/distrib/scc/transmit.c
