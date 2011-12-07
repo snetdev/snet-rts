@@ -922,7 +922,7 @@ void C4SNetContainerOut(c4snet_container_t *c)
 /************************ Distribution Layer Functions ***********************/
 #ifdef ENABLE_DIST_MPI
 #include <mpi.h>
-#include "src/distrib/mpi/pack.h"
+#include "pack.h"
 static MPI_Datatype C4SNetTypeToMPIType(c4snet_type_t type)
 {
   switch (type) {
