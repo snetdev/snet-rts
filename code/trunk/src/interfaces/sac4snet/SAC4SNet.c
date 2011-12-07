@@ -180,7 +180,6 @@ void SAC4SNetInit( int id, snet_distrib_t distImpl)
     case nodist:
       break;
     case mpi:
-    case scc:
     default:
       SNetUtilDebugFatal("SAC4SNet doesn't support the selected distribution "
                          "layer (%d).\n", distImpl);
