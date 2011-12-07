@@ -420,6 +420,7 @@ static void SAC4SNetMPIPackFun(void *sacdata, void *buf)
   }
 
   SNetDistribPack(contents, buf, SAC4SNetBasetypeToMPIType(type), num_elems);
+  SNetMemFree(contents);
 }
 
 static void *SAC4SNetMPIUnpackFun(void *buf)
@@ -471,7 +472,6 @@ static void *SAC4SNetMPIUnpackFun(void *buf)
   }
 
   SNetMemFree(shape);
-  SNetMemFree(contents);
 
   return result;
 }
