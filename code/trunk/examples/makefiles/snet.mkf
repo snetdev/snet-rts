@@ -1,0 +1,64 @@
+THREAD=pthread lpel
+DIST=nodist mpi sccbasic scclutmapping
+
+SNETC?=snetc
+SNETCFLAGS?=-g
+
+MAKE:=$(MAKE) _
+
+.PHONY: all everything clean _
+.SILENT: _ $(MAKECMDGOALS)
+_:
+
+ifneq ($(firstword $(MAKECMDGOALS)), _)
+
+ifeq ($(findstring all, $(MAKECMDGOALS)), all)
+THREAD := $(or $(filter $(MAKECMDGOALS), $(THREAD)), pthread)
+DIST   := $(or $(filter $(MAKECMDGOALS), $(DIST)), nodist)
+else ifneq ($(findstring everything, $(MAKECMDGOALS)), everything)
+TARGETS := $(filter-out all everything clean $(THREAD) $(DIST), $(MAKECMDGOALS))
+endif
+
+COMBI   = $(foreach t, $(THREAD), $(foreach d, $(DIST), $t-$d))
+TARGETS := $(foreach t, $(TARGETS), $(COMBI:%=$t-%))
+
+ifeq ($(findstring clean, $(MAKECMDGOALS)), clean)
+$(firstword $(MAKECMDGOALS)):
+	$(MAKE) clean CLEANTARGETS="$(TARGETS)"
+else
+$(firstword $(MAKECMDGOALS)):
+	$(MAKE) $(foreach t, $(TARGETS), $t.make)
+endif
+
+$(filter-out $(firstword $(MAKECMDGOALS)), $(MAKECMDGOALS)):
+
+else
+
+%-pthread.make:
+	$(MAKE) $*.make DEPS="$(PTHREADDEPS) $(DEPS)" NAME="-pthread$(NAME)" \
+	    SNETCFLAGS="$(SNETCFLAGS) -threading pthread $(PTHREADFLAGS)"
+%-lpel.make:
+	$(MAKE) $*.make DEPS="$(LPELDEPS) $(DEPS)" NAME="-lpel$(NAME)" \
+	    SNETCFLAGS="$(SNETCFLAGS) -threading lpel $(LPELFLAGS)"
+
+%-nodist.make:
+	$(MAKE) $*.make DEPS="$(NODISTDEPS) $(DEPS)" NAME="-nodist$(NAME)" \
+	    SNETCFLAGS="$(SNETCFLAGS) -distrib nodist $(NODISTFLAGS)"
+%-mpi.make:
+	$(MAKE) $*.make DEPS="$(MPIDEPS) $(DEPS)" NAME="-mpi$(NAME)" \
+	    SNETCFLAGS="$(SNETCFLAGS) -distrib mpi $(MPIFLAGS)"
+%-sccbasic.make:
+	$(MAKE) $*.make DEPS="$(SCCDEPS) $(DEPS)" NAME="-sccbasic$(NAME)" \
+	    SNETCFLAGS="$(SNETCFLAGS) -distrib sccbasic $(SCCFLAGS)"
+%-scclutmapping.make:
+	$(MAKE) $*.make DEPS="$(SCCDEPS) $(DEPS)" NAME="-scclutmapping$(NAME)" \
+	    SNETCFLAGS="$(SNETCFLAGS) -distrib scclutmapping $(SCCFLAGS)"
+
+%.make: %.snet $(DEPS)
+	rm -f *.o *.lo .libs/*.o
+	$(SNETC) $(SNETCFLAGS) -o $*$(NAME) $<
+
+clean:
+	rm -f $(CLEANTARGETS) mon_n*_info.log *.o *.lo
+
+endif
