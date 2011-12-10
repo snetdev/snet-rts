@@ -1,0 +1,14 @@
+<record type="data" mode="textual">
+<field label="Key" interface="SAC4SNet">
+:::SACFIBRE: int 1 16 :::
+input/key.fibre
+</field>
+<field label="Pt" interface="SAC4SNet">
+:::SACFIBRE: int 1 1024 :::
+input/cipher1K.fibre
+</field>
+<tag label="Decipher">0</tag>
+</record>
+
+<record type="terminate" />
+

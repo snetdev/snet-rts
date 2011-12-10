@@ -1,0 +1,53 @@
+  <metadata>
+   <boxdefault>
+     <interface value="SAC4SNet" />
+   </boxdefault>
+  </metadata>
+
+net simpleDes {
+
+
+  <metadata>
+    <box name="genSubKeys" >
+      <SACmodule>simpleDes</SACmodule>
+    </box>
+    <box name="KeyInvert" >
+      <SACmodule>simpleDes</SACmodule>
+    </box>
+    <box name="InitialP" >
+      <SACmodule>simpleDes</SACmodule>
+    </box>
+    <box name="FinalP" >
+      <SACmodule>simpleDes</SACmodule>
+    </box>
+    <box name="DesRound" >
+      <SACmodule>simpleDes</SACmodule>
+    </box>
+    <box name="genKey" >
+      <SACmodule>simpleDes</SACmodule>
+    </box>
+    <box name="breakP" >
+      <SACmodule>simpleDes</SACmodule>
+    </box>
+    <box name="mergeP" >
+      <SACmodule>simpleDes</SACmodule>
+    </box>
+</metadata>
+
+  box genKey( (Key) -> (NewKey));
+  box genSubKeys( (NewKey) -> (KeySet));
+  box KeyInvert( (KeySet) -> (KeySet));
+  box InitialP( (Pt) -> (L, R));
+  box FinalP( (L, R) -> (Ct));
+  box DesRound( (L, R, KeySet, <C>) -> (L, R, KeySet, <C>));
+
+  box breakP( (Pt) -> (Pt, <Index>) | (M, <Total>, <count>));
+  box mergeP( (M, Ct, <Total>, <count>, <Index>) -> (M, <Total>, <count>) | (Output));
+
+} connect genKey .. genSubKeys .. ( ([{<Decipher>} -> {}] .. KeyInvert)| [] ) ..
+  breakP .. 
+  ( ( InitialP .. [{} -> {<C=0>}] .. (DesRound*{<C>} if <C==16>) .. 
+  	FinalP .. [{KeySet, <C>} -> {}]
+   )  | [{KeySet} -> {}]) ..
+   ([|{M, <Total>, <count>}, {Ct, <Index>}|] .. (mergeP | []))* {Output} ;
+
