@@ -43,6 +43,9 @@ libSAC4SNet_la_CPPFLAGS = \
         -I$(SAC2CBASE)/include \
         -I$(SAC2CBASE)/src/include \
         $(S4CINCS)
+if ENABLE_DIST_MPI
+libSAC4SNet_la_CPPFLAGS += -I$(top_srcdir)/src/distrib/mpi
+endif
 
 libSAC4SNet_la_LDFLAGS = $(S4CLIBS)
 

@@ -67,6 +67,15 @@ typedef enum { SACint=3, SACflt=11, SACdbl=12} SACbasetype_t;
 extern void SACARGfree( void*);
 extern void *SACARGcopy( void*);
 
+#ifdef ENABLE_DIST_MPI
+static void SAC4SNetMPIPackFun(void *cdata, void *buf);
+static void *SAC4SNetMPIUnpackFun(void *buf);
+#endif
+#ifdef ENABLE_DIST_SCC
+static void SAC4SNetSCCPackFun(void *cdata, void *dest);
+static void *SAC4SNetSCCUnpackFun(void *localBuf);
+#endif
+
 struct container {
   struct handle *hnd;
   snet_variant_t *variant;
@@ -180,7 +189,24 @@ void SAC4SNetInit( int id, snet_distrib_t distImpl)
     case nodist:
       break;
     case mpi:
-    case scc:
+      #ifdef ENABLE_DIST_MPI
+        packfun = &SAC4SNetMPIPackFun;
+        unpackfun = &SAC4SNetMPIUnpackFun;
+      #else
+        SNetUtilDebugFatal("SAC4SNet supports MPI, but is not configured to use "
+                           "it.\n");
+      #endif
+      break;
+    case sccbasic:
+    case scclutmapping:
+      #ifdef ENABLE_DIST_SCC
+        packfun = &SAC4SNetSCCPackFun;
+        unpackfun = &SAC4SNetSCCUnpackFun;
+      #else
+        SNetUtilDebugFatal("SAC4SNet supports SCC, but is not configured to use "
+                           "it.\n");
+      #endif
+      break;
     default:
       SNetUtilDebugFatal("SAC4SNet doesn't support the selected distribution "
                          "layer (%d).\n", distImpl);
@@ -337,3 +363,128 @@ static void *SAC4SNetDataDeserialise( FILE *file)
 
   return( (void*)scanres);
 }
+
+/************************ Distribution Layer Functions ***********************/
+#ifdef ENABLE_DIST_MPI
+#include <mpi.h>
+#include "pack.h"
+static MPI_Datatype SAC4SNetBasetypeToMPIType( int basetype)
+{
+  switch (basetype) {
+    case SACint: return MPI_INT;
+    case SACflt: return MPI_FLOAT;
+    case SACdbl: return MPI_DOUBLE;
+    default:
+      Error( "Unsupported basetype in type conversion.");
+      break;
+  }
+
+  return MPI_DATATYPE_NULL;
+}
+
+static void SAC4SNetMPIPackFun(void *sacdata, void *buf)
+{
+  int *shape;
+  void *contents = NULL;
+  SACarg *data = sacdata;
+  int type, dims, num_elems = 1;
+
+  type = SACARGgetBasetype(data);
+  dims = SACARGgetDim(data);
+  shape = SNetMemAlloc(dims * sizeof(int));
+
+  for (int i = 0; i < dims; i++) {
+    shape[i] = SACARGgetShape(data, i);
+    num_elems *= SACARGgetShape(data, i);
+  }
+
+  SNetDistribPack(&type, buf, MPI_INT, 1);
+  SNetDistribPack(&dims, buf, MPI_INT, 1);
+  SNetDistribPack(shape, buf, MPI_INT, dims);
+
+  SNetMemFree(shape);
+
+  switch (type) {
+    case SACint:
+      contents = SACARGconvertToIntArray(SACARGnewReference(data));
+      break;
+    case SACdbl:
+      contents = SACARGconvertToDoubleArray(SACARGnewReference(data));
+      break;
+    case SACflt:
+      contents = SACARGconvertToFloatArray(SACARGnewReference(data));
+      break;
+    default:
+      Error( "Unsupported basetype in pack function.");
+      break;
+  }
+
+  SNetDistribPack(contents, buf, SAC4SNetBasetypeToMPIType(type), num_elems);
+  SNetMemFree(contents);
+}
+
+static void *SAC4SNetMPIUnpackFun(void *buf)
+{
+  int *shape;
+  SACarg *result = NULL;
+  void *contents = NULL;
+  int type, dims, num_elems = 1;
+
+  SNetDistribUnpack(&type, buf, MPI_INT, 1);
+  SNetDistribUnpack(&dims, buf, MPI_INT, 1);
+  shape = SNetMemAlloc(dims * sizeof(int));
+  SNetDistribUnpack(shape, buf, MPI_INT, dims);
+
+  for (int i = 0; i < dims; i++) {
+    num_elems *= shape[i];
+  }
+
+  switch (type) {
+    case SACint:
+      contents = SNetMemAlloc(num_elems * sizeof(int));
+      break;
+    case SACdbl:
+      contents = SNetMemAlloc(num_elems * sizeof(double));
+      break;
+    case SACflt:
+      contents = SNetMemAlloc(num_elems * sizeof(float));
+      break;
+    default:
+      SNetUtilDebugFatal("Unknown SAC type!\n");
+      break;
+  }
+
+  SNetDistribUnpack(contents, buf, SAC4SNetBasetypeToMPIType(type), num_elems);
+
+  switch (type) {
+    case SACint:
+      result = SACARGconvertFromIntPointerVect(contents, dims, shape);
+      break;
+    case SACflt:
+      result = SACARGconvertFromFloatPointerVect(contents, dims, shape);
+      break;
+    case SACdbl:
+      result = SACARGconvertFromDoublePointerVect(contents, dims, shape);
+      break;
+    default:
+      Error( "Unsupported basetype in unpack function.");
+      break;
+  }
+
+  SNetMemFree(shape);
+
+  return result;
+}
+#endif
+
+#ifdef ENABLE_DIST_SCC
+#include "src/distrib/scc/scc.h"
+
+static void SAC4SNetSCCPackFun(void *cdata, void *buf)
+{
+}
+
+static void *SAC4SNetSCCUnpackFun(void *buf)
+{
+}
+#endif

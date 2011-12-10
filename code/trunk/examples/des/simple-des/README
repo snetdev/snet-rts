@@ -1,0 +1,4 @@
+input:
+  - plaintext: byte-format (0 -> 127), should be multiple of 64-bit (or 8-byte) blocks
+  - key: 16 hex-number (0 -> 15)
+

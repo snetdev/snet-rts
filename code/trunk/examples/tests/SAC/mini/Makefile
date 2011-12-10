@@ -7,13 +7,14 @@ LIBDIRS   = -L. -L$(SNET_LIBS)     -L./lib \
 
 #THREADING = pthread
 THREADING      = lpel
+DISTRIBUTION   = nodist
 LIBS_LA        = libsnetutil.la libtb$(THREADING).la libdistribnodist.la libruntimestream.la
 LIBSAC4SNET_LA = $(SNETBASE)/src/interfaces/sac4snet/libSAC4SNet.la
 
 SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__mini=main
 
 SNETC      = snetc
-SNETCFLAGS = -b7 -threading $(THREADING)
+SNETCFLAGS = -b7 -threading $(THREADING) -distrib $(DISTRIBUTION)
 
 #export SNET_EXTRA_LDFLAGS += -L$(SNETBASE)/src/interfaces/sac4snet
 
