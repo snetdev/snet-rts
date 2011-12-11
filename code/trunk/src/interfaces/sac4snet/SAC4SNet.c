@@ -134,6 +134,32 @@ static void *SAC4SNetDataDecode(FILE *file)
   return( 0);
 }
 
+static size_t sizeOfType(SACbasetype_t type)
+{
+  switch (type) {
+    case SACint: return sizeof(int);
+    case SACdbl: return sizeof(double);
+    case SACflt: return sizeof(float);
+    default:
+      SNetUtilDebugFatal("Unknown SAC type!\n");
+      break;
+  }
+
+  return -1;
+}
+
+static size_t SAC4SNetAllocSize(void *data)
+{
+  int dims, num_elems = 1;
+
+  dims = SACARGgetDim(data);
+  for (int i = 0; i < dims; i++) {
+    num_elems *= SACARGgetShape(data, i);
+  }
+
+  return num_elems * sizeOfType(SACARGgetBasetype(data));
+}
+
 /******************************************************************************/
 
 void SAC4SNet_outCompound( sac4snet_container_t *c) 
@@ -216,6 +242,7 @@ void SAC4SNetInit( int id, snet_distrib_t distImpl)
   SNetInterfaceRegister( id,
                          &SACARGfree,
                          &SACARGcopy,
+                         &SAC4SNetAllocSize,
                          &SAC4SNetDataSerialise,
                          &SAC4SNetDataDeserialise,
                          &SAC4SNetDataEncode,
@@ -439,21 +466,7 @@ static void *SAC4SNetMPIUnpackFun(void *buf)
     num_elems *= shape[i];
   }
 
-  switch (type) {
-    case SACint:
-      contents = SNetMemAlloc(num_elems * sizeof(int));
-      break;
-    case SACdbl:
-      contents = SNetMemAlloc(num_elems * sizeof(double));
-      break;
-    case SACflt:
-      contents = SNetMemAlloc(num_elems * sizeof(float));
-      break;
-    default:
-      SNetUtilDebugFatal("Unknown SAC type!\n");
-      break;
-  }
-
+  contents = SNetMemAlloc(num_elems * sizeOfType(type));
   SNetDistribUnpack(contents, buf, SAC4SNetBasetypeToMPIType(type), num_elems);
 
   switch (type) {

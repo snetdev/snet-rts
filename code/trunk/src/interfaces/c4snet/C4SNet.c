@@ -119,6 +119,18 @@ int C4SNetSizeof(c4snet_data_t *data)
   return sizeOfType(data->type);
 }
 
+size_t C4SNetAllocSize(void *cdata)
+{
+  c4snet_data_t *data = cdata;
+  if (data->vtype == VTYPE_simple) {
+    return 0;
+  } else {
+    return data->size * C4SNetSizeof(data);
+  }
+}
+
+
+
 /***************************** Common functions ****************************/
 
 /* Language interface initialization function. */
@@ -159,6 +171,7 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
   SNetInterfaceRegister( id,
                          &C4SNetDataFree,
                          &C4SNetDataShallowCopy,
+                         &C4SNetAllocSize,
                          &C4SNetDataSerialize,
                          &C4SNetDataDeserialize,
                          &C4SNetDataEncode,
@@ -977,7 +990,7 @@ static void *C4SNetMPIUnpackFun(void *buf)
   SNetDistribUnpack(&type, buf, MPI_INT, 1);
 
   if (vtype == VTYPE_array) {
-    data.ptr = SNetMemAlloc(count * sizeOfType(type));
+    data.ptr = SNetMemAlloc(C4SNetAllocSize(result));
     SNetDistribUnpack(data.ptr, buf, C4SNetTypeToMPIType(type), count);
     result = C4SNetDataCreateArray(type, count, data.ptr);
   } else {
@@ -998,7 +1011,7 @@ static void C4SNetSCCPackFun(void *cdata, void *buf)
   SNetDistribPack(cdata, buf, sizeof(c4snet_data_t), false);
 
   if (data->vtype == VTYPE_array) {
-    SNetDistribPack(data->data.ptr, buf, data->size * sizeOfType(data->type), true);
+    SNetDistribPack(data->data.ptr, buf, C4SNetAllocSize(data), true);
   }
 }
 
@@ -1008,7 +1021,7 @@ static void *C4SNetSCCUnpackFun(void *buf)
   SNetDistribUnpack(result, buf, sizeof(c4snet_data_t), false);
 
   if (result->vtype == VTYPE_array) {
-    SNetDistribUnpack(&result->data.ptr, buf, result->size * sizeOfType(result->type), true);
+    SNetDistribUnpack(&result->data.ptr, buf, C4SNetAllocSize(result), true);
   }
 
   return result;

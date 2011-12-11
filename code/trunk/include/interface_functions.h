@@ -9,6 +9,7 @@ struct record;
 
 typedef void (*snet_free_fun_t)( void*);
 typedef void* (*snet_copy_fun_t)( void*);
+typedef size_t (*snet_alloc_size_fun_t)( void*);
 typedef int (*snet_serialise_fun_t)( FILE *, void*);
 typedef void* (*snet_deserialise_fun_t)( FILE *);
 typedef int (*snet_encode_fun_t)( FILE *, void*);
@@ -24,6 +25,7 @@ typedef struct SNET_INTERFACE {
 
   snet_free_fun_t freefun;
   snet_copy_fun_t copyfun;
+  snet_alloc_size_fun_t allocsizefun;
   snet_serialise_fun_t serialisefun;
   snet_deserialise_fun_t deserialisefun;
   snet_encode_fun_t encodefun;
@@ -35,6 +37,7 @@ typedef struct SNET_INTERFACE {
 void SNetInterfaceRegister( int id,
                             snet_free_fun_t freefun,
                             snet_copy_fun_t copyfun,
+                            snet_alloc_size_fun_t allocsizefun,
                             snet_serialise_fun_t serialisefun,
                             snet_deserialise_fun_t deserialisefun,
                             snet_encode_fun_t encodefun,
