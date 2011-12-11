@@ -1,4 +1,4 @@
-LIBDIRS   = -Llib -L$(SNETBASE)
+LIBDIRS   = -Llib -L$(SNET_LIBS)
 
 SAC2C     = sac2c
 S2CFLAGS  = -v1 -g -nophm
