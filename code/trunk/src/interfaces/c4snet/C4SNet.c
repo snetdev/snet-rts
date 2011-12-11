@@ -990,24 +990,25 @@ static void *C4SNetMPIUnpackFun(void *buf)
 #endif
 
 #ifdef ENABLE_DIST_SCC
-#include "src/distrib/scc/scc.h"
+#include "scc.h"
 
 static void C4SNetSCCPackFun(void *cdata, void *buf)
 {
   c4snet_data_t *data = (c4snet_data_t*) cdata;
-  SNetDistribPack(cdata, buf, sizeof(c4snet_data_t));
+  SNetDistribPack(cdata, buf, sizeof(c4snet_data_t), false);
 
-  if (data->vtype == VTYPE_array) SNetDistribPack(data->data.ptr, buf, data->size * sizeOfType(data->type));
+  if (data->vtype == VTYPE_array) {
+    SNetDistribPack(data->data.ptr, buf, data->size * sizeOfType(data->type), true);
+  }
 }
 
 static void *C4SNetSCCUnpackFun(void *buf)
 {
   c4snet_data_t *result = SNetMemAlloc(sizeof(c4snet_data_t));
-  SNetDistribUnpack(result, buf, sizeof(c4snet_data_t));
+  SNetDistribUnpack(result, buf, sizeof(c4snet_data_t), false);
 
   if (result->vtype == VTYPE_array) {
-    result->data.ptr = SNetMemAlloc(result->size * sizeOfType(result->type));
-    SNetDistribUnpack(result->data.ptr, buf, result->size * sizeOfType(result->type));
+    SNetDistribUnpack(&result->data.ptr, buf, result->size * sizeOfType(result->type), true);
   }
 
   return result;

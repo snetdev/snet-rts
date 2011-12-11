@@ -122,32 +122,42 @@ bool SNetDistribIsRootNode(void) { return node_location == 0; }
 
 void SNetDistribPack(void *src, ...)
 {
-  va_list args;
-  t_vcharp buf;
+  bool useSHM;
   size_t size;
+  t_vcharp buf;
+  va_list args;
 
   va_start(args, src);
   buf = va_arg(args, t_vcharp);
   size = va_arg(args, size_t);
+  useSHM = va_arg(args, bool);
   va_end(args);
 
-  flush();
-  cpy_mem_to_mpb(buf, src, size);
-  FOOL_WRITE_COMBINE;
+  if (useSHM) {
+  } else {
+    flush();
+    cpy_mem_to_mpb(buf, src, size);
+    FOOL_WRITE_COMBINE;
+  }
 }
 
 void SNetDistribUnpack(void *dst, ...)
 {
-  va_list args;
-  t_vcharp buf;
+  bool useSHM;
   size_t size;
+  t_vcharp buf;
+  va_list args;
 
   va_start(args, dst);
   buf = va_arg(args, void*);
   size = va_arg(args, size_t);
+  useSHM = va_arg(args, bool);
   va_end(args);
 
-  flush();
-  cpy_mpb_to_mem(buf, dst, size);
-  FOOL_WRITE_COMBINE;
+  if (useSHM) {
+  } else {
+    flush();
+    cpy_mpb_to_mem(buf, dst, size);
+    FOOL_WRITE_COMBINE;
+  }
 }

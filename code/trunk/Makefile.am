@@ -154,7 +154,7 @@ if ENABLE_DIST_MPI
 libC4SNet_la_CPPFLAGS += -I$(srcdir)/src/distrib/mpi
 endif
 if ENABLE_DIST_SCC
-libC4SNet_la_CPPFLAGS += -I$(srcdir)/../../../scc-hg/rcce/include
+libC4SNet_la_CPPFLAGS += -I$(srcdir)/../../../scc-hg/rcce/include -I$(srcdir)/src/distrib/scc
 endif
 
 libC4SNetc_la_SOURCES = \
@@ -198,8 +198,8 @@ libdistribsccbasic_la_SOURCES = \
 	src/distrib/common/distribcollections.c \
 	src/distrib/common/imanager.c \
 	src/distrib/common/omanager.c \
-	src/distrib/common/reference.c \
 	src/distrib/common/distribcommon.c \
+	src/distrib/scc/basicref.c \
 	src/distrib/scc/distribution.c \
 	src/distrib/scc/transmit.c
 libdistribsccbasic_la_CPPFLAGS = \
@@ -213,8 +213,8 @@ libdistribscclutmapping_la_SOURCES = \
 	src/distrib/common/distribcollections.c \
 	src/distrib/common/imanager.c \
 	src/distrib/common/omanager.c \
-	src/distrib/scc/reference.c \
 	src/distrib/common/distribcommon.c \
+	src/distrib/scc/lutmappingref.c \
 	src/distrib/scc/distribution.c \
 	src/distrib/scc/transmit.c
 libdistribscclutmapping_la_CPPFLAGS = \

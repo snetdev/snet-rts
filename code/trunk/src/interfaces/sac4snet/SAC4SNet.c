@@ -478,7 +478,7 @@ static void *SAC4SNetMPIUnpackFun(void *buf)
 #endif
 
 #ifdef ENABLE_DIST_SCC
-#include "src/distrib/scc/scc.h"
+#include "scc.h"
 
 static void SAC4SNetSCCPackFun(void *cdata, void *buf)
 {
@@ -486,5 +486,6 @@ static void SAC4SNetSCCPackFun(void *cdata, void *buf)
 
 static void *SAC4SNetSCCUnpackFun(void *buf)
 {
+  return NULL;
 }
 #endif
