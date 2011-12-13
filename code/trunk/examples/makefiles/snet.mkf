@@ -12,11 +12,12 @@ _:
 
 ifneq ($(firstword $(MAKECMDGOALS)), _)
 
-ifeq ($(findstring all, $(MAKECMDGOALS)), all)
+ifneq ($(findstring everything, $(MAKECMDGOALS)), everything)
+ifneq ($(findstring all, $(MAKECMDGOALS)), all)
+TARGETS := $(filter-out all everything clean $(THREAD) $(DIST), $(MAKECMDGOALS))
+endif
 THREAD := $(or $(filter $(MAKECMDGOALS), $(THREAD)), pthread)
 DIST   := $(or $(filter $(MAKECMDGOALS), $(DIST)), nodist)
-else ifneq ($(findstring everything, $(MAKECMDGOALS)), everything)
-TARGETS := $(filter-out all everything clean $(THREAD) $(DIST), $(MAKECMDGOALS))
 endif
 
 COMBI   = $(foreach t, $(THREAD), $(foreach d, $(DIST), $t-$d))
