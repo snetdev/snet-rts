@@ -32,6 +32,7 @@
 #include "debug.h"
 
 #include "threading.h"
+#include <lpel/monitor.h>
 
 #ifndef YY_BUF_SIZE
 #define YY_BUF_SIZE 16384
@@ -273,11 +274,11 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 			SNetRecSetDataMode(current.record, MODE_textual);
 		      }
 
-#ifdef MONINFO_USE_RECORD_EVENTS
+#ifdef USE_USER_EVENT_LOGGING
                       /* Emit a monitoring message of a record read from input */
-                    //  SNetThreadingEventSignal( parser.ent,
-                     //     SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record)
-                     //     );
+                      SNetThreadingEventSignal( parser.ent,
+                         SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, current.record)
+                         );
 #endif
 
 		    }
@@ -398,11 +399,11 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		      yyerror("Error encountered while parsing a record: Unknown interface! Record discarded.");
 		      parser.terminate = SNET_PARSE_CONTINUE;
 		    } else {
-#ifdef MONINFO_USE_RECORD_EVENTS
+#ifdef USE_USER_EVENT_LOGGING
                       if(SNetRecGetDescriptor(current.record) == REC_data) {
                         /* Emit a monitoring message of a record read from input */
                         SNetThreadingEventSignal( parser.ent,
-                            SNetMonInfoCreate( EV_INPUT_ARRIVE, MON_RECORD, current.record)
+                            SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, current.record)
                             );
                       }
 #endif

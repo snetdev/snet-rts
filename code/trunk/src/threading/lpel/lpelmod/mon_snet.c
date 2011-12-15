@@ -22,7 +22,8 @@ static const char *prefix = "mon_";
 static const char *suffix = ".log";
 static const char end_entry = END_LOG_ENTRY;
 static const char end_stream = END_STREAM_TRACE;
-static const char trace_sep = TRACE_SEPARATOR;
+static const char stream_trace_sep = STREAM_TRACE_SEPARATOR;
+static const char message_trace_sep = MESSAGE_TRACE_SEPARATOR;
 static const char worker_start = WORKER_START_EVENT;
 static const char worker_end = WORKER_END_EVENT;
 static const char worker_wait = WORKER_WAIT_EVENT;
@@ -273,19 +274,17 @@ static void PrintDirtyList(mon_task_t *mt)
 #else
 
 		(void) fprintf( file,
-		"%u,%c,%c,%lu,%c%c%c;",
+		"%u,%c,%c,%lu,%c%c%c%c",
 		ms->sid, ms->mode, ms->state, ms->counter,
 		( ms->strevt_flags & ST_BLOCKON) ? '?':'-',
 		( ms->strevt_flags & ST_WAKEUP) ? '!':'-',
-		( ms->strevt_flags & ST_MOVED ) ? '*':'-'
+		( ms->strevt_flags & ST_MOVED ) ? '*':'-', stream_trace_sep
 		);
 
-		//(void) fprintf( file,
-		//		"%u,%c,%c,%lu%c",			//print [stream id, r/w, num of mess]
-		//		ms->sid, ms->mode, ms->state, ms->counter, trace_sep);
-#endif
 
+#endif
 		/* get the next dirty entry, and clear the link in the current entry */
+		ms->counter = 0;	//reset for stream counter
 		next = ms->dirty;
 
 		/* update/reset states */
@@ -342,7 +341,7 @@ static void PrintUsrEvt(mon_task_t *mt)
 		SNetMonInfoPrint(file, cur->moninfo);
 
 #ifndef BINARY_FORMAT
-		fprintf( file, "%c", trace_sep);
+		fprintf( file, "%c", message_trace_sep);
 #endif
 		/*
 		 * According to the treading interface, we destroy the moninfo.
@@ -784,7 +783,6 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int level)
 #ifdef USE_LOGGING
 	mon_node = node;
 	mon_level = level;
-
 	if (mon_level < MON_WORKER_LEVEL) return;
 	/* compute task flags from level */
 	mon_task_flags = 0;

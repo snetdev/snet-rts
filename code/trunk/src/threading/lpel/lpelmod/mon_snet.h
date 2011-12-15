@@ -51,7 +51,8 @@ void SNetThreadingMonEvent(struct mon_task_t *mt,
 //#define END_LOG_ENTRY '\n'		// for separate each log entry by one line --> for testing
 #define END_LOG_ENTRY 			'#'			// more efficient for file writing, just send when the buffer is full
 #define END_STREAM_TRACE 		'|'
-#define TRACE_SEPARATOR 		';'			// used to separate stream traces, message traces
+#define MESSAGE_TRACE_SEPARATOR ';'			// used to separate message traces
+#define STREAM_TRACE_SEPARATOR  ';'			// used to separate stream traces
 #define WORKER_START_EVENT 		'S'
 #define WORKER_WAIT_EVENT 		'W'
 #define WORKER_END_EVENT 		'E'
