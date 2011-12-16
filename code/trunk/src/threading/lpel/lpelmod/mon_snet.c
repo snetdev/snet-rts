@@ -14,8 +14,8 @@
 #define PrintNormTS(t, file)  PrintNormTSns((t),(file))
 
 static int mon_node = -1;
-static int mon_level = 0;
-static int mon_task_flags = 0;
+//static int mon_level = 0;
+static int mon_flags = 0;
 
 
 static const char *prefix = "mon_";
@@ -46,6 +46,7 @@ struct mon_worker_t {
 		int cnt, size;
 		mon_usrevt_t *buffer;
 	} events;         /** user-defined events */
+	int flags;
 };
 
 
@@ -111,8 +112,8 @@ struct mon_usrevt_t {
 #define ST_REPLACED 'R'
 
 /*
-* The strevt_flags of a stream descriptor
-*/
+ * The strevt_flags of a stream descriptor
+ */
 #define ST_MOVED    (1<<0)
 #define ST_WAKEUP   (1<<1)
 #define ST_BLOCKON  (1<<2)
@@ -143,10 +144,11 @@ static lpel_timing_t monitoring_begin = LPEL_TIMING_INITIALIZER;
 /**
  * Macros for checking flags
  */
-#define FLAG_TIMES(mt)    (mt->flags & SNET_MON_TASK_TIMES)
-#define FLAG_STREAMS(mt)  (mt->flags & SNET_MON_TASK_STREAMS)
-#define FLAG_USREVT(mt)   (mt->flags & SNET_MON_USREVT)
-
+#define FLAG_TIMES(mt)    (mt->flags & SNET_MON_TIME)
+#define FLAG_STREAMS(mt)  (mt->flags & SNET_MON_STREAM)
+#define FLAG_MESSAGE(mt)   (mt->flags & SNET_MON_MESSAGE)
+#define FLAG_TASK(mt)  (mt->flags & SNET_MON_TASK)
+#define FLAG_WORKER(mt)  (mt->flags & SNET_MON_WORKER)
 
 /**
  * Print a time in usec
@@ -167,9 +169,6 @@ static inline void PrintTimingUs( const lpel_timing_t *t, FILE *file)
  */
 static inline void PrintTimingNs( const lpel_timing_t *t, FILE *file)
 {
-#ifdef BINARY_FORMAT
-	fwrite(t, sizeof(lpel_timing_t), 1, file);
-#else
 	if (t->tv_sec == 0) {
 		(void) fprintf( file, "%lu ", t->tv_nsec);
 	} else {
@@ -177,7 +176,6 @@ static inline void PrintTimingNs( const lpel_timing_t *t, FILE *file)
 				(unsigned long) t->tv_sec, (t->tv_nsec)
 		);
 	}
-#endif
 }
 
 /**
@@ -203,15 +201,22 @@ static inline void PrintNormTSns( const lpel_timing_t *t, FILE *file)
 	lpel_timing_t norm_ts;
 
 	LpelTimingDiff(&norm_ts, &monitoring_begin, t);
-#ifdef BINARY_FORMAT
-	fwrite(&norm_ts, sizeof(lpel_timing_t), 1, file);
-#else
-	(void) fprintf( file,
+	// to shorten the timestamp
+	if (norm_ts.tv_sec == 0) {
+		(void) fprintf( file, "%lu ", norm_ts.tv_nsec);
+	} else {
+		(void) fprintf( file, "%lu%09lu ",
+				(unsigned long) norm_ts.tv_sec, (norm_ts.tv_nsec)
+		);
+	}
+
+	/*
+	 // full timestamp
+	 (void) fprintf( file,
 			"%lu%09lu ",
 			(unsigned long) norm_ts.tv_sec,
 			(norm_ts.tv_nsec)
-	);
-#endif
+	);*/
 
 }
 
@@ -260,29 +265,16 @@ static void PrintDirtyList(mon_task_t *mt)
 		assert( ms->montask == mt );
 
 		/* now print */
-#ifdef BINARY_FORMAT
-		fwrite( &ms->sid, sizeof(int), 1, file);
-		fwrite( &ms->mode, 1, 1, file);
-		fwrite( &ms->state, 1, 1, file);
-		fwrite( &ms->counter, sizeof(long), 1, file);
-		char a = ( ms->strevt_flags & ST_BLOCKON) ? '?':'-';
-		fwrite( &a, 1, 1, file);
-		char b = ( ms->strevt_flags & ST_WAKEUP) ? '!':'-';
-		fwrite( &b, 1, 1, file);
-		char c = ( ms->strevt_flags & ST_MOVED ) ? '*':'-';
-		fwrite( &c, 1, 1, file);
-#else
 
 		(void) fprintf( file,
-		"%u,%c,%c,%lu,%c%c%c%c",
-		ms->sid, ms->mode, ms->state, ms->counter,
-		( ms->strevt_flags & ST_BLOCKON) ? '?':'-',
-		( ms->strevt_flags & ST_WAKEUP) ? '!':'-',
-		( ms->strevt_flags & ST_MOVED ) ? '*':'-', stream_trace_sep
+				"%u,%c,%c,%lu,%c%c%c%c",
+				ms->sid, ms->mode, ms->state, ms->counter,
+				( ms->strevt_flags & ST_BLOCKON) ? '?':'-',
+						( ms->strevt_flags & ST_WAKEUP) ? '!':'-',
+								( ms->strevt_flags & ST_MOVED ) ? '*':'-', stream_trace_sep
 		);
 
 
-#endif
 		/* get the next dirty entry, and clear the link in the current entry */
 		ms->counter = 0;	//reset for stream counter
 		next = ms->dirty;
@@ -326,11 +318,8 @@ static void PrintUsrEvt(mon_task_t *mt)
 
 	FILE *file = mw->outfile;
 
-#ifdef BINARY_FORMAT
-	fwrite(&end_stream, 1, 1, file);
-#else
+
 	fprintf( file, "%c", end_stream);
-#endif
 	for (i=0; i<mw->events.cnt; i++) {
 		mon_usrevt_t *cur = &mw->events.buffer[i];
 		/* print cur */
@@ -340,9 +329,8 @@ static void PrintUsrEvt(mon_task_t *mt)
 
 		SNetMonInfoPrint(file, cur->moninfo);
 
-#ifndef BINARY_FORMAT
 		fprintf( file, "%c", message_trace_sep);
-#endif
+
 		/*
 		 * According to the treading interface, we destroy the moninfo.
 		 */
@@ -370,6 +358,7 @@ static mon_worker_t *MonCbWorkerCreate( int wid)
 	char fname[MON_FNAME_MAXLEN+1];
 
 	mon_worker_t *mon = (mon_worker_t *) malloc( sizeof(mon_worker_t));
+	mon->flags = mon_flags;
 
 	mon->wid = wid;
 
@@ -395,16 +384,15 @@ static mon_worker_t *MonCbWorkerCreate( int wid)
 	mon->events.buffer = malloc( mon->events.size * sizeof(mon_usrevt_t));
 
 	/* start message */
-	lpel_timing_t tnow;
-	LpelTimingNow(&tnow);
-	PrintNormTS(&tnow, mon->outfile);
+	if (FLAG_WORKER(mon)){
+		if (FLAG_TIMES(mon)){
+			lpel_timing_t tnow;
+			LpelTimingNow(&tnow);
+			PrintNormTS(&tnow, mon->outfile);
+		}
 
-#ifndef BINARY_FORMAT
-	fwrite( &worker_start, 1, 1, mon->outfile);
-	fwrite( &end_entry, 1, 1, mon->outfile);
-#else
-	fprintf( mon->outfile, "%c%c", worker_start, end_entry);
-#endif
+		fprintf( mon->outfile, "%c%c", worker_start, end_entry);
+	}
 
 	return mon;
 }
@@ -417,6 +405,7 @@ static mon_worker_t *MonCbWrapperCreate( mon_task_t *mt)
 
 	mon_worker_t *mon = (mon_worker_t *) malloc( sizeof(mon_worker_t));
 	mon->wid = -1;
+	mon->flags = mon_flags;
 
 	/* build filename */
 	memset(fname, 0, MON_FNAME_MAXLEN+1);
@@ -442,16 +431,16 @@ static mon_worker_t *MonCbWrapperCreate( mon_task_t *mt)
 	mon->events.buffer = NULL;
 
 	/* start message */
-	lpel_timing_t tnow;
-	LpelTimingNow(&tnow);
-	PrintNormTS(&tnow, mon->outfile);
+	if (FLAG_WORKER(mon)){
+		if (FLAG_TIMES(mon)) {
+			lpel_timing_t tnow;
+			LpelTimingNow(&tnow);
+			PrintNormTS(&tnow, mon->outfile);
+		}
 
-#ifndef BINARY_FORMAT
-	fwrite( &worker_start, 1, 1, mon->outfile);
-	fwrite(&end_entry, 1, 1, mon->outfile);
-#else
-	fprintf(mon->outfile, "%c%c", worker_start, end_entry);
-#endif
+
+		fprintf(mon->outfile, "%c%c", worker_start, end_entry);
+	}
 	return mon;
 }
 
@@ -465,25 +454,24 @@ static mon_worker_t *MonCbWrapperCreate( mon_task_t *mt)
 static void MonCbWorkerDestroy( mon_worker_t *mon)
 {
 
-	/* write message */
-	lpel_timing_t tnow;
-	LpelTimingNow( &tnow);
-	PrintNormTS( &tnow, mon->outfile);
+	if ( FLAG_WORKER(mon)) {
+		/* write message */
+		if ( FLAG_TIMES(mon)) {
+			lpel_timing_t tnow;
+			LpelTimingNow( &tnow);
+			PrintNormTS( &tnow, mon->outfile);
+		}
 
-#ifdef BINARY_FORMAT
-	fwrite(&worker_end, 1, 1, mon->outfile);
-	fwrite(&end_entry, 1, 1, mon->outfile);
-#else
-	fprintf( mon->outfile, "%c%c", worker_end, end_entry);
-#endif
 
+		fprintf( mon->outfile, "%c%c", worker_end, end_entry);
+	}
 	if ( mon->outfile != NULL) {
 		int ret;
 		ret = fclose( mon->outfile);
 		assert(ret == 0);
 	}
 
-	if (mon->events.buffer != NULL) {
+	if ( mon->events.buffer != NULL) {
 		free(mon->events.buffer);
 	}
 
@@ -501,20 +489,19 @@ static void MonCbWorkerWaitStart( mon_worker_t *mon)
 
 static void MonCbWorkerWaitStop(mon_worker_t *mon)
 {
-	LpelTimingEnd(&mon->wait_current);
-	lpel_timing_t tnow;
-	LpelTimingNow(&tnow);
-	PrintNormTS(&tnow, mon->outfile);
+	if (FLAG_WORKER(mon)){
+		if (FLAG_TIMES(mon)) {
+			LpelTimingEnd(&mon->wait_current);
+			lpel_timing_t tnow;
+			LpelTimingNow(&tnow);
+			PrintNormTS(&tnow, mon->outfile);
+		}
 
-#ifdef BINARY_FORMAT
-	fwrite( &worker_wait, 1, 1, mon->outfile);
-	fwrite(&mon->wait_current, sizeof(lpel_timing_t), 1, mon->outfile);
-	fwrite(&end_entry, 1, 1, mon->outfile);
-#else
-	fprintf(mon->outfile, "%c %lu.%09lu%c", worker_wait,
-			(unsigned long) mon->wait_current.tv_sec, (mon->wait_current.tv_nsec), end_entry
-	);
-#endif
+
+		fprintf(mon->outfile, "%c %lu.%09lu%c", worker_wait,
+				(unsigned long) mon->wait_current.tv_sec, (mon->wait_current.tv_nsec), end_entry
+		);
+	}
 }
 
 
@@ -554,7 +541,7 @@ mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *name)
 
 	mt->mw = NULL;
 	mt->tid = tid;
-	mt->flags = mon_task_flags;
+	mt->flags = mon_flags;
 
 	mt->dirty_list = ST_DIRTY_END;
 
@@ -597,21 +584,14 @@ static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 	}
 
 	/* print general info: status, id */
-#ifdef BINARY_FORMAT
-	if ( state==TASK_BLOCKED) {
-		fwrite( &mt->blockon, 1, 1, file);
-	} else {
-		fwrite( &state, 1, 1, file);
-	}
-	fwrite( &mt->tid, sizeof(long), 1, file);
-#else
+
 	if ( state==TASK_BLOCKED) {
 		fprintf( file, "%c ", mt->blockon);
 	} else {
 		fprintf( file, "%c ", state);
 	}
 	fprintf( file, "%lu ", mt->tid);
-#endif
+
 	/* print times */
 	if FLAG_TIMES(mt) {
 		/* execution time */
@@ -629,14 +609,11 @@ static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 	}
 
 	/* print user events */
-	if FLAG_USREVT(mt) {
+	if FLAG_MESSAGE(mt) {
 		PrintUsrEvt(mt);
 	}
-#ifdef BINARY_FORMAT
-	fwrite(&end_entry, 1, 1, file);
-#else
+
 	fprintf( file, "%c", end_entry);
-#endif
 
 	//FIXME only for debugging purposes
 	//fflush( file);
@@ -777,49 +754,41 @@ static void MonCbStreamWakeup(mon_stream_t *ms)
  * Initialize the monitoring module
  *
  */
-void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int level)
+void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int flag)
 {
 
 #ifdef USE_LOGGING
 	mon_node = node;
-	mon_level = level;
-	if (mon_level < MON_WORKER_LEVEL) return;
-	/* compute task flags from level */
-	mon_task_flags = 0;
-	switch(mon_level) {
-	case MON_USREVT_LEVEL: mon_task_flags |= SNET_MON_USREVT;
-	case MON_ALL_ENTITY_LEVEL:
-	case MON_STREAM_LEVEL: mon_task_flags |= SNET_MON_TASK_STREAMS;
-	case MON_TIMESTAMP_LEVEL: mon_task_flags |= SNET_MON_TASK_TIMES;
-	case MON_BOX_LEVEL:
-	case MON_WORKER_LEVEL:
-
-		break;
-	}
+	mon_flags = flag;
 
 	/* register callbacks */
 
-	cb->worker_create         = MonCbWorkerCreate;
-	cb->worker_create_wrapper = MonCbWrapperCreate;
-	cb->worker_destroy        = MonCbWorkerDestroy;
-	cb->worker_waitstart      = MonCbWorkerWaitStart;
-	cb->worker_waitstop       = MonCbWorkerWaitStop;
+	if ((mon_flags & SNET_MON_WORKER) | (mon_flags & SNET_MON_TASK)) {
+		cb->worker_create         = MonCbWorkerCreate;
+		cb->worker_create_wrapper = MonCbWrapperCreate;
+		cb->worker_destroy        = MonCbWorkerDestroy;
+		cb->worker_waitstart      = MonCbWorkerWaitStart;
+		cb->worker_waitstop       = MonCbWorkerWaitStop;
+	}
 
-	cb->task_destroy = MonCbTaskDestroy;
-	cb->task_assign  = MonCbTaskAssign;
-	cb->task_start   = MonCbTaskStart;
-	cb->task_stop    = MonCbTaskStop;
+	if (mon_flags & SNET_MON_TASK) {
+		cb->task_destroy = MonCbTaskDestroy;
+		cb->task_assign  = MonCbTaskAssign;
+		cb->task_start   = MonCbTaskStart;
+		cb->task_stop    = MonCbTaskStop;
+	}
 
-	cb->stream_open         = MonCbStreamOpen;
-	cb->stream_close        = MonCbStreamClose;
-	cb->stream_replace      = MonCbStreamReplace;
-	cb->stream_readprepare  = MonCbStreamReadPrepare;
-	cb->stream_readfinish   = MonCbStreamReadFinish;
-	cb->stream_writeprepare = MonCbStreamWritePrepare;
-	cb->stream_writefinish  = MonCbStreamWriteFinish;
-	cb->stream_blockon      = MonCbStreamBlockon;
-	cb->stream_wakeup       = MonCbStreamWakeup;
-
+	if(mon_flags & SNET_MON_STREAM) {
+		cb->stream_open         = MonCbStreamOpen;
+		cb->stream_close        = MonCbStreamClose;
+		cb->stream_replace      = MonCbStreamReplace;
+		cb->stream_readprepare  = MonCbStreamReadPrepare;
+		cb->stream_readfinish   = MonCbStreamReadFinish;
+		cb->stream_writeprepare = MonCbStreamWritePrepare;
+		cb->stream_writefinish  = MonCbStreamWriteFinish;
+		cb->stream_blockon      = MonCbStreamBlockon;
+		cb->stream_wakeup       = MonCbStreamWakeup;
+	}
 	/* initialize timing */
 	LpelTimingNow(&monitoring_begin);
 #endif
@@ -841,7 +810,7 @@ void SNetThreadingMonEvent(mon_task_t *mt, snet_moninfo_t *moninfo)
 	mon_worker_t *mw = mt->mw;
 
 
-	if (FLAG_USREVT(mt) && mw) {
+	if (FLAG_MESSAGE(mt) && mw) {
 		/* grow events buffer if needed */
 		if (mw->events.cnt == mw->events.size) {
 			/* grow */

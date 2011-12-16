@@ -2,10 +2,12 @@
 #define _MON_SNET_H_
 
 
-#define SNET_MON_TASK_TIMES   (1<<0)
-#define SNET_MON_TASK_STREAMS (1<<1)
-#define SNET_MON_USREVT  (1<<2)
-
+#define SNET_MON_TIME   (1<<0)
+#define SNET_MON_TASK		  (1<<1)
+#define SNET_MON_MESSAGE  	  (1<<2)
+#define SNET_MON_WORKER  	  (1<<3)
+#define SNET_MON_STREAM  	  (1<<4)
+#define SNET_MON_MAP  	  (1<<5)
 
 #define MON_ENTNAME_MAXLEN  64
 #define MON_FNAME_MAXLEN  63
@@ -32,20 +34,22 @@ struct mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *nam
 void SNetThreadingMonEvent(struct mon_task_t *mt,
     snet_moninfo_t *moninfo);
 
-/* logging levels
- all level is activated by USE_LOGGGING (default: MAP and WORKER)
- box, timestamp, stream, entity are activated by USE_TASK_EVENT_LOGGING
- message is activated by USE_USER_EVENT_LOGGING
+/* logging flags
+ - m: mapping
+ - t: timestamp
+ - W: worker events
+ - T: task events
+ - S: stream traces (only with task events)
+ - M: message traces (only with task events)
+ - A: all
 */
-#define MON_NUM_LEVEL 			7
-#define MON_MAP_LEVEL 			1
-#define MON_WORKER_LEVEL 		2
-#define MON_BOX_LEVEL 			3
-#define MON_TIMESTAMP_LEVEL 	4
-#define MON_STREAM_LEVEL 		5
-#define MON_ALL_ENTITY_LEVEL 	6
-#define MON_USREVT_LEVEL 		7 //message event
-
+#define MON_MAP_FLAG 'm'
+#define MON_TIME_FLAG 't'
+#define MON_WORKER_FLAG 'W'
+#define MON_TASK_FLAG 'T'
+#define MON_STREAM_FLAG 'S'
+#define MON_MESSAGE_FLAG 'M'
+#define MON_ALL_FLAG 'A'
 
 /* special characters */
 //#define END_LOG_ENTRY '\n'		// for separate each log entry by one line --> for testing
@@ -56,5 +60,7 @@ void SNetThreadingMonEvent(struct mon_task_t *mt,
 #define WORKER_START_EVENT 		'S'
 #define WORKER_WAIT_EVENT 		'W'
 #define WORKER_END_EVENT 		'E'
+
+#define LOG_FORMAT_VERSION		"Log format version 2.0 (since Dec 2011)\n"
 
 #endif /* _MON_SNET_H_ */
