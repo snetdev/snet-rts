@@ -129,7 +129,8 @@ int SNetThreadingInit(int argc, char **argv)
 		snprintf(fname, 20, "n%02d_tasks.map", SNetDistribGetNodeId() );
 		/* create a map file */
 		mapfile = fopen(fname, "w");
-		fprintf(mapfile, "%s", LOG_FORMAT_VERSION);
+		assert( mapfile != NULL);
+		(void) fprintf(mapfile, "%s%c", LOG_FORMAT_VERSION, END_LOG_ENTRY);
 	}
 
 #endif

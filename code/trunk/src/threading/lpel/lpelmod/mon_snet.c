@@ -373,6 +373,7 @@ static mon_worker_t *MonCbWorkerCreate( int wid)
 	/* open logfile */
 	mon->outfile = fopen(fname, "w");
 	assert( mon->outfile != NULL);
+	(void) fprintf(mon->outfile, "%s%c", LOG_FORMAT_VERSION, END_LOG_ENTRY);
 
 	/* default values */
 	mon->disp = 0;
