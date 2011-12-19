@@ -1,12 +1,16 @@
 #ifndef SCC_H
 #define SCC_H
 
+#include <string.h>
 #include <unistd.h>
 
 #include "debug.h"
 #include "SCC_API.h"
 
 #define CORES                   (NUM_ROWS * NUM_COLS * NUM_CORES)
+#define PAGE_SIZE               (16*1024*1024)
+#define PAGE_PER_CORE           (41)
+#define MAX_PAGES               (171)
 #define IRQ_BIT                 (0x01 << GLCFG_XINTR_BIT)
 
 #define B_OFFSET                64
@@ -20,7 +24,8 @@
 
 #define LUT(loc, idx)           (*((volatile uint32_t*)(&luts[loc][idx])))
 
-extern int node_location;
+extern unsigned char node_location;
+
 extern t_vcharp mpbs[CORES];
 extern t_vcharp locks[CORES];
 extern volatile int *irq_pins[CORES];
@@ -29,11 +34,11 @@ extern volatile uint64_t *luts[CORES];
 /* Flush MPBT from L1. */
 static inline void flush() { __asm__ volatile ( ".byte 0x0f; .byte 0x0a;\n" ); }
 
-static inline void lock(int core) { while (!(*locks[core] & 0x01)); }
+static inline void lock(unsigned char core) { while (!(*locks[core] & 0x01)); }
 
-static inline void unlock(int core) { *locks[core] = 0; }
+static inline void unlock(unsigned char core) { *locks[core] = 0; }
 
-static inline void interrupt(int core)
+static inline void interrupt(unsigned char core)
 {
   /* Possibly (unnecesarily) reads memory twice, which would cause slow down.
     * Needs testing to see if another implementation using a local variable
@@ -45,9 +50,7 @@ static inline void interrupt(int core)
 static inline int min(int x, int y) { return x < y ? x : y; }
 
 static inline void start_write_node(unsigned int node)
-{
-  lock(node);
-}
+{ lock(node); }
 
 static inline void stop_write_node(unsigned int node)
 {
@@ -55,11 +58,9 @@ static inline void stop_write_node(unsigned int node)
   flush();
   handling = HANDLING(mpbs[node]);
 
-  unlock(node);
+  if (!handling) interrupt(node);
 
-  if (!handling) {
-    interrupt(node);
-  }
+  unlock(node);
 }
 
 static inline void cpy_mpb_to_mem(t_vcharp mpb, void *dst, int size)

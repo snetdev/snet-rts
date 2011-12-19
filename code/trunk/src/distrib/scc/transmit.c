@@ -10,6 +10,7 @@
 #include "record.h"
 #include "reference.h"
 #include "scc.h"
+#include "sccmalloc.h"
 
 static t_vcharp sendMPB;
 static t_vcharp recvMPB;
@@ -56,8 +57,7 @@ void SCCUnpackRef(int count, snet_ref_t **dst)
 {
   int i;
   for (i = 0; i < count; i++) {
-    dst[i] = SNetRefAlloc();
-    SNetRefDeserialise(dst[i], (void*) recvMPB, &UnpackInt, &UnpackByte);
+    dst[i] = SNetRefDeserialise((void*) recvMPB, &UnpackInt, &UnpackByte);
     SNetRefIncoming(dst[i]);
   }
 }
@@ -65,6 +65,7 @@ void SCCUnpackRef(int count, snet_ref_t **dst)
 snet_msg_t SNetDistribRecvMsg(void)
 {
   int sig;
+  lut_addr_t addr;
   snet_msg_t result;
   static sigset_t sigmask;
   static bool handling = true, set = false;
@@ -112,18 +113,17 @@ start:
       cpy_mpb_to_mem(recvMPB, &result.dest, sizeof(snet_dest_t));
       break;
     case snet_ref_set:
-      result.ref = SNetRefAlloc();
-      SNetRefDeserialise(result.ref, (void*) recvMPB, &UnpackInt, &UnpackByte);
-      result.data = SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun((void*) mpbs[node_location]);
+      result.ref = SNetRefDeserialise((void*) recvMPB, &UnpackInt, &UnpackByte);
+      cpy_mpb_to_mem(recvMPB, &addr, sizeof(lut_addr_t));
+      result.data = SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun((void*) &addr);
       break;
     case snet_ref_fetch:
-      result.ref = SNetRefAlloc();
-      SNetRefDeserialise(result.ref, (void*) recvMPB, &UnpackInt, &UnpackByte);
-      cpy_mpb_to_mem(recvMPB, &result.val, sizeof(int));
+      result.ref = SNetRefDeserialise((void*) recvMPB, &UnpackInt, &UnpackByte);
+      result.data = SNetMemAlloc(sizeof(lut_addr_t));
+      cpy_mpb_to_mem(recvMPB, result.data, sizeof(lut_addr_t));
       break;
     case snet_ref_update:
-      result.ref = SNetRefAlloc();
-      SNetRefDeserialise(result.ref, (void*) recvMPB, &UnpackInt, &UnpackByte);
+      result.ref = SNetRefDeserialise((void*) recvMPB, &UnpackInt, &UnpackByte);
       cpy_mpb_to_mem(recvMPB, &result.val, sizeof(int));
       break;
     default:
@@ -150,15 +150,17 @@ void SNetDistribSendRecord(snet_dest_t dest, snet_record_t *rec)
   stop_write_node(node);
 }
 
+extern size_t SNetRefAllocSize(snet_ref_t *ref);
 void SNetDistribFetchRef(snet_ref_t *ref)
 {
   int node = SNetRefNode(ref);
+  lut_addr_t addr = SCCPtr2Addr(SCCMalloc(SNetRefAllocSize(ref)));
   snet_comm_type_t type = snet_ref_fetch;
 
   start_write_node(node);
   cpy_mem_to_mpb(mpbs[node], &type, sizeof(snet_comm_type_t));
   SNetRefSerialise(ref, (void*) mpbs[node], &PackInt, &PackByte);
-  cpy_mem_to_mpb(mpbs[node], &node_location, sizeof(int));
+  cpy_mem_to_mpb(mpbs[node], &addr, sizeof(lut_addr_t));
   stop_write_node(node);
 }
 
@@ -200,12 +202,16 @@ void SNetDistribBlockDest(snet_dest_t dest)
   stop_write_node(dest.node);
 }
 
-void SNetDistribSendData(snet_ref_t *ref, void *data, int node)
+void SNetDistribSendData(snet_ref_t *ref, void *data, void *dest)
 {
+  lut_addr_t *addr = dest;
   snet_comm_type_t type = snet_ref_set;
-  start_write_node(node);
-  cpy_mem_to_mpb(mpbs[node], &type, sizeof(snet_comm_type_t));
-  SNetRefSerialise(ref, (void*) mpbs[node], &PackInt, &PackByte);
-  SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, (void*) mpbs[node]);
-  stop_write_node(node);
+
+  start_write_node(addr->node);
+  cpy_mem_to_mpb(mpbs[addr->node], &type, sizeof(snet_comm_type_t));
+  SNetRefSerialise(ref, (void*) mpbs[addr->node], &PackInt, &PackByte);
+  cpy_mem_to_mpb(mpbs[addr->node], addr, sizeof(lut_addr_t));
+  SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, addr);
+  stop_write_node(addr->node);
+  SNetMemFree(dest);
 }

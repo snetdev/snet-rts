@@ -172,8 +172,8 @@ libdistribnodist_la_CPPFLAGS = \
 if ENABLE_DIST_MPI
 pkglib_LTLIBRARIES += libdistribmpi.la
 libdistribmpi_la_SOURCES = \
-	src/distrib/common/distribcollections.c \
-	src/distrib/common/distribcollections.h \
+	src/distrib/common/tuplelist.c \
+	src/distrib/common/tuplelist.h \
 	src/distrib/common/imanager.c \
 	src/distrib/common/imanager.h \
 	src/distrib/common/omanager.c \
@@ -193,31 +193,23 @@ endif
 
 
 if ENABLE_DIST_SCC
-pkglib_LTLIBRARIES += libdistribsccbasic.la
-libdistribsccbasic_la_SOURCES = \
-	src/distrib/common/distribcollections.c \
+pkglib_LTLIBRARIES += libdistribscc.la
+libdistribscc_la_SOURCES = \
+	src/distrib/common/tuplelist.c \
+	src/distrib/common/tuplelist.h \
 	src/distrib/common/imanager.c \
+	src/distrib/common/imanager.h \
 	src/distrib/common/omanager.c \
+	src/distrib/common/omanager.h \
 	src/distrib/common/distribcommon.c \
-	src/distrib/scc/basicref.c \
+	src/distrib/common/distribcommon.h \
+	src/distrib/scc/sccmalloc.c \
+	src/distrib/scc/sccmalloc.h \
+	src/distrib/scc/sccref.c \
 	src/distrib/scc/distribution.c \
+	src/distrib/scc/scc.h \
 	src/distrib/scc/transmit.c
-libdistribsccbasic_la_CPPFLAGS = \
-        $(AM_CPPFLAGS) \
-	-I$(srcdir)/src/distrib/scc \
-	-I$(srcdir)/src/distrib/common \
-	-I$(srcdir)/../../../scc-hg/rcce/include
-
-pkglib_LTLIBRARIES += libdistribscclutmapping.la
-libdistribscclutmapping_la_SOURCES = \
-	src/distrib/common/distribcollections.c \
-	src/distrib/common/imanager.c \
-	src/distrib/common/omanager.c \
-	src/distrib/common/distribcommon.c \
-	src/distrib/scc/lutmappingref.c \
-	src/distrib/scc/distribution.c \
-	src/distrib/scc/transmit.c
-libdistribscclutmapping_la_CPPFLAGS = \
+libdistribscc_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/distrib/scc \
 	-I$(srcdir)/src/distrib/common \

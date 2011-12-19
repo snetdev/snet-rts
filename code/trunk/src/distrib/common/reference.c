@@ -133,17 +133,16 @@ void SNetRefSerialise(snet_ref_t *ref, void *buf,
     serialiseByte(buf, sizeof(uintptr_t), (char*) &ref->data);
 }
 
-void SNetRefDeserialise(snet_ref_t *ref, void *buf,
-                        void (*deserialiseInt)(void*, int, int*),
-                        void (*deserialiseByte)(void*, int, char*))
+snet_ref_t *SNetRefDeserialise(void *buf,
+                               void (*deserialiseInt)(void*, int, int*),
+                               void (*deserialiseByte)(void*, int, char*))
 {
-    deserialiseInt(buf, 1, &ref->node);
-    deserialiseInt(buf, 1, &ref->interface);
-    deserialiseByte(buf, sizeof(uintptr_t), (char*) &ref->data);
+    snet_ref_t *result = SNetMemAlloc(sizeof(snet_ref_t));
+    deserialiseInt(buf, 1, &result->node);
+    deserialiseInt(buf, 1, &result->interface);
+    deserialiseByte(buf, sizeof(uintptr_t), (char*) &result->data);
+    return result;
 }
-
-snet_ref_t *SNetRefAlloc(void)
-{ return SNetMemAlloc(sizeof(snet_ref_t)); }
 
 int SNetRefInterface(snet_ref_t *ref)
 { return ref->interface; };
@@ -329,10 +328,4 @@ void SNetRefSet(snet_ref_t *ref, void *data)
   }
 
   pthread_mutex_unlock(&remoteRefMutex);
-}
-
-void SNetRefFetch(snet_ref_t *ref, int node)
-{
-  SNetDistribSendData(ref, SNetRefGetData(ref), node);
-  SNetRefUpdate(ref, -1);
 }

@@ -2,10 +2,51 @@
 #include <pthread.h>
 
 #include "distribcommon.h"
-#include "distribcollections.h"
 #include "entities.h"
 #include "memfun.h"
+#include "omanager.h"
 #include "record.h"
+#include "tuplelist.h"
+
+#define MAP_NAME_H StreamDest
+#define MAP_TYPE_NAME_H stream_dest
+#define MAP_KEY_H snet_stream_desc_t*
+#define MAP_VAL_H snet_dest_t
+#include "map-template.h"
+#undef MAP_VAL_H
+#undef MAP_KEY_H
+#undef MAP_TYPE_NAME_H
+#undef MAP_NAME_H
+
+#define LIST_NAME_H Dest
+#define LIST_TYPE_NAME_H dest
+#define LIST_VAL_H snet_dest_t
+#include "list-template.h"
+#undef LIST_VAL_H
+#undef LIST_TYPE_NAME_H
+#undef LIST_NAME_H
+
+#define MAP_NAME StreamDest
+#define MAP_TYPE_NAME stream_dest
+#define MAP_KEY snet_stream_desc_t*
+#define MAP_VAL snet_dest_t
+#define MAP_VAL_CMP SNetDestCompare
+#include "map-template.c"
+#undef MAP_VAL_CMP
+#undef MAP_VAL
+#undef MAP_KEY
+#undef MAP_TYPE_NAME
+#undef MAP_NAME
+
+#define LIST_NAME Dest
+#define LIST_TYPE_NAME dest
+#define LIST_VAL snet_dest_t
+#define LIST_CMP SNetDestCompare
+#include "list-template.c"
+#undef LIST_CMP
+#undef LIST_VAL
+#undef LIST_TYPE_NAME
+#undef LIST_NAME
 
 static bool running = true;
 static snet_stream_t *wakeupStream = NULL;
