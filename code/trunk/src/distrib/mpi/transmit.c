@@ -99,12 +99,11 @@ snet_msg_t SNetDistribRecvMsg(void)
       break;
     case snet_ref_set:
       result.ref = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
-      result.data = SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun(&recvBuf);
+      result.data = (uintptr_t) SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun(&recvBuf);
       break;
     case snet_ref_fetch:
       result.ref = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
-      result.val = status.MPI_SOURCE;
-      result.data = &result.val;
+      result.data = status.MPI_SOURCE;
       break;
     case snet_ref_update:
       result.ref = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
@@ -171,6 +170,6 @@ void SNetDistribSendData(snet_ref_t *ref, void *data, void *dest)
   mpi_buf_t buf = {0, 0, NULL};
   SNetRefSerialise(ref, (void*) &buf, &PackInt, &PackByte);
   SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, &buf);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, *(int*)dest, snet_ref_set, MPI_COMM_WORLD);
+  MPI_Send(buf.data, buf.offset, MPI_PACKED, (uintptr_t) dest, snet_ref_set, MPI_COMM_WORLD);
   SNetMemFree(buf.data);
 }

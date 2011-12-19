@@ -67,35 +67,35 @@ libruntimestream_la_SOURCES = \
 	src/runtime/common/moninfo.c \
 	src/runtime/common/record.c \
 	src/runtime/common/variant.c \
-        src/runtime/stream/utils/bitmap.c \
-        src/runtime/stream/utils/bitmap.h \
-        src/runtime/stream/utils/debug.c \
-        src/runtime/stream/utils/debugcounters.c \
-        src/runtime/stream/utils/debugcounters.h \
-        src/runtime/stream/utils/debugtime.c \
-        src/runtime/stream/utils/debugtime.h \
-        src/runtime/stream/utils/hashtab.c \
-        src/runtime/stream/utils/hashtab.h \
-        src/runtime/stream/utils/hashtable.c \
-        src/runtime/stream/utils/hashtable.h \
-        src/runtime/stream/utils/locvec.c \
-        src/runtime/stream/utils/queue.c \
-        src/runtime/stream/utils/queue.h \
-        src/runtime/stream/shared/handle.c \
-        src/runtime/stream/shared/handle_p.h \
-        src/runtime/stream/entity/alias.c \
-        src/runtime/stream/entity/box.c \
-        src/runtime/stream/entity/collector.c \
-        src/runtime/stream/entity/collector.h \
-        src/runtime/stream/entity/entities.c \
-        src/runtime/stream/entity/feedback.c \
-        src/runtime/stream/entity/filter.c \
-        src/runtime/stream/entity/out.c \
-        src/runtime/stream/entity/parallel.c \
-        src/runtime/stream/entity/serial.c \
-        src/runtime/stream/entity/split.c \
-        src/runtime/stream/entity/star.c \
-        src/runtime/stream/entity/syncro.c \
+	src/runtime/stream/utils/bitmap.c \
+	src/runtime/stream/utils/bitmap.h \
+	src/runtime/stream/utils/debug.c \
+	src/runtime/stream/utils/debugcounters.c \
+	src/runtime/stream/utils/debugcounters.h \
+	src/runtime/stream/utils/debugtime.c \
+	src/runtime/stream/utils/debugtime.h \
+	src/runtime/stream/utils/hashtab.c \
+	src/runtime/stream/utils/hashtab.h \
+	src/runtime/stream/utils/hashtable.c \
+	src/runtime/stream/utils/hashtable.h \
+	src/runtime/stream/utils/locvec.c \
+	src/runtime/stream/utils/queue.c \
+	src/runtime/stream/utils/queue.h \
+	src/runtime/stream/shared/handle.c \
+	src/runtime/stream/shared/handle_p.h \
+	src/runtime/stream/entity/alias.c \
+	src/runtime/stream/entity/box.c \
+	src/runtime/stream/entity/collector.c \
+	src/runtime/stream/entity/collector.h \
+	src/runtime/stream/entity/entities.c \
+	src/runtime/stream/entity/feedback.c \
+	src/runtime/stream/entity/filter.c \
+	src/runtime/stream/entity/out.c \
+	src/runtime/stream/entity/parallel.c \
+	src/runtime/stream/entity/serial.c \
+	src/runtime/stream/entity/split.c \
+	src/runtime/stream/entity/star.c \
+	src/runtime/stream/entity/syncro.c \
 	src/runtime/stream/observer/observers.c \
 	src/runtime/stream/observer/observers.h \
 	src/runtime/stream/langif/interface_functions.c \
@@ -109,11 +109,11 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/netif/parserutils.h \
 	src/runtime/stream/netif/parser.y \
 	src/runtime/stream/netif/lexer.l
-libruntimestream_la_CPPFLAGS = \
+libruntimestream_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/runtime/stream/utils \
 	-I$(srcdir)/src/runtime/stream/shared \
 	-I$(srcdir)/src/runtime/stream/observer \
-	-I$(srcdir)/src/runtime/stream/netif 
+	-I$(srcdir)/src/runtime/stream/netif
 
 # for runtime/stream/netif
 BUILT_SOURCES = src/runtime/stream/netif/parser.h

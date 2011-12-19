@@ -235,7 +235,7 @@ void SNetInputManager(snet_entity_t *ent, void *args)
         break;
 
       case snet_ref_set:
-        SNetRefSet(msg.ref, msg.data);
+        SNetRefSet(msg.ref, (void*) msg.data);
         SNetMemFree(msg.ref);
         break;
 
@@ -245,7 +245,7 @@ void SNetInputManager(snet_entity_t *ent, void *args)
         break;
 
       case snet_ref_fetch:
-        SNetDistribSendData(msg.ref, SNetRefGetData(msg.ref), msg.data);
+        SNetDistribSendData(msg.ref, SNetRefGetData(msg.ref), (void*) msg.data);
         SNetRefUpdate(msg.ref, -1);
         SNetMemFree(msg.ref);
         break;
