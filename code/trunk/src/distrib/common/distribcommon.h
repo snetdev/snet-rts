@@ -71,5 +71,5 @@ void SNetDistribBlockDest(snet_dest_t dest);
 void SNetDistribUnblockDest(snet_dest_t dest);
 
 void SNetDistribUpdateBlocked(void);
-void SNetDistribSendData(snet_ref_t *ref, void *data, int node);
+void SNetDistribSendData(snet_ref_t *ref, void *data, void *dest);
 #endif

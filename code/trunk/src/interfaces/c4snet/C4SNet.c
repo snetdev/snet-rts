@@ -67,6 +67,7 @@ struct cdata {
   unsigned int ref_count;     /* reference count for garbage collection. */
   c4snet_vtype_t vtype;       /* Variable type. */
   int size;                   /* Number of elements in the array. */
+  void (*freeFun)(void*);
   c4snet_type_t type;         /* C type of the data. */
   c4snet_primary_type_t data; /* The data. */
 };
@@ -152,8 +153,7 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
                            "it.\n");
       #endif
       break;
-    case sccbasic:
-    case scclutmapping:
+    case scc:
       #ifdef ENABLE_DIST_SCC
         packfun = &C4SNetSCCPackFun;
         unpackfun = &C4SNetSCCUnpackFun;
@@ -209,6 +209,7 @@ c4snet_data_t *C4SNetDataCreate( c4snet_type_t type, const void *data)
   c->size = -1;
   c->type = type;
   c->ref_count = 1;
+  c->freeFun = &SNetMemFree;
 
   size = C4SNetSizeof(c);
 
@@ -236,6 +237,7 @@ c4snet_data_t *C4SNetDataCreateArray( c4snet_type_t type, int size, void *data)
   c->size = size;
   c->type = type;
   c->ref_count = 1;
+  c->freeFun = &SNetMemFree;
 
   c->data.ptr = data;
 
@@ -274,6 +276,7 @@ void *C4SNetDataCopy( void *ptr)
   c->vtype = temp->vtype;
   c->size = temp->size;
   c->type = temp->type;
+  c->freeFun = &SNetMemFree;
   c->ref_count = 1;
 
   size = C4SNetSizeof(c);
@@ -300,14 +303,15 @@ void *C4SNetDataCopy( void *ptr)
 /* Frees the memory allocated for c4snet_data_t struct. */
 void C4SNetDataFree( void *ptr)
 {
-  c4snet_data_t *temp = (c4snet_data_t *)ptr;
+  c4snet_data_t *data = ptr;
 
-  if(temp != NULL) { 
-    temp->ref_count--;
-    
-    if(temp->ref_count == 0) {
-      if(temp->vtype == VTYPE_array) {
-	SNetMemFree( temp->data.ptr);
+  if (data != NULL) {
+    data->ref_count--;
+
+    if (data->ref_count == 0) {
+      if (data->vtype == VTYPE_array) {
+        if (data->freeFun) data->freeFun(data->data.ptr);
+        else SNetMemFree(data->data.ptr);
       }
       SNetMemFree( ptr);
     }
@@ -327,7 +331,7 @@ void *C4SNetDataGetData( c4snet_data_t *ptr)
     } else {
       return (void *)&ptr->data;
     }
-  } 
+  }
 
   return ptr;
 }
@@ -764,6 +768,7 @@ static void *C4SNetDataDeserialize(FILE *file)
   temp->size = C4SNetDataDeserializeTypePart(buf, j - 1, &temp->vtype, &temp->type); 
 
   temp->ref_count = 1;
+  temp->freeFun = &SNetMemFree;
 
 
   if(temp->vtype == VTYPE_array) {
@@ -848,6 +853,7 @@ static void *C4SNetDataDecode(FILE *file)
   i = Base64decodeDataType(file, (int *)&c->type);
 
   c->ref_count = 1;
+  c->freeFun = &SNetMemFree;
 
   size = C4SNetSizeof(c);
   
@@ -1004,10 +1010,11 @@ static void *C4SNetMPIUnpackFun(void *buf)
 
 #ifdef ENABLE_DIST_SCC
 #include "scc.h"
+#include "sccmalloc.h"
 
 static void C4SNetSCCPackFun(void *cdata, void *buf)
 {
-  c4snet_data_t *data = (c4snet_data_t*) cdata;
+  c4snet_data_t *data = cdata;
   SNetDistribPack(cdata, buf, sizeof(c4snet_data_t), false);
 
   if (data->vtype == VTYPE_array) {
@@ -1017,11 +1024,14 @@ static void C4SNetSCCPackFun(void *cdata, void *buf)
 
 static void *C4SNetSCCUnpackFun(void *buf)
 {
+  lut_addr_t *addr = buf;
   c4snet_data_t *result = SNetMemAlloc(sizeof(c4snet_data_t));
-  SNetDistribUnpack(result, buf, sizeof(c4snet_data_t), false);
+  SNetDistribUnpack(result, buf, sizeof(c4snet_data_t));
 
+  result->ref_count = 1;
   if (result->vtype == VTYPE_array) {
-    SNetDistribUnpack(&result->data.ptr, buf, C4SNetAllocSize(result), true);
+    result->freeFun = &SCCFree;
+    result->data.ptr = SCCAddr2Ptr(*addr);
   }
 
   return result;

@@ -1,5 +1,5 @@
 THREAD=pthread lpel
-DIST=nodist mpi sccbasic scclutmapping
+DIST=nodist mpi scc
 
 SNETC?=snetc
 SNETCFLAGS?=-g
@@ -48,12 +48,9 @@ else
 %-mpi.make:
 	$(MAKE) $*.make DEPS="$(MPIDEPS) $(DEPS)" NAME="-mpi$(NAME)" \
 	    SNETCFLAGS="$(SNETCFLAGS) -distrib mpi $(MPIFLAGS)"
-%-sccbasic.make:
-	$(MAKE) $*.make DEPS="$(SCCDEPS) $(DEPS)" NAME="-sccbasic$(NAME)" \
-	    SNETCFLAGS="$(SNETCFLAGS) -distrib sccbasic $(SCCFLAGS)"
-%-scclutmapping.make:
-	$(MAKE) $*.make DEPS="$(SCCDEPS) $(DEPS)" NAME="-scclutmapping$(NAME)" \
-	    SNETCFLAGS="$(SNETCFLAGS) -distrib scclutmapping $(SCCFLAGS)"
+%-scc.make:
+	$(MAKE) $*.make DEPS="$(SCCDEPS) $(DEPS)" NAME="-scc$(NAME)" \
+	    SNETCFLAGS="$(SNETCFLAGS) -distrib scc $(SCCFLAGS)"
 
 %.make: %.snet $(DEPS)
 	rm -f *.o *.lo .libs/*.o

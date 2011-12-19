@@ -44,8 +44,7 @@ static void MPIUnpackRef(int count, snet_ref_t **dst)
 {
   int i;
   for (i = 0; i < count; i++) {
-    dst[i] = SNetRefAlloc();
-    SNetRefDeserialise(dst[i], (void*) &recvBuf, &UnpackInt, &UnpackByte);
+    dst[i] = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
     SNetRefIncoming(dst[i]);
   }
 }
@@ -99,18 +98,16 @@ snet_msg_t SNetDistribRecvMsg(void)
       MPIUnpackDest(&recvBuf, &result.dest);
       break;
     case snet_ref_set:
-      result.ref = SNetRefAlloc();
-      SNetRefDeserialise(result.ref, (void*) &recvBuf, &UnpackInt, &UnpackByte);
+      result.ref = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
       result.data = SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun(&recvBuf);
       break;
     case snet_ref_fetch:
-      result.ref = SNetRefAlloc();
-      SNetRefDeserialise(result.ref, (void*) &recvBuf, &UnpackInt, &UnpackByte);
+      result.ref = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
       result.val = status.MPI_SOURCE;
+      result.data = &result.val;
       break;
     case snet_ref_update:
-      result.ref = SNetRefAlloc();
-      SNetRefDeserialise(result.ref, (void*) &recvBuf, &UnpackInt, &UnpackByte);
+      result.ref = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
       MPIUnpackInt(1, &result.val);
       break;
     default:
@@ -169,11 +166,11 @@ void SNetDistribBlockDest(snet_dest_t dest)
   SNetMemFree(buf.data);
 }
 
-void SNetDistribSendData(snet_ref_t *ref, void *data, int node)
+void SNetDistribSendData(snet_ref_t *ref, void *data, void *dest)
 {
   mpi_buf_t buf = {0, 0, NULL};
   SNetRefSerialise(ref, (void*) &buf, &PackInt, &PackByte);
   SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, &buf);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, node, snet_ref_set, MPI_COMM_WORLD);
+  MPI_Send(buf.data, buf.offset, MPI_PACKED, *(int*)dest, snet_ref_set, MPI_COMM_WORLD);
   SNetMemFree(buf.data);
 }

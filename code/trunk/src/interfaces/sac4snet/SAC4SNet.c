@@ -223,8 +223,7 @@ void SAC4SNetInit( int id, snet_distrib_t distImpl)
                            "it.\n");
       #endif
       break;
-    case sccbasic:
-    case scclutmapping:
+    case scc:
       #ifdef ENABLE_DIST_SCC
         packfun = &SAC4SNetSCCPackFun;
         unpackfun = &SAC4SNetSCCUnpackFun;

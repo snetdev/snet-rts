@@ -3,13 +3,70 @@
 
 #include "debug.h"
 #include "distribcommon.h"
-#include "distribcollections.h"
 #include "entities.h"
+#include "imanager.h"
 #include "memfun.h"
 #include "omanager.h"
 #include "reference.h"
+#include "tuplelist.h"
 
-extern void SNetRouteNewDynamic(snet_dest_t dest);
+#define MAP_NAME_H DestStream
+#define MAP_TYPE_NAME_H dest_stream
+#define MAP_KEY_H snet_dest_t
+#define MAP_VAL_H snet_stream_desc_t*
+#include "map-template.h"
+#undef MAP_VAL_H
+#undef MAP_KEY_H
+#undef MAP_TYPE_NAME_H
+#undef MAP_NAME_H
+
+#define LIST_NAME_H Record
+#define LIST_TYPE_NAME_H record
+#define LIST_VAL_H snet_record_t*
+#include "list-template.h"
+#undef LIST_VAL_H
+#undef LIST_TYPE_NAME_H
+#undef LIST_NAME_H
+
+#define LIST_NAME_H Buffer
+#define LIST_TYPE_NAME_H buffer
+#define LIST_VAL_H snet_buffer_t*
+#include "list-template.h"
+#undef LIST_VAL_H
+#undef LIST_TYPE_NAME_H
+#undef LIST_NAME_H
+
+#define MAP_NAME DestStream
+#define MAP_TYPE_NAME dest_stream
+#define MAP_KEY snet_dest_t
+#define MAP_VAL snet_stream_desc_t*
+#define MAP_KEY_CMP SNetDestCompare
+#include "map-template.c"
+#undef MAP_KEY_FREE_FUN
+#undef MAP_KEY_CMP
+#undef MAP_VAL
+#undef MAP_KEY
+#undef MAP_TYPE_NAME
+#undef MAP_NAME
+
+#define LIST_NAME Record
+#define LIST_TYPE_NAME record
+#define LIST_VAL snet_record_t*
+#include "list-template.c"
+#undef LIST_VAL
+#undef LIST_TYPE_NAME
+#undef LIST_NAME
+
+#define LIST_NAME Buffer
+#define LIST_TYPE_NAME buffer
+#define LIST_VAL snet_buffer_t*
+#include "list-template.c"
+#undef LIST_VAL
+#undef LIST_TYPE_NAME
+#undef LIST_NAME
+
+
+void SNetRouteNewDynamic(snet_dest_t dest);
 
 struct snet_buffer {
   bool done;
@@ -188,7 +245,8 @@ void SNetInputManager(snet_entity_t *ent, void *args)
         break;
 
       case snet_ref_fetch:
-        SNetRefFetch(msg.ref, msg.val);
+        SNetDistribSendData(msg.ref, SNetRefGetData(msg.ref), msg.data);
+        SNetRefUpdate(msg.ref, -1);
         SNetMemFree(msg.ref);
         break;
 
