@@ -7,7 +7,10 @@
 #include "memfun.h"
 #include "interface_functions.h"
 #include "type.h"
+<<<<<<< /Users/thiennga/Study/phd/snet/snet/code/trunk/src/runtime/stream/entity/out.c
 #include "moninfo.h"
+=======
+>>>>>>> /var/folders/ps/9qnz36892w772m9xw4r2zymm0000gp/T/out.c~other.SE_fG3
 
 //#define DBG_RT_TRACE_OUT_TIMINGS
 

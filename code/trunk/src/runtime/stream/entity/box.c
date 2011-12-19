@@ -8,6 +8,10 @@
 #include "moninfo.h"
 #include "type.h"
 #include "threading.h"
+<<<<<<< /Users/thiennga/Study/phd/snet/snet/code/trunk/src/runtime/stream/entity/box.c
+=======
+
+>>>>>>> /var/folders/ps/9qnz36892w772m9xw4r2zymm0000gp/T/box.c~other.6TKmjR
 
 #include "handle_p.h"
 #include "list.h"

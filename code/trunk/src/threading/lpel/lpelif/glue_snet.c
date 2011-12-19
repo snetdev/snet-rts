@@ -83,7 +83,7 @@ int SNetThreadingInit(int argc, char **argv)
 	lpel_config_t config;
 	char fname[20+1];
 	int i, res;
-	char *mon_elts;
+	char *mon_elts = NULL;
 	memset(&config, 0, sizeof(lpel_config_t));
 
 
@@ -125,6 +125,7 @@ int SNetThreadingInit(int argc, char **argv)
 			if (strchr(mon_elts, MON_MESSAGE_FLAG) != NULL) mon_flags |= SNET_MON_MESSAGE;
 		}
 
+<<<<<<< /Users/thiennga/Study/phd/snet/snet/code/trunk/src/threading/lpel/lpelif/glue_snet.c
 		if ( mon_flags & SNET_MON_MAP) {
 			snprintf(fname, 20, "n%02d_tasks.map", SNetDistribGetNodeId() );
 			/* create a map file */
@@ -133,6 +134,29 @@ int SNetThreadingInit(int argc, char **argv)
 			(void) fprintf(mapfile, "%s%c", LOG_FORMAT_VERSION, END_LOG_ENTRY);
 		}
 	}
+=======
+        if (mon_elts != NULL) {
+            if (strchr(mon_elts, MON_ALL_FLAG) != NULL) {
+                    mon_flags = (1<<6) - 1;
+            } else {
+                    if (strchr(mon_elts, MON_MAP_FLAG) != NULL) mon_flags |= SNET_MON_MAP;
+                    if (strchr(mon_elts, MON_TIME_FLAG) != NULL) mon_flags |= SNET_MON_TIME;
+                    if (strchr(mon_elts, MON_WORKER_FLAG) != NULL) mon_flags |= SNET_MON_WORKER;
+                    if (strchr(mon_elts, MON_TASK_FLAG) != NULL) mon_flags |= SNET_MON_TASK;
+                    if (strchr(mon_elts, MON_STREAM_FLAG) != NULL) mon_flags |= SNET_MON_STREAM;
+                    if (strchr(mon_elts, MON_MESSAGE_FLAG) != NULL) mon_flags |= SNET_MON_MESSAGE;
+            }
+
+            if ( mon_flags & SNET_MON_MAP) {
+                    snprintf(fname, 20, "n%02d_tasks.map", SNetDistribGetNodeId() );
+                    /* create a map file */
+                    mapfile = fopen(fname, "w");
+                    assert( mapfile != NULL);
+                    (void) fprintf(mapfile, "%s%c", LOG_FORMAT_VERSION, END_LOG_ENTRY);
+            }
+        }
+
+>>>>>>> /var/folders/ps/9qnz36892w772m9xw4r2zymm0000gp/T/glue_snet.c~other.9KBKq0
 #endif
 	/* determine number of cpus */
 	if ( 0 != LpelGetNumCores( &num_cpus) ) {

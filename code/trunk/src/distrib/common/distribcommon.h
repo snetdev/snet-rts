@@ -36,7 +36,7 @@ typedef struct {
   snet_record_t *rec;
   snet_dest_t dest;
   snet_ref_t *ref;
-  void *data;
+  uintptr_t data;
   int val;
 } snet_msg_t;
 
