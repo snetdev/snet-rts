@@ -7,7 +7,6 @@
 #include "memfun.h"
 #include "interface_functions.h"
 #include "type.h"
-#include <lpel/monitor.h>
 
 //#define DBG_RT_TRACE_OUT_TIMINGS
 

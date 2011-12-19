@@ -8,7 +8,6 @@
 #include "moninfo.h"
 #include "type.h"
 #include "threading.h"
-#include <lpel/monitor.h>
 
 
 #include "handle_p.h"
