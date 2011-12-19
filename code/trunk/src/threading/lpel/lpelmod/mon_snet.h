@@ -17,6 +17,7 @@
 #include "threading.h"
 #include <lpel.h>
 #include <lpel/timing.h>
+#include <lpel/monitor.h>
 
 struct mon_worker_t;
 struct mon_task_t;

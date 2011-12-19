@@ -32,7 +32,6 @@
 #include "debug.h"
 
 #include "threading.h"
-#include <lpel/monitor.h>
 
 #ifndef YY_BUF_SIZE
 #define YY_BUF_SIZE 16384

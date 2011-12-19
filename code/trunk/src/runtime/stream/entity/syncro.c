@@ -34,7 +34,6 @@
 #include "locvec.h"
 #include "debug.h"
 #include "moninfo.h"
-#include <lpel/monitor.h>
 
 /*
  * needs to be enabled to trigger the garbage collection mechanism

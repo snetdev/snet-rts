@@ -19,6 +19,10 @@
 #include "bool.h"
 #include "record.h"
 
+// to activate/deactivate user event logging (message trace)
+#define USE_USER_EVENT_LOGGING
+
+
 typedef union moninfo_types snet_moninfo_types_t;
 
 /* macros for monitoring information */
@@ -34,21 +38,21 @@ typedef union moninfo_types snet_moninfo_types_t;
  */
 
 typedef enum {
-//  EV_INPUT_ARRIVE=0,
-//  EV_BOX_START,
-//  EV_BOX_WRITE,
-//  EV_BOX_FINISH, /* not yet used, because its not a record event */
-//  EV_FILTER_START,
-//  EV_FILTER_WRITE,
-//  EV_SYNC_FIRST,
-//  EV_SYNC_NEXT,
-//  EV_SYNC_FIRE,
+	//  EV_INPUT_ARRIVE=0,
+	//  EV_BOX_START,
+	//  EV_BOX_WRITE,
+	//  EV_BOX_FINISH, /* not yet used, because its not a record event */
+	//  EV_FILTER_START,
+	//  EV_FILTER_WRITE,
+	//  EV_SYNC_FIRST,
+	//  EV_SYNC_NEXT,
+	//  EV_SYNC_FIRE,
 	EV_MESSAGE_IN = 0,
 	EV_MESSAGE_OUT = 1
 } snet_moninfo_event_t;
 
 typedef enum {
-  MON_RECORD=0,
+	MON_RECORD=0,
 } snet_moninfo_descr_t;
 
 
@@ -57,23 +61,23 @@ typedef char* snet_add_moninfo_rec_data_t;
 
 /* data structure of monitoring information for records */
 typedef struct {
-  snet_record_id_t id;
-  //snet_recid_list_t *parent_ids;
-  snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
+	snet_record_id_t id;
+	//snet_recid_list_t *parent_ids;
+	snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
 } snet_moninfo_record_t;
 
 
 /* enum of different monitoring info structures */
 union moninfo_types {
-  snet_moninfo_record_t moninfo_rec;
+	snet_moninfo_record_t moninfo_rec;
 };
 
 
 /* data structure of monitoring information */
 typedef struct snet_moninfo {
-  snet_moninfo_event_t mon_event;
-  snet_moninfo_descr_t mon_descr;
-  snet_moninfo_types_t *mon_data;
+	snet_moninfo_event_t mon_event;
+	snet_moninfo_descr_t mon_descr;
+	snet_moninfo_types_t *mon_data;
 } snet_moninfo_t;
 
 

@@ -16,7 +16,6 @@
 #include "distribution.h"
 
 #include "threading.h"
-#include <lpel/monitor.h>
 
 /*****************************************************************************/
 /* FILTER INSTRUCTIONS                                                       */

@@ -8,13 +8,11 @@
 
 #include "locvec.h"
 #include "moninfo.h"
-#include <lpel/monitor.h>
 
 #define PrintTiming(t, file)  PrintTimingNs((t),(file))
 #define PrintNormTS(t, file)  PrintNormTSns((t),(file))
 
 static int mon_node = -1;
-//static int mon_level = 0;
 static int mon_flags = 0;
 
 
