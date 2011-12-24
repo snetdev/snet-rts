@@ -24,6 +24,22 @@
 #include "out.h"
 #include "base64.h"
 
+#ifdef ENABLE_DIST_MPI
+#include <mpi.h>
+#include "pack.h"
+
+static void C4SNetMPIPackFun(void *cdata, void *buf);
+static void *C4SNetMPIUnpackFun(void *buf);
+#endif
+
+#ifdef ENABLE_DIST_SCC
+#include "scc.h"
+#include "sccmalloc.h"
+
+static void *C4SNetSCCMalloc(size_t, void (**)(void*));
+static void C4SNetSCCPackFun(void *cdata, void *dest);
+static void *C4SNetSCCUnpackFun(void *localBuf);
+#endif
 
 #define F_COUNT( c) c->counter[0]
 #define T_COUNT( c) c->counter[1]
@@ -31,8 +47,11 @@
 
 #define BUF_SIZE 32
 
+static void *C4SNetAllocFun(size_t, void (**)(void*));
+
 /* ID of the language interface. */
 static int interface_id;
+static void *(*allocfun)(size_t, void (**)(void*)) = &C4SNetAllocFun;
 
 /* Container for returning the result. */
 struct container {
@@ -80,15 +99,6 @@ static void *C4SNetDataDeserialize(FILE *file);
 static int C4SNetDataEncode( FILE *file, void *ptr);
 static void *C4SNetDataDecode(FILE *file);
 
-#ifdef ENABLE_DIST_MPI
-static void C4SNetMPIPackFun(void *cdata, void *buf);
-static void *C4SNetMPIUnpackFun(void *buf);
-#endif
-#ifdef ENABLE_DIST_SCC
-static void C4SNetSCCPackFun(void *cdata, void *dest);
-static void *C4SNetSCCUnpackFun(void *localBuf);
-#endif
-
 /***************************** Auxiliary functions ****************************/
 
 static int sizeOfType(c4snet_type_t type)
@@ -130,7 +140,11 @@ size_t C4SNetAllocSize(void *cdata)
   }
 }
 
-
+void *C4SNetAllocFun(size_t s, void (**free)(void*))
+{
+  *free = &SNetMemFree;
+  return SNetMemAlloc(s);
+}
 
 /***************************** Common functions ****************************/
 
@@ -155,6 +169,7 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
       break;
     case scc:
       #ifdef ENABLE_DIST_SCC
+        allocfun = &C4SNetSCCMalloc;
         packfun = &C4SNetSCCPackFun;
         unpackfun = &C4SNetSCCUnpackFun;
       #else
@@ -242,6 +257,25 @@ c4snet_data_t *C4SNetDataCreateArray( c4snet_type_t type, int size, void *data)
   c->data.ptr = data;
 
   return( c);
+}
+
+c4snet_data_t *C4SNetDataAllocCreateArray( c4snet_type_t type, int size, void **data)
+{
+  c4snet_data_t *c = NULL;
+
+  if(type == CTYPE_unknown || data == NULL) {
+    return NULL;
+  }
+
+  c = SNetMemAlloc( sizeof( c4snet_data_t));
+
+  c->vtype = VTYPE_array;
+  c->size = size;
+  c->type = type;
+  c->ref_count = 1;
+  *data = c->data.ptr = allocfun(size * sizeOfType(type), &c->freeFun);
+
+  return c;
 }
 
 /* Increments c4snet_data_t struct's reference count by one.
@@ -940,8 +974,6 @@ void C4SNetContainerOut(c4snet_container_t *c)
 
 /************************ Distribution Layer Functions ***********************/
 #ifdef ENABLE_DIST_MPI
-#include <mpi.h>
-#include "pack.h"
 static MPI_Datatype C4SNetTypeToMPIType(c4snet_type_t type)
 {
   switch (type) {
@@ -1009,8 +1041,13 @@ static void *C4SNetMPIUnpackFun(void *buf)
 #endif
 
 #ifdef ENABLE_DIST_SCC
-#include "scc.h"
-#include "sccmalloc.h"
+static void *C4SNetSCCMalloc(size_t s, void (**free)(void*))
+{
+  if (!remap) return C4SNetAllocFun(s, free);
+
+  *free = &SCCFree;
+  return SCCMallocPtr(s);
+}
 
 static void C4SNetSCCPackFun(void *cdata, void *buf)
 {
@@ -1018,20 +1055,27 @@ static void C4SNetSCCPackFun(void *cdata, void *buf)
   SNetDistribPack(cdata, buf, sizeof(c4snet_data_t), false);
 
   if (data->vtype == VTYPE_array) {
+    if (remap && data->freeFun == &SNetMemFree) {
+      void *tmp = SCCMallocPtr(C4SNetAllocSize(cdata));
+      memcpy(tmp, data->data.ptr, C4SNetAllocSize(cdata));
+      SNetMemFree(data->data.ptr);
+      data->freeFun = &SCCFree;
+      data->data.ptr = tmp;
+    }
+
     SNetDistribPack(data->data.ptr, buf, C4SNetAllocSize(data), true);
   }
 }
 
 static void *C4SNetSCCUnpackFun(void *buf)
 {
-  lut_addr_t *addr = buf;
   c4snet_data_t *result = SNetMemAlloc(sizeof(c4snet_data_t));
-  SNetDistribUnpack(result, buf, sizeof(c4snet_data_t));
+  SNetDistribUnpack(result, buf, false, sizeof(c4snet_data_t));
 
   result->ref_count = 1;
   if (result->vtype == VTYPE_array) {
     result->freeFun = &SCCFree;
-    result->data.ptr = SCCAddr2Ptr(*addr);
+    SNetDistribUnpack(&result->data.ptr, buf, true);
   }
 
   return result;

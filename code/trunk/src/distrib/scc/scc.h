@@ -9,8 +9,9 @@
 
 #define CORES                   (NUM_ROWS * NUM_COLS * NUM_CORES)
 #define PAGE_SIZE               (16*1024*1024)
-#define PAGE_PER_CORE           (41)
-#define MAX_PAGES               (171)
+#define LINUX_PRIV_PAGES        (20)
+#define PAGES_PER_CORE          (41)
+#define MAX_PAGES               (172)
 #define IRQ_BIT                 (0x01 << GLCFG_XINTR_BIT)
 
 #define B_OFFSET                64
@@ -24,6 +25,7 @@
 
 #define LUT(loc, idx)           (*((volatile uint32_t*)(&luts[loc][idx])))
 
+extern bool remap;
 extern unsigned char node_location;
 
 extern t_vcharp mpbs[CORES];

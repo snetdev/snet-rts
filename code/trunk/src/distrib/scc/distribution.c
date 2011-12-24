@@ -1,8 +1,6 @@
-#include <fcntl.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
 
 #include "SCC_API.h"
 #include "distribution.h"
@@ -16,11 +14,12 @@ t_vcharp locks[CORES];
 volatile int *irq_pins[CORES];
 volatile uint64_t *luts[CORES];
 
-static char *local, *remote;
-static int mem, cache, num_pages, num_nodes = 0;
+bool remap = false;
+static int num_nodes = 0;
 
 void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
 {
+  unsigned char num_pages;
   sigset_t signal_mask;
   int x, y, z;
   (void) info; /* NOT USED */
@@ -28,6 +27,8 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
   for (int i = 0; i < argc; i++) {
     if (strcmp(argv[i], "-np") == 0 && ++i < argc) {
       num_nodes = atoi(argv[i]);
+    } else if (strcmp(argv[i], "-sccremap") == 0) {
+      remap = true;
     }
   }
 
@@ -62,20 +63,23 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
     MPBalloc(&mpbs[cpu], x, y, z, cpu == node_location);
   }
 
-  num_pages = 21;
-  for (int i = 1; i < CORES / num_nodes && num_pages < MAX_PAGES; i++) {
-    for (int lut = 0; lut < PAGE_PER_CORE && num_pages < MAX_PAGES; lut++) {
-      LUT(node_location, 20 + num_pages++) = LUT(node_location + i * num_nodes, lut);
+  num_pages = PAGES_PER_CORE - LINUX_PRIV_PAGES;
+  int max_pages = remap ? MAX_PAGES/2 : MAX_PAGES - 1;
+
+  for (int i = 1; i < CORES / num_nodes && num_pages < max_pages; i++) {
+    for (int lut = 0; lut < PAGES_PER_CORE && num_pages < max_pages; lut++) {
+      LUT(node_location, LINUX_PRIV_PAGES + num_pages++) = LUT(node_location + i * num_nodes, lut);
     }
   }
 
-  int extra = ((CORES % num_nodes) * PAGE_PER_CORE) / num_nodes;
-  int node = num_nodes + (node_location * extra) / PAGE_PER_CORE;
-  int lut = (node_location * extra) % PAGE_PER_CORE;
-  for (int i = 0; i < extra && num_pages < MAX_PAGES; i++ ) {
-    LUT(node_location, 20 + num_pages++) = LUT(node, lut + i);
+  int extra = ((CORES % num_nodes) * PAGES_PER_CORE) / num_nodes;
+  int node = num_nodes + (node_location * extra) / PAGES_PER_CORE;
+  int lut = (node_location * extra) % PAGES_PER_CORE;
 
-    if (lut + i + 1 == PAGE_PER_CORE) {
+  for (int i = 0; i < extra && num_pages < max_pages; i++ ) {
+    LUT(node_location, LINUX_PRIV_PAGES + num_pages++) = LUT(node, lut + i);
+
+    if (lut + i + 1 == PAGES_PER_CORE) {
       lut = 0;
       node++;
     }
@@ -86,20 +90,8 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
   END(mpbs[node_location]) = 0;
   /* Start with an initial handling run to avoid a cross-core race. */
   HANDLING(mpbs[node_location]) = 1;
-  FOOL_WRITE_COMBINE;
 
-  /* Open driver device "/dev/rckdyn011" to map memory in write-through mode */
-  mem = open("/dev/rckdyn011", O_RDWR|O_SYNC);
-  if (mem < 0) SNetUtilDebugFatal("Opening /dev/rckdyn011 failed!");
-  cache = open("/dev/rckdcm", O_RDWR|O_SYNC);
-  if (cache < 0) SNetUtilDebugFatal("Opening /dev/rckdcm failed!");
-
-  local = mmap(NULL, num_pages * PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, mem, 0x14 << 24);
-  if (local == NULL) SNetUtilDebugFatal("Couldn't map memory!");
-  SCCInit(local, 0x14, num_pages * PAGE_SIZE);
-
-  remote = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, mem, (0x14 + num_pages) << 24);
-  if (remote == NULL) SNetUtilDebugFatal("Couldn't map memory!");
+  SCCInit(num_pages);
 
   FOOL_WRITE_COMBINE;
   unlock(node_location);
@@ -125,11 +117,7 @@ void SNetDistribLocalStop(void)
     MPBunalloc(&mpbs[cpu]);
   }
 
-  munmap(remote, PAGE_SIZE);
-  munmap(local, num_pages * PAGE_SIZE);
-
-  close(mem);
-  close(cache);
+  SCCStop();
 }
 
 int SNetDistribGetNodeId(void) { return node_location; }
@@ -140,34 +128,40 @@ bool SNetDistribIsRootNode(void) { return node_location == 0; }
 
 void SNetDistribPack(void *src, ...)
 {
-  bool useSHM;
-  size_t size;
+  bool isData;
   va_list args;
   lut_addr_t *addr;
+  unsigned char node;
+  size_t size, cpySize;
 
   va_start(args, src);
   addr = va_arg(args, void*);
   size = va_arg(args, size_t);
-  useSHM = va_arg(args, bool);
+  isData = va_arg(args, bool);
   va_end(args);
 
-  if (useSHM) {
-    size_t cpySize;
+  if (isData) {
+    if (remap) {
+      node = addr->node;
+      *addr = SCCPtr2Addr(src);
+      cpy_mem_to_mpb(mpbs[node], addr, sizeof(lut_addr_t));
+      cpy_mem_to_mpb(mpbs[node], &size, sizeof(size_t));
+    } else {
+      while (size > 0) {
+        flush();
+        LUT(node_location, REMOTE_LUT) = LUT(addr->node, addr->lut++);
 
-    while (size > 0) {
-      flush();
-      LUT(node_location, (0x14 + num_pages)) = LUT(addr->node, addr->lut++);
+        cpySize = min(size, PAGE_SIZE - addr->offset);
+        memcpy(((char*) remote + addr->offset), src, cpySize);
 
-      cpySize = min(size, PAGE_SIZE - addr->offset);
-      memcpy(((char*)remote + addr->offset), src, cpySize);
+        size -= cpySize;
+        src += cpySize;
 
-      size -= cpySize;
-      src += cpySize;
+        if (addr->offset) addr->offset = 0;
+      }
 
-      if (addr->offset) addr->offset = 0;
+      FOOL_WRITE_COMBINE;
     }
-
-    FOOL_WRITE_COMBINE;
   } else {
     cpy_mem_to_mpb(mpbs[addr->node], src, size);
   }
@@ -175,14 +169,36 @@ void SNetDistribPack(void *src, ...)
 
 void SNetDistribUnpack(void *dst, ...)
 {
+  bool isData;
   size_t size;
   va_list args;
   lut_addr_t *addr;
 
   va_start(args, dst);
   addr = va_arg(args, void*);
-  size = va_arg(args, size_t);
+  isData = va_arg(args, bool);
+  if (!isData) size = va_arg(args, size_t);
   va_end(args);
 
-  cpy_mpb_to_mem(mpbs[addr->node], dst, size);
+  if (isData) {
+    if (remap) {
+      unsigned char node, lut, count;
+      cpy_mpb_to_mem(mpbs[node_location], addr, sizeof(lut_addr_t));
+      cpy_mpb_to_mem(mpbs[node_location], &size, sizeof(size_t));
+
+      node = addr->node;
+      count = (size + addr->offset + PAGE_SIZE - 1) / PAGE_SIZE;
+      lut = SCCMallocLut(count);
+
+      for (unsigned char i = 0; i < count; i++) {
+        LUT(node_location, lut + i) = LUT(node, addr->lut + i);
+      }
+
+      addr->lut = lut;
+    }
+
+    *(void**) dst = SCCAddr2Ptr(*addr);
+  } else {
+    cpy_mpb_to_mem(mpbs[node_location], dst, size);
+  }
 }

@@ -114,13 +114,22 @@ start:
       break;
     case snet_ref_set:
       result.ref = SNetRefDeserialise((void*) recvMPB, &UnpackInt, &UnpackByte);
-      cpy_mpb_to_mem(recvMPB, &addr, sizeof(lut_addr_t));
-      result.data = SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun((void*) &addr);
+      if (!remap) cpy_mpb_to_mem(recvMPB, &addr, sizeof(lut_addr_t));
+      result.data = (uintptr_t) SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun((void*) &addr);
       break;
     case snet_ref_fetch:
       result.ref = SNetRefDeserialise((void*) recvMPB, &UnpackInt, &UnpackByte);
-      result.data = SNetMemAlloc(sizeof(lut_addr_t));
-      cpy_mpb_to_mem(recvMPB, result.data, sizeof(lut_addr_t));
+      if (remap) {
+        unsigned char loc;
+        cpy_mpb_to_mem(recvMPB, &loc, sizeof(unsigned char));
+        unlock(node_location);
+        SNetDistribSendData(result.ref, SNetRefGetData(result.ref), (void*) &loc);
+        SNetMemFree(result.ref);
+        goto start;
+      }
+
+      result.data = (uintptr_t) SNetMemAlloc(sizeof(lut_addr_t));
+      cpy_mpb_to_mem(recvMPB, (void*) result.data, sizeof(lut_addr_t));
       break;
     case snet_ref_update:
       result.ref = SNetRefDeserialise((void*) recvMPB, &UnpackInt, &UnpackByte);
@@ -154,13 +163,17 @@ extern size_t SNetRefAllocSize(snet_ref_t *ref);
 void SNetDistribFetchRef(snet_ref_t *ref)
 {
   int node = SNetRefNode(ref);
-  lut_addr_t addr = SCCPtr2Addr(SCCMalloc(SNetRefAllocSize(ref)));
   snet_comm_type_t type = snet_ref_fetch;
 
   start_write_node(node);
   cpy_mem_to_mpb(mpbs[node], &type, sizeof(snet_comm_type_t));
   SNetRefSerialise(ref, (void*) mpbs[node], &PackInt, &PackByte);
-  cpy_mem_to_mpb(mpbs[node], &addr, sizeof(lut_addr_t));
+  if (remap) {
+    cpy_mem_to_mpb(mpbs[node], &node_location, sizeof(node_location));
+  } else {
+    lut_addr_t addr = SCCPtr2Addr(SCCMallocPtr(SNetRefAllocSize(ref)));
+    cpy_mem_to_mpb(mpbs[node], &addr, sizeof(lut_addr_t));
+  }
   stop_write_node(node);
 }
 
@@ -180,7 +193,7 @@ void SNetDistribUpdateBlocked(void)
 {
   snet_comm_type_t type = snet_update;
   start_write_node(node_location);
-  cpy_mem_to_mpb(mpbs[node_location], &type, sizeof(int));
+  cpy_mem_to_mpb(mpbs[node_location], &type, sizeof(snet_comm_type_t));
   stop_write_node(node_location);
 }
 
@@ -204,14 +217,22 @@ void SNetDistribBlockDest(snet_dest_t dest)
 
 void SNetDistribSendData(snet_ref_t *ref, void *data, void *dest)
 {
-  lut_addr_t *addr = dest;
+  lut_addr_t addr;
+  unsigned char node;
+  if (remap) {
+    addr.node = node = *(unsigned char*) dest;
+  } else {
+    addr = *(lut_addr_t*) dest;
+    node = addr.node;
+    SNetMemFree(dest);
+  }
+
   snet_comm_type_t type = snet_ref_set;
 
-  start_write_node(addr->node);
-  cpy_mem_to_mpb(mpbs[addr->node], &type, sizeof(snet_comm_type_t));
-  SNetRefSerialise(ref, (void*) mpbs[addr->node], &PackInt, &PackByte);
-  cpy_mem_to_mpb(mpbs[addr->node], addr, sizeof(lut_addr_t));
-  SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, addr);
-  stop_write_node(addr->node);
-  SNetMemFree(dest);
+  start_write_node(node);
+  cpy_mem_to_mpb(mpbs[node], &type, sizeof(snet_comm_type_t));
+  SNetRefSerialise(ref, (void*) mpbs[node], &PackInt, &PackByte);
+  if (!remap) cpy_mem_to_mpb(mpbs[node], &addr, sizeof(lut_addr_t));
+  SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, &addr);
+  stop_write_node(node);
 }
