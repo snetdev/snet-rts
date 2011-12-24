@@ -206,7 +206,7 @@ void *SNetRefGetData(snet_ref_t *ref)
   void *result = GetData(ref);
 
   if (!remap) {
-    ref->data = result;
+    ref->data = (uintptr_t) result;
     ref->node = SNetDistribGetNodeId();
   }
 
