@@ -1028,7 +1028,7 @@ static void *C4SNetMPIUnpackFun(void *buf)
   SNetDistribUnpack(&type, buf, MPI_INT, 1);
 
   if (vtype == VTYPE_array) {
-    data.ptr = SNetMemAlloc(C4SNetAllocSize(result));
+    data.ptr = SNetMemAlloc(count * sizeOfType(type));
     SNetDistribUnpack(data.ptr, buf, C4SNetTypeToMPIType(type), count);
     result = C4SNetDataCreateArray(type, count, data.ptr);
   } else {
