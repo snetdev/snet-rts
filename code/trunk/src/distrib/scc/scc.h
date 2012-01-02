@@ -85,44 +85,32 @@ static inline void cpy_mpb_to_mem(t_vcharp mpb, void *dst, int size)
   }
 
   flush();
-  START(mpb) = start + size;
+  START(mpb) = start;
   FOOL_WRITE_COMBINE;
 }
 
 static inline void cpy_mem_to_mpb(t_vcharp mpb, void *src, int size)
 {
-  int start, end, oldEnd, cpy = 0;
+  int start, end, free;
 
   flush();
   start = START(mpb);
-  oldEnd = end = END(mpb);
+  end = END(mpb);
 
-  while (size > 0) {
-    while (cpy == 0) {
-      if (end >= start) cpy = min(size, B_SIZE - end);
-      else cpy = min(size, (start - 1) - end);
+  free = B_SIZE - (end + B_SIZE - start) % B_SIZE;
+  free = min(free - 1, size);
+  if (free < size) SNetUtilDebugFatal("Message to big!");
 
-      if (cpy) break;
-
-      unlock(node_location);
-      usleep(10);
-      lock(node_location);
-      flush();
-      start = START(mpb);
-
-      if (start == oldEnd) SNetUtilDebugFatal("Message size to big!");
-    }
-
-    flush();
-    memcpy((void*) (mpb + B_START + end), src, cpy);
-    FOOL_WRITE_COMBINE;
-    end = (end + cpy) % B_SIZE;
-    src = ((char*) src) + cpy;
-    size -= cpy;
+  if (end + free > B_SIZE) {
+    size = B_SIZE - end;
+    memcpy((void*) (mpb + B_START + end), src, size);
+    memcpy((void*) (mpb + B_START), (char*) src + size, free - size);
+  } else {
+    memcpy((void*) (mpb + B_START + end), src, free);
   }
 
   flush();
-  END(mpb) = end + size;
+  END(mpb) = (end + free) % B_SIZE;
   FOOL_WRITE_COMBINE;
 }
 #endif
