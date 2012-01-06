@@ -19,8 +19,8 @@ typedef union block {
 } block_t;
 
 typedef struct {
-  unsigned char free : 1;
-  unsigned char size : 7;
+  unsigned char free;
+  unsigned char size;
 } lut_state_t;
 
 void *remote;
@@ -209,9 +209,11 @@ void SCCFreeLut(void *p)
 {
   lut_state_t *lut = lutState + (p - remote) / PAGE_SIZE;
 
-  if (lut[lut->size].free) lut->size += lut[lut->size].size;
+  if (lut + lut->size < lutState + remote_pages && lut[lut->size].free) {
+    lut->size += lut[lut->size].size;
+  }
 
-  if (lut[-1].free) {
+  if (lutState < lut && lut[-1].free) {
     lut -= lut[-1].size;
     lut->size += lut[lut->size].size;
   }
