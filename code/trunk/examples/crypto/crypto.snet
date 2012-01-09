@@ -3,6 +3,12 @@
  *
  */
 
+<metadata>
+  <boxdefault>
+  <interface value="C4SNet" />
+  </boxdefault>
+</metadata>
+
 net crypto ( {dictionary, 
               entries, 
               <dictionary_size>, 
