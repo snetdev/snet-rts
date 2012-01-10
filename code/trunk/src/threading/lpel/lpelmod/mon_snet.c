@@ -19,8 +19,6 @@ static int mon_flags = 0;
 static const char *prefix = "mon_";
 static const char *suffix = ".log";
 static const char end_entry = END_LOG_ENTRY;
-static const char end_stream = END_STREAM_TRACE;
-static const char stream_trace_sep = STREAM_TRACE_SEPARATOR;
 static const char message_trace_sep = MESSAGE_TRACE_SEPARATOR;
 static const char worker_start = WORKER_START_EVENT;
 static const char worker_end = WORKER_END_EVENT;
@@ -168,9 +166,9 @@ static inline void PrintTimingUs( const lpel_timing_t *t, FILE *file)
 static inline void PrintTimingNs( const lpel_timing_t *t, FILE *file)
 {
 	if (t->tv_sec == 0) {
-		(void) fprintf( file, "%lu ", t->tv_nsec);
+		(void) fprintf( file, "%lu", t->tv_nsec);
 	} else {
-		(void) fprintf( file, "%lu%09lu ",
+		(void) fprintf( file, "%lu%09lu",
 				(unsigned long) t->tv_sec, (t->tv_nsec)
 		);
 	}
@@ -201,9 +199,9 @@ static inline void PrintNormTSns( const lpel_timing_t *t, FILE *file)
 	LpelTimingDiff(&norm_ts, &monitoring_begin, t);
 	// to shorten the timestamp
 	if (norm_ts.tv_sec == 0) {
-		(void) fprintf( file, "%lu ", norm_ts.tv_nsec);
+		(void) fprintf( file, "%lu", norm_ts.tv_nsec);
 	} else {
-		(void) fprintf( file, "%lu%09lu ",
+		(void) fprintf( file, "%lu%09lu",
 				(unsigned long) norm_ts.tv_sec, (norm_ts.tv_nsec)
 		);
 	}
@@ -265,11 +263,11 @@ static void PrintDirtyList(mon_task_t *mt)
 		/* now print */
 
 		(void) fprintf( file,
-				"%u,%c,%c,%lu,%c%c%c%c",
+				"%u%c%c%lu%c%c%c",
 				ms->sid, ms->mode, ms->state, ms->counter,
 				( ms->strevt_flags & ST_BLOCKON) ? '?':'-',
 						( ms->strevt_flags & ST_WAKEUP) ? '!':'-',
-								( ms->strevt_flags & ST_MOVED ) ? '*':'-', stream_trace_sep
+								( ms->strevt_flags & ST_MOVED ) ? '*':'-'
 		);
 
 
@@ -316,8 +314,6 @@ static void PrintUsrEvt(mon_task_t *mt)
 
 	FILE *file = mw->outfile;
 
-
-	fprintf( file, "%c", end_stream);
 	for (i=0; i<mw->events.cnt; i++) {
 		mon_usrevt_t *cur = &mw->events.buffer[i];
 		/* print cur */
@@ -497,9 +493,15 @@ static void MonCbWorkerWaitStop(mon_worker_t *mon)
 		}
 
 
-		fprintf(mon->outfile, "%c %lu.%09lu%c", worker_wait,
+		/* waiting time in second
+		 * fprintf(mon->outfile, "%c %lu.%09lu%c", worker_wait,
 				(unsigned long) mon->wait_current.tv_sec, (mon->wait_current.tv_nsec), end_entry
-		);
+		);*/
+
+		/* waiting time in nanosecond */
+		fprintf( mon->outfile, "%c", worker_wait);
+		PrintTiming( &mon->wait_current, mon->outfile);
+		fprintf( mon->outfile, "%c", end_entry);
 	}
 }
 
@@ -585,9 +587,9 @@ static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 	/* print general info: status, id */
 
 	if ( state==TASK_BLOCKED) {
-		fprintf( file, "%c ", mt->blockon);
+		fprintf( file, "%c", mt->blockon);
 	} else {
-		fprintf( file, "%c ", state);
+		fprintf( file, "%c", state);
 	}
 	fprintf( file, "%lu ", mt->tid);
 
@@ -596,9 +598,11 @@ static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 		/* execution time */
 		LpelTimingDiff(&et, &mt->times.start, &mt->times.stop);
 		PrintTiming( &et , file);
-
-		if ( state == TASK_ZOMBIE)	// task finish
+		fprintf( file, " ");
+		if ( state == TASK_ZOMBIE) {	// task finish
 			PrintTiming( &mt->times.creat, file);
+			fprintf(file, " ");
+		}
 	}
 
 	/* print stream info */

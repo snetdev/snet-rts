@@ -175,7 +175,7 @@ void SNetMonInfoPrint( FILE *f, snet_moninfo_t *mon)
 {
 //	snet_record_id_t
 	fprintf(f,
-			"%c ",
+			"%c",
 			names_event[MONINFO_EVENT(mon)]
 			//, names_descr[MONINFO_DESCR(mon)] 	/* do not need print the description, since there is only one type
 	);

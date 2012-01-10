@@ -274,7 +274,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 	if ((mon_flags & SNET_MON_MAP) && mapfile) {
 		int tid = LpelTaskGetID(t);
 		// FIXME: change to binary format
-		(void) fprintf(mapfile, "%d %s %d%c", tid, SNetEntityStr(ent), worker, END_LOG_ENTRY);
+		(void) fprintf(mapfile, "%d%s %d%c", tid, SNetEntityStr(ent), worker, END_LOG_ENTRY);
 	}
 
 

@@ -57,11 +57,10 @@ void SNetThreadingMonEvent(struct mon_task_t *mt,
 #define END_LOG_ENTRY 			'#'			// more efficient for file writing, just send when the buffer is full
 #define END_STREAM_TRACE 		'|'
 #define MESSAGE_TRACE_SEPARATOR ';'			// used to separate message traces
-#define STREAM_TRACE_SEPARATOR  ';'			// used to separate stream traces
 #define WORKER_START_EVENT 		'S'
 #define WORKER_WAIT_EVENT 		'W'
 #define WORKER_END_EVENT 		'E'
 
-#define LOG_FORMAT_VERSION		"Log format version 2.0 (since Dec 2011)"
+#define LOG_FORMAT_VERSION		"Log format version 2.1 (since 10/01/2012)"
 
 #endif /* _MON_SNET_H_ */
