@@ -1,4 +1,4 @@
-#include <algorithm.h>
+#include "algorithm.h"
 #include <stdlib.h>
 #include <bool.h>
 #include <stdio.h>
@@ -6,7 +6,7 @@
 #include <crypt.h>
 #include <string.h>
 #include "memfun.h"
-#include "id.h"
+#include "C4SNet.h"
 
 
 void *algorithm( void *hnd, 

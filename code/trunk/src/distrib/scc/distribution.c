@@ -90,6 +90,7 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
   END(mpbs[node_location]) = 0;
   /* Start with an initial handling run to avoid a cross-core race. */
   HANDLING(mpbs[node_location]) = 1;
+  WRITING(mpbs[node_location]) = false;
 
   SCCInit(num_pages);
 

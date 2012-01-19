@@ -1,0 +1,40 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet" />
+  </boxdefault>
+</metadata>
+
+net parallel {
+  box t_start(() -> (time));
+  box t_end((time) -> ());
+
+  net balancer ({<nodes>, <tasks>, <dataSize>, <sleep>} -> {<tasks>, <task>, data}) {
+    net work {
+      box split((<nodes>, <tasks>, <dataSize>) -> (<tasks>, <task>, data) | (<node>));
+
+      net combiner connect [| {<task>}, {<node>} |]*{<task>, <node>};
+
+      box dummy((<sleep>, data) -> (data));
+
+      net separate
+      connect [ {<node>, <tasks>, <task>, data} -> {<node>}; {<tasks>, <task>, data} ];
+    } connect (split | []) .. combiner .. dummy!@<node> .. separate;
+  } connect work\{<node>};
+
+  net merge {
+    net count_start
+    connect [ {<tasks>, <task>} -> if <task==0> then {<count=tasks-1>} else {} ];
+
+    box rename_field((<count>, data) -> (<count>, DATA));
+
+    net merge_loop ({data} | {<count>, DATA} -> {DATA}) {
+      net combiner
+      connect [| {data},{<count>, DATA} |]*{<count>, DATA, data};
+
+      box merge((data, DATA) -> (DATA));
+
+      net dec
+      connect [ {<count>} -> if <count<=1> then {} else {<count=count-1>} ];
+    } connect (combiner .. merge .. dec)\{<count>};
+  } connect count_start .. (rename_field | []) .. merge_loop;
+} connect t_start .. balancer .. merge .. t_end .. [ {DATA} -> {} ];
