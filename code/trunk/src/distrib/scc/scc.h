@@ -52,7 +52,15 @@ static inline void interrupt(unsigned char core)
 static inline int min(int x, int y) { return x < y ? x : y; }
 
 static inline void start_write_node(unsigned int node)
-{ lock(node); }
+{
+  while (true) {
+    lock(node);
+    flush();
+    if (!WRITING(mpbs[node])) return;
+    unlock(node);
+    usleep(1);
+  }
+}
 
 static inline void stop_write_node(unsigned int node)
 {
@@ -73,7 +81,7 @@ static inline void cpy_mpb_to_mem(t_vcharp mpb, void *dst, int size)
   start = START(mpb);
   end = END(mpb);
 
-  while (size > 0) {
+  while (size) {
     if (end < start) cpy = min(size, B_SIZE - start);
     else cpy = size;
 
@@ -93,24 +101,39 @@ static inline void cpy_mem_to_mpb(t_vcharp mpb, void *src, int size)
 {
   int start, end, free;
 
-  flush();
-  start = START(mpb);
-  end = END(mpb);
-
-  free = B_SIZE - (end + B_SIZE - start) % B_SIZE;
-  free = min(free - 1, size);
-  if (free < size) SNetUtilDebugFatal("Message to big!");
-
-  if (end + free > B_SIZE) {
-    size = B_SIZE - end;
-    memcpy((void*) (mpb + B_START + end), src, size);
-    memcpy((void*) (mpb + B_START), (char*) src + size, free - size);
-  } else {
-    memcpy((void*) (mpb + B_START + end), src, free);
-  }
+  if (size >= B_SIZE) SNetUtilDebugFatal("Message to big!");
 
   flush();
-  END(mpb) = (end + free) % B_SIZE;
+  WRITING(mpb) = true;
   FOOL_WRITE_COMBINE;
+
+  while (size) {
+    flush();
+    start = START(mpb);
+    end = END(mpb);
+
+    if (end < start) free = start - end - 1;
+    else free = B_SIZE - end - (start == 0 ? 1 : 0);
+    free = min(free, size);
+
+    if (!free) {
+      int i;
+      for (i = 0; i < CORES; i++) if (mpbs[i] == mpb) break;
+
+      unlock(i);
+      usleep(1);
+      lock(i);
+      continue;
+    }
+
+    memcpy((void*) (mpb + B_START + end), src, free);
+
+    flush();
+    size -= free;
+    src += free;
+    END(mpb) = (end + free) % B_SIZE;
+    WRITING(mpb) = false;
+    FOOL_WRITE_COMBINE;
+  }
 }
 #endif
