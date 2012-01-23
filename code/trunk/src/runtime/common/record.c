@@ -546,25 +546,28 @@ void SNetRecAddAsParent(snet_record_t *rec, snet_record_t *parent)
 /*****************************************************************************/
 
 
-void SNetRecSerialise( snet_record_t *rec, void (*packInts)(int, int*),
-                       void (*packRefs)(int, snet_ref_t**))
+void SNetRecSerialise(
+        snet_record_t *rec,
+        void *buf,
+        void (*packInts)(void*, int, int*),
+        void (*packRefs)(void*, int, snet_ref_t**))
 {
   snet_ref_t *val;
   int key, enumConversion;
 
   enumConversion = REC_DESCR(rec);
-  packInts(1, &enumConversion);
+  packInts(buf, 1, &enumConversion);
   switch (REC_DESCR(rec)) {
     case REC_data:
-      SNetIntMapSerialise(DATA_REC(rec, btags), packInts, packInts);
-      SNetIntMapSerialise(DATA_REC(rec, tags), packInts, packInts);
-      SNetRefMapSerialise(DATA_REC(rec, fields), packInts, packRefs);
+      SNetIntMapSerialise(DATA_REC(rec, btags), buf, packInts, packInts);
+      SNetIntMapSerialise(DATA_REC(rec, tags), buf, packInts, packInts);
+      SNetRefMapSerialise(DATA_REC(rec, fields), buf, packInts, packRefs);
 
       enumConversion = DATA_REC( rec, mode);
-      packInts(1, &enumConversion);
+      packInts(buf, 1, &enumConversion);
 
       enumConversion = DATA_REC( rec, interface_id);
-      packInts(1, &enumConversion);
+      packInts(buf, 1, &enumConversion);
 
       MAP_DEQUEUE_EACH( DATA_REC( rec, fields), key, val) {
         SNetMemFree(val);
@@ -573,11 +576,11 @@ void SNetRecSerialise( snet_record_t *rec, void (*packInts)(int, int*),
       /* FIXME how to best serialise the id and the parent ids */
       break;
     case REC_sort_end:
-      packInts(1, &SORT_E_REC(rec, level));
-      packInts(1, &SORT_E_REC(rec, num));
+      packInts(buf, 1, &SORT_E_REC(rec, level));
+      packInts(buf, 1, &SORT_E_REC(rec, num));
       break;
     case REC_terminate:
-      packInts(1, &TERM_REC(rec, local));
+      packInts(buf, 1, &TERM_REC(rec, local));
       break;
     case REC_trigger_initialiser:
       break;
@@ -593,36 +596,38 @@ void SNetRecSerialise( snet_record_t *rec, void (*packInts)(int, int*),
   SNetRecDestroy(rec);
 }
 
-snet_record_t *SNetRecDeserialise( void (*unpackInts)(int, int*),
-                                   void (*unpackRefs)(int, snet_ref_t**))
+snet_record_t *SNetRecDeserialise(
+        void *buf,
+        void (*unpackInts)(void*, int, int*),
+        void (*unpackRefs)(void*, int, snet_ref_t**))
 {
   int enumConversion;
   snet_record_t *result = NULL;
 
-  unpackInts(1, &enumConversion);
+  unpackInts(buf, 1, &enumConversion);
   switch (enumConversion) {
     case REC_data:
       result = SNetRecCreate(enumConversion);
-      SNetIntMapDeserialise(DATA_REC(result, btags), unpackInts, unpackInts);
-      SNetIntMapDeserialise(DATA_REC(result, tags), unpackInts, unpackInts);
-      SNetRefMapDeserialise(DATA_REC(result, fields), unpackInts, unpackRefs);
+      SNetIntMapDeserialise(DATA_REC(result, btags), buf, unpackInts, unpackInts);
+      SNetIntMapDeserialise(DATA_REC(result, tags), buf, unpackInts, unpackInts);
+      SNetRefMapDeserialise(DATA_REC(result, fields), buf, unpackInts, unpackRefs);
 
-      unpackInts(1, &enumConversion);
+      unpackInts(buf, 1, &enumConversion);
       DATA_REC( result, mode) = enumConversion;
 
-      unpackInts(1, &enumConversion);
+      unpackInts(buf, 1, &enumConversion);
       DATA_REC( result, mode) = enumConversion;
 
       /* FIXME how to best deserialise the id and the parent ids */
       break;
     case REC_sort_end:
       result = SNetRecCreate(enumConversion, 0, 0);
-      unpackInts(1, &SORT_E_REC(result, level));
-      unpackInts(1, &SORT_E_REC(result, num));
+      unpackInts(buf, 1, &SORT_E_REC(result, level));
+      unpackInts(buf, 1, &SORT_E_REC(result, num));
       break;
     case REC_terminate:
       result = SNetRecCreate(enumConversion);
-      unpackInts(1, &TERM_REC(result, local));
+      unpackInts(buf, 1, &TERM_REC(result, local));
       break;
     case REC_trigger_initialiser:
       result = SNetRecCreate(enumConversion);

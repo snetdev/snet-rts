@@ -10,61 +10,55 @@
 #include "record.h"
 #include "reference.h"
 
-static mpi_buf_t recvBuf = {0, 0, NULL};
-static mpi_buf_t sendBuf = {0, 0, NULL};
+extern int node_location;
 
-static void PackInt(void *buf, int count, int *src)
+inline static void MPISend(void *src, size_t size, int dest, int type)
+{ MPI_Send(src, size, MPI_PACKED, dest, type, MPI_COMM_WORLD); }
+
+inline static void PackInt(void *buf, int count, int *src)
 { MPIPack(buf, src, MPI_INT, count); }
 
-static void UnpackInt(void *buf, int count, int *dst)
+inline static void UnpackInt(void *buf, int count, int *dst)
 { MPIUnpack(buf, dst, MPI_INT, count); }
 
-static void PackByte(void *buf, int count, char *src)
+inline static void PackByte(void *buf, int count, char *src)
 { MPIPack(buf, src, MPI_BYTE, count); }
 
-static void UnpackByte(void *buf, int count, char *dst)
+inline static void UnpackByte(void *buf, int count, char *dst)
 { MPIUnpack(buf, dst, MPI_BYTE, count); }
 
-static void MPIPackInt(int count, int *src)
-{ PackInt(&sendBuf, count, src); }
-
-static void MPIUnpackInt(int count, int *src)
-{ UnpackInt(&recvBuf, count, src); }
-
-static void MPIPackRef(int count, snet_ref_t **src)
+inline static void PackRef(void *buf, int count, snet_ref_t **src)
 {
-  int i;
-  for (i = 0; i < count; i++) {
-    SNetRefSerialise(src[i], (void*) &sendBuf, &PackInt, &PackByte);
+  for (int i = 0; i < count; i++) {
+    SNetRefSerialise(src[i], buf, &PackInt, &PackByte);
     SNetRefOutgoing(src[i]);
   }
 }
 
-static void MPIUnpackRef(int count, snet_ref_t **dst)
+inline static void UnpackRef(void *buf, int count, snet_ref_t **dst)
 {
-  int i;
-  for (i = 0; i < count; i++) {
-    dst[i] = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
+  for (int i = 0; i < count; i++) {
+    dst[i] = SNetRefDeserialise(buf, &UnpackInt, &UnpackByte);
     SNetRefIncoming(dst[i]);
   }
 }
 
-static void MPIPackDest(mpi_buf_t *buf, snet_dest_t *dest)
+inline static void PackDest(void *buf, snet_dest_t *dest)
 {
-  MPIPack(buf, &dest->dest, MPI_INT, 1);
-  MPIPack(buf, &dest->parent, MPI_INT, 1);
-  MPIPack(buf, &dest->dynamicIndex, MPI_INT, 1);
-  MPIPack(buf, &dest->parentNode, MPI_INT, 1);
-  MPIPack(buf, &dest->dynamicLoc, MPI_INT, 1);
+  PackInt(buf, 1, &dest->dest);
+  PackInt(buf, 1, &dest->parent);
+  PackInt(buf, 1, &dest->dynamicIndex);
+  PackInt(buf, 1, &dest->parentNode);
+  PackInt(buf, 1, &dest->dynamicLoc);
 }
 
-static void MPIUnpackDest(mpi_buf_t *buf, snet_dest_t *dest)
+inline static void UnpackDest(void *buf, snet_dest_t *dest)
 {
-  MPIUnpack(buf, &dest->dest, MPI_INT, 1);
-  MPIUnpack(buf, &dest->parent, MPI_INT, 1);
-  MPIUnpack(buf, &dest->dynamicIndex, MPI_INT, 1);
-  MPIUnpack(buf, &dest->parentNode, MPI_INT, 1);
-  MPIUnpack(buf, &dest->dynamicLoc, MPI_INT, 1);
+  UnpackInt(buf, 1, &dest->dest);
+  UnpackInt(buf, 1, &dest->parent);
+  UnpackInt(buf, 1, &dest->dynamicIndex);
+  UnpackInt(buf, 1, &dest->parentNode);
+  UnpackInt(buf, 1, &dest->dynamicLoc);
 }
 
 snet_msg_t SNetDistribRecvMsg(void)
@@ -72,6 +66,7 @@ snet_msg_t SNetDistribRecvMsg(void)
   int count;
   snet_msg_t result;
   MPI_Status status;
+  static mpi_buf_t recvBuf = {0, 0, NULL};
 
   MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
   MPI_Get_count(&status, MPI_PACKED, &count);
@@ -91,23 +86,23 @@ snet_msg_t SNetDistribRecvMsg(void)
 
   switch (result.type) {
     case snet_rec:
-        result.rec = SNetRecDeserialise(&MPIUnpackInt, &MPIUnpackRef);
+        result.rec = SNetRecDeserialise(&recvBuf, &UnpackInt, &UnpackRef);
     case snet_block:
     case snet_unblock:
       result.dest.node = status.MPI_SOURCE;
-      MPIUnpackDest(&recvBuf, &result.dest);
+      UnpackDest(&recvBuf, &result.dest);
       break;
     case snet_ref_set:
-      result.ref = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
+      result.ref = SNetRefDeserialise(&recvBuf, &UnpackInt, &UnpackByte);
       result.data = (uintptr_t) SNetInterfaceGet(SNetRefInterface(result.ref))->unpackfun(&recvBuf);
       break;
     case snet_ref_fetch:
-      result.ref = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
+      result.ref = SNetRefDeserialise(&recvBuf, &UnpackInt, &UnpackByte);
       result.data = status.MPI_SOURCE;
       break;
     case snet_ref_update:
-      result.ref = SNetRefDeserialise((void*) &recvBuf, &UnpackInt, &UnpackByte);
-      MPIUnpackInt(1, &result.val);
+      result.ref = SNetRefDeserialise(&recvBuf, &UnpackInt, &UnpackByte);
+      UnpackInt(&recvBuf, 1, &result.val);
       break;
     default:
       break;
@@ -118,58 +113,58 @@ snet_msg_t SNetDistribRecvMsg(void)
 
 void SNetDistribSendRecord(snet_dest_t dest, snet_record_t *rec)
 {
+  static mpi_buf_t sendBuf = {0, 0, NULL};
+
   sendBuf.offset = 0;
-  SNetRecSerialise(rec, &MPIPackInt, &MPIPackRef);
-  MPIPackDest(&sendBuf, &dest);
-  MPI_Send(sendBuf.data, sendBuf.offset, MPI_PACKED, dest.node, snet_rec,
-           MPI_COMM_WORLD);
+  SNetRecSerialise(rec, &sendBuf, &PackInt, &PackRef);
+  PackDest(&sendBuf, &dest);
+  MPISend(sendBuf.data, sendBuf.offset, dest.node, snet_rec);
 }
 
 void SNetDistribFetchRef(snet_ref_t *ref)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  SNetRefSerialise(ref, (void*) &buf, &PackInt, &PackByte);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, SNetRefNode(ref), snet_ref_fetch, MPI_COMM_WORLD);
+  SNetRefSerialise(ref, &buf, &PackInt, &PackByte);
+  MPISend(buf.data, buf.offset, SNetRefNode(ref), snet_ref_fetch);
   SNetMemFree(buf.data);
 }
 
 void SNetDistribUpdateRef(snet_ref_t *ref, int count)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  SNetRefSerialise(ref, (void*) &buf, &PackInt, &PackByte);
-  MPIPack(&buf, &count, MPI_INT, 1);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, SNetRefNode(ref), snet_ref_update, MPI_COMM_WORLD);
+  SNetRefSerialise(ref, &buf, &PackInt, &PackByte);
+  PackInt(&buf, 1, &count);
+  MPISend(buf.data, buf.offset, SNetRefNode(ref), snet_ref_update);
   SNetMemFree(buf.data);
 }
 
-extern int node_location;
 void SNetDistribUpdateBlocked(void)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, node_location, snet_update, MPI_COMM_WORLD);
+  MPISend(buf.data, buf.offset, node_location, snet_update);
 }
 
 void SNetDistribUnblockDest(snet_dest_t dest)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  MPIPackDest(&buf, &dest);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, dest.node, snet_unblock, MPI_COMM_WORLD);
+  PackDest(&buf, &dest);
+  MPISend(buf.data, buf.offset, dest.node, snet_unblock);
   SNetMemFree(buf.data);
 }
 
 void SNetDistribBlockDest(snet_dest_t dest)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  MPIPackDest(&buf, &dest);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, dest.node, snet_block, MPI_COMM_WORLD);
+  PackDest(&buf, &dest);
+  MPISend(buf.data, buf.offset, dest.node, snet_block);
   SNetMemFree(buf.data);
 }
 
 void SNetDistribSendData(snet_ref_t *ref, void *data, void *dest)
 {
   mpi_buf_t buf = {0, 0, NULL};
-  SNetRefSerialise(ref, (void*) &buf, &PackInt, &PackByte);
+  SNetRefSerialise(ref, &buf, &PackInt, &PackByte);
   SNetInterfaceGet(SNetRefInterface(ref))->packfun(data, &buf);
-  MPI_Send(buf.data, buf.offset, MPI_PACKED, (uintptr_t) dest, snet_ref_set, MPI_COMM_WORLD);
+  MPISend(buf.data, buf.offset, (uintptr_t) dest, snet_ref_set);
   SNetMemFree(buf.data);
 }
