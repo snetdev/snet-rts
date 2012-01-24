@@ -8,7 +8,7 @@
 #include "scc.h"
 #include "sccmalloc.h"
 
-unsigned char node_location;
+int node_location;
 t_vcharp mpbs[CORES];
 t_vcharp locks[CORES];
 volatile int *irq_pins[CORES];
@@ -19,10 +19,10 @@ static int num_nodes = 0;
 
 void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
 {
-  unsigned char num_pages;
-  sigset_t signal_mask;
-  int x, y, z;
   (void) info; /* NOT USED */
+  int x, y, z, address;
+  sigset_t signal_mask;
+  unsigned char num_pages;
 
   for (int i = 0; i < argc; i++) {
     if (strcmp(argv[i], "-np") == 0 && ++i < argc) {
@@ -49,7 +49,6 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
   node_location = PID(x, y, z);
 
   for (unsigned char cpu = 0; cpu < CORES; cpu++) {
-    int address;
     x = X_PID(cpu);
     y = Y_PID(cpu);
     z = Z_PID(cpu);
@@ -86,11 +85,11 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
   }
 
   flush();
-  START(mpbs[node_location]) = 0;
-  END(mpbs[node_location]) = 0;
+  START(node_location) = 0;
+  END(node_location) = 0;
   /* Start with an initial handling run to avoid a cross-core race. */
-  HANDLING(mpbs[node_location]) = 1;
-  WRITING(mpbs[node_location]) = false;
+  HANDLING(node_location) = 1;
+  WRITING(node_location) = false;
 
   SCCInit(num_pages);
 
@@ -104,7 +103,7 @@ void SNetDistribGlobalStop(void)
 
   for (int i = num_nodes - 1; i >= 0; i--) {
     start_write_node(i);
-    cpy_mem_to_mpb(mpbs[i], &exit_status, sizeof(snet_comm_type_t));
+    cpy_mem_to_mpb(i, &exit_status, sizeof(snet_comm_type_t));
     stop_write_node(i);
   }
 }
@@ -141,15 +140,15 @@ void SNetDistribPack(void *src, ...)
   isData = va_arg(args, bool);
   va_end(args);
 
+  flush();
   if (isData) {
     if (remap) {
       node = addr->node;
       *addr = SCCPtr2Addr(src);
-      cpy_mem_to_mpb(mpbs[node], addr, sizeof(lut_addr_t));
-      cpy_mem_to_mpb(mpbs[node], &size, sizeof(size_t));
+      cpy_mem_to_mpb(node, addr, sizeof(lut_addr_t));
+      cpy_mem_to_mpb(node, &size, sizeof(size_t));
     } else {
       while (size > 0) {
-        flush();
         LUT(node_location, REMOTE_LUT) = LUT(addr->node, addr->lut++);
 
         cpySize = min(size, PAGE_SIZE - addr->offset);
@@ -164,7 +163,7 @@ void SNetDistribPack(void *src, ...)
       FOOL_WRITE_COMBINE;
     }
   } else {
-    cpy_mem_to_mpb(mpbs[addr->node], src, size);
+    cpy_mem_to_mpb(addr->node, src, size);
   }
 }
 
@@ -184,8 +183,8 @@ void SNetDistribUnpack(void *dst, ...)
   if (isData) {
     if (remap) {
       unsigned char node, lut, count;
-      cpy_mpb_to_mem(mpbs[node_location], addr, sizeof(lut_addr_t));
-      cpy_mpb_to_mem(mpbs[node_location], &size, sizeof(size_t));
+      cpy_mpb_to_mem(node_location, addr, sizeof(lut_addr_t));
+      cpy_mpb_to_mem(node_location, &size, sizeof(size_t));
 
       node = addr->node;
       count = (size + addr->offset + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -200,6 +199,6 @@ void SNetDistribUnpack(void *dst, ...)
 
     *(void**) dst = SCCAddr2Ptr(*addr);
   } else {
-    cpy_mpb_to_mem(mpbs[node_location], dst, size);
+    cpy_mpb_to_mem(node_location, dst, size);
   }
 }
