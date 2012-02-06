@@ -820,11 +820,11 @@ void SNetThreadingMonEvent(mon_task_t *mt, snet_moninfo_t *moninfo)
 			mon_usrevt_t *newbuf = malloc(
 					(mw->events.size + MON_USREVT_BUFSIZE_DELTA ) * sizeof(mon_usrevt_t)
 			);
-			mw->events.size += MON_USREVT_BUFSIZE_DELTA;
 			if (mw->events.buffer != NULL) {
 				(void) memcpy(newbuf, mw->events.buffer, mw->events.size * sizeof(mon_usrevt_t));
 				free(mw->events.buffer);
 			}
+			mw->events.size += MON_USREVT_BUFSIZE_DELTA;
 			mw->events.buffer = newbuf;
 		}
 		/* get a pointer to a usrevt slot */
