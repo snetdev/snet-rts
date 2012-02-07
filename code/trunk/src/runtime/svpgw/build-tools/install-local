@@ -1,6 +1,0 @@
-#!/bin/sh
-
-cp -r src/include/* /usr/local/include
-cp -r build/bin/*   /usr/local/bin
-cp -r build/lib/*   /usr/local/lib
-
