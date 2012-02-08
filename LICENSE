@@ -1,44 +1,30 @@
+
+The S-Net Runtime System Libraries and Tools
+
+  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012 
+  
+  Clemens Grelck, Frank Penczek, Jukka Julku, Daniel Prokesch, 
+  Merijn Verstraaten, Raimund Kirner, Nguyen Vu Thien Nga
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
 ---------------------------------------------------------------------------
-
-S-NET COPYRIGHT NOTICE, LICENSE, AND DISCLAIMER
-
----------------------------------------------------------------------------
-
-(c) Copyright 2006 - 2009 by
-
-S-Net Research Foundation
 
 http://www.snet-home.org
 email:info@snet-home.org
-
----------------------------------------------------------------------------
-
-The S-Net compiler, the various S-Net runtime libraries, and all
-accompanying software and documentation (in the following named this
-software) is developed by the S-Net Research Foundation (in the following
-named the developer), which reserves all rights on this software.
-
-Permission to use this software is hereby granted free of charge
-for any non-profit purpose in a non-commercial environment, i.e. for
-educational or research purposes in a non-profit institute or for
-personal, non-commercial use. For this kind of use it is allowed to
-copy or redistribute this software under the condition that the
-complete distribution for a certain platform is copied or
-redistributed and this copyright notice, license agreement, and
-warranty disclaimer appears in each copy. ANY use of this software with
-a commercial purpose or in a commercial environment is not granted by
-this license. Please, contact the developer and copyright holder for
-details of a license agreement.
-
-The developer disclaims all warranties with regard to this software,
-including all implied warranties of merchantability and fitness.  In no
-event shall the developer be liable for any special, indirect or
-consequential damages or any damages whatsoever resulting from loss of
-use, data, or profits, whether in an action of contract, negligence, or
-other tortuous action, arising out of or in connection with the use or
-performance of this software. The entire risk as to the quality and
-performance of this software is with you. Should this software prove
-defective, you assume the cost of all servicing, repair, or correction.
 
 ---------------------------------------------------------------------------
 
