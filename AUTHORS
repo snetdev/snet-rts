@@ -1,0 +1,24 @@
+The S-Net Project
+-----------------
+
+Clemens Grelck, Frank Penczek, Raimund Kirner, Raphael 'kena' Poss
+
+* Merijn Verstraaten
+    - Unified distribution interface
+    - SCC S-Net implementation
+
+* Nguyen Vu Thien Nga
+    - Monitoring system implementation
+
+Past Contributors
+-----------------
+
+* Daniel Prokesch
+    - LPEL implementation
+    - Threading interface implementation
+
+* Jukka Julku
+    - Distributed S-Net implementation
+
+Acknowledgements
+----------------
