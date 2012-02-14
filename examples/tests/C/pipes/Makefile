@@ -7,23 +7,19 @@ BOXPATH := ./boxes
 
 .PHONY: clean
 
-all: $(TARGET) 
+all: $(TARGET)
 
 
 $(TARGET): $(TARGET).snet lib$(TARGET)Boxes.a
-	snetc $(INCLUDES) \
-            -L. -L$(BOXPATH) -L$(SNETBASE)/lib \
-            -l$(TARGET)Boxes -lm $(LIBRARIES) \
+	snetc $(INCLUDES) -L$(BOXPATH) -l$(TARGET)Boxes -lm $(LIBRARIES) \
             $(TARGET).snet -o $(TARGET)
 
 
 lib$(TARGET)Boxes.a: $(patsubst %, $(BOXPATH)/%.o, $(BOXES))
-	ar -r lib$(TARGET)Boxes.a $(BOXPATH)/*.o 
+	ar -r lib$(TARGET)Boxes.a $(BOXPATH)/*.o
 
 %.o: %.c %.h
 	gcc -Wall -pedantic $(INCLUDES) -c $< -o $@
-
-
 
 clean:
 	- rm -f $(TARGET).[ch] *.o $(BOXPATH)/*.o lib$(TARGET)Boxes.a

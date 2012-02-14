@@ -1,11 +1,9 @@
-include $(SNETBASE)/src/makefiles/config.mkf
-
 NAME       = C4SNet
 
 CC         = gcc
 CCFLAGS    = -Wall -g -fPIC
 AR         = ar
-INCDIRS    = -I. -I$(SNETBASE)/include
+INCDIRS    = -I. -I$(SNET_INCLUDES)
 COPY       = cp
 
 # = = = = = = = = = = = = = = = = = = = =
@@ -14,10 +12,6 @@ TARGET      = lib$(NAME).so
 WRAPOBJECTS = $(NAME)c.o
 WRAPTARGET  = lib$(NAME)c.so
 # = = = = = = = = = = = = = = = = = = = =
-TARGETLIBDIR   = $(SNETBASE)/lib
-TARGETINCDIR   = $(SNETBASE)/include
-# = = = = = = = = = = = = = = = = = = = =
-
 
 all: default
 
@@ -28,9 +22,9 @@ default:
   -o $(TARGET) $(OBJECTS) 
 	$(CC) $(subst %libname%,$(notdir $(WRAPTARGET)),$(LD_DYNAMIC))\
   -o $(WRAPTARGET) $(WRAPOBJECTS) 
-	$(COPY) $(TARGET) $(WRAPTARGET) $(TARGETLIBDIR)
-	$(COPY) $(NAME).h $(TARGETINCDIR)
+	$(COPY) $(TARGET) $(WRAPTARGET) $(SNET_LIB)
+	$(COPY) $(NAME).h $(SNET_INCLUDES)
 
 clean:
-	rm -f *.o *.a *.so $(TARGETLIBDIR)/$(TARGET)\
-  $(TARGETLIBDIR)/$(WRAPTARGET) $(TARGETINCDIR)/$(NAME).h
+	rm -f *.o *.a *.so $(SNET_LIBS)/$(TARGET)\
+  $(SNET_LIBS)/$(WRAPTARGET) $(SNET_INCLUDES)/$(NAME).h

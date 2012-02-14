@@ -1,22 +1,10 @@
-
-INCDIRS   = -I. -I$(SNET_INCLUDES) -I./include \
-            -I$(SNETBASE)/src/interfaces/sac4snet
-
-LIBDIRS   = -L. -L$(SNET_LIBS)     -L./lib \
-            -L$(SNETBASE)/src/interfaces/sac4snet
-
-#THREADING = pthread
-THREADING      = lpel
-DISTRIBUTION   = nodist
-LIBS_LA        = libsnetutil.la libtb$(THREADING).la libdistribnodist.la libruntimestream.la
-LIBSAC4SNET_LA = $(SNETBASE)/src/interfaces/sac4snet/libSAC4SNet.la
+INCDIRS   = -I. -I$(SNET_INCLUDES) -I./include
+LIBDIRS   = -L. -L$(SNET_LIBS) -L./lib
 
 SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__mini=main
 
 SNETC      = snetc
-SNETCFLAGS = -b7 -threading $(THREADING) -distrib $(DISTRIBUTION)
-
-#export SNET_EXTRA_LDFLAGS += -L$(SNETBASE)/src/interfaces/sac4snet
+SNETCFLAGS = -b7 -threading lpel -distrib nodist
 
 # - - - - - - - - - - - - - - - - - - - -
 SACTARGET = mini
@@ -30,7 +18,6 @@ S4CFLAGS  = -v3 -incdir include -libdir lib -g $(LIBDIRS)
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)`
 
-
 LT = $(SNET_LIBS)/libtool
 
 # = = = = = = = = = = = = = = = = = = = =
@@ -42,7 +29,7 @@ all: $(TARGET)
 
 $(TARGET): lib$(SACTARGET)Mod.so $(TARGET).c
 	$(LT) --mode=compile $(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c *.c
-	$(LT) --mode=link    $(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(S4CLIBS) $(LIBSAC4SNET_LA) $(LIBS_LA:%=$(SNETBASE)/%)
+	$(LT) --mode=link    $(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(S4CLIBS)
 
 lib$(SACTARGET)Mod.so: $(SACTARGET).sac
 	mkdir -p lib include
@@ -50,8 +37,7 @@ lib$(SACTARGET)Mod.so: $(SACTARGET).sac
 	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $(SACTARGET)
 
 $(TARGET).c: $(TARGET).snet
-	LD_LIBRARY_PATH=$(SNETBASE)/src/interfaces/sac4snet:$(LD_LIBRARY_PATH) && \
-          $(SNETC) $(SNETCFLAGS) $(TARGET).snet
+	$(SNETC) $(SNETCFLAGS) $(TARGET).snet
 
 clean:
 	$(LT) --mode=clean rm -f $(TARGET) $(TARGET).lo

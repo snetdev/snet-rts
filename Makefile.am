@@ -3,7 +3,9 @@ SUBDIRS = . src/interfaces/sac4snet
 
 # stuff that gets installed
 pkglib_DATA = \
-	compile_cmd link_cmd \
+	compile_cmd link_cmd
+
+pkglib_SCRIPTS = \
 	libtool
 
 pkglib_LTLIBRARIES = \
@@ -221,13 +223,13 @@ INCLUDES = -I$(top_srcdir)/include
 
 compile_cmd: Makefile
 	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
-	     $(CC) $(DEFS) $(AM_CPPFLAGS) -I'$${SNET_INCLUDES:-$$SNETBASE/include}' $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c >$@
+	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
+	     $(CC) $(DEFS) $(AM_CPPFLAGS) -I'$${SNET_INCLUDES}' $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c >$@
 
 link_cmd: Makefile
 	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS:-$$SNETBASE/lib}'/libtool --preserve-dup-deps --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
-	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS:-$$SNETBASE/lib}' >$@
+	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
+	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS}' >$@
 
 
 CLEANFILES = \
