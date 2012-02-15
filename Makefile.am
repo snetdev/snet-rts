@@ -5,6 +5,9 @@ SUBDIRS = . src/interfaces/sac4snet
 pkglib_DATA = \
 	compile_cmd link_cmd
 
+pkgdata_DATA =\
+	src/snet.mkf
+
 pkglib_SCRIPTS = \
 	libtool
 
