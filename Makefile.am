@@ -46,6 +46,7 @@ pkginclude_HEADERS = \
 	include/metadata.h \
 	include/moninfo.h \
 	include/networkinterface.h \
+	include/observers.h \
 	include/out.h \
 	include/record.h \
 	include/snetentities.h \
