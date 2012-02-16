@@ -1,45 +1,20 @@
-INCDIRS   = -I. -I$(SNET_INCLUDES) -I./include
-LIBDIRS   = -L. -L$(SNET_LIBS) -L./lib
+LIBDIRS   = -Llib -L$(SNET_LIBS)
 
-SACNAMES  = -DSACTYPE_SNet_SNet=20 -DSNetMain__mini=main
-
-SNETC      = snetc
-SNETCFLAGS = -b7 -threading lpel -distrib nodist
-
-# - - - - - - - - - - - - - - - - - - - -
-SACTARGET = mini
-# - - - - - - - - - - - - - - - - - - - -
-
-CC        = gcc
 SAC2C     = sac2c
-S2CFLAGS  = -v1 -g
+S2CFLAGS  = -v1 -g -nophm
 SAC4C     = sac4c
 S4CFLAGS  = -v3 -incdir include -libdir lib -g $(LIBDIRS)
-S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags $(SACTARGET)`
-S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags $(SACTARGET)`
+S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags mini | sed 's/-pthread//'`
+S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags mini | sed 's/-pthread//'`
 
-LT = $(SNET_LIBS)/libtool
-
-# = = = = = = = = = = = = = = = = = = = =
-TARGET    = mini
-# = = = = = = = = = = = = = = = = = = = =
+TARGETS     = mini
+SNETCFLAGS  = -DSACTYPE_SNet_SNet=21 $(S4CINCS) $(S4CLIBS)
+DEPS        = lib/libminiMod.so
 
 
-all: $(TARGET)
+include $(SNET_MISC)/snet.mkf
 
-$(TARGET): lib$(SACTARGET)Mod.so $(TARGET).c
-	$(LT) --mode=compile $(CC) $(CCFLAGS) $(INCDIRS) $(S4CINCS) $(SACNAMES) -c *.c
-	$(LT) --mode=link    $(CC) $(LIBDIRS) $(RPATH) -o $(TARGET) *.o $(S4CLIBS)
-
-lib$(SACTARGET)Mod.so: $(SACTARGET).sac
+lib/lib%Mod.so: %.sac
 	mkdir -p lib include
-	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $(SACTARGET).sac
-	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $(SACTARGET)
-
-$(TARGET).c: $(TARGET).snet
-	$(SNETC) $(SNETCFLAGS) $(TARGET).snet
-
-clean:
-	$(LT) --mode=clean rm -f $(TARGET) $(TARGET).lo
-	rm -f *.o *.so *.a cwrapper.sac2c $(TARGET).?
-	rm -fr lib include
+	$(SAC2C) $(S2CFLAGS) $(LIBDIRS) $*.sac -o lib
+	$(SAC4C) $(S4CFLAGS) $(LIBDIRS) $*
