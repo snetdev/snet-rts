@@ -1,8 +1,8 @@
-#include <init.h>
 #include <stdlib.h>
 #include <bool.h>
 #include <stdio.h>
 
+#include "init.h"
 
 #define X 6
 #define Y 7

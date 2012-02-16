@@ -3,7 +3,7 @@ TARGETS    = crypto
 DEPS       = libcrypto.a
 SNETCFLAGS = -g -lcrypto -lcrypt -static
 
-include ../makefiles/snet.mkf
+include $(SNET_MISC)/snet.mkf
 
 libcrypto.a: algorithm.o split.o
 	ar rc $@ $+

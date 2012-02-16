@@ -1,7 +1,8 @@
-#include <dec.h>
 #include <stdlib.h>
 #include <bool.h>
 #include <stdio.h>
+
+#include "dec.h"
 
 void *dec( void *hnd, c4snet_data_t *x)
 {

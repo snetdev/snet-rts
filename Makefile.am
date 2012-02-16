@@ -5,6 +5,9 @@ SUBDIRS = . src/interfaces/sac4snet
 pkglib_DATA = \
 	compile_cmd link_cmd
 
+pkgdata_DATA =\
+	src/snet.mkf
+
 pkglib_SCRIPTS = \
 	libtool
 
@@ -43,6 +46,7 @@ pkginclude_HEADERS = \
 	include/metadata.h \
 	include/moninfo.h \
 	include/networkinterface.h \
+	include/observers.h \
 	include/out.h \
 	include/record.h \
 	include/snetentities.h \

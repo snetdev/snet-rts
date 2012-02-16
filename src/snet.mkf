@@ -36,21 +36,21 @@ $(filter-out $(firstword $(MAKECMDGOALS)), $(MAKECMDGOALS)):
 else
 
 %-pthread.make:
-	$(MAKE) $*.make DEPS="$(PTHREADDEPS) $(DEPS)" NAME="-pthread$(NAME)" \
-	    SNETCFLAGS="$(SNETCFLAGS) -threading pthread $(PTHREADFLAGS)"
+	+$(MAKE) $*.make DEPS="$(PTHREADDEPS) $(DEPS)" NAME="-pthread$(NAME)" \
+	    SNETCFLAGS='$(SNETCFLAGS) -threading pthread $(PTHREADFLAGS)'
 %-lpel.make:
 	$(MAKE) $*.make DEPS="$(LPELDEPS) $(DEPS)" NAME="-lpel$(NAME)" \
-	    SNETCFLAGS="$(SNETCFLAGS) -threading lpel $(LPELFLAGS)"
+	    SNETCFLAGS='$(SNETCFLAGS) -threading lpel $(LPELFLAGS)'
 
 %-nodist.make:
 	$(MAKE) $*.make DEPS="$(NODISTDEPS) $(DEPS)" NAME="-nodist$(NAME)" \
-	    SNETCFLAGS="$(SNETCFLAGS) -distrib nodist $(NODISTFLAGS)"
+	    SNETCFLAGS='$(SNETCFLAGS) -distrib nodist $(NODISTFLAGS)'
 %-mpi.make:
 	$(MAKE) $*.make DEPS="$(MPIDEPS) $(DEPS)" NAME="-mpi$(NAME)" \
-	    SNETCFLAGS="$(SNETCFLAGS) -distrib mpi $(MPIFLAGS)"
+	    SNETCFLAGS='$(SNETCFLAGS) -distrib mpi $(MPIFLAGS)'
 %-scc.make:
 	$(MAKE) $*.make DEPS="$(SCCDEPS) $(DEPS)" NAME="-scc$(NAME)" \
-	    SNETCFLAGS="$(SNETCFLAGS) -distrib scc $(SCCFLAGS)"
+	    SNETCFLAGS='$(SNETCFLAGS) -distrib scc $(SCCFLAGS)'
 
 %.make: %.snet $(DEPS)
 	rm -f *.o *.lo .libs/*.o

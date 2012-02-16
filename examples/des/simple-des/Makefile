@@ -12,7 +12,7 @@ SNETCFLAGS  = -DSACTYPE_SNet_SNet=21 $(S4CINCS) $(S4CLIBS)
 DEPS        = libsimpleDesMod.so
 
 
-include ../../makefiles/snet.mkf
+include $(SNET_MISC)/snet.mkf
 
 lib%Mod.so: %.sac
 	mkdir -p lib include
