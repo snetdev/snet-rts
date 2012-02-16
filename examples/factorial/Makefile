@@ -2,7 +2,7 @@ TARGETS    = factorial
 DEPS       = boxes/libboxes.a
 SNETCFLAGS = -g -Lboxes -lboxes
 
-include ../makefiles/snet.mkf
+include $(SNET_MISC)/snet.mkf
 
 $(DEPS):
 	make -C boxes/

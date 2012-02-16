@@ -1,5 +1,10 @@
 /* Multiply matrices A and B. There are <nodes> nodes in the system.*/
 
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet" />
+  </boxdefault>
+</metadata>
 
 net matrix({A, B, <A_width>, <A_height>, <B_width>, <B_height>, <nodes>}
             -> {C, <C_width>, <C_height>})

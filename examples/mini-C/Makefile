@@ -1,14 +1,8 @@
-include $(SNETBASE)/src/makefiles/config.mkf
+TARGETS    = minic
+DEPS       = boxes/libboxes.a
+SNETCFLAGS = -g -Lboxes -lboxes
 
-TARGET	=	minic
+include $(SNET_MISC)/snet.mkf
 
-.PHONY: clean
-
-all:
-			gcc -I. -I$(SNETBASE)/include -c dec.c
-			gcc -I. -I$(SNETBASE)/include -c init.c
-			snetc -I. -I$(SNETBASE)/include -L. -L$(SNETBASE)/lib $(SOCKETLIBS) minic.snet -o minic # -threading lpel
-
-
-clean:
-			- rm -f $(TARGET) *.o
+$(DEPS):
+	make -C boxes/

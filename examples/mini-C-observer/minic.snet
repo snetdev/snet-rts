@@ -1,4 +1,4 @@
-net minic 
+net minic
 {
   <metadata>
     <boxdefault>
@@ -10,7 +10,7 @@ net minic
     <observer_port value="6555" />
     </box>
   </metadata>
- 
+
   box init(-> (A));
   box dec( (A) -> (A));
 } connect (init|[]) .. dec;

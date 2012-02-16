@@ -3,7 +3,7 @@ TARGETS    = parallel
 DEPS       = libboxes.a
 SNETCFLAGS = -O0 -g -lboxes -static
 
-include ../makefiles/snet.mkf
+include $(SNET_MISC)/snet.mkf
 
 libboxes.a: boxes.o
 	ar rc $@ $+
