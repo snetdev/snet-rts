@@ -1,6 +1,6 @@
 TARGET  = libboxes.a
 
-BOXOBJS = condif.o leq1.o mult.o sub.o
+BOXOBJS = init.o merger.o multiply.o split.o
 
 .PHONY: clean
 
