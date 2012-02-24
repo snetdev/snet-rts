@@ -51,7 +51,6 @@ typedef struct container c4snet_container_t;
  *****************************************************************************/
 
 typedef enum{
-    VTYPE_unknown, /*!< unkown data type. Not a valid type! */
     VTYPE_simple,  /*!< simple type */
     VTYPE_array    /*!< array  type */
 }c4snet_vtype_t;
@@ -65,7 +64,6 @@ typedef enum{
  *****************************************************************************/
 
 typedef enum{
-    CTYPE_unknown, /*!< unkown data type. Not a valid type! */
     CTYPE_uchar,   /*!< unsigned char */
     CTYPE_char,    /*!< signed char */
     CTYPE_ushort,  /*!< unsigned short int */
@@ -363,6 +361,6 @@ void C4SNetContainerOut( c4snet_container_t *c);
 
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
 #endif /* _C4SNET_H_ */
