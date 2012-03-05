@@ -12,7 +12,7 @@ void *inc( void *hnd, c4snet_data_t *x)
   int_x= *(int *)C4SNetDataGetData( x);
   int_x += 1;
 
-  result = C4SNetDataCreate( CTYPE_int, &int_x);
+  result = C4SNetDataCreate(CTYPE_int, 1, &int_x);
 
   C4SNetDataFree(x);
 

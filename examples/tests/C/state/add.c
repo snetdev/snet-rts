@@ -22,12 +22,12 @@ void *add( void *hnd, c4snet_data_t *state, c4snet_data_t *inval)
   int_newstate = int_state + int_inval;
 
   if (int_newstate < MAXVAL) {
-    data_newstate = C4SNetDataCreate( CTYPE_int, &int_newstate);
+    data_newstate = C4SNetDataCreate(CTYPE_int, 1, &int_newstate);
     C4SNetOut( hnd, 1, data_newstate);
   }
 
   /* emit old state as output */
-  data_output = C4SNetDataCreate( CTYPE_int, &int_state);
+  data_output = C4SNetDataCreate(CTYPE_int, 1, &int_state);
   C4SNetOut( hnd, 2, data_output);
 
 

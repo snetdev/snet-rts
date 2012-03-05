@@ -14,7 +14,7 @@ void *delay( void *hnd, c4snet_data_t *x, int T)
   /* delay */
   usleep(int_x);
 
-  result = C4SNetDataCreate( CTYPE_int, &int_x);
+  result = C4SNetDataCreate(CTYPE_int, 1, &int_x);
 
   C4SNetDataFree(x);
 

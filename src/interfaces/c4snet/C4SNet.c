@@ -1,13 +1,3 @@
-/** <!--********************************************************************-->
- *
- * $Id$
- *
- * file C4SNet.c
- *
- * C4SNet is a simple C language interface for S-Net.
- *
- *****************************************************************************/
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -23,41 +13,17 @@
 #include "out.h"
 #include "base64.h"
 
-#ifdef ENABLE_DIST_MPI
-#include <mpi.h>
-#include "pack.h"
-
-static void C4SNetMPIPackFun(void *cdata, void *buf);
-static void *C4SNetMPIUnpackFun(void *buf);
-#endif
-
-#ifdef ENABLE_DIST_SCC
-#include "scc.h"
-#include "sccmalloc.h"
-
-static void *C4SNetSCCMalloc(size_t, void (**)(void*));
-static void C4SNetSCCPackFun(void *cdata, void *dest);
-static void *C4SNetSCCUnpackFun(void *localBuf);
-#endif
-
+#define COUNTS      3
 #define F_COUNT( c) c->counter[0]
 #define T_COUNT( c) c->counter[1]
 #define B_COUNT( c) c->counter[2]
-
-#define BUF_SIZE 32
-
-static void *C4SNetAllocFun(size_t, void (**)(void*));
-
-/* ID of the language interface. */
-static int interface_id;
-static void *(*allocfun)(size_t, void (**)(void*)) = &C4SNetAllocFun;
 
 /* Container for returning the result. */
 struct container {
   struct handle *hnd;
   snet_variant_t *variant;
 
-  int *counter;
+  int counter[3];
   void **fields;
   int *tags;
   int *btags;
@@ -93,10 +59,16 @@ struct cdata {
 /* Interface functions that are needed by the runtime environment,
  * but are not given to the box programmer.
  */
-static int C4SNetDataSerialize( FILE *file, void *ptr);
-static void *C4SNetDataDeserialize(FILE *file);
-static int C4SNetDataEncode( FILE *file, void *ptr);
-static void *C4SNetDataDecode(FILE *file);
+static void *C4SNetAllocFun(size_t, void (**)(void*));
+static void C4SNetDataSerialise(FILE *file, c4snet_data_t *ptr);
+static c4snet_data_t *C4SNetDataDeserialise(FILE *file);
+static void C4SNetDataEncode(FILE *file, c4snet_data_t *ptr);
+static c4snet_data_t *C4SNetDataDecode(FILE *file);
+
+/* ID of the language interface. */
+static int interface_id;
+static void *(*allocfun)(size_t, void (**)(void*)) = &C4SNetAllocFun;
+
 
 /***************************** Auxiliary functions ****************************/
 
@@ -126,13 +98,8 @@ static int sizeOfType(c4snet_type_t type)
 int C4SNetSizeof(c4snet_data_t *data)
 { return sizeOfType(data->type); }
 
-size_t C4SNetAllocSize(void *cdata)
-{
-  c4snet_data_t *data = cdata;
-  if (data->vtype == VTYPE_simple) return 0;
-
-  return data->size * C4SNetSizeof(data);
-}
+size_t C4SNetAllocSize(c4snet_data_t *data)
+{ return data->size * C4SNetSizeof(data); }
 
 void *C4SNetAllocFun(size_t s, void (**free)(void*))
 {
@@ -141,6 +108,23 @@ void *C4SNetAllocFun(size_t s, void (**free)(void*))
 }
 
 /***************************** Common functions ****************************/
+#ifdef ENABLE_DIST_MPI
+#include <mpi.h>
+#include "pack.h"
+
+static void C4SNetMPIPackFun(c4snet_data_t *data, void *buf);
+static c4snet_data_t *C4SNetMPIUnpackFun(void *buf);
+#endif
+
+#ifdef ENABLE_DIST_SCC
+#include "scc.h"
+#include "sccmalloc.h"
+
+static void *C4SNetSCCMalloc(size_t, void (**)(void*));
+static void C4SNetSCCPackFun(void *cdata, void *dest);
+static void *C4SNetSCCUnpackFun(void *localBuf);
+#endif
+
 
 /* Language interface initialization function. */
 void C4SNetInit( int id, snet_distrib_t distImpl)
@@ -154,8 +138,8 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
       break;
     case mpi:
       #ifdef ENABLE_DIST_MPI
-        packfun = &C4SNetMPIPackFun;
-        unpackfun = &C4SNetMPIUnpackFun;
+        packfun = (void (*)(void*, void*)) &C4SNetMPIPackFun;
+        unpackfun = (void *(*)(void*)) &C4SNetMPIUnpackFun;
       #else
         SNetUtilDebugFatal("C4SNet supports MPI, but is not configured to use "
                            "it.\n");
@@ -178,13 +162,13 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
   }
 
   SNetInterfaceRegister( id,
-                         &C4SNetDataFree,
-                         &C4SNetDataShallowCopy,
-                         &C4SNetAllocSize,
-                         &C4SNetDataSerialize,
-                         &C4SNetDataDeserialize,
-                         &C4SNetDataEncode,
-                         &C4SNetDataDecode,
+                         (void (*)(void*)) &C4SNetDataFree,
+                         (void *(*)(void*)) &C4SNetDataShallowCopy,
+                         (size_t (*)(void*)) &C4SNetAllocSize,
+                         (void (*)(FILE*, void*)) &C4SNetDataSerialise,
+                         (void *(*)(FILE*)) &C4SNetDataDeserialise,
+                         (void (*)(FILE*, void*)) &C4SNetDataEncode,
+                         (void *(*)(FILE*)) &C4SNetDataDecode,
                          packfun,
                          unpackfun);
 }
@@ -201,160 +185,124 @@ void C4SNetOut( void *hnd, int variant, ...)
 /****************************** Data functions *****************************/
 
 /* Creates a new c4snet_data_t struct. */
-c4snet_data_t *C4SNetDataCreate( c4snet_type_t type, const void *data)
+c4snet_data_t *C4SNetDataCreate(c4snet_type_t type, size_t size, const void *data)
 {
   c4snet_data_t *c = SNetMemAlloc(sizeof(c4snet_data_t));
 
-  c->vtype = VTYPE_simple;
-  c->size = -1;
   c->type = type;
   c->ref_count = 1;
-  c->freeFun = &SNetMemFree;
 
-  if (type == CTYPE_string) {
-    c->data.str = strdup((char*) data);
+  if (size == 1) {
+    c->vtype = VTYPE_simple;
+    c->size = 0;
+    memcpy(&c->data, data, C4SNetSizeof(c));
   } else {
-    memcpy((void*) &c->data, data, C4SNetSizeof(c));
+    c->vtype = VTYPE_array;
+    c->size = size;
+    c->data.ptr = allocfun(C4SNetAllocSize(c), &c->freeFun);
+    memcpy(c->data.ptr, data, C4SNetAllocSize(c));
   }
 
   return c;
 }
 
-c4snet_data_t *C4SNetDataCreateArray( c4snet_type_t type, int size, void *data)
+c4snet_data_t *C4SNetDataAlloc(c4snet_type_t type, int size, void **data)
 {
   c4snet_data_t *c = SNetMemAlloc(sizeof(c4snet_data_t));
 
-  c->vtype = VTYPE_array;
-  c->size = size;
   c->type = type;
   c->ref_count = 1;
-  c->freeFun = &SNetMemFree;
-  c->data.ptr = data;
+
+  if (size == 1) {
+    c->vtype = VTYPE_simple;
+    c->size = 0;
+    *data = &c->data;
+  } else {
+    c->vtype = VTYPE_array;
+    c->size = size;
+    c->data.ptr = allocfun(C4SNetAllocSize(c), &c->freeFun);
+    *data = c->data.ptr;
+  }
 
   return c;
 }
 
-c4snet_data_t *C4SNetDataAllocCreateArray( c4snet_type_t type, int size, void **data)
-{
-  c4snet_data_t *c = SNetMemAlloc(sizeof(c4snet_data_t));
-
-  c->vtype = VTYPE_array;
-  c->size = size;
-  c->type = type;
-  c->ref_count = 1;
-  c->data.ptr = *data = allocfun(size * sizeOfType(type), &c->freeFun);
-
-  return c;
-}
 
 /* Increments c4snet_data_t struct's reference count by one.
  * This copy function should be used inside S-Net runtime
  * to avoid needles copying.
  */
-void *C4SNetDataShallowCopy(void *ptr)
+c4snet_data_t *C4SNetDataShallowCopy(c4snet_data_t *data)
 {
-  c4snet_data_t *temp = (c4snet_data_t*) ptr;
-  temp->ref_count++;
-  return ptr;
+  data->ref_count++;
+  return data;
 }
 
 /* Copies c4snet_data_t struct.
  * This copy function is available for box code writers.
  *
  */
-void *C4SNetDataCopy( void *ptr)
+c4snet_data_t *C4SNetDataCopy(c4snet_data_t *data)
 {
-  c4snet_data_t *temp = (c4snet_data_t *)ptr;
-  c4snet_data_t *c = SNetMemAlloc(sizeof(c4snet_data_t));
-
-  c->vtype = temp->vtype;
-  c->size = temp->size;
-  c->type = temp->type;
-  c->freeFun = &SNetMemFree;
-  c->ref_count = 1;
-
-  if (c->vtype == VTYPE_array) {
-    int size = C4SNetAllocSize(c);
-    c->data.ptr = SNetMemAlloc(size);
-    memcpy(c->data.ptr, temp->data.ptr, size);
-  } else if (c->type == CTYPE_string) {
-    c->data.str = strdup(temp->data.str);
-  } else {
-    memcpy(&c->data, &temp->data, C4SNetSizeof(c));
+  if (data->vtype == VTYPE_array) {
+    return C4SNetDataCreate(data->type, data->size, data->data.ptr);
   }
 
-  return c;
+  return C4SNetDataCreate(data->type, data->size, &data->data);
 }
 
 /* Frees the memory allocated for c4snet_data_t struct. */
-void C4SNetDataFree( void *ptr)
+void C4SNetDataFree(c4snet_data_t *data)
 {
-  c4snet_data_t *data = ptr;
+  if (--data->ref_count == 0) {
+    if (data->vtype == VTYPE_array) data->freeFun(data->data.ptr);
 
-  data->ref_count--;
-
-  if (data->ref_count == 0) {
-    if (data->vtype == VTYPE_array) {
-      if (data->freeFun) data->freeFun(data->data.ptr);
-      else SNetMemFree(data->data.ptr);
-    }
-
-    SNetMemFree(ptr);
+    SNetMemFree(data);
   }
 }
 
 /* Returns the actual data. */
-void *C4SNetDataGetData( c4snet_data_t *ptr)
+void *C4SNetDataGetData(c4snet_data_t *data)
 {
-  if(ptr->type == CTYPE_string) return ptr->data.str;
-  if(ptr->vtype == VTYPE_array) return ptr->data.ptr;
-  return &ptr->data;
+  if (data->vtype == VTYPE_array) return data->data.ptr;
+  return &data->data;
 }
 
-int C4SNetDataGetArraySize( c4snet_data_t *ptr)
-{
-  if (ptr->vtype == VTYPE_array) return ptr->size;
-  return -1;
-}
+int C4SNetDataGetArraySize(c4snet_data_t *data)
+{ return data->size; }
 
-static int C4SNetDataSerializeDataPart( FILE *file, c4snet_type_t type, void *data)
+static void C4SNetDataSerializeDataPart( FILE *file, c4snet_type_t type, void *data)
 {
-  char c;
   switch (type) {
     case CTYPE_uchar:
     case CTYPE_char:
-      c = *(char*)data;
-      /* '&' and '<' must be encoded to '&amp;' and 'lt';
-       * as they are not legal characters in  XML character data!
-       */
-      if (c == '<') return fprintf(file, "&lt;");
-      else if (c == '&') return fprintf(file, "&amp;");
-      else return fprintf(file, "%c", c);
+      {
+        char c = *(char*) data;
+        /* '&' and '<' must be encoded to '&amp;' and 'lt';
+        * as they are not legal characters in  XML character data!
+        */
+        if (c == '<') fprintf(file, "&lt;");
+        else if (c == '&') fprintf(file, "&amp;");
+        else fprintf(file, "%c", c);
+      }
+      break;
 
-    case CTYPE_string:
-      return fprintf(file, "\"%s\"", ((c4snet_primary_type_t*) data)->str);
-
-    case CTYPE_ushort: return fprintf(file, "%hu", *(unsigned short *)data);
-    case CTYPE_short: return fprintf(file, "%hd", *(short *)data);
-    case CTYPE_uint: return fprintf(file, "%u", *(unsigned int *)data);
-    case CTYPE_int: return fprintf(file, "%d", *(int *)data);
-    case CTYPE_ulong: return fprintf(file, "%lu", *(unsigned long *)data);
-    case CTYPE_long: return fprintf(file, "%ld", *(long *)data);
-    case CTYPE_float: return fprintf(file, "%.32f", *(float *)data);
-    case CTYPE_double: return fprintf(file, "%.32le", *(double *)data);
-    case CTYPE_ldouble: return fprintf(file, "%.32le", *(double *)data);
+    case CTYPE_ushort: fprintf(file, "%hu", *(unsigned short *) data); break;
+    case CTYPE_short: fprintf(file, "%hd", *(short *) data); break;
+    case CTYPE_uint: fprintf(file, "%u", *(unsigned int *) data); break;
+    case CTYPE_int: fprintf(file, "%d", *(int *) data); break;
+    case CTYPE_ulong: fprintf(file, "%lu", *(unsigned long *) data); break;
+    case CTYPE_long: fprintf(file, "%ld", *(long *) data); break;
+    case CTYPE_float: fprintf(file, "%.32f", *(float *) data); break;
+    case CTYPE_double: fprintf(file, "%.32le", *(double *) data); break;
+    case CTYPE_ldouble: fprintf(file, "%.32le", *(long double *) data); break;
     default: SNetUtilDebugFatal("Unknown type in C4SNet.");
   }
-
-  return 0;
 }
 
 /* Serializes data to a file using textual representation. */
-static int C4SNetDataSerialize( FILE *file, void *ptr)
+static void C4SNetDataSerialise( FILE *file, c4snet_data_t *data)
 {
-  int ret = 0;
-  c4snet_data_t *data = (c4snet_data_t*) ptr;
-
   char *type = NULL;
   switch (data->type) {
     case CTYPE_uchar: type = "unsigned char"; break;
@@ -372,26 +320,19 @@ static int C4SNetDataSerialize( FILE *file, void *ptr)
     default: SNetUtilDebugFatal("Unknown type in C4SNet.");
   }
 
-  ret += fprintf(file, "(%s", type);
+  fprintf(file, "(%s", type);
+  if (data->vtype == VTYPE_array) fprintf(file, "[%d]", data->size);
+  fprintf(file, ")");
 
-  if (data->vtype == VTYPE_array) ret += fprintf(file, "[%d]", data->size);
-
-  ret += fprintf(file, ")");
   if (data->vtype == VTYPE_array) {
-    int size = C4SNetSizeof(data);
+    for (int i = 0, size = C4SNetSizeof(data); i < data->size; i++) {
+      C4SNetDataSerializeDataPart(file, data->type, (char*) data->data.ptr + i * size);
 
-    for (int i = 0; i < data->size; i++) {
-      // TODO This conversion `(c4snet_primary_type_t *)((size_t)data->data.ptr + i * size)' 
-      // should be chekced properly, this is done for compiling this file with g++
-      ret += C4SNetDataSerializeDataPart(file, data->type, (char*) data->data.ptr + i * size);
-
-      if (i < data->size - 1) ret += fprintf(file, ",");
+      if (i < data->size - 1) fprintf(file, ",");
     }
   } else {
-    ret += C4SNetDataSerializeDataPart(file, data->type, &data->data);
+    C4SNetDataSerializeDataPart(file, data->type, &data->data);
   }
-
-  return ret;
 }
 
 static int C4SNetDataDeserializeTypePart(const char *buf, int size, c4snet_vtype_t *vtype, c4snet_type_t *type)
@@ -401,7 +342,7 @@ static int C4SNetDataDeserializeTypePart(const char *buf, int size, c4snet_vtype
 
   c = strchr(buf, '[');
   if (c == NULL) {
-    count = -1;
+    count = 0;
     *vtype = VTYPE_simple;
   } else {
     count = strtol(c + 1, NULL, 0);
@@ -410,7 +351,7 @@ static int C4SNetDataDeserializeTypePart(const char *buf, int size, c4snet_vtype
   }
 
 
-  if (strncmp(buf, "unsigned char", size) == 0)        *type = CTYPE_uchar;
+  if (strncmp(buf, "unsigned char", size) == 0)       *type = CTYPE_uchar;
   else if(strncmp(buf, "char", size) == 0)            *type = CTYPE_char;
   else if(strncmp(buf, "unsigned short", size) == 0)  *type = CTYPE_ushort;
   else if(strncmp(buf, "short", size) == 0)           *type = CTYPE_short;
@@ -427,75 +368,27 @@ static int C4SNetDataDeserializeTypePart(const char *buf, int size, c4snet_vtype
   return count;
 }
 
-static int C4SNetDataDeserializeDataPart( FILE *file, c4snet_type_t type, void *data)
+static void C4SNetDataDeserializeDataPart(FILE *file, c4snet_type_t type, void *data)
 {
-  char buf[5];
+  char buf[6];
 
   char *fmt = NULL;
   switch (type) {
-    case CTYPE_uchar:
-      /* '&' and '<' must be encoded to '&amp;' and 'lt';
-       * as they are not legal characters in  XML character data!
-       */
-      if (fscanf(file, "%c", (char*) data) != 1) return 0;
-
-      if (*(char*) data == '&') {
-        if (fgets(buf, 5, file) == NULL) SNetUtilDebugFatal("FIXME");
-
-        if (strcmp(buf, "amp;") == 0) *(char*) data = '&';
-        else if (strcmp(buf, "lt;") == 0) *(char*) data = '<';
-        else SNetUtilDebugFatal("FIXME");
-      } else if (*(char*) data == '<') {
-        SNetUtilDebugFatal("FIXME");
-      }
-
-      *(unsigned char*) data = (unsigned char) *(char*)data;
-      return 1;
-
     case CTYPE_char:
-      /* '&' and '<' must be encoded to '&amp;' and 'lt';
-       * as they are not legal characters in  XML character data!
-       */
-      if (fscanf(file, "%c", (char*) data) != 1) return 0;
-
-      if (*(char*) data == '&') {
-        if (fgets(buf, 5, file) == NULL) SNetUtilDebugFatal("FIXME");
-
-        if (strcmp(buf, "amp;") == 0) *(char*) data = '&';
-        else if (strcmp(buf, "lt;") == 0) *(char*) data = '<';
-        else SNetUtilDebugFatal("FIXME");
-      } else if (*(char*) data == '<') {
-        SNetUtilDebugFatal("FIXME");
-      }
-      return 1;
-
-    case CTYPE_string:
+    case CTYPE_uchar:
       {
-#   define SIZE 3
-        char * buffer=NULL;
-        int size=0, cur=0;
-        char symbol;
-        int res;
-        res = fscanf(file, "%c", &symbol);
-        assert(res != EOF || errno == 0);
+        /* '&' and '<' must be encoded to '&amp;' and 'lt';
+        * as they are not legal characters in  XML character data!
+        */
+        int count = fscanf(file, "%5[^<]", buf);
 
-        if (symbol != '\"') return 0;
-        while (symbol != 0) {
-          res = fscanf(file, "%c", &symbol);
-          assert(res != EOF || errno == 0);
-          if (symbol == '\"') symbol = 0;
-          if (cur == size) {
-            size += SIZE;
-            if (buffer == NULL) {
-              buffer = (char *) malloc(size * sizeof(char));
-            }
-            else
-              buffer = (char *) realloc(buffer, size * sizeof(char));
-          }
-          buffer[cur++] = symbol;
-        }
-        *(char**) data = buffer;
-        return 1;
+        if (!strcmp(buf, "&amp;")) *(char *) data = '&';
+        else if (!strcmp(buf, "&lt;")) *(char *) data = '<';
+        else if (count == 1) *(char *) data = buf[0];
+        else SNetUtilDebugFatal("FIXME");
+
+        if (type == CTYPE_uchar) *(unsigned char*) data = (unsigned char) *(char*) data;
+        return;
       }
 
     case CTYPE_ushort: fmt = "%hu"; break;
@@ -510,151 +403,107 @@ static int C4SNetDataDeserializeDataPart( FILE *file, c4snet_type_t type, void *
     default: SNetUtilDebugFatal("FIXME");
   }
 
-  return fscanf(file, fmt, data);
+  fscanf(file, fmt, data);
 }
 
 /* Deserializes textual data from a file. */
-static void *C4SNetDataDeserialize(FILE *file)
+static c4snet_data_t *C4SNetDataDeserialise(FILE *file)
 {
-  c4snet_data_t *temp = NULL;
-  char buf[BUF_SIZE];
-  int j;
-  char c;
-  int size;
-  int i;
+  c4snet_data_t *temp = SNetMemAlloc(sizeof(c4snet_data_t));
+  char buf[32];
 
   fscanf(file, "(%[^)])", buf);
-  j = strlen(buf);
 
-  temp = SNetMemAlloc(sizeof(c4snet_data_t));
-
-  temp->size = C4SNetDataDeserializeTypePart(buf, j, &temp->vtype, &temp->type);
-
+  temp->size = C4SNetDataDeserializeTypePart(buf, strlen(buf), &temp->vtype, &temp->type);
   temp->ref_count = 1;
-  temp->freeFun = &SNetMemFree;
 
   if (temp->vtype == VTYPE_array) {
-    size = C4SNetSizeof(temp);
+    temp->data.ptr = allocfun(C4SNetSizeof(temp) * temp->size, &temp->freeFun);
+    for (int i = 0; i < temp->size; i++) {
+      if (i > 0 && fgetc(file) != ',') SNetUtilDebugFatal("FIXME");
 
-    temp->data.ptr = SNetMemAlloc(size * temp->size);
-    for (i = 0; i < temp->size; i++) {
-      if (i > 0 && (c = fgetc(file)) != ',') {
-        SNetUtilDebugFatal("FIXME");
-      }
-
-      if (!C4SNetDataDeserializeDataPart(file, temp->type, (char*) temp->data.ptr + i * size)) {
-        SNetUtilDebugFatal("FIXME");
-      }
+      C4SNetDataDeserializeDataPart(file, temp->type, (char*) temp->data.ptr + i * C4SNetSizeof(temp));
     }
   } else {
-    if (!C4SNetDataDeserializeDataPart(file, temp->type, &temp->data)) {
-      SNetUtilDebugFatal("FIXME");
-    }
+    C4SNetDataDeserializeDataPart(file, temp->type, &temp->data);
   }
 
   return temp;
 }
 
 /* Binary encodes data to a file. */
-static int C4SNetDataEncode( FILE *file, void *ptr)
+static void C4SNetDataEncode(FILE *file, c4snet_data_t *data)
 {
-  int i = 0;
-  c4snet_data_t *temp = ptr;
+  Base64encodeDataType(file, (int) data->vtype);
+  Base64encode(file, &data->size, sizeof(int));
+   Base64encodeDataType(file, (int) data->type);
 
-  Base64encodeDataType(file, (int)temp->vtype);
-  Base64encode(file, &temp->size, sizeof(int));
-  i = Base64encodeDataType(file, (int)temp->type);
-
-  if(temp->vtype == VTYPE_array) {
-    i += Base64encode(file, temp->data.ptr, C4SNetSizeof(temp) * temp->size);
+  if (data->vtype == VTYPE_array) {
+    Base64encode(file, data->data.ptr, C4SNetAllocSize(data));
   } else {
-    i += Base64encode(file, &temp->data, C4SNetSizeof(temp));
+    Base64encode(file, &data->data, C4SNetSizeof(data));
   }
-
-  return i + 1;
 }
 
 /* Decodes binary data from a file. */
-static void *C4SNetDataDecode(FILE *file)
+static c4snet_data_t *C4SNetDataDecode(FILE *file)
 {
-  c4snet_data_t *c = SNetMemAlloc( sizeof( c4snet_data_t));
-  int i = 0;
-  int size;
+  c4snet_data_t *c = SNetMemAlloc(sizeof(c4snet_data_t));
 
-  Base64decodeDataType(file, (int *)&c->vtype);
-  Base64decode(file, (unsigned char *)&c->size, sizeof(int));
-  i = Base64decodeDataType(file, (int *)&c->type);
+  Base64decodeDataType(file, (int*) &c->vtype);
+  Base64decode(file, &c->size, sizeof(int));
+  Base64decodeDataType(file, (int*) &c->type);
 
   c->ref_count = 1;
   c->freeFun = &SNetMemFree;
 
-  size = C4SNetSizeof(c);
-
   if(c->vtype == VTYPE_array) {
-    c->data.ptr = SNetMemAlloc(size * c->size);
-    i += Base64decode(file, c->data.ptr, size * c->size);
+    c->data.ptr = allocfun(C4SNetAllocSize(c), &c->freeFun);
+    Base64decode(file, c->data.ptr, C4SNetAllocSize(c));
   } else {
-    i += Base64decode(file, &c->data, size);
+    Base64decode(file, &c->data, C4SNetSizeof(c));
   }
 
   return c;
 }
-
-
 
 /**************************** Container functions ***************************/
 
 /* Creates a container that can be used to return values. */
-c4snet_container_t *C4SNetContainerCreate( void *hnd, int variant)
+c4snet_container_t *C4SNetContainerCreate(void *hnd, int variant)
 {
-  c4snet_container_t *c = SNetMemAlloc( sizeof( c4snet_container_t));
+  c4snet_container_t *c = SNetMemAlloc(sizeof(c4snet_container_t));
 
   //variant - 1: Lists are zero indexed, but existing S-Net code defines
   //variants as 1-indexed. Go backwards compatibility!
-  c->variant = SNetVariantListGet( SNetHndGetVariantList((struct handle *) hnd), variant - 1);
+  c->variant = SNetVariantListGet(SNetHndGetVariantList(hnd), variant - 1);
 
-  c->counter = SNetMemAlloc( 3 * sizeof( int));
-
-  c->fields = SNetMemAlloc( SNetVariantNumFields( c->variant) * sizeof(void*));
-  c->tags = SNetMemAlloc( SNetVariantNumTags( c->variant) * sizeof( int));
-  c->btags = SNetMemAlloc( SNetVariantNumBTags( c->variant) * sizeof( int));
+  c->fields = SNetMemAlloc(SNetVariantNumFields(c->variant) * sizeof(void*));
+  c->tags = SNetMemAlloc(SNetVariantNumTags(c->variant) * sizeof(int));
+  c->btags = SNetMemAlloc(SNetVariantNumBTags(c->variant) * sizeof(int));
   c->hnd = hnd;
 
-  for (int i = 0; i < 3; i++) {
-    c->counter[i] = 0;
-  }
+  for (int i = 0; i < COUNTS; i++) c->counter[i] = 0;
 
   return c;
 }
-
 
 /* Adds field into a container. */
-c4snet_container_t *C4SNetContainerSetField(c4snet_container_t *c, void *ptr)
-{
-  c->fields[F_COUNT(c)++] = ptr;
-  return c;
-}
+void C4SNetContainerSetField(c4snet_container_t *c, void *ptr)
+{ c->fields[F_COUNT(c)++] = ptr; }
 
 /* Adds tag into a container. */
-c4snet_container_t *C4SNetContainerSetTag(c4snet_container_t *c, int value)
-{
-  c->tags[T_COUNT(c)++] = value;
-  return c;
-}
+void C4SNetContainerSetTag(c4snet_container_t *c, int value)
+{ c->tags[T_COUNT(c)++] = value; }
 
 /* Adds binding tag into a container. */
-c4snet_container_t *C4SNetContainerSetBTag(c4snet_container_t *c, int value)
-{
-  c->btags[B_COUNT(c)++] = value;
-  return c;
-}
+void C4SNetContainerSetBTag(c4snet_container_t *c, int value)
+{ c->btags[B_COUNT(c)++] = value; }
 
 /* Communicates back the results of the box stored in a container. */
 void C4SNetContainerOut(c4snet_container_t *c)
 {
-  SNetOutRawArray( c->hnd, interface_id, c->variant, c->fields, c->tags, c->btags);
-
-  SNetMemFree(c->counter);
+  SNetOutRawArray(c->hnd, interface_id, c->variant, c->fields, c->tags, c->btags);
   SNetMemFree(c);
 }
 
@@ -674,21 +523,16 @@ static MPI_Datatype C4SNetTypeToMPIType(c4snet_type_t type)
     case CTYPE_float: return MPI_FLOAT;
     case CTYPE_double: return MPI_DOUBLE;
     case CTYPE_ldouble: return MPI_LONG_DOUBLE;
-    default:
-      break;
+    default: SNetUtilDebugFatal("Unknown MPI datatype!\n");
   }
 
-  SNetUtilDebugFatal("Unknown MPI datatype!\n");
   return MPI_CHAR;
 }
 
-static void C4SNetMPIPackFun(void *cdata, void *buf)
+static void C4SNetMPIPackFun(c4snet_data_t *data, void *buf)
 {
-  int vtype, type;
-  c4snet_data_t *data = (c4snet_data_t*) cdata;
-
-  vtype = data->vtype;
-  type = data->type;
+  int vtype = data->vtype,
+      type = data->type;
 
   SNetDistribPack(&vtype, buf, MPI_INT, 1);
   SNetDistribPack(&data->size, buf, MPI_INT, 1);
@@ -702,23 +546,22 @@ static void C4SNetMPIPackFun(void *cdata, void *buf)
   }
 }
 
-static void *C4SNetMPIUnpackFun(void *buf)
+static c4snet_data_t *C4SNetMPIUnpackFun(void *buf)
 {
+  void *tmp;
   c4snet_data_t *result;
   int vtype, type, count;
-  c4snet_primary_type_t data;
 
   SNetDistribUnpack(&vtype, buf, MPI_INT, 1);
   SNetDistribUnpack(&count, buf, MPI_INT, 1);
   SNetDistribUnpack(&type, buf, MPI_INT, 1);
 
   if (vtype == VTYPE_array) {
-    data.ptr = SNetMemAlloc(count * sizeOfType(type));
-    SNetDistribUnpack(data.ptr, buf, C4SNetTypeToMPIType(type), count);
-    result = C4SNetDataCreateArray(type, count, data.ptr);
+    result = C4SNetDataAlloc(type, count, &tmp);
+    SNetDistribUnpack(tmp, buf, C4SNetTypeToMPIType(type), count);
   } else {
-    SNetDistribUnpack(&data, buf, C4SNetTypeToMPIType(type), 1);
-    result = C4SNetDataCreate(type, &data);
+    result = C4SNetDataCreate(type, 1, &tmp);
+    SNetDistribUnpack(tmp, buf, C4SNetTypeToMPIType(type), 1);
   }
 
   return result;
@@ -734,9 +577,8 @@ static void *C4SNetSCCMalloc(size_t s, void (**free)(void*))
   return SCCMallocPtr(s);
 }
 
-static void C4SNetSCCPackFun(void *cdata, void *buf)
+static void C4SNetSCCPackFun(c4snet_data_t *cdata, void *buf)
 {
-  c4snet_data_t *data = cdata;
   SNetDistribPack(cdata, buf, sizeof(c4snet_data_t), false);
 
   if (data->vtype == VTYPE_array) {
