@@ -9,12 +9,12 @@ void *inc( void *hnd, c4snet_data_t *x)
   int int_x;
   c4snet_data_t *result;
 
-  int_x= *(int *)C4SNetDataGetData( x);
+  int_x= *(int *)C4SNetGetData( x);
   int_x += 1;
 
-  result = C4SNetDataCreate(CTYPE_int, 1, &int_x);
+  result = C4SNetCreate(CTYPE_int, 1, &int_x);
 
-  C4SNetDataFree(x);
+  C4SNetFree(x);
 
   C4SNetOut( hnd, 1, result);
   return( hnd);
