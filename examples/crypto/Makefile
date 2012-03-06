@@ -1,4 +1,4 @@
-CFLAGS     = -g
+CFLAGS     = -g -std=c99
 TARGETS    = crypto
 DEPS       = libcrypto.a
 SNETCFLAGS = -g -lcrypto -lcrypt -static

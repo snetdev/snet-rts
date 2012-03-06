@@ -21,6 +21,7 @@ typedef enum {
     CTYPE_ldouble, /*!< long double */
 } c4snet_type_t;
 
+void C4SNetInit(int id, snet_distrib_t distImpl);
 void C4SNetOut(void *hnd, int variant, ...);
 
 int C4SNetSizeof(c4snet_data_t *data);

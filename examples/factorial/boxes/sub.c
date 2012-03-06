@@ -3,22 +3,16 @@
 
 void *sub( void *hnd, c4snet_data_t *x)
 {
-  int int_x;
   c4snet_container_t *c;
-  c4snet_data_t *result;
+  int int_x = *(int *) C4SNetGetData(x);
 
-  int_x= *(int *)C4SNetDataGetData( x);
   int_x -= 1;
 
-  result = C4SNetDataCreate( CTYPE_int, &int_x);
+  c = C4SNetContainerCreate(hnd, 1);
+  C4SNetContainerSetField(c, C4SNetCreate(CTYPE_int, 1, &int_x));
+  C4SNetContainerOut(c);
 
-  c = C4SNetContainerCreate( hnd, 1);
-  C4SNetContainerSetField( c, result);
+  C4SNetFree(x);
 
-  C4SNetDataFree(x);
-
-  C4SNetContainerOut( c);
-  return( hnd);
+  return hnd;
 }
-
-

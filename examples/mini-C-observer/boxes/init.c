@@ -9,18 +9,12 @@
 
 void *init( void *hnd)
 {
-  int i;
   int *int_x;
   c4snet_data_t *result;
-   
-  int_x = malloc( X * Y * sizeof( int));
-  for( i=0; i < (X*Y); i++) {
-    int_x[i] = i;
-  }
-    
-  result = C4SNetDataCreateArray( CTYPE_int, X*Y, int_x);
 
-  C4SNetOut( hnd, 1, result);
-  return( hnd);
+  result = C4SNetAlloc(CTYPE_int, X*Y, &int_x);
+  for (int i = 0; i < X*Y; i++) int_x[i] = i;
+
+  C4SNetOut(hnd, 1, result);
+  return hnd;
 }
-

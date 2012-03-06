@@ -6,23 +6,15 @@
 
 void *init( void *hnd, c4snet_data_t *array, int C_width, int C_height, int last)
 {
-  int *a;
+  int *a = C4SNetGetData(array);
   int *C;
 
-  c4snet_data_t *new;
-
-
-  a = (int *)C4SNetDataGetData(array);
-  
-  C = SNetMemAlloc(sizeof(int) * C_width * C_height);
+  c4snet_data_t *new = C4SNetAlloc(CTYPE_int, C_width * C_height, &C);
 
   memcpy(C, a, sizeof(int) * C_width * (last + 1));
 
-  new = C4SNetDataCreateArray(CTYPE_int, C_width * C_height, C);
-
   C4SNetOut( hnd, 1, new, C_width, C_height, last);
-  
-  C4SNetDataFree(array);
+  C4SNetFree(array);
 
-  return( hnd);
+  return hnd;
 }
