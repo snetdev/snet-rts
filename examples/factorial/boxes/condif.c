@@ -6,9 +6,8 @@ void *condif( void *hnd, c4snet_data_t *p)
 {
   bool bool_p = *(bool *) C4SNetGetData(p);
 
-  c4snet_container_t *c = C4SNetContainerCreate(hnd, bool_p ? 1 : 2);
-  C4SNetContainerSetTag(c, 0);
-  C4SNetContainerOut(c);
+  if (bool_p) C4SNetOut(hnd, 1, 0);
+  else C4SNetOut(hnd, 2, 0);
 
   C4SNetFree(p);
 

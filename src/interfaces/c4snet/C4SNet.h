@@ -34,12 +34,4 @@ void C4SNetFree(c4snet_data_t *ptr);
 
 c4snet_data_t *C4SNetShallowCopy(c4snet_data_t *ptr);
 c4snet_data_t *C4SNetDeepCopy(c4snet_data_t *ptr);
-
-/**************************** Container functions ****************************/
-
-c4snet_container_t *C4SNetContainerCreate(void *hnd, int variant);
-void C4SNetContainerSetField(c4snet_container_t *c, void *ptr);
-void C4SNetContainerSetTag(c4snet_container_t *c, int value);
-void C4SNetContainerSetBTag(c4snet_container_t *c, int value);
-void C4SNetContainerOut(c4snet_container_t *c);
 #endif /* _C4SNET_H_ */

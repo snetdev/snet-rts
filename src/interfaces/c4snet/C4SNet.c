@@ -435,46 +435,6 @@ c4snet_data_t *C4SNetDeepCopy(c4snet_data_t *data)
   return C4SNetCreate(data->type, data->size, &data->data);
 }
 
-/**************************** Container functions *****************************/
-
-/* Creates a container that can be used to return values. */
-c4snet_container_t *C4SNetContainerCreate(void *hnd, int variant)
-{
-  c4snet_container_t *c = SNetMemAlloc(sizeof(c4snet_container_t));
-
-  //variant - 1: Lists are zero indexed, but existing S-Net code defines
-  //variants as 1-indexed. Go backwards compatibility!
-  c->variant = SNetVariantListGet(SNetHndGetVariantList(hnd), variant - 1);
-
-  c->fields = SNetMemAlloc(SNetVariantNumFields(c->variant) * sizeof(void*));
-  c->tags = SNetMemAlloc(SNetVariantNumTags(c->variant) * sizeof(int));
-  c->btags = SNetMemAlloc(SNetVariantNumBTags(c->variant) * sizeof(int));
-  c->hnd = hnd;
-
-  for (int i = 0; i < COUNTS; i++) c->counter[i] = 0;
-
-  return c;
-}
-
-/* Adds field into a container. */
-void C4SNetContainerSetField(c4snet_container_t *c, void *ptr)
-{ c->fields[F_COUNT(c)++] = ptr; }
-
-/* Adds tag into a container. */
-void C4SNetContainerSetTag(c4snet_container_t *c, int value)
-{ c->tags[T_COUNT(c)++] = value; }
-
-/* Adds binding tag into a container. */
-void C4SNetContainerSetBTag(c4snet_container_t *c, int value)
-{ c->btags[B_COUNT(c)++] = value; }
-
-/* Communicates back the results of the box stored in a container. */
-void C4SNetContainerOut(c4snet_container_t *c)
-{
-  SNetOutRawArray(c->hnd, interface_id, c->variant, c->fields, c->tags, c->btags);
-  SNetMemFree(c);
-}
-
 /************************ Distribution Layer Functions ***********************/
 #ifdef ENABLE_DIST_MPI
 static MPI_Datatype TypeToMPIType(c4snet_type_t type)
