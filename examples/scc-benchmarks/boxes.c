@@ -17,30 +17,26 @@ static inline volatile unsigned long long rdtsc()
 void *t_start(void *hnd)
 {
   time_t start;
-  c4snet_data_t *snet_time;
 
   time(&start);
   printf("t_start: time = %ld\n", start);
 
-  snet_time = C4SNetDataCreate( CTYPE_long, &start);
-
-  C4SNetOut( hnd, 1, snet_time);
+  C4SNetOut(hnd, 1, C4SNetCreate(CTYPE_long, 1, &start));
 
   return hnd;
 }
 
-void *t_end( void *hnd, c4snet_data_t *snet_time)
+void *t_end(void *hnd, c4snet_data_t *snet_time)
 {
-  time_t start, end;
-  c4snet_data_t *snet_res;
+  time_t start = *(long*) C4SNetGetData(snet_time),
+         end;
 
   time(&end);
-  start = *(long*)C4SNetDataGetData(snet_time);
   printf("t_end: time = %lu\n", end);
   printf("runtime: time = %lu\n", end - start);
 
   C4SNetOut(hnd, 1);
-  C4SNetDataFree(snet_time);
+  C4SNetFree(snet_time);
 
   return hnd;
 }
@@ -48,11 +44,9 @@ void *t_end( void *hnd, c4snet_data_t *snet_time)
 void *split(void *hnd, int nodes, int tasks, int dataSize)
 {
   void *data;
-  c4snet_data_t *snet_data;
 
   for (int i = 0; i < tasks; i++) {
-    snet_data = C4SNetDataAllocCreateArray(CTYPE_char, dataSize, &data);
-    C4SNetOut(hnd, 1, tasks, i, snet_data);
+    C4SNetOut(hnd, 1, tasks, i, C4SNetAlloc(CTYPE_char, dataSize, &data));
     if (i < nodes) C4SNetOut(hnd, 2, i);
   }
 
@@ -62,11 +56,9 @@ void *split(void *hnd, int nodes, int tasks, int dataSize)
 void *dummy(void *hnd, int sleep, c4snet_data_t *old)
 {
   void *data;
-  int size = C4SNetDataGetArraySize(old);
-  c4snet_data_t *snet_data = C4SNetDataAllocCreateArray(CTYPE_char, size, &data);
   usleep(100000 * sleep);
-  C4SNetOut(hnd, 1, snet_data);
-  C4SNetDataFree(old);
+  C4SNetOut(hnd, 1, C4SNetAlloc(CTYPE_char, C4SNetArraySize(old), &data));
+  C4SNetFree(old);
   return hnd;
 }
 
@@ -79,6 +71,6 @@ void *rename_field(void *hnd, int count, c4snet_data_t *data)
 void *merge(void *hnd, c4snet_data_t *data, c4snet_data_t *DATA)
 {
   C4SNetOut(hnd, 1, DATA);
-  C4SNetDataFree(data);
+  C4SNetFree(data);
   return hnd;
 }

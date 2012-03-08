@@ -8,7 +8,7 @@ $(TARGET): $(BOXOBJS)
 	$(AR) rcs $@ $^
 
 %.o: %.c *.h
-	$(CC) $(CCFLAGS) -I$(SNET_INCLUDES) -c $<
+	$(CC) -std=c99 $(CCFLAGS) -I$(SNET_INCLUDES) -c $<
 
 clean:
 	rm -f $(TARGET) $(BOXOBJS)

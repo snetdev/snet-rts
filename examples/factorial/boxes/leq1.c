@@ -3,17 +3,10 @@
 
 void *leq1( void *hnd, c4snet_data_t *x)
 {
-  bool bool_p;
-  int int_x;
-  c4snet_data_t *result;
+  int int_x = *(int *) C4SNetGetData(x);
+  bool bool_p = int_x <= 1;
 
-  int_x= *(int *)C4SNetDataGetData( x);
+  C4SNetOut(hnd, 1, x, C4SNetCreate(CTYPE_int, 1, &bool_p));
 
-  bool_p = (int_x <= 1);
-
-  result = C4SNetDataCreate( CTYPE_int, &bool_p);
-
-  C4SNetOut( hnd, 1, x, result);
-
-  return( hnd);
+  return hnd;
 }
