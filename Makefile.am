@@ -9,7 +9,7 @@ snetstuff_DATA = \
 pkgdata_DATA =\
 	src/snet.mkf
 
-pkglib_SCRIPTS = \
+snetstuff_SCRIPTS = \
 	libtool
 
 pkglib_LTLIBRARIES = \
