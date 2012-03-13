@@ -23,17 +23,6 @@ typedef enum {
     VTYPE_array    /*!< array  type */
 } c4snet_vtype_t;
 
-/* Container for returning the result. */
-struct container {
-  struct handle *hnd;
-  snet_variant_t *variant;
-
-  int counter[3];
-  void **fields;
-  int *tags;
-  int *btags;
-};
-
 /* Union containing all C primary types. */
 typedef union primary_types {
   unsigned char uc;
@@ -109,7 +98,7 @@ static int sizeOfType(c4snet_type_t type)
 }
 
 static size_t AllocatedSpace(c4snet_data_t *d)
-{ return C4SNetArraySize(d) * C4SNetSizeof(d); }
+{ return d->vtype == VTYPE_array ? C4SNetArraySize(d) * C4SNetSizeof(d) : 0; }
 
 static void SerialiseData(FILE *file, c4snet_type_t type, void *data)
 {
@@ -364,15 +353,14 @@ c4snet_data_t *C4SNetAlloc(c4snet_type_t type, size_t size, void **data)
   c4snet_data_t *c = SNetMemAlloc(sizeof(c4snet_data_t));
 
   c->type = type;
+  c->size = size;
   c->ref_count = 1;
 
   if (size == 1) {
     c->vtype = VTYPE_simple;
-    c->size = 0;
     *data = &c->data;
   } else {
     c->vtype = VTYPE_array;
-    c->size = size;
     c->data.ptr = MemAlloc(AllocatedSpace(c));
     *data = c->data.ptr;
   }
@@ -385,15 +373,14 @@ c4snet_data_t *C4SNetCreate(c4snet_type_t type, size_t size, const void *data)
   c4snet_data_t *c = SNetMemAlloc(sizeof(c4snet_data_t));
 
   c->type = type;
+  c->size = size;
   c->ref_count = 1;
 
   if (size == 1) {
     c->vtype = VTYPE_simple;
-    c->size = 0;
     memcpy(&c->data, data, C4SNetSizeof(c));
   } else {
     c->vtype = VTYPE_array;
-    c->size = size;
     c->data.ptr = MemAlloc(AllocatedSpace(c));
     memcpy(c->data.ptr, data, AllocatedSpace(c));
   }
@@ -511,14 +498,14 @@ static void SCCPackFun(c4snet_data_t *cdata, void *buf)
 
   if (data->vtype == VTYPE_array) {
     if (remap && data->freeFun == &SNetMemFree) {
-      void *tmp = SCCMallocPtr(C4SNetAllocSize(cdata));
-      memcpy(tmp, data->data.ptr, C4SNetAllocSize(cdata));
+      void *tmp = SCCMallocPtr(AllocatedSpace(cdata));
+      memcpy(tmp, data->data.ptr, AllocatedSpace(cdata));
       SNetMemFree(data->data.ptr);
       data->freeFun = &SCCFree;
       data->data.ptr = tmp;
     }
 
-    SNetDistribPack(data->data.ptr, buf, C4SNetAllocSize(data), true);
+    SNetDistribPack(data->data.ptr, buf, AllocatedSpace(data), true);
   }
 }
 
