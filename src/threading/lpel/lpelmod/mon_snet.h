@@ -8,6 +8,7 @@
 #define SNET_MON_WORKER  	  (1<<3)
 #define SNET_MON_STREAM  	  (1<<4)
 #define SNET_MON_MAP  	  (1<<5)
+#define SNET_MON_LOAD	 (1<<6)
 
 #define MON_ENTNAME_MAXLEN  64
 #define MON_FNAME_MAXLEN  63
@@ -51,6 +52,7 @@ void SNetThreadingMonEvent(struct mon_task_t *mt,
 #define MON_STREAM_FLAG 'S'
 #define MON_MESSAGE_FLAG 'M'
 #define MON_ALL_FLAG 'A'
+#define MON_LOAD_FLAG 'L'
 
 /* special characters */
 //#define END_LOG_ENTRY '\n'		// for separate each log entry by one line --> for testing
@@ -61,6 +63,6 @@ void SNetThreadingMonEvent(struct mon_task_t *mt,
 #define WORKER_WAIT_EVENT 		'W'
 #define WORKER_END_EVENT 		'E'
 
-#define LOG_FORMAT_VERSION		"Log format version 2.1 (since 10/01/2012)"
+#define LOG_FORMAT_VERSION		"Log format version 2.2 (since 05/03/2012)"
 
 #endif /* _MON_SNET_H_ */
