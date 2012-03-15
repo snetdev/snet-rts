@@ -501,9 +501,13 @@ static void MonCbWorkerWaitStart( mon_worker_t *mon)
 
 static void MonCbWorkerWaitStop(mon_worker_t *mon)
 {
-	if ((FLAG_WORKER(mon) & FLAG_TIMES(mon))
-			| FLAG_LOAD(mon))
+	fprintf(mon->outfile, "start waiting %lu.%09lu ", (unsigned long) mon->wait_current.tv_sec, (unsigned long)mon->wait_current.tv_nsec);
+
+	if ((FLAG_WORKER(mon) && FLAG_TIMES(mon))
+			|| FLAG_LOAD(mon)) {
 			LpelTimingEnd(&mon->wait_current);
+	}
+
 
 	if (FLAG_WORKER(mon)) {
 		if (FLAG_TIMES(mon)) {
@@ -513,10 +517,10 @@ static void MonCbWorkerWaitStop(mon_worker_t *mon)
 		}
 
 
-		/* waiting time in second
-		 * fprintf(mon->outfile, "%c %lu.%09lu%c", worker_wait,
-				(unsigned long) mon->wait_current.tv_sec, (mon->wait_current.tv_nsec), end_entry
-		);*/
+		// waiting time in second
+//		  fprintf(mon->outfile, "%c %lu.%09lu %c", worker_wait,
+//				(unsigned long) mon->wait_current.tv_sec, (unsigned long)mon->wait_current.tv_nsec, end_entry
+//		);
 
 
 		/* waiting time in nanosecond */
@@ -526,7 +530,7 @@ static void MonCbWorkerWaitStop(mon_worker_t *mon)
 	}
 
 	if (FLAG_LOAD(mon))
-		LpelTimingAdd(&mon->wait_time, &mon->wait_current); // can be cheaper without checking flag?
+		LpelTimingAdd(&mon->wait_time, &mon->wait_current);
 
 }
 

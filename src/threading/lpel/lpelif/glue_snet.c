@@ -267,7 +267,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 
 
 #ifdef USE_LOGGING
-	if (mon_flags | SNET_MON_TASK){
+	if (mon_flags & SNET_MON_TASK){
 		mon_task_t *mt = SNetThreadingMonTaskCreate(
 				LpelTaskGetID(t),
 				name
