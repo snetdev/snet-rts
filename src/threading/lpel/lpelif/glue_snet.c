@@ -116,16 +116,14 @@ int SNetThreadingInit(int argc, char **argv)
 	if (mon_elts != NULL) {
 		if (strchr(mon_elts, MON_ALL_FLAG) != NULL) {
 			mon_flags = (1<<7) - 1;
-			mon_flags -= SNET_MON_LOAD;	// worker event is set --> unset load (redundant data)
 		} else {
 			if (strchr(mon_elts, MON_MAP_FLAG) != NULL) mon_flags |= SNET_MON_MAP;
 			if (strchr(mon_elts, MON_TIME_FLAG) != NULL) mon_flags |= SNET_MON_TIME;
+			if (strchr(mon_elts, MON_WORKER_FLAG) != NULL) mon_flags |= SNET_MON_WORKER;
 			if (strchr(mon_elts, MON_TASK_FLAG) != NULL) mon_flags |= SNET_MON_TASK;
 			if (strchr(mon_elts, MON_STREAM_FLAG) != NULL) mon_flags |= SNET_MON_STREAM;
-			if (strchr(mon_elts, MON_WORKER_FLAG) != NULL)
-				mon_flags |= SNET_MON_WORKER;
-			else if (strchr(mon_elts, MON_LOAD_FLAG) != NULL)
-				mon_flags |= SNET_MON_LOAD; // only consider load if worker is not set
+			if (strchr(mon_elts, MON_MESSAGE_FLAG) != NULL) mon_flags |= SNET_MON_MESSAGE;
+			if (strchr(mon_elts, MON_LOAD_FLAG) != NULL) mon_flags |= SNET_MON_LOAD;
 		}
 
 
