@@ -38,6 +38,9 @@ struct mon_worker_t {
 	FILE         *outfile;     /** where to write the monitoring data to */
 	unsigned int  disp;        /** count how often a task has been dispatched */
 	lpel_timing_t      wait_current;
+	unsigned int wait_cnt;
+	lpel_timing_t wait_time;
+	lpel_timing_t exec_time;
 	struct {
 		int cnt, size;
 		mon_usrevt_t *buffer;
@@ -145,6 +148,7 @@ static lpel_timing_t monitoring_begin = LPEL_TIMING_INITIALIZER;
 #define FLAG_MESSAGE(mt)   (mt->flags & SNET_MON_MESSAGE)
 #define FLAG_TASK(mt)  (mt->flags & SNET_MON_TASK)
 #define FLAG_WORKER(mt)  (mt->flags & SNET_MON_WORKER)
+#define FLAG_LOAD(mt)	(mt->flags & SNET_MON_LOAD)
 
 /**
  * Print a time in usec
@@ -373,14 +377,18 @@ static mon_worker_t *MonCbWorkerCreate( int wid)
 	mon->disp = 0;
 	LpelTimingZero(&mon->wait_current);
 
+	/* statistic info */
+	mon->wait_cnt = 0;
+	LpelTimingZero(&mon->wait_time);
+
 	/* user events */
 	mon->events.cnt = 0;
 	mon->events.size = MON_USREVT_BUFSIZE_DELTA;
 	mon->events.buffer = malloc( mon->events.size * sizeof(mon_usrevt_t));
 
 	/* start message */
-	if (FLAG_WORKER(mon)){
-		if (FLAG_TIMES(mon)){
+	if (FLAG_WORKER(mon) | FLAG_LOAD(mon)){
+		if (FLAG_TIMES(mon) | FLAG_LOAD(mon)){
 			lpel_timing_t tnow;
 			LpelTimingNow(&tnow);
 			PrintNormTS(&tnow, mon->outfile);
@@ -441,6 +449,11 @@ static mon_worker_t *MonCbWrapperCreate( mon_task_t *mt)
 
 
 
+static void printStatistic(mon_worker_t *mon){
+	fprintf(mon->outfile, "WC%dWT", mon->wait_cnt);
+	PrintTiming( &mon->wait_time, mon->outfile);
+
+}
 /**
  * Destroy a monitoring context
  *
@@ -449,17 +462,19 @@ static mon_worker_t *MonCbWrapperCreate( mon_task_t *mt)
 static void MonCbWorkerDestroy( mon_worker_t *mon)
 {
 
-	if ( FLAG_WORKER(mon)) {
+	if ( FLAG_WORKER(mon) | FLAG_LOAD(mon)) {
 		/* write message */
-		if ( FLAG_TIMES(mon)) {
+		if ( FLAG_TIMES(mon) | FLAG_LOAD(mon)) {
 			lpel_timing_t tnow;
 			LpelTimingNow( &tnow);
 			PrintNormTS( &tnow, mon->outfile);
 		}
-
-
 		fprintf( mon->outfile, "%c%c", worker_end, end_entry);
+		if (FLAG_LOAD(mon))
+			 printStatistic(mon);
 	}
+
+
 	if ( mon->outfile != NULL) {
 		int ret;
 		ret = fclose( mon->outfile);
@@ -479,14 +494,19 @@ static void MonCbWorkerDestroy( mon_worker_t *mon)
 static void MonCbWorkerWaitStart( mon_worker_t *mon)
 {
 	LpelTimingStart(&mon->wait_current);
+	if (FLAG_LOAD(mon))
+		mon->wait_cnt++;		// cheaper than without conditional check but leave it here for ease of understanding
 }
 
 
 static void MonCbWorkerWaitStop(mon_worker_t *mon)
 {
-	if (FLAG_WORKER(mon)){
-		if (FLAG_TIMES(mon)) {
+	if ((FLAG_WORKER(mon) & FLAG_TIMES(mon))
+			| FLAG_LOAD(mon))
 			LpelTimingEnd(&mon->wait_current);
+
+	if (FLAG_WORKER(mon)) {
+		if (FLAG_TIMES(mon)) {
 			lpel_timing_t tnow;
 			LpelTimingNow(&tnow);
 			PrintNormTS(&tnow, mon->outfile);
@@ -498,11 +518,16 @@ static void MonCbWorkerWaitStop(mon_worker_t *mon)
 				(unsigned long) mon->wait_current.tv_sec, (mon->wait_current.tv_nsec), end_entry
 		);*/
 
+
 		/* waiting time in nanosecond */
 		fprintf( mon->outfile, "%c", worker_wait);
 		PrintTiming( &mon->wait_current, mon->outfile);
 		fprintf( mon->outfile, "%c", end_entry);
 	}
+
+	if (FLAG_LOAD(mon))
+		LpelTimingAdd(&mon->wait_time, &mon->wait_current); // can be cheaper without checking flag?
+
 }
 
 
@@ -619,7 +644,7 @@ static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 	fprintf( file, "%c", end_entry);
 
 	//FIXME only for debugging purposes
-	//fflush( file);
+//	fflush( file);
 }
 
 
@@ -766,7 +791,7 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int flag)
 
 	/* register callbacks */
 
-	if ((mon_flags & SNET_MON_WORKER) | (mon_flags & SNET_MON_TASK)) {
+	if ((mon_flags & SNET_MON_WORKER) | (mon_flags & SNET_MON_TASK) | (mon_flags & SNET_MON_LOAD)) {
 		cb->worker_create         = MonCbWorkerCreate;
 		cb->worker_create_wrapper = MonCbWrapperCreate;
 		cb->worker_destroy        = MonCbWorkerDestroy;

@@ -2,13 +2,14 @@
 SUBDIRS = . src/interfaces/sac4snet
 
 # stuff that gets installed
-pkglib_DATA = \
+snetstuffdir = $(pkglibdir)
+snetstuff_DATA = \
 	compile_cmd link_cmd
 
 pkgdata_DATA =\
 	src/snet.mkf
 
-pkglib_SCRIPTS = \
+snetstuff_SCRIPTS = \
 	libtool
 
 pkglib_LTLIBRARIES = \

@@ -12,7 +12,8 @@ pkginclude_HEADERS = \
 SACMODLIBS  = libSNetMod.so libSAC4SNetInputGenMod.so libSAC4SNetFibreIOMod.so
 SACTREELIBS = libSNetTree.so libSAC4SNetInputGenTree.so libSAC4SNetFibreIOTree.so
 
-pkglib_DATA = \
+sacmoddir = $(pkglibdir)
+sacmod_DATA = \
 	 $(SACMODLIBS) $(SACMODLIBS:.so=.a) \
          $(SACTREELIBS) \
          $(WRAPLIBDIR)/libSAC4SNetFibreIO.so $(WRAPLIBDIR)/libSAC4SNetFibreIO.a
