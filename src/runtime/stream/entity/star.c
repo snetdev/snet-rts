@@ -334,7 +334,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
 
       case REC_collect:
       default:
-        assert(0);
+        SNetUtilDebugFatal("Unknown record type!");
         /* if ignore, at least destroy ... */
         SNetRecDestroy( rec);
     }
