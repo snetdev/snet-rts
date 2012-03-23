@@ -174,7 +174,7 @@ static void DeserialiseData(FILE *file, c4snet_type_t type, void *data)
         /* '&' and '<' must be encoded to '&amp;' and 'lt';
         * as they are not legal characters in  XML character data!
         */
-        int count = fscanf(file, "%5[^<]", buf);
+        int count = fscanf(file, "%c%4[^<,]", buf, buf+1);
 
         if (!strcmp(buf, "&amp;")) *(char *) data = '&';
         else if (!strcmp(buf, "&lt;")) *(char *) data = '<';
