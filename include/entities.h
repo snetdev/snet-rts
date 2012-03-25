@@ -47,4 +47,6 @@ extern const char *SNetEntityName(snet_entity_t *);
 
 extern const char *SNetEntityStr(snet_entity_t *);
 
+extern void SNetEntitySetFunction(snet_entity_t *ent, snet_entityfunc_t f);
+
 #endif /* _ENTITIES_H_ */
