@@ -226,6 +226,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
             );
 #endif
         SNetStreamClose(nextstream, false);
+        sarg->next = NULL;
         SNetStreamClose(instream, false);
         TerminateStarBoxTask(outstream,sarg);
         return;
@@ -284,9 +285,10 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
                 );
 #endif
             SNetStreamClose(nextstream, false);
+            sarg->next = NULL;
             SNetStreamClose(instream, true);
             TerminateStarBoxTask(outstream,sarg);
-
+            return;
           } else {
             sarg->sync_cleanup = true;
 #ifdef DEBUG_PRINT_GC
@@ -336,11 +338,13 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
       if( nextstream != NULL) {
         SNetStreamWrite( nextstream, SNetRecCopy( rec));
         SNetStreamClose( nextstream, false);
+        sarg->next = NULL;
       }
       SNetStreamWrite( outstream, rec);
       /* note that no sort record has to be appended */
       SNetStreamClose(instream, true);
       TerminateStarBoxTask(outstream,sarg);
+
       return;
 
     case REC_collect:
@@ -651,7 +655,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_star, location, locvec,
-          "<star>", &StarBoxTaskBack, (void*)sarg)
+          "<star>", &InitStarBoxTask, (void*)sarg)
         );
 
     /* creation function of top level star will return output stream
