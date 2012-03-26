@@ -124,13 +124,19 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
   SNetStreamWrite( to_coll, SNetRecCreate(REC_collect, starstream));
 }
 
+static void StarBoxTask(snet_entity_t *ent, void *arg)
+{
+}
 
+static void InitStarBoxTask(snet_entity_t *ent, void *arg)
+{
+}
 
 
 /**
  * Star component task
  */
-static void StarBoxTask(snet_entity_t *ent, void *arg)
+static void StarBoxTaskBack(snet_entity_t *ent, void *arg)
 {
   star_arg_t *sarg = (star_arg_t *)arg;
   snet_stream_desc_t *instream;
@@ -408,7 +414,7 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_star, location, locvec,
-          "<star>", StarBoxTask, (void*)sarg)
+          "<star>", StarBoxTaskBack, (void*)sarg)
         );
 
     /* creation function of top level star will return output stream

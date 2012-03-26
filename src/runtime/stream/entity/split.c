@@ -447,7 +447,7 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->location = location;
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_split, location, locvec,
-          "<split>", &InitSplitBoxTask, (void*)sarg)
+          "<split>", &SplitBoxTaskBack, (void*)sarg)
         );
 
     output = CollectorCreateDynamic( initial, location, info);
