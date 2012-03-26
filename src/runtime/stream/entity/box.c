@@ -137,6 +137,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
       {
         snet_stream_t *newstream = SNetRecGetStream(rec);
         SNetStreamReplace( instream, newstream);
+        barg->input = newstream;
         SNetRecDestroy( rec);
       }
       break;

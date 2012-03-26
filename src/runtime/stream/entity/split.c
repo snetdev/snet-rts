@@ -133,6 +133,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       {
         snet_stream_t *newstream = SNetRecGetStream( rec);
         SNetStreamReplace( instream, newstream);
+        sarg->input = newstream;
         SNetRecDestroy( rec);
       }
       break;
