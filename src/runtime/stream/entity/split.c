@@ -11,6 +11,7 @@
 
 #include "distribution.h"
 
+
 /* ------------------------------------------------------------------------- */
 /*  SNetSplit                                                                */
 /* ------------------------------------------------------------------------- */
@@ -115,7 +116,8 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
         /* reset iterator */
         SNetStreamIterReset( sarg->iter, &sarg->repos_set);
         while( SNetStreamIterHasNext( sarg->iter)) {
-          snet_stream_desc_t *cur_stream = SNetStreamIterNext( sarg->iter);
+          snet_stream_desc_t *cur_stream;
+          cur_stream = SNetStreamOpen(SNetStreamGet(SNetStreamIterNext( sarg->iter)), 'w');
 
           SNetStreamWrite( cur_stream,
               SNetRecCreate( REC_sort_end, 0, sarg->counter));
@@ -143,7 +145,8 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       SNetStreamIterReset( sarg->iter, &sarg->repos_set);
       /* all instances receive copies of the record */
       while( SNetStreamIterHasNext( sarg->iter)) {
-        snet_stream_desc_t *cur_stream = SNetStreamIterNext( sarg->iter);
+        snet_stream_desc_t *cur_stream;
+        cur_stream = SNetStreamOpen(SNetStreamGet(SNetStreamIterNext( sarg->iter)), 'w');
         SNetStreamWrite( cur_stream,
             SNetRecCreate( REC_sort_end,
               /* we have to increase level */
@@ -162,7 +165,8 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       SNetStreamIterReset( sarg->iter, &sarg->repos_set);
       /* all instances receive copies of the record */
       while( SNetStreamIterHasNext( sarg->iter)) {
-        snet_stream_desc_t *cur_stream = SNetStreamIterNext( sarg->iter);
+        snet_stream_desc_t *cur_stream;
+        cur_stream = SNetStreamOpen(SNetStreamGet(SNetStreamIterNext( sarg->iter)), 'w');
         SNetStreamWrite( cur_stream, SNetRecCopy( rec));
 
         SNetStreamIterRemove( sarg->iter);
@@ -448,7 +452,7 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->location = location;
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_split, location, locvec,
-          "<split>", &SplitBoxTaskBack, (void*)sarg)
+          "<split>", &InitSplitBoxTask, (void*)sarg)
         );
 
     output = CollectorCreateDynamic( initial, location, info);
