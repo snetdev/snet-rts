@@ -279,6 +279,10 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
       /* if ignore, destroy at least ... */
       SNetRecDestroy( rec);
   }
+
+  SNetStreamClose( outstream, false);
+  SNetStreamClose( instream, false);
+
   newent = SNetEntityCopy(ent);
   SNetThreadingSpawn(newent);
 }

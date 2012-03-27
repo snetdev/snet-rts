@@ -261,6 +261,8 @@ static void FilterTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( in_rec);
       break;
   }
+  SNetStreamClose( outstream, false);
+  SNetStreamClose( instream, false);
 
   newent = SNetEntityCopy(ent);
   SNetThreadingSpawn(newent);
@@ -459,6 +461,8 @@ static void NameshiftTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( rec);
       break;
   }
+  SNetStreamClose( instream, false);
+  SNetStreamClose( outstream, false);
 
   newent = SNetEntityCopy(ent);
   SNetThreadingSpawn(newent);

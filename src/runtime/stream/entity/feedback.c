@@ -217,6 +217,10 @@ static void FeedbackCollTask(snet_entity_t *ent, void *arg)
     SNetStreamClose(state.outstream,  false);
     SNetMemFree(fbcarg);
     return;
+  }else{
+    SNetStreamClose(state.instream,   false);
+    SNetStreamClose(state.backstream, false);
+    SNetStreamClose(state.outstream,  false);
   }
 
   fbcarg->mode = state.mode;
@@ -362,6 +366,9 @@ static void FeedbackDispTask(snet_entity_t *ent, void *arg)
       break;
   }
 
+  SNetStreamClose(instream,   false);
+  SNetStreamClose(outstream,  false);
+  SNetStreamClose(backstream, false);
   newent = SNetEntityCopy(ent);
   SNetEntitySetFunction(newent, &FeedbackDispTask);
   SNetThreadingSpawn(newent);
@@ -690,6 +697,8 @@ static void FeedbackBufTask(snet_entity_t *ent, void *arg)
     rec = SNetQueuePeek(fbbarg->internal_buffer);
   }
   fbbarg->out_capacity = out_capacity;
+  SNetStreamClose( instream, false);
+  SNetStreamClose( outstream, false);
 
   newent = SNetEntityCopy(ent);
   SNetEntitySetFunction(newent, &FeedbackBufTask);

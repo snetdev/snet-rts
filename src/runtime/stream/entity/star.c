@@ -353,6 +353,11 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
       /* if ignore, at least destroy ... */
       SNetRecDestroy( rec);
   }
+  if( nextstream != NULL) {
+    SNetStreamClose( nextstream, false);
+  }
+  SNetStreamClose( instream, false);
+  SNetStreamClose( outstream, false);
   newent = SNetEntityCopy(ent);
 
   SNetThreadingSpawn(newent);

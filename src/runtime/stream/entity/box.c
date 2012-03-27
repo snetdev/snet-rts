@@ -164,6 +164,8 @@ static void BoxTask(snet_entity_t *ent, void *arg)
       /* if ignore, destroy at least ...*/
       SNetRecDestroy( rec);
   }
+  SNetStreamClose( instream, false);
+  SNetStreamClose( outstream, false);
 
   /* schedule new task */
   SNetThreadingSpawn(newent);

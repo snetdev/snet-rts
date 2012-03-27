@@ -421,6 +421,13 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( rec);
   }
 
+  for( i = 0; i<num; i++) {
+      if( outstreams[i] != NULL) {
+          SNetStreamClose( outstreams[i], false);
+      }
+  }
+  SNetStreamClose( instream, false);
+
   newent = SNetEntityCopy(ent);
 
   SNetThreadingSpawn(newent);
@@ -496,6 +503,12 @@ static void InitParallelBoxTask(snet_entity_t *ent, void *arg)
     parg->matchcounter[i] = SNetMemAlloc( sizeof( match_count_t));
     parg->usedcounter[i] = 0;
   }
+  for( i=0; i<num; i++) {
+      if(outstreams[i] != NULL){
+          SNetStreamClose( outstreams[i], false);
+      }
+  }
+  SNetStreamClose( instream, false);
 
   newent = SNetEntityCopy(ent);
   SNetEntitySetFunction(newent, &ParallelBoxTask);

@@ -28,12 +28,14 @@
 #define DESTROY_TERM_IN_WAITING_UPON_COLLECT
 
 typedef struct {
-  snet_stream_t *output, *cur;
+  snet_stream_t *output;
+  snet_stream_desc_t *curstream;
   snet_streamset_t readyset, waitingset;
   snet_stream_iter_t *wait_iter;
   snet_record_t *sort_rec;
   snet_record_t *term_rec;
   int incount;
+  int n;
   bool is_static;
   union {
     struct {
@@ -219,6 +221,7 @@ static void RestoreFromWaitingset(
   *sort_rec = NULL;
 }
 
+
 static void TerminateCollectorTask(snet_stream_desc_t *outstream,
                                    coll_arg_t *carg)
 {
@@ -246,39 +249,44 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
 
   coll_arg_t *carg = (coll_arg_t *)arg;
   snet_stream_desc_t *outstream;
-  snet_stream_desc_t *curstream = NULL;
 
+  printf("%d: task\n",carg->n);
   /* open outstream for writing */
   outstream = SNetStreamOpen(carg->output, 'w');
 
-  if(carg->cur != NULL){
-      curstream = SNetStreamOpen(carg->cur, 'r');
-  }
+//  if(carg->curstream != NULL){
+//      carg->curstream = SNetStreamOpen(SNetStreamGet(carg->curstream), 'r');
+//  }
 
   /* get a record */
-  snet_record_t *rec = GetRecord(&carg->readyset, carg->incount, &curstream);
+  snet_record_t *rec = GetRecord(&carg->readyset, carg->incount, &carg->curstream);
   /* process the record */
   switch( SNetRecGetDescriptor( rec)) {
 
     case REC_data:
+      printf("%d: Begin REC data\n",carg->n);
       /* data record: forward to output */
       SNetStreamWrite( outstream, rec);
+      printf("%d: End REC data\n",carg->n);
       break;
 
     case REC_sort_end:
-      ProcessSortRecord(ent, rec, &carg->sort_rec, curstream, &carg->readyset, &carg->waitingset);
+      printf("%d: Begin REC sort end\n",carg->n);
+      ProcessSortRecord(ent, rec, &carg->sort_rec, carg->curstream, &carg->readyset, &carg->waitingset);
       /* end processing this stream */
-      curstream = NULL;
-      carg->cur = NULL;
+      carg->curstream = NULL;
+      printf("%d: End REC sort end\n",carg->n);
       break;
 
     case REC_sync:
-      SNetStreamReplace( curstream, SNetRecGetStream( rec));
-      carg->cur = SNetRecGetStream( rec);
+      printf("%d: Begin REC sync\n",carg->n);
+      SNetStreamReplace( carg->curstream, SNetRecGetStream( rec));
       SNetRecDestroy( rec);
+      printf("%d: End REC sync\n",carg->n);
       break;
 
     case REC_collect:
+      printf("%d: Begin REC collect\n",carg->n);
       /* only for dynamic collectors! */
       assert( false == carg->is_static );
       /* collect: add new stream to ready set */
@@ -297,20 +305,24 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
       carg->incount++;
       /* destroy collect record */
       SNetRecDestroy( rec);
+      printf("%d: End REC collect\n",carg->n);
       break;
 
     case REC_terminate:
+      printf("%d: Begin REC terminate\n",carg->n);
       /* termination record: close stream and remove from ready set */
-      ProcessTermRecord(rec, &carg->term_rec, curstream, &carg->readyset, &carg->incount);
+      ProcessTermRecord(rec, &carg->term_rec, carg->curstream, &carg->readyset, &carg->incount);
       /* stop processing this stream */
-      curstream = NULL;
-      carg->cur = NULL;
+      carg->curstream = NULL;
+      printf("%d: End REC terminate\n",carg->n);
       break;
 
     default:
+      printf("%d: Begin default\n",carg->n);
       assert(0);
       /* if ignore, at least destroy ... */
       SNetRecDestroy( rec);
+      printf("%d: End default\n",carg->n);
   } /* end switch */
 
   /************* termination conditions *****************/
@@ -324,7 +336,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
          *    successor via a sync record
          * -> collector can terminate
          */
-        snet_stream_desc_t *in = carg->waitingset;
+        snet_stream_desc_t *in = SNetStreamOpen(SNetStreamGet(carg->waitingset), 'r');
 
         SNetStreamWrite( outstream,
             SNetRecCreate( REC_sync, SNetStreamGet(in))
@@ -367,9 +379,13 @@ static void InitCollectorTask(snet_entity_t *ent, void *arg)
   snet_entity_t *newent;
 
   coll_arg_t *carg = (coll_arg_t *)arg;
+  static int n = 0;
+  n++;
+  carg->n = n;
 
-  carg->cur = NULL;
+  printf("%d: Init\n",carg->n);
 
+  carg->curstream = NULL;
   carg->sort_rec = NULL;
   carg->term_rec = NULL;
 
@@ -402,6 +418,7 @@ static void InitCollectorTask(snet_entity_t *ent, void *arg)
   SNetEntitySetFunction(newent, &CollectorTask);
   SNetThreadingSpawn(newent);
 }
+
 
 /**
  * Collector task for dynamic combinators (star/split)
@@ -562,7 +579,6 @@ void CollectorTaskBack(snet_entity_t *ent, void *arg)
   /* destroy argument */
   SNetMemFree( carg);
 } /* END of DYNAMIC COLLECTOR TASK */
-
 
 
 /*****************************************************************************/

@@ -116,8 +116,9 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
         /* reset iterator */
         SNetStreamIterReset( sarg->iter, &sarg->repos_set);
         while( SNetStreamIterHasNext( sarg->iter)) {
+          snet_stream_desc_t *tmp = SNetStreamIterNext( sarg->iter);
           snet_stream_desc_t *cur_stream;
-          cur_stream = SNetStreamOpen(SNetStreamGet(SNetStreamIterNext( sarg->iter)), 'w');
+          cur_stream = SNetStreamOpen(SNetStreamGet(tmp), 'w');
 
           SNetStreamWrite( cur_stream,
               SNetRecCreate( REC_sort_end, 0, sarg->counter));
@@ -145,8 +146,9 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       SNetStreamIterReset( sarg->iter, &sarg->repos_set);
       /* all instances receive copies of the record */
       while( SNetStreamIterHasNext( sarg->iter)) {
+        snet_stream_desc_t *tmp = SNetStreamIterNext( sarg->iter);
         snet_stream_desc_t *cur_stream;
-        cur_stream = SNetStreamOpen(SNetStreamGet(SNetStreamIterNext( sarg->iter)), 'w');
+        cur_stream = SNetStreamOpen(SNetStreamGet(tmp), 'w');
         SNetStreamWrite( cur_stream,
             SNetRecCreate( REC_sort_end,
               /* we have to increase level */
@@ -165,8 +167,9 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       SNetStreamIterReset( sarg->iter, &sarg->repos_set);
       /* all instances receive copies of the record */
       while( SNetStreamIterHasNext( sarg->iter)) {
+        snet_stream_desc_t *tmp = SNetStreamIterNext( sarg->iter);
         snet_stream_desc_t *cur_stream;
-        cur_stream = SNetStreamOpen(SNetStreamGet(SNetStreamIterNext( sarg->iter)), 'w');
+        cur_stream = SNetStreamOpen(SNetStreamGet(tmp), 'w');
         SNetStreamWrite( cur_stream, SNetRecCopy( rec));
 
         SNetStreamIterRemove( sarg->iter);
@@ -200,6 +203,9 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       /* if ignore, at least destroy it */
       SNetRecDestroy( rec);
   }
+
+  SNetStreamClose( initial, false);
+  SNetStreamClose( instream, false);
 
   newent = SNetEntityCopy(ent);
 
