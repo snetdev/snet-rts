@@ -27,13 +27,20 @@
  */
 #define DESTROY_TERM_IN_WAITING_UPON_COLLECT
 
+typedef struct snet_set_t {
+  snet_stream_t *stream;
+  struct snet_set_t *next;
+  bool cur;
+} snet_set_t;
+
 typedef struct {
   snet_stream_t *output;
-  snet_stream_desc_t *curstream;
-  snet_streamset_t readyset, waitingset;
-  snet_stream_iter_t *wait_iter;
+  snet_stream_t *cur;
+  //snet_streamset_t readyset, waitingset;
+  //snet_stream_iter_t *wait_iter;
   snet_record_t *sort_rec;
   snet_record_t *term_rec;
+  snet_set_t *ready, *waiting;
   int incount;
   int n;
   bool is_static;
@@ -61,6 +68,56 @@ typedef struct {
 /* Helper functions                                                          */
 /*****************************************************************************/
 
+static snet_set_t * FillSet(snet_streamset_t *streamset, snet_stream_desc_t *cur_stream)
+{
+  snet_stream_iter_t *iter = SNetStreamIterCreate(streamset);
+  snet_set_t * head = NULL;
+  snet_set_t * set;
+  while(SNetStreamIterHasNext(iter)){
+    snet_stream_desc_t * tmp = SNetStreamIterNext(iter);
+    snet_stream_t * stream = SNetStreamGet(tmp);
+    snet_set_t *tmp_set;
+//    SNetStreamClose(tmp, false);
+    tmp_set = (snet_set_t *)SNetMemAlloc(sizeof(snet_set_t));
+    if(tmp == cur_stream) {
+      tmp_set->cur = true;
+    }else{
+      tmp_set->cur = false;
+    }
+    tmp_set->stream = stream;
+    tmp_set->next = NULL;
+    if(head == NULL) {
+      head = tmp_set;
+      set = head;
+    }else{
+      set->next = tmp_set;
+      set = set->next;
+    }
+  }
+  SNetStreamIterDestroy(iter);
+  return head;
+}
+
+static snet_streamset_t FillStreamSet(snet_set_t *head, snet_stream_desc_t **cur_stream, snet_stream_t *cur)
+{
+  snet_streamset_t streamset = NULL;
+  snet_set_t *set = head;
+  while(set != NULL){
+    snet_stream_desc_t *tmp_desc;
+    snet_set_t *tmp = set;
+    set = tmp->next;
+    /* open each stream in listening set for reading */
+    tmp_desc = SNetStreamOpen( tmp->stream, 'r');
+    if(tmp->cur){
+      *cur_stream = tmp_desc;
+    }
+    /* add each stream instreams[i] to listening set of collector */
+    SNetStreamsetPut( &streamset, tmp_desc);
+    SNetMemFree(tmp);
+  }
+  return streamset;
+}
+
 /**
  * @pre rec1 and rec2 are sort records
  */
@@ -84,13 +141,14 @@ static int DestroyTermInWaitingSet(snet_stream_iter_t *wait_iter,
     SNetStreamIterReset( wait_iter, waitingset);
     while( SNetStreamIterHasNext( wait_iter)) {
       snet_stream_desc_t *sd = SNetStreamIterNext( wait_iter);
-      snet_record_t *wait_rec = SNetStreamPeek( sd);
+      snet_stream_desc_t *tmp = SNetStreamOpen(SNetStreamGet(sd), 'r');
+      snet_record_t *wait_rec = SNetStreamPeek( tmp);
 
       /* for this stream, check if there is a termination record next */
       if ( wait_rec != NULL &&
           SNetRecGetDescriptor( wait_rec) == REC_terminate ) {
         /* consume, remove from waiting set and free the stream */
-        (void) SNetStreamRead( sd);
+        (void) SNetStreamRead( tmp);
         SNetStreamIterRemove( wait_iter);
         SNetStreamClose( sd, true);
         /* update destroyed counter */
@@ -98,6 +156,7 @@ static int DestroyTermInWaitingSet(snet_stream_iter_t *wait_iter,
         /* destroy record */
         SNetRecDestroy( wait_rec);
       }
+      SNetStreamClose( tmp, false);
       /* else do nothing */
     }
   }
@@ -113,6 +172,7 @@ static snet_record_t *GetRecord(
     int incount,
     snet_stream_desc_t **cur_stream)
 {
+  snet_record_t * rec;
   assert(incount >= 1 && *readyset != NULL);
   if (*cur_stream == NULL || SNetStreamPeek(*cur_stream) == NULL) {
     if (incount == 1) {
@@ -121,7 +181,8 @@ static snet_record_t *GetRecord(
       *cur_stream = SNetStreamPoll(readyset);
     }
   }
-  return SNetStreamRead(*cur_stream);
+  rec = SNetStreamRead(*cur_stream);
+  return rec;
 }
 
 
@@ -233,8 +294,6 @@ static void TerminateCollectorTask(snet_stream_desc_t *outstream,
   }
   /* close outstream */
   SNetStreamClose( outstream, false);
-  /* destroy iterator */
-  SNetStreamIterDestroy( carg->wait_iter);
   /* destroy argument */
   SNetMemFree( carg);
 }
@@ -248,87 +307,92 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
   snet_entity_t *newent;
 
   coll_arg_t *carg = (coll_arg_t *)arg;
-  snet_stream_desc_t *outstream;
+  snet_streamset_t readyset, waitingset;
+  snet_stream_desc_t *outstream, *curstream = NULL;
+  snet_stream_iter_t *wait_iter;
 
-  printf("%d: task\n",carg->n);
+  //printf("%d: task\n",carg->n);
   /* open outstream for writing */
   outstream = SNetStreamOpen(carg->output, 'w');
-
+  readyset = FillStreamSet(carg->ready, &curstream, carg->cur);
+  waitingset = FillStreamSet(carg->waiting, &curstream, carg->cur);
+  /* create an iterator for waiting set, is reused within main loop*/
+  wait_iter = SNetStreamIterCreate( &waitingset);
 //  if(carg->curstream != NULL){
 //      carg->curstream = SNetStreamOpen(SNetStreamGet(carg->curstream), 'r');
 //  }
 
   /* get a record */
-  snet_record_t *rec = GetRecord(&carg->readyset, carg->incount, &carg->curstream);
+  snet_record_t *rec = GetRecord(&readyset, carg->incount, &curstream);
   /* process the record */
   switch( SNetRecGetDescriptor( rec)) {
 
     case REC_data:
-      printf("%d: Begin REC data\n",carg->n);
+      //printf("%d: Begin REC data\n",carg->n);
       /* data record: forward to output */
       SNetStreamWrite( outstream, rec);
-      printf("%d: End REC data\n",carg->n);
+      //printf("%d: End REC data\n",carg->n);
       break;
 
     case REC_sort_end:
-      printf("%d: Begin REC sort end\n",carg->n);
-      ProcessSortRecord(ent, rec, &carg->sort_rec, carg->curstream, &carg->readyset, &carg->waitingset);
+      //printf("%d: Begin REC sort end\n",carg->n);
+      ProcessSortRecord(ent, rec, &carg->sort_rec, curstream, &readyset, &waitingset);
       /* end processing this stream */
-      carg->curstream = NULL;
-      printf("%d: End REC sort end\n",carg->n);
+      curstream = NULL;
+      //printf("%d: End REC sort end\n",carg->n);
       break;
 
     case REC_sync:
-      printf("%d: Begin REC sync\n",carg->n);
-      SNetStreamReplace( carg->curstream, SNetRecGetStream( rec));
+      //printf("%d: Begin REC sync\n",carg->n);
+      SNetStreamReplace( curstream, SNetRecGetStream( rec));
       SNetRecDestroy( rec);
-      printf("%d: End REC sync\n",carg->n);
+      //printf("%d: End REC sync\n",carg->n);
       break;
 
     case REC_collect:
-      printf("%d: Begin REC collect\n",carg->n);
+      //printf("%d: Begin REC collect\n",carg->n);
       /* only for dynamic collectors! */
       assert( false == carg->is_static );
       /* collect: add new stream to ready set */
 #ifdef DESTROY_TERM_IN_WAITING_UPON_COLLECT
       /* but first, check if we can free resources by checking the
          waiting set for arrival of termination records */
-      carg->incount -= DestroyTermInWaitingSet(carg->wait_iter, &carg->waitingset);
+      carg->incount -= DestroyTermInWaitingSet(wait_iter, &waitingset);
       assert(carg->incount > 0);
 #endif
       /* finally, add new stream to ready set */
       SNetStreamsetPut(
-          &carg->readyset,
+          &readyset,
           SNetStreamOpen( SNetRecGetStream( rec), 'r')
           );
       /* update incoming counter */
       carg->incount++;
       /* destroy collect record */
       SNetRecDestroy( rec);
-      printf("%d: End REC collect\n",carg->n);
+      //printf("%d: End REC collect\n",carg->n);
       break;
 
     case REC_terminate:
-      printf("%d: Begin REC terminate\n",carg->n);
+      //printf("%d: Begin REC terminate\n",carg->n);
       /* termination record: close stream and remove from ready set */
-      ProcessTermRecord(rec, &carg->term_rec, carg->curstream, &carg->readyset, &carg->incount);
+      ProcessTermRecord(rec, &carg->term_rec, curstream, &readyset, &carg->incount);
       /* stop processing this stream */
-      carg->curstream = NULL;
-      printf("%d: End REC terminate\n",carg->n);
+      curstream = NULL;
+      //printf("%d: End REC terminate\n",carg->n);
       break;
 
     default:
-      printf("%d: Begin default\n",carg->n);
+      //printf("%d: Begin default\n",carg->n);
       assert(0);
       /* if ignore, at least destroy ... */
       SNetRecDestroy( rec);
-      printf("%d: End default\n",carg->n);
+      //printf("%d: End default\n",carg->n);
   } /* end switch */
 
   /************* termination conditions *****************/
-  if ( SNetStreamsetIsEmpty( &carg->readyset)) {
+  if ( SNetStreamsetIsEmpty( &readyset)) {
     /* the streams which had a sort record are in the waitingset */
-    if ( !SNetStreamsetIsEmpty( &carg->waitingset)) {
+    if ( !SNetStreamsetIsEmpty( &waitingset)) {
       /* check incount */
       if ( carg->is_static && (1 == carg->incount) ) {
         /* static collector has only one incoming stream left
@@ -336,7 +400,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
          *    successor via a sync record
          * -> collector can terminate
          */
-        snet_stream_desc_t *in = SNetStreamOpen(SNetStreamGet(carg->waitingset), 'r');
+        snet_stream_desc_t *in = SNetStreamOpen(SNetStreamGet(waitingset), 'r');
 
         SNetStreamWrite( outstream,
             SNetRecCreate( REC_sync, SNetStreamGet(in))
@@ -351,7 +415,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
         TerminateCollectorTask(outstream,carg);
         return;
       } else {
-        RestoreFromWaitingset(&carg->waitingset, &carg->readyset, &carg->sort_rec, outstream);
+        RestoreFromWaitingset(&waitingset, &readyset, &carg->sort_rec, outstream);
       }
     } else {
       /* both ready set and waitingset are empty */
@@ -369,7 +433,12 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
     }
   }
   /************* end of termination conditions **********/
-
+  if(curstream != NULL) {
+    carg->cur = SNetStreamGet(curstream);
+  }
+  carg->ready = FillSet(&readyset,curstream);
+  carg->waiting = FillSet(&waitingset,curstream);
+  SNetStreamIterDestroy(wait_iter);
   newent = SNetEntityCopy(ent);
   SNetThreadingSpawn(newent);
 }
@@ -380,16 +449,18 @@ static void InitCollectorTask(snet_entity_t *ent, void *arg)
 
   coll_arg_t *carg = (coll_arg_t *)arg;
   static int n = 0;
+  snet_streamset_t readyset = NULL;
   n++;
   carg->n = n;
+  carg->waiting = NULL;
+  carg->ready = NULL;
 
-  printf("%d: Init\n",carg->n);
+  //printf("%d: Init\n",carg->n);
 
-  carg->curstream = NULL;
+  carg->cur = NULL;
   carg->sort_rec = NULL;
   carg->term_rec = NULL;
 
-  carg->readyset = carg->waitingset = NULL;
 
   if (carg->is_static) {
     int i;
@@ -400,19 +471,17 @@ static void InitCollectorTask(snet_entity_t *ent, void *arg)
       /* open each stream in listening set for reading */
       tmp = SNetStreamOpen( CARG_ST(carg, inputs[i]), 'r');
       /* add each stream instreams[i] to listening set of collector */
-      SNetStreamsetPut( &carg->readyset, tmp);
+      SNetStreamsetPut( &readyset, tmp);
     }
     SNetMemFree( CARG_ST(carg, inputs) );
   } else {
     carg->incount = 1;
     /* Open initial stream and put into readyset */
-    SNetStreamsetPut( &carg->readyset,
+    SNetStreamsetPut( &readyset,
         SNetStreamOpen(CARG_DYN(carg, input), 'r')
         );
   }
-
-  /* create an iterator for waiting set, is reused within main loop*/
-  carg->wait_iter = SNetStreamIterCreate( &carg->waitingset);
+  carg->ready = FillSet(&readyset,NULL);
 
   newent = SNetEntityCopy(ent);
   SNetEntitySetFunction(newent, &CollectorTask);
@@ -615,7 +684,7 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, int lo
   /* spawn collector task */
   SNetThreadingSpawn(
       SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
-        "<collect>", &CollectorTaskBack, (void*)carg)
+        "<collect>", &InitCollectorTask, (void*)carg)
       );
   return outstream;
 }
@@ -642,7 +711,7 @@ snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, int location, sn
   /* spawn collector task */
   SNetThreadingSpawn(
       SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
-        "<collect>", &CollectorTaskBack, (void*)carg)
+        "<collect>", &InitCollectorTask, (void*)carg)
       );
   return outstream;
 }

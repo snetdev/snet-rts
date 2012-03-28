@@ -16,7 +16,6 @@
 /*  SNetSplit                                                                */
 /* ------------------------------------------------------------------------- */
 
-
 typedef struct {
   snet_stream_t *input, *output;
   snet_startup_fun_t boxfun;
@@ -173,6 +172,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
         SNetStreamWrite( cur_stream, SNetRecCopy( rec));
 
         SNetStreamIterRemove( sarg->iter);
+        SNetStreamClose(tmp,false);
         /* close  the stream to the instance */
         SNetStreamClose( cur_stream, false);
       }
