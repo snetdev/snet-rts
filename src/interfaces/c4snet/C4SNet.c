@@ -70,7 +70,8 @@ static c4snet_data_t *MPIUnpackFun(void *buf);
 #include "sccmalloc.h"
 
 static void *SCCMalloc(size_t);
-static void SCCPackFun(void *cdata, void *dest);
+static void SCCFreeWrapper(void*);
+static void SCCPackFun(c4snet_data_t *cdata, void *dest);
 static void *SCCUnpackFun(void *localBuf);
 #endif
 
@@ -303,7 +304,7 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
       #ifdef ENABLE_DIST_SCC
         MemAlloc = &SCCMalloc;
         MemFree = &SCCFreeWrapper;
-        packfun = &SCCPackFun;
+        packfun = (void (*)(void*, void*)) &SCCPackFun;
         unpackfun = &SCCUnpackFun;
       #else
         SNetUtilDebugFatal("C4SNet supports SCC, but is not configured to use "
