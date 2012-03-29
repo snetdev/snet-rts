@@ -493,16 +493,16 @@ static void *SCCMalloc(size_t s)
   return SCCMallocPtr(s);
 }
 
-static void *SCCFreeWrapper(void *p)
+static void SCCFreeWrapper(void *p)
 {
   if (!remap) SNetMemFree(p);
 
   SCCFree(p);
 }
 
-static void SCCPackFun(c4snet_data_t *cdata, void *buf)
+static void SCCPackFun(c4snet_data_t *data, void *buf)
 {
-  SNetDistribPack(cdata, buf, sizeof(c4snet_data_t), false);
+  SNetDistribPack(data, buf, sizeof(c4snet_data_t), false);
 
   if (data->vtype == VTYPE_array) {
     SNetDistribPack(data->data.ptr, buf, AllocatedSpace(data), true);
