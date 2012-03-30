@@ -11,6 +11,13 @@
 #include "threading.h"
 
 
+#define LIST_NAME_H Stream
+#define LIST_TYPE_NAME_H stream
+#define LIST_VAL_H snet_stream_t *
+#include "list-template.h"
+#undef LIST_VAL_H
+#undef LIST_TYPE_NAME_H
+#undef LIST_NAME_H
 //#define DEBUG_PRINT_GC
 
 
@@ -27,12 +34,6 @@
  */
 #define DESTROY_TERM_IN_WAITING_UPON_COLLECT
 
-typedef struct snet_set_t {
-  snet_stream_t *stream;
-  struct snet_set_t *next;
-  bool cur;
-} snet_set_t;
-
 typedef struct {
   snet_stream_t *output;
   snet_stream_t *cur;
@@ -40,7 +41,9 @@ typedef struct {
   //snet_stream_iter_t *wait_iter;
   snet_record_t *sort_rec;
   snet_record_t *term_rec;
-  snet_set_t *ready, *waiting;
+  snet_stream_list_t * ready_list, *waiting_list;
+  int cur_index;
+  bool is_ready;
   int incount;
   int n;
   bool is_static;
@@ -68,55 +71,41 @@ typedef struct {
 /* Helper functions                                                          */
 /*****************************************************************************/
 
-static snet_set_t * FillSet(snet_streamset_t *streamset, snet_stream_desc_t *cur_stream)
-{
+static int FillList(snet_stream_list_t *streamlist, snet_streamset_t *streamset, snet_stream_desc_t *cur_stream){
+  int cur = -1;
+  int i = 0;
   snet_stream_iter_t *iter = SNetStreamIterCreate(streamset);
-  snet_set_t * head = NULL;
-  snet_set_t * set;
   while(SNetStreamIterHasNext(iter)){
-    snet_stream_desc_t * tmp = SNetStreamIterNext(iter);
-    snet_stream_t * stream = SNetStreamGet(tmp);
-    snet_set_t *tmp_set;
-//    SNetStreamClose(tmp, false);
-    tmp_set = (snet_set_t *)SNetMemAlloc(sizeof(snet_set_t));
+    snet_stream_desc_t *tmp = SNetStreamIterNext(iter);
+    SNetStreamListAppendEnd(streamlist,SNetStreamGet(tmp));
     if(tmp == cur_stream) {
-      tmp_set->cur = true;
-    }else{
-      tmp_set->cur = false;
+      cur = i;
     }
-    tmp_set->stream = stream;
-    tmp_set->next = NULL;
-    if(head == NULL) {
-      head = tmp_set;
-      set = head;
-    }else{
-      set->next = tmp_set;
-      set = set->next;
-    }
+    //SNetStreamClose(tmp,false);
+    i++;
   }
   SNetStreamIterDestroy(iter);
-  return head;
+  return cur;
 }
 
-static snet_streamset_t FillStreamSet(snet_set_t *head, snet_stream_desc_t **cur_stream, snet_stream_t *cur)
+
+static snet_streamset_t DequeueStreamList(snet_stream_list_t *list, snet_stream_desc_t **cur_stream, int index)
 {
+  int i = 0;
   snet_streamset_t streamset = NULL;
-  snet_set_t *set = head;
-  while(set != NULL){
-    snet_stream_desc_t *tmp_desc;
-    snet_set_t *tmp = set;
-    set = tmp->next;
-    /* open each stream in listening set for reading */
-    tmp_desc = SNetStreamOpen( tmp->stream, 'r');
-    if(tmp->cur){
-      *cur_stream = tmp_desc;
+  snet_stream_t * stream = NULL;
+  LIST_DEQUEUE_EACH(list, stream) {
+    snet_stream_desc_t *tmp;
+    tmp = SNetStreamOpen(stream, 'r');
+    if(i == index){
+      *cur_stream = tmp;
     }
-    /* add each stream instreams[i] to listening set of collector */
-    SNetStreamsetPut( &streamset, tmp_desc);
-    SNetMemFree(tmp);
+    SNetStreamsetPut(&streamset, tmp);
+    i++;
   }
   return streamset;
 }
+
 
 /**
  * @pre rec1 and rec2 are sort records
@@ -305,6 +294,7 @@ static void TerminateCollectorTask(snet_stream_desc_t *outstream,
 static void CollectorTask(snet_entity_t *ent, void *arg)
 {
   snet_entity_t *newent;
+  int index = 0;
 
   coll_arg_t *carg = (coll_arg_t *)arg;
   snet_streamset_t readyset, waitingset;
@@ -314,8 +304,20 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
   //printf("%d: task\n",carg->n);
   /* open outstream for writing */
   outstream = SNetStreamOpen(carg->output, 'w');
-  readyset = FillStreamSet(carg->ready, &curstream, carg->cur);
-  waitingset = FillStreamSet(carg->waiting, &curstream, carg->cur);
+  if(carg->is_ready){
+    index = carg->cur_index;
+  }else{
+    index = -1;
+  }
+  readyset = DequeueStreamList(carg->ready_list, &curstream, index);
+  if(!carg->is_ready){
+     index = carg->cur_index;
+  }else{
+    index = -1;
+  }
+  waitingset = DequeueStreamList(carg->waiting_list, &curstream, index);
+  //readyset = FillStreamSet(carg->ready, &curstream, carg->cur);
+  //waitingset = FillStreamSet(carg->waiting, &curstream, carg->cur);
   /* create an iterator for waiting set, is reused within main loop*/
   wait_iter = SNetStreamIterCreate( &waitingset);
 //  if(carg->curstream != NULL){
@@ -433,11 +435,21 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
     }
   }
   /************* end of termination conditions **********/
-  if(curstream != NULL) {
-    carg->cur = SNetStreamGet(curstream);
+  //if(curstream != NULL) {
+  //  carg->cur = SNetStreamGet(curstream);
+  //}
+  //carg->ready = FillSet(&readyset,curstream);
+  //carg->waiting = FillSet(&waitingset,curstream);
+  index = FillList(carg->ready_list,&readyset,curstream);
+  if(index == -1){
+    carg->is_ready = false;
+    carg->cur_index = -1;
+    index = FillList(carg->waiting_list, &waitingset,curstream);
+  }else{
+    FillList(carg->waiting_list, &waitingset, NULL);
   }
-  carg->ready = FillSet(&readyset,curstream);
-  carg->waiting = FillSet(&waitingset,curstream);
+  
+
   SNetStreamIterDestroy(wait_iter);
   newent = SNetEntityCopy(ent);
   SNetThreadingSpawn(newent);
@@ -449,11 +461,10 @@ static void InitCollectorTask(snet_entity_t *ent, void *arg)
 
   coll_arg_t *carg = (coll_arg_t *)arg;
   static int n = 0;
+  int index = 0;
   snet_streamset_t readyset = NULL;
   n++;
   carg->n = n;
-  carg->waiting = NULL;
-  carg->ready = NULL;
 
   //printf("%d: Init\n",carg->n);
 
@@ -481,8 +492,14 @@ static void InitCollectorTask(snet_entity_t *ent, void *arg)
         SNetStreamOpen(CARG_DYN(carg, input), 'r')
         );
   }
-  carg->ready = FillSet(&readyset,NULL);
+  carg->ready_list = SNetStreamListCreate(carg->incount);
+  carg->waiting_list = SNetStreamListCreate(0);
 
+  index = FillList(carg->ready_list,&readyset,NULL);
+  if(index == -1){
+    carg->is_ready = false;
+    carg->cur_index = -1;
+  }
   newent = SNetEntityCopy(ent);
   SNetEntitySetFunction(newent, &CollectorTask);
   SNetThreadingSpawn(newent);
