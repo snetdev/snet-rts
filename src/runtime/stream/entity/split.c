@@ -121,6 +121,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
 
           SNetStreamWrite( cur_stream,
               SNetRecCreate( REC_sort_end, 0, sarg->counter));
+          SNetStreamClose( cur_stream, false);
         }
         /* Now also send a sort record to initial,
            after the collect records for new instances have been sent */

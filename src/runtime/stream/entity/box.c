@@ -37,7 +37,6 @@ typedef struct {
   static struct timeval tv_out;
 #endif
   snet_stream_t *input, *output;
-  snet_info_t *info;
   void (*boxfun)( snet_handle_t*);
   snet_int_list_list_t *output_variants;
   const char *boxname;
@@ -155,6 +154,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
       //SNetHndDestroy( &hnd);
 
       /* destroy box arg */
+      SNetVariantListDestroy(barg->vars);
       SNetIntListListDestroy(barg->output_variants);
       SNetMemFree( barg);
       return;
@@ -231,7 +231,6 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->output_variants = output_variants;
     barg->vars = vlist;
     barg->boxname = boxname;
-    barg->info = SNetInfoCopy(info);
 
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_box, location, SNetLocvecGet(info),

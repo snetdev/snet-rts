@@ -69,20 +69,22 @@ typedef struct {
 /* Helper functions                                                          */
 /*****************************************************************************/
 
-static int FillList(snet_stream_list_t *streamlist, snet_streamset_t *streamset, snet_stream_desc_t *cur_stream){
+static int FillList(snet_stream_list_t *streamlist, snet_streamset_t *streamset, snet_stream_desc_t *cur_stream)
+{
   int cur = -1;
   int i = 0;
-  snet_stream_t *str;
   snet_stream_iter_t *iter = SNetStreamIterCreate(streamset);
   while(SNetStreamIterHasNext(iter)){
     snet_stream_desc_t *tmp = SNetStreamIterNext(iter);
-    snet_stream_t *tmp_stream = SNetStreamGet(tmp);
-    SNetStreamListAppendEnd(streamlist,tmp_stream);
-    if(tmp == cur_stream) {
-      cur = i;
+    if(tmp != NULL) {
+      snet_stream_t *tmp_stream = SNetStreamGet(tmp);
+      SNetStreamListAppendEnd(streamlist,tmp_stream);
+      if(tmp == cur_stream) {
+        cur = i;
+      }
+      //SNetStreamClose(tmp,false);
+      i++;
     }
-    //SNetStreamClose(tmp,false);
-    i++;
   }
   SNetStreamIterDestroy(iter);
   return cur;
@@ -400,6 +402,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
             );
 #endif
         TerminateCollectorTask(outstream,carg);
+        SNetStreamIterDestroy(wait_iter);
         return;
       } else {
         RestoreFromWaitingset(&waitingset, &readyset, &carg->sort_rec, outstream);
@@ -416,6 +419,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
       SNetStreamWrite( outstream, carg->term_rec);
       carg->term_rec = NULL;
       TerminateCollectorTask(outstream,carg);
+      SNetStreamIterDestroy(wait_iter);
       return;
     }
   }
@@ -428,7 +432,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
   }else{
     FillList(carg->waiting_list, &waitingset, NULL);
   }
-  
+  SNetStreamClose(outstream, false);
 
   SNetStreamIterDestroy(wait_iter);
   newent = SNetEntityCopy(ent);

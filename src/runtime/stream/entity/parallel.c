@@ -252,7 +252,7 @@ static void TerminateParallelBoxTask(snet_stream_desc_t **outstreams,
   if(parg->usedcounter != NULL){
     SNetMemFree( parg->usedcounter);
   }
-
+  SNetMemFree( parg->outputs);
   SNetVariantListListDestroy( parg->variant_lists);
   SNetMemFree( parg);
 }
@@ -513,6 +513,7 @@ static void InitParallelBoxTask(snet_entity_t *ent, void *arg)
   newent = SNetEntityCopy(ent);
   SNetEntitySetFunction(newent, &ParallelBoxTask);
 
+  //SNetEntityDestroy(ent);
   SNetThreadingSpawn(newent);
 }
 
