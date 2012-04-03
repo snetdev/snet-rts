@@ -82,7 +82,7 @@ static int FillList(snet_stream_list_t *streamlist, snet_streamset_t *streamset,
       if(tmp == cur_stream) {
         cur = i;
       }
-      //SNetStreamClose(tmp,false);
+      SNetStreamClose(tmp,false);
       i++;
     }
   }
@@ -97,12 +97,15 @@ static snet_streamset_t DequeueStreamList(snet_stream_list_t *list, snet_stream_
   snet_streamset_t streamset = NULL;
   snet_stream_t * stream;
   LIST_DEQUEUE_EACH(list, stream) {
-    snet_stream_desc_t *tmp;
-    tmp = SNetStreamOpen(stream, 'r');
-    if(i == index){
-      *cur_stream = tmp;
+    if(stream == NULL) {
+    }else{
+      snet_stream_desc_t *tmp;
+      tmp = SNetStreamOpen(stream, 'r');
+      if(i == index){
+        *cur_stream = tmp;
+      }
+      SNetStreamsetPut(&streamset, tmp);
     }
-    SNetStreamsetPut(&streamset, tmp);
     i++;
   }
   return streamset;
