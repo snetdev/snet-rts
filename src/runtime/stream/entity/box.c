@@ -59,9 +59,6 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   snet_handle_t hnd;
   snet_entity_t *newent;
 
-  newent = SNetEntityCopy(ent);
-  SNetEntitySetFunction(newent, &BoxTask);
-
   instream = SNetStreamOpen(barg->input, 'r');
   outstream = SNetStreamOpen(barg->output, 'w');
   /* read from input stream */
@@ -167,6 +164,8 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   SNetStreamClose( instream, false);
   SNetStreamClose( outstream, false);
 
+  newent = SNetEntityCopy(ent);
+  SNetEntitySetFunction(newent, &BoxTask);
   /* schedule new task */
   SNetThreadingSpawn(newent);
 }

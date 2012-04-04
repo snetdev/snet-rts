@@ -75,6 +75,7 @@ static int FillList(snet_stream_list_t *streamlist, snet_streamset_t *streamset,
   int i = 0;
   snet_stream_iter_t *iter = SNetStreamIterCreate(streamset);
   while(SNetStreamIterHasNext(iter)){
+    //printf("next\n");
     snet_stream_desc_t *tmp = SNetStreamIterNext(iter);
     if(tmp != NULL) {
       snet_stream_t *tmp_stream = SNetStreamGet(tmp);
@@ -83,8 +84,10 @@ static int FillList(snet_stream_list_t *streamlist, snet_streamset_t *streamset,
         cur = i;
       }
       SNetStreamClose(tmp,false);
+      tmp = NULL;
       i++;
     }
+    //printf("next end\n");
   }
   SNetStreamIterDestroy(iter);
   return cur;
@@ -96,7 +99,7 @@ static snet_streamset_t DequeueStreamList(snet_stream_list_t *list, snet_stream_
   int i = 0;
   snet_streamset_t streamset = NULL;
   snet_stream_t * stream;
-  LIST_DEQUEUE_EACH(list, stream) {
+  LIST_ENUMERATE(list, i, stream) {
     if(stream == NULL) {
     }else{
       snet_stream_desc_t *tmp;
@@ -106,7 +109,6 @@ static snet_streamset_t DequeueStreamList(snet_stream_list_t *list, snet_stream_
       }
       SNetStreamsetPut(&streamset, tmp);
     }
-    i++;
   }
   return streamset;
 }
@@ -135,14 +137,13 @@ static int DestroyTermInWaitingSet(snet_stream_iter_t *wait_iter,
     SNetStreamIterReset( wait_iter, waitingset);
     while( SNetStreamIterHasNext( wait_iter)) {
       snet_stream_desc_t *sd = SNetStreamIterNext( wait_iter);
-      snet_stream_desc_t *tmp = SNetStreamOpen(SNetStreamGet(sd), 'r');
-      snet_record_t *wait_rec = SNetStreamPeek( tmp);
+      snet_record_t *wait_rec = SNetStreamPeek( sd);
 
       /* for this stream, check if there is a termination record next */
       if ( wait_rec != NULL &&
           SNetRecGetDescriptor( wait_rec) == REC_terminate ) {
         /* consume, remove from waiting set and free the stream */
-        (void) SNetStreamRead( tmp);
+        (void) SNetStreamRead( sd);
         SNetStreamIterRemove( wait_iter);
         SNetStreamClose( sd, true);
         /* update destroyed counter */
@@ -150,7 +151,6 @@ static int DestroyTermInWaitingSet(snet_stream_iter_t *wait_iter,
         /* destroy record */
         SNetRecDestroy( wait_rec);
       }
-      SNetStreamClose( tmp, false);
       /* else do nothing */
     }
   }
@@ -289,8 +289,6 @@ static void TerminateCollectorTask(snet_stream_desc_t *outstream,
   /* close outstream */
   SNetStreamClose( outstream, false);
 
-  SNetStreamListDestroy(carg->ready_list);
-  SNetStreamListDestroy(carg->waiting_list);
   /* destroy argument */
   SNetMemFree( carg);
 }
@@ -301,6 +299,7 @@ static void TerminateCollectorTask(snet_stream_desc_t *outstream,
 
 static void CollectorTask(snet_entity_t *ent, void *arg)
 {
+  //printf("begin\n");
   snet_entity_t *newent;
   int index = 0;
 
@@ -322,29 +321,39 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
   }else{
     index = -1;
   }
+  if(carg->cur_index == -1 && carg->cur != NULL){
+    curstream = SNetStreamOpen(carg->cur, 'r');
+  }
   waitingset = DequeueStreamList(carg->waiting_list, &curstream, index);
+  SNetStreamListDestroy(carg->ready_list);
+  SNetStreamListDestroy(carg->waiting_list);
   /* create an iterator for waiting set, is reused within main loop*/
   wait_iter = SNetStreamIterCreate( &waitingset);
 
+  //printf("0\n");
   /* get a record */
   snet_record_t *rec = GetRecord(&readyset, carg->incount, &curstream);
+  //printf("1\n");
   /* process the record */
   switch( SNetRecGetDescriptor( rec)) {
 
     case REC_data:
       /* data record: forward to output */
       SNetStreamWrite( outstream, rec);
+      //printf("data\n");
       break;
 
     case REC_sort_end:
       ProcessSortRecord(ent, rec, &carg->sort_rec, curstream, &readyset, &waitingset);
       /* end processing this stream */
       curstream = NULL;
+      //printf("sort\n");
       break;
 
     case REC_sync:
       SNetStreamReplace( curstream, SNetRecGetStream( rec));
       SNetRecDestroy( rec);
+      //printf("sync\n");
       break;
 
     case REC_collect:
@@ -366,6 +375,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
       carg->incount++;
       /* destroy collect record */
       SNetRecDestroy( rec);
+      //printf("collect\n");
       break;
 
     case REC_terminate:
@@ -373,6 +383,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
       ProcessTermRecord(rec, &carg->term_rec, curstream, &readyset, &carg->incount);
       /* stop processing this stream */
       curstream = NULL;
+      //printf("terminate\n");
       break;
 
     default:
@@ -427,13 +438,21 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
     }
   }
   /************* end of termination conditions **********/
+  carg->ready_list = SNetStreamListCreate(0);
+  carg->waiting_list = SNetStreamListCreate(0);
   index = FillList(carg->ready_list,&readyset,curstream);
+  //printf("end\n");
   if(index == -1){
     carg->is_ready = false;
-    carg->cur_index = -1;
-    index = FillList(carg->waiting_list, &waitingset,curstream);
+    carg->cur_index = FillList(carg->waiting_list, &waitingset,curstream);
   }else{
+    carg->is_ready = true;
+    carg->cur_index = index;
     FillList(carg->waiting_list, &waitingset, NULL);
+  }
+  if(carg->cur_index == -1 && curstream != NULL){
+    carg->cur = SNetStreamGet(curstream);
+    SNetStreamClose(curstream, false);
   }
   SNetStreamClose(outstream, false);
 
@@ -486,6 +505,9 @@ static void InitCollectorTask(snet_entity_t *ent, void *arg)
   if(index == -1){
     carg->is_ready = false;
     carg->cur_index = -1;
+  }else{
+    carg->is_ready = true;
+    carg->cur_index = index;
   }
   newent = SNetEntityCopy(ent);
   SNetEntitySetFunction(newent, &CollectorTask);
