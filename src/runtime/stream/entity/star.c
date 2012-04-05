@@ -230,7 +230,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
         SNetStreamClose(instream, false);
         TerminateStarBoxTask(outstream,sarg);
         return;
-        }
+      }
 #endif /* ENABLE_GC */
       break;
 
