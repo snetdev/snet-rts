@@ -220,9 +220,10 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 	lpel_task_t *t = LpelTaskSelf();
 	assert(t != NULL);
 	mon_task_t *mt = LpelTaskGetMon(t);
-	if (mt != NULL) {
-		SNetThreadingMonEvent(mt, moninfo);
-	}
+
+	//	if (mt != NULL) // check inside SNetThreadingMonEvent
+	SNetThreadingMonEvent(mt, moninfo);
+
 }
 
 

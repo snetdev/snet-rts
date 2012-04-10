@@ -473,8 +473,9 @@ static void MonCbWorkerDestroy( mon_worker_t *mon)
 	if (FLAG_WORKER(mon) || FLAG_LOAD(mon)) {
 		fprintf( mon->outfile, "%c%c", worker_end, end_entry);
 
-		if (FLAG_LOAD(mon))
+		if (FLAG_LOAD(mon)){
 			printStatistic(mon);
+		}
 	}
 
 
@@ -529,9 +530,9 @@ static void MonCbWorkerWaitStop(mon_worker_t *mon)
 		fprintf( mon->outfile, "%c", end_entry);
 	}
 
-	if (FLAG_LOAD(mon))
+	if (FLAG_LOAD(mon)){
 		LpelTimingAdd(&mon->wait_time, &mon->wait_current);
-
+	}
 }
 
 
@@ -838,7 +839,12 @@ void SNetThreadingMonCleanup(void)
 
 void SNetThreadingMonEvent(mon_task_t *mt, snet_moninfo_t *moninfo)
 {
-	assert(mt != NULL);
+//	assert(mt != NULL);
+	if (!(mt != NULL && FLAG_MESSAGE(mt))) {
+		SNetMonInfoDestroy(moninfo); // created by SNET entity but no need in this case --> destroy here
+		return;
+	}
+
 	mon_worker_t *mw = mt->mw;
 
 
