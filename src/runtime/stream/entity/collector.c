@@ -85,10 +85,9 @@ static void FillList(snet_stream_list_t *streamlist, snet_streamset_t *streamset
 
 static snet_streamset_t DequeueStreamList(snet_stream_list_t *list, snet_stream_desc_t **cur_stream, snet_stream_t *cur)
 {
-  int i = 0;
   snet_streamset_t streamset = NULL;
   snet_stream_t * stream;
-  LIST_ENUMERATE(list, i, stream) {
+  LIST_DEQUEUE_EACH(list, stream) {
     snet_stream_desc_t *tmp;
     tmp = SNetStreamOpen(stream, 'r');
     if(stream == cur){
@@ -270,6 +269,8 @@ static void TerminateCollectorTask(snet_stream_desc_t *outstream,
   if (carg->sort_rec != NULL) {
     SNetRecDestroy(carg->sort_rec);
   }
+  SNetStreamListDestroy(carg->ready_list);
+  SNetStreamListDestroy(carg->waiting_list);
   /* close outstream */
   SNetStreamClose( outstream, false);
 
@@ -294,8 +295,6 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
   outstream = SNetStreamOpen(carg->output, 'w');
   readyset = DequeueStreamList(carg->ready_list, &curstream, carg->cur);
   waitingset = DequeueStreamList(carg->waiting_list, &curstream, carg->cur);
-  SNetStreamListDestroy(carg->ready_list);
-  SNetStreamListDestroy(carg->waiting_list);
   /* create an iterator for waiting set, is reused within main loop*/
   wait_iter = SNetStreamIterCreate( &waitingset);
 
@@ -400,8 +399,6 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
     }
   }
   /************* end of termination conditions **********/
-  carg->ready_list = SNetStreamListCreate(0);
-  carg->waiting_list = SNetStreamListCreate(0);
   FillList(carg->ready_list,&readyset);
   FillList(carg->waiting_list, &waitingset);
   SNetStreamClose(outstream, false);
@@ -442,6 +439,7 @@ static void InitCollectorTask(snet_entity_t *ent, void *arg)
         SNetStreamOpen(CARG_DYN(carg, input), 'r')
         );
   }
+
   carg->ready_list = SNetStreamListCreate(0);
   carg->waiting_list = SNetStreamListCreate(0);
 

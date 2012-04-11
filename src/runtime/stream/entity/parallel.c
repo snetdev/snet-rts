@@ -230,18 +230,16 @@ static void PutToBuffers( snet_stream_desc_t **outstreams, int num,
 /**
  * Close outstreams and the arguments
  */
-static void TerminateParallelBoxTask(snet_stream_desc_t **outstreams,
-                                     int num,
-                                     parallel_arg_t *parg)
+static void TerminateParallelBoxTask( int num, parallel_arg_t *parg)
 {
   int i;
 
   /* close the outstreams */
 
   for( i=0; i<num; i++) {
-    if (outstreams[i] != NULL) {
+    /*if (outstreams[i] != NULL) {
       SNetStreamClose( outstreams[i], false);
-    }
+    }*/
     if(parg->matchcounter != NULL && parg->matchcounter[i] != NULL){
       SNetMemFree( parg->matchcounter[i]);
     }
@@ -275,13 +273,11 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
   /* the number of outputs */
   int num = SNetVariantListListLength(parg->variant_lists);
   snet_stream_desc_t *instream;
-  snet_stream_desc_t *outstreams[num];
   int i;
   snet_record_t *rec;
   /* open instream for reading */
   instream = SNetStreamOpen(parg->input, 'r');
 
-  OpenOutStreams(outstreams,num,parg->outputs);
 
   /* read a record from the instream */
   rec = SNetStreamRead( instream);
@@ -290,11 +286,13 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
 
     case REC_data:
       {
+        snet_stream_desc_t *outstreams[num];
         int stream_index;
         for( i=0; i<num; i++) {
           CheckMatch( rec,
                       SNetVariantListListGet( parg->variant_lists, i),
                       parg->matchcounter[i]);
+          outstreams[i] = SNetStreamOpen(parg->outputs[i], 'w');
         }
         // used first match stategy
         stream_index = BestMatch( parg->matchcounter, num);
@@ -309,6 +307,9 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
         PutToBuffers( outstreams, num, stream_index, rec,
                       (parg->is_det)? &parg->counter : NULL);
         parg->usedcounter[stream_index] += 1;  // increase the number of usage
+        for( i=0; i<num; i++) {
+          SNetStreamClose(outstreams[i], false);
+        }
 
       }
       break;
@@ -316,13 +317,15 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
     case REC_sync:
       {
 #ifdef ENABLE_GC_STATE
+        snet_stream_desc_t *outstreams[num];
         snet_variant_t *synctype = SNetRecGetVariant(rec);
         if (synctype!=NULL) {
-          snet_stream_desc_t *last = NULL;
+          snet_stream_t *last = NULL;
           int cnt = 0;
 
           /* terminate affected branches */
           for( i=0; i<num; i++) {
+            outstreams[i] = SNetStreamOpen(parg->outputs[i], 'w');
             if ( VariantIsSupertypeOfAllOthers( synctype,
                   SNetVariantListListGet( parg->variant_lists, i)) ) {
               snet_record_t *term_rec = SNetRecCreate(REC_terminate);
@@ -341,20 +344,23 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
           for (i=0;i<num;i++) {
             if (outstreams[i] != NULL) {
               cnt++;
-              last = outstreams[i];
+              last = parg->outputs[i];
               /* send sort records through */
               SNetStreamWrite( outstreams[i],
                   SNetRecCreate( REC_sort_end, 0, parg->counter));
+              SNetStreamClose(outstreams[i], false);
             }
           }
           parg->counter++;
 
           /* if only one branch left, we can terminate ourselves*/
           if (cnt == 1) {
+            snet_stream_desc_t *tmp = SNetStreamOpen(last, 'w');
 
             /* forward stripped sync record */
             SNetRecSetVariant(rec, NULL);
-            SNetStreamWrite(last, rec);
+            SNetStreamWrite(tmp, rec);
+            SNetStreamClose( tmp, false);
 
             /* close instream */
             SNetStreamClose( instream, true);
@@ -362,7 +368,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
             SNetUtilDebugNoticeEnt( ent,
                 "[PAR] Terminate self, as only one branch left!");
 #endif
-            TerminateParallelBoxTask(outstreams,num,parg);
+            TerminateParallelBoxTask(num,parg);
             return;
           } else {
             /* usual sync replace */
@@ -392,8 +398,10 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
       SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
       /* send a copy to all */
       for( i=0; i<num; i++) {
-        if (outstreams[i] != NULL) {
-          SNetStreamWrite( outstreams[i], SNetRecCopy( rec));
+        if (parg->outputs[i] != NULL) {
+          snet_stream_desc_t *tmp = SNetStreamOpen(parg->outputs[i], 'w');
+          SNetStreamWrite( tmp, SNetRecCopy( rec));
+          SNetStreamClose(tmp, false);
         }
       }
       /* destroy the original */
@@ -403,8 +411,10 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
     case REC_terminate:
       /* send a copy to all */
       for( i=0; i<num; i++) {
-        if (outstreams[i] != NULL) {
-          SNetStreamWrite( outstreams[i], SNetRecCopy( rec));
+        if (parg->outputs[i] != NULL) {
+          snet_stream_desc_t *tmp = SNetStreamOpen(parg->outputs[i], 'w');
+          SNetStreamWrite( tmp, SNetRecCopy( rec));
+          SNetStreamClose(tmp, false);
         }
       }
       /* destroy the original */
@@ -412,7 +422,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
       /* close and destroy instream */
       SNetStreamClose( instream, true);
       /* note that no sort record needs to be appended */
-      TerminateParallelBoxTask(outstreams,num,parg);
+      TerminateParallelBoxTask(num,parg);
       return;
 
     default:
@@ -421,11 +431,11 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( rec);
   }
 
-  for( i = 0; i<num; i++) {
+  /*for( i = 0; i<num; i++) {
       if( outstreams[i] != NULL) {
           SNetStreamClose( outstreams[i], false);
       }
-  }
+  }*/
   SNetStreamClose( instream, false);
 
   newent = SNetEntityCopy(ent);
@@ -491,7 +501,7 @@ static void InitParallelBoxTask(snet_entity_t *ent, void *arg)
         }
       }
     case 0: /* and terminate */
-      TerminateParallelBoxTask(outstreams, num, parg);
+      TerminateParallelBoxTask(num, parg);
       return;
     break;
     default: ;/* or resume operation as normal */
