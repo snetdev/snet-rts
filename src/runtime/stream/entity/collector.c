@@ -18,6 +18,7 @@
 #undef LIST_VAL_H
 #undef LIST_TYPE_NAME_H
 #undef LIST_NAME_H
+
 //#define DEBUG_PRINT_GC
 
 
@@ -70,13 +71,9 @@ typedef struct {
 
 static void ReplaceSet(snet_streamset_t *old, snet_streamset_t *new, snet_stream_desc_t ** curstream)
 {
-  int counter = 0, i = 0;
   snet_stream_iter_t *iter = SNetStreamIterCreate(old);
   while(SNetStreamIterHasNext(iter)) {
     snet_stream_desc_t *tmp = SNetStreamIterNext(iter);
-    /*if(tmp == NULL) {
-      continue;
-    }*/
     snet_stream_desc_t *tmpnew;
     bool same = *curstream != NULL && SNetStreamGet(tmp) == SNetStreamGet(*curstream);
     snet_stream_t *tmp_stream = SNetStreamGet(tmp);
@@ -88,17 +85,9 @@ static void ReplaceSet(snet_streamset_t *old, snet_streamset_t *new, snet_stream
     if(same) {
       *curstream = tmpnew;
     }
-    //SNetStreamClose(tmp, false);
+    SNetStreamIterRemove(iter);
+    SNetStreamClose(tmp, false);
     SNetStreamsetPut(new, tmpnew);
-    counter++;
-  }
-  SNetStreamIterReset(iter, old);
-  while(SNetStreamIterHasNext(iter)){
-    snet_stream_desc_t *tmp = SNetStreamIterNext(iter);
-    //if(tmp != NULL) {
-      SNetStreamClose(tmp, false);
-      i++;
-    //}
   }
   SNetStreamIterDestroy(iter);
 }
@@ -108,11 +97,10 @@ static void FillList(snet_stream_list_t *streamlist, snet_streamset_t *streamset
   snet_stream_iter_t *iter = SNetStreamIterCreate(streamset);
   while(SNetStreamIterHasNext(iter)){
     snet_stream_desc_t *tmp = SNetStreamIterNext(iter);
-    if(tmp != NULL) {
-      snet_stream_t *tmp_stream = SNetStreamGet(tmp);
-      SNetStreamListAppendEnd(streamlist,tmp_stream);
-      SNetStreamClose(tmp,false);
-    }
+    snet_stream_t *tmp_stream = SNetStreamGet(tmp);
+    SNetStreamListAppendEnd(streamlist,tmp_stream);
+    SNetStreamIterRemove(iter);
+    SNetStreamClose(tmp,false);
   }
   SNetStreamIterDestroy(iter);
 }
