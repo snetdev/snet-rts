@@ -171,17 +171,6 @@ static void BoxTask(snet_entity_t *ent, void *arg)
 }
 
 
-static void InitBoxTask(snet_entity_t *ent, void *arg){
-  snet_entity_t *newent;
-
-  newent = SNetEntityCopy(ent);
-  SNetEntitySetFunction(newent, &BoxTask);
-
-  /* schedule new task */
-  SNetThreadingSpawn(newent);
-}
-
-
 /**
  * Box creation function
  */
@@ -233,7 +222,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
 
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_box, location, SNetLocvecGet(info),
-          barg->boxname, InitBoxTask, (void*)barg)
+          barg->boxname, BoxTask, (void*)barg)
         );
 
 
