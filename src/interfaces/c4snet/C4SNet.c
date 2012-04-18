@@ -70,7 +70,8 @@ static c4snet_data_t *MPIUnpackFun(void *buf);
 #include "sccmalloc.h"
 
 static void *SCCMalloc(size_t);
-static void SCCPackFun(void *cdata, void *dest);
+static void SCCFreeWrapper(void*);
+static void SCCPackFun(c4snet_data_t *cdata, void *dest);
 static void *SCCUnpackFun(void *localBuf);
 #endif
 
@@ -301,8 +302,9 @@ void C4SNetInit( int id, snet_distrib_t distImpl)
       break;
     case scc:
       #ifdef ENABLE_DIST_SCC
-        allocfun = &SCCMalloc;
-        packfun = &SCCPackFun;
+        MemAlloc = &SCCMalloc;
+        MemFree = &SCCFreeWrapper;
+        packfun = (void (*)(void*, void*)) &SCCPackFun;
         unpackfun = &SCCUnpackFun;
       #else
         SNetUtilDebugFatal("C4SNet supports SCC, but is not configured to use "
@@ -484,27 +486,25 @@ static c4snet_data_t *MPIUnpackFun(void *buf)
 #endif
 
 #ifdef ENABLE_DIST_SCC
-static void *SCCMalloc(size_t s, void (**free)(void*))
+static void *SCCMalloc(size_t s)
 {
-  if (!remap) return C4SNetAllocFun(s, free);
+  if (!remap) return SNetMemAlloc(s);
 
-  *free = &SCCFree;
   return SCCMallocPtr(s);
 }
 
-static void SCCPackFun(c4snet_data_t *cdata, void *buf)
+static void SCCFreeWrapper(void *p)
 {
-  SNetDistribPack(cdata, buf, sizeof(c4snet_data_t), false);
+  if (!remap) SNetMemFree(p);
+
+  SCCFree(p);
+}
+
+static void SCCPackFun(c4snet_data_t *data, void *buf)
+{
+  SNetDistribPack(data, buf, sizeof(c4snet_data_t), false);
 
   if (data->vtype == VTYPE_array) {
-    if (remap && data->freeFun == &SNetMemFree) {
-      void *tmp = SCCMallocPtr(AllocatedSpace(cdata));
-      memcpy(tmp, data->data.ptr, AllocatedSpace(cdata));
-      SNetMemFree(data->data.ptr);
-      data->freeFun = &SCCFree;
-      data->data.ptr = tmp;
-    }
-
     SNetDistribPack(data->data.ptr, buf, AllocatedSpace(data), true);
   }
 }
@@ -516,7 +516,6 @@ static void *SCCUnpackFun(void *buf)
 
   result->ref_count = 1;
   if (result->vtype == VTYPE_array) {
-    result->freeFun = &SCCFree;
     SNetDistribUnpack(&result->data.ptr, buf, true);
   }
 
