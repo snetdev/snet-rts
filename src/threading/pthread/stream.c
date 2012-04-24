@@ -13,7 +13,6 @@
 #include "entity.h"
 
 
-
 void SNetStreamSetSource(snet_stream_t *s, snet_locvec_t *lv)
 {
   s->source = SNetLocvecCopy(lv);
@@ -88,8 +87,14 @@ void SNetStreamDestroy(snet_stream_t *s)
 snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode)
 {
   assert( mode=='w' || mode=='r' );
+  snet_linked_list_t *head_list;
   snet_stream_desc_t *sd = SNetMemAlloc(sizeof(snet_stream_t));
   sd->thr = SNetThreadingSelf();
+  
+  head_list = SNetLinkedListAdd(sd->thr->head_list, sd);
+  sd->list_ptr = head_list;
+  sd->thr->head_list = head_list;
+
   sd->stream = stream;
   sd->next = NULL;
   sd->mode = mode;
@@ -108,6 +113,7 @@ void SNetStreamClose(snet_stream_desc_t *sd, int destroy_s)
   if (destroy_s) {
     SNetStreamDestroy(sd->stream);
   }
+  SNetLinkedListRemove(sd->list_ptr);
   SNetMemFree(sd);
 }
 

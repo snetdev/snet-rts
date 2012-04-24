@@ -5,6 +5,7 @@
 
 #include "threading.h"
 #include "entity.h"
+#include "linkedlist.h"
 
 #define SNET_STREAM_DEFAULT_CAPACITY  16
 
@@ -36,6 +37,7 @@ struct snet_stream_t {
 struct snet_stream_desc_t {
   snet_thread_t *thr;
   snet_stream_t *stream;
+  snet_linked_list_t *list_ptr;
   char mode;
   struct snet_stream_desc_t *next;
 };

@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
 #include <assert.h>
 
 #include "memfun.h"
@@ -226,8 +227,6 @@ LIST_VAL LIST_FUNCTION(LIST_NAME, Remove)(snet_list_t *list, int i)
   list->used--;
   return result;
 }
-
-
 
 
 void LIST_FUNCTION(LIST_NAME, Serialise)(snet_list_t *list,

@@ -29,6 +29,8 @@ typedef struct snet_entity_t snet_entity_t;
 
 typedef void (*snet_entityfunc_t)(snet_entity_t *ent, void *arg);
 
+typedef void (*snet_entityinitfunc_t)(snet_entity_t *ent, void *arg);
+
 extern snet_entity_t *SNetEntityCreate(snet_entity_descr_t, ...);
 
 extern void SNetEntityDestroy(snet_entity_t *);

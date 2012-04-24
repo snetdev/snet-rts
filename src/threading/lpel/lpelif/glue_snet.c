@@ -296,4 +296,20 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 }
 
 
+/**
+ * Spawn a new task
+ */
+int SNetInitThreadingSpawn(snet_entity_t *ent)
+{
+  return SNetThreadingSpawn(ent);
+}
+
+/**
+ * Respawn a current task or if the task is on a different worker, create a
+ * new task
+ */
+int SNetThreadingReSpawn(snet_entity_t *ent)
+{
+  return SNetThreadingSpawn(ent);
+}
 

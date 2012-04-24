@@ -20,11 +20,15 @@
  *
  *
  * Author: Daniel Prokesch <dlp@snet-home.org>
+ * Author: Stefan Kok
  * Date:   15/03/2011
  *
  *****************************************************************************/
 
 
+/**
+ * Stream descriptor
+ */
 
 
 /*****************************************************************************
@@ -111,6 +115,24 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo);
 int SNetThreadingSpawn(snet_entity_t *ent);
 
 
+/**
+ * Spawn a new thread
+ *
+ * @param ent     the entity to spawn
+ *
+ * @return 0 on success
+ */
+int SNetInitThreadingSpawn(snet_entity_t *ent);
+
+/**
+ * Respawn a thread if the task should stay on the same node, or spawn a new
+ * thread
+ *
+ * @param ent     the entity to spawn
+ *
+ * @return 0 on succes
+ */
+int SNetThreadingReSpawn(snet_entity_t *ent);
 
 
 /**
@@ -132,21 +154,8 @@ void SNetThreadingYield(void);
 //typedef struct snet_stream_t snet_stream_t;
 struct snet_stream_t;
 
-
-/**
- * Stream descriptor
- */
 typedef struct snet_stream_desc_t snet_stream_desc_t;
 
-
-
-/**
- * Create a stream with a given capacity
- *
- * @param capacity  the number of items that can be
- *                  stored in the stream
- * @return a newly created stream
- */
 snet_stream_t *SNetStreamCreate(int capacity);
 
 
