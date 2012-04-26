@@ -37,6 +37,7 @@ typedef struct {
   static struct timeval tv_out;
 #endif
   snet_stream_t *input, *output;
+  snet_stream_desc_t *instream, *outstream;
   void (*boxfun)( snet_handle_t*);
   snet_int_list_list_t *output_variants;
   const char *boxname;
@@ -54,18 +55,14 @@ static void BoxTask(snet_entity_t *ent, void *arg)
 {
   box_arg_t *barg = (box_arg_t *)arg;
   snet_record_t *rec;
-  snet_stream_desc_t *instream;
-  snet_stream_desc_t *outstream;
   snet_handle_t hnd;
   snet_entity_t *newent;
 
-  instream = SNetStreamOpen(barg->input, 'r');
-  outstream = SNetStreamOpen(barg->output, 'w');
   /* read from input stream */
-  rec = SNetStreamRead( instream);
+  rec = SNetStreamRead( barg->instream);
 
   /* set out descriptor */
-  hnd.out_sd = outstream;
+  hnd.out_sd = barg->outstream;
   /* set out signs */
   hnd.sign = barg->output_variants;
   /* mapping */
@@ -132,7 +129,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
     case REC_sync:
       {
         snet_stream_t *newstream = SNetRecGetStream(rec);
-        SNetStreamReplace( instream, newstream);
+        SNetStreamReplace( barg->instream, newstream);
         barg->input = newstream;
         SNetRecDestroy( rec);
       }
@@ -140,13 +137,13 @@ static void BoxTask(snet_entity_t *ent, void *arg)
 
     case REC_sort_end:
       /* forward the sort record */
-      SNetStreamWrite( outstream, rec);
+      SNetStreamWrite( barg->outstream, rec);
       break;
 
     case REC_terminate:
-      SNetStreamWrite( outstream, rec);
-      SNetStreamClose( instream, true);
-      SNetStreamClose( outstream, false);
+      SNetStreamWrite( barg->outstream, rec);
+      SNetStreamClose( barg->instream, true);
+      SNetStreamClose( barg->outstream, false);
 
       //SNetHndDestroy( &hnd);
 
@@ -161,13 +158,20 @@ static void BoxTask(snet_entity_t *ent, void *arg)
       /* if ignore, destroy at least ...*/
       SNetRecDestroy( rec);
   }
-  SNetStreamClose( instream, false);
-  SNetStreamClose( outstream, false);
 
   newent = SNetEntityCopy(ent);
   SNetEntitySetFunction(newent, &BoxTask);
   /* schedule new task */
-  SNetThreadingSpawn(newent);
+  SNetThreadingReSpawn(newent);
+}
+
+
+static void InitBoxTask(snet_entity_t *ent, void *arg)
+{
+  box_arg_t *barg = (box_arg_t *)arg;
+  barg->instream = SNetStreamOpen(barg->input, 'r');
+  barg->outstream = SNetStreamOpen(barg->output, 'w');
+  BoxTask(ent, arg);
 }
 
 
@@ -220,9 +224,9 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->vars = vlist;
     barg->boxname = boxname;
 
-    SNetThreadingSpawn(
+    SNetInitThreadingSpawn(
         SNetEntityCreate( ENTITY_box, location, SNetLocvecGet(info),
-          barg->boxname, BoxTask, (void*)barg)
+          barg->boxname, InitBoxTask, (void*)barg)
         );
 
 

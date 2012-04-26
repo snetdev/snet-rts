@@ -81,6 +81,7 @@ void SNetDestroyFilterInstruction( snet_filter_instr_t *instr)
  */
 typedef struct {
   snet_stream_t *input, *output;
+  snet_stream_desc_t *instream, *outstream;
   snet_variant_t *input_variant;
   snet_expr_list_t *guard_exprs;
   snet_filter_instr_list_list_t **filter_instructions;
@@ -163,18 +164,14 @@ static void FilterTask(snet_entity_t *ent, void *arg)
   snet_record_t *in_rec = NULL, *out_rec = NULL;
   snet_filter_instr_t *instr;
   snet_filter_instr_list_t *instr_list;
-  snet_stream_desc_t *instream, *outstream;
   bool done;
   int i;
 
   assert( farg->guard_exprs != NULL &&
       SNetExprListLength(farg->guard_exprs) > 0 );
 
-  instream  = SNetStreamOpen(farg->input, 'r');
-  outstream = SNetStreamOpen(farg->output, 'w');
-
   /* read from input stream */
-  in_rec = SNetStreamRead( instream);
+  in_rec = SNetStreamRead( farg->instream);
 
   switch (SNetRecGetDescriptor( in_rec)) {
     case REC_data:
@@ -226,7 +223,7 @@ static void FilterTask(snet_entity_t *ent, void *arg)
                   SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, out_rec)
                   );
 #endif
-                SNetStreamWrite( outstream, out_rec);
+                SNetStreamWrite( farg->outstream, out_rec);
             } /* forall instruction lists */
           } /* if a guard is true first time */
         }
@@ -240,22 +237,22 @@ static void FilterTask(snet_entity_t *ent, void *arg)
       {
         snet_stream_t *newstream = SNetRecGetStream( in_rec);
         farg->input = newstream;
-        SNetStreamReplace( instream, newstream);
+        SNetStreamReplace( farg->instream, newstream);
         SNetRecDestroy( in_rec);
       }
       break;
 
     case REC_terminate:
       /* forward record */
-      SNetStreamWrite( outstream, in_rec);
-      SNetStreamClose( outstream, false);
-      SNetStreamClose( instream, true);
+      SNetStreamWrite( farg->outstream, in_rec);
+      SNetStreamClose( farg->outstream, false);
+      SNetStreamClose( farg->instream, true);
 
       FilterArgsDestroy( farg);
       return;
     case REC_sort_end:
       /* forward record */
-      SNetStreamWrite( outstream, in_rec);
+      SNetStreamWrite( farg->outstream, in_rec);
       break;
 
     case REC_collect:
@@ -264,11 +261,22 @@ static void FilterTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( in_rec);
       break;
   }
-  SNetStreamClose( outstream, false);
-  SNetStreamClose( instream, false);
 
   newent = SNetEntityCopy(ent);
-  SNetThreadingSpawn(newent);
+
+  SNetEntitySetFunction(newent, &FilterTask);
+  SNetThreadingReSpawn(newent);
+}
+
+/**
+ * Initialize filter task
+ */
+static void InitFilterTask(snet_entity_t *ent, void *arg)
+{
+  filter_arg_t *farg = (filter_arg_t *)arg;
+  farg->instream  = SNetStreamOpen(farg->input, 'r');
+  farg->outstream = SNetStreamOpen(farg->output, 'w');
+  FilterTask(ent, arg);
 }
 
 /**
@@ -278,20 +286,17 @@ static void NameshiftTask(snet_entity_t *ent, void *arg)
 {
   snet_entity_t *newent;
   filter_arg_t *farg = (filter_arg_t *)arg;
-  snet_stream_desc_t *outstream, *instream;
   snet_variant_t *untouched = farg->input_variant;
   snet_record_t *rec;
   int name, offset, val;
   snet_ref_t *field;
 
-  instream  = SNetStreamOpen(farg->input, 'r');
-  outstream = SNetStreamOpen(farg->output, 'w');
 
   /* Guards are misused for offset */
   offset = SNetEevaluateInt( SNetExprListGet( farg->guard_exprs, 0), NULL);
 
   /* read from input stream */
-  rec = SNetStreamRead( instream);
+  rec = SNetStreamRead( farg->instream);
 
   switch (SNetRecGetDescriptor( rec)) {
     case REC_data:
@@ -313,13 +318,13 @@ static void NameshiftTask(snet_entity_t *ent, void *arg)
         }
       }
 
-      SNetStreamWrite( outstream, rec);
+      SNetStreamWrite( farg->outstream, rec);
       break;
 
     case REC_sync:
       {
         snet_stream_t *newstream = SNetRecGetStream(rec);
-        SNetStreamReplace( instream, newstream);
+        SNetStreamReplace( farg->instream, newstream);
         farg->input = newstream;
         SNetRecDestroy( rec);
       }
@@ -327,15 +332,15 @@ static void NameshiftTask(snet_entity_t *ent, void *arg)
 
     case REC_terminate:
       /* forward record */
-      SNetStreamWrite( outstream, rec);
-      SNetStreamClose( instream, true);
-      SNetStreamClose( outstream, false);
+      SNetStreamWrite( farg->outstream, rec);
+      SNetStreamClose( farg->instream, true);
+      SNetStreamClose( farg->outstream, false);
 
       FilterArgsDestroy( farg);
       return;
     case REC_sort_end:
       /* forward record */
-      SNetStreamWrite( outstream, rec);
+      SNetStreamWrite( farg->outstream, rec);
       break;
 
     case REC_collect:
@@ -344,13 +349,22 @@ static void NameshiftTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( rec);
       break;
   }
-  SNetStreamClose( instream, false);
-  SNetStreamClose( outstream, false);
 
   newent = SNetEntityCopy(ent);
-  SNetThreadingSpawn(newent);
+  SNetEntitySetFunction(newent, &NameshiftTask);
+  SNetThreadingReSpawn(newent);
 }
 
+/**
+ * Initialize nameshift task
+ */
+static void InitNameshiftTask(snet_entity_t *ent, void *arg)
+{
+  filter_arg_t *farg = (filter_arg_t *)arg;
+  farg->instream  = SNetStreamOpen(farg->input, 'r');
+  farg->outstream = SNetStreamOpen(farg->output, 'w');
+  NameshiftTask(ent, arg);
+}
 
 /*****************************************************************************/
 /* CREATION FUNCTIONS                                                        */
@@ -387,9 +401,9 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
     farg->guard_exprs = guard_exprs;
     farg->filter_instructions = instr_list;
 
-    SNetThreadingSpawn(
+    SNetInitThreadingSpawn(
         SNetEntityCreate( ENTITY_filter, location, SNetLocvecGet(info),
-          name, &FilterTask, (void*)farg)
+          name, &InitFilterTask, (void*)farg)
         );
   } else {
     int i;
@@ -503,9 +517,9 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
     farg->guard_exprs = SNetExprListCreate( 1, SNetEconsti( offset));
     farg->filter_instructions = NULL; /* instructions */
 
-    SNetThreadingSpawn(
+    SNetInitThreadingSpawn(
         SNetEntityCreate( ENTITY_nameshift, location, SNetLocvecGet(info),
-          "<nameshift>", &NameshiftTask, (void*)farg)
+          "<nameshift>", &InitNameshiftTask, (void*)farg)
         );
   } else {
     SNetVariantDestroy( untouched);

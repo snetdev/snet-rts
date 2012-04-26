@@ -127,6 +127,7 @@ static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
 
 typedef struct {
   snet_stream_t *input, *output;
+  snet_stream_desc_t *outstream, *instream;
   snet_variant_list_t *patterns;
   snet_expr_list_t *guard_exprs;
   snet_record_t **storage;
@@ -155,16 +156,13 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
   snet_expr_t *expr;
   snet_record_t *rec;
   snet_variant_t *pattern;
-  snet_stream_desc_t *outstream, *instream;
 
   int i, new_matches;
   int num_patterns = SNetVariantListLength( sarg->patterns);
 
-  instream  = SNetStreamOpen(sarg->input,  'r');
-  outstream = SNetStreamOpen(sarg->output, 'w');
 
   /* read from input stream */
-  rec = SNetStreamRead( instream);
+  rec = SNetStreamRead( sarg->instream);
 
   switch (SNetRecGetDescriptor( rec)) {
     case REC_data:
@@ -204,7 +202,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 
       sarg->match_cnt += new_matches;
       if (new_matches == 0) {
-        SNetStreamWrite( outstream, rec);
+        SNetStreamWrite( sarg->outstream, rec);
       } else if (sarg->match_cnt == num_patterns) {
 #ifdef SYNC_SEND_OUTTYPES
         snet_variant_t *outtype;
@@ -218,7 +216,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
             );
 #endif
         /* this is the last sync */
-        SNetStreamWrite( outstream, syncrec);
+        SNetStreamWrite( sarg->outstream, syncrec);
 
         /* follow by a sync record */
         syncrec = SNetRecCreate(REC_sync, sarg->input);
@@ -238,12 +236,12 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
         }
 #endif
 
-        SNetStreamWrite( outstream, syncrec);
+        SNetStreamWrite( sarg->outstream, syncrec);
 
         /* the receiver of REC_sync will destroy the outstream */
-        SNetStreamClose( outstream, false);
+        SNetStreamClose( sarg->outstream, false);
         /* instream has been sent to next entity, do not destroy  */
-        SNetStreamClose( instream, false);
+        SNetStreamClose( sarg->instream, false);
 
         sarg->partial_sync = false;
         TerminateSyncBoxTask(sarg);
@@ -254,14 +252,14 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
     case REC_sync:
       {
         sarg->input = SNetRecGetStream( rec);
-        SNetStreamReplace( instream, sarg->input);
+        SNetStreamReplace( sarg->instream, sarg->input);
         SNetRecDestroy( rec);
       }
       break;
 
     case REC_sort_end:
       /* forward sort record */
-      SNetStreamWrite( outstream, rec);
+      SNetStreamWrite( sarg->outstream, rec);
       break;
 
     case REC_terminate:
@@ -270,9 +268,9 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
         SNetUtilDebugNoticeEnt( ent,
         "[SYNC] Warning: Destroying partially synchronized sync-cell!");
       }
-      SNetStreamWrite( outstream, rec);
-      SNetStreamClose( outstream, false);
-      SNetStreamClose( instream, true);
+      SNetStreamWrite( sarg->outstream, rec);
+      SNetStreamClose( sarg->outstream, false);
+      SNetStreamClose( sarg->instream, true);
       TerminateSyncBoxTask(sarg);
       return;
     case REC_collect:
@@ -283,11 +281,20 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( rec);
   }
 
-  SNetStreamClose( outstream, false);
-  SNetStreamClose( instream, false);
-
   newent = SNetEntityCopy(ent);
-  SNetThreadingSpawn(newent);
+  SNetEntitySetFunction(newent, &SyncBoxTask);
+  SNetThreadingReSpawn(newent);
+}
+
+/**
+ * Init sync box task
+ */
+static void InitSyncBoxTask(snet_entity_t *ent, void *arg)
+{
+  sync_arg_t *sarg = (sync_arg_t *) arg;
+  sarg->instream  = SNetStreamOpen(sarg->input,  'r');
+  sarg->outstream = SNetStreamOpen(sarg->output, 'w');
+  SyncBoxTask(ent, arg);
 }
 
 /*****************************************************************************/
@@ -335,9 +342,9 @@ snet_stream_t *SNetSync( snet_stream_t *input,
       sarg->storage[i] = &sarg->dummy;
     }
 
-    SNetThreadingSpawn(
+    SNetInitThreadingSpawn(
         SNetEntityCreate( ENTITY_sync, location, locvec,
-          "<sync>", &SyncBoxTask, (void*)sarg)
+          "<sync>", &InitSyncBoxTask, (void*)sarg)
         );
   } else {
     SNetVariantListDestroy( patterns);

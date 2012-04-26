@@ -18,6 +18,7 @@
 
 typedef struct {
   snet_stream_t *input, *output;
+  snet_stream_desc_t *initial, *instream;
   snet_startup_fun_t boxfun;
   snet_info_t *info;
   int ltag, utag;
@@ -44,18 +45,15 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
   snet_entity_t *newent;
   int i;
 
-  snet_stream_desc_t *initial, *instream;
   int ltag_val, utag_val;
   snet_info_t *info;
   snet_record_t *rec;
   snet_locvec_t *locvec;
 
-  initial = SNetStreamOpen(sarg->output, 'w');
-  instream = SNetStreamOpen(sarg->input, 'r');
 
 
   /* read from input stream */
-  rec = SNetStreamRead( instream);
+  rec = SNetStreamRead( sarg->instream);
 
   switch( SNetRecGetDescriptor( rec)) {
 
@@ -101,7 +99,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
 
           if(temp_stream != NULL) {
             /* notify collector about the new instance via initial */
-            SNetStreamWrite( initial,
+            SNetStreamWrite( sarg->initial,
                 SNetRecCreate( REC_collect, temp_stream));
           }
         } /* end if (outstream==NULL) */
@@ -130,7 +128,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
         }
         /* Now also send a sort record to initial,
            after the collect records for new instances have been sent */
-        SNetStreamWrite( initial,
+        SNetStreamWrite( sarg->initial,
             SNetRecCreate( REC_sort_end, 0, sarg->counter));
       }
       /* increment counter for deterministic variant */
@@ -140,7 +138,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
     case REC_sync:
       {
         snet_stream_t *newstream = SNetRecGetStream( rec);
-        SNetStreamReplace( instream, newstream);
+        SNetStreamReplace( sarg->instream, newstream);
         sarg->input = newstream;
         SNetRecDestroy( rec);
       }
@@ -164,7 +162,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       /* send the original record to the initial stream,
          but with increased level */
       SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-      SNetStreamWrite( initial, rec);
+      SNetStreamWrite( sarg->initial, rec);
       break;
 
     case REC_terminate:
@@ -183,7 +181,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
         SNetStreamClose( cur_stream, false);
       }
       /* send the original record to the initial stream */
-      SNetStreamWrite( initial, rec);
+      SNetStreamWrite( sarg->initial, rec);
       /* note that no sort record has to be appended */
 
 
@@ -192,9 +190,9 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       SNetStreamIterDestroy( sarg->iter);
 
       /* close and destroy initial stream */
-      SNetStreamClose( initial, false);
+      SNetStreamClose( sarg->initial, false);
       /* close instream */
-      SNetStreamClose( instream, true);
+      SNetStreamClose( sarg->instream, true);
 
       SNetLocvecDestroy(SNetLocvecGet(sarg->info));
       SNetInfoDestroy(sarg->info);
@@ -210,15 +208,26 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( rec);
   }
 
-  SNetStreamClose( initial, false);
-  SNetStreamClose( instream, false);
-
   newent = SNetEntityCopy(ent);
 
-  SNetThreadingSpawn(newent);
+  SNetEntitySetFunction(newent, &SplitBoxTask);
+  SNetThreadingReSpawn(newent);
 }
 
 
+/**
+ * Init Split box task.
+ *
+ * Implements both the non-deterministic and deterministic variants.
+ */
+static void InitSplitBoxTask(snet_entity_t *ent, void *arg)
+{
+  split_arg_t *sarg = (split_arg_t *)arg;
+  sarg->initial = SNetStreamOpen(sarg->output, 'w');
+  sarg->instream = SNetStreamOpen(sarg->input, 'r');
+
+  SplitBoxTask(ent, arg);
+}
 /*****************************************************************************/
 /* CREATION FUNCTIONS                                                        */
 /*****************************************************************************/
@@ -268,9 +277,9 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->repos_tab = HashtabCreate( 4);
 
     sarg->counter = 0;
-    SNetThreadingSpawn(
+    SNetInitThreadingSpawn(
         SNetEntityCreate( ENTITY_split, location, locvec,
-          "<split>", &SplitBoxTask, (void*)sarg)
+          "<split>", &InitSplitBoxTask, (void*)sarg)
         );
 
     output = CollectorCreateDynamic( initial, location, info);

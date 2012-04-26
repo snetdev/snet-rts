@@ -87,13 +87,7 @@ void SNetStreamDestroy(snet_stream_t *s)
 snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode)
 {
   assert( mode=='w' || mode=='r' );
-  snet_linked_list_t *head_list;
   snet_stream_desc_t *sd = SNetMemAlloc(sizeof(snet_stream_t));
-  sd->thr = SNetThreadingSelf();
-  
-  head_list = SNetLinkedListAdd(sd->thr->head_list, sd);
-  sd->list_ptr = head_list;
-  sd->thr->head_list = head_list;
 
   sd->stream = stream;
   sd->next = NULL;
@@ -113,7 +107,6 @@ void SNetStreamClose(snet_stream_desc_t *sd, int destroy_s)
   if (destroy_s) {
     SNetStreamDestroy(sd->stream);
   }
-  SNetLinkedListRemove(sd->list_ptr);
   SNetMemFree(sd);
 }
 
@@ -129,6 +122,11 @@ void SNetStreamReplace(snet_stream_desc_t *sd, snet_stream_t *new_stream)
   sd->stream = new_stream;
 }
 
+void SNetStreamUpdate(snet_stream_desc_t *sd, void *ptr)
+{
+  snet_thread_t *thr = (snet_thread_t *)ptr;
+  sd->thr = thr;
+}
 
 snet_stream_t *SNetStreamGet(snet_stream_desc_t *sd)
 {

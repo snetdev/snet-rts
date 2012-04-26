@@ -301,7 +301,58 @@ int SNetThreadingSpawn(snet_entity_t *ent)
  */
 int SNetInitThreadingSpawn(snet_entity_t *ent)
 {
-  return SNetThreadingSpawn(ent);
+  int worker = -1;
+  snet_entity_descr_t type = SNetEntityDescr(ent);
+  int location = SNetEntityNode(ent);
+  const char *name = SNetEntityName(ent);
+
+  if ( type != ENTITY_other) {
+    if (dloc_placement) {
+      assert(location != -1);
+      worker = location % num_workers;
+    } else {
+      worker = SNetAssignTask( (type==ENTITY_box), name );
+    }
+  }
+
+  lpel_task_t *t = LpelTaskCreate(
+                      worker,
+                      //(lpel_taskfunc_t) func,
+                      EntityTask,
+                      ent,
+                      GetStacksize(type)
+                   );
+
+
+#ifdef USE_LOGGING
+  if (mon_flags & SNET_MON_TASK){
+    mon_task_t *mt = SNetThreadingMonTaskCreate(
+                               LpelTaskGetID(t),
+                               name
+                     );
+    LpelTaskMonitor(t, mt);
+  /* if we monitor the task, we make an entry in the map file */
+  }
+
+  if ((mon_flags & SNET_MON_MAP) && mapfile) {
+    int tid = LpelTaskGetID(t);
+    // FIXME: change to binary format
+    (void) fprintf(mapfile, "%d%s %d%c", tid, SNetEntityStr(ent), worker, END_LOG_ENTRY);
+  }
+
+
+#endif
+
+  if (type != ENTITY_box && type != ENTITY_fbbuf) {
+    LpelTaskPrio(t, 1);
+  }
+
+
+  //FIXME only for debugging purposes
+  //fflush(mapfile);
+
+  LpelTaskRun(t);
+  return 0;
 }
 
 /**

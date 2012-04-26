@@ -103,7 +103,6 @@ int SNetThreadingCleanup(void)
   return 0;
 }
 
-
 int SNetThreadingSpawn(snet_entity_t *ent)
 {
   /*
@@ -124,7 +123,6 @@ int SNetThreadingSpawn(snet_entity_t *ent)
   pthread_mutex_init( &thr->lock, NULL );
   pthread_cond_init( &thr->pollcond, NULL );
   thr->wakeup_sd = NULL;
-  thr->head_list = NULL;
   thr->entity = ent;
 
 
@@ -178,7 +176,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
   return 0;
 }
 
-static int SNetCreateThread(snet_entity_t *ent, snet_linked_list_t *head_list)
+static int SNetCreateThread(snet_entity_t *ent)
 {
   /*
   snet_entity_type_t type,
@@ -199,8 +197,6 @@ static int SNetCreateThread(snet_entity_t *ent, snet_linked_list_t *head_list)
   pthread_cond_init( &thr->pollcond, NULL );
   thr->wakeup_sd = NULL;
   thr->entity = ent;
-  thr->head_list = head_list;
-
 
   /* increment entity counter */
   pthread_mutex_lock( &entity_lock );
@@ -257,13 +253,16 @@ static int SNetCreateThread(snet_entity_t *ent, snet_linked_list_t *head_list)
  */
 int SNetInitThreadingSpawn(snet_entity_t *ent)
 {
-  return SNetCreateThread(ent, NULL);
+  return SNetCreateThread(ent);
 }
 
 int SNetThreadingReSpawn(snet_entity_t *ent)
 {
-  snet_thread_t *old_thr = SNetThreadingSelf();
-  return SNetCreateThread(ent, old_thr->head_list);
+  snet_thread_t *thr = SNetThreadingSelf();
+  SNetEntityDestroy(thr->entity);
+  thr->entity = ent;
+  SNetEntityCall(thr->entity);
+  return 0;
 }
 
 

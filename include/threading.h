@@ -134,7 +134,6 @@ int SNetInitThreadingSpawn(snet_entity_t *ent);
  */
 int SNetThreadingReSpawn(snet_entity_t *ent);
 
-
 /**
  * Let the current entity thread/task give up execution
  */

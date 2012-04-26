@@ -4,7 +4,6 @@
 //#include <pthread.h>
 
 #include "threading.h"
-#include "linkedlist.h"
 
 typedef struct {
   snet_entity_t      *entity;
@@ -13,7 +12,6 @@ typedef struct {
   pthread_mutex_t     lock;
   pthread_cond_t      pollcond;
   snet_stream_desc_t *wakeup_sd;
-  snet_linked_list_t *head_list;
 } snet_thread_t;
 
 extern snet_thread_t *SNetThreadingSelf(void);
