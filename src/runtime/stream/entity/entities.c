@@ -21,6 +21,7 @@ struct snet_entity_t {
   snet_entityfunc_t func;
   void *arg;
   const char *str;
+  bool run;
 };
 
 
@@ -78,6 +79,7 @@ snet_entity_t *SNetEntityCreate(snet_entity_descr_t descr, ...)
   }
   ENT(ent, func) = va_arg(args, snet_entityfunc_t);
   ENT(ent, arg)  = va_arg(args, void*);
+  ENT(ent, run)  = false;
 
   ENT(ent, str) = NULL;
 
@@ -116,6 +118,7 @@ snet_entity_t *SNetEntityCopy(snet_entity_t *ent)
   ENT(newent, func)   = ENT(ent, func);
   ENT(newent, arg)    = ENT(ent, arg);
   ENT(newent, str)    = StringCopy(ENT(ent, str));
+  ENT(newent, run)    = ENT(ent, run);
 
   return newent;
 }
@@ -211,5 +214,20 @@ const char *SNetEntityStr(snet_entity_t *ent)
 }
 void SNetEntitySetFunction(snet_entity_t *ent, snet_entityfunc_t f)
 {
-  ENT(ent,func) = f;
+  ENT(ent, func) = f;
+}
+
+void SNetEntitySetStop(snet_entity_t *ent)
+{
+  ENT(ent, run) = false;
+}
+
+void SNetEntitySetRun(snet_entity_t *ent)
+{
+  ENT(ent, run) = true;
+}
+
+bool SNetEntityIsRun(snet_entity_t *ent)
+{
+  return ENT(ent, run);
 }

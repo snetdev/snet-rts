@@ -56,7 +56,6 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   box_arg_t *barg = (box_arg_t *)arg;
   snet_record_t *rec;
   snet_handle_t hnd;
-  snet_entity_t *newent;
 
   /* read from input stream */
   rec = SNetStreamRead( barg->instream);
@@ -144,7 +143,6 @@ static void BoxTask(snet_entity_t *ent, void *arg)
       SNetStreamWrite( barg->outstream, rec);
       SNetStreamClose( barg->instream, true);
       SNetStreamClose( barg->outstream, false);
-
       //SNetHndDestroy( &hnd);
 
       /* destroy box arg */
@@ -159,10 +157,8 @@ static void BoxTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( rec);
   }
 
-  newent = SNetEntityCopy(ent);
-  SNetEntitySetFunction(newent, &BoxTask);
   /* schedule new task */
-  SNetThreadingReSpawn(newent);
+  SNetThreadingReSpawn(ent);
 }
 
 
@@ -171,9 +167,139 @@ static void InitBoxTask(snet_entity_t *ent, void *arg)
   box_arg_t *barg = (box_arg_t *)arg;
   barg->instream = SNetStreamOpen(barg->input, 'r');
   barg->outstream = SNetStreamOpen(barg->output, 'w');
+  SNetEntitySetFunction(ent, &BoxTask);
   BoxTask(ent, arg);
 }
 
+
+static void InitBoxTaskBack(snet_entity_t *ent, void *arg)
+{
+#ifdef DBG_RT_TRACE_BOX_TIMINGS
+  static struct timeval tv_in;
+  static struct timeval tv_out;
+#endif
+
+#ifdef SNET_DEBUG_COUNTERS
+  snet_time_t time_in;
+  snet_time_t time_out;
+  long mseconds;
+#endif /* SNET_DEBUG_COUNTERS */
+
+  box_arg_t *barg = (box_arg_t *)arg;
+  snet_record_t *rec;
+  snet_stream_desc_t *instream, *outstream;
+  bool terminate = false;
+
+  /* storage for the handle is within the box task */
+  snet_handle_t hnd;
+
+  instream = SNetStreamOpen(barg->input, 'r');
+  outstream =  SNetStreamOpen(barg->output, 'w');
+
+  /* set out descriptor */
+  hnd.out_sd = outstream;
+  /* set out signs */
+  hnd.sign = barg->output_variants;
+  /* mapping */
+  hnd.mapping = NULL;
+  /* set variants */
+  hnd.vars = barg->vars;
+  /* box entity */
+  hnd.ent = ent;
+
+  /* MAIN LOOP */
+  while( !terminate) {
+    /* read from input stream */
+    rec = SNetStreamRead( instream);
+
+    switch( SNetRecGetDescriptor(rec)) {
+      case REC_trigger_initialiser:
+      case REC_data:
+        hnd.rec = rec;
+
+#ifdef DBG_RT_TRACE_BOX_TIMINGS
+        gettimeofday( &tv_in, NULL);
+        SNetUtilDebugNoticeEnt( ent,
+            "[BOX] Firing box function at %lf.",
+            tv_in.tv_sec + tv_in.tv_usec / 1000000.0
+            );
+#endif
+#ifdef SNET_DEBUG_COUNTERS
+        SNetDebugTimeGetTime(&time_in);
+#endif /* SNET_DEBUG_COUNTERS */
+
+#ifdef USE_USER_EVENT_LOGGING
+        /* Emit a monitoring message of a record read to be processed by a box */
+        if (SNetRecGetDescriptor(rec) == REC_data) {
+          SNetThreadingEventSignal( ent,
+              SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
+              );
+        }
+#endif
+
+        (*barg->boxfun)( &hnd);
+
+        /*
+         * Emit an event here?
+         * SNetMonInfoEvent( EV_BOX_???, MON_RECORD, rec);
+         */
+
+#ifdef DBG_RT_TRACE_BOX_TIMINGS
+        gettimeofday( &tv_out, NULL);
+        SNetUtilDebugNoticeEnt( ent,
+            "[BOX] Return from box function after %lf sec.",
+            (tv_out.tv_sec - tv_in.tv_sec) + (tv_out.tv_usec - tv_in.tv_usec) / 1000000.0
+            );
+#endif
+
+
+#ifdef SNET_DEBUG_COUNTERS
+        SNetDebugTimeGetTime(&time_out);
+        mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
+        SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
+#endif /* SNET_DEBUG_COUNTERS */
+
+        SNetRecDestroy( rec);
+
+        /* restrict to one data record per execution */
+        //SNetThreadingYield();
+        break;
+
+      case REC_sync:
+        {
+          snet_stream_t *newstream = SNetRecGetStream(rec);
+          SNetStreamReplace( instream, newstream);
+          SNetRecDestroy( rec);
+        }
+        break;
+
+      case REC_sort_end:
+        /* forward the sort record */
+        SNetStreamWrite( outstream, rec);
+        break;
+
+      case REC_terminate:
+        SNetStreamWrite( outstream, rec);
+        terminate = true;
+        break;
+
+      case REC_collect:
+      default:
+        assert(0);
+        /* if ignore, destroy at least ...*/
+        SNetRecDestroy( rec);
+    }
+  } /* MAIN LOOP END */
+
+  SNetStreamClose( instream, true);
+  SNetStreamClose( outstream, false);
+
+  SNetHndDestroy( &hnd);
+
+  /* destroy box arg */
+  SNetIntListListDestroy(barg->output_variants);
+  SNetMemFree( barg);
+}
 
 /**
  * Box creation function

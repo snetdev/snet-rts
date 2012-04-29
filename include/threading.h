@@ -122,7 +122,7 @@ int SNetThreadingSpawn(snet_entity_t *ent);
  *
  * @return 0 on success
  */
-int SNetInitThreadingSpawn(snet_entity_t *ent);
+void SNetInitThreadingSpawn(snet_entity_t *ent);
 
 /**
  * Respawn a thread if the task should stay on the same node, or spawn a new
@@ -132,7 +132,7 @@ int SNetInitThreadingSpawn(snet_entity_t *ent);
  *
  * @return 0 on succes
  */
-int SNetThreadingReSpawn(snet_entity_t *ent);
+void SNetThreadingReSpawn(snet_entity_t *ent);
 
 /**
  * Let the current entity thread/task give up execution

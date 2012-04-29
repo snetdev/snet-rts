@@ -92,6 +92,7 @@ snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode)
   sd->stream = stream;
   sd->next = NULL;
   sd->mode = mode;
+  sd->thr = SNetThreadingSelf();
   /* assign consumer or producer */
   switch(mode) {
     case 'w': stream->producer = sd; break;
@@ -120,12 +121,6 @@ void SNetStreamReplace(snet_stream_desc_t *sd, snet_stream_t *new_stream)
   new_stream->is_poll = 0;
   pthread_mutex_unlock( &new_stream->lock);
   sd->stream = new_stream;
-}
-
-void SNetStreamUpdate(snet_stream_desc_t *sd, void *ptr)
-{
-  snet_thread_t *thr = (snet_thread_t *)ptr;
-  sd->thr = thr;
 }
 
 snet_stream_t *SNetStreamGet(snet_stream_desc_t *sd)
@@ -235,14 +230,14 @@ snet_stream_desc_t *SNetStreamPoll(snet_streamset_t *set)
   assert( *set != NULL);
 
   snet_stream_desc_t *result = NULL;
-  snet_thread_t *self;
-  snet_stream_iter_t *iter;
-  int cnt = 0;
-
   /* get 'self', i.e. the task calling SNetStreamPoll()
    * the set is a simple pointer to the last element
    */
-  self = (*set)->thr;
+  snet_thread_t *self = SNetThreadingSelf();
+  snet_stream_iter_t *iter;
+  int cnt = 0;
+
+  //self = (*set)->thr;
 
   iter = SNetStreamIterCreate(set);
 

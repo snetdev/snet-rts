@@ -51,4 +51,10 @@ extern const char *SNetEntityStr(snet_entity_t *);
 
 extern void SNetEntitySetFunction(snet_entity_t *ent, snet_entityfunc_t f);
 
+extern void SNetEntitySetStop(snet_entity_t *ent);
+
+extern void SNetEntitySetRun(snet_entity_t *ent);
+
+extern bool SNetEntityIsRun(snet_entity_t *ent);
+
 #endif /* _ENTITIES_H_ */

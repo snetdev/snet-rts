@@ -70,12 +70,20 @@ static size_t GetStacksize(snet_entity_descr_t descr)
 
 static void *EntityTask(void *arg)
 {
-	snet_entity_t *ent = (snet_entity_t *)arg;
+  snet_entity_t *ent = (snet_entity_t *)arg;
 
-	SNetEntityCall(ent);
-	SNetEntityDestroy(ent);
+  do {
+  //  snet_entity_t *new_ent;
+    SNetEntitySetStop(ent);
+    SNetEntityCall(ent);
+  //  new_ent = SNetEntityCopy(ent);
+  //  SNetEntityDestroy(ent);
+  //  ent = new_ent;
+  } while(SNetEntityIsRun(ent));
 
-	return NULL;
+  SNetEntityDestroy(ent);
+
+  return NULL;
 }
 
 int SNetThreadingInit(int argc, char **argv)
@@ -295,11 +303,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 	return 0;
 }
 
-
-/**
- * Spawn a new task
- */
-int SNetInitThreadingSpawn(snet_entity_t *ent)
+void CreateNewTask(snet_entity_t *ent)
 {
   int worker = -1;
   snet_entity_descr_t type = SNetEntityDescr(ent);
@@ -307,12 +311,8 @@ int SNetInitThreadingSpawn(snet_entity_t *ent)
   const char *name = SNetEntityName(ent);
 
   if ( type != ENTITY_other) {
-    if (dloc_placement) {
-      assert(location != -1);
-      worker = location % num_workers;
-    } else {
-      worker = SNetAssignTask( (type==ENTITY_box), name );
-    }
+    assert(location != -1);
+    worker = location % num_workers;
   }
 
   lpel_task_t *t = LpelTaskCreate(
@@ -352,15 +352,77 @@ int SNetInitThreadingSpawn(snet_entity_t *ent)
   //fflush(mapfile);
 
   LpelTaskRun(t);
-  return 0;
+}
+
+
+/**
+ * Spawn a new task
+ */
+void SNetInitThreadingSpawn(snet_entity_t *ent)
+{
+  int worker = -1;
+  snet_entity_descr_t type = SNetEntityDescr(ent);
+  int location = SNetEntityNode(ent);
+  const char *name = SNetEntityName(ent);
+
+  if ( type != ENTITY_other) {
+    assert(location != -1);
+    worker = location % num_workers;
+  }
+
+  lpel_task_t *t = LpelTaskCreate(
+                      worker,
+                      //(lpel_taskfunc_t) func,
+                      EntityTask,
+                      ent,
+                      GetStacksize(type)
+                   );
+
+
+#ifdef USE_LOGGING
+  if (mon_flags & SNET_MON_TASK){
+    mon_task_t *mt = SNetThreadingMonTaskCreate(
+                               LpelTaskGetID(t),
+                               name
+                     );
+    LpelTaskMonitor(t, mt);
+  /* if we monitor the task, we make an entry in the map file */
+  }
+
+  if ((mon_flags & SNET_MON_MAP) && mapfile) {
+    int tid = LpelTaskGetID(t);
+    // FIXME: change to binary format
+    (void) fprintf(mapfile, "%d%s %d%c", tid, SNetEntityStr(ent), worker, END_LOG_ENTRY);
+  }
+
+
+#endif
+
+  if (type != ENTITY_box && type != ENTITY_fbbuf) {
+    LpelTaskPrio(t, 1);
+  }
+
+
+  //FIXME only for debugging purposes
+  //fflush(mapfile);
+
+  LpelTaskRun(t);
 }
 
 /**
  * Respawn a current task or if the task is on a different worker, create a
  * new task
  */
-int SNetThreadingReSpawn(snet_entity_t *ent)
+void SNetThreadingReSpawn(snet_entity_t *ent)
 {
-  return SNetThreadingSpawn(ent);
+  //lpel_task_t *t = LpelTaskSelf();
+  //if(LpelTaskMigrate(t) {
+    snet_entity_t *new_ent = SNetEntityCopy(ent);
+
+    CreateNewTask(new_ent);
+  //  create new task
+  //} else {
+  //SNetEntitySetRun(ent);
+  //}
 }
 
