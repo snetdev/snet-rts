@@ -303,16 +303,13 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 	return 0;
 }
 
-void CreateNewTask(snet_entity_t *ent)
+void CreateNewTask(snet_entity_t *ent, int worker)
 {
-  int worker = -1;
   snet_entity_descr_t type = SNetEntityDescr(ent);
-  int location = SNetEntityNode(ent);
   const char *name = SNetEntityName(ent);
 
   if ( type != ENTITY_other) {
-    assert(location != -1);
-    worker = location % num_workers;
+    assert(worker != -1);
   }
 
   lpel_task_t *t = LpelTaskCreate(
@@ -415,14 +412,22 @@ void SNetInitThreadingSpawn(snet_entity_t *ent)
  */
 void SNetThreadingReSpawn(snet_entity_t *ent)
 {
-  //lpel_task_t *t = LpelTaskSelf();
-  //if(LpelTaskMigrate(t) {
+  lpel_task_t *t;
+  int current_worker;
+  int new_worker;
+
+  t = LpelTaskSelf();
+  current_worker = LpelTaskWorkerId(t);
+  new_worker = LpelTaskMigrationWorkerId(t);
+
+  if(current_worker != new_worker) {
+    /* Migrate */
     snet_entity_t *new_ent = SNetEntityCopy(ent);
 
-    CreateNewTask(new_ent);
-  //  create new task
-  //} else {
-  //SNetEntitySetRun(ent);
-  //}
+    CreateNewTask(new_ent, new_worker);
+  } else {
+    /* Stay on the same worker */
+    SNetEntitySetRun(ent);
+  }
 }
 
