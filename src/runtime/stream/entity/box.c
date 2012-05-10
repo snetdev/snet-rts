@@ -27,21 +27,17 @@
 
 
 typedef struct {
-#ifdef SNET_DEBUG_COUNTERS
-  snet_time_t time_in;
-  snet_time_t time_out;
-  long mseconds;
-#endif /* SNET_DEBUG_COUNTERS */
-#ifdef DBG_RT_TRACE_BOX_TIMINGS
-  static struct timeval tv_in;
-  static struct timeval tv_out;
-#endif
   snet_stream_t *input, *output;
   snet_stream_desc_t *instream, *outstream;
   void (*boxfun)( snet_handle_t*);
   snet_int_list_list_t *output_variants;
   const char *boxname;
   snet_variant_list_t *vars;
+#ifdef SNET_DEBUG_COUNTERS
+  snet_time_t time_in;
+  snet_time_t time_out;
+  long mseconds;
+#endif /* SNET_DEBUG_COUNTERS */
 } box_arg_t;
 
 
@@ -56,6 +52,10 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   box_arg_t *barg = (box_arg_t *)arg;
   snet_record_t *rec;
   snet_handle_t hnd;
+#ifdef DBG_RT_TRACE_BOX_TIMINGS
+  static struct timeval tv_in;
+  static struct timeval tv_out;
+#endif
 
   /* read from input stream */
   rec = SNetStreamRead( barg->instream);
@@ -76,14 +76,14 @@ static void BoxTask(snet_entity_t *ent, void *arg)
     case REC_data:
       hnd.rec = rec;
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
-      gettimeofday( &(barg->tv_in), NULL);
+      gettimeofday( &tv_in, NULL);
       SNetUtilDebugNoticeEnt( ent,
           "[BOX] Firing box function at %lf.",
-          barg->tv_in.tv_sec + barg->tv_in.tv_usec / 1000000.0
+          tv_in.tv_sec + tv_in.tv_usec / 1000000.0
           );
 #endif
 #ifdef SNET_DEBUG_COUNTERS
-      SNetDebugTimeGetTime(&(barg->time_in));
+      SNetDebugTimeGetTime(&time_in);
 #endif /* SNET_DEBUG_COUNTERS */
 
 #ifdef USE_USER_EVENT_LOGGING
@@ -103,11 +103,11 @@ static void BoxTask(snet_entity_t *ent, void *arg)
        */
 
 #ifdef DBG_RT_TRACE_BOX_TIMINGS
-      gettimeofday( &(barg->tv_out), NULL);
+      gettimeofday( &tv_out, NULL);
       SNetUtilDebugNoticeEnt( ent,
           "[BOX] Return from box function after %lf sec.",
-          (barg->tv_out.tv_sec - barg->tv_in.tv_sec) + (barg->tv_out.tv_usec - 
-           barg->tv_in.tv_usec) / 1000000.0
+          (tv_out.tv_sec - tv_in.tv_sec) + (tv_out.tv_usec - 
+           tv_in.tv_usec) / 1000000.0
           );
 #endif
 
@@ -122,7 +122,6 @@ static void BoxTask(snet_entity_t *ent, void *arg)
       SNetRecDestroy( rec);
 
       /* restrict to one data record per execution */
-      //SNetThreadingYield();
       break;
 
     case REC_sync:
@@ -143,6 +142,10 @@ static void BoxTask(snet_entity_t *ent, void *arg)
       SNetStreamWrite( barg->outstream, rec);
       SNetStreamClose( barg->instream, true);
       SNetStreamClose( barg->outstream, false);
+      /**
+       * NOTE: This function is not necessary as it destroys a structure
+       * on the stack
+       */
       //SNetHndDestroy( &hnd);
 
       /* destroy box arg */
@@ -178,12 +181,6 @@ static void InitBoxTaskBack(snet_entity_t *ent, void *arg)
   static struct timeval tv_in;
   static struct timeval tv_out;
 #endif
-
-#ifdef SNET_DEBUG_COUNTERS
-  snet_time_t time_in;
-  snet_time_t time_out;
-  long mseconds;
-#endif /* SNET_DEBUG_COUNTERS */
 
   box_arg_t *barg = (box_arg_t *)arg;
   snet_record_t *rec;
@@ -225,7 +222,7 @@ static void InitBoxTaskBack(snet_entity_t *ent, void *arg)
             );
 #endif
 #ifdef SNET_DEBUG_COUNTERS
-        SNetDebugTimeGetTime(&time_in);
+        SNetDebugTimeGetTime(&barg->time_in);
 #endif /* SNET_DEBUG_COUNTERS */
 
 #ifdef USE_USER_EVENT_LOGGING
@@ -254,9 +251,9 @@ static void InitBoxTaskBack(snet_entity_t *ent, void *arg)
 
 
 #ifdef SNET_DEBUG_COUNTERS
-        SNetDebugTimeGetTime(&time_out);
-        mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
-        SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
+        SNetDebugTimeGetTime(&barg->time_out);
+        mseconds = SNetDebugTimeDifferenceInMilliseconds(&barg->time_in, &barg->time_out);
+        SNetDebugCountersIncreaseCounter(barg->mseconds, SNET_COUNTER_TIME_BOX);
 #endif /* SNET_DEBUG_COUNTERS */
 
         SNetRecDestroy( rec);

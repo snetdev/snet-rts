@@ -43,6 +43,7 @@ typedef struct {
 /* This function prints records to stdout */
 static void printRec(snet_record_t *rec, handle_t *hnd)
 {
+#ifndef NO_PRINT
   snet_ref_t *field;
   int name, val;
   char *label = NULL;
@@ -136,6 +137,7 @@ static void printRec(snet_record_t *rec, handle_t *hnd)
   }
 
   fflush(hnd->file);
+#endif
 }
 
 /**
