@@ -88,6 +88,15 @@ static void *EntityTask(void *arg)
   return NULL;
 }
 
+static int GetPrio(snet_entity_descr_t type)
+{
+  switch(type) {
+    case ENTITY_box:
+    case ENTITY_other: return 0;
+    default: return 1;
+  }
+}
+
 int SNetThreadingInit(int argc, char **argv)
 {
 	lpel_config_t config;
@@ -254,14 +263,7 @@ void CreateNewTask(snet_entity_t *ent, int worker)
   }
 
 #ifdef USE_PRIORITY
-  switch(type) {
-    case ENTITY_box: prio = 1;
-                     break;
-    case ENTITY_other: prio = 0;
-                       break;
-    default: prio = 2;
-             break;
-  }
+  prio = GetPrio(type);
 #else
   prio = 0;
 #endif
@@ -326,7 +328,12 @@ int SNetThreadingSpawn(snet_entity_t *ent)
  */
 void SNetInitThreadingSpawn(snet_entity_t *ent)
 {
-  int worker = num_workers;
+  int worker = 0;
+  int n;
+  int *workers;
+  snet_entity_descr_t type = SNetEntityDescr(ent);
+  LpelPlacementSchedulerWorkerIndices(GetPrio(type), &workers, &n);
+  //TODO add info_t to arguments and use this to determine worker
   CreateNewTask(ent, worker);
 }
 
