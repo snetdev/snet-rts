@@ -96,6 +96,7 @@ static int GetPrio(snet_entity_descr_t type)
 {
   switch(type) {
     case ENTITY_box:
+    case ENTITY_fbbuf:
     case ENTITY_other: return 0;
     default: return 1;
   }
@@ -338,6 +339,44 @@ int SNetThreadingSpawn(snet_entity_t *ent)
  */
 void SNetThreadingInitSpawn(snet_entity_t *ent, int worker)
 {
+  snet_entity_descr_t type = SNetEntityDescr(ent);
+  switch(type) {
+    case ENTITY_box:
+        printf("box, %d\n", worker);
+        break;
+    case ENTITY_parallel:
+        printf("parallel, %d\n", worker);
+        break;
+    case ENTITY_star:
+        printf("star, %d\n", worker);
+        break;
+    case ENTITY_split:
+        printf("split, %d\n", worker);
+        break;
+    case ENTITY_fbcoll:
+        printf("fbcoll, %d\n", worker);
+        break;
+    case ENTITY_fbdisp:
+        printf("fbdisp, %d\n", worker);
+        break;
+    case ENTITY_fbbuf:
+        printf("fbbuf, %d\n", worker);
+        break;
+    case ENTITY_sync:
+        printf("sync, %d\n", worker);
+        break;
+    case ENTITY_filter:
+        printf("filter, %d\n", worker);
+        break;
+    case ENTITY_nameshift:
+        printf("nameshift, %d\n", worker);
+        break;
+    case ENTITY_collect:
+        printf("collect, %d\n", worker);
+        break;
+    case ENTITY_other:
+        break;
+  }
   CreateNewTask(ent, worker);
 }
 
