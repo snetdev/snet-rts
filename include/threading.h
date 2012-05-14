@@ -102,9 +102,6 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo);
  ****************************************************************************/
 
 
-
-
-
 /**
  * Spawn a new thread
  *
@@ -122,7 +119,7 @@ int SNetThreadingSpawn(snet_entity_t *ent);
  *
  * @return 0 on success
  */
-void SNetInitThreadingSpawn(snet_entity_t *ent);
+void SNetThreadingInitSpawn(snet_entity_t *ent, int worker);
 
 /**
  * Respawn a thread if the task should stay on the same node, or spawn a new
@@ -139,7 +136,20 @@ void SNetThreadingReSpawn(snet_entity_t *ent);
  */
 void SNetThreadingYield(void);
 
-
+/**
+ * Get the initial worker where the entity should be initially spawnedi.
+ * This function is only used for LPEL.
+ *
+ * @param info    The dictonary containing the information about the worker
+ *
+ * @param type    The type of entity, 0 is a box task, 1 a control task,
+ *                2 is a control task that should be placed on a different
+ *                worker if possible, 3 is when the parent worker id should
+ *                be used.
+ *
+ * @return        Returns the worker on which the entity should be spawned
+ */
+int SNetThreadingInitialWorker(snet_info_t *info, int type);
 
 
 

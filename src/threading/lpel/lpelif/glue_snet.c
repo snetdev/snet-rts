@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
 
 
 #include "debug.h"
@@ -12,6 +13,9 @@
 #include "threading.h"
 
 #include "lpel.h"
+
+/* info dictionary */
+#include "info.h"
 
 /* provisional assignment module */
 #include "assign.h"
@@ -95,6 +99,15 @@ static int GetPrio(snet_entity_descr_t type)
     case ENTITY_other: return 0;
     default: return 1;
   }
+}
+
+static int GetRandomNumber(int old_index, int n)
+{
+  int new_index = old_index;
+  while(n > 1 && old_index == new_index) {
+    new_index = rand() % n;
+  }
+  return new_index;
 }
 
 int SNetThreadingInit(int argc, char **argv)
@@ -191,9 +204,6 @@ int SNetThreadingInit(int argc, char **argv)
 
 	return 0;
 }
-
-
-
 
 unsigned long SNetThreadingGetId()
 {
@@ -326,14 +336,8 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 /**
  * Spawn a new task
  */
-void SNetInitThreadingSpawn(snet_entity_t *ent)
+void SNetThreadingInitSpawn(snet_entity_t *ent, int worker)
 {
-  int worker = 0;
-  int n;
-  int *workers;
-  snet_entity_descr_t type = SNetEntityDescr(ent);
-  LpelPlacementSchedulerWorkerIndices(GetPrio(type), &workers, &n);
-  //TODO add info_t to arguments and use this to determine worker
   CreateNewTask(ent, worker);
 }
 
@@ -360,5 +364,87 @@ void SNetThreadingReSpawn(snet_entity_t *ent)
     /* Stay on the same worker */
     SNetEntitySetRun(ent);
   }
+}
+
+int SNetThreadingInitialWorker(snet_info_t *info, int type)
+{
+#ifdef TASK_WORKER_SEPARATION
+  static int wid_set = -1;
+  static snet_info_tag_t control_wid;
+  static snet_info_tag_t box_wid;
+
+  if(wid_set == -1) {
+    control_wid = SNetInfoCreateTag();
+    SNetInfoSetTag(info, control_wid, (uintptr_t)0, NULL);
+    box_wid = SNetInfoCreateTag();
+    SNetInfoSetTag(info, box_wid, (uintptr_t)0, NULL);
+    wid_set = 0;
+  }
+
+  switch(type) {
+    case 0:
+      {
+        int wid_index = (int)SNetInfoGetTag(info, box_wid);
+        return LpelPlacementSchedulerGetWorker(0, wid_index);
+      }
+    case 1:
+      {
+        int wid_index = (int)SNetInfoGetTag(info, control_wid);
+        return LpelPlacementSchedulerGetWorker(1, wid_index);
+      }
+    case 2:
+      {
+        int box_n = LpelPlacementSchedulerNumWorkers(0);
+        int control_n = LpelPlacementSchedulerNumWorkers(1);
+        int box_index = (int)SNetInfoGetTag(info, box_wid);
+        int control_index = (int)SNetInfoGetTag(info, control_wid);
+        int new_box_index = GetRandomNumber(box_index, box_n);
+        int new_control_index = GetRandomNumber(control_index, control_n);
+        SNetInfoSetTag(info, control_wid, (uintptr_t)new_control_index, NULL);
+        SNetInfoSetTag(info, box_wid, (uintptr_t)new_box_index, NULL);
+        return LpelPlacementSchedulerGetWorker(1, new_control_index);
+      }
+    case 3:
+      {
+        int worker = LpelTaskWorkerId();
+        int index = LpelPlacementSchedulerGetIndexWorker(1, worker);
+        SNetInfoSetTag(info, control_wid, (uintptr_t)index, NULL);
+        return index;
+      }
+    default:
+      return 0;
+  }
+#else
+  static snet_info_tag_t wid = -1;
+  if(wid == -1) {
+    wid = SNetInfoCreateTag();
+    SNetInfoSetTag(info, wid, (uintptr_t)0, NULL);
+  }
+  switch(type) {
+    case 0:
+    case 1:
+      {
+        int wid_index = (int)SNetInfoGetTag(info, wid);
+        return LpelPlacementSchedulerGetWorker(0, wid_index);
+      }
+    case 2:
+      {
+        int n = LpelPlacementSchedulerNumWorkers(0);
+        int index = (int)SNetInfoGetTag(info, wid);
+        int new_index = GetRandomNumber(index, n);
+        SNetInfoSetTag(info, wid, (uintptr_t)new_index, NULL);
+        return LpelPlacementSchedulerGetWorker(0, new_index);
+      }
+    case 3:
+      {
+        int worker = LpelTaskWorkerId();
+        int index = LpelPlacementSchedulerGetIndexWorker(0, worker);
+        SNetInfoSetTag(info, wid, (uintptr_t)index, NULL);
+        return index;
+      }
+    default:
+      return 0;
+  }
+#endif
 }
 
