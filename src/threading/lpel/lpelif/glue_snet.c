@@ -96,7 +96,6 @@ static int GetPrio(snet_entity_descr_t type)
 {
   switch(type) {
     case ENTITY_box:
-    case ENTITY_fbbuf:
     case ENTITY_other: return 0;
     default: return 1;
   }
