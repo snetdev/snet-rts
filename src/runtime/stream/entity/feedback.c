@@ -448,8 +448,8 @@ static void FeedbackBufTask(snet_entity_t *ent, void *arg)
     //printf("yield\n");
     //SNetThreadingYield();
     //if ( SNetStreamPeek(fbbarg->instream) != NULL ) {
-      rec = SNetStreamRead(fbbarg->instream);
-      assert( REC_terminate != SNetRecGetDescriptor( rec) );
+    rec = SNetStreamRead(fbbarg->instream);
+    assert( REC_terminate != SNetRecGetDescriptor( rec) );
     //}
   }
 
