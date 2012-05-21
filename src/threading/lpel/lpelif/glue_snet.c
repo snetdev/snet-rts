@@ -92,6 +92,7 @@ static void *EntityTask(void *arg)
   return NULL;
 }
 
+#ifdef USE_PRIORITY
 static int GetPrio(snet_entity_descr_t type)
 {
   switch(type) {
@@ -100,6 +101,7 @@ static int GetPrio(snet_entity_descr_t type)
     default: return 1;
   }
 }
+#endif
 
 static int GetRandomNumber(int old_index, int n)
 {
@@ -338,6 +340,12 @@ int SNetThreadingSpawn(snet_entity_t *ent)
  */
 void SNetThreadingInitSpawn(snet_entity_t *ent, int worker)
 {
+#ifdef MEASUREMENTS
+  snet_entity_descr_t type = SNetEntityDescr(ent);
+  if(type != ENTITY_other) {
+    LpelWorkerAddTask();
+  }
+#endif
   CreateNewTask(ent, worker);
 }
 
@@ -368,7 +376,7 @@ void SNetThreadingReSpawn(snet_entity_t *ent)
 
 int SNetThreadingInitialWorker(snet_info_t *info, int type)
 {
-#ifdef TASK_WORKER_SEPARATION
+#ifdef TASK_SEGMENTATION
   static int wid_set = -1;
   static snet_info_tag_t control_wid;
   static snet_info_tag_t box_wid;
