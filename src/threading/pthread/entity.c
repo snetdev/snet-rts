@@ -33,6 +33,16 @@ static size_t StackSize(snet_entity_descr_t descr);
 
 static void ThreadDestroy(snet_thread_t *self);
 
+#ifdef USE_CORE_AFFINITY
+typedef enum {
+  DEFAULT,
+  MASKMOD2,
+  STRICTLYFIRST,
+  ALLBUTFIRST,
+  MAXCORES
+} affinity_type_t;
+
+static int SetThreadAffinity( pthread_t *pt, affinity_type_t at, ...);
 
 #ifndef CPU_COUNT
 /* Old pthread implementations do not have the CPU_COUNT macro. */
@@ -49,17 +59,6 @@ static inline int _my_cpu_count(cpu_set_t *set)
 
 #define CPU_COUNT(set)    _my_cpu_count(set)
 #endif
-
-#ifdef USE_CORE_AFFINITY
-typedef enum {
-  DEFAULT,
-  MASKMOD2,
-  STRICTLYFIRST,
-  ALLBUTFIRST,
-  MAXCORES
-} affinity_type_t;
-
-static int SetThreadAffinity( pthread_t *pt, affinity_type_t at, ...);
 #endif
 
 unsigned long SNetThreadingGetId()
