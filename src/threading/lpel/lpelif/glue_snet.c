@@ -142,7 +142,20 @@ int SNetThreadingInit(int argc, char **argv)
 			/* Number of workers */
 			i = i + 1;
 			num_workers = atoi(argv[i]);
-		}
+		} else if(strcmp(argv[i], "-thr") == 0 && i + 1 <= argc) {
+                        /* Theshold for placement scheduler */
+                        i = i + 1;
+                        config.threshold = atof(argv[i]);
+                }
+#ifdef TASK_SEGMENTATION
+                else if(strcmp(argv[i], "-seg") == 0 && i+1 <= argc) {
+                       /* If task segementation is used, this is the number of
+                        * workers assigned for control tasks
+                        */
+                       i = i +1;
+                       config.segmentation = atoi(argv[i]);
+                }
+#endif
 	}
 
 
