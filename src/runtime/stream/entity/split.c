@@ -171,13 +171,10 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       SNetStreamIterReset( sarg->iter, &sarg->repos_set);
       /* all instances receive copies of the record */
       while( SNetStreamIterHasNext( sarg->iter)) {
-        snet_stream_desc_t *tmp = SNetStreamIterNext( sarg->iter);
-        snet_stream_desc_t *cur_stream;
-        cur_stream = SNetStreamOpen(SNetStreamGet(tmp), 'w');
+        snet_stream_desc_t *cur_stream = SNetStreamIterNext( sarg->iter);
         SNetStreamWrite( cur_stream, SNetRecCopy( rec));
 
         SNetStreamIterRemove( sarg->iter);
-        SNetStreamClose(tmp,false);
         /* close  the stream to the instance */
         SNetStreamClose( cur_stream, false);
       }
