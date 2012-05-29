@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <memfun.h>
 #include <stdio.h>
-
+/*
 void *SNetMemAlloc( size_t s) {
   
   void *ptr;
@@ -30,5 +30,5 @@ void SNetMemFree( void *ptr) {
   free( ptr);
   ptr = NULL;
 }
-
+*/
 

@@ -6,14 +6,17 @@
 #define MEMFUN_H
 
 #include <stddef.h>
+#include <lpel.h>
 
+#define SNetMemAlloc malloc
+#define SNetMemFree free
 
 /*
  * Allocates memory of size s.
  * RETURNS: pointer to memory.
  */
 
-void *SNetMemAlloc( size_t s);
+// void *SNetMemAlloc( size_t s);
 
 
 
@@ -22,7 +25,7 @@ void *SNetMemAlloc( size_t s);
  * RETURNS: nothing.
  */
 
-void SNetMemFree( void *ptr);
+// void SNetMemFree( void *ptr);
 
 
 
