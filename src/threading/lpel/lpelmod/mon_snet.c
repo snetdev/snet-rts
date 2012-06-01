@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "mon_snet.h"
 
@@ -28,6 +29,20 @@ static const char worker_wait = WORKER_WAIT_EVENT;
 
 typedef struct mon_usrevt_t mon_usrevt_t;
 
+/*
+ * global monitoring information
+ *  - refer to some local mon info of each worker
+ *  - currently used for load-balance allocating task to worker
+ */
+typedef struct {
+	int num_workers;
+	pthread_mutex_t ** wt_locks;
+	lpel_timing_t **wts;	//wait time
+	lpel_timing_t **wcs;	//wait current
+} global_mon_t;
+
+static global_mon_t ginfo;
+
 
 /**
  * Every worker has a monitoring context, which besides
@@ -40,6 +55,7 @@ struct mon_worker_t {
 	lpel_timing_t      wait_current;
 	unsigned int wait_cnt;
 	lpel_timing_t wait_time;
+	pthread_mutex_t wt_lock;	// lock for global access to wait_time
 	lpel_timing_t exec_time;
 	struct {
 		int cnt, size;
@@ -375,11 +391,15 @@ static mon_worker_t *MonCbWorkerCreate( int wid)
 
 	/* default values */
 	mon->disp = 0;
+	mon->wait_cnt = 0;
+	pthread_mutex_init( &mon->wt_lock, NULL);
+	LpelTimingZero(&mon->wait_time);	// no need mutex
 	LpelTimingZero(&mon->wait_current);
 
-	/* statistic info */
-	mon->wait_cnt = 0;
-	LpelTimingZero(&mon->wait_time);
+	/* register global mon info */
+	ginfo.wt_locks[wid] = (&mon->wt_lock);
+	ginfo.wts[wid] = (&mon->wait_time);
+	ginfo.wcs[wid] = (&mon->wait_current);
 
 	/* user events */
 	mon->events.cnt = 0;
@@ -427,6 +447,9 @@ static mon_worker_t *MonCbWrapperCreate( mon_task_t *mt)
 
 	/* default values */
 	mon->disp = 0;
+	mon->wait_cnt = 0;
+	pthread_mutex_init(&mon->wt_lock, NULL);
+	LpelTimingZero(&mon->wait_time);	// no need mutex
 	LpelTimingZero(&mon->wait_current);
 
 	/* user events */
@@ -452,7 +475,7 @@ static mon_worker_t *MonCbWrapperCreate( mon_task_t *mt)
 
 static void printStatistic(mon_worker_t *mon){
 	fprintf(mon->outfile, "WC%dWT", mon->wait_cnt);
-	PrintTiming( &mon->wait_time, mon->outfile);
+	PrintTiming( &mon->wait_time, mon->outfile);	// no need mutex
 
 }
 /**
@@ -497,14 +520,17 @@ static void MonCbWorkerDestroy( mon_worker_t *mon)
 
 static void MonCbWorkerWaitStart( mon_worker_t *mon)
 {
+	pthread_mutex_lock(&mon->wt_lock);
 	LpelTimingStart(&mon->wait_current);
 	if (FLAG_LOAD(mon))
 		mon->wait_cnt++;		// cheaper than without conditional check?
+	pthread_mutex_unlock(&mon->wt_lock);
 }
 
 
 static void MonCbWorkerWaitStop(mon_worker_t *mon)
 {
+	pthread_mutex_lock(&mon->wt_lock);
 	if (FLAG_WORKER(mon) || FLAG_LOAD(mon)) {
 		LpelTimingEnd(&mon->wait_current);
 	}
@@ -533,6 +559,8 @@ static void MonCbWorkerWaitStop(mon_worker_t *mon)
 	if (FLAG_LOAD(mon)){
 		LpelTimingAdd(&mon->wait_time, &mon->wait_current);
 	}
+	LpelTimingZero(&mon->wait_current); // if wait_current is not zero, the worker is current waiting --> used for dynamic alloc
+	pthread_mutex_unlock(&mon->wt_lock);
 }
 
 
@@ -787,9 +815,8 @@ static void MonCbStreamWakeup(mon_stream_t *ms)
  * Initialize the monitoring module
  *
  */
-void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int flag)
+void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int num_workers, int node, int flag)
 {
-
 #ifdef USE_LOGGING
 	mon_node = node;
 	mon_flags = flag;
@@ -822,6 +849,14 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int flag)
 		cb->stream_blockon      = MonCbStreamBlockon;
 		cb->stream_wakeup       = MonCbStreamWakeup;
 	}
+
+	/* init global mon info */
+	if (mon_flags & SNET_MON_LOAD) {
+		ginfo.num_workers = num_workers;
+		ginfo.wt_locks = (pthread_mutex_t **) malloc(num_workers * sizeof (pthread_mutex_t *));
+		ginfo.wts = (lpel_timing_t **) malloc(num_workers * sizeof (lpel_timing_t *));
+		ginfo.wcs = (lpel_timing_t **) malloc(num_workers * sizeof (lpel_timing_t *));
+	}
 	/* initialize timing */
 	LpelTimingNow(&monitoring_begin);
 #endif
@@ -837,9 +872,41 @@ void SNetThreadingMonCleanup(void)
 }
 
 
+/*
+ * get the worker with maximum waiting time, including current wait if the work is waiting (and its total waiting time is not updated yet
+ *
+ */
+
+int SNetGetMaxWait(){
+	int i;
+	int w = 0;
+	lpel_timing_t zero, max, now, cur;
+	LpelTimingZero(&max);
+	LpelTimingNow (&now);
+	LpelTimingZero(&zero);
+	for (i = 0; i < ginfo.num_workers; i++){
+		pthread_mutex_lock( ginfo.wt_locks[i]);
+		if (LpelTimingCompare( &zero, ginfo.wcs[i]) != 0) {		// worker is is currently waiting --> add its current wait time
+			if (LpelTimingCompare( &now, ginfo.wcs[i]) > 0) {			// avoid now < wait_current, this might happen because non-completely synchronised time between worker
+				LpelTimingDiff ( &cur, ginfo.wcs[i], &now);
+				LpelTimingAdd ( &cur, ginfo.wts[i]);
+				if (LpelTimingCompare( &max, &cur) < 0) {
+					LpelTimingSet( &max, &cur);
+					w = i;
+				}
+			}
+		} else if (LpelTimingCompare( &max, ginfo.wts[i]) < 0) {
+			LpelTimingSet( &max, ginfo.wts[i]);
+			w = i;
+		}
+		pthread_mutex_unlock( ginfo.wt_locks[i]);
+	}
+	return w;
+}
+
 void SNetThreadingMonEvent(mon_task_t *mt, snet_moninfo_t *moninfo)
 {
-//	assert(mt != NULL);
+	//	assert(mt != NULL);
 	if (!(mt != NULL && FLAG_MESSAGE(mt))) {
 		SNetMonInfoDestroy(moninfo); // created by SNET entity but no need in this case --> destroy here
 		return;

@@ -25,8 +25,8 @@ struct mon_task_t;
 struct mon_stream_t;
 
 
-
-void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int level);
+int SNetGetMaxWait();
+void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int num_workers, int node, int level);
 void SNetThreadingMonCleanup(void);
 
 
@@ -35,6 +35,24 @@ struct mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *nam
 
 void SNetThreadingMonEvent(struct mon_task_t *mt,
     snet_moninfo_t *moninfo);
+
+/* allocation flags
+ *   r: roundrobin
+ *   l: load-balancing
+ *   lb: load-balancing for box, roundrobin for non-box
+ */
+#define ALLOC_RR_FLAG "r"
+#define ALLOC_LB_FLAG "l"
+#define ALLOC_LB_BOX_FLAG "lb"
+
+
+#define ALLOC_DEFAULT_MODE 1
+#define ALLOC_RR_MODE 1
+#define ALLOC_LB_MODE 2
+#define ALLOC_LB_BOX_MODE 3
+
+
+
 
 /* logging flags
  - m: mapping
