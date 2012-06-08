@@ -56,6 +56,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
 
   /* storage for the handle is within the box task */
   snet_handle_t hnd;
+  memset(&hnd, 0, sizeof(snet_handle_t));
 
   instream = SNetStreamOpen(barg->input, 'r');
   outstream =  SNetStreamOpen(barg->output, 'w');
