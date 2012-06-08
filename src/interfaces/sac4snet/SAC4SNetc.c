@@ -13,6 +13,8 @@
 #define MOD_NAME      "SACmodule"
 #define BOX_FUN       "SACboxfun"
 #define OUTVIARETURN  "SACoutViaReturn"
+#define DEFAULT_MAP   "SACdefaultmap"
+
 /** ********************************************************* **/
 
 
@@ -117,7 +119,7 @@ char *SAC4SNetGenBoxWrapper( char *box_name,
   /* generate box wrapper */
   STRAPPEND( wrapper_code, "static void *SNetCall__");
   STRAPPEND( wrapper_code, box_name);
-  STRAPPEND( wrapper_code, "( void *handle");
+  STRAPPEND( wrapper_code, "( snet_handle_t *handle");
   for( i=0; i<arg_num; i++) {
     switch( t->type[i]) {
       case field:
@@ -135,10 +137,53 @@ char *SAC4SNetGenBoxWrapper( char *box_name,
   }
   STRAPPEND( wrapper_code, ")\n{\n");
 
+  /* a default task-mapping information can be placed in the metadata */
+  const char *defmap = SNetMetadataGet( meta_data, DEFAULT_MAP);
+  /* for now, the presence of the default mapping implies a multithreaded sac box */
+  const int is_mtbox = (defmap != NULL);
+  
+  if (is_mtbox) {
+    STRAPPEND( wrapper_code, "  /* default mapping can be given via the meta-data */\n");
+    if (defmap) {
+      /* insert the default mapping as-is */
+      STRAPPEND( wrapper_code, "  static const int defmap[] = { ");
+      STRAPPEND( wrapper_code, defmap);
+      STRAPPEND( wrapper_code, " };\n");
+      STRAPPEND( wrapper_code, "  const int defmap_num = sizeof(defmap) / sizeof(int);\n\n");
+    } else {
+      /* no default mapping */
+      //STRAPPEND( wrapper_code, "  const int *defmap = NULL;\n\n");
+    }
+    
+    STRAPPEND( wrapper_code,
+        "  /* retrieve my continuation: a handle to a bee-hive */\n"
+        "  SAChive *hive = SNetHndGetCData(handle);\n"
+        "\n");
+    
+    if (defmap) {
+      STRAPPEND( wrapper_code,
+        "  if (!hive) {\n"
+        "    /* initialize the hive according to the default mapping */\n"
+        "    hive = SAC_AllocHive(defmap_num, 2,\n"
+        "                         defmap,   /* places */\n"
+        "                         handle);   /* opaque thdata */\n"
+        "  }\n"
+        "\n");
+    }
+    
+    STRAPPEND( wrapper_code,
+        "  if (hive) {\n"
+        "    SAC_AttachHive(hive);\n"
+        "    SNetHndSetCData(handle, NULL);\n"
+        "    hive = NULL;    /* the hive-handle is no longer valid */\n"
+        "  }\n"
+        "\n");
+  }
+  
   /* box wrapper body */
-  STRAPPEND( wrapper_code, "  SACarg *hnd_return, *hnd;\n\n");
-  STRAPPEND( wrapper_code, "  hnd = SACARGconvertFromVoidPointer( SACTYPE"
+  STRAPPEND( wrapper_code, "  SACarg *hnd = SACARGconvertFromVoidPointer( SACTYPE"
                            "_SNet_SNet, handle);\n");
+  STRAPPEND( wrapper_code, "  SACarg *hnd_return;\n");
   STRAPPEND( wrapper_code, "  ");
   STRAPPEND( wrapper_code, sac_fqn);
   STRAPPEND( wrapper_code, "( &hnd_return, hnd");
@@ -163,8 +208,18 @@ char *SAC4SNetGenBoxWrapper( char *box_name,
         break;
     }
   }
-  STRAPPEND( wrapper_code, ");\n\n"
-            "  return( SACARGconvertToVoidPointer( ");
+  STRAPPEND( wrapper_code, ");\n\n");
+  
+  if (is_mtbox) {
+    STRAPPEND( wrapper_code,
+        "  /* pick up my continuation */\n"
+        "  hive = SAC_DetachHive();\n"
+        "  SAC_ReleaseHive(hive);\n"      /* FIXME: when the continuation destructor is ready, comment this... */
+        "  //SNetHndSetCData(handle, hive);\n"    /*    ... and uncomment this */
+        "\n");
+  }
+  
+  STRAPPEND( wrapper_code, "  return( SACARGconvertToVoidPointer( ");
   STRAPPEND( wrapper_code, TYPE_STRING);
   STRAPPEND( wrapper_code, ", hnd_return));\n");
   
