@@ -54,13 +54,13 @@ char *C4SNetGenBoxWrapper( char *box_name,
   STRAPPEND(wrapper_code, ");\n\n");
 
   /* execution realms are not used for C4SNet */
-  STRAPPEND(wrapper_code, "snet_handle_t *SNetExeRealm_create__");
+  STRAPPEND(wrapper_code, "static snet_handle_t *SNetExeRealm_create__");
   STRAPPEND(wrapper_code, c_fqn);
   STRAPPEND(wrapper_code, "(snet_handle_t *h) { return(h); }\n\n");
-  STRAPPEND(wrapper_code, "snet_handle_t *SNetExeRealm_update__");
+  STRAPPEND(wrapper_code, "static snet_handle_t *SNetExeRealm_update__");
   STRAPPEND(wrapper_code, c_fqn);
   STRAPPEND(wrapper_code, "(snet_handle_t *h) { return(h); }\n\n");
-  STRAPPEND(wrapper_code, "snet_handle_t *SNetExeRealm_destroy__");
+  STRAPPEND(wrapper_code, "static snet_handle_t *SNetExeRealm_destroy__");
   STRAPPEND(wrapper_code, c_fqn);
   STRAPPEND(wrapper_code, "(snet_handle_t *h) { return(h); }\n\n");
 

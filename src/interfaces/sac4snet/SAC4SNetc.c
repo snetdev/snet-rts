@@ -121,7 +121,7 @@ char *SAC4SNetGenBoxWrapper(char *box_name,
   STRAPPEND(wrapper_code, ");\n\n");
   
   /* execution realm functions */
-  STRAPPEND(wrapper_code, "snet_handle_t *SNetExeRealm_create__");
+  STRAPPEND(wrapper_code, "static snet_handle_t *SNetExeRealm_create__");
   STRAPPEND(wrapper_code, box_name);
   STRAPPEND(wrapper_code, "(snet_handle_t *h)\n{\n"); 
   if (is_mtbox) {
@@ -130,19 +130,18 @@ char *SAC4SNetGenBoxWrapper(char *box_name,
     STRAPPEND(wrapper_code, defmap);
     STRAPPEND(wrapper_code, " };\n");
     STRAPPEND(wrapper_code, "  const int defmap_num = sizeof(defmap) / sizeof(int);\n\n");
-    STRAPPEND(wrapper_code,
-        "  assert(hive = SAC_AllocHive(defmap_num, 2, defmap, h));\n"
-        "\n");
+    STRAPPEND(wrapper_code, "  hive = SAC_AllocHive(defmap_num, 2, defmap, h);\n");
+    STRAPPEND(wrapper_code, "  assert(hive != NULL);\n");
     STRAPPEND(wrapper_code, "  SNetHndSetExeRealm(h, hive);\n");
   }
   STRAPPEND(wrapper_code, "  return(h);");
   STRAPPEND(wrapper_code, "\n}\n\n");
   
-  STRAPPEND(wrapper_code, "snet_handle_t *SNetExeRealm_update__");
+  STRAPPEND(wrapper_code, "static snet_handle_t *SNetExeRealm_update__");
   STRAPPEND(wrapper_code, box_name);
   STRAPPEND(wrapper_code, "(snet_handle_t *h) { return(h); }\n\n");
   
-  STRAPPEND(wrapper_code, "snet_handle_t *SNetExeRealm_destroy__");
+  STRAPPEND(wrapper_code, "static snet_handle_t *SNetExeRealm_destroy__");
   STRAPPEND(wrapper_code, box_name);
   STRAPPEND(wrapper_code, "(snet_handle_t *h)\n{\n");
   if (is_mtbox) {
