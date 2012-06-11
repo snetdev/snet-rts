@@ -378,6 +378,7 @@ void SNetThreadingReSpawn(snet_entity_t *ent)
 
   if(current_worker != new_worker) {
     /* Migrate */
+    printf("migrate\n");
     snet_entity_t *new_ent = SNetEntityCopy(ent);
 
     CreateNewTask(new_ent, new_worker);
@@ -419,8 +420,8 @@ int SNetThreadingInitialWorker(snet_info_t *info, int type)
         int control_n = LpelPlacementSchedulerNumWorkers(1);
         int box_index = (int)SNetInfoGetTag(info, box_wid);
         int control_index = (int)SNetInfoGetTag(info, control_wid);
-        int new_box_index = GetRandomNumber(box_index, box_n);
-        int new_control_index = GetRandomNumber(control_index, control_n);
+        int new_box_index = (box_index + 1) % box_n;
+        int new_control_index = (control_index +1) % control_n;
         SNetInfoSetTag(info, control_wid, (uintptr_t)new_control_index, NULL);
         SNetInfoSetTag(info, box_wid, (uintptr_t)new_box_index, NULL);
         return LpelPlacementSchedulerGetWorker(1, new_control_index);
@@ -452,7 +453,7 @@ int SNetThreadingInitialWorker(snet_info_t *info, int type)
       {
         int n = LpelPlacementSchedulerNumWorkers(0);
         int index = (int)SNetInfoGetTag(info, wid);
-        int new_index = GetRandomNumber(index, n);
+        int new_index = (index +1) % n;
         SNetInfoSetTag(info, wid, (uintptr_t)new_index, NULL);
         return LpelPlacementSchedulerGetWorker(0, new_index);
       }

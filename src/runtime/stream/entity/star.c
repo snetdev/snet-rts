@@ -483,7 +483,7 @@ snet_stream_t *SNetStarIncarnate( snet_stream_t *input,
   //task that incarnated it, it should not create a new copy, but do it
   //using another method
   snet_info_t *newInfo = SNetInfoCopy(info);
-  SNetThreadingInitialWorker(newInfo, 4);
+  SNetThreadingInitialWorker(newInfo, 1);
 
   stream = CreateStar( input, newInfo, location, exit_patterns, guards, box_a, box_b,
       true, /* is incarnate */
@@ -530,7 +530,7 @@ snet_stream_t *SNetStarDetIncarnate(snet_stream_t *input,
   //task that incarnated it, it should not create a new copy, but do it
   //using another method
   snet_info_t *newInfo = SNetInfoCopy(info);
-  SNetThreadingInitialWorker(newInfo, 4);
+  SNetThreadingInitialWorker(newInfo, 1);
 
   stream = CreateStar( input, newInfo, location, exit_patterns, guards, box_a, box_b,
       true, /* is incarnate */
