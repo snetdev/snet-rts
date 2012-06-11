@@ -1,0 +1,50 @@
+module mini;
+
+use Structures: all;
+use StdIO: all;
+
+
+export all;
+
+
+void A( SNet::SNet &hnd, float[*] A)
+{
+  res = A + tof(1);
+  res2 = res + tof(1);
+  res3 = res2 + tof(1);
+  SNet::out( hnd, 1, sacprelude::wrap( res));
+  SNet::out( hnd, 1, sacprelude::wrap( res2));
+  SNet::out( hnd, 1, sacprelude::wrap( res3));
+}
+
+void A( SNet::SNet &hnd, int[*] A)
+{
+  res = A + 1;
+  res2 = res + 1;
+  res3 = res2 + 1;
+  SNet::out( hnd, 1, sacprelude::wrap( res));
+  SNet::out( hnd, 1, sacprelude::wrap( res2));
+  SNet::out( hnd, 1, sacprelude::wrap( res3));
+}
+
+void A( SNet::SNet &hnd, double[*] A)
+{
+  res = A + tod(1);
+  res2 = res + tod(1);
+  res3 = res2 + tod(1);
+  SNet::out( hnd, 1, sacprelude::wrap( res));
+  SNet::out( hnd, 1, sacprelude::wrap( res2));
+  SNet::out( hnd, 1, sacprelude::wrap( res3));
+}
+
+void B( SNet::SNet &hnd)
+{
+  res = genarray( [2], tof(17)); 
+  SNet::out( hnd, 1, sacprelude::wrap( res));
+  
+  res = genarray( [4,1,1], toi(17)); 
+  SNet::out( hnd, 1, sacprelude::wrap( res));
+  
+  res = genarray( [2], tod(17)); 
+  SNet::out( hnd, 1, sacprelude::wrap( res));
+}

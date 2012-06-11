@@ -31,6 +31,9 @@ snet_stream_t *SNetBox(snet_stream_t *instream,
     int location,
     const char *boxname,
     snet_box_fun_t fun,
+    snet_exerealm_create_fun_t exerealm_create,
+    snet_exerealm_update_fun_t exerealm_update,
+    snet_exerealm_destroy_fun_t exerealm_destroy,
     snet_int_list_list_t *out_variants);
 
 

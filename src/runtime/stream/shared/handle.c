@@ -67,12 +67,12 @@ void SNetHndSetStringNames(snet_handle_t *hnd, int num, ...)
   }
 }
 
-void *SNetHndGetCData( snet_handle_t *hnd)
+void *SNetHndGetExeRealm( snet_handle_t *hnd)
 {
   return hnd->cdata;
 }
 
-void SNetHndSetCData( snet_handle_t *hnd, void *cdata)
+void SNetHndSetExeRealm( snet_handle_t *hnd, void *cdata)
 {
   hnd->cdata = cdata;
 }
