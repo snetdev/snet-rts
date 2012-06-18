@@ -248,6 +248,8 @@ void SAC4SNetInit( int id, snet_distrib_t distImpl)
                          &SAC4SNetDataDecode,
                          packfun,
                          unpackfun);
+  
+  SAC_InitRuntimeSystem();
 }
 
 /******************************************************************************/
