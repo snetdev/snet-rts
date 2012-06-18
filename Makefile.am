@@ -104,7 +104,6 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/entity/star.c \
 	src/runtime/stream/entity/syncro.c \
 	src/runtime/stream/observer/observers.c \
-	src/runtime/stream/observer/observers.h \
 	src/runtime/stream/langif/interface_functions.c \
 	src/runtime/stream/netif/interface.c \
 	src/runtime/stream/netif/input.c \
