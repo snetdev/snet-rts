@@ -103,6 +103,7 @@ int SNetThreadingCleanup(void)
   return 0;
 }
 
+
 int SNetThreadingSpawn(snet_entity_t *ent)
 {
   /*
@@ -176,87 +177,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
   return 0;
 }
 
-static int SNetCreateThread(snet_entity_t *ent)
-{
-  /*
-  snet_entity_type_t type,
-  snet_locvec_t *locvec,
-  int location,
-  const char *name,
-  snet_entityfunc_t func,
-  void *arg
-  */
-  int res;
-  pthread_t p;
-  pthread_attr_t attr;
-  size_t stacksize;
-
-  /* create snet_thread_t */
-  snet_thread_t *thr = SNetMemAlloc(sizeof(snet_thread_t));
-  pthread_mutex_init( &thr->lock, NULL );
-  pthread_cond_init( &thr->pollcond, NULL );
-  thr->wakeup_sd = NULL;
-  thr->entity = ent;
-
-  /* increment entity counter */
-  pthread_mutex_lock( &entity_lock );
-  entity_count += 1;
-  pthread_mutex_unlock( &entity_lock );
-
-
-  /* create pthread: */
-
-  (void) pthread_attr_init( &attr);
-
-  /* stacksize */
-  stacksize = StackSize( SNetEntityDescr(ent) );
-
-  if (stacksize > 0) {
-    res = pthread_attr_setstacksize(&attr, stacksize);
-    if (res != 0) {
-      //error(1, res, "Cannot set stack size!");
-      return 1;
-    }
-  }
-
-  /* all threads are detached */
-  res = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-  if (res != 0) {
-    //error(1, res, "Cannot set detached!");
-    return 1;
-  }
-
-  /* spawn off thread */
-  res = pthread_create( &p, &attr, EntityThread, thr);
-  if (res != 0) {
-    //error(1, res, "Cannot create pthread!");
-    return 1;
-  }
-  pthread_attr_destroy( &attr);
-
-
-  /* core affinity */
-#ifdef USE_CORE_AFFINITY
-  if( SNetEntityDescr(ent)== ENTITY_other) {
-    SetThreadAffinity( &p, STRICTLYFIRST);
-  } else {
-    SetThreadAffinity( &p, DEFAULT);
-  }
-#endif /* USE_CORE_AFFINITY */
-
-
-  return 0;
-}
-
-/**
- * Spawn a new thread
- */
-void SNetInitThreadingSpawn(snet_entity_t *ent)
-{
-  SNetCreateThread(ent);
-}
-
-void SNetThreadingReSpawn(snet_entity_t *ent)
+void SNetThreadingRespawn(snet_entity_t *ent)
 {
   SNetEntitySetRun(ent);
 }

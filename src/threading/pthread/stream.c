@@ -13,6 +13,7 @@
 #include "entity.h"
 
 
+
 void SNetStreamSetSource(snet_stream_t *s, snet_locvec_t *lv)
 {
   s->source = SNetLocvecCopy(lv);
@@ -88,11 +89,9 @@ snet_stream_desc_t *SNetStreamOpen(snet_stream_t *stream, char mode)
 {
   assert( mode=='w' || mode=='r' );
   snet_stream_desc_t *sd = SNetMemAlloc(sizeof(snet_stream_t));
-
   sd->stream = stream;
   sd->next = NULL;
   sd->mode = mode;
-  sd->thr = SNetThreadingSelf();
   /* assign consumer or producer */
   switch(mode) {
     case 'w': stream->producer = sd; break;
@@ -133,6 +132,7 @@ void *SNetStreamRead(snet_stream_desc_t *sd)
 {
   assert( sd->mode == 'r' );
   snet_stream_t *s = sd->stream;
+  sd->thr = SNetThreadingSelf();
   void *item;
 
   pthread_mutex_lock( &s->lock);
@@ -178,6 +178,7 @@ void SNetStreamWrite(snet_stream_desc_t *sd, void *item)
 {
   assert( sd->mode == 'w' );
   snet_stream_t *s = sd->stream;
+  sd->thr = SNetThreadingSelf();
 
   pthread_mutex_lock( &s->lock);
   while(s->count == s->size){
@@ -267,6 +268,7 @@ snet_stream_desc_t *SNetStreamPoll(snet_streamset_t *set)
   SNetStreamIterReset(iter, set);
   while( SNetStreamIterHasNext(iter)) {
     snet_stream_desc_t *sd = SNetStreamIterNext( iter);
+    sd->thr = SNetThreadingSelf();
     snet_stream_t *s = sd->stream;
 
     /* lock stream (prod-side) */

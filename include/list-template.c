@@ -1,6 +1,5 @@
 #include <stdarg.h>
 #include <string.h>
-#include <stdio.h>
 #include <assert.h>
 
 #include "memfun.h"

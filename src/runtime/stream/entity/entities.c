@@ -212,6 +212,7 @@ const char *SNetEntityStr(snet_entity_t *ent)
     return (name!=NULL) ? name : "";
   }
 }
+
 void SNetEntitySetFunction(snet_entity_t *ent, snet_entityfunc_t f)
 {
   ENT(ent, func) = f;
