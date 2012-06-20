@@ -24,7 +24,6 @@ typedef enum {
   ENTITY_other
 } snet_entity_descr_t;
 
-
 typedef struct snet_entity_t snet_entity_t;
 
 typedef void (*snet_entityfunc_t)(snet_entity_t *ent, void *arg);
@@ -46,5 +45,13 @@ extern int SNetEntityNode(snet_entity_t *);
 extern const char *SNetEntityName(snet_entity_t *);
 
 extern const char *SNetEntityStr(snet_entity_t *);
+
+extern void SNetEntitySetFunction(snet_entity_t *ent, snet_entityfunc_t f);
+
+extern void SNetEntitySetStop(snet_entity_t *ent);
+
+extern void SNetEntitySetRun(snet_entity_t *ent);
+
+extern bool SNetEntityIsRun(snet_entity_t *ent);
 
 #endif /* _ENTITIES_H_ */

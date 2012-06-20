@@ -80,6 +80,6 @@ void SNetInInputInit(FILE *file,
 
   SNetThreadingSpawn(
       SNetEntityCreate( ENTITY_other, -1, NULL,
-        "glob_input", GlobInputTask, (void*)hnd)
+        "glob_input", GlobInputTask, hnd)
       );
 }

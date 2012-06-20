@@ -70,12 +70,16 @@ static size_t GetStacksize(snet_entity_descr_t descr)
 
 static void *EntityTask(void *arg)
 {
-	snet_entity_t *ent = (snet_entity_t *)arg;
+  snet_entity_t *ent = (snet_entity_t *)arg;
 
-	SNetEntityCall(ent);
-	SNetEntityDestroy(ent);
+  do {
+    SNetEntitySetStop(ent);
+    SNetEntityCall(ent);
+  } while(SNetEntityIsRun(ent));
 
-	return NULL;
+  SNetEntityDestroy(ent);
+
+  return NULL;
 }
 
 int SNetThreadingInit(int argc, char **argv)
@@ -225,21 +229,7 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 	}
 }
 
-
-
-/*****************************************************************************
- * Spawn a new task
- ****************************************************************************/
 int SNetThreadingSpawn(snet_entity_t *ent)
-/*
-  snet_entity_type_t type,
-  snet_locvec_t *locvec,
-  int location,
-  const char *name,
-  snet_entityfunc_t func,
-  void *arg
-  )
- */
 {
 	int worker = -1;
 	snet_entity_descr_t type = SNetEntityDescr(ent);
@@ -295,5 +285,9 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 	return 0;
 }
 
-
-
+/**
+ * Respawn a current task or if the task is on a different worker, create a
+ * new task
+ */
+void SNetThreadingRespawn(snet_entity_t *ent)
+{ SNetEntitySetRun(ent); }

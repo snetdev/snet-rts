@@ -24,12 +24,18 @@ extern int SNetLocvecTopval(snet_locvec_t *locvec);
  */
 typedef struct {
   snet_info_t *info;
-  snet_stream_t *input, *output;
+  snet_stream_desc_t *instream;
+  snet_stream_desc_t *outstream; /* the stream to the collector */
+  /* The stream to the next instance;
+     a non-null value indicates that the instance has been created. */
+  snet_stream_desc_t *nextstream;
   snet_variant_list_t *exit_patterns;
   snet_startup_fun_t box, selffun;
   snet_expr_list_t *guards;
   bool is_det, is_incarnate;
   int location;
+  bool sync_cleanup;
+  int counter;
 } star_arg_t;
 
 
@@ -124,223 +130,9 @@ static void CreateOperandNetwork(snet_stream_desc_t **next,
   SNetStreamWrite( to_coll, SNetRecCreate(REC_collect, starstream));
 }
 
-
-
-
-/**
- * Star component task
- */
-static void StarBoxTask(snet_entity_t *ent, void *arg)
+static void TerminateStarBoxTask(snet_stream_desc_t *outstream,
+                                 star_arg_t *sarg)
 {
-  star_arg_t *sarg = (star_arg_t *)arg;
-  snet_stream_desc_t *instream;
-  snet_stream_desc_t *outstream; /* the stream to the collector */
-  /* The stream to the next instance;
-     a non-null value indicates that the instance has been created. */
-  snet_stream_desc_t *nextstream=NULL;
-  bool terminate = false;
-  bool sync_cleanup = false;
-  snet_record_t *rec;
-  int counter = 0;
-  (void) ent; /* NOT USED */
-
-  instream  = SNetStreamOpen(sarg->input, 'r');
-  outstream = SNetStreamOpen(sarg->output, 'w');
-
-  /* MAIN LOOP */
-  while( !terminate) {
-    /* read from input stream */
-    rec = SNetStreamRead( instream);
-
-    switch( SNetRecGetDescriptor( rec)) {
-
-      case REC_data:
-        if( MatchesExitPattern( rec, sarg->exit_patterns, sarg->guards)) {
-          assert(!sync_cleanup);
-#ifdef DEBUG_PRINT_GC
-          SNetUtilDebugNoticeEnt( ent,
-              "[STAR] Notice: Data leaves replication network.");
-#endif
-          /* send rec to collector */
-          SNetStreamWrite( outstream, rec);
-        } else {
-          /* if instance has not been created yet, create it */
-          if( nextstream == NULL) {
-            CreateOperandNetwork(&nextstream, sarg, outstream);
-          }
-          /* send the record to the instance */
-          SNetStreamWrite( nextstream, rec);
-        } /* end if not matches exit pattern */
-
-        /* deterministic non-incarnate has to append control records */
-        if (sarg->is_det && !sarg->is_incarnate) {
-          /* send new sort record to collector level=0, counter=0*/
-          SNetStreamWrite( outstream,
-              SNetRecCreate( REC_sort_end, 0, counter) );
-
-          /* if has next instance, send new sort record */
-          if (nextstream != NULL) {
-            SNetStreamWrite( nextstream,
-                SNetRecCreate( REC_sort_end, 0, counter) );
-          }
-          /* increment counter */
-          counter++;
-
-        }
-#ifdef ENABLE_GC
-        else if (sync_cleanup) {
-          snet_record_t *term_rec;
-          /*
-           * If sync_cleanup is set, we decided to postpone termination
-           * due to garbage collection triggered by a sync record until now.
-           * Postponing was done in order not to create the operand network unnecessarily
-           * only to be able to forward the sync record.
-           */
-          assert( nextstream != NULL);
-          /* first send a sync record to the next instance */
-          SNetStreamWrite( nextstream,
-              SNetRecCreate( REC_sync, sarg->input) );
-
-
-          /* send a terminate record to collector, it will close and
-             destroy the stream */
-          term_rec = SNetRecCreate(REC_terminate);
-          SNetRecSetFlag(term_rec);
-          SNetStreamWrite( outstream, term_rec);
-
-          terminate = true;
-#ifdef DEBUG_PRINT_GC
-          /* terminating due to GC */
-          SNetUtilDebugNoticeEnt( ent,
-              "[STAR] Notice: Destroying star dispatcher due to GC, "
-              "delayed until new data record!"
-              );
-#endif
-          SNetStreamClose(nextstream, false);
-          SNetStreamClose(instream, false);
-        }
-#endif /* ENABLE_GC */
-        break;
-
-      case REC_sync:
-        {
-          snet_stream_t *newstream = SNetRecGetStream( rec);
-#ifdef ENABLE_GC
-          snet_locvec_t *loc = SNetStreamGetSource( newstream);
-#ifdef DEBUG_PRINT_GC
-          if (loc != NULL) {
-            char srecloc[64];
-            SNetLocvecPrint(srecloc, 64, loc);
-            SNetUtilDebugNoticeEnt( ent,
-                  "[STAR] Notice: Received sync record with a stream with source %s.",
-                  srecloc
-                  );
-          }
-#endif
-          /* TODO
-           * It is not necessary to carry the whole location vector in the
-           * next stream of a star-entity, only a flag. As a prerequisite,
-           * non_incarnates must not clean themselves up!
-           */
-          /*
-           * Only incarnates are eligible for cleanup!
-           * check if the source (location) of the stream and the own location are
-           * (subsequent) star dispatcher entities of the same star combinator network
-           * -> if so, we can clean-up ourselves
-           */
-          if ( sarg->is_incarnate && loc != NULL ) {
-            assert( true == SNetLocvecEqualParent(loc, SNetLocvecGet(sarg->info)) );
-            /* If the next instance is already created, we can forward the sync-record
-             * immediately and terminate.
-             * Otherwise we postpone termination to the point when a next data record
-             * is received, as we create the operand network then.
-             */
-            if (nextstream != NULL) {
-              snet_record_t *term_rec;
-              /* forward the sync record  */
-              SNetStreamWrite( nextstream, rec);
-              /* send a terminate record to collector, it will close and
-                 destroy the stream */
-              term_rec = SNetRecCreate(REC_terminate);
-              SNetRecSetFlag(term_rec);
-              SNetStreamWrite( outstream, term_rec);
-
-              terminate = true;
-#ifdef DEBUG_PRINT_GC
-              /* terminating due to GC */
-              SNetUtilDebugNoticeEnt( ent,
-                  "[STAR] Notice: Destroying star dispatcher due to GC, "
-                  "immediately on sync!"
-                  );
-#endif
-              SNetStreamClose(nextstream, false);
-              SNetStreamClose(instream, true);
-
-            } else {
-              sync_cleanup = true;
-#ifdef DEBUG_PRINT_GC
-              SNetUtilDebugNoticeEnt( ent,
-                  "[STAR] Notice: Remembering delayed destruction.");
-#endif
-              /* handle sync record as usual */
-              SNetStreamReplace( instream, newstream);
-              sarg->input = newstream;
-              SNetRecDestroy( rec);
-            }
-          } else
-#endif /* ENABLE_GC */
-          {
-            /* handle sync record as usual */
-            SNetStreamReplace( instream, newstream);
-            sarg->input = newstream;
-            SNetRecDestroy( rec);
-          }
-        }
-        break;
-
-
-      case REC_sort_end:
-        {
-          int rec_lvl = SNetRecGetLevel(rec);
-          /* send a copy to the box, if exists */
-          if( nextstream != NULL) {
-            SNetStreamWrite(
-                nextstream,
-                SNetRecCreate( REC_sort_end,
-                  (!sarg->is_incarnate)? rec_lvl+1 : rec_lvl,
-                  SNetRecGetNum(rec) )
-                );
-          }
-
-          /* send the original one to the collector */
-          if (!sarg->is_incarnate) {
-            /* if non-incarnate, we have to increase level */
-            SNetRecSetLevel( rec, rec_lvl+1);
-          }
-          SNetStreamWrite( outstream, rec);
-        }
-        break;
-
-      case REC_terminate:
-        terminate = true;
-        if( nextstream != NULL) {
-          SNetStreamWrite( nextstream, SNetRecCopy( rec));
-          SNetStreamClose( nextstream, false);
-        }
-        SNetStreamWrite( outstream, rec);
-        /* note that no sort record has to be appended */
-        SNetStreamClose(instream, true);
-        break;
-
-      case REC_collect:
-      default:
-        SNetUtilDebugFatal("Unknown record type!");
-        /* if ignore, at least destroy ... */
-        SNetRecDestroy( rec);
-    }
-  } /* MAIN LOOP END */
-
-
   /* close streams */
   SNetStreamClose( outstream, false);
 
@@ -350,10 +142,207 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
   SNetInfoDestroy(sarg->info);
   SNetVariantListDestroy( sarg->exit_patterns);
   SNetMemFree( sarg);
-} /* STAR BOX TASK END */
+}
+
+/**
+ * Star component task
+ */
+static void StarBoxTask(snet_entity_t *ent, void *arg)
+{
+  star_arg_t *sarg = arg;
+  snet_record_t *rec;
+
+  /* read from input stream */
+  rec = SNetStreamRead( sarg->instream);
+
+  switch( SNetRecGetDescriptor( rec)) {
+
+    case REC_data:
+      if( MatchesExitPattern( rec, sarg->exit_patterns, sarg->guards)) {
+        assert(!sarg->sync_cleanup);
+#ifdef DEBUG_PRINT_GC
+        SNetUtilDebugNoticeEnt( ent,
+            "[STAR] Notice: Data leaves replication network.");
+#endif
+        /* send rec to collector */
+        SNetStreamWrite( sarg->outstream, rec);
+      } else {
+        /* if instance has not been created yet, create it */
+        if( sarg->nextstream == NULL) {
+          CreateOperandNetwork(&sarg->nextstream, sarg, sarg->outstream);
+        }
+        /* send the record to the instance */
+        SNetStreamWrite( sarg->nextstream, rec);
+      } /* end if not matches exit pattern */
+
+      /* deterministic non-incarnate has to append control records */
+      if (sarg->is_det && !sarg->is_incarnate) {
+        /* send new sort record to collector level=0, counter=0*/
+        SNetStreamWrite( sarg->outstream,
+            SNetRecCreate( REC_sort_end, 0, sarg->counter) );
+
+        /* if has next instance, send new sort record */
+        if (sarg->nextstream != NULL) {
+          SNetStreamWrite( sarg->nextstream,
+              SNetRecCreate( REC_sort_end, 0, sarg->counter) );
+        }
+        /* increment counter */
+        sarg->counter++;
+
+      }
+#ifdef ENABLE_GC
+      else if (sarg->sync_cleanup) {
+        snet_record_t *term_rec;
+        /*
+         * If sync_cleanup is set, we decided to postpone termination
+         * due to garbage collection triggered by a sync record until now.
+         * Postponing was done in order not to create the operand network unnecessarily
+         * only to be able to forward the sync record.
+         */
+        assert( sarg->nextstream != NULL);
+        /* first send a sync record to the next instance */
+        SNetStreamWrite( sarg->nextstream,
+            SNetRecCreate( REC_sync, SNetStreamGet(sarg->instream)) );
 
 
+        /* send a terminate record to collector, it will close and
+           destroy the stream */
+        term_rec = SNetRecCreate(REC_terminate);
+        SNetRecSetFlag(term_rec);
+        SNetStreamWrite( sarg->outstream, term_rec);
 
+#ifdef DEBUG_PRINT_GC
+        /* terminating due to GC */
+        SNetUtilDebugNoticeEnt( ent,
+            "[STAR] Notice: Destroying star dispatcher due to GC, "
+            "delayed until new data record!"
+            );
+#endif
+        SNetStreamClose(sarg->nextstream, false);
+        SNetStreamClose(sarg->instream, false);
+        TerminateStarBoxTask(sarg->outstream,sarg);
+        return;
+      }
+#endif /* ENABLE_GC */
+      break;
+
+    case REC_sync:
+      {
+        snet_stream_t *newstream = SNetRecGetStream( rec);
+#ifdef ENABLE_GC
+        snet_locvec_t *loc = SNetStreamGetSource( newstream);
+#ifdef DEBUG_PRINT_GC
+        if (loc != NULL) {
+          char srecloc[64];
+          SNetLocvecPrint(srecloc, 64, loc);
+          SNetUtilDebugNoticeEnt( ent,
+                "[STAR] Notice: Received sync record with a stream with source %s.",
+                srecloc
+                );
+        }
+#endif
+        /* TODO
+         * It is not necessary to carry the whole location vector in the
+         * next stream of a star-entity, only a flag. As a prerequisite,
+         * non_incarnates must not clean themselves up!
+         */
+        /*
+         * Only incarnates are eligible for cleanup!
+         * check if the source (location) of the stream and the own location are
+         * (subsequent) star dispatcher entities of the same star combinator network
+         * -> if so, we can clean-up ourselves
+         */
+        if ( sarg->is_incarnate && loc != NULL ) {
+          assert( true == SNetLocvecEqualParent(loc, SNetLocvecGet(sarg->info)) );
+          /* If the next instance is already created, we can forward the sync-record
+           * immediately and terminate.
+           * Otherwise we postpone termination to the point when a next data record
+           * is received, as we create the operand network then.
+           */
+          if (sarg->nextstream != NULL) {
+            snet_record_t *term_rec;
+            /* forward the sync record  */
+            SNetStreamWrite( sarg->nextstream, rec);
+            /* send a terminate record to collector, it will close and
+               destroy the stream */
+            term_rec = SNetRecCreate(REC_terminate);
+            SNetRecSetFlag(term_rec);
+            SNetStreamWrite( sarg->outstream, term_rec);
+
+#ifdef DEBUG_PRINT_GC
+            /* terminating due to GC */
+            SNetUtilDebugNoticeEnt( ent,
+                "[STAR] Notice: Destroying star dispatcher due to GC, "
+                "immediately on sync!"
+                );
+#endif
+            SNetStreamClose(sarg->nextstream, false);
+            SNetStreamClose(sarg->instream, true);
+            TerminateStarBoxTask(sarg->outstream,sarg);
+            return;
+          } else {
+            sarg->sync_cleanup = true;
+#ifdef DEBUG_PRINT_GC
+            SNetUtilDebugNoticeEnt( ent,
+                "[STAR] Notice: Remembering delayed destruction.");
+#endif
+            /* handle sync record as usual */
+            SNetStreamReplace( sarg->instream, newstream);
+            SNetRecDestroy( rec);
+          }
+        } else
+#endif /* ENABLE_GC */
+        {
+          /* handle sync record as usual */
+          SNetStreamReplace( sarg->instream, newstream);
+          SNetRecDestroy( rec);
+        }
+      }
+      break;
+
+
+    case REC_sort_end:
+      {
+        int rec_lvl = SNetRecGetLevel(rec);
+        /* send a copy to the box, if exists */
+        if( sarg->nextstream != NULL) {
+          SNetStreamWrite(
+              sarg->nextstream,
+              SNetRecCreate( REC_sort_end,
+                (!sarg->is_incarnate)? rec_lvl+1 : rec_lvl,
+                SNetRecGetNum(rec) )
+              );
+        }
+
+        /* send the original one to the collector */
+        if (!sarg->is_incarnate) {
+          /* if non-incarnate, we have to increase level */
+          SNetRecSetLevel( rec, rec_lvl+1);
+        }
+        SNetStreamWrite( sarg->outstream, rec);
+      }
+      break;
+
+    case REC_terminate:
+      if( sarg->nextstream != NULL) {
+        SNetStreamWrite( sarg->nextstream, SNetRecCopy( rec));
+        SNetStreamClose( sarg->nextstream, false);
+      }
+      SNetStreamWrite( sarg->outstream, rec);
+      /* note that no sort record has to be appended */
+      SNetStreamClose(sarg->instream, true);
+      TerminateStarBoxTask(sarg->outstream,sarg);
+
+      return;
+
+    case REC_collect:
+    default:
+      SNetUtilDebugFatal("Unknown record type!");
+      /* if ignore, at least destroy ... */
+      SNetRecDestroy( rec);
+  }
+  SNetThreadingRespawn(ent);
+}
 
 /*****************************************************************************/
 /* CREATION FUNCTIONS                                                        */
@@ -391,24 +380,27 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
 
   if(SNetDistribIsNodeLocation(location)) {
     /* create the task argument */
-    sarg = (star_arg_t *) SNetMemAlloc( sizeof(star_arg_t));
+    sarg = SNetMemAlloc( sizeof(star_arg_t));
     newstream = SNetStreamCreate(0);
-    sarg->input = input;
-    /* copy location vector */
-    sarg->output = newstream;
+    sarg->instream = SNetStreamOpen(input, 'r');
+    sarg->outstream = SNetStreamOpen(newstream, 'w');
+    sarg->nextstream = NULL;
     sarg->box = box_a;
     sarg->selffun = box_b;
     sarg->exit_patterns = exit_patterns;
     sarg->guards = guards;
     sarg->info = SNetInfoCopy(info);
+    /* copy location vector */
     SNetLocvecSet(sarg->info, SNetLocvecCopy(locvec));
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;
     sarg->location = location;
+    sarg->sync_cleanup = false;
+    sarg->counter = 0;
 
     SNetThreadingSpawn(
         SNetEntityCreate( ENTITY_star, location, locvec,
-          "<star>", StarBoxTask, (void*)sarg)
+          "<star>", &StarBoxTask, sarg)
         );
 
     /* creation function of top level star will return output stream

@@ -192,6 +192,11 @@ int SNetThreadingSpawn(snet_entity_t *ent)
   return 0;
 }
 
+void SNetThreadingRespawn(snet_entity_t *ent)
+{
+  SNetEntitySetRun(ent);
+}
+
 
 void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 {
@@ -226,7 +231,15 @@ static void *EntityThread(void *arg)
 
   pthread_setspecific(thread_self_key, thr);
 
-  SNetEntityCall(thr->entity);
+  do {
+  //  snet_entity_t *new_ent;
+    SNetEntitySetStop(thr->entity);
+    SNetEntityCall(thr->entity);
+  //  new_ent = SNetEntityCopy(thr->entity);
+  //  SNetEntityDestroy(thr->entity);
+  //  thr->entity = new_ent;
+  } while(SNetEntityIsRun(thr->entity));
+
   SNetEntityDestroy(thr->entity);
 
   /* call entity function */

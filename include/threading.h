@@ -110,8 +110,7 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo);
  */
 int SNetThreadingSpawn(snet_entity_t *ent);
 
-
-
+void SNetThreadingRespawn(snet_entity_t *ent);
 
 /**
  * Let the current entity thread/task give up execution
