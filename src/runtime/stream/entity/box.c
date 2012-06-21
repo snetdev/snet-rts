@@ -49,7 +49,6 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   box_arg_t *barg = arg;
   snet_record_t *rec;
   snet_handle_t hnd;
-  memset(&hnd, 0, sizeof(snet_handle_t));
 
   /* set out descriptor */
   hnd.out_sd = barg->outstream;

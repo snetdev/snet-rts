@@ -390,7 +390,6 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->exit_patterns = exit_patterns;
     sarg->guards = guards;
     sarg->info = SNetInfoCopy(info);
-    /* copy location vector */
     SNetLocvecSet(sarg->info, SNetLocvecCopy(locvec));
     sarg->is_incarnate = is_incarnate;
     sarg->is_det = is_det;

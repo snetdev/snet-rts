@@ -245,41 +245,39 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 		}
 	}
 
-	lpel_task_t *t = LpelTaskCreate(
-			worker,
-			//(lpel_taskfunc_t) func,
-			EntityTask,
-			ent,
-			GetStacksize(type)
-	);
+  lpel_task_t *t = LpelTaskCreate(
+                      worker,
+                      EntityTask,
+                      ent,
+                      GetStacksize(type)
+                   );
 
 
 #ifdef USE_LOGGING
-	if (mon_flags & SNET_MON_TASK){
-		mon_task_t *mt = SNetThreadingMonTaskCreate(
-				LpelTaskGetID(t),
-				name
-		);
-		LpelTaskMonitor(t, mt);
-		/* if we monitor the task, we make an entry in the map file */
-	}
+  if (mon_flags & SNET_MON_TASK){
+    mon_task_t *mt = SNetThreadingMonTaskCreate(
+                               LpelTaskGetID(t),
+                               name
+                     );
+    LpelTaskMonitor(t, mt);
+  /* if we monitor the task, we make an entry in the map file */
+  }
 
-	if ((mon_flags & SNET_MON_MAP) && mapfile) {
-		int tid = LpelTaskGetID(t);
-		// FIXME: change to binary format
-		(void) fprintf(mapfile, "%d%s %d%c", tid, SNetEntityStr(ent), worker, END_LOG_ENTRY);
-	}
+  if ((mon_flags & SNET_MON_MAP) && mapfile) {
+    int tid = LpelTaskGetID(t);
+    // FIXME: change to binary format
+    (void) fprintf(mapfile, "%d%s %d%c", tid, SNetEntityStr(ent), worker, END_LOG_ENTRY);
+  }
 
 
 #endif
 
+#ifndef NO_PRIORITY
 	if (type != ENTITY_box && type != ENTITY_fbbuf) {
 		LpelTaskPrio(t, 1);
 	}
+#endif
 
-
-	//FIXME only for debugging purposes
-	//fflush(mapfile);
 
 	LpelTaskRun(t);
 	return 0;

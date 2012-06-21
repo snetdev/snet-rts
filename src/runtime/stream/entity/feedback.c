@@ -327,7 +327,7 @@ static void FeedbackBufTask(snet_entity_t *ent, void *arg)
         );
 
     SNetStreamClose(fbbarg->outstream, false);
-    ofbbarg->utstream = SNetStreamOpen(new_stream, 'w');
+    fbbarg->outstream = SNetStreamOpen(new_stream, 'w');
     fbbarg->out = new_stream;
     fbbarg->out_counter = 0;
   }

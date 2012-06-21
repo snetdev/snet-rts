@@ -121,14 +121,6 @@ int SNetThreadingCleanup(void)
 
 int SNetThreadingSpawn(snet_entity_t *ent)
 {
-  /*
-  snet_entity_type_t type,
-  snet_locvec_t *locvec,
-  int location,
-  const char *name,
-  snet_entityfunc_t func,
-  void *arg
-  */
   int res;
   pthread_t p;
   pthread_attr_t attr;
@@ -140,7 +132,6 @@ int SNetThreadingSpawn(snet_entity_t *ent)
   pthread_cond_init( &thr->pollcond, NULL );
   thr->wakeup_sd = NULL;
   thr->entity = ent;
-
 
   /* increment entity counter */
   pthread_mutex_lock( &entity_lock );

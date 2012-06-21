@@ -20,6 +20,7 @@
  *
  *
  * Author: Daniel Prokesch <dlp@snet-home.org>
+ * Author: Stefan Kok
  * Date:   15/03/2011
  *
  *****************************************************************************/
