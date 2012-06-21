@@ -39,6 +39,7 @@ typedef struct {
   snet_stream_desc_t *curstream, *outstream;
   snet_record_t *sort_rec;
   snet_record_t *term_rec;
+  snet_stream_iter_t *wait_iter;
   snet_streamset_t readyset, waitingset;
   int incount;
   bool is_static;
@@ -222,8 +223,7 @@ static void TerminateCollectorTask(snet_stream_desc_t *outstream,
   if (carg->sort_rec != NULL) {
     SNetRecDestroy(carg->sort_rec);
   }
-  //SNetStreamListDestroy(carg->ready_list);
-  //SNetStreamListDestroy(carg->waiting_list);
+  SNetStreamIterDestroy(carg->wait_iter);
   /* close outstream */
   SNetStreamClose( outstream, false);
 
@@ -237,11 +237,8 @@ static void TerminateCollectorTask(snet_stream_desc_t *outstream,
 
 static void CollectorTask(snet_entity_t *ent, void *arg)
 {
-  coll_arg_t *carg = arg;
-  snet_stream_iter_t *wait_iter;
+  coll_arg_t *carg = (coll_arg_t *)arg;
 
-  /* create an iterator for waiting set, is reused within main loop*/
-  wait_iter = SNetStreamIterCreate( &carg->waitingset);
 
   /* get a record */
   snet_record_t *rec = GetRecord(&carg->readyset, carg->incount, &carg->curstream);
@@ -271,7 +268,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
 #ifdef DESTROY_TERM_IN_WAITING_UPON_COLLECT
       /* but first, check if we can free resources by checking the
          waiting set for arrival of termination records */
-      carg->incount -= DestroyTermInWaitingSet(wait_iter, &carg->waitingset);
+      carg->incount -= DestroyTermInWaitingSet(carg->wait_iter, &carg->waitingset);
       assert(carg->incount > 0);
 #endif
       /* finally, add new stream to ready set */
@@ -322,7 +319,6 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
             );
 #endif
         TerminateCollectorTask(carg->outstream, carg);
-        SNetStreamIterDestroy(wait_iter);
         return;
       } else {
         RestoreFromWaitingset(&carg->waitingset,
@@ -342,13 +338,11 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
       SNetStreamWrite( carg->outstream, carg->term_rec);
       carg->term_rec = NULL;
       TerminateCollectorTask(carg->outstream, carg);
-      SNetStreamIterDestroy(wait_iter);
       return;
     }
   }
   /************* end of termination conditions **********/
 
-  SNetStreamIterDestroy(wait_iter);
   SNetThreadingRespawn(ent);
 }
 
@@ -432,4 +426,3 @@ snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, int location, sn
       );
   return outstream;
 }
-

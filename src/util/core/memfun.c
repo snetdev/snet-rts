@@ -31,4 +31,3 @@ void SNetMemFree( void *ptr) {
   ptr = NULL;
 }
 
-
