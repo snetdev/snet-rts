@@ -84,36 +84,48 @@ static void *EntityTask(void *arg)
 
 int SNetThreadingInit(int argc, char **argv)
 {
-	lpel_config_t config;
-	char fname[20+1];
-	int i, res;
-	char *mon_elts = NULL;
-	memset(&config, 0, sizeof(lpel_config_t));
+  lpel_config_t config;
+  char fname[20+1];
+  int i, res;
+  char *mon_elts = NULL;
+  memset(&config, 0, sizeof(lpel_config_t));
 
 
-	config.flags = LPEL_FLAG_PINNED;
+  config.flags = LPEL_FLAG_PINNED;
 
-	for (i=0; i<argc; i++) {
-		if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
-			/* Monitoring level */
-			i = i + 1;
-			mon_elts = argv[i];
-		} else if(strcmp(argv[i], "-excl") == 0 ) {
-			/* Assign realtime priority to workers*/
-			config.flags |= LPEL_FLAG_EXCLUSIVE;
-		} else if(strcmp(argv[i], "-dloc") == 0 ) {
-			/* Use distributed s-net location placement */
-			dloc_placement = true;
-		} else if(strcmp(argv[i], "-wo") == 0 && i + 1 <= argc) {
-			/* Number of cores for others */
-			i = i + 1;
-			num_others = atoi(argv[i]);
-		} else if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
-			/* Number of workers */
-			i = i + 1;
-			num_workers = atoi(argv[i]);
-		}
-	}
+  for (i=0; i<argc; i++) {
+    if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
+      /* Monitoring level */
+      i = i + 1;
+      mon_elts = argv[i];
+    } else if(strcmp(argv[i], "-excl") == 0 ) {
+      /* Assign realtime priority to workers*/
+      config.flags |= LPEL_FLAG_EXCLUSIVE;
+    } else if(strcmp(argv[i], "-dloc") == 0 ) {
+      /* Use distributed s-net location placement */
+      dloc_placement = true;
+    } else if(strcmp(argv[i], "-wo") == 0 && i + 1 <= argc) {
+      /* Number of cores for others */
+      i = i + 1;
+      num_others = atoi(argv[i]);
+    } else if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
+      /* Number of workers */
+      i = i + 1;
+      num_workers = atoi(argv[i]);
+    } else if(strcmp(argv[i], "-threshold") == 0 && i + 1 <= argc) {
+      /* Threshold for placement scheduler */
+      i = i + 1;
+      config.threshold = atof(argv[i]);
+#ifdef TASK_SEGMENTATION
+    } else if(strcmp(argv[i], "-segment") == 0 && i+1 <= argc) {
+      /* If task segmentation is used, this is the number of
+       * workers assigned for control tasks
+       */
+      i = i + 1;
+      config.segmentation = atoi(argv[i]);
+#endif
+    }
+  }
 
 
 #ifdef USE_LOGGING
@@ -176,9 +188,6 @@ int SNetThreadingInit(int argc, char **argv)
 
 	return 0;
 }
-
-
-
 
 unsigned long SNetThreadingGetId()
 {
