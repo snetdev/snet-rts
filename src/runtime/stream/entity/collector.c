@@ -374,9 +374,10 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, int lo
   carg->curstream = NULL;
 
   carg->readyset = NULL;
-  carg->waitingset = NULL;
   carg->sort_rec = NULL;
   carg->term_rec = NULL;
+  carg->waitingset = NULL;
+  carg->wait_iter = SNetStreamIterCreate( &carg->waitingset);
 
   /* copy instreams */
   for(i=0; i<num; i++) {
@@ -413,9 +414,10 @@ snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, int location, sn
   carg->incount = 1;
 
   carg->readyset = NULL;
-  carg->waitingset = NULL;
   carg->sort_rec = NULL;
   carg->term_rec = NULL;
+  carg->waitingset = NULL;
+  carg->wait_iter = SNetStreamIterCreate( &carg->waitingset);
 
   SNetStreamsetPut(&carg->readyset, carg->curstream);
 
