@@ -91,6 +91,12 @@ if test $have_compiler_atomics = yes; then
   AC_DEFINE([HAVE_SYNC_ATOMIC_BUILTINS], [1], [Define to 1 if compiler builtins for atomic memory access are available.])
 fi
 
+have___thread=no
+AX_TLS([have___thread=yes])
+if test $have___thread = yes; then
+  AC_DEFINE([HAVE___THREAD], [1], [Define to 1 if compiler supports the __thread storage class.])
+fi
+
 AC_LANG_POP([C])
 
 LT_PREREQ([2.4])
