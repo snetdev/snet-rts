@@ -7,18 +7,19 @@
 /* forward declaration */
 struct record;
 
-typedef void (*snet_free_fun_t)( void*);
-typedef void* (*snet_copy_fun_t)( void*);
+typedef void   (*snet_free_fun_t)( void*);
+typedef void*  (*snet_copy_fun_t)( void*);
 typedef size_t (*snet_alloc_size_fun_t)( void*);
-typedef void (*snet_serialise_fun_t)( FILE *, void*);
-typedef void* (*snet_deserialise_fun_t)( FILE *);
-typedef void (*snet_encode_fun_t)( FILE *, void*);
-typedef void* (*snet_decode_fun_t)( FILE *);
-typedef void (*snet_pack_fun_t)(void *data, void *arg);
-typedef void *(*snet_unpack_fun_t)(void *arg);
+typedef void   (*snet_serialise_fun_t)( FILE *, void*);
+typedef void*  (*snet_deserialise_fun_t)( FILE *);
+typedef void   (*snet_encode_fun_t)( FILE *, void*);
+typedef void*  (*snet_decode_fun_t)( FILE *);
+typedef void   (*snet_pack_fun_t)(void *data, void *arg);
+typedef void*  (*snet_unpack_fun_t)(void *arg);
 
 #define SNET_INTERFACE_ERR     -1
 #define SNET_INTERFACE_ERR_BUF -2
+
 typedef struct SNET_INTERFACE {
   int id;
   struct SNET_INTERFACE *next;
