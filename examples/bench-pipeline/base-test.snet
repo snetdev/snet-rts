@@ -1,0 +1,13 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet" />
+  </boxdefault>
+</metadata>
+
+net NETNAME
+{
+  box gen((A,B) -> (A,B));
+  box add((A,B) -> (A,B));
+  box drop((A,B) -> (A,B)); 
+} connect
+
