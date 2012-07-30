@@ -120,7 +120,6 @@ static snet_record_t *GetRecord(
  * Process a sort record
  */
 static void ProcessSortRecord(
-    snet_entity_t *ent,
     snet_record_t *rec,
     snet_record_t **sort_rec,
     snet_stream_desc_t *cur_stream,
@@ -142,7 +141,7 @@ static void ProcessSortRecord(
      * check that level & counter match
      */
     if( !SortRecEqual(rec, *sort_rec) ) {
-      SNetUtilDebugNoticeEnt( ent,
+      SNetUtilDebugNoticeTask(
           "[COLL] Warning: Received sort records do not match! "
           "expected (l%d,c%d) got (l%d,c%d) on %p", /* *trollface* PROBLEM? */
           SNetRecGetLevel(*sort_rec), SNetRecGetNum(*sort_rec),
@@ -235,7 +234,7 @@ static void TerminateCollectorTask(snet_stream_desc_t *outstream,
 /* COLLECTOR TASK                                                            */
 /*****************************************************************************/
 
-static void CollectorTask(snet_entity_t *ent, void *arg)
+static void CollectorTask(void *arg)
 {
   coll_arg_t *carg = arg;
   snet_stream_iter_t *wait_iter;
@@ -254,7 +253,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
       break;
 
     case REC_sort_end:
-      ProcessSortRecord(ent, rec, &carg->sort_rec, carg->curstream, &carg->readyset, &carg->waitingset);
+      ProcessSortRecord(rec, &carg->sort_rec, carg->curstream, &carg->readyset, &carg->waitingset);
       /* end processing this stream */
       carg->curstream = NULL;
       break;
@@ -349,7 +348,7 @@ static void CollectorTask(snet_entity_t *ent, void *arg)
   /************* end of termination conditions **********/
 
   SNetStreamIterDestroy(wait_iter);
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 /*****************************************************************************/
@@ -391,10 +390,8 @@ snet_stream_t *CollectorCreateStatic( int num, snet_stream_t **instreams, int lo
 
 
   /* spawn collector task */
-  SNetThreadingSpawn(
-      SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
-        "<collect>", &CollectorTask, carg)
-      );
+  SNetThreadingSpawn( ENTITY_collect, location, SNetLocvecGet(info),
+        "<collect>", &CollectorTask, carg);
   return outstream;
 }
 
@@ -426,10 +423,8 @@ snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, int location, sn
   SNetStreamsetPut(&carg->readyset, carg->curstream);
 
   /* spawn collector task */
-  SNetThreadingSpawn(
-      SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
-        "<collect>", &CollectorTask, carg)
-      );
+  SNetThreadingSpawn( ENTITY_collect, location, SNetLocvecGet(info),
+        "<collect>", &CollectorTask, carg);
   return outstream;
 }
 

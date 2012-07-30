@@ -257,7 +257,7 @@ static void TerminateParallelBoxTask( int num, parallel_arg_t *parg)
 /**
  * Main Parallel Box Task
  */
-static void ParallelBoxTask(snet_entity_t *ent, void *arg)
+static void ParallelBoxTask(void *arg)
 {
   parallel_arg_t *parg = (parallel_arg_t *) arg;
 
@@ -287,7 +287,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
        // stream_index = WeightedRoundRobin( matchcounter, usedcounter, num);
 
         if (stream_index == -1) {
-          SNetUtilDebugFatalEnt( ent,
+          SNetUtilDebugFatalTask(
               "[PAR] Cannot route data record, no matching branch!");
         }
         PutToBuffers( parg->outstreams, num, stream_index, rec,
@@ -364,7 +364,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
       break;
 
     case REC_collect:
-      SNetUtilDebugNoticeEnt( ent, "[PAR] Received REC_collect, destroying it");
+      SNetUtilDebugNoticeTask("[PAR] Received REC_collect, destroying it");
       SNetRecDestroy( rec);
       break;
 
@@ -397,18 +397,18 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
       return;
 
     default:
-      SNetUtilDebugNoticeEnt( ent, "[PAR] Unknown control rec destroyed (%d).\n",
+      SNetUtilDebugNoticeTask("[PAR] Unknown control rec destroyed (%d).\n",
           SNetRecGetDescriptor( rec));
       SNetRecDestroy( rec);
   }
 
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 /**
  * Initialization Parallel Box Task
  */
-static void InitParallelBoxTask(snet_entity_t *ent, void *arg)
+static void InitParallelBoxTask(void *arg)
 {
   parallel_arg_t *parg = arg;
 
@@ -468,8 +468,7 @@ static void InitParallelBoxTask(snet_entity_t *ent, void *arg)
     parg->usedcounter[i] = 0;
   }
 
-  SNetEntitySetFunction(ent, &ParallelBoxTask);
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(&ParallelBoxTask);
 }
 
 /*****************************************************************************/
@@ -530,10 +529,8 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     parg->variant_lists = variant_lists;
     parg->is_det = is_det;
 
-    SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_parallel, location, locvec,
-          "<parallel>", &InitParallelBoxTask, parg)
-        );
+    SNetThreadingSpawn( ENTITY_parallel, location, locvec,
+          "<parallel>", &InitParallelBoxTask, parg);
 
     /* create collector with collstreams */
     outstream = CollectorCreateStatic(num, collstreams, location, info);

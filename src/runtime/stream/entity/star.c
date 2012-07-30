@@ -12,11 +12,6 @@
 #include "distribution.h"
 
 
-
-extern int SNetLocvecTopval(snet_locvec_t *locvec);
-//#define DEBUG_PRINT_GC
-
-
 #define ENABLE_GC
 
 /**
@@ -147,7 +142,7 @@ static void TerminateStarBoxTask(snet_stream_desc_t *outstream,
 /**
  * Star component task
  */
-static void StarBoxTask(snet_entity_t *ent, void *arg)
+static void StarBoxTask(void *arg)
 {
   star_arg_t *sarg = arg;
   snet_record_t *rec;
@@ -233,9 +228,11 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
         snet_locvec_t *loc = SNetStreamGetSource( newstream);
 #ifdef DEBUG_PRINT_GC
         if (loc != NULL) {
-          char srecloc[64];
-          SNetLocvecPrint(srecloc, 64, loc);
-          SNetUtilDebugNoticeEnt( ent,
+          int size = SNetLocvecPrintSize(loc) + 1;
+          char srecloc[size];
+          srecloc[size - 1] = '\0';
+          SNetLocvecPrint(srecloc, loc);
+          SNetUtilDebugNoticeTask(
                 "[STAR] Notice: Received sync record with a stream with source %s.",
                 srecloc
                 );
@@ -341,7 +338,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
       /* if ignore, at least destroy ... */
       SNetRecDestroy( rec);
   }
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 /*****************************************************************************/
@@ -398,10 +395,8 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
     sarg->sync_cleanup = false;
     sarg->counter = 0;
 
-    SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_star, location, locvec,
-          "<star>", &StarBoxTask, sarg)
-        );
+    SNetThreadingSpawn( ENTITY_star, location, locvec,
+          "<star>", &StarBoxTask, sarg);
 
     /* creation function of top level star will return output stream
      * of its collector, the incarnates return their outstream

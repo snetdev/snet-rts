@@ -38,7 +38,7 @@ typedef struct {
  *
  * Implements both the non-deterministic and deterministic variants.
  */
-static void SplitBoxTask(snet_entity_t *ent, void *arg)
+static void SplitBoxTask(void *arg)
 {
   split_arg_t *sarg = arg;
   int i;
@@ -202,7 +202,7 @@ static void SplitBoxTask(snet_entity_t *ent, void *arg)
       /* if ignore, at least destroy it */
       SNetRecDestroy( rec);
   }
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 
@@ -255,10 +255,8 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
     sarg->repos_tab = HashtabCreate( 4);
 
     sarg->counter = 0;
-    SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_split, location, locvec,
-          "<split>", &SplitBoxTask, sarg)
-        );
+    SNetThreadingSpawn( ENTITY_split, location, locvec,
+          "<split>", &SplitBoxTask, sarg);
 
     output = CollectorCreateDynamic( initial, location, info);
 

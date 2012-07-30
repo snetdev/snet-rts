@@ -16,7 +16,6 @@
 #include "memfun.h"
 #include "locvec.h"
 #include "queue.h"
-#include "entities.h"
 
 #include "threading.h"
 #include "distribution.h"
@@ -179,7 +178,7 @@ static void FbCollReadFbi(fbcoll_arg_t *fbcarg)
  * The feedback collector, the entry point of the
  * feedback combinator
  */
-static void FeedbackCollTask(snet_entity_t *ent, void *arg)
+static void FeedbackCollTask(void *arg)
 {
   fbcoll_arg_t *fbcarg = arg;
 
@@ -203,7 +202,7 @@ static void FeedbackCollTask(snet_entity_t *ent, void *arg)
     return;
   }
 
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 
@@ -221,7 +220,7 @@ typedef struct {
  * The feedback dispatcher, at the end of the
  * feedback combinator
  */
-static void FeedbackDispTask(snet_entity_t *ent, void *arg)
+static void FeedbackDispTask(void *arg)
 {
   fbdisp_arg_t *fbdarg = arg;
 
@@ -284,7 +283,7 @@ static void FeedbackDispTask(snet_entity_t *ent, void *arg)
       break;
   }
 
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 /******************************************************************************
@@ -303,7 +302,7 @@ typedef struct{
 } fbbuf_arg_t;
 
 #ifdef FEEDBACK_STREAM_EMITTER
-static void FeedbackBufTask(snet_entity_t *ent, void *arg)
+static void FeedbackBufTask(void *arg)
 {
   fbbuf_arg_t *fbbarg = arg;
 
@@ -335,7 +334,7 @@ static void FeedbackBufTask(snet_entity_t *ent, void *arg)
   SNetStreamWrite(fbbarg->outstream, rec);
   fbbarg->out_counter++;
 
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 #else /* FEEDBACK_STREAM_EMITTER */
@@ -343,7 +342,7 @@ static void FeedbackBufTask(snet_entity_t *ent, void *arg)
 /**
  * The feedback buffer
  */
-static void FeedbackBufTask(snet_entity_t *ent, void *arg)
+static void FeedbackBufTask(void *arg)
 {
   fbbuf_arg_t *fbbarg = arg;
 
@@ -435,7 +434,7 @@ static void FeedbackBufTask(snet_entity_t *ent, void *arg)
   }
   fbbarg->out_capacity = out_capacity;
 
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 #endif /* FEEDBACK_STREAM_EMITTER */
 
@@ -484,10 +483,8 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     fbbarg->max_read = fbbarg->out_capacity; /* TODO better usual stream capacity */
     fbbarg->internal_buffer = SNetQueueCreate();
 #endif /* FEEDBACK_STREAM_EMITTER */
-    SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_fbbuf, location, locvec,
-          "<fbbuf>", &FeedbackBufTask, fbbarg)
-        );
+    SNetThreadingSpawn( ENTITY_fbbuf, location, locvec,
+          "<fbbuf>", &FeedbackBufTask, fbbarg);
 #else
     back_bufin = back_bufout;
 #endif
@@ -498,10 +495,8 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     fbcarg->outstream = SNetStreamOpen(into_op, 'w');
     fbcarg->backstream = SNetStreamOpen(back_bufout, 'r');
     fbcarg->mode = FBCOLL_IN;
-    SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_fbcoll, location, locvec,
-          "<fbcoll>", &FeedbackCollTask, fbcarg)
-        );
+    SNetThreadingSpawn( ENTITY_fbcoll, location, locvec,
+          "<fbcoll>", &FeedbackCollTask, fbcarg);
 
     /* create the instance network */
     from_op = box_a(into_op, info, location);
@@ -514,10 +509,8 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
     fbdarg->backstream = SNetStreamOpen(back_bufin, 'w');
     fbdarg->back_patterns = back_patterns;
     fbdarg->guards = guards;
-    SNetThreadingSpawn(
-      SNetEntityCreate( ENTITY_fbdisp, location, locvec,
-          "<fbdisp>", &FeedbackDispTask, fbdarg)
-        );
+    SNetThreadingSpawn( ENTITY_fbdisp, location, locvec,
+          "<fbdisp>", &FeedbackDispTask, fbdarg);
 
   } else {
     SNetVariantListDestroy(back_patterns);

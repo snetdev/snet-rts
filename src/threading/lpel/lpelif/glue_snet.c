@@ -7,11 +7,12 @@
 
 
 #include "debug.h"
+#include "memfun.h"
 
 /* S-Net threading backend interface */
 #include "threading.h"
 
-#include "lpel.h"
+#include <lpel.h>
 
 /* provisional assignment module */
 #include "assign.h"
@@ -38,11 +39,11 @@ static int mon_flags = 0;
 static bool dloc_placement = false;
 
 
-static size_t GetStacksize(snet_entity_descr_t descr)
+static size_t GetStacksize(snet_entity_t ent)
 {
 	size_t stack_size;
 
-	switch(descr) {
+	switch(ent) {
 	case ENTITY_parallel:
 	case ENTITY_star:
 	case ENTITY_split:
@@ -67,20 +68,6 @@ static size_t GetStacksize(snet_entity_descr_t descr)
 	return( stack_size);
 }
 
-
-static void *EntityTask(void *arg)
-{
-  snet_entity_t *ent = (snet_entity_t *)arg;
-
-  do {
-    SNetEntitySetStop(ent);
-    SNetEntityCall(ent);
-  } while(SNetEntityIsRun(ent));
-
-  SNetEntityDestroy(ent);
-
-  return NULL;
-}
 
 int SNetThreadingInit(int argc, char **argv)
 {
@@ -218,9 +205,8 @@ int SNetThreadingCleanup(void)
 /**
  * Signal an user event
  */
-void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
+void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
 {
-	(void) ent; /* NOT USED */
 	lpel_task_t *t = LpelTaskSelf();
 	assert(t != NULL);
 	mon_task_t *mt = LpelTaskGetMon(t);
@@ -229,65 +215,79 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 	}
 }
 
-int SNetThreadingSpawn(snet_entity_t *ent)
+void FreeName(lpel_task_t *t, void *v)
 {
-	int worker = -1;
-	snet_entity_descr_t type = SNetEntityDescr(ent);
-	int location = SNetEntityNode(ent);
-	const char *name = SNetEntityName(ent);
+  (void) t;
+  SNetMemFree(v);
+}
 
-	if ( type != ENTITY_other) {
-		if (dloc_placement) {
-			assert(location != -1);
-			worker = location % num_workers;
-		} else {
-			worker = SNetAssignTask( (type==ENTITY_box), name );
-		}
-	}
+void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
+                        const char *name, snet_taskfun_t func, void *arg)
+{
+  char *buf = NULL;
+  int worker = -1;
+  /* if locvec is NULL then entity_other */
+  assert(locvec != NULL || ent == ENTITY_other);
 
-	lpel_task_t *t = LpelTaskCreate(
-			worker,
-			//(lpel_taskfunc_t) func,
-			EntityTask,
-			ent,
-			GetStacksize(type)
-	);
+  if (locvec != NULL) {
+    int namelen, size;
 
+    namelen = name ? strlen(name) : 0;
+    /* initial size of the buffer */
+    size = SNetLocvecPrintSize(locvec) + namelen + 1;
+    buf = SNetMemAlloc(size);
+    strncpy(buf, name, namelen);
+    SNetLocvecPrint(buf + namelen, locvec);
+    buf[size-1] = '\0';
+  }
+
+  if (ent != ENTITY_other) {
+    if (dloc_placement) {
+      assert(loc != -1);
+      worker = loc % num_workers;
+    } else {
+      worker = SNetAssignTask( (ent==ENTITY_box), name );
+    }
+  }
+
+  lpel_task_t *t = LpelTaskCreate(worker, func, arg, GetStacksize(ent));
+
+  LpelSetUserData(t, buf);
+  LpelSetUserDataDestructor(t, &FreeName);
 
 #ifdef USE_LOGGING
-	if (mon_flags & SNET_MON_TASK){
-		mon_task_t *mt = SNetThreadingMonTaskCreate(
-				LpelTaskGetID(t),
-				name
-		);
-		LpelTaskMonitor(t, mt);
-		/* if we monitor the task, we make an entry in the map file */
-	}
+  if (mon_flags & SNET_MON_TASK){
+    mon_task_t *mt = SNetThreadingMonTaskCreate(LpelTaskGetID(t), name);
+    LpelTaskMonitor(t, mt);
+    /* if we monitor the task, we make an entry in the map file */
+  }
 
-	if ((mon_flags & SNET_MON_MAP) && mapfile) {
-		int tid = LpelTaskGetID(t);
-		// FIXME: change to binary format
-		(void) fprintf(mapfile, "%d%s %d%c", tid, SNetEntityStr(ent), worker, END_LOG_ENTRY);
-	}
+  if ((mon_flags & SNET_MON_MAP) && mapfile) {
+    int tid = LpelTaskGetID(t);
+    // FIXME: change to binary format
+    fprintf(mapfile, "%d%s %d%c", tid, buf, worker, END_LOG_ENTRY);
+  }
 
 
 #endif
 
-	if (type != ENTITY_box && type != ENTITY_fbbuf) {
-		LpelTaskPrio(t, 1);
-	}
+  if (ent != ENTITY_box && ent != ENTITY_fbbuf) {
+    LpelTaskPrio(t, 1);
+  }
 
 
-	//FIXME only for debugging purposes
-	//fflush(mapfile);
+  //FIXME only for debugging purposes
+  //fflush(mapfile);
 
-	LpelTaskRun(t);
-	return 0;
+  LpelTaskRun(t);
 }
 
 /**
  * Respawn a current task or if the task is on a different worker, create a
  * new task
  */
-void SNetThreadingRespawn(snet_entity_t *ent)
-{ SNetEntitySetRun(ent); }
+void SNetThreadingRespawn(snet_taskfun_t f)
+{ LpelTaskRespawn(f); }
+
+const char *SNetThreadingGetName(void)
+{ return LpelGetUserData(LpelTaskSelf()); }

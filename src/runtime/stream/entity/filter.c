@@ -154,7 +154,7 @@ static bool FilterIsBypass(
 /**
  * Filter task
  */
-static void FilterTask(snet_entity_t *ent, void *arg)
+static void FilterTask(void *arg)
 {
   filter_arg_t *farg = arg;
   snet_expr_t *expr;
@@ -177,9 +177,8 @@ static void FilterTask(snet_entity_t *ent, void *arg)
 
 #ifdef USE_USER_EVENT_LOGGING
         /* Emit a monitoring message of a record read to be processed by a filter */
-        SNetThreadingEventSignal( ent,
-            SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, in_rec)
-            );
+        SNetThreadingEventSignal(
+            SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, in_rec));
 #endif
 
         LIST_ENUMERATE( farg->guard_exprs, i, expr) {
@@ -216,9 +215,8 @@ static void FilterTask(snet_entity_t *ent, void *arg)
 
 #ifdef USE_USER_EVENT_LOGGING
               /* Emit a monitoring message of a record write by a filter started */
-              SNetThreadingEventSignal( ent,
-                  SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, out_rec)
-                  );
+              SNetThreadingEventSignal(
+                  SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, out_rec));
 #endif
                 SNetStreamWrite( farg->outstream, out_rec);
             } /* forall instruction lists */
@@ -255,13 +253,13 @@ static void FilterTask(snet_entity_t *ent, void *arg)
       break;
   }
 
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 /**
  * Nameshift task
  */
-static void NameshiftTask(snet_entity_t *ent, void *arg)
+static void NameshiftTask(void *arg)
 {
   filter_arg_t *farg = arg;
   snet_variant_t *untouched = farg->input_variant;
@@ -324,7 +322,7 @@ static void NameshiftTask(snet_entity_t *ent, void *arg)
       break;
   }
 
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 /*****************************************************************************/
@@ -362,10 +360,8 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
     farg->guard_exprs = guard_exprs;
     farg->filter_instructions = instr_list;
 
-    SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_filter, location, SNetLocvecGet(info),
-          name, &FilterTask, farg)
-        );
+    SNetThreadingSpawn( ENTITY_filter, location, SNetLocvecGet(info),
+          name, &FilterTask, farg);
   } else {
     int i;
     snet_expr_t *expr;
@@ -478,10 +474,8 @@ snet_stream_t *SNetNameShift( snet_stream_t *instream,
     farg->guard_exprs = SNetExprListCreate( 1, SNetEconsti( offset));
     farg->filter_instructions = NULL; /* instructions */
 
-    SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_nameshift, location, SNetLocvecGet(info),
-          "<nameshift>", &NameshiftTask, farg)
-        );
+    SNetThreadingSpawn( ENTITY_nameshift, location, SNetLocvecGet(info),
+          "<nameshift>", &NameshiftTask, farg);
   } else {
     SNetVariantDestroy( untouched);
     outstream = instream;

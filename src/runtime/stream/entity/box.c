@@ -38,7 +38,7 @@ typedef struct {
 /* ------------------------------------------------------------------------- */
 
 
-static void BoxTask(snet_entity_t *ent, void *arg)
+static void BoxTask(void *arg)
 {
 #if defined(DBG_RT_TRACE_BOX_TIMINGS) || defined(SNET_DEBUG_COUNTERS)
   snet_time_t time_in;
@@ -49,7 +49,6 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   box_arg_t *barg = arg;
   snet_record_t *rec;
   snet_handle_t hnd;
-  memset(&hnd, 0, sizeof(snet_handle_t));
 
   /* set out descriptor */
   hnd.out_sd = barg->outstream;
@@ -59,8 +58,6 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   hnd.mapping = NULL;
   /* set variants */
   hnd.vars = barg->vars;
-  /* box entity */
-  hnd.ent = ent;
 
   /* read from input stream */
   rec = SNetStreamRead( barg->instream);
@@ -71,7 +68,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
 #if defined(DBG_RT_TRACE_BOX_TIMINGS) || defined(SNET_DEBUG_COUNTERS)
       SNetDebugTimeGetTime(&time_in);
       #ifdef DBG_RT_TRACE_BOX_TIMINGS
-        SNetUtilDebugNoticeEnt( ent,
+        SNetUtilDebugNoticeTask(
             "[BOX] Firing box function at %lf.",
             SNetDebugTimeGetMilliseconds(&time_in));
      #endif
@@ -80,9 +77,8 @@ static void BoxTask(snet_entity_t *ent, void *arg)
 #ifdef USE_USER_EVENT_LOGGING
       /* Emit a monitoring message of a record read to be processed by a box */
       if (SNetRecGetDescriptor(rec) == REC_data) {
-        SNetThreadingEventSignal( ent,
-            SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
-            );
+        SNetThreadingEventSignal(
+            SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec));
       }
 #endif
 
@@ -98,7 +94,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
       mseconds = SNetDebugTimeDifferenceInMilliseconds(time_in, time_out);
 
       #if defined(DBG_RT_TRACE_BOX_TIMINGS)
-        SNetUtilDebugNoticeEnt( ent,
+        SNetUtilDebugNoticeTask(
             "[BOX] Return from box function after %lf sec.", mseconds);
       #elif defined(SNET_DEBUG_COUNTERS)
         SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
@@ -136,7 +132,7 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   }
 
   /* schedule new task */
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 
@@ -192,10 +188,8 @@ snet_stream_t *SNetBox( snet_stream_t *input,
     barg->vars = vlist;
     barg->boxname = boxname;
 
-    SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_box, location, SNetLocvecGet(info),
-          barg->boxname, &BoxTask, barg)
-        );
+    SNetThreadingSpawn( ENTITY_box, location, SNetLocvecGet(info),
+          barg->boxname, &BoxTask, barg);
 
 
   } else {

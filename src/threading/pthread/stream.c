@@ -132,7 +132,6 @@ void *SNetStreamRead(snet_stream_desc_t *sd)
 {
   assert( sd->mode == 'r' );
   snet_stream_t *s = sd->stream;
-  sd->thr = SNetThreadingSelf();
   void *item;
 
   pthread_mutex_lock( &s->lock);

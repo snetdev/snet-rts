@@ -146,7 +146,7 @@ static void TerminateSyncBoxTask(sync_arg_t *sarg)
 /**
  * Sync box task
  */
-static void SyncBoxTask(snet_entity_t *ent, void *arg)
+static void SyncBoxTask(void *arg)
 {
   sync_arg_t *sarg = arg;
 
@@ -181,17 +181,15 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 
 #ifdef USE_USER_EVENT_LOGGING
             /* Emit a monitoring message of first record entering syncro cell */
-            SNetThreadingEventSignal( ent,
-                SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
-                );
+            SNetThreadingEventSignal(
+                SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec));
 #endif
 
           } else {
 #ifdef USE_USER_EVENT_LOGGING
             /* Emit a monitoring message of another accepted record entering syncro cell */
-            SNetThreadingEventSignal( ent,
-                SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
-                );
+            SNetThreadingEventSignal(
+                SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec));
 #endif
           }
         }
@@ -208,9 +206,8 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 
 #ifdef USE_USER_EVENT_LOGGING
         /* Emit a monitoring message of firing syncro cell */
-        SNetThreadingEventSignal( ent,
-            SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, syncrec)
-            );
+        SNetThreadingEventSignal(
+            SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, syncrec));
 #endif
         /* this is the last sync */
         SNetStreamWrite( sarg->outstream, syncrec);
@@ -259,7 +256,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
     case REC_terminate:
       if (sarg->partial_sync) {
         DestroyStorage(sarg->storage, sarg->patterns, &sarg->dummy);
-        SNetUtilDebugNoticeEnt( ent,
+        SNetUtilDebugNoticeTask(
         "[SYNC] Warning: Destroying partially synchronized sync-cell!");
       }
       SNetStreamWrite( sarg->outstream, rec);
@@ -274,7 +271,7 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
       /* if ignore, destroy at least ... */
       SNetRecDestroy( rec);
   }
-  SNetThreadingRespawn(ent);
+  SNetThreadingRespawn(NULL);
 }
 
 /*****************************************************************************/
@@ -322,10 +319,8 @@ snet_stream_t *SNetSync( snet_stream_t *input,
       sarg->storage[i] = &sarg->dummy;
     }
 
-    SNetThreadingSpawn(
-        SNetEntityCreate( ENTITY_sync, location, locvec,
-          "<sync>", &SyncBoxTask, sarg)
-        );
+    SNetThreadingSpawn( ENTITY_sync, location, locvec,
+          "<sync>", &SyncBoxTask, sarg);
   } else {
     SNetVariantListDestroy( patterns);
     SNetExprListDestroy( guard_exprs);
