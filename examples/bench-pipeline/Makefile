@@ -50,25 +50,38 @@ compile:
 
 .SECONDEXPANSION:
 
-test%/prog: $$(word 1,$$(subst -, ,$$@)).snet $(BOXLIB)
+WORD1_ = $$(word 1,$$(subst -, ,$$*))
+WORD2_ = $$(word 2,$$(subst -, ,$$*))
+WORD3_ = $$(word 3,$$(subst -, ,$$*))
+WORD4_ = $$(word 4,$$(subst -, ,$$*))
+WORD5_ = $$(word 5,$$(subst -, ,$$*))
+WORD6_ = $$(word 6,$$(subst -, ,$$*))
+WORD7_ = $$(word 7,$$(subst -, ,$$*))
+
+WORD1 = $(word 1,$(subst -, ,$*))
+WORD2 = $(word 2,$(subst -, ,$*))
+WORD3 = $(word 3,$(subst -, ,$*))
+WORD4 = $(word 4,$(subst -, ,$*))
+WORD5 = $(word 5,$(subst -, ,$*))
+WORD6 = $(word 6,$(subst -, ,$*))
+WORD7 = $(word 7,$(subst -, ,$*))
+
+test%/prog: test$(WORD1_).snet $(BOXLIB)
 	mkdir -p test$*
 	cd test$* && $(SNETC) $(SNETCFLAGS) -L.. -lboxes \
-	   -threading $(word 2,$(subst -, ,$*)) \
-	   -distrib   $(word 3,$(subst -, ,$*)) \
+	   -threading $(WORD2) \
+	   -distrib   $(WORD3) \
 	   -o prog \
-	   ../test$(word 1,$(subst -, ,$*)).snet
+	   ../test$(WORD1).snet
 
-result-%: test$$(word 2,$$(subst -, ,$$@))-$$(word 6,$$(subst -, ,$$@))-$$(word 7,$$(subst -, ,$$@))/prog template-input.xml
+input-%.xml: template-input.xml
+	rm -f $@ $@.tmp
+	sed -e "s/NRECORDS/$(WORD1)/g;s/NWORK/$(WORD2)/g"<template-input.xml >$@.tmp
+	mv -f $@.tmp $@
+
+result-%: test$(WORD1_)-$(WORD5_)-$(WORD6_)/prog input-$(WORD2_)-$(WORD3_).xml
 	rm -f $@ error-$*
-	len=`echo $*|cut -d- -f1`; \
-	nrecs=`echo $*|cut -d- -f2`; \
-	nwork=`echo $*|cut -d- -f3`; \
-	ncores=`echo $*|cut -d- -f4`; \
-	impl=`echo $*|cut -d- -f5-6`; \
-	sed -e "s/NRECORDS/$$nrecs/g;s/NWORK/$$nwork/g"<template-input.xml | \
-	  /usr/bin/time -p ./test$$len-$$impl/prog -w $$ncores  >error-$* 2>&1 && \
-	sed -e "s/NRECORDS/$$nrecs/g;s/NWORK/$$nwork/g"<template-input.xml | \
-	  /usr/bin/time -p ./test$$len-$$impl/prog -w $$ncores  >>error-$* 2>&1 && \
-	sed -e "s/NRECORDS/$$nrecs/g;s/NWORK/$$nwork/g"<template-input.xml | \
-	  /usr/bin/time -p ./test$$len-$$impl/prog -w $$ncores  >>error-$* 2>&1
+	/usr/bin/time -p ./test$(WORD1)-$(WORD5)-$(WORD6)/prog -w $(WORD4) -i input-$(WORD2)-$(WORD3).xml  >error-$* 2>&1 && \
+	 /usr/bin/time -p ./test$(WORD1)-$(WORD5)-$(WORD6)/prog -w $(WORD4) -i input-$(WORD2)-$(WORD3).xml  >>error-$* 2>&1 && \
+	 /usr/bin/time -p ./test$(WORD1)-$(WORD5)-$(WORD6)/prog -w $(WORD4) -i input-$(WORD2)-$(WORD3).xml  >>error-$* 2>&1
 	mv error-$* $@
