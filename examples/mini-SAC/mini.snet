@@ -1,0 +1,20 @@
+  <metadata>
+   <boxdefault>
+     <interface value="SAC4SNet" />
+     <SACmodule>mini</SACmodule>
+   </boxdefault>
+  </metadata>
+
+net mini {
+
+    <metadata>
+      <box name="boxA" >
+        <SACboxfun>A</SACboxfun>
+        <SACdefaultmap>1, 2, 3, 0</SACdefaultmap>
+      </box>
+    </metadata>
+
+  box boxA( (A) -> (A));
+  box B( -> (A));
+
+} connect (B|[]) .. boxA;
