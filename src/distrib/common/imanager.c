@@ -186,7 +186,7 @@ static void HandleRecord(snet_dest_stream_map_t *destMap, snet_record_t *rec,
 
 
 
-void SNetInputManager(snet_entity_t *ent, void *args);
+void SNetInputManager( void *args);
 
 void SNetInputManagerNewIn(snet_dest_t dest, snet_stream_t *stream)
 {
@@ -204,14 +204,12 @@ void SNetInputManagerInit(void)
 
 void SNetInputManagerStart(void)
 {
-  SNetThreadingSpawn(
-    SNetEntityCreate( ENTITY_other, -1, NULL,
-      "input_manager", &SNetInputManager, NULL));
+  SNetThreadingSpawn( ENTITY_other, -1, NULL,
+      "input_manager", &SNetInputManager, NULL);
 }
 
-void SNetInputManager(snet_entity_t *ent, void *args)
+void SNetInputManager(void *args)
 {
-  (void) ent; /* NOT USED */
   (void) args; /* NOT USED */
   snet_dest_stream_map_t *destMap = SNetDestStreamMapCreate(0);
 

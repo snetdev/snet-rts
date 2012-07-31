@@ -2,7 +2,6 @@
 #define _MONITORER_H_
 
 #include "moninfo.h"
-#include "entities.h"
 
 
 void SNetThreadingMonitoringInit(char *fname);

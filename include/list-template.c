@@ -228,8 +228,6 @@ LIST_VAL LIST_FUNCTION(LIST_NAME, Remove)(snet_list_t *list, int i)
 }
 
 
-
-
 void LIST_FUNCTION(LIST_NAME, Serialise)(snet_list_t *list,
     void (*serialiseInts)(int, int*),
     void (*serialiseValues)(int, LIST_VAL*))

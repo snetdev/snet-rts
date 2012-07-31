@@ -23,15 +23,17 @@
 static unsigned int entity_count = 0;
 static pthread_mutex_t entity_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  entity_cond = PTHREAD_COND_INITIALIZER;
+
+#ifdef HAVE___THREAD
+static __thread snet_thread_t *thread_self;
+#else /* HAVE___THREAD */
 static pthread_key_t thread_self_key;
+#endif /* HAVE___THREAD */
 
 
 /* prototype for pthread thread function */
-static void *EntityThread(void *arg);
-
-static size_t StackSize(snet_entity_descr_t descr);
-
-static void ThreadDestroy(snet_thread_t *self);
+static size_t StackSize(snet_entity_t ent);
+static void *TaskWrapper(void *arg);
 
 #ifdef USE_CORE_AFFINITY
 typedef enum {
@@ -61,12 +63,6 @@ static inline int _my_cpu_count(cpu_set_t *set)
 #endif
 #endif
 
-unsigned long SNetThreadingGetId()
-{
-  /* returns the thread id */
-  return (unsigned long) pthread_self(); /* returns a pointer on Mac */
-}
-
 int SNetThreadingInit(int argc, char **argv)
 {
 #ifdef USE_CORE_AFFINITY
@@ -78,7 +74,9 @@ int SNetThreadingInit(int argc, char **argv)
   (void) argc; /* NOT USED */
   (void) argv; /* NOT USED */
 
+#ifndef HAVE___THREAD
   pthread_key_create(&thread_self_key, NULL);
+#endif
 
 #ifdef USE_CORE_AFFINITY
   for (i=0; i<argc; i++) {
@@ -86,7 +84,7 @@ int SNetThreadingInit(int argc, char **argv)
       /* Number of cores */
       i = i + 1;
       num_cores = atoi(argv[i]);
-      SetThreadAffinity( (pthread_t*)SNetThreadingGetId(), MAXCORES,  num_cores);
+      SetThreadAffinity( pthread_self(), MAXCORES,  num_cores);
     }
   }
 #endif
@@ -113,34 +111,38 @@ int SNetThreadingStop(void)
 
 int SNetThreadingCleanup(void)
 {
+#ifndef HAVE___THREAD
   pthread_key_delete(thread_self_key);
+#endif
   SNetThreadingMonitoringCleanup();
   return 0;
 }
 
 
-int SNetThreadingSpawn(snet_entity_t *ent)
+void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
+                        const char *name, snet_taskfun_t func, void *arg)
 {
-  /*
-  snet_entity_type_t type,
-  snet_locvec_t *locvec,
-  int location,
-  const char *name,
-  snet_entityfunc_t func,
-  void *arg
-  */
-  int res;
+  int res, namelen, size;
   pthread_t p;
   pthread_attr_t attr;
-  size_t stacksize;
+
+  /* if locvec is NULL then entity_other */
+  assert(locvec != NULL || ent == ENTITY_other);
 
   /* create snet_thread_t */
   snet_thread_t *thr = SNetMemAlloc(sizeof(snet_thread_t));
+  thr->fun = func;
   pthread_mutex_init( &thr->lock, NULL );
   pthread_cond_init( &thr->pollcond, NULL );
   thr->wakeup_sd = NULL;
-  thr->entity = ent;
+  thr->inarg = arg;
 
+  namelen = name ? strlen(name) : 0;
+  size = (locvec ? SNetLocvecPrintSize(locvec) : 0) + namelen + 1;
+  thr->name = SNetMemAlloc(size);
+  strncpy(thr->name, name, namelen);
+  if (locvec != NULL) SNetLocvecPrint(thr->name + namelen, locvec);
+  thr->name[size-1] = '\0';
 
   /* increment entity counter */
   pthread_mutex_lock( &entity_lock );
@@ -152,51 +154,51 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 
   (void) pthread_attr_init( &attr);
 
-  /* stacksize */
-  stacksize = StackSize( SNetEntityDescr(ent) );
-
+  size_t stacksize = StackSize(ent);
   if (stacksize > 0) {
     res = pthread_attr_setstacksize(&attr, stacksize);
-    if (res != 0) {
-      //error(1, res, "Cannot set stack size!");
-      return 1;
-    }
+    if (res != 0) perror("Cannot set stack size!");
   }
 
   /* all threads are detached */
   res = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-  if (res != 0) {
-    //error(1, res, "Cannot set detached!");
-    return 1;
-  }
+  if (res != 0) perror("Cannot set detached!");
 
   /* spawn off thread */
-  res = pthread_create( &p, &attr, EntityThread, thr);
-  if (res != 0) {
-    //error(1, res, "Cannot create pthread!");
-    return 1;
-  }
+  res = pthread_create( &p, &attr, &TaskWrapper, thr);
+  if (res != 0) perror("Cannot create pthread!");
   pthread_attr_destroy( &attr);
 
 
   /* core affinity */
 #ifdef USE_CORE_AFFINITY
-  if( SNetEntityDescr(ent)== ENTITY_other) {
+  if (ent == ENTITY_other) {
     SetThreadAffinity( &p, STRICTLYFIRST);
   } else {
     SetThreadAffinity( &p, DEFAULT);
   }
 #endif /* USE_CORE_AFFINITY */
-
-
-  return 0;
 }
 
-
-void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
+snet_thread_t *SNetThreadingSelf(void)
 {
-  SNetThreadingMonitoringAppend( moninfo, SNetEntityStr(ent) );
+#ifdef HAVE___THREAD
+  return thread_self;
+#else
+  return (snet_thread_t *) pthread_getspecific(thread_self_key);
+#endif
 }
+
+void SNetThreadingRespawn(snet_taskfun_t fun)
+{
+  snet_thread_t *self = SNetThreadingSelf();
+  if (fun) self->fun = fun;
+  self->run = true;
+}
+
+
+void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
+{ SNetThreadingMonitoringAppend( moninfo, SNetThreadingGetName()); }
 
 void SNetThreadingYield(void)
 {
@@ -209,41 +211,31 @@ void SNetThreadingYield(void)
 #endif
 }
 
-
-snet_thread_t *SNetThreadingSelf(void)
-{
-  return (snet_thread_t *) pthread_getspecific(thread_self_key);
-}
-
+const char *SNetThreadingGetName(void) { return SNetThreadingSelf()->name; }
 
 /******************************************************************************
  * Private functions
  *****************************************************************************/
 
-static void *EntityThread(void *arg)
+static void *TaskWrapper(void *arg)
 {
-  snet_thread_t *thr = (snet_thread_t *)arg;
+  snet_thread_t *self = arg;
+#ifdef HAVE___THREAD
+  thread_self = arg;
+#else
+  pthread_setspecific(thread_self_key, arg);
+#endif
 
-  pthread_setspecific(thread_self_key, thr);
+  do {
+    self->run = false;
+    self->fun(self->inarg);
+  } while (self->run);
 
-  SNetEntityCall(thr->entity);
-  SNetEntityDestroy(thr->entity);
-
-  /* call entity function */
-  ThreadDestroy(thr);
-
-  return NULL;
-}
-
-/**
- * Cleanup the thread
- */
-static void ThreadDestroy(snet_thread_t *thr)
-{
   /* cleanup */
-  pthread_mutex_destroy( &thr->lock );
-  pthread_cond_destroy(  &thr->pollcond );
-  SNetMemFree(thr);
+  pthread_mutex_destroy( &self->lock );
+  pthread_cond_destroy(  &self->pollcond );
+  SNetMemFree(self->name);
+  SNetMemFree(self);
 
 
   /* decrement and signal entity counter */
@@ -253,13 +245,15 @@ static void ThreadDestroy(snet_thread_t *thr)
     pthread_cond_signal( &entity_cond );
   }
   pthread_mutex_unlock( &entity_lock );
+
+  return NULL;
 }
 
-static size_t StackSize(snet_entity_descr_t descr)
+static size_t StackSize(snet_entity_t ent)
 {
   size_t stack_size;
 
-  switch(descr) {
+  switch(ent) {
     case ENTITY_parallel:
     case ENTITY_star:
     case ENTITY_split:
