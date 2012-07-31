@@ -14,5 +14,3 @@ net NETNAME
   box gen((A,B,C) -> (A,B,C));
   box add((A,B) -> (A,B));
   box drop((A,B,C) -> (A,B,C)); 
-} connect
-
