@@ -55,7 +55,7 @@ void *genxt( void *hnd , int n, int w, int c, int p)
     {
         r = r % c;
 
-        for (int v = 0; v < p; ++p)
+        for (int v = 0; v < p; ++v)
             C4SNetOut(hnd, 1 + v, n, w, r, 1);
     }
 

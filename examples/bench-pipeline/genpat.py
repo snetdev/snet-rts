@@ -13,7 +13,7 @@ if par_width == 0:
 else:
     # define the generator box
     gen = "genxt"
-    print "box genxt ((<a>,<b>,<c>,<p>) -> %s)" % \
+    print "box genxt ((<a>,<b>,<c>,<p>) -> %s);" % \
         "|".join("(<a>,<b>,<c>,<x%d>)" % i for i in range(par_width))
 
 print "} connect "
@@ -30,7 +30,13 @@ elif insidet == "sd":
     inside = "([{<c>}->{<c=c>,<i=c>}] .. (addt .. [{<i>} -> if <i==0> then {<i=i>,<stop>} else {<i=i-1>}]) ** {<stop>} .. [{<stop>}->{}] )"
 
 if par_width > 0:
-    inside = "(%s)" % "|\n     ".join("([{<x%d>}->{<x%d=x%d>}] .. %s)" % (i,i,i, inside) for i in range(par_width))
+    def geninside(i):
+        if par_width > 1:
+            return "[{<x%d>}->{<x%d=x%d>}] .. %s" % (i,i,i, inside)
+        else:
+            return inside
+
+    inside = "(%s)" % "|\n     ".join("(%s)" % geninside(i) for i in range(par_width))
     
 items = ["[{} -> {<p=%d>}]" % par_width, 
          "f2t", gen] + [inside for j in range(pipe_len)] + ["dropt"]

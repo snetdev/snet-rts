@@ -42,7 +42,7 @@ compile:
 
 T_BASES = sn sd pt bn bd
 T_LENS = 1 50
-T_WIDTHS = 0 1 50
+T_WIDTHS = 0 1 5
 T_NRECS = 1 50
 T_CYCLES = 1 50
 T_THREADING = lpel pthread
