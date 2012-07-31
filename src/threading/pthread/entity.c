@@ -25,7 +25,7 @@ static pthread_mutex_t entity_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  entity_cond = PTHREAD_COND_INITIALIZER;
 
 #ifdef HAVE___THREAD
-static __thread snet_thread_t *thread_self;
+static TLSSPEC snet_thread_t *thread_self;
 #else /* HAVE___THREAD */
 static pthread_key_t thread_self_key;
 #endif /* HAVE___THREAD */
