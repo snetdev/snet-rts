@@ -2,6 +2,7 @@
 <record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
 <field label="A" >(int)NRECORDS</field>
 <field label="B" >(int)NWORK</field>
+<field label="C" >(int)CYCLIC</field>
 </record>
 <record xmlns="snet-home.org" type="terminate"/>
 
