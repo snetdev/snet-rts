@@ -221,8 +221,7 @@ static void TerminateCollectorTask(snet_stream_desc_t *outstream,
   if (carg->sort_rec != NULL) {
     SNetRecDestroy(carg->sort_rec);
   }
-  //SNetStreamListDestroy(carg->ready_list);
-  //SNetStreamListDestroy(carg->waiting_list);
+
   /* close outstream */
   SNetStreamClose( outstream, false);
 

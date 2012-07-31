@@ -224,22 +224,18 @@ void FreeName(lpel_task_t *t, void *v)
 void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
                         const char *name, snet_taskfun_t func, void *arg)
 {
+  int namelen, size;
   char *buf = NULL;
   int worker = -1;
   /* if locvec is NULL then entity_other */
   assert(locvec != NULL || ent == ENTITY_other);
 
-  if (locvec != NULL) {
-    int namelen, size;
-
-    namelen = name ? strlen(name) : 0;
-    /* initial size of the buffer */
-    size = SNetLocvecPrintSize(locvec) + namelen + 1;
-    buf = SNetMemAlloc(size);
-    strncpy(buf, name, namelen);
-    SNetLocvecPrint(buf + namelen, locvec);
-    buf[size-1] = '\0';
-  }
+  namelen = name ? strlen(name) : 0;
+  size = (locvec ? SNetLocvecPrintSize(locvec) : 0) + namelen + 1;
+  buf = SNetMemAlloc(size);
+  strncpy(buf, name, namelen);
+  if (locvec != NULL) SNetLocvecPrint(buf + namelen, locvec);
+  buf[size-1] = '\0';
 
   if (ent != ENTITY_other) {
     if (dloc_placement) {

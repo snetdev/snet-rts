@@ -122,7 +122,7 @@ int SNetThreadingCleanup(void)
 void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
                         const char *name, snet_taskfun_t func, void *arg)
 {
-  int res;
+  int res, namelen, size;
   pthread_t p;
   pthread_attr_t attr;
 
@@ -137,19 +137,12 @@ void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
   thr->wakeup_sd = NULL;
   thr->inarg = arg;
 
-  if (locvec != NULL) {
-    int namelen, size;
-
-    namelen = name ? strlen(name) : 0;
-    /* initial size of the buffer */
-    size = SNetLocvecPrintSize(locvec) + namelen + 1;
-    thr->name = SNetMemAlloc(size);
-    strncpy(thr->name, name, namelen);
-    SNetLocvecPrint(thr->name + namelen, locvec);
-    thr->name[size-1] = '\0';
-  } else {
-    thr->name = NULL;
-  }
+  namelen = name ? strlen(name) : 0;
+  size = (locvec ? SNetLocvecPrintSize(locvec) : 0) + namelen + 1;
+  thr->name = SNetMemAlloc(size);
+  strncpy(thr->name, name, namelen);
+  if (locvec != NULL) SNetLocvecPrint(thr->name + namelen, locvec);
+  thr->name[size-1] = '\0';
 
   /* increment entity counter */
   pthread_mutex_lock( &entity_lock );
@@ -205,8 +198,7 @@ void SNetThreadingRespawn(snet_taskfun_t fun)
 
 
 void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
-{ //SNetThreadingMonitoringAppend( moninfo, SNetThreadingGetName());
-}
+{ SNetThreadingMonitoringAppend( moninfo, SNetThreadingGetName()); }
 
 void SNetThreadingYield(void)
 {
@@ -247,6 +239,7 @@ static void *TaskWrapper(void *arg)
   /* cleanup */
   pthread_mutex_destroy( &self->lock );
   pthread_cond_destroy(  &self->pollcond );
+  SNetMemFree(self->name);
   SNetMemFree(self);
 
 

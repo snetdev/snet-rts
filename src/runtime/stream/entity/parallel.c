@@ -536,8 +536,8 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     outstream = CollectorCreateStatic(num, collstreams, location, info);
 
     /* free collstreams array */
+    SNetMemFree(transits);
     SNetMemFree(collstreams);
-
 
   } else {
     LIST_ENUMERATE(variant_lists, i, variants) {
