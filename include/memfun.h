@@ -7,7 +7,6 @@
 
 #include <stddef.h>
 
-
 /*
  * Allocates memory of size s.
  * RETURNS: pointer to memory.

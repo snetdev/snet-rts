@@ -426,4 +426,3 @@ snet_stream_t *CollectorCreateDynamic( snet_stream_t *instream, int location, sn
         "<collect>", &CollectorTask, carg);
   return outstream;
 }
-

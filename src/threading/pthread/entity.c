@@ -211,17 +211,12 @@ void SNetThreadingYield(void)
 #endif
 }
 
-const char *SNetThreadingGetName(void) {
-  return SNetThreadingSelf()->name;
-}
+const char *SNetThreadingGetName(void) { return SNetThreadingSelf()->name; }
 
 /******************************************************************************
  * Private functions
  *****************************************************************************/
 
-/**
- * Cleanup the thread
- */
 static void *TaskWrapper(void *arg)
 {
   snet_thread_t *self = arg;
