@@ -19,3 +19,17 @@ void *add( void *hnd, c4snet_data_t *n, c4snet_data_t *w)
 
   return hnd;
 }
+
+void *addt( void *hnd, int n, int w)
+{
+  int i, s;
+  for (s = n, i = 0; i <= w; ++i)
+  {
+         s += n;
+        __asm__ __volatile__ ("");
+  }
+
+  C4SNetOut(hnd, 1, n, w);
+
+  return hnd;
+}
