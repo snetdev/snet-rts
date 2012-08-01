@@ -14,6 +14,6 @@ struct handle;
 
 void SAC4SNetInit( int id, snet_distrib_t distImpl);
 
-void SAC4SNet_out( snet_handle_t *hnd, int variant, ...);
+void SAC4SNet_out( void *hnd, int variant, ...);
 
 #endif 
