@@ -1,0 +1,16 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet" />
+  </boxdefault>
+</metadata>
+
+net NETNAME
+{
+  box gent((<a>,<b>,<c>) -> (<a>,<b>,<c>));
+  box addt((<a>,<b>,<c>) -> (<a>,<b>,<c>));
+  box dropt((<a>,<b>,<c>) -> (<a>,<b>,<c>));
+  box t2f((<a>,<b>,<c>) -> (A,B,C));
+  box f2t((A,B,C) -> (<a>,<b>,<c>));
+  box gen((A,B,C) -> (A,B,C));
+  box add((A,B) -> (A,B));
+  box drop((A,B,C) -> (A,B,C)); 
