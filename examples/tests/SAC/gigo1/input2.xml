@@ -1,0 +1,8 @@
+<record xmlns="snet-home.org" type="data" mode="textual">
+<field label="A" interface="SAC4SNet">
+:::SACFIBRE: double 1 2  :::
+inputs/input2a.inp
+</field>
+</record>
+
+<record xmlns="snet-home.org" type="terminate"/>

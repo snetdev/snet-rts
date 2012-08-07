@@ -9,8 +9,11 @@ pkginclude_HEADERS = \
 	SAC4SNet.h \
 	SAC4SNetc.h
 
-SACMODLIBS  = libSNetMod.so libSAC4SNetInputGenMod.so libSAC4SNetFibreIOMod.so
-SACTREELIBS = libSNetTree.so libSAC4SNetInputGenTree.so libSAC4SNetFibreIOTree.so
+SAC2CTARGET = lpel
+SAC2CLIBVARIANT = -$(SAC2CTARGET)
+
+SACMODLIBS  = libSNetMod$(SAC2CLIBVARIANT).so libSAC4SNetInputGenMod$(SAC2CLIBVARIANT).so libSAC4SNetFibreIOMod$(SAC2CLIBVARIANT).so
+SACTREELIBS = libSNetTree$(SAC2CLIBVARIANT).so libSAC4SNetInputGenTree$(SAC2CLIBVARIANT).so libSAC4SNetFibreIOTree$(SAC2CLIBVARIANT).so
 
 sacmoddir = $(pkglibdir)
 sacmod_DATA = \
@@ -73,8 +76,9 @@ libSAC4SNetc_la_LIBADD = \
 WRAPLIBDIR = sac_lib
 WRAPINCDIR = sac_inc
 
-SAC2CFLAGS  = -v0
-S4CFLAGS  = -v0 -incdir $(WRAPINCDIR) -libdir $(WRAPLIBDIR) -o SAC4SNetFibreIO
+# you may optionally specify the -nophm in SAC2CFLAGS and S4CFLAGS to disable the private heap manager of sac.
+SAC2CFLAGS  = -g -v0 -mt -ccflag"$(LPEL_INCLUDES)" -target $(SAC2CTARGET) -nophm -dnocleanup
+S4CFLAGS  = -g -v0 -mt -ccflag"$(LPEL_INCLUDES)" -target $(SAC2CTARGET) -incdir $(WRAPINCDIR) -libdir $(WRAPLIBDIR) -o SAC4SNetFibreIO -nophm -dnocleanup
 
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags SAC4SNetFibreIO`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags SAC4SNetFibreIO`
@@ -82,7 +86,7 @@ S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags SAC4SNetFibreIO`
 if ENABLE_SAC4SNET
 
 # these are built by sac2c
-lib%Mod.so lib%Mod.a lib%Tree.so: %.sac
+lib%Mod$(SAC2CLIBVARIANT).so lib%Mod$(SAC2CLIBVARIANT).a lib%Tree$(SAC2CLIBVARIANT).so: %.sac
 	$(AM_V_at) printf "[%s]" $(SAC2C)
 	$(AM_V_GEN) $(SAC2C) $(SAC2CFLAGS) $<
 
