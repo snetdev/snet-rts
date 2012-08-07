@@ -7,7 +7,8 @@ snetstuff_DATA = \
 	compile_cmd link_cmd
 
 pkgdata_DATA =\
-	src/snet.mkf
+	src/snet.mkf \
+	snet-config.mkf
 
 snetstuff_SCRIPTS = \
 	libtool
@@ -254,6 +255,10 @@ link_cmd: Makefile
 	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
 	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS}' >$@
 
+snet-config.mkf: Makefile
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)echo LPEL_INCLUDES=$(LPEL_INCLUDES) >$@
+	$(AM_V_GEN)echo LIBLPEL_LA=$(LIBLPEL_LA) >>$@
 
 CLEANFILES = \
         compile_cmd \
