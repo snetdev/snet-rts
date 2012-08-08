@@ -121,12 +121,11 @@ static int MaxTNum()
 /*
  * Serialisation & Deserialisation functions 
  */
-static int SAC4SNetDataSerialise( FILE *file, void *ptr);
+static void SAC4SNetDataSerialise( FILE *file, void *ptr);
 static void *SAC4SNetDataDeserialise(FILE *file);
-static int SAC4SNetDataEncode( FILE *file, void *ptr)
+static void SAC4SNetDataEncode( FILE *file, void *ptr)
 {
   Error( "DataEncoding not implemented.");
-  return( 0);
 }
 static void *SAC4SNetDataDecode(FILE *file)
 {
@@ -248,12 +247,14 @@ void SAC4SNetInit( int id, snet_distrib_t distImpl)
                          &SAC4SNetDataDecode,
                          packfun,
                          unpackfun);
+  
+  SAC_InitRuntimeSystem();
 }
 
 /******************************************************************************/
 
 
-static int SAC4SNetDataSerialise( FILE *file, void *ptr)
+static void SAC4SNetDataSerialise( FILE *file, void *ptr)
 {
   int i, dim;
   SACarg *ret, *arg = (SACarg*)ptr;
@@ -310,8 +311,6 @@ static int SAC4SNetDataSerialise( FILE *file, void *ptr)
 
   }
   SNetMemFree( basetype_str);
-
-  return( 0);
 }
 
 static void *SAC4SNetDataDeserialise( FILE *file)
