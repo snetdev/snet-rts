@@ -2,7 +2,6 @@
 #include <pthread.h>
 
 #include "distribcommon.h"
-#include "entities.h"
 #include "memfun.h"
 #include "omanager.h"
 #include "record.h"
