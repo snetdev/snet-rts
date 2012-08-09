@@ -31,10 +31,11 @@ clean: clean-boxes
 	rm -f result-* error-* input-*
 
 compile: 
-	for i in $(wildcard result-*); do \
+	$(V_at)echo "# B L W N M C P T D timings..." 
+	$(V_at)for i in $(wildcard result-*); do \
 	  var=`echo $$i | cut -d- -f2- | tr - ' '`; \
 	  printf "$$var "; \
-	  grep '^real' <$$i | cut -d' ' -f2 | tr '\n' ' '; \
+	  grep '^real' <$$i | cut -c5- | tr -d ' \t' | tr '\n' ' '; \
 	  echo; \
 	done
 
