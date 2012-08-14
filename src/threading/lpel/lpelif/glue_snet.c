@@ -84,8 +84,6 @@ int SNetThreadingInit(int argc, char **argv)
 	char fname[20+1];
 	int i, res;
 	char *mon_elts = NULL;
-	char *allocate = NULL;
-	int alloc_mode = 0;
 	memset(&config, 0, sizeof(lpel_config_t));
 
 
@@ -110,28 +108,11 @@ int SNetThreadingInit(int argc, char **argv)
 			/* Number of workers */
 			i = i + 1;
 			num_workers = atoi(argv[i]);
-		} else if (strcmp(argv[i], "-a") == 0 && i+ 1 <= argc) {
-			i = i + 1;
-			allocate = argv[i];
 		}
 	}
 
+
 #ifdef USE_LOGGING
-	if (allocate != NULL) {
-		if (strcmp(allocate, ALLOC_RR_FLAG) == 0)
-			alloc_mode = ALLOC_RR_MODE;
-		else if (strcmp(allocate, ALLOC_LB_FLAG) == 0)
-			alloc_mode = ALLOC_LB_MODE;
-		else if (strcmp(allocate, ALLOC_LB_BOX_FLAG) == 0)
-			alloc_mode = ALLOC_LB_BOX_MODE;
-		else
-			alloc_mode = ALLOC_DEFAULT_MODE;
-	} else
-		alloc_mode = ALLOC_DEFAULT_MODE;
-
-	if (alloc_mode != ALLOC_RR_MODE)
-		mon_flags |= SNET_MON_LOAD;		// set flag for collecing load info
-
 	if (mon_elts != NULL) {
 		if (strchr(mon_elts, MON_ALL_FLAG) != NULL) {
 			mon_flags = (1<<7) - 1;
@@ -144,6 +125,8 @@ int SNetThreadingInit(int argc, char **argv)
 			if (strchr(mon_elts, MON_MESSAGE_FLAG) != NULL) mon_flags |= SNET_MON_MESSAGE;
 			if (strchr(mon_elts, MON_LOAD_FLAG) != NULL) mon_flags |= SNET_MON_LOAD;
 		}
+
+
 
 		if ( mon_flags & SNET_MON_MAP) {
 			snprintf(fname, 20, "n%02d_tasks.map", SNetDistribGetNodeId() );
@@ -174,20 +157,17 @@ int SNetThreadingInit(int argc, char **argv)
 	}
 	num_workers = config.num_workers;
 
-	config.alloc_mode = alloc_mode;
 #ifdef USE_LOGGING
 	/* initialise monitoring module */
-	SNetThreadingMonInit(&config.mon, config.num_workers, SNetDistribGetNodeId(), mon_flags);
+	SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_flags);
 #endif
 
-
-	SNetAssignInit(config.num_workers, alloc_mode);
+	SNetAssignInit(config.num_workers);
 
 	res = LpelInit(&config);
 	if (res != LPEL_ERR_SUCCESS) {
 		SNetUtilDebugFatal("Could not initialize LPEL!\n");
 	}
-
 	LpelStart();
 
 	return 0;
@@ -240,10 +220,9 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 	lpel_task_t *t = LpelTaskSelf();
 	assert(t != NULL);
 	mon_task_t *mt = LpelTaskGetMon(t);
-
-	//	if (mt != NULL) // check inside SNetThreadingMonEvent
-	SNetThreadingMonEvent(mt, moninfo);
-
+	if (mt != NULL) {
+		SNetThreadingMonEvent(mt, moninfo);
+	}
 }
 
 
