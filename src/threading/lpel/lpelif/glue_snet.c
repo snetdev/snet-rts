@@ -79,6 +79,7 @@ int SNetThreadingInit(int argc, char **argv)
 
 
   config.flags = LPEL_FLAG_PINNED;
+  config.threshold = 0;
 
   for (i=0; i<argc; i++) {
     if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
