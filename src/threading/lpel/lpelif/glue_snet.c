@@ -104,14 +104,6 @@ int SNetThreadingInit(int argc, char **argv)
       /* Threshold for placement scheduler */
       i = i + 1;
       config.threshold = atof(argv[i]);
-#ifdef TASK_SEGMENTATION
-    } else if(strcmp(argv[i], "-segment") == 0 && i+1 <= argc) {
-      /* If task segmentation is used, this is the number of
-       * workers assigned for control tasks
-       */
-      i = i + 1;
-      config.segmentation = atoi(argv[i]);
-#endif
     }
   }
 
