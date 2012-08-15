@@ -7,11 +7,12 @@
 
 
 #include "debug.h"
+#include "memfun.h"
 
 /* S-Net threading backend interface */
 #include "threading.h"
 
-#include "lpel.h"
+#include <lpel.h>
 
 /* provisional assignment module */
 #include "assign.h"
@@ -38,11 +39,11 @@ static int mon_flags = 0;
 static bool dloc_placement = false;
 
 
-static size_t GetStacksize(snet_entity_descr_t descr)
+static size_t GetStacksize(snet_entity_t ent)
 {
 	size_t stack_size;
 
-	switch(descr) {
+	switch(ent) {
 	case ENTITY_parallel:
 	case ENTITY_star:
 	case ENTITY_split:
@@ -68,48 +69,51 @@ static size_t GetStacksize(snet_entity_descr_t descr)
 }
 
 
-static void *EntityTask(void *arg)
-{
-	snet_entity_t *ent = (snet_entity_t *)arg;
-
-	SNetEntityCall(ent);
-	SNetEntityDestroy(ent);
-
-	return NULL;
-}
-
 int SNetThreadingInit(int argc, char **argv)
 {
-	lpel_config_t config;
-	char fname[20+1];
-	int i, res;
-	char *mon_elts = NULL;
-	memset(&config, 0, sizeof(lpel_config_t));
+  lpel_config_t config;
+  char fname[20+1];
+  int i, res;
+  char *mon_elts = NULL;
+  memset(&config, 0, sizeof(lpel_config_t));
 
 
-	config.flags = LPEL_FLAG_PINNED;
+  config.flags = LPEL_FLAG_PINNED;
+  config.threshold = 0;
 
-	for (i=0; i<argc; i++) {
-		if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
-			/* Monitoring level */
-			i = i + 1;
-			mon_elts = argv[i];
-		} else if(strcmp(argv[i], "-excl") == 0 ) {
-			/* Assign realtime priority to workers*/
-			config.flags |= LPEL_FLAG_EXCLUSIVE;
-		} else if(strcmp(argv[i], "-dloc") == 0 ) {
-			/* Use distributed s-net location placement */
-			dloc_placement = true;
-		} else if(strcmp(argv[i], "-wo") == 0 && i + 1 <= argc) {
-			/* Number of cores for others */
-			i = i + 1;
-			num_others = atoi(argv[i]);
-		} else if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
-			/* Number of workers */
-			i = i + 1;
-			num_workers = atoi(argv[i]);
-		}
-	}
+  for (i=0; i<argc; i++) {
+    if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
+      /* Monitoring level */
+      i = i + 1;
+      mon_elts = argv[i];
+    } else if(strcmp(argv[i], "-excl") == 0 ) {
+      /* Assign realtime priority to workers*/
+      config.flags |= LPEL_FLAG_EXCLUSIVE;
+    } else if(strcmp(argv[i], "-dloc") == 0 ) {
+      /* Use distributed s-net location placement */
+      dloc_placement = true;
+    } else if(strcmp(argv[i], "-wo") == 0 && i + 1 <= argc) {
+      /* Number of cores for others */
+      i = i + 1;
+      num_others = atoi(argv[i]);
+    } else if(strcmp(argv[i], "-w") == 0 && i + 1 <= argc) {
+      /* Number of workers */
+      i = i + 1;
+      num_workers = atoi(argv[i]);
+    } else if(strcmp(argv[i], "-threshold") == 0 && i + 1 <= argc) {
+      /* Threshold for placement scheduler */
+      i = i + 1;
+      config.threshold = atof(argv[i]);
+#ifdef TASK_SEGMENTATION
+    } else if(strcmp(argv[i], "-segment") == 0 && i+1 <= argc) {
+      /* If task segmentation is used, this is the number of
+       * workers assigned for control tasks
+       */
+      i = i + 1;
+      config.segmentation = atoi(argv[i]);
+#endif
+    }
+  }
 
 
 #ifdef USE_LOGGING
@@ -173,9 +177,6 @@ int SNetThreadingInit(int argc, char **argv)
 	return 0;
 }
 
-
-
-
 unsigned long SNetThreadingGetId()
 {
 	/* FIXME more convenient way */
@@ -214,9 +215,8 @@ int SNetThreadingCleanup(void)
 /**
  * Signal an user event
  */
-void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
+void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
 {
-	(void) ent; /* NOT USED */
 	lpel_task_t *t = LpelTaskSelf();
 	assert(t != NULL);
 	mon_task_t *mt = LpelTaskGetMon(t);
@@ -225,75 +225,73 @@ void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 	}
 }
 
-
-
-/*****************************************************************************
- * Spawn a new task
- ****************************************************************************/
-int SNetThreadingSpawn(snet_entity_t *ent)
-/*
-  snet_entity_type_t type,
-  snet_locvec_t *locvec,
-  int location,
-  const char *name,
-  snet_entityfunc_t func,
-  void *arg
-  )
- */
+void FreeName(lpel_task_t *t, void *v)
 {
-	int worker = -1;
-	snet_entity_descr_t type = SNetEntityDescr(ent);
-	int location = SNetEntityNode(ent);
-	const char *name = SNetEntityName(ent);
+  (void) t;
+  SNetMemFree(v);
+}
 
-	if ( type != ENTITY_other) {
-		if (dloc_placement) {
-			assert(location != -1);
-			worker = location % num_workers;
-		} else {
-			worker = SNetAssignTask( (type==ENTITY_box), name );
-		}
-	}
+void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
+                        const char *name, snet_taskfun_t func, void *arg)
+{
+  int namelen, size;
+  char *buf = NULL;
+  int worker = -1;
+  /* if locvec is NULL then entity_other */
+  assert(locvec != NULL || ent == ENTITY_other);
 
-	lpel_task_t *t = LpelTaskCreate(
-			worker,
-			//(lpel_taskfunc_t) func,
-			EntityTask,
-			ent,
-			GetStacksize(type)
-	);
+  namelen = name ? strlen(name) : 0;
+  size = (locvec ? SNetLocvecPrintSize(locvec) : 0) + namelen + 1;
+  buf = SNetMemAlloc(size);
+  strncpy(buf, name, namelen);
+  if (locvec != NULL) SNetLocvecPrint(buf + namelen, locvec);
+  buf[size-1] = '\0';
 
+  if (ent != ENTITY_other) {
+    if (dloc_placement) {
+      assert(loc != -1);
+      worker = loc % num_workers;
+    } else {
+      worker = SNetAssignTask( (ent==ENTITY_box), name );
+    }
+  }
+
+  lpel_task_t *t = LpelTaskCreate(worker, func, arg, GetStacksize(ent));
+
+  LpelSetUserData(t, buf);
+  LpelSetUserDataDestructor(t, &FreeName);
 
 #ifdef USE_LOGGING
-	if (mon_flags & SNET_MON_TASK){
-		mon_task_t *mt = SNetThreadingMonTaskCreate(
-				LpelTaskGetID(t),
-				name
-		);
-		LpelTaskMonitor(t, mt);
-		/* if we monitor the task, we make an entry in the map file */
-	}
+  if (mon_flags & SNET_MON_TASK){
+    mon_task_t *mt = SNetThreadingMonTaskCreate(LpelTaskGetID(t), name);
+    LpelTaskMonitor(t, mt);
+    /* if we monitor the task, we make an entry in the map file */
+  }
 
-	if ((mon_flags & SNET_MON_MAP) && mapfile) {
-		int tid = LpelTaskGetID(t);
-		// FIXME: change to binary format
-		(void) fprintf(mapfile, "%d%s %d%c", tid, SNetEntityStr(ent), worker, END_LOG_ENTRY);
-	}
+  if ((mon_flags & SNET_MON_MAP) && mapfile) {
+    // FIXME: change to binary format
+    fprintf(mapfile, "%d%s %d%c", LpelTaskGetID(t), buf, worker, END_LOG_ENTRY);
+  }
 
 
 #endif
 
-	if (type != ENTITY_box && type != ENTITY_fbbuf) {
-		LpelTaskPrio(t, 1);
-	}
+#ifndef NO_PRIORITY
+  if (ent != ENTITY_box && ent != ENTITY_fbbuf) {
+    LpelTaskPrio(t, 1);
+  }
+#endif
 
 
-	//FIXME only for debugging purposes
-	//fflush(mapfile);
-
-	LpelTaskRun(t);
-	return 0;
+  LpelTaskRun(t);
 }
 
+/**
+ * Respawn a current task or if the task is on a different worker, create a
+ * new task
+ */
+void SNetThreadingRespawn(snet_taskfun_t f)
+{ LpelTaskRespawn(f); }
 
-
+const char *SNetThreadingGetName(void)
+{ return LpelGetUserData(LpelTaskSelf()); }

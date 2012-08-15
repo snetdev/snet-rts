@@ -87,4 +87,19 @@ will:
 
 - and no distribution.
 
+Tuning / environment variables
+==============================
+
+The following environment variables influence the execution:
+
+``BENCH_RUNS``
+   The number of times each program is run to produce a ``result`` file. Defaults to 3.
+
+``BENCH_EXTRA_ARGS``
+   Extra command-line arguments to pass to each program. Defaults to none.
+
+``WORKLOAD_FUZZINESS``
+   Fuzziness factor to apply to the N parameter. Defaults to 0%. When
+   non-zero, must be a percentage. The effect is that the workload of
+   each box will between [N*(1-F), N].
 
