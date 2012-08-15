@@ -1,0 +1,35 @@
+  <metadata>
+   <boxdefault>
+     <interface value="SAC4SNet" />
+     <SACmodule>gigo</SACmodule>
+   </boxdefault>
+  </metadata>
+
+net gigo {
+
+    <metadata>
+      <box name="gen" >
+        <SACboxfun>gen</SACboxfun>
+        <SACdefaultmap>0, 1</SACdefaultmap>
+      </box>
+    </metadata>
+
+    <metadata>
+      <box name="mmul" >
+        <SACboxfun>mmul</SACboxfun>
+        <SACdefaultmap>1, 2, 3, 0</SACdefaultmap>
+      </box>
+    </metadata>
+
+    <metadata>
+      <box name="redu" >
+        <SACboxfun>redu</SACboxfun>
+        <SACdefaultmap>2, 3</SACdefaultmap>
+      </box>
+    </metadata>
+
+  box gen( -> (A));
+  box mmul( (A) -> (A));
+  box redu( (A) -> (B));
+
+} connect (gen|[]) .. mmul .. redu;
