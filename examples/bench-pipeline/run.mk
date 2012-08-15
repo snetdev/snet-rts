@@ -52,14 +52,18 @@ input-%.xml: template-input.xml
 
 result-%: test-$(WORD1_)-$(WORD2_)-$(WORD3_)-$(WORD8_)-$(WORD9_)/prog input-$(WORD4_)-$(WORD5_)-$(WORD6_).xml
 	$(V_at)rm -f $@ error-$*
-	$(V_GEN)(/usr/bin/time -p \
-	   ./test-$(WORD1)-$(WORD2)-$(WORD3)-$(WORD8)-$(WORD9)/prog -w $(WORD7) -i input-$(WORD4)-$(WORD5)-$(WORD6).xml >error-$* 2>&1 && \
-	/usr/bin/time -p \
-	   ./test-$(WORD1)-$(WORD2)-$(WORD3)-$(WORD8)-$(WORD9)/prog -w $(WORD7) -i input-$(WORD4)-$(WORD5)-$(WORD6).xml  >>error-$* 2>&1 && \
-	 /usr/bin/time -p \
-	   ./test-$(WORD1)-$(WORD2)-$(WORD3)-$(WORD8)-$(WORD9)/prog -w $(WORD7) -i input-$(WORD4)-$(WORD5)-$(WORD6).xml  >>error-$* 2>&1) \
-	  || { r=$$?; \
-	       echo "  FAIL     ./test-$(WORD1)-$(WORD2)-$(WORD3)-$(WORD8)-$(WORD9)/prog -w $(WORD7) -i input-$(WORD4)-$(WORD5)-$(WORD6).xml" >&2; \
+	$(V_GEN)( touch error-$*; \
+	    i=0; while test $$i -lt $${BENCH_RUNS:-3}; do \
+            if ! /usr/bin/time -p \
+	      ./test-$(WORD1)-$(WORD2)-$(WORD3)-$(WORD8)-$(WORD9)/prog -w $(WORD7) \
+	          -i input-$(WORD4)-$(WORD5)-$(WORD6).xml \
+	          $${BENCH_EXTRA_ARGS:-} \
+                  >>error-$* 2>&1; then \
+                  exit 1; \
+	    fi; \
+	    i=`expr $$i + 1`; \
+	    done ) || { r=$$?; \
+	       echo "  FAIL     ./test-$(WORD1)-$(WORD2)-$(WORD3)-$(WORD8)-$(WORD9)/prog -w $(WORD7) -i input-$(WORD4)-$(WORD5)-$(WORD6).xml $${BENCH_EXTRA_ARGS:-}" >&2; \
 	       echo "  ERROR    -> error-$*" >&2; \
 	       if $(V_P); then cat error-$*; fi; \
 	       exit $$r; }

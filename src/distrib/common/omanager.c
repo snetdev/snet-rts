@@ -2,7 +2,6 @@
 #include <pthread.h>
 
 #include "distribcommon.h"
-#include "entities.h"
 #include "memfun.h"
 #include "omanager.h"
 #include "record.h"
@@ -114,7 +113,7 @@ static void UpdateBlocked(snet_stream_dest_map_t *map, snet_dest_list_t *list,
   pthread_mutex_unlock(&outputManagerMutex);
 }
 
-void SNetOutputManager(snet_entity_t *ent, void *args);
+void SNetOutputManager(void *args);
 
 void SNetOutputManagerInit(void)
 {
@@ -126,9 +125,8 @@ void SNetOutputManagerInit(void)
 void SNetOutputManagerStart(void)
 {
   wakeupStream = SNetStreamCreate(1);
-  SNetThreadingSpawn(
-    SNetEntityCreate( ENTITY_other, -1, NULL,
-      "output_manager", &SNetOutputManager, NULL));
+  SNetThreadingSpawn( ENTITY_other, -1, NULL,
+      "output_manager", &SNetOutputManager, NULL);
 }
 
 void SNetOutputManagerStop(void)
@@ -143,14 +141,13 @@ void SNetOutputManagerStop(void)
   pthread_mutex_unlock(&outputManagerMutex);
 }
 
-void SNetOutputManager(snet_entity_t *ent, void *args)
+void SNetOutputManager(void *args)
 {
+  (void) args; /* NOT USED */
   snet_streamset_t waiting = NULL;
   snet_streamset_t blocked = NULL;
   snet_stream_dest_map_t *streamMap = SNetStreamDestMapCreate(0);
   snet_stream_desc_t *wakeupDesc = SNetStreamOpen(wakeupStream, 'r');
-  (void) ent; /* NOT USED */
-  (void) args; /* NOT USED */
 
   SNetStreamsetPut(&waiting, wakeupDesc);
 

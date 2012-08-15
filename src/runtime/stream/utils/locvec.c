@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 #include "locvec.h"
 #include "memfun.h"
@@ -284,42 +285,39 @@ void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec)
 
 
 
-/**
- * Prints the locvec as string representation into a given string buffer
- *
- * @param sbuf  string buffer
- * @param size  maximal allowed size to be printed
- * @param vec   the locvec to be printed
- * @return  the number of characters that were printed, or, that would have
- *          been printed if they didn't exceed the size
- * @pre sbuf is a char buffer large enough to hold the printed
- *      locvec, >= size
- */
-int SNetLocvecPrint(char *sbuf, int size, snet_locvec_t *vec)
+inline static int max(int x, int y) { return x > y ? x : y; }
+
+int SNetLocvecPrintSize(snet_locvec_t *vec)
 {
-  int i, ret, cnt;
-  /* the decimal number representable by 64 bits is at most 20 digits long*/
-  char itembuf[24];
+  int cnt = 0;
 
-  if (size <= 0) return 0;
-
-  cnt = 0;
-  sbuf[0] = '\0';
-  for (i=0; i<vec->size; i++) {
-    snet_locitem_t *item = &vec->arr[i];
-    snet_loctype_t type = item->type;
-    int num = item->num;
-    if (num >= 0) {
-      ret = sprintf(itembuf, ":%c%d", (char)type, num);
-    } else {
-      ret = sprintf(itembuf, ":%c", (char)type);
+  for (int i = 0; i < vec->size; i++) {
+    cnt += 2;
+    if (vec->arr[i].num >= 0) {
+      cnt += max(1, ceil(log10(vec->arr[i].num + 1)));
     }
-    if (cnt+ret < size) {
-      strcpy( sbuf+cnt, itembuf );
-    }
-    cnt += ret;
   }
+
   return cnt;
+}
+
+void SNetLocvecPrint(char *sbuf, snet_locvec_t *vec)
+{
+  int val;
+  int offset = 0;
+
+  for (int i = 0; i < vec->size; i++) {
+    snet_locitem_t *item = &vec->arr[i];
+    if (item->num >= 0) {
+      val = sprintf(sbuf + offset, ":%c%d", (char)item->type, item->num);
+      assert(val >= 0);
+      offset += val;
+    } else {
+      val = sprintf(sbuf + offset, ":%c", (char)item->type);
+      assert(val >= 0);
+      offset += val;
+    }
+  }
 }
 
 
