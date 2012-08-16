@@ -1,0 +1,13 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+
+
+
+net initbox
+{
+  box init( -> (<X>));
+} connect (init | []);
+
