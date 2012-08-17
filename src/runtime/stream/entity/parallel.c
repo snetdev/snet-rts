@@ -418,6 +418,8 @@ static void InitParallelBoxTask(void *arg)
   snet_record_t *rec;
   parg->counter = 0;
   parg->num_init_branches = 0;
+  parg->matchcounter = NULL;
+  parg->usedcounter = NULL;
 
   /* Handle initialiser branches */
   for( i=0; i<num; i++) {
