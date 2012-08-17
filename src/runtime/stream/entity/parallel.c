@@ -71,6 +71,7 @@ static void CheckMatch( snet_record_t *rec,
   int name, val;
   snet_variant_t *variant;
   int max=-1;
+  (void) val;
 
   assert(rec != NULL);
   assert(variant_list != NULL);
@@ -494,6 +495,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   snet_startup_fun_t fun;
   snet_variant_list_t *variants;
   snet_locvec_t *locvec;
+  (void) variants;
 
   num = SNetVariantListListLength( variant_lists);
 
