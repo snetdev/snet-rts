@@ -93,6 +93,7 @@ static void FilterArgsDestroy( filter_arg_t *farg)
   if (farg->filter_instructions != NULL) {
     int i;
     snet_expr_t *expr;
+    (void) expr;
 
     LIST_ENUMERATE(farg->guard_exprs, i, expr) {
       SNetFilterInstrListListDestroy( farg->filter_instructions[i]);
@@ -266,6 +267,8 @@ static void NameshiftTask(void *arg)
   snet_record_t *rec;
   int name, offset, val;
   snet_ref_t *field;
+  (void) val;
+  (void) field;
 
 
   /* Guards are misused for offset */
@@ -365,6 +368,7 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
   } else {
     int i;
     snet_expr_t *expr;
+    (void) expr;
 
     SNetVariantDestroy(input_variant);
     LIST_ENUMERATE(guard_exprs, i, expr) {

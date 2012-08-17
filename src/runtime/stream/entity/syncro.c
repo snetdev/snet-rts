@@ -91,6 +91,7 @@ static void DestroyStorage( snet_record_t **storage,
 {
   int i;
   snet_variant_t *pattern;
+  (void) pattern;
 
   LIST_ENUMERATE(patterns, i, pattern) {
     /* free storage */
