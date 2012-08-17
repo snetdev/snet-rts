@@ -217,12 +217,6 @@ void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
 	}
 }
 
-void FreeName(lpel_task_t *t, void *v)
-{
-  (void) t;
-  SNetMemFree(v);
-}
-
 void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
                         const char *name, snet_taskfun_t func, void *arg)
 {
@@ -250,8 +244,8 @@ void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
 
   lpel_task_t *t = LpelTaskCreate(worker, func, arg, GetStacksize(ent));
 
-  LpelSetUserData(t, buf);
-  LpelSetUserDataDestructor(t, &FreeName);
+  LpelSetName(t, buf);
+  LpelSetNameDestructor(t, &SNetMemFree);
 
 #ifdef USE_LOGGING
   if (mon_flags & SNET_MON_TASK){
@@ -286,4 +280,4 @@ void SNetThreadingRespawn(snet_taskfun_t f)
 { LpelTaskRespawn(f); }
 
 const char *SNetThreadingGetName(void)
-{ return LpelGetUserData(LpelTaskSelf()); }
+{ return LpelGetName(LpelTaskSelf()); }
