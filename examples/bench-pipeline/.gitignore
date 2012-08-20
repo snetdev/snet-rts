@@ -7,3 +7,5 @@ test*.snet
 *.a
 *~
 input-*.xml
+*.gp
+*.dat
