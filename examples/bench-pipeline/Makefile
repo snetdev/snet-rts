@@ -33,12 +33,14 @@ clean: clean-boxes
 
 compile: 
 	$(V_at)echo "# B L W N M C P T D timings..." 
-	$(V_at)for i in $(wildcard result-*); do \
+	$(V_at)ls result-* | while read i; do \
 	  var=`echo $$i | cut -d- -f2- | tr - ' '`; \
 	  printf "$$var "; \
-	  vals=`grep '^real' <$$i | cut -c5- | tr -d ' \t' | tr '\n' ','`; \
+	  vals=`grep '^real' <$$i | grep -v '0.00' | cut -c5- | tr -d ' \t' | tr '\n' ','`; \
+	  if test "x$$vals" = x; then echo "- -"; else \
 	  $(PYTHON) -c "print min([$$vals]), ' '.join((str(x) for x in [$$vals]))"; \
-	done | sort -n -k7
+	  fi; \
+	done
 
 ##### Things that get tested with "make check" #####
 
