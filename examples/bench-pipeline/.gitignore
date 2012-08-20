@@ -1,0 +1,11 @@
+result-*
+error-*
+test-*
+test*.snet
+*.log
+*.o
+*.a
+*~
+input-*.xml
+*.gp
+*.dat
