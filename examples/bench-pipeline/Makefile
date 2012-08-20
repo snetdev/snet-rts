@@ -2,6 +2,7 @@ PYTHON = python
 CC = gcc
 CFLAGS = -std=gnu99 -O2 -g -I$(SNET_INCLUDES)
 SNETC = snetc
+TAG = 
 
 all:
 	@echo "Use: "
@@ -61,7 +62,7 @@ TESTS = $(foreach B,$(T_BASES), \
 	$(B)-$(L)-$(W)-$(N)-$(M)-$(C)-$(P)-$(T)-nodist))))))))
 
 check:
-	$(MAKE) $(TESTS:%=result-%)
+	$(MAKE) $(TESTS:%=result-%$(TAG))
 
 ##### Automated testing/benchmarking #####
 
