@@ -140,7 +140,7 @@ int SNetThreadingInit(int argc, char **argv)
 
   SNetAssignInit(config.num_workers);
 
-  if (!LpelStart(&config)) SNetUtilDebugFatal("Could not initialize LPEL!\n");
+  if (LpelStart(&config)) SNetUtilDebugFatal("Could not initialize LPEL!");
 
   return 0;
 }
