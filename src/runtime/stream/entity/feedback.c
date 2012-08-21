@@ -491,6 +491,7 @@ snet_stream_t *SNetFeedback( snet_stream_t *input,
 
     /* create the feedback collector */
     fbcarg = SNetMemAlloc( sizeof( fbcoll_arg_t));
+    fbcarg->terminate = false;
     fbcarg->instream = SNetStreamOpen(input, 'r');
     fbcarg->outstream = SNetStreamOpen(into_op, 'w');
     fbcarg->backstream = SNetStreamOpen(back_bufout, 'r');
