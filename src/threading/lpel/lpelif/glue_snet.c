@@ -100,6 +100,8 @@ int SNetThreadingInit(int argc, char **argv)
       /* Threshold for placement scheduler */
       i = i + 1;
       config.threshold = atof(argv[i]);
+    } else if(strcmp(argv[i], "-placement") == 0) {
+      config.placement = 1;
     }
   }
 
