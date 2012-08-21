@@ -25,11 +25,7 @@
 
 #include <lpel/monitor.h>
 
-static int num_cpus = 0;
 static int num_workers = 0;
-static int num_others = 0;
-
-
 static FILE *mapfile = NULL;
 static int mon_flags = 0;
 
@@ -73,15 +69,15 @@ int SNetThreadingInit(int argc, char **argv)
 {
   lpel_config_t config;
   char fname[20+1];
-  int i, res;
+  int num_others = 0;
   char *mon_elts = NULL;
-  memset(&config, 0, sizeof(lpel_config_t));
 
+  LpelInit(&config);
 
   config.flags = LPEL_FLAG_PINNED;
   config.threshold = 0;
 
-  for (i=0; i<argc; i++) {
+  for (int i = 0; i < argc; i++) {
     if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
       /* Monitoring level */
       i = i + 1;
@@ -109,64 +105,44 @@ int SNetThreadingInit(int argc, char **argv)
 
 
 #ifdef USE_LOGGING
-	if (mon_elts != NULL) {
-		if (strchr(mon_elts, MON_ALL_FLAG) != NULL) {
-			mon_flags = (1<<7) - 1;
-		} else {
-			if (strchr(mon_elts, MON_MAP_FLAG) != NULL) mon_flags |= SNET_MON_MAP;
-			if (strchr(mon_elts, MON_TIME_FLAG) != NULL) mon_flags |= SNET_MON_TIME;
-			if (strchr(mon_elts, MON_WORKER_FLAG) != NULL) mon_flags |= SNET_MON_WORKER;
-			if (strchr(mon_elts, MON_TASK_FLAG) != NULL) mon_flags |= SNET_MON_TASK;
-			if (strchr(mon_elts, MON_STREAM_FLAG) != NULL) mon_flags |= SNET_MON_STREAM;
-			if (strchr(mon_elts, MON_MESSAGE_FLAG) != NULL) mon_flags |= SNET_MON_MESSAGE;
-			if (strchr(mon_elts, MON_LOAD_FLAG) != NULL) mon_flags |= SNET_MON_LOAD;
-		}
+  if (mon_elts != NULL) {
+    if (strchr(mon_elts, MON_ALL_FLAG) != NULL) {
+      mon_flags = (1<<7) - 1;
+    } else {
+      if (strchr(mon_elts, MON_MAP_FLAG) != NULL) mon_flags |= SNET_MON_MAP;
+      if (strchr(mon_elts, MON_TIME_FLAG) != NULL) mon_flags |= SNET_MON_TIME;
+      if (strchr(mon_elts, MON_WORKER_FLAG) != NULL) mon_flags |= SNET_MON_WORKER;
+      if (strchr(mon_elts, MON_TASK_FLAG) != NULL) mon_flags |= SNET_MON_TASK;
+      if (strchr(mon_elts, MON_STREAM_FLAG) != NULL) mon_flags |= SNET_MON_STREAM;
+      if (strchr(mon_elts, MON_MESSAGE_FLAG) != NULL) mon_flags |= SNET_MON_MESSAGE;
+      if (strchr(mon_elts, MON_LOAD_FLAG) != NULL) mon_flags |= SNET_MON_LOAD;
+    }
 
 
 
-		if ( mon_flags & SNET_MON_MAP) {
-			snprintf(fname, 20, "n%02d_tasks.map", SNetDistribGetNodeId() );
-			/* create a map file */
-			mapfile = fopen(fname, "w");
-			assert( mapfile != NULL);
-			(void) fprintf(mapfile, "%s%c", LOG_FORMAT_VERSION, END_LOG_ENTRY);
-		}
-	}
-
+    if ( mon_flags & SNET_MON_MAP) {
+      snprintf(fname, 20, "n%02d_tasks.map", SNetDistribGetNodeId() );
+      /* create a map file */
+      mapfile = fopen(fname, "w");
+      assert( mapfile != NULL);
+      (void) fprintf(mapfile, "%s%c", LOG_FORMAT_VERSION, END_LOG_ENTRY);
+    }
+  }
 #endif
 
-  /* determine number of cpus */
-	if ( 0 != LpelGetNumCores( &num_cpus) ) {
-		SNetUtilDebugFatal("Could not determine number of cores!\n");
-		assert(0);
-	}
-
-	if (num_workers == 0) {
-		config.proc_workers = num_cpus;
-		//config.num_workers = num_cpus + 1;
-		config.num_workers = num_cpus;
-		config.proc_others = num_others;
-	} else {
-		config.proc_workers = num_cpus;
-		config.num_workers = num_workers;
-		config.proc_others = num_others;
-	}
-	num_workers = config.num_workers;
+  config.proc_others = num_others;
+  config.num_workers = num_workers ? num_workers : config.num_workers;
 
 #ifdef USE_LOGGING
-	/* initialise monitoring module */
-	SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_flags);
+  /* initialise monitoring module */
+  SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_flags);
 #endif
 
-	SNetAssignInit(config.num_workers);
+  SNetAssignInit(config.num_workers);
 
-	res = LpelInit(&config);
-	if (res != LPEL_ERR_SUCCESS) {
-		SNetUtilDebugFatal("Could not initialize LPEL!\n");
-	}
-	LpelStart();
+  if (!LpelStart(&config)) SNetUtilDebugFatal("Could not initialize LPEL!\n");
 
-	return 0;
+  return 0;
 }
 
 unsigned long SNetThreadingGetId()
