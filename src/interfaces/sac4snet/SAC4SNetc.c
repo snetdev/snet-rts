@@ -119,18 +119,46 @@ char *SAC4SNetGenBoxWrapper(char *box_name,
     free(tmp_str);
   }
   STRAPPEND(wrapper_code, ");\n\n");
-  
+
   /* execution realm functions */
   STRAPPEND(wrapper_code, "static snet_handle_t *SNetExeRealm_create__");
   STRAPPEND(wrapper_code, box_name);
   STRAPPEND(wrapper_code, "(snet_handle_t *h)\n{\n"); 
   if (is_mtbox) {
     STRAPPEND(wrapper_code, "  SAChive *hive;\n");
-    STRAPPEND(wrapper_code, "  static const int defmap[] = { ");
-    STRAPPEND(wrapper_code, defmap);
-    STRAPPEND(wrapper_code, " };\n");
-    STRAPPEND(wrapper_code, "  const int defmap_num = sizeof(defmap) / sizeof(int);\n\n");
+    if (defmap[0] == '$') {
+      /* oooh, that's gona be interesting. The default task mapping is supposed to be
+       * available at runtime in an environment variable */
+      STRAPPEND(wrapper_code, "  const char *s_defmap = getenv(\"");
+      STRAPPEND(wrapper_code, &defmap[1]);    // skip the $
+      STRAPPEND(wrapper_code, "\");\n");
+      /* handle missing variable as an error */
+      STRAPPEND(wrapper_code, "  if (s_defmap == NULL) {\n");
+      STRAPPEND(wrapper_code, "    SNetUtilDebugFatal(\"In SNetExeRealm_create__");
+      STRAPPEND(wrapper_code, box_name);
+      STRAPPEND(wrapper_code, ": the variable '");
+      STRAPPEND(wrapper_code, &defmap[1]);    // skip the $
+      STRAPPEND(wrapper_code, "' not found in the environment!\");\n");
+      STRAPPEND(wrapper_code, "  }\n");
+      /* determine the number of ints in the CSV string */
+      STRAPPEND(wrapper_code, "  const int defmap_num = SAC4SNetParseIntCSV(s_defmap, NULL);\n");
+      /* alloc an array and parse the CSV into it */
+      STRAPPEND(wrapper_code, "  int *defmap = calloc(defmap_num, sizeof(int));\n");
+      STRAPPEND(wrapper_code, "  SAC4SNetParseIntCSV(s_defmap, defmap);\n");
+      /* debug print */
+      STRAPPEND(wrapper_code, "  SAC4SNetDebugPrintMapping(\"The box '");
+      STRAPPEND(wrapper_code, box_name);
+      STRAPPEND(wrapper_code, "' is mapped to \", defmap, defmap_num);\n");
+    } else {
+      STRAPPEND(wrapper_code, "  static const int defmap[] = { ");
+      STRAPPEND(wrapper_code, defmap);
+      STRAPPEND(wrapper_code, " };\n");
+      STRAPPEND(wrapper_code, "  const int defmap_num = sizeof(defmap) / sizeof(int);\n\n");
+    }
     STRAPPEND(wrapper_code, "  hive = SAC_AllocHive(defmap_num, 2, defmap, h);\n");
+    if (defmap[0] == '$') {
+      STRAPPEND(wrapper_code, "  free(defmap); defmap = NULL;\n");
+    }
     STRAPPEND(wrapper_code, "  assert(hive != NULL);\n");
     STRAPPEND(wrapper_code, "  SNetHndSetExeRealm(h, hive);\n");
   }

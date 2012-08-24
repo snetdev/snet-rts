@@ -77,8 +77,8 @@ WRAPLIBDIR = sac_lib
 WRAPINCDIR = sac_inc
 
 # you may optionally specify the -nophm in SAC2CFLAGS and S4CFLAGS to disable the private heap manager of sac.
-SAC2CFLAGS  = -g -v0 -mt -ccflag"$(LPEL_INCLUDES)" -target $(SAC2CTARGET) -nophm -dnocleanup
-S4CFLAGS  = -g -v0 -mt -ccflag"$(LPEL_INCLUDES)" -target $(SAC2CTARGET) -incdir $(WRAPINCDIR) -libdir $(WRAPLIBDIR) -o SAC4SNetFibreIO -nophm -dnocleanup
+SAC2CFLAGS  = -g -v0 -mt -ccflag"$(LPEL_INCLUDES)" -target $(SAC2CTARGET) -nophm
+S4CFLAGS  = -g -v0 -mt -ccflag"$(LPEL_INCLUDES)" -target $(SAC2CTARGET) -incdir $(WRAPINCDIR) -libdir $(WRAPLIBDIR) -o SAC4SNetFibreIO -nophm
 
 S4CINCS   = `$(SAC4C) $(S4CFLAGS) -ccflags SAC4SNetFibreIO`
 S4CLIBS   = `$(SAC4C) $(S4CFLAGS) -ldflags SAC4SNetFibreIO`
