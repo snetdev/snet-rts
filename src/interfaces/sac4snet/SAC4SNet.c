@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 #include "SAC4SNet.h"
 #include "SAC4SNetFibreIO.h"
 #include "snetentities.h"
@@ -387,6 +388,61 @@ static void *SAC4SNetDataDeserialise( FILE *file)
   }
 
   return( (void*)scanres);
+}
+
+
+/******************************************************************************/
+
+/*
+ * A utility function to parse a comma separated string (CSV) of integers
+ * into an array of ints. The format of @csv is, eg:
+ *    1, 2, 3, 4
+ * The function returns the total number of integers found in the string.
+ * The values are returned in the optional @nums array.
+ */
+int SAC4SNetParseIntCSV(const char *csv, int *nums)
+{
+  int count = 0;    /* the number of numbers found */
+
+  do {
+    /* skip all whitespace and delimiters */
+    while (isspace(*csv) || *csv == ',' || *csv == ';') {
+      ++csv;
+    }
+    if (*csv == '\0') {
+      /* end of string */
+      break;
+    }
+
+    char *invalid;    /* ptr to the first invalid character in csv */
+    int v = strtol(csv, &invalid, 10);
+    if (invalid == csv) {
+      /* nonsensical character at the position, no number found */
+      Error("SAC4SNetParseIntCSV: the csv string contains an invalid character!");
+    }
+
+    /* there was a number */
+    if (nums != NULL) {
+      nums[count] = v;
+    }
+    /* inc the count of numbers */
+    ++count;
+    /* reposition at the first invalid character, which might be just a whitespace */
+    csv = invalid;
+  } while (*csv != '\0');
+  return count;
+}
+
+
+void SAC4SNetDebugPrintMapping(const char *msg, int *defmap, int cnt)
+{
+  printf("%s[", msg);
+  for (int i = 0; i < cnt; ++i) {
+    if (i > 0)
+      printf(", ");
+    printf("%d", defmap[i]);
+  }
+  printf("]\n");
 }
 
 /************************ Distribution Layer Functions ***********************/
