@@ -29,7 +29,22 @@ void mmul( SNet::SNet &hnd, double[.,.] A)
   SNet::out( hnd, 1, sacprelude::wrap( D));
 }
 
-void redu( SNet::SNet &hnd, double[.,.] A)
+void mmul( SNet::SNet &hnd, double[.] A)
+{
+  C = A + 1.0d;
+  
+  SNet::out( hnd, 1, sacprelude::wrap( C));
+  
+  D = with {
+    ( . <= [i] <= .) {
+      y = A[i] * A[i];
+    } : y;
+  } : genarray(shape(A));
+  
+  SNet::out( hnd, 1, sacprelude::wrap( D));
+}
+
+void redu( SNet::SNet &hnd, double[*] A)
 {
   C = sum(A);
   SNet::out( hnd, 1, sacprelude::wrap( C));
