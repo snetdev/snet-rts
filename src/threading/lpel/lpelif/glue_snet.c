@@ -206,10 +206,11 @@ void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
 
   locveclen = locvec ? SNetLocvecPrintSize(locvec) : 0;
   namelen = name ? strlen(name) : 0;
-  size = locveclen + namelen + 1;
+  size = locveclen + namelen + 2;
   buf = SNetMemAlloc(size);
   if (locvec) SNetLocvecPrint(buf, locvec);
-  strncpy(buf + locveclen, name, namelen);
+  buf[locveclen] = ' ';
+  strncpy(buf + locveclen + 1, name, namelen);
   buf[size-1] = '\0';
 
   if (ent != ENTITY_other) {
