@@ -10,21 +10,21 @@ net gigo {
     <metadata>
       <box name="gen" >
         <SACboxfun>gen</SACboxfun>
-        <SACdefaultmap>0, 1</SACdefaultmap>
+        <SACdefaultmap>-1, 1</SACdefaultmap>
       </box>
     </metadata>
 
     <metadata>
       <box name="mmul" >
         <SACboxfun>mmul</SACboxfun>
-        <SACdefaultmap>1, 2, 3, 0</SACdefaultmap>
+        <SACdefaultmap>$MMAP</SACdefaultmap>
       </box>
     </metadata>
 
     <metadata>
       <box name="redu" >
         <SACboxfun>redu</SACboxfun>
-        <SACdefaultmap>2, 3</SACdefaultmap>
+        <SACdefaultmap>-1, 3</SACdefaultmap>
       </box>
     </metadata>
 
