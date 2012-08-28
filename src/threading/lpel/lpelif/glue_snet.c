@@ -198,17 +198,19 @@ void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
 void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
                         const char *name, snet_taskfun_t func, void *arg)
 {
-  int namelen, size;
+  int locveclen, namelen, size;
   char *buf = NULL;
   int worker = -1;
   /* if locvec is NULL then entity_other */
   assert(locvec != NULL || ent == ENTITY_other);
 
+  locveclen = locvec ? SNetLocvecPrintSize(locvec) : 0;
   namelen = name ? strlen(name) : 0;
-  size = (locvec ? SNetLocvecPrintSize(locvec) : 0) + namelen + 1;
+  size = locveclen + namelen + 2;
   buf = SNetMemAlloc(size);
-  strncpy(buf, name, namelen);
-  if (locvec != NULL) SNetLocvecPrint(buf + namelen, locvec);
+  if (locvec) SNetLocvecPrint(buf, locvec);
+  buf[locveclen] = ' ';
+  strncpy(buf + locveclen + 1, name, namelen);
   buf[size-1] = '\0';
 
   if (ent != ENTITY_other) {
