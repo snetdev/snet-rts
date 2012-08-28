@@ -1,0 +1,65 @@
+Sac4snet interface plugin
+============================
+
+Examples
+----------
+A couple of examples is located in examples/tests/SAC
+
+
+Box metadata in .snet source files
+-----------------------------------
+
+"SACmodule"
+~~~~~~~~~~~~
+Name of the SAC module library that contains the box function.
+
+"SACboxfun"
+~~~~~~~~~~~~
+Function name in the SAC module.
+
+"SACdefaultmap"
+~~~~~~~~~~~~~~~~
+Default mapping of SAC bees (tasks) to LPEL workers.
+Two possible formats:
+    a) Comma separated list of worker IDs (integers).
+        Example:
+            <SACdefaultmap>-1, 2, 3, 0</SACdefaultmap>
+        This assigns workers 2, 3, and 0 to SAC slave bees.
+        The placement of the queen bee (the first integer) is determined
+        by the snet system and cannot be influenced from within SAC, hence
+        the value -1 should be always specified at the position.
+
+    b) Name of an environment variable that will hold the list of worker IDs.
+       The variable name starts by the '$' character.
+        Example:
+            <SACdefaultmap>$AMAP</SACdefaultmap>
+        When the snet program starts it will look for the environment variable AMAP,
+        and expect to find a list of worker IDs in it.
+        So, the program may be executed like this:
+            AMAP=-1,1,2 ./gigo_1-lpel <wkload-A00.xml
+        The same note as above regarding the placement of the queen bee applies as well.
+
+
+Diagnostics
+--------------
+
+*** SAC runtime warning
+*** LPEL::SAC_MT_AllocHive: the mapping specification `places[0]' is not used, it shall be -1 to suppress the warning.
+
+The "SACdefaultmap" metadata tag allows to specify the placement of SAC slave bees (tasks) onto the LPEL workers.
+However, the SAC runtime cannot modify or influence the placement of the queen bee (that is, the "main" box task).
+Therefore, the worker ID at the first position is unused in SAC and should be -1.
+Most likely you have something like this:
+    <SACdefaultmap>0, 1, 2</SACdefaultmap>
+which incorrectly suggests that the queen bee will be placed on worker 0.
+You have to change that to:
+    <SACdefaultmap>-1, 1, 2</SACdefaultmap>
+because you nor me don't know where the queen will be.
+
+
+*** SAC runtime warning
+*** In SAC4SNetFibreIO__PrintDoubleArray2: there was no hive attached to the calling thread!
+    Created a temporary hive of one. The warning will not be repeated for this function.
+
+The SAC printing function is called without an execution realm properly set-up.
+
