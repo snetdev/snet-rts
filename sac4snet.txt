@@ -63,3 +63,9 @@ because you nor me don't know where the queen will be.
 
 The SAC printing function is called without an execution realm properly set-up.
 
+
+(SNET FATAL (NODE 0 THREAD 46951069190544)In SNetExeRealm_create__mmul: the variable 'MMAP' not found in the environment!)
+
+The variable MMAP was not found in the environment. It has been specified in one of the <SACdefaultmap> tags like this:
+    <SACdefaultmap>$MMAP</SACdefaultmap>
+
