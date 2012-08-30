@@ -146,9 +146,11 @@ char *SAC4SNetGenBoxWrapper(char *box_name,
       STRAPPEND(wrapper_code, "  int *defmap = calloc(defmap_num, sizeof(int));\n");
       STRAPPEND(wrapper_code, "  SAC4SNetParseIntCSV(s_defmap, defmap);\n");
       /* debug print */
+#if 0
       STRAPPEND(wrapper_code, "  SAC4SNetDebugPrintMapping(\"The box '");
       STRAPPEND(wrapper_code, box_name);
       STRAPPEND(wrapper_code, "' is mapped to \", defmap, defmap_num);\n");
+#endif
     } else {
       STRAPPEND(wrapper_code, "  static const int defmap[] = { ");
       STRAPPEND(wrapper_code, defmap);
