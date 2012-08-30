@@ -1,9 +1,146 @@
+============================
 Sac4snet interface plugin
 ============================
+
 
 Examples
 ----------
 A couple of examples is located in examples/tests/SAC
+
+
+SAC / LPEL / S-Net Installation instructions
+-----------------------------------------------
+
+Source code packages
+~~~~~~~~~~~~~~~~~~~~~~
+
+Create an empty directory (e.g. $HOME/advance) and download the packages listed below into it:
+
+Portable Coroutine Library (PCL)
+    http://www.xmailserver.org/libpcl.html
+
+Lightweight Parallel Execution Layer (LPEL)
+    git clone git://github.com/snetdev/lpel.git
+
+SAC Compiler (sac2c)
+    svn co svn+ssh://svn@revisionix.stca.herts.ac.uk/repositories/sac/sac2c/trunk sac2c
+
+SAC StdLib (stdlib)
+    svn co svn+ssh://svn@revisionix.stca.herts.ac.uk/repositories/sac/stdlib/trunk stdlib
+
+S-NET Run-time System (snet-rts)
+    git clone git://github.com/snetdev/snet-rts.git
+
+S-NET Compiler (snetc)
+    svn co svn+ssh://svn@svn.snet-home.org/repositories/snet/code/trunk/src/snetc snetc
+
+
+Dependencies
+~~~~~~~~~~~~~~
+
+  PCL <-- LPEL <-+--------------------<-- snet-rts <-- snetc
+                 |                          |
+                 `-- sac2c <-- stdlib <-----'
+
+
+Building order
+~~~~~~~~~~~~~~~~
+
+Generally speaking, the S-NET-related packages need to be *installed* into their final locations
+after being built using 'make install', while the SAC-related packages (the sac2c compiler and stdlib)
+need not.
+
+First of all, a couple of environment variables must be set:
+For SAC:
+    export SACBASE=$HOME/advance
+    export SAC2CBASE=$SACBASE/sac2c
+    export PATH=$PATH:$SAC2CBASE/bin
+    export SVN_EDITOR=/bin/vi
+
+For SNET:
+    SNETBASE=/usr/local
+
+    export SNET_LIBS=$SNETBASE/lib/snet
+    export SNET_INCLUDES=$SNETBASE/include/snet
+    export SNET_MISC=$SNETBASE/share/snet
+    
+    export LD_LIBRARY_PATH=$SNET_LIBS:$SNETBASE/lib:$LD_LIBRARY_PATH
+    export PATH=$SNETBASE/bin:$PATH
+
+It is perhaps best to create a shell script called 'settings.sh' in the top-level directory ($HOME/advance),
+put these commands in it, and then 'source' it into the shell session every time you start working.
+It is NOT recomended to put the commands into a .bashrc or similar file.
+
+For simplicity, this manual assumes the SNET software will be installed into the standard installation
+path "/usr/local". It is possible to install into a different location (e.g. $HOME/advance/local).
+
+This section shows the order in which the software has to be built:
+
+1. pcl
+    Use "./configure --prefix=/usr/local",
+    then "make && make install"
+
+2. lpel
+    If the source code has been checked out directly from the source repository,
+    you first need to create the configure script by running: "./build-aux/boostrap".
+    Then use the standard: "./configure --prefix=/usr/local --with-pcl=/usr/local"
+    and "make && make install"
+
+    Hint: Check the configure log to make sure that pcl was detected.
+
+3. sac2c
+    Use "./configure --with-lpel-include-path=/usr/local/include"
+    then: "make"  to build the compiler itself,
+    then: "make CROSS=lpel"  to build the lpel-enabled cross-compiler.
+    You may decorate the make commands with "-j4" or similar to your liking.
+
+    Hint: Check the configure log to make sure that lpel was detected.
+
+4. stdlib
+    The basic command to build stdlib for SNet is:
+        make CROSS=lpel mtfast
+    For a slightly increased build speed you may decorate with "-j" and "MODE=lean".
+
+    Important: If the LPEL library has been installed into a non-standard location
+    you will need to specify the CCFLAG option to direct the gcc compiler.
+    Suppose we are installing everything into "$HOME/advance/local" instead
+    of "/usr/local". The stdlib make command would read:
+        make CROSS=lpel mtfast CCFLAG="-I$HOME/advance/local/include -L$HOME/advance/local/lib -Wl,-rpath,$HOME/advance/local/lib"
+    This is because the gcc compiler invoked from sac2c needs to know where to
+    find the library.
+
+5. snet-rts
+    Use "./configure --prefix=/usr/local".
+    If LPEL hasn't been detected we may add:
+    "--with-lpel-includes=/usr/local/include --with-lpel-libs=/usr/local/lib"
+    Then: "make && make install"
+    This installs libraries into "$PREFIX/lib/snet"
+
+6. snetc
+    Use "./configure --prefix=/usr/local"
+    If installing into a non-standard path, add:
+        CFLAGS="-I$HOME/advance/local/include" LDFLAGS="-L$HOME/advance/local/lib"
+    Then "make" to build the compiler.
+    The executable file "snetc" is left in the package's top directory;
+    create a symlink to it from "/usr/local/bin".
+
+7. examples
+    Build a primitive test/example in "snet-rts/examples/tests/SAC/gigo1"
+    using "make". This produces the file "gigo-lpel".
+    Run the program like this:
+        MMAP=-1,2,4 ./gigo-lpel <input2.xml
+
+
+Friendly hints
+~~~~~~~~~~~~~~~~
+
+It is actually quite wise NOT to use the standard installation path "/usr/local",
+but instead to install into a more specific location, such as "$HOME/advance/local".
+This allows to keep several versions of the system side by side.
+
+Should the sac2c compiler go crazy about module version mismatch, you may try purging
+the snet/sac libraries in "/usr/local/lib/snet".
+
 
 
 Box metadata in .snet source files
