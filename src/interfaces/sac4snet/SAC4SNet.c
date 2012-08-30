@@ -286,6 +286,9 @@ static void SAC4SNetDataSerialise( FILE *file, void *ptr)
     }
     fprintf(file, " %s\n", IDSTRINGSUF);
 
+    /* create a stub hive for the SAC calls */
+    SAC_AttachHive(SAC_AllocHive(1, 2, NULL, NULL));
+
     switch( SACARGgetBasetype( arg)) {
       case SACint: 
         SAC4SNetFibreIO__PrintIntArray2( 
@@ -309,6 +312,9 @@ static void SAC4SNetDataSerialise( FILE *file, void *ptr)
         fprintf( file, "## UNSERIALISABLE BASETYPE (%d) ##\n", btype);
       break;
     }
+
+    /* release the stub hive */
+    SAC_ReleaseHive(SAC_DetachHive());
 
   }
   SNetMemFree( basetype_str);
@@ -346,6 +352,9 @@ static void *SAC4SNetDataDeserialise( FILE *file)
     }
     
     if( strcmp( IDSTRINGSUF, buf) == 0) {
+      /* create a stub hive for the SAC calls */
+      SAC_AttachHive(SAC_AllocHive(1, 2, NULL, NULL));
+
       sac_shp = SACARGconvertFromIntPointerVect( shape, 1, &dim);
       switch( basetype) {
         case SACint:
@@ -376,6 +385,9 @@ static void *SAC4SNetDataDeserialise( FILE *file)
           break;
       }
       fclose( datafile);
+
+      /* release the stub hive */
+      SAC_ReleaseHive(SAC_DetachHive());
     }
     else { /* Illegal Header Suffix */
       scanres = NULL;
