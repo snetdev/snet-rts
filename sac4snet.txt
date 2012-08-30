@@ -2,6 +2,9 @@
 Sac4snet interface plugin
 ============================
 
+:Author:
+    Jaroslav Sykora (jara)
+
 
 Examples
 ----------
@@ -35,10 +38,11 @@ S-NET Compiler (snetc)
     svn co svn+ssh://svn@svn.snet-home.org/repositories/snet/code/trunk/src/snetc snetc
 
 
-Dependencies
-~~~~~~~~~~~~~~
+Dependency graph
+~~~~~~~~~~~~~~~~~
+::
 
-  PCL <-- LPEL <-+--------------------<-- snet-rts <-- snetc
+  PCL <-- LPEL <-+--------------------<-- snet-rts <-- snetc <-- snet-rts/examples
                  |                          |
                  `-- sac2c <-- stdlib <-----'
 
@@ -51,13 +55,15 @@ after being built using 'make install', while the SAC-related packages (the sac2
 need not.
 
 First of all, a couple of environment variables must be set:
-For SAC:
+For SAC::
+
     export SACBASE=$HOME/advance
     export SAC2CBASE=$SACBASE/sac2c
     export PATH=$PATH:$SAC2CBASE/bin
     export SVN_EDITOR=/bin/vi
 
-For SNET:
+For SNET::
+
     SNETBASE=/usr/local
 
     export SNET_LIBS=$SNETBASE/lib/snet
@@ -97,15 +103,19 @@ This section shows the order in which the software has to be built:
     Hint: Check the configure log to make sure that lpel was detected.
 
 4. stdlib
-    The basic command to build stdlib for SNet is:
+    The basic command to build stdlib for SNet is::
+    
         make CROSS=lpel mtfast
+    
     For a slightly increased build speed you may decorate with "-j" and "MODE=lean".
 
     Important: If the LPEL library has been installed into a non-standard location
     you will need to specify the CCFLAG option to direct the gcc compiler.
     Suppose we are installing everything into "$HOME/advance/local" instead
-    of "/usr/local". The stdlib make command would read:
+    of "/usr/local". The stdlib make command would read::
+    
         make CROSS=lpel mtfast CCFLAG="-I$HOME/advance/local/include -L$HOME/advance/local/lib -Wl,-rpath,$HOME/advance/local/lib"
+    
     This is because the gcc compiler invoked from sac2c needs to know where to
     find the library.
 
@@ -118,8 +128,10 @@ This section shows the order in which the software has to be built:
 
 6. snetc
     Use "./configure --prefix=/usr/local"
-    If installing into a non-standard path, add:
+    If installing into a non-standard path, add::
+    
         CFLAGS="-I$HOME/advance/local/include" LDFLAGS="-L$HOME/advance/local/lib"
+    
     Then "make" to build the compiler.
     The executable file "snetc" is left in the package's top directory;
     create a symlink to it from "/usr/local/bin".
@@ -127,7 +139,8 @@ This section shows the order in which the software has to be built:
 7. examples
     Build a primitive test/example in "snet-rts/examples/tests/SAC/gigo1"
     using "make". This produces the file "gigo-lpel".
-    Run the program like this:
+    Run the program like this::
+    
         MMAP=-1,2,4 ./gigo-lpel <input2.xml
 
 
@@ -140,6 +153,9 @@ This allows to keep several versions of the system side by side.
 
 Should the sac2c compiler go crazy about module version mismatch, you may try purging
 the snet/sac libraries in "/usr/local/lib/snet".
+
+Don't forget to run "make install" after each update and re-compilation cycle
+in lpel and snet-rts packages!
 
 
 
@@ -158,51 +174,69 @@ Function name in the SAC module.
 ~~~~~~~~~~~~~~~~
 Default mapping of SAC bees (tasks) to LPEL workers.
 Two possible formats:
-    a) Comma separated list of worker IDs (integers).
-        Example:
-            <SACdefaultmap>-1, 2, 3, 0</SACdefaultmap>
-        This assigns workers 2, 3, and 0 to SAC slave bees.
-        The placement of the queen bee (the first integer) is determined
-        by the snet system and cannot be influenced from within SAC, hence
-        the value -1 should be always specified at the position.
 
-    b) Name of an environment variable that will hold the list of worker IDs.
-       The variable name starts by the '$' character.
-        Example:
-            <SACdefaultmap>$AMAP</SACdefaultmap>
-        When the snet program starts it will look for the environment variable AMAP,
-        and expect to find a list of worker IDs in it.
-        So, the program may be executed like this:
-            AMAP=-1,1,2 ./gigo_1-lpel <wkload-A00.xml
-        The same note as above regarding the placement of the queen bee applies as well.
+a) Comma separated list of worker IDs (integers).
+    Example::
+    
+        <SACdefaultmap>-1, 2, 3, 0</SACdefaultmap>
+    
+    This assigns workers 2, 3, and 0 to SAC slave bees.
+    The placement of the queen bee (the first integer) is determined
+    by the snet system and cannot be influenced from within SAC, hence
+    the value -1 should be always specified at the position.
+
+b) Name of an environment variable that will hold the list of worker IDs.
+    The variable name starts by the '$' character.
+    Example::
+    
+        <SACdefaultmap>$AMAP</SACdefaultmap>
+    
+    When the snet program starts it will look for the environment variable AMAP,
+    and expect to find a list of worker IDs in it.
+    So, the program may be executed like this::
+    
+        AMAP=-1,1,2 ./gigo_1-lpel <wkload-A00.xml
+    
+    The same note as above regarding the placement of the queen bee applies as well.
 
 
 Diagnostics
 --------------
 
-*** SAC runtime warning
-*** LPEL::SAC_MT_AllocHive: the mapping specification `places[0]' is not used, it shall be -1 to suppress the warning.
+**Mapping specification**::
+
+    *** SAC runtime warning
+    *** LPEL::SAC_MT_AllocHive: the mapping specification 'places[0]' is not used, it shall be -1 to suppress the warning.
 
 The "SACdefaultmap" metadata tag allows to specify the placement of SAC slave bees (tasks) onto the LPEL workers.
 However, the SAC runtime cannot modify or influence the placement of the queen bee (that is, the "main" box task).
 Therefore, the worker ID at the first position is unused in SAC and should be -1.
-Most likely you have something like this:
+Most likely you have something like this::
+
     <SACdefaultmap>0, 1, 2</SACdefaultmap>
+
 which incorrectly suggests that the queen bee will be placed on worker 0.
-You have to change that to:
+You have to change that to::
+
     <SACdefaultmap>-1, 1, 2</SACdefaultmap>
+
 because you nor me don't know where the queen will be.
 
 
-*** SAC runtime warning
-*** In SAC4SNetFibreIO__PrintDoubleArray2: there was no hive attached to the calling thread!
+**No hive attached**::
+
+    *** SAC runtime warning
+    *** In SAC4SNetFibreIO__PrintDoubleArray2: there was no hive attached to the calling thread!
     Created a temporary hive of one. The warning will not be repeated for this function.
 
 The SAC printing function is called without an execution realm properly set-up.
 
 
-(SNET FATAL (NODE 0 THREAD 46951069190544)In SNetExeRealm_create__mmul: the variable 'MMAP' not found in the environment!)
+**Environmet variable not found**::
 
-The variable MMAP was not found in the environment. It has been specified in one of the <SACdefaultmap> tags like this:
+    (SNET FATAL (NODE 0 THREAD 46951069190544)In SNetExeRealm_create__mmul: the variable 'MMAP' not found in the environment!)
+
+The variable MMAP was not found in the environment. It has been specified in one of the <SACdefaultmap> tags like this::
+
     <SACdefaultmap>$MMAP</SACdefaultmap>
 
