@@ -9,6 +9,7 @@
 #include "memfun.h"
 #include "scc.h"
 #include "sccmalloc.h"
+#include "bool.h"
 
 typedef union block {
   struct {
