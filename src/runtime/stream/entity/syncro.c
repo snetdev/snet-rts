@@ -185,22 +185,13 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
             /* this is the first sync */
             if (!partial_sync) {
               partial_sync = true;
-
-#ifdef USE_USER_EVENT_LOGGING
-              /* Emit a monitoring message of first record entering syncro cell */
-              SNetThreadingEventSignal( ent,
-                  SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
-                  );
-#endif
-
-            } else {
-#ifdef USE_USER_EVENT_LOGGING
-              /* Emit a monitoring message of another accepted record entering syncro cell */
-              SNetThreadingEventSignal( ent,
-                  SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
-                  );
-#endif
             }
+#ifdef USE_USER_EVENT_LOGGING
+            /* Emit a monitoring message of another accepted record entering syncro cell */
+            SNetThreadingEventSignal( ent,
+            		SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
+            );
+#endif
           }
         }
 
