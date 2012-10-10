@@ -1,0 +1,36 @@
+module gigo;
+
+use Structures: all;
+use StdIO: all;
+/*use Array: all;*/
+
+export all;
+
+
+void gen( SNet::SNet &hnd)
+{
+  A = tod(reshape( [1000,1000], iota(1000000)));
+  //A = tod(reshape( [10,10], iota(100)));
+  SNet::out( hnd, 1, sacprelude::wrap( A));
+}
+
+void mmul( SNet::SNet &hnd, double[.,.] A)
+{
+  C = A + 1.0d;
+  
+  SNet::out( hnd, 1, sacprelude::wrap( C));
+  
+  D = with {
+    ( . <= [i,j] <= .) {
+      y = sum(A[i,.] * A[.,j]);
+    } : y;
+  } : genarray(shape(A));
+  
+  SNet::out( hnd, 1, sacprelude::wrap( D));
+}
+
+void redu( SNet::SNet &hnd, double[.,.] A)
+{
+  C = sum(A);
+  SNet::out( hnd, 1, sacprelude::wrap( C));
+}

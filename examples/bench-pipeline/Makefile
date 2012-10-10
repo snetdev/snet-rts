@@ -2,6 +2,7 @@ PYTHON = python
 CC = gcc
 CFLAGS = -std=gnu99 -O2 -g -I$(SNET_INCLUDES)
 SNETC = snetc
+TAG = 
 
 all:
 	@echo "Use: "
@@ -31,11 +32,14 @@ clean: clean-boxes
 	rm -f result-* error-* input-*
 
 compile: 
-	for i in $(wildcard result-*); do \
+	$(V_at)echo "# B L W N M C P T D timings..." 
+	$(V_at)ls result-* | while read i; do \
 	  var=`echo $$i | cut -d- -f2- | tr - ' '`; \
 	  printf "$$var "; \
-	  grep '^real' <$$i | cut -d' ' -f2 | tr '\n' ' '; \
-	  echo; \
+	  vals=`grep '^real' <$$i | grep -v '0.00' | cut -c5- | tr -d ' \t' | tr '\n' ','`; \
+	  if test "x$$vals" = x; then echo "- -"; else \
+	  $(PYTHON) -c "print min([$$vals]), ' '.join((str(x) for x in [$$vals]))"; \
+	  fi; \
 	done
 
 ##### Things that get tested with "make check" #####
@@ -47,19 +51,20 @@ T_NRECS = 1 50
 T_CYCLES = 1 50
 T_THREADING = lpel pthread
 T_CORES = 1 2
+T_LOADS = 1
 
 TESTS = $(foreach B,$(T_BASES), \
 	$(foreach L,$(T_LENS), \
 	$(foreach W,$(T_WIDTHS), \
 	$(foreach N,$(T_NRECS), \
+	$(foreach M,$(T_LOADS), \
 	$(foreach C,$(T_CYCLES), \
 	$(foreach P,$(T_CORES), \
 	$(foreach T,$(T_THREADING), \
-	$(B)-$(L)-$(W)-$(N)-1-$(C)-$(P)-$(T)-nodist)))))))
+	$(B)-$(L)-$(W)-$(N)-$(M)-$(C)-$(P)-$(T)-nodist))))))))
 
 check:
-	rm -f $(TESTS:%=result-%) $(TESTS:%=error-%)
-	$(MAKE) $(TESTS:%=result-%)
+	$(MAKE) $(TESTS:%=result-%$(TAG))
 
 ##### Automated testing/benchmarking #####
 

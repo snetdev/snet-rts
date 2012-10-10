@@ -200,6 +200,7 @@ void SNetRecDestroy( snet_record_t *rec)
 {
   int name;
   snet_ref_t *field;
+  (void) name;
 
   switch (REC_DESCR( rec)) {
     case REC_data:
@@ -555,6 +556,7 @@ void SNetRecSerialise(
 {
   snet_ref_t *val;
   int key, enumConversion;
+  (void) key;
 
   enumConversion = REC_DESCR(rec);
   packInts(buf, 1, &enumConversion);

@@ -124,8 +124,8 @@ static void SerialiseData(FILE *file, c4snet_type_t type, void *data)
     case CTYPE_ulong: fprintf(file, "%lu", *(unsigned long *) data); break;
     case CTYPE_long: fprintf(file, "%ld", *(long *) data); break;
     case CTYPE_float: fprintf(file, "%.32f", *(float *) data); break;
-    case CTYPE_double: fprintf(file, "%.32le", *(double *) data); break;
-    case CTYPE_ldouble: fprintf(file, "%.32le", *(long double *) data); break;
+    case CTYPE_double: fprintf(file, "%.32e", *(double *) data); break;
+    case CTYPE_ldouble: fprintf(file, "%.32Le", *(long double *) data); break;
     default: SNetUtilDebugFatal("Unknown type in C4SNet.");
   }
 }

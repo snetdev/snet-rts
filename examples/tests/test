@@ -17,12 +17,13 @@ function runTests {
 
   # For all tests
   for dir in "${tests[@]}"; do
+    fail_flag=false
     # Try to compile test
     if make -C $base/$dir 2>/dev/null >/dev/null; then
       # If the compile succeeded, run the test for each XML file.
       for input in $base/$dir/*.xml; do
         if [ -f $base/$dir/$dir ]; then
-          if run $base/$dir/$dir $input out.bak; then
+          if run $base/$dir/$dir $input out.bak -m A; then
             # If the test exited succesfully, verify the output
             if ! ./compare ${input%.xml} out.bak; then
               echo "Results differ for $dir with ${input#$base/$dir/}"
@@ -34,13 +35,16 @@ function runTests {
           else
             echo "Execution failed for $dir with ${input#$base/$dir/}"
             rm -f out.bak
+            fail_flag=true
           fi
         fi
       done
     else
       echo "Compile failed for $dir"
     fi
-    make -C $base/$dir clean 2>/dev/null >/dev/null
+    if ! $fail_flag; then
+      make -C $base/$dir clean 2>/dev/null >/dev/null
+    fi
   done
 }
 

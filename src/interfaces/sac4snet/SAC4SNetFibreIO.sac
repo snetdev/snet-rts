@@ -86,21 +86,20 @@ inline void FibrePrint(File &stream, double arr)
 
 
 /** Printing ********************************************************/
-void PrintIntArray( File &f, int[+] A)
+void PrintIntArray( File &f, int[*] A)
 {
    SAC4SNetFibreIO::FibrePrint( f, A);
 }
 
-void PrintDoubleArray( File &f, double[+] A)
+void PrintDoubleArray( File &f, double[*] A)
 {
    SAC4SNetFibreIO::FibrePrint( f, A);
 }
 
-void PrintFloatArray( File &f, float[+] A)
+void PrintFloatArray( File &f, float[*] A)
 {
    SAC4SNetFibreIO::FibrePrint( f, A);
 }
-
 
 
 /** Scanning *********************************************************/

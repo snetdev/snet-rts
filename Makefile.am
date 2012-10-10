@@ -7,7 +7,8 @@ snetstuff_DATA = \
 	compile_cmd link_cmd
 
 pkgdata_DATA =\
-	src/snet.mkf
+	src/snet.mkf \
+	snet-config.mkf
 
 snetstuff_SCRIPTS = \
 	libtool
@@ -28,7 +29,6 @@ pkginclude_HEADERS = \
 	include/constants.h \
 	include/debug.h \
 	include/distribution.h \
-	include/entities.h \
 	include/expression.h \
 	include/filter.h \
 	include/handle.h \
@@ -94,7 +94,6 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/entity/box.c \
 	src/runtime/stream/entity/collector.c \
 	src/runtime/stream/entity/collector.h \
-	src/runtime/stream/entity/entities.c \
 	src/runtime/stream/entity/feedback.c \
 	src/runtime/stream/entity/filter.c \
 	src/runtime/stream/entity/out.c \
@@ -104,7 +103,6 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/entity/star.c \
 	src/runtime/stream/entity/syncro.c \
 	src/runtime/stream/observer/observers.c \
-	src/runtime/stream/observer/observers.h \
 	src/runtime/stream/langif/interface_functions.c \
 	src/runtime/stream/netif/interface.c \
 	src/runtime/stream/netif/input.c \
@@ -236,6 +234,10 @@ link_cmd: Makefile
 	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
 	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS}' >$@
 
+snet-config.mkf: Makefile
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)echo LPEL_INCLUDES=$(LPEL_INCLUDES) >$@
+	$(AM_V_GEN)echo LIBLPEL_LA=$(LIBLPEL_LA) >>$@
 
 CLEANFILES = \
         compile_cmd \
