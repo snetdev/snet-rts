@@ -173,6 +173,7 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
       SNetRecSetInterfaceId( new_rec, SNetRecGetInterfaceId( rec));
       SNetRecSetDataMode( new_rec, SNetRecGetDataMode( rec));
       DATA_REC( new_rec, parent_rids) = NULL;
+      GenerateRecId( &DATA_REC( new_rec, rid) );		// generate a new Id for the new message
       /*
       (DATA_REC( rec, parent_rids)==NULL) ?
         NULL : SNetRecIdListCopy(DATA_REC( rec, parent_rids));

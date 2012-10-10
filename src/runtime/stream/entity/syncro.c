@@ -158,6 +158,36 @@ static void SyncBoxTask(void *arg)
   int i, new_matches;
   int num_patterns = SNetVariantListLength( sarg->patterns);
 
+<<<<<<< HEAD
+  /* MAIN LOOP START */
+  while( !terminate) {
+    /* read from input stream */
+    rec = SNetStreamRead( instream);
+
+    switch (SNetRecGetDescriptor( rec)) {
+      case REC_data:
+        new_matches = 0;
+        LIST_ZIP_ENUMERATE(sarg->patterns, sarg->guard_exprs, i, pattern, expr) {
+          /* storage empty and guard accepts => store record*/
+          if (storage[i] == &dummy && SNetRecPatternMatches(pattern, rec) &&
+              SNetEevaluateBool(expr, rec)) {
+            if (new_matches == 0) {
+              storage[i] = rec;
+            } else {
+              /* Record already stored as match for another pattern. */
+              storage[i] = NULL;
+            }
+            new_matches += 1;
+            /* this is the first sync */
+            if (!partial_sync) {
+              partial_sync = true;
+            }
+#ifdef USE_USER_EVENT_LOGGING
+            /* Emit a monitoring message of another accepted record entering syncro cell */
+            SNetThreadingEventSignal( ent,
+            		SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
+            );
+=======
 
   /* read from input stream */
   rec = SNetStreamRead( sarg->instream);
@@ -179,20 +209,12 @@ static void SyncBoxTask(void *arg)
           /* this is the first sync */
           if (!sarg->partial_sync) {
             sarg->partial_sync = true;
-
-#ifdef USE_USER_EVENT_LOGGING
-            /* Emit a monitoring message of first record entering syncro cell */
-            SNetThreadingEventSignal(
-                SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec));
-#endif
-
-          } else {
-#ifdef USE_USER_EVENT_LOGGING
-            /* Emit a monitoring message of another accepted record entering syncro cell */
-            SNetThreadingEventSignal(
-                SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec));
-#endif
           }
+#ifdef USE_USER_EVENT_LOGGING
+          /* Emit a monitoring message of first record entering syncro cell */
+          SNetThreadingEventSignal(
+          		SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec));
+#endif
         }
       }
 
