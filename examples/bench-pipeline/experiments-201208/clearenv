@@ -1,0 +1,34 @@
+#! /bin/bash
+
+prefix=$(dirname "$0")
+prefix=$(cd "$prefix"; pwd)
+
+save_IFS=$IFS
+IFS=:
+NEWPATH=
+for p in $PATH; do
+   if test "x${p#$prefix}" != "x$p"; then
+      continue
+   else
+      NEWPATH="$NEWPATH$p:"
+   fi
+done
+NEWPATH="$NEWPATH$p"
+
+NEWLDPATH=
+for p in $LD_LIBRARY_PATH; do
+   if test "x${p#$prefix}" != "x$p"; then
+      continue
+   else
+      NEWLDPATH="$NEWLDPATH$p:"
+   fi
+done
+NEWLDPATH="$NEWLDPATH$p"
+
+IFS=$saveIFS
+
+cat <<EOF
+unset SNET_INCLUDES SNET_MISC SNET_LIBS;
+export PATH=$NEWPATH ;
+export LD_LIBRARY_PATH=$NEWLDPATH ;
+EOF

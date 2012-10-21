@@ -1,0 +1,33 @@
+# columns:
+# <tag> <desc> <snetbackend> <installtag> <cmdflags>
+po pth+original pthread pthread-base
+ptr pth+respawn pthread pthread-task-respawn
+lo lpel:original lpel lpel-base
+ltr lpel+respawn lpel lpel-task-respawn
+ltrf lpel+respawn+freelist lpel lpel-task-respawn-freelist
+lsmr025 lpel:rndschedsk,th0.25 lpel lpel-stefan-migration -threshold 0.25
+lsmr050 lpel:rndschedsk,th0.5 lpel lpel-stefan-migration -threshold 0.5
+lsmr075 lpel:rndschedsk,th0.75 lpel lpel-stefan-migration -threshold 0.75
+lsmr100 lpel:rndschedsk,th1 lpel lpel-stefan-migration -threshold 1
+lsmr200 lpel:rndschedsk,th2 lpel lpel-stefan-migration -threshold 2
+lsmw025 lpel:wschedsk,th0.25 lpel lpel-stefan-migration-waiting -threshold 0.25
+lsmw050 lpel:wschedsk,th0.5 lpel lpel-stefan-migration-waiting -threshold 0.5
+lsmw075 lpel:wschedsk,th0.75 lpel lpel-stefan-migration-waiting -threshold 0.75
+lsmw100 lpel:wschedsk,th1 lpel lpel-stefan-migration-waiting -threshold 1
+lsmw200 lpel:wschedsk,th2 lpel lpel-stefan-migration-waiting -threshold 2
+lmr025 lpel:rndsched,th0.25 lpel lpel-cleanup-20120816 -threshold 0.25
+lmr050 lpel:rndsched,th0.5 lpel lpel-cleanup-20120816 -threshold 0.5
+lmr075 lpel:rndsched,th0.75 lpel lpel-cleanup-20120816 -threshold 0.75
+lmr100 lpel:rndsched,th1 lpel lpel-cleanup-20120816 -threshold 1
+lmr200 lpel:rndsched,th2 lpel lpel-cleanup-20120816 -threshold 2
+lmrcs025 lpel:rndsched+cs,th0.25 lpel lpel-cleanup-20120816-concsched -threshold 0.25
+lmrcs050 lpel:rndsched+cs,th0.5 lpel lpel-cleanup-20120816-concsched -threshold 0.5
+lmrcs075 lpel:rndsched+cs,th0.75 lpel lpel-cleanup-20120816-concsched -threshold 0.75
+lmrcs100 lpel:rndsched+cs,th1 lpel lpel-cleanup-20120816-concsched -threshold 1
+lmrcs200 lpel:rndsched+cs,th2 lpel lpel-cleanup-20120816-concsched -threshold 2
+lmw lpel:wsched lpel lpel-cleanup-20120816-waiting
+lmwcs lpel:wsched+cs lpel lpel-cleanup-20120816-waiting-concsched
+
+
+
+
