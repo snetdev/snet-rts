@@ -1,7 +1,9 @@
 #ifndef _SAC4SNet_h_
 #define _SAC4SNet_h_
 
-#include <assert.h> /* SAC4SNetc generated code requires this */
+/* SAC4SNetc generated code requires this: */
+#include <stdlib.h>
+#include <assert.h>
 
 #include "handle.h"
 #include "sacinterface.h"
@@ -15,5 +17,9 @@ struct handle;
 void SAC4SNetInit( int id, snet_distrib_t distImpl);
 
 void SAC4SNet_out( void *hnd, int variant, ...);
+
+int SAC4SNetParseIntCSV(const char *csv, int *nums);
+
+void SAC4SNetDebugPrintMapping(const char *msg, int *defmap, int cnt);
 
 #endif 

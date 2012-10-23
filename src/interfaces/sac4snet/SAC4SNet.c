@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 #include "SAC4SNet.h"
 #include "SAC4SNetFibreIO.h"
 #include "snetentities.h"
@@ -285,6 +286,9 @@ static void SAC4SNetDataSerialise( FILE *file, void *ptr)
     }
     fprintf(file, " %s\n", IDSTRINGSUF);
 
+    /* create a stub hive for the SAC calls */
+    SAC_AttachHive(SAC_AllocHive(1, 2, NULL, NULL));
+
     switch( SACARGgetBasetype( arg)) {
       case SACint: 
         SAC4SNetFibreIO__PrintIntArray2( 
@@ -308,6 +312,9 @@ static void SAC4SNetDataSerialise( FILE *file, void *ptr)
         fprintf( file, "## UNSERIALISABLE BASETYPE (%d) ##\n", btype);
       break;
     }
+
+    /* release the stub hive */
+    SAC_ReleaseHive(SAC_DetachHive());
 
   }
   SNetMemFree( basetype_str);
@@ -345,6 +352,9 @@ static void *SAC4SNetDataDeserialise( FILE *file)
     }
     
     if( strcmp( IDSTRINGSUF, buf) == 0) {
+      /* create a stub hive for the SAC calls */
+      SAC_AttachHive(SAC_AllocHive(1, 2, NULL, NULL));
+
       sac_shp = SACARGconvertFromIntPointerVect( shape, 1, &dim);
       switch( basetype) {
         case SACint:
@@ -375,6 +385,9 @@ static void *SAC4SNetDataDeserialise( FILE *file)
           break;
       }
       fclose( datafile);
+
+      /* release the stub hive */
+      SAC_ReleaseHive(SAC_DetachHive());
     }
     else { /* Illegal Header Suffix */
       scanres = NULL;
@@ -387,6 +400,61 @@ static void *SAC4SNetDataDeserialise( FILE *file)
   }
 
   return( (void*)scanres);
+}
+
+
+/******************************************************************************/
+
+/*
+ * A utility function to parse a comma separated string (CSV) of integers
+ * into an array of ints. The format of @csv is, eg:
+ *    1, 2, 3, 4
+ * The function returns the total number of integers found in the string.
+ * The values are returned in the optional @nums array.
+ */
+int SAC4SNetParseIntCSV(const char *csv, int *nums)
+{
+  int count = 0;    /* the number of numbers found */
+
+  do {
+    /* skip all whitespace and delimiters */
+    while (isspace(*csv) || *csv == ',' || *csv == ';') {
+      ++csv;
+    }
+    if (*csv == '\0') {
+      /* end of string */
+      break;
+    }
+
+    char *invalid;    /* ptr to the first invalid character in csv */
+    int v = strtol(csv, &invalid, 10);
+    if (invalid == csv) {
+      /* nonsensical character at the position, no number found */
+      Error("SAC4SNetParseIntCSV: the csv string contains an invalid character!");
+    }
+
+    /* there was a number */
+    if (nums != NULL) {
+      nums[count] = v;
+    }
+    /* inc the count of numbers */
+    ++count;
+    /* reposition at the first invalid character, which might be just a whitespace */
+    csv = invalid;
+  } while (*csv != '\0');
+  return count;
+}
+
+
+void SAC4SNetDebugPrintMapping(const char *msg, int *defmap, int cnt)
+{
+  printf("%s[", msg);
+  for (int i = 0; i < cnt; ++i) {
+    if (i > 0)
+      printf(", ");
+    printf("%d", defmap[i]);
+  }
+  printf("]\n");
 }
 
 /************************ Distribution Layer Functions ***********************/
