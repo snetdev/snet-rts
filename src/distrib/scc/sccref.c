@@ -4,7 +4,6 @@
 
 #include "distribcommon.h"
 #include "distribution.h"
-#include "entities.h"
 #include "interface_functions.h"
 #include "memfun.h"
 #include "reference.h"

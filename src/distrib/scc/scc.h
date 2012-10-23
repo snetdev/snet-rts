@@ -6,6 +6,7 @@
 
 #include "debug.h"
 #include "SCC_API.h"
+#include "bool.h"
 
 #define CORES               (NUM_ROWS * NUM_COLS * NUM_CORES)
 #define PAGE_SIZE           (16*1024*1024)
