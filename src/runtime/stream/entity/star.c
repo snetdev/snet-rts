@@ -17,7 +17,7 @@ extern int SNetLocvecTopval(snet_locvec_t *locvec);
 //#define DEBUG_PRINT_GC
 
 
-#define ENABLE_GC
+#define ENABLE_GARBAGE_COLLECTOR
 
 /**
  * argument of the star function
@@ -151,7 +151,6 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
   while( !terminate) {
     /* read from input stream */
     rec = SNetStreamRead( instream);
-
     switch( SNetRecGetDescriptor( rec)) {
 
       case REC_data:
@@ -187,7 +186,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
           counter++;
 
         }
-#ifdef ENABLE_GC
+#ifdef ENABLE_GARBAGE_COLLECTOR
         else if (sync_cleanup) {
           snet_record_t *term_rec;
           /*
@@ -219,13 +218,13 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
           SNetStreamClose(nextstream, false);
           SNetStreamClose(instream, false);
         }
-#endif /* ENABLE_GC */
+#endif /* ENABLE_GARBAGE_COLLECTOR */
         break;
 
       case REC_sync:
         {
           snet_stream_t *newstream = SNetRecGetStream( rec);
-#ifdef ENABLE_GC
+#ifdef ENABLE_GARBAGE_COLLECTOR
           snet_locvec_t *loc = SNetStreamGetSource( newstream);
 #ifdef DEBUG_PRINT_GC
           if (loc != NULL) {
@@ -288,7 +287,7 @@ static void StarBoxTask(snet_entity_t *ent, void *arg)
               SNetRecDestroy( rec);
             }
           } else
-#endif /* ENABLE_GC */
+#endif /* ENABLE_GARBAGE_COLLECTOR */
           {
             /* handle sync record as usual */
             SNetStreamReplace( instream, newstream);

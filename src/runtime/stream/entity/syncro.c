@@ -39,7 +39,7 @@
  * needs to be enabled to trigger the garbage collection mechanism
  * at the parallel dispatcher
  */
-#define SYNC_SEND_OUTTYPES
+#define ENABLE_GARBAGE_COLLECTOR
 
 /*****************************************************************************/
 /* HELPER FUNCTIONS                                                          */
@@ -100,7 +100,7 @@ static void DestroyStorage( snet_record_t **storage,
   }
 }
 
-#ifdef SYNC_SEND_OUTTYPES
+#ifdef ENABLE_GARBAGE_COLLECTOR
 /**
  * Create a new variant that contains the union of fields/tags/btags of
  * a list of variants.
@@ -118,7 +118,7 @@ static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
 
   return res;
 }
-#endif
+#endif /*ENABLE_GARBAGE_COLLECTOR */
 
 
 /*****************************************************************************/
@@ -199,10 +199,8 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
         if (new_matches == 0) {
           SNetStreamWrite( outstream, rec);
         } else if (match_cnt == num_patterns) {
-#ifdef SYNC_SEND_OUTTYPES
-          snet_variant_t *outtype;
-#endif
-          snet_record_t *syncrec = MergeFromStorage( storage, sarg->patterns);
+
+        	snet_record_t *syncrec = MergeFromStorage( storage, sarg->patterns);
 
 #ifdef USE_USER_EVENT_LOGGING
           /* Emit a monitoring message of firing syncro cell */
@@ -215,7 +213,8 @@ static void SyncBoxTask(snet_entity_t *ent, void *arg)
 
           /* follow by a sync record */
           syncrec = SNetRecCreate(REC_sync, sarg->input);
-#ifdef SYNC_SEND_OUTTYPES
+#ifdef ENABLE_GARBAGE_COLLECTOR
+          snet_variant_t *outtype;
           /* if we read from a star entity, we store the outtype along
              with the sync record */
           if( SNetStreamGetSource( sarg->input) != NULL ) {

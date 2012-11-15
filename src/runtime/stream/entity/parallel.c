@@ -37,7 +37,7 @@
 
 //#define DEBUG_PRINT_GC
 
-#define ENABLE_GC_STATE
+#define ENABLE_GARBAGE_COLLECTOR
 
 typedef struct {
   snet_stream_t *input;
@@ -104,7 +104,7 @@ static void CheckMatch( snet_record_t *rec,
 
 
 
-#ifdef ENABLE_GC_STATE
+#ifdef ENABLE_GARBAGE_COLLECTOR
 
 static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
     snet_variant_list_t *variant_list)
@@ -129,7 +129,7 @@ static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
   return true;
 }
 
-#endif /* ENABLE_GC_STATE */
+#endif /* ENABLE_GARBAGE_COLLECTOR */
 
 
 /**
@@ -334,9 +334,9 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
 
       case REC_sync:
         {
-#ifdef ENABLE_GC_STATE
+#ifdef ENABLE_GARBAGE_COLLECTOR
           snet_variant_t *synctype = SNetRecGetVariant(rec);
-          if (synctype!=NULL) {
+          if (synctype != NULL) {
             snet_stream_desc_t *last = NULL;
             int cnt = 0;
 
@@ -356,16 +356,6 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
               }
             }
 
-            /* count remaining branches */
-            for (i=0;i<num;i++) {
-              if (outstreams[i] != NULL) {
-                cnt++;
-                last = outstreams[i];
-                /* send sort records through */
-                SNetStreamWrite( outstreams[i],
-                    SNetRecCreate( REC_sort_end, 0, counter));
-              }
-            }
             counter++;
 
             /* if only one branch left, we can terminate ourselves*/
@@ -390,7 +380,7 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
             }
 
           } else
-#endif /* ENABLE_GC_STATE */
+#endif /* ENABLE_GARBAGE_COLLECTOR */
           {
             /* usual sync replace */
             parg->input = SNetRecGetStream( rec);
