@@ -356,6 +356,13 @@ static void ParallelBoxTask(snet_entity_t *ent, void *arg)
               }
             }
 
+            /* count remaining branches */
+            for (i=0;i<num;i++) {
+            	if (outstreams[i] != NULL) {
+            		cnt++;
+            		last = outstreams[i];
+            	}
+            }
             counter++;
 
             /* if only one branch left, we can terminate ourselves*/
