@@ -300,34 +300,10 @@ static void CollectorTask(void *arg)
   if ( SNetStreamsetIsEmpty( &carg->readyset)) {
     /* the streams which had a sort record are in the waitingset */
     if ( !SNetStreamsetIsEmpty( &carg->waitingset)) {
-      /* check incount */
-      if ( carg->is_static && (1 == carg->incount) ) {
-        /* static collector has only one incoming stream left
-         * -> this input stream can be sent to the collectors
-         *    successor via a sync record
-         * -> collector can terminate
-         */
-        snet_stream_desc_t *in = carg->waitingset;
-
-        SNetStreamWrite( carg->outstream,
-            SNetRecCreate( REC_sync, SNetStreamGet(in))
-            );
-        SNetStreamClose( in, false);
-#ifdef DEBUG_PRINT_GC
-        /* terminating due to GC */
-        SNetUtilDebugNoticeEnt( ent,
-            "[COLL] Terminate static collector as only one branch left!"
-            );
-#endif
-        TerminateCollectorTask(carg->outstream, carg);
-        SNetStreamIterDestroy(wait_iter);
-        return;
-      } else {
         RestoreFromWaitingset(&carg->waitingset,
                               &carg->readyset,
                               &carg->sort_rec,
                               carg->outstream);
-      }
     } else {
       /* both ready set and waitingset are empty */
 #ifdef DEBUG_PRINT_GC
@@ -344,6 +320,30 @@ static void CollectorTask(void *arg)
       return;
     }
   }
+
+  if ( carg->is_static && (1 == carg->incount) ) {
+  	/* static collector has only one incoming stream left
+  	 * -> this input stream can be sent to the collectors
+  	 *    successor via a sync record
+  	 * -> collector can terminate
+  	 */
+  	snet_stream_desc_t *in = (carg->waitingset != NULL) ? carg->waitingset : carg->readyset;
+
+  	SNetStreamWrite( carg->outstream,
+  			SNetRecCreate( REC_sync, SNetStreamGet(in))
+  	);
+  	SNetStreamClose( in, false);
+  	 TerminateCollectorTask(carg->outstream, carg);
+  	 SNetStreamIterDestroy(wait_iter);
+  	 return;
+#ifdef DEBUG_PRINT_GC
+/* terminating due to GC */
+  	SNetUtilDebugNoticeEnt( ent,
+  			"[COLL] Terminate static collector as only one branch left!"
+  	);
+#endif
+  }
+
   /************* end of termination conditions **********/
 
   SNetStreamIterDestroy(wait_iter);

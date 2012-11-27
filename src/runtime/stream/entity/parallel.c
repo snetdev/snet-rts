@@ -37,7 +37,7 @@
 
 //#define DEBUG_PRINT_GC
 
-#define ENABLE_GC_STATE
+#define ENABLE_GARBAGE_COLLECTOR
 
 typedef struct {
   bool is_match;
@@ -107,7 +107,7 @@ static void CheckMatch( snet_record_t *rec,
 
 
 
-#ifdef ENABLE_GC_STATE
+#ifdef ENABLE_GARBAGE_COLLECTOR
 
 static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
     snet_variant_list_t *variant_list)
@@ -132,7 +132,7 @@ static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
   return true;
 }
 
-#endif /* ENABLE_GC_STATE */
+#endif /* ENABLE_GARBAGE_COLLECTOR */
 
 
 /**
@@ -300,7 +300,7 @@ static void ParallelBoxTask(void *arg)
 
     case REC_sync:
       {
-#ifdef ENABLE_GC_STATE
+#ifdef ENABLE_GARBAGE_COLLECTOR
         snet_variant_t *synctype = SNetRecGetVariant(rec);
         if (synctype!=NULL) {
           snet_stream_desc_t *last = NULL;
@@ -327,9 +327,6 @@ static void ParallelBoxTask(void *arg)
             if (parg->outstreams[i] != NULL) {
               cnt++;
               last = parg->outstreams[i];
-              /* send sort records through */
-              SNetStreamWrite( parg->outstreams[i],
-                  SNetRecCreate( REC_sort_end, 0, parg->counter));
             }
           }
           parg->counter++;
@@ -355,7 +352,7 @@ static void ParallelBoxTask(void *arg)
           }
 
         } else
-#endif /* ENABLE_GC_STATE */
+#endif /* ENABLE_GARBAGE_COLLECTOR */
         {
           /* usual sync replace */
           SNetStreamReplace( parg->instream, SNetRecGetStream(rec));
