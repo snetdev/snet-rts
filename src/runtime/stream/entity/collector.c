@@ -326,6 +326,26 @@ void CollectorTask(snet_entity_t *ent, void *arg)
     if ( SNetStreamsetIsEmpty( &readyset)) {
       /* the streams which had a sort record are in the waitingset */
       if ( !SNetStreamsetIsEmpty( &waitingset)) {
+        if ( carg->is_static && (1 == incount) ) {
+          /* static collector has only one incoming stream left
+           * -> this input stream can be sent to the collectors
+           *    successor via a sync record
+           * -> collector can terminate
+           */
+          snet_stream_desc_t *in = (waitingset != NULL) ? waitingset : readyset;
+
+          SNetStreamWrite( outstream,
+              SNetRecCreate( REC_sync, SNetStreamGet(in))
+              );
+          SNetStreamClose( in, false);
+          terminate = true;
+#ifdef DEBUG_PRINT_GC
+          /* terminating due to GC */
+          SNetUtilDebugNoticeEnt( ent,
+              "[COLL] Terminate static collector as only one branch left!"
+              );
+#endif
+        } else
           RestoreFromWaitingset(&waitingset, &readyset, &sort_rec, outstream);
       } else {
         /* both ready set and waitingset are empty */
@@ -341,28 +361,8 @@ void CollectorTask(snet_entity_t *ent, void *arg)
         terminate = true;
       }
     }
-      
-    if ( carg->is_static && (1 == incount) ) {
-        /* static collector has only one incoming stream left
-        * -> this input stream can be sent to the collectors
-        *    successor via a sync record
-        * -> collector can terminate
-        */
-        snet_stream_desc_t *in = (waitingset != NULL) ? waitingset : readyset;
-          
-        SNetStreamWrite( outstream,
-                          SNetRecCreate( REC_sync, SNetStreamGet(in))
-                          );
-        SNetStreamClose( in, false);
-        terminate = true;
-#ifdef DEBUG_PRINT_GC
-          /* terminating due to GC */
-          SNetUtilDebugNoticeEnt( ent,
-                                 "[COLL] Terminate static collector as only one branch left!"
-                               );
-#endif
-      }
 
+     
     /************* end of termination conditions **********/
   } /* MAIN LOOP END */
 
