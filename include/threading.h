@@ -249,6 +249,13 @@ snet_stream_t *SNetStreamGet(snet_stream_desc_t *sd);
 
 
 /**
+ * Get the stream id
+ * @param sd  stream descriptor
+ * @return  the stream id
+ */
+int SNetStreamGetId(snet_stream_desc_t *sd);
+
+/**
  * Read an item from the stream, consuming
  *
  * @param sd  stream descriptor
