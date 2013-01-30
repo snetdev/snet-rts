@@ -5,6 +5,16 @@
 #include "locvec.h"
 #include "moninfo.h"
 
+/*
+* This macro is used to enable the garbage collector (implemented in star.c, syncro.c and parallel.c)
+*  - star entities: postpone termination to avoid creating the star operand network only for REC_sync
+*  - sync: trigger to send outtypes when got synchronised
+*  - parallel: terminate branch due to outtype of synchrocell
+*/
+#define ENABLE_GARBAGE_COLLECTOR
+
+
+
 /******************************************************************************
  *
  * Threading Backends for the Multithreaded S-Net Runtime System
@@ -247,6 +257,14 @@ void SNetStreamReplace(snet_stream_desc_t *sd, snet_stream_t *new_stream);
  */
 snet_stream_t *SNetStreamGet(snet_stream_desc_t *sd);
 
+
+
+/**
+ * Get the stream id
+ * @param sd  stream descriptor
+ * @return  the stream id
+ */
+int SNetStreamGetId(snet_stream_desc_t *sd);
 
 /**
  * Read an item from the stream, consuming
