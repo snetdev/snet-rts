@@ -196,3 +196,7 @@ void SNetStreamIterRemove(snet_stream_iter_t * iter)
 {
   LpelStreamIterRemove((lpel_stream_iter_t *) iter);
 }
+
+int SNetStreamGetId(snet_stream_desc_t *sd) {
+	return LpelStreamGetId((lpel_stream_desc_t *)sd);
+}

@@ -231,6 +231,7 @@ void CollectorTask(snet_entity_t *ent, void *arg)
   snet_stream_iter_t *wait_iter;
   snet_stream_desc_t *outstream;
   snet_stream_desc_t *curstream = NULL;
+  snet_stream_desc_t *last = NULL;		// when the paired parallel terminate, it sends the sort_end record to the last branch
   snet_record_t *sort_rec = NULL;
   snet_record_t *term_rec = NULL;
   int incount;
@@ -278,6 +279,19 @@ void CollectorTask(snet_entity_t *ent, void *arg)
         break;
 
       case REC_sort_end:
+      	/* curstream == last, this is the last branch and the paired parallel already terminates
+      	 * increase the level by one because it was not increased by the paired parallel as it should be
+      	 * Also later when last becomes the only waiting branch, the collector should terminate. However before terminating, it should pretend that parallel has sent the sort end from all branches
+      	 */
+      	if (curstream == last) {			// imply last != NULL, this will be the last branch and the paired parallel already terminates
+      		SNetRecSetLevel(rec, SNetRecGetLevel(rec) + 1);			// increase the level by one because it was not increased by the paired parallel as it should be
+      	}
+      	if (last == NULL && SNetRecGetLevel(rec) == 0 && SNetRecGetNum(rec) == -1) {		// if last was not set, and collector receives a sort_end (l0, c-1) --> set the curstream as last
+      		last = curstream;																															// from now on, any sort_end from last will be increased level by 1
+      		SNetRecDestroy( rec);
+      		break;			// ignore the sort_end
+      	}
+
         ProcessSortRecord(ent, rec, &sort_rec, curstream, &readyset, &waitingset);
         /* end processing this stream */
         curstream = NULL;
@@ -326,13 +340,13 @@ void CollectorTask(snet_entity_t *ent, void *arg)
     if ( SNetStreamsetIsEmpty( &readyset)) {
       /* the streams which had a sort record are in the waitingset */
       if ( !SNetStreamsetIsEmpty( &waitingset)) {
-        if ( carg->is_static && (1 == incount) ) {
-          /* static collector has only one incoming stream left
-           * -> this input stream can be sent to the collectors
-           *    successor via a sync record
-           * -> collector can terminate
-           */
+        if ( carg->is_static && (1 == incount) ) {		// stat
           snet_stream_desc_t *in = (waitingset != NULL) ? waitingset : readyset;
+
+          /* if last is the only one in the waitingset --> pretends that the already-terminated paired parallel has sent the sort end to all branches
+           * Therefore restore the waitingset before terminating (so that a relevant sort_end is sent out) */
+          if (in == last)
+          	RestoreFromWaitingset(&waitingset, &readyset, &sort_rec, outstream);
 
           SNetStreamWrite( outstream,
               SNetRecCreate( REC_sync, SNetStreamGet(in))
