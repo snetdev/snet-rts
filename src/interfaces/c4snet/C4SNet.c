@@ -180,7 +180,7 @@ static void DeserialiseData(FILE *file, c4snet_type_t type, void *data)
         if (!strcmp(buf, "&amp;")) *(char *) data = '&';
         else if (!strcmp(buf, "&lt;")) *(char *) data = '<';
         else if (count == 1) *(char *) data = buf[0];
-        else SNetUtilDebugFatal("FIXME");
+        else SNetUtilDebugFatal("C4SNet: Couldn't deserialise data.");
 
         if (type == CTYPE_uchar) *(unsigned char*) data = (unsigned char) *(char*) data;
         return;
@@ -195,7 +195,7 @@ static void DeserialiseData(FILE *file, c4snet_type_t type, void *data)
     case CTYPE_float: fmt = "%f"; break;
     case CTYPE_double: fmt = "%lf"; break;
     case CTYPE_ldouble: fmt = "%Lf"; break;
-    default: SNetUtilDebugFatal("FIXME");
+    default: SNetUtilDebugFatal("C4SNet: Invalid C datatype.");
   }
 
   fscanf(file, fmt, data);
@@ -236,7 +236,7 @@ static c4snet_data_t *C4SNetDeserialise(FILE *file)
   } else {
     temp->data.ptr = MemAlloc(AllocatedSpace(temp));
     for (int i = 0; i < temp->size; i++) {
-      if (i > 0 && fgetc(file) != ',') SNetUtilDebugFatal("FIXME");
+      if (i > 0 && fgetc(file) != ',') SNetUtilDebugFatal("C4SNet: Parse error deserialising data.");
 
       DeserialiseData(file, temp->type,
                       (char*) temp->data.ptr + i * C4SNetSizeof(temp));
