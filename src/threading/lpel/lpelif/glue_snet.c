@@ -156,17 +156,14 @@ int SNetThreadingInit(int argc, char **argv)
 	}
 
 	if (num_workers == 0) {
-		config.proc_workers = num_cpus;
-		//config.num_workers = num_cpus + 1;
 		config.num_workers = num_cpus;
-		config.proc_others = num_others;
+		//config.num_workers = num_cpus + 1;
 	} else {
-		config.proc_workers = num_cpus;
 		config.num_workers = num_workers;
-		config.proc_others = num_others;
 	}
-	num_workers = config.num_workers;
 
+	config.proc_workers = config.num_workers;
+	config.proc_others = num_others;
 #ifdef USE_LOGGING
 	/* initialise monitoring module */
 	SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_flags);
