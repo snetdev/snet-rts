@@ -1,0 +1,27 @@
+This file shows the meaning of LPEL flags
+
+-i <input file>: specify input file
+
+-m <monitoring flag combination>: enable monitoring (for more detail, see LOGFORMAT)
+
+-w <num>: specify the number of workers
+-wo <num>: specify the number of cores for others/wrapper
+By default: w = #cpus 
+            wo = 0
+
+
+-excl: workers and wrappers executed on exclusive cpus, i.e. one worker has its own cpu
+ If this flag is used:
+    + pinned mode must be enable (by default)
+    + wo > 0
+    + #cpus >= w + wo
+
+- dloc: explicit allocation for task (from the snet file)
+  + if any snet entity is not specified, location would be 0
+
+- sosi <num>: support source/sink
+  + dloc mode should not be used
+  + num: number of core for source/sink, core from 0 -> num - 1: sosi, core from num ->...: workers
+  + from the snet file, entity with location > 0 will be mapped to sosi, otherwise on normal workers
+
+

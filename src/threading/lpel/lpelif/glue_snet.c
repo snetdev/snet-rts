@@ -36,6 +36,8 @@ static int mon_flags = 0;
  * use the Distributed S-Net placement operators for worker placement
  */
 static bool dloc_placement = false;
+static bool sosi_placement = false;
+static int	sosi_num = 0;
 
 
 static size_t GetStacksize(snet_entity_descr_t descr)
@@ -108,9 +110,17 @@ int SNetThreadingInit(int argc, char **argv)
 			/* Number of workers */
 			i = i + 1;
 			num_workers = atoi(argv[i]);
+		} else if(strcmp(argv[i], "-sosi") == 0 && i + 1 <= argc) {
+			sosi_placement = true;
+			i = i + 1;
+			sosi_num = atoi(argv[i]);
 		}
 	}
 
+	if (dloc_placement && sosi_placement)
+		SNetUtilDebugFatal("Could not initialize LPEL (Can not have both sosi and dloc)!\n");
+	if (sosi_placement && sosi_num <= 0)
+		SNetUtilDebugFatal("Could not initialize LPEL sosi number must be greater than 0!\n");
 
 #ifdef USE_LOGGING
 	if (mon_elts != NULL) {
@@ -162,7 +172,8 @@ int SNetThreadingInit(int argc, char **argv)
 	SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_flags);
 #endif
 
-	SNetAssignInit(config.num_workers);
+	/* assin non-sosi task to non-sosi workers */
+	SNetAssignInit(config.num_workers - sosi_num);
 
 	res = LpelInit(&config);
 	if (res != LPEL_ERR_SUCCESS) {
@@ -245,14 +256,17 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 	snet_entity_descr_t type = SNetEntityDescr(ent);
 	int location = SNetEntityNode(ent);
 	const char *name = SNetEntityName(ent);
-
 	if ( type != ENTITY_other) {
 		if (dloc_placement) {
 			assert(location != -1);
 			worker = location % num_workers;
-		} else {
+		} else if (sosi_placement) {
+				if (location > 0)
+					worker = location % sosi_num;
+				else
+					worker = SNetAssignTask( (type==ENTITY_box), name ) + sosi_num;
+		} else
 			worker = SNetAssignTask( (type==ENTITY_box), name );
-		}
 	}
 
 	lpel_task_t *t = LpelTaskCreate(
