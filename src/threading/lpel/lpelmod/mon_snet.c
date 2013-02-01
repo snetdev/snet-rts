@@ -656,7 +656,7 @@ static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 
 static mon_stream_t *MonCbStreamOpen(mon_task_t *mt, unsigned int sid, char mode)
 {
-	if (!mt || !FLAG_STREAMS(mt)) return NULL;
+	if (!mt || !(FLAG_STREAMS(mt) | FLAG_TASK(mt))) return NULL;
 
 	mon_stream_t *ms = malloc(sizeof(mon_stream_t));
 	ms->sid = sid;
@@ -804,10 +804,14 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int flag)
 	}
 
 	if (mon_flags & SNET_MON_TASK) {
-		cb->task_destroy = MonCbTaskDestroy;
-		cb->task_assign  = MonCbTaskAssign;
-		cb->task_start   = MonCbTaskStart;
-		cb->task_stop    = MonCbTaskStop;
+		cb->task_destroy 				= MonCbTaskDestroy;
+		cb->task_assign  				= MonCbTaskAssign;
+		cb->task_start   				= MonCbTaskStart;
+		cb->task_stop    				= MonCbTaskStop;
+		cb->stream_blockon      = MonCbStreamBlockon;				// used for task event, task is blocked on input/output
+		cb->stream_open         = MonCbStreamOpen;
+		cb->stream_close        = MonCbStreamClose;
+		cb->stream_replace      = MonCbStreamReplace;
 	}
 
 	if(mon_flags & SNET_MON_STREAM) {
