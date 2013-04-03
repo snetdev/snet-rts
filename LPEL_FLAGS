@@ -4,24 +4,27 @@ This file shows the meaning of LPEL flags
 
 -m <monitoring flag combination>: enable monitoring (for more detail, see LOGFORMAT)
 
--w <num>: specify the number of workers
--wo <num>: specify the number of cores for others/wrapper
-By default: w = #cpus 
-            wo = 0
+-w <num>: 	specify the number of workers (including master, e.g. -w 2 ==> 1 master, 1 worker)
+-cw <num>: 	specify the number of cpus used for workers and master
+-co <num>: 	specify the number of cpus used for wrappers
+-sosi:	enable supporting source/sink
+
+Each wrapper/source/sink is mapped separately to its own thread.
+Source tasks are tasks of entities starting with "snet_source"
+Sink tasks are tasks of entities starting with "snet_sink"
+
+By default: w = #cpus
+            cw =# cpus
+            co = 0
+            css = 0
+If co = 0; wrapper/source/sink are executed on the same set of cpus as workers
+
+-np: disable pinned mode. By default, pinned mode is enable, i.e. workers and master are mapped in their set of cpus with round-robin manner. E.g. if there is 3 cpus for master/worker and there are 1 master and 4 workers:  master is mapped to cpu 0, worker 1 is mapped to cpu 1, worker 2 is mapped to cpu 2, worker 3 is mapped to cpu 0, worker 4 is mapped to cpu 1.
+When this mode is disable, worker/master are mapped to the set of cpus but not pinned to any specific cpu.
 
 
--excl: workers and wrappers executed on exclusive cpus, i.e. one worker has its own cpu
+-excl: workers and master are executed on exclusive cpus, i.e. one worker/master has its own cpu
  If this flag is used:
-    + pinned mode must be enable (by default)
-    + wo > 0
-    + #cpus >= w + wo
-
-- dloc: explicit allocation for task (from the snet file)
-  + if any snet entity is not specified, location would be 0
-
-- sosi <num>: support source/sink
-  + dloc mode should not be used
-  + num: number of core for source/sink, core from 0 -> num - 1: sosi, core from num ->...: workers
-  + from the snet file, entity with location > 0 will be mapped to sosi, otherwise on normal workers
-
-
+    + pinned mode must be enable
+    + co > 0
+    + #cpus >= cw + co

@@ -552,7 +552,7 @@ static void MonCbTaskDestroy(mon_task_t *mt)
 static void MonCbTaskAssign(mon_task_t *mt, mon_worker_t *mw)
 {
 	assert( mt != NULL );
-	assert( mt->mw == NULL );
+//	assert( mt->mw == NULL );		// not applied for hrc
 	mt->mw = mw;
 }
 
