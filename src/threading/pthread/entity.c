@@ -71,6 +71,7 @@ int SNetThreadingInit(int argc, char **argv)
 {
 #ifdef USE_CORE_AFFINITY
   int i, num_cores;
+  pthread_t selftid;
 #endif
   char fname[32];
   /* initialize the entity counter to 0 */
@@ -86,7 +87,8 @@ int SNetThreadingInit(int argc, char **argv)
       /* Number of cores */
       i = i + 1;
       num_cores = atoi(argv[i]);
-      SetThreadAffinity( (pthread_t*)SNetThreadingGetId(), MAXCORES,  num_cores);
+      selftid = pthread_self();
+      SetThreadAffinity( &selftid, MAXCORES,  num_cores);
     }
   }
 #endif
