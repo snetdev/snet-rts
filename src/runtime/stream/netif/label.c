@@ -137,7 +137,6 @@ char *SNetInIdToLabel(snetin_label_t *labels, int i){
   pthread_mutex_lock(&labels->mutex);
 
   temp_label_t *templabel = labels->temp_labels;
-  temp_label_t *last = NULL;
   char *t = NULL;
   while(templabel != NULL){
     if(templabel->index == i){
@@ -149,7 +148,6 @@ char *SNetInIdToLabel(snetin_label_t *labels, int i){
       
       break;
     }
-    last = templabel;
     templabel = templabel->next;
   }
 
