@@ -37,7 +37,7 @@
 
 //#define DEBUG_PRINT_GC
 
-#define ENABLE_GC_STATE
+#define ENABLE_GARBAGE_COLLECTOR
 
 typedef struct {
   bool is_match;
@@ -107,7 +107,7 @@ static void CheckMatch( snet_record_t *rec,
 
 
 
-#ifdef ENABLE_GC_STATE
+#ifdef ENABLE_GARBAGE_COLLECTOR
 
 static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
     snet_variant_list_t *variant_list)
@@ -132,7 +132,7 @@ static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
   return true;
 }
 
-#endif /* ENABLE_GC_STATE */
+#endif /* ENABLE_GARBAGE_COLLECTOR */
 
 
 /**
@@ -300,7 +300,7 @@ static void ParallelBoxTask(void *arg)
 
     case REC_sync:
       {
-#ifdef ENABLE_GC_STATE
+#ifdef ENABLE_GARBAGE_COLLECTOR
         snet_variant_t *synctype = SNetRecGetVariant(rec);
         if (synctype!=NULL) {
           snet_stream_desc_t *last = NULL;
@@ -327,15 +327,21 @@ static void ParallelBoxTask(void *arg)
             if (parg->outstreams[i] != NULL) {
               cnt++;
               last = parg->outstreams[i];
-              /* send sort records through */
-              SNetStreamWrite( parg->outstreams[i],
-                  SNetRecCreate( REC_sort_end, 0, parg->counter));
             }
           }
           parg->counter++;
 
           /* if only one branch left, we can terminate ourselves*/
           if (cnt == 1) {
+          	/* send a sort end to notify the paired collector so that the collector know all sort_end records coming from the last branch was not rasied the level by the this parallel entity
+          	 * Special (l0, c-1) is used for this purpose
+          	 * On the path the sort_end may reach other parallel and collector, parallel increases the level by 1, and collector decreases by 1
+          	 * When the sort_end record reaches the relevant collector, its level should be zero
+          	 * One collector is supposed to receive at most 1 this special sort_end record. After receiving it, the collector will terminate soon as well
+          	 * */
+          	snet_record_t *notify_rec = SNetRecCreate(REC_sort_end, 0, -1);
+          	SNetStreamWrite(last, notify_rec);
+
             /* forward stripped sync record */
             SNetRecSetVariant(rec, NULL);
             SNetStreamWrite(last, rec);
@@ -355,7 +361,7 @@ static void ParallelBoxTask(void *arg)
           }
 
         } else
-#endif /* ENABLE_GC_STATE */
+#endif /* ENABLE_GARBAGE_COLLECTOR */
         {
           /* usual sync replace */
           SNetStreamReplace( parg->instream, SNetRecGetStream(rec));
