@@ -131,6 +131,12 @@ void SNetThreadingYield(void);
 
 
 
+/**
+ * Check if the current task should be migrate to another core
+ * Should be called for appropriate snet entity at appropriate time
+ */
+void SNetThreadingCheckMigrate();
+
 
 /*****************************************************************************
  * (4) Stream handling

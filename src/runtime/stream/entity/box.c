@@ -135,6 +135,9 @@ static void BoxTask(snet_entity_t *ent, void *arg)
 
         /* restrict to one data record per execution */
         //SNetThreadingYield();
+
+        /* check the box task should be migrated after one record execution */
+        SNetThreadingCheckMigrate();
         break;
 
       case REC_sync:

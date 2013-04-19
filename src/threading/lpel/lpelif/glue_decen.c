@@ -43,6 +43,12 @@ int SNetThreadingInit(int argc, char **argv)
 
 	config.flags = LPEL_FLAG_PINNED; // pinned by default
 
+	/* task migration configure */
+	lpel_tm_config_t tm_conf;
+	memset(&tm_conf, 0, sizeof(lpel_tm_config_t));
+	int tm_mech;
+	double tm_threshold = 0.0;
+
 	for (i=0; i<argc; i++) {
 		if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
 			/* Monitoring level */
@@ -70,11 +76,34 @@ int SNetThreadingInit(int argc, char **argv)
 			sosi_placement = true;
 		} else if (strcmp(argv[i], "-np") == 0) { // no pinned
 			config.flags ^= LPEL_FLAG_PINNED;
+		} else if (strcmp(argv[i], "-tm") == 0) {
+			i = i + 1;
+			tm_mech = atoi(argv[i]);
+		} else if (strcmp(argv[i], "-threshold") == 0) {
+			i = i +1;
+			tm_threshold = atof(argv[i]);
 		}
+	}
+
+	/* set up task migration configuration */
+	switch (tm_mech) {
+	case 1:
+		tm_conf.mechanism = LPEL_MIG_RAND;
+		if (tm_threshold <= 0)
+			tm_threshold = 0.5;
+		tm_conf.threshold = tm_threshold;
+		break;
+	case 2:
+		tm_conf.mechanism = LPEL_MIG_WAIT_PROP;
+		break;
+	default:
+		tm_conf.mechanism = LPEL_MIG_NONE;
+		break;
 	}
 
 #ifdef USE_LOGGING
 	if (mon_elts != NULL) {
+
 		if (strchr(mon_elts, MON_ALL_FLAG) != NULL) {
 			mon_flags = (1<<7) - 1;
 		} else {
@@ -87,6 +116,9 @@ int SNetThreadingInit(int argc, char **argv)
 			if (strchr(mon_elts, MON_LOAD_FLAG) != NULL) mon_flags |= SNET_MON_LOAD;
 		}
 
+		/* set monitoring framework for task migration */
+		if (tm_conf.mechanism == LPEL_MIG_WAIT_PROP)
+			mon_flags |= SNET_MON_WAIT_PROP;
 
 
 		if ( mon_flags & SNET_MON_MAP) {
@@ -119,6 +151,7 @@ int SNetThreadingInit(int argc, char **argv)
 	config.proc_others = proc_others;
 #ifdef USE_LOGGING
 	/* initialise monitoring module */
+	config.mon.num_workers = config.num_workers;
 	SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_flags);
 #endif
 
@@ -129,6 +162,10 @@ int SNetThreadingInit(int argc, char **argv)
 	if (res != LPEL_ERR_SUCCESS) {
 		SNetUtilDebugFatal("Could not initialize LPEL!\n");
 	}
+
+	/* init task migration */
+	tm_conf.num_workers = config.num_workers;
+	LpelTaskMigrationInit(&tm_conf);
 	LpelStart();
 
 	return 0;
@@ -177,7 +214,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 
 
 #ifdef USE_LOGGING
-	if (mon_flags & SNET_MON_TASK){
+	if ((mon_flags & SNET_MON_TASK) || (mon_flags & SNET_MON_WAIT_PROP)){
 		mon_task_t *mt = SNetThreadingMonTaskCreate(
 				LpelTaskGetId(t),
 				name

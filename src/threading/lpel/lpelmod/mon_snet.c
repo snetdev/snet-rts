@@ -3,6 +3,9 @@
 #include <stdarg.h>
 #include <string.h>
 #include <assert.h>
+#include <pthread.h>
+
+#include <time.h>
 
 #include "mon_snet.h"
 
@@ -26,6 +29,14 @@ static const char worker_wait = WORKER_WAIT_EVENT;
 
 #define MON_USREVT_BUFSIZE_DELTA 64
 
+/* static variables for task migration */
+static mon_worker_t **mon_workers = NULL;	//all worker monitors
+static int num_workers;
+static double global_wait_prop = 0.0;	// average task wait proportion of all workers
+static pthread_mutex_t global_lock;	// lock to read global wait
+static int *worker_indexes = NULL;
+
+
 typedef struct mon_usrevt_t mon_usrevt_t;
 
 
@@ -39,7 +50,10 @@ struct mon_worker_t {
 	unsigned int  disp;        /** count how often a task has been dispatched */
 	lpel_timing_t      wait_current;
 	unsigned int wait_cnt;
-	lpel_timing_t wait_time;
+	lpel_timing_t wait_time;	/* idling time of the worker */
+	double avg_wait_prop;	/* average task wait proportion in the worker
+	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 average is obtained over a sliding window time, used in task migration */
+
 	lpel_timing_t exec_time;
 	struct {
 		int cnt, size;
@@ -66,10 +80,14 @@ struct mon_task_t {
 		lpel_timing_t creat; /** task creation time */
 		lpel_timing_t start; /** start time of last dispatch */
 		lpel_timing_t stop;  /** stop time of last dispatch */
+		lpel_timing_t ready;	/** time when task becomes ready recently */
 	} times;
 	mon_stream_t *dirty_list; /** head of dirty stream list */
 	unsigned long last_in_cnt;  /** last counter of an input stream */
 	unsigned long last_out_cnt; /** last counter of an output stream */
+	double wait_prop; 	/* wait time = time period from task become ready;
+	  												 wait proportion = wait_time / (wait_time + et from the last dispatch)
+	  												 avg is obtained over a sliding window time, used in task migration */
 	char blockon;     /** for convenience: tracking if blocked
                         on read or write or any */
 };
@@ -149,6 +167,7 @@ static lpel_timing_t monitoring_begin = LPEL_TIMING_INITIALIZER;
 #define FLAG_TASK(mt)  (mt->flags & SNET_MON_TASK)
 #define FLAG_WORKER(mt)  (mt->flags & SNET_MON_WORKER)
 #define FLAG_LOAD(mt)	(mt->flags & SNET_MON_LOAD)
+#define FLAG_TASK_WAIT(mt)	(mt->flags & SNET_MON_WAIT_PROP)
 
 /**
  * Print a time in usec
@@ -338,8 +357,6 @@ static void PrintUsrEvt(mon_task_t *mt)
 	mw->events.cnt = 0;
 }
 
-
-
 /*****************************************************************************
  * CALLBACK FUNCTIONS
  ****************************************************************************/
@@ -360,7 +377,10 @@ static mon_worker_t *MonCbWorkerCreate( int wid)
 
 	mon->wid = wid;
 
-
+	if (FLAG_TASK_WAIT(mon)) {
+		mon_workers[wid] = mon;
+		mon->avg_wait_prop = 0.0;
+	}
 
 	/* build filename */
 	memset(fname, 0, MON_FNAME_MAXLEN+1);
@@ -552,6 +572,7 @@ static void MonCbTaskDestroy(mon_task_t *mt)
 static void MonCbTaskAssign(mon_task_t *mt, mon_worker_t *mw)
 {
 	assert( mt != NULL );
+	mt->wait_prop = 0.0;		// after migrate the task, reset this
 //	assert( mt->mw == NULL );		// not applied for hrc
 	mt->mw = mw;
 }
@@ -559,6 +580,7 @@ static void MonCbTaskAssign(mon_task_t *mt, mon_worker_t *mw)
 mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *name)
 {
 	mon_task_t *mt = malloc( sizeof(mon_task_t) );
+	mt->wait_prop = 0.0;
 
 	/* zero out everything */
 	memset(mt, 0, sizeof(mon_task_t));
@@ -585,19 +607,39 @@ mon_task_t *SNetThreadingMonTaskCreate(unsigned long tid, const char *name)
 }
 
 
+static void MonCbTaskReady(mon_task_t *mt)
+{
+	if (FLAG_TASK_WAIT(mt)) {
+		assert( mt != NULL );
+		LpelTimingStart(&mt->times.ready);
+	}
+}
+
 static void MonCbTaskStart(mon_task_t *mt)
 {
 	assert( mt != NULL );
-	if FLAG_TIMES(mt) {
+	if (FLAG_TIMES(mt) || FLAG_TASK_WAIT(mt)) {
 		LpelTimingNow(&mt->times.start);
 	}
 
+	if (FLAG_TASK_WAIT(mt)) {
+			LpelTimingEnd(&mt->times.ready);
+		}
 	/* set blockon to any */
 	mt->blockon = 'A';
 }
 
 
+static double calAvgWait(double avg, double wp) {
+	double a = 0.8;	// FIXME
+	return wp * a + avg * (1 - a);
+}
 
+static double calWaitProportion(lpel_timing_t *wait, lpel_timing_t *et) {
+	double wp = LpelTimingToNSec(wait);
+	wp = wp/(LpelTimingToNSec(et) + wp);
+	return wp;
+}
 
 static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 {
@@ -623,15 +665,36 @@ static void MonCbTaskStop( mon_task_t *mt, lpel_taskstate_t state)
 	fprintf( file, "%lu ", mt->tid);
 
 	/* print times */
-	if FLAG_TIMES(mt) {
+	if (FLAG_TIMES(mt) || FLAG_TASK_WAIT(mt)) {
 		/* execution time */
 		LpelTimingDiff(&et, &mt->times.start, &mt->times.stop);
-		PrintTiming( &et , file);
-		fprintf( file, " ");
-		if ( state == TASK_ZOMBIE) {	// task finish
-			PrintTiming( &mt->times.creat, file);
-			fprintf(file, " ");
+		if (FLAG_TIMES(mt)) {
+			PrintTiming( &et , file);
+			fprintf( file, " ");
+			if ( state == TASK_ZOMBIE) {	// task finish
+				PrintTiming( &mt->times.creat, file);
+				fprintf(file, " ");
+			}
 		}
+	}
+
+	if (FLAG_TASK_WAIT (mt)) {
+		double wp = calWaitProportion(&mt->times.ready, &et);
+		mt->wait_prop = calAvgWait(mt->wait_prop, wp);
+
+		/* update worker average wait */
+		// worker read from itself, no need to use lock free
+		double worker_wait = mt->mw->avg_wait_prop;
+		double new_worker_wait = calAvgWait(worker_wait, wp);
+		mt->mw->avg_wait_prop = new_worker_wait;
+
+		/* update global wait */
+		double change = (new_worker_wait - worker_wait)/num_workers;
+
+		/* lock before write to global avg */
+		pthread_mutex_lock(&global_lock);
+		global_wait_prop += change;
+		pthread_mutex_unlock(&global_lock);
 	}
 
 	/* print stream info */
@@ -773,13 +836,40 @@ static void MonCbStreamWakeup(mon_stream_t *ms)
 	//MarkDirty(ms);
 }
 
+static double MonCbGetTaskWaitProp(mon_task_t *mt) {
+	return mt->wait_prop;
+}
 
+static inline int comp(const void *a, const void *b) {
+  double i = mon_workers[*(int*)a]->avg_wait_prop;
+  double j = mon_workers[*(int*)b]->avg_wait_prop;
 
+  if (i < j) return -1;
+  if (i > j) return 1;
+  return 0;
+}
+
+/* get the worker with the most task wait & update the global_wait */
+static int MonCbWorkerMostWaitProp() {
+	qsort(worker_indexes, num_workers, sizeof(int), &comp);
+	return worker_indexes[0];
+}
+
+static double MonCbGetGlobalWaitProp() {
+	double val;
+	pthread_mutex_lock(&global_lock);
+	val = global_wait_prop;
+	pthread_mutex_unlock(&global_lock);
+	return val;
+}
+
+static double MonCbGetWorkerWaitProp(mon_task_t *mt) {
+	return mt->mw->avg_wait_prop;
+}
 
 /*****************************************************************************
  * PUBLIC FUNCTIONS
  ****************************************************************************/
-
 
 
 /**
@@ -825,6 +915,27 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int flag)
 		cb->stream_blockon      = MonCbStreamBlockon;
 		cb->stream_wakeup       = MonCbStreamWakeup;
 	}
+
+	/* monitoring used for task migration based on task waiting time */
+	pthread_mutex_init(&global_lock, NULL);
+	if (mon_flags & SNET_MON_WAIT_PROP) {
+		num_workers = cb->num_workers;
+		mon_workers = (mon_worker_t **) malloc(num_workers * sizeof(mon_worker_t *));
+		global_wait_prop = 0.0;
+		worker_indexes = malloc(num_workers * sizeof(int));
+		for (int i = 0; i < num_workers; i++) {
+			worker_indexes[i] = i;
+		}
+		cb->task_destroy 					= MonCbTaskDestroy;
+		cb->task_assign  					= MonCbTaskAssign;
+		cb->task_start   					= MonCbTaskStart;
+		cb->task_stop    					= MonCbTaskStop;
+		cb->task_ready 						= MonCbTaskReady;
+		cb->get_task_wait_prop 		= MonCbGetTaskWaitProp;
+		cb->worker_most_wait_prop = MonCbWorkerMostWaitProp;
+		cb->get_global_wait_prop 	= MonCbGetGlobalWaitProp;
+		cb->get_worker_wait_prop 	= MonCbGetWorkerWaitProp;
+	}
 	/* initialize timing */
 	LpelTimingNow(&monitoring_begin);
 #endif
@@ -836,7 +947,14 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int flag)
  */
 void SNetThreadingMonCleanup(void)
 {
-	/* NOP */
+#ifdef USE_LOGGING
+	pthread_mutex_destroy(&global_lock);
+	if (mon_workers)
+		free(mon_workers);
+	if (worker_indexes)
+		free(worker_indexes);
+
+#endif
 }
 
 

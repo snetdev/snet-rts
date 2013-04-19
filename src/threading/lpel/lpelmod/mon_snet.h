@@ -2,13 +2,14 @@
 #define _MON_SNET_H_
 
 
-#define SNET_MON_TIME   (1<<0)
-#define SNET_MON_TASK		  (1<<1)
-#define SNET_MON_MESSAGE  	  (1<<2)
+#define SNET_MON_TIME   		(1<<0)
+#define SNET_MON_TASK		  	(1<<1)
+#define SNET_MON_MESSAGE  	(1<<2)
 #define SNET_MON_WORKER  	  (1<<3)
 #define SNET_MON_STREAM  	  (1<<4)
-#define SNET_MON_MAP  	  (1<<5)
-#define SNET_MON_LOAD	 (1<<6)
+#define SNET_MON_MAP  	  	(1<<5)
+#define SNET_MON_LOAD	 			(1<<6)
+#define SNET_MON_WAIT_PROP 	(1<<7)
 
 #define MON_ENTNAME_MAXLEN  64
 #define MON_FNAME_MAXLEN  63
@@ -44,6 +45,7 @@ void SNetThreadingMonEvent(struct mon_task_t *mt,
  - S: stream traces (only with task events)
  - M: message traces (only with task events)
  - A: all
+ - w: collect waiting time for task migration
 */
 #define MON_MAP_FLAG 'm'
 #define MON_TIME_FLAG 't'

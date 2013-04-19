@@ -218,6 +218,11 @@ snet_thread_t *SNetThreadingSelf(void)
 }
 
 
+/* void function, to support task migration for lpel_hrc */
+void SNetThreadingCheckMigrate() {
+}
+
+
 /******************************************************************************
  * Private functions
  *****************************************************************************/
