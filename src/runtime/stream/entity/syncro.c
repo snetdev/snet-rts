@@ -57,11 +57,8 @@ static snet_record_t *MergeFromStorage( snet_record_t **storage,
   snet_variant_t *pattern;
   snet_record_t *result = SNetRecCopy(storage[0]);
 
-  SNetRecAddAsParent( result, storage[0]);
-
   LIST_ENUMERATE(patterns, i, pattern) {
     if (i > 0 && storage[i] != NULL) {
-      SNetRecAddAsParent( result, storage[i]);
 
       RECORD_FOR_EACH_FIELD(storage[i], name, field) {
         if (SNetVariantHasField(pattern, name)) {

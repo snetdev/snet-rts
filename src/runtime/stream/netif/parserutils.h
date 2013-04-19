@@ -41,7 +41,13 @@ extern void SNetInParserInit(FILE *file,
  * @notice parserInit() MUST be called before the first call to parserParse()! 
  */
 
-extern int SNetInParserParse();
+extern int SNetInParserParse(void);
+
+
+/* Similar to SNetInParserParse(), but instead of outputting the record
+ * to the output stream in this case return the record to the parameter.
+ */
+extern int SNetInParserGetNextRecord(snet_record_t **record);
 
 
 /* Delete the parser and all data stored by it.
@@ -50,6 +56,6 @@ extern int SNetInParserParse();
  *         to unexpected results!
  */
 
-extern void SNetInParserDestroy();
+extern void SNetInParserDestroy(void);
 
 #endif /* PARSER_H_ */

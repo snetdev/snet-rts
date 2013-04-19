@@ -3,31 +3,52 @@
  */ 
 
 #include <stdlib.h>
-#include <memfun.h>
+#include <string.h>
 #include <stdio.h>
+#include <errno.h>
+#include "memfun.h"
 
-void *SNetMemAlloc( size_t s) {
-  
-  void *ptr;
-
-  if( s == 0) {
-    ptr = NULL;
-  }
-  else {
-    ptr = malloc( s);
-    if( ptr == NULL) {
-      printf("\n\n** Fatal Error ** : Unable to Allocate Memory.\n\n");
-      exit(1);
-    }
-  }
-
-  return( ptr);
+void SNetMemFailed(void)
+{
+  fprintf(stderr,
+          "\n\n** Fatal Error ** : Unable to Allocate Memory: %s.\n\n",
+          strerror(errno));
+  exit(1);
 }
 
+void *SNetMemAlloc( size_t size)
+{
+  void *ptr = NULL;
+  if (size && (ptr = malloc(size)) == NULL) {
+    SNetMemFailed();
+  }
+  return ptr;
+}
 
-void SNetMemFree( void *ptr) {
+void *SNetMemResize( void *ptr, size_t size)
+{
+  if ((ptr = realloc(ptr, size)) == NULL) {
+    SNetMemFailed();
+  }
+  return ptr;
+}
 
-  free( ptr);
-  ptr = NULL;
+void SNetMemFree( void *ptr)
+{
+  free(ptr);
+}
+
+void* SNetMemAlign( size_t size)
+{
+  void *vptr;
+  int retval;
+  size_t remain = size % LINE_SIZE;
+  size_t request = remain ? (size + (LINE_SIZE - remain)) : size;
+
+  if ((retval = posix_memalign(&vptr, LINE_SIZE, request)) != 0) {
+    errno = retval;
+    SNetMemFailed();
+  }
+  return vptr;
 }
 
