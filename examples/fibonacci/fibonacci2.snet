@@ -1,0 +1,16 @@
+<metadata> <default> <interface value="C4SNet" /> </default> </metadata>
+
+net fibonacci2 ({<N>} -> {<X>})
+{
+    net testZero
+    connect [{<N>} -> if <N==0> then {<N>,<A>,<B>} else {<N>,<A=1>,<B>}];
+
+    net repeat
+    {
+        net testTwo
+        connect [{<N>,<A>,<B>} -> if <N <= 2> then {<X=A+B>}
+                                  else {<N=N-1>,<A=A+B>,<B=A>}];
+    }
+    connect testTwo * {<X>};
+}
+connect testZero .. repeat;

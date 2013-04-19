@@ -212,7 +212,6 @@ void SNetRecDestroy( snet_record_t *rec)
       SNetRefMapDestroy( DATA_REC( rec, fields));
       SNetIntMapDestroy( DATA_REC( rec, tags));
       SNetIntMapDestroy( DATA_REC( rec, btags));
-      assert(DATA_REC(rec, detref) == NULL);
       (void) name;
       break;
     case REC_sync:
