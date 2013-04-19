@@ -36,7 +36,7 @@ static bool sosi_placement = false;
 int SNetThreadingInit(int argc, char **argv)
 {
 	lpel_config_t config;
-	int i, res;
+	int i;
 	char *mon_elts = NULL;
 	memset(&config, 0, sizeof(lpel_config_t));
 
@@ -133,11 +133,9 @@ int SNetThreadingInit(int argc, char **argv)
 	SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_flags);
 #endif
 
-	res = LpelInit(&config);
-	if (res != LPEL_ERR_SUCCESS) {
-		SNetUtilDebugFatal("Could not initialize LPEL!\n");
-	}
-	LpelStart();
+	LpelInit(&config);
+
+	if (LpelStart(&config)) SNetUtilDebugFatal("Could not initialize LPEL!");
 
 	return 0;
 }

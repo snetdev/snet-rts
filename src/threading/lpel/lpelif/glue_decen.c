@@ -158,15 +158,14 @@ int SNetThreadingInit(int argc, char **argv)
 	/* assin non-sosi task to non-sosi workers */
 	SNetAssignInit(config.num_workers);
 
-	res = LpelInit(&config);
-	if (res != LPEL_ERR_SUCCESS) {
-		SNetUtilDebugFatal("Could not initialize LPEL!\n");
-	}
+	LpelInit(&config);
 
 	/* init task migration */
 	tm_conf.num_workers = config.num_workers;
 	LpelTaskMigrationInit(&tm_conf);
-	LpelStart();
+
+	/* start Lpel */
+	if (LpelStart(&config)) SNetUtilDebugFatal("Could not initialize LPEL!");
 
 	return 0;
 }
