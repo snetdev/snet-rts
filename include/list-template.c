@@ -1,7 +1,3 @@
-#include <stdarg.h>
-#include <string.h>
-#include <assert.h>
-
 #include "memfun.h"
 
 #ifndef LIST_NAME

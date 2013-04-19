@@ -54,6 +54,10 @@ void SNetUtilDebugNotice(char *msg, ...)
   va_end(arg);
 }
 
+
+/**
+ * Print an error message on stderr and abort the program.
+ */
 void SNetUtilDebugFatalTask(char* msg, ...)
 {
   va_list arg;

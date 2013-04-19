@@ -124,7 +124,7 @@ static void SerialiseData(FILE *file, c4snet_type_t type, void *data)
     case CTYPE_ulong: fprintf(file, "%lu", *(unsigned long *) data); break;
     case CTYPE_long: fprintf(file, "%ld", *(long *) data); break;
     case CTYPE_float: fprintf(file, "%.32f", *(float *) data); break;
-    case CTYPE_double: fprintf(file, "%.32e", *(double *) data); break;
+    case CTYPE_double: fprintf(file, "%.32le", *(double *) data); break;
     case CTYPE_ldouble: fprintf(file, "%.32Le", *(long double *) data); break;
     default: SNetUtilDebugFatal("Unknown type in C4SNet.");
   }
@@ -180,7 +180,7 @@ static void DeserialiseData(FILE *file, c4snet_type_t type, void *data)
         if (!strcmp(buf, "&amp;")) *(char *) data = '&';
         else if (!strcmp(buf, "&lt;")) *(char *) data = '<';
         else if (count == 1) *(char *) data = buf[0];
-        else SNetUtilDebugFatal("FIXME");
+        else SNetUtilDebugFatal("[%s]: FIXME invalid char '%s'.", __func__, buf);
 
         if (type == CTYPE_uchar) *(unsigned char*) data = (unsigned char) *(char*) data;
         return;
@@ -195,7 +195,7 @@ static void DeserialiseData(FILE *file, c4snet_type_t type, void *data)
     case CTYPE_float: fmt = "%f"; break;
     case CTYPE_double: fmt = "%lf"; break;
     case CTYPE_ldouble: fmt = "%Lf"; break;
-    default: SNetUtilDebugFatal("FIXME");
+    default: SNetUtilDebugFatal("[%s]: FIXME invalid type %d.", __func__, type);
   }
 
   fscanf(file, fmt, data);

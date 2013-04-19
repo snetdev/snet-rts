@@ -24,6 +24,9 @@
 #include <assert.h>
 
 #include "hashtab.h"
+#include "bool.h"
+
+#define HASHTAB_NOT_KEY         (-1)
 
 
 typedef struct hashtab_entry {
@@ -36,6 +39,53 @@ struct hashtab {
   int count;
   hashtab_entry_t *table;
 };
+
+struct hashtab_iter {
+  hashtab_t *ht;
+  int idx;
+  bool found;
+};
+
+hashtab_iter_t *HashtabIterCreate( hashtab_t *ht)
+{
+  hashtab_iter_t *hti = (hashtab_iter_t *) malloc( sizeof(hashtab_iter_t));
+  hti->ht = ht;
+  hti->idx = -1;
+  hti->found = false;
+  return hti;
+}
+
+void HashtabIterDestroy( hashtab_iter_t *hti)
+{
+  hti->ht = NULL;
+  hti->found = false;
+  free(hti);
+}
+
+int HashtabIterHasNext( hashtab_iter_t *hti)
+{
+  while (!hti->found && ++hti->idx < hti->ht->capacity) {
+    if (hti->ht->table[hti->idx].key != HASHTAB_NOT_KEY) {
+      hti->found = true;
+    }
+  }
+  return hti->found;
+}
+
+void *HashtabIterNext( hashtab_iter_t *hti)
+{
+  if (hti->found || HashtabIterHasNext(hti)) {
+    hti->found = false;
+    return hti->ht->table[hti->idx].value;
+  }
+  return NULL;
+}
+
+void HashtabIterReset( hashtab_iter_t *hti)
+{
+  hti->idx = -1;
+  hti->found = false;
+}
 
 /**
  * Create a hashtable
@@ -56,7 +106,7 @@ hashtab_t *HashtabCreate( int init_cap2)
       ht->capacity * sizeof(hashtab_entry_t));
 
   for (i=0; i<ht->capacity; i++) {
-    ht->table[i].key = -1;
+    ht->table[i].key = HASHTAB_NOT_KEY;
   }
   return ht;
 }
@@ -91,7 +141,7 @@ static hashtab_entry_t *ProbePut( hashtab_t *ht, int key)
   pos = key;
   for (i=0; i<ht->capacity; i++) {
     pos = HASH_K_I( ht->capacity, pos, i);
-    if (ht->table[pos].key == -1 ||
+    if (ht->table[pos].key == HASHTAB_NOT_KEY ||
         ht->table[pos].key == key) {
       res = &ht->table[pos];
       break;
@@ -129,12 +179,12 @@ void HashtabPut( hashtab_t *ht, int key, void *value)
     ht->table = (hashtab_entry_t *) malloc(
         ht->capacity * sizeof(hashtab_entry_t));
     for (i=0; i<ht->capacity; i++) {
-      ht->table[i].key = -1;
+      ht->table[i].key = HASHTAB_NOT_KEY;
     }
     /* fill the old entries */
     for (i=0; i<oldcap; i++) {
       int key = oldtab[i].key;
-      if (key != -1) {
+      if (key != HASHTAB_NOT_KEY) {
         /* get a pointer to the table entry */
         hte = ProbePut( ht, key);
         assert( hte != NULL);
@@ -173,11 +223,40 @@ void *HashtabGet( hashtab_t *ht, int key)
   pos = key;
   for (i=0; i<ht->capacity; i++) {
     pos = HASH_K_I( ht->capacity, pos, i);
-    if (ht->table[pos].key == -1) {
+    if (ht->table[pos].key == HASHTAB_NOT_KEY) {
       break;
     }
     if (ht->table[pos].key == key) {
       res = ht->table[pos].value;
+      break;
+    }
+  }
+  return res;
+}
+
+
+/**
+ * Get a pointer to the value for a key from the hashtable.
+ * If key does not exist, NULL will be returned.
+ *
+ * @param ht  pointer to hashtable
+ * @param key key for which the value should be retrieved
+ * @return The pointer to the value for the key, or NULL if key does not exist
+ */
+void **HashtabGetPointer( hashtab_t *ht, int key)
+{
+  int pos, i;
+  void **res = NULL;
+
+  /* find the position in the table through quadratic probing */
+  pos = key;
+  for (i=0; i<ht->capacity; i++) {
+    pos = HASH_K_I( ht->capacity, pos, i);
+    if (ht->table[pos].key == HASHTAB_NOT_KEY) {
+      break;
+    }
+    if (ht->table[pos].key == key) {
+      res = &ht->table[pos].value;
       break;
     }
   }

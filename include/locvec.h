@@ -59,6 +59,9 @@ snet_locvec_t *SNetLocvecGet(snet_info_t *info);
 /* set to info */
 void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec);
 
+/* get top value */
+int SNetLocvecTopval(snet_locvec_t *locvec);
+
 int SNetLocvecPrintSize(snet_locvec_t *vec);
 void SNetLocvecPrint(char *sbuf, snet_locvec_t *vec);
 

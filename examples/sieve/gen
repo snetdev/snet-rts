@@ -1,0 +1,17 @@
+#!/bin/sh
+
+N=30
+M=50
+
+[ $# -gt 0 ] && N=$1 && shift
+[ $# -gt 0 ] && M=$1 && shift
+[ $M -lt $N ] && let M=$N+10
+
+cat << EOI
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual"  interface="C4SNet">
+  <tag label="N">$N</tag>
+  <tag label="M">$M</tag>
+</record>
+<record type="terminate" />
+EOI

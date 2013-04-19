@@ -1,0 +1,51 @@
+<metadata> <default> <interface value="C4SNet" /> </default> </metadata>
+
+net fibonacci ({<N>} -> {<X>})
+{
+    net addlevel
+    connect [{<N>} -> {<N>,<M=1>}];
+
+    net recur
+    {
+        net leq1
+        connect [{<N>} -> if <N <= 1> then {<N>,<T>} else {<N>,<F>}];
+
+        net true
+        connect [{<N>,<T>} -> {<R=N>}];
+
+        net false
+        connect [{<N>,<F>,<M>} -> {<N=N-1>,<M=(2*M)+1>}
+                                ; {<N=N-2>,<M=(2*M)+0>}];
+    }
+    connect (leq1 .. (false | true)) * {<R>};
+
+    net merge ({<M>,<R>} -> {<X>})
+    {
+        net rewrite
+        connect [{<M>,<R>} -> if <M < 2> then {<X=R>} else
+                              if <M % 2 == 0> then {<M=M/2>, <V=R>}
+                              else {<M=M/2>, <W=R>}];
+        net pair
+        {
+            net sync
+            {
+                net cells
+                {
+                    net cell
+                    connect [| {<V>}, {<W>} |];
+                }
+                connect cell*{<V>,<W>};
+            }
+            connect cells!<M>;
+
+            net sum
+            connect [{<V>,<W>} -> {<R=V+W>}];
+        }
+        connect sync .. sum;
+
+        net Xpass
+        connect [{<X>} -> {<X>}];
+    }
+    connect (rewrite .. (Xpass | pair)) \ {<M>};
+}
+connect addlevel .. recur .. merge;

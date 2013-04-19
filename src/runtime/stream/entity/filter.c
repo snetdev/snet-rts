@@ -188,7 +188,6 @@ static void FilterTask(void *arg)
 
             LIST_FOR_EACH(farg->filter_instructions[i], instr_list) {
               out_rec = SNetRecCreate( REC_data);
-              SNetRecAddAsParent( out_rec, in_rec );
               SNetRecSetInterfaceId( out_rec, SNetRecGetInterfaceId( in_rec));
               SNetRecSetDataMode( out_rec, SNetRecGetDataMode( in_rec));
 

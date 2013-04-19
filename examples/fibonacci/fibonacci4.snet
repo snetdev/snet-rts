@@ -1,0 +1,43 @@
+<metadata> <default> <interface value="C4SNet" /> </default> </metadata>
+
+net fibonacci4
+{
+    net pow
+    {
+        net addP
+        connect [{<N>} -> {<N>,<P=1>}];
+
+        net loop
+        {
+            net step
+            connect [{<N>,<P>} -> if <N > 0> then {<N=N-1>,<P=P*2>}
+                                  else {<Q=P>}];
+        }
+        connect step * {<Q>};
+    }
+    connect addP .. loop;
+
+    net generate
+    {
+        net split
+        connect [{<Q>} -> if <Q == 0> then else
+                          if <Q % 2 == 0> then {<Q=Q-1>} ; {<V=1>}
+                          else {<Q=Q-1>} ; {<W=1>}];
+    }
+    connect split * {<V>}, {<W>};
+
+    net merge
+    {
+        net cells
+        {
+            net cell
+            connect [| {<V>}, {<W>} |];
+        }
+        connect cell * {<V>,<W>};
+
+        net delete
+        connect [{<V>,<W>} -> if <V == 0> then {<V>} else];
+    }
+    connect cells .. delete;
+}
+connect pow .. generate .. merge;
