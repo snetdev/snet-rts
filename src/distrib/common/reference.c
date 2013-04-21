@@ -1,8 +1,6 @@
 #include <assert.h>
 #include <pthread.h>
-#include <stdarg.h>
 #include <string.h>
-#include <assert.h>
 
 #include "distribcommon.h"
 #include "distribution.h"
@@ -14,6 +12,11 @@
 
 #define COPYFUN(interface, data)    (SNetInterfaceGet(interface)->copyfun((void*) (data)))
 #define FREEFUN(interface, data)    (SNetInterfaceGet(interface)->freefun((void*) (data)))
+
+struct snet_ref {
+    int node, interface;
+    uintptr_t data;
+};
 
 #define LIST_NAME_H Stream
 #define LIST_TYPE_NAME_H stream
@@ -149,7 +152,42 @@ int SNetRefNode(snet_ref_t *ref)
 
 static void *GetData(snet_ref_t *ref)
 {
-  return SNetDistribRefGetData(ref);
+  void *result;
+  if (SNetDistribIsNodeLocation(ref->node)) return (void*) ref->data;
+
+  pthread_mutex_lock(&remoteRefMutex);
+  snet_refcount_t *refInfo = SNetRefRefcountMapGet(remoteRefMap, *ref);
+
+  if (refInfo->data == NULL) {
+    snet_stream_t *str = SNetStreamCreate(1);
+    snet_stream_desc_t *sd = SNetStreamOpen(str, 'r');
+
+    if (refInfo->list) {
+      SNetStreamListAppendEnd(refInfo->list, str);
+    } else {
+      refInfo->list = SNetStreamListCreate(1, str);
+      SNetDistribFetchRef(ref);
+    }
+
+    // refInfo->count gets updated by SNetRefSet instead of here to avoid a
+    // race between nodes when a pointer is recycled.
+    pthread_mutex_unlock(&remoteRefMutex);
+    result = SNetStreamRead(sd);
+    SNetStreamClose(sd, true);
+
+    return result;
+  }
+
+  SNetDistribUpdateRef(ref, -1);
+  if (--refInfo->count == 0) {
+    result = refInfo->data;
+    SNetMemFree(SNetRefRefcountMapTake(remoteRefMap, *ref));
+  } else {
+    result = COPYFUN(ref->interface, refInfo->data);
+  }
+
+  pthread_mutex_unlock(&remoteRefMutex);
+  return result;
 }
 
 void *SNetRefGetData(snet_ref_t *ref)
@@ -267,5 +305,27 @@ void SNetRefUpdate(snet_ref_t *ref, int value)
 
 void SNetRefSet(snet_ref_t *ref, void *data)
 {
-  SNetDistribRefSet(ref, data);
+  snet_stream_t *str;
+  pthread_mutex_lock(&remoteRefMutex);
+  snet_refcount_t *refInfo = SNetRefRefcountMapGet(remoteRefMap, *ref);
+
+  LIST_DEQUEUE_EACH(refInfo->list, str) {
+    snet_stream_desc_t *sd = SNetStreamOpen(str, 'w');
+    SNetStreamWrite(sd, (void*) COPYFUN(ref->interface, data));
+    SNetStreamClose(sd, false);
+    // Counter is updated here instead of the fetching side to avoid a race
+    // across node boundaries.
+    refInfo->count--;
+  }
+
+  SNetStreamListDestroy(refInfo->list);
+
+  if (refInfo->count > 0) {
+    refInfo->data = data;
+  } else {
+    FREEFUN(ref->interface, data);
+    SNetMemFree(SNetRefRefcountMapTake(remoteRefMap, *ref));
+  }
+
+  pthread_mutex_unlock(&remoteRefMutex);
 }

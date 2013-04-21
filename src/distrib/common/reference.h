@@ -1,11 +1,6 @@
 #ifndef REFERENCE_H
 #define REFERENCE_H
 
-struct snet_ref {
-    int node, interface;
-    uintptr_t data;
-};
-
 typedef struct snet_refcount snet_refcount_t;
 
 void SNetReferenceInit(void);
@@ -26,7 +21,4 @@ void SNetRefSet(snet_ref_t *ref, void *data);
 /* To be implemented by distrib/implementation */
 void SNetDistribFetchRef(snet_ref_t *ref);
 void SNetDistribUpdateRef(snet_ref_t *ref, int count);
-void* SNetDistribRefGetData(snet_ref_t *ref);
-void SNetDistribRefSet(snet_ref_t *ref, void *data);
-
 #endif

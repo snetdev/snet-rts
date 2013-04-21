@@ -2,8 +2,6 @@
 
 #include "distribution.h"
 #include "reference.h"
-#include <assert.h>
-#include <stdlib.h>
 
 static int node_location;
 static bool running = true;
@@ -89,16 +87,4 @@ void SNetDistribUpdateRef(snet_ref_t *ref, int count)
 {
   (void) ref; /* NOT USED */
   (void) count; /* NOT USED */
-}
-
-void* SNetDistribRefGetData(snet_ref_t *ref)
-{
-  return (void*) ref->data;
-}
-
-void SNetDistribRefSet(snet_ref_t *ref, void *data)
-{
-  /* impossible */
-  assert(0);
-  abort();
 }
