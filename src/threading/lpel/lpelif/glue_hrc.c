@@ -212,4 +212,3 @@ int SNetThreadingCleanup(void)
 
 	return 0;
 }
-

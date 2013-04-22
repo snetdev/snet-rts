@@ -36,7 +36,7 @@ int SNetThreadingInit(int argc, char **argv)
 {
 	lpel_config_t config;
 	char fname[20+1];
-	int i, res;
+	int i;
 	char *mon_elts = NULL;
 	memset(&config, 0, sizeof(lpel_config_t));
 	config.type = DECEN_LPEL;
@@ -46,7 +46,7 @@ int SNetThreadingInit(int argc, char **argv)
 	/* task migration configure */
 	lpel_tm_config_t tm_conf;
 	memset(&tm_conf, 0, sizeof(lpel_tm_config_t));
-	int tm_mech;
+	int tm_mech = 0;
 	double tm_threshold = 0.0;
 
 	for (i=0; i<argc; i++) {
