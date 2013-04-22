@@ -24,7 +24,7 @@ sacmod_DATA = \
 BUILT_SOURCES = \
         $(WRAPINCDIR)/SAC4SNetFibreIO.h
 
-install-exec-hook:
+install-data-hook:
 	chmod +x $(pkglibdir)/*.so
 
 endif
