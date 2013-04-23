@@ -1,6 +1,6 @@
 TARGETS    = raytrace loadbalance
 DEPS       = libboxes.a
-SNETCFLAGS = -v 0 -g -lboxes
+SNETCFLAGS = -v1 -g -lboxes
 
 include $(SNET_MISC)/snet.mkf
 

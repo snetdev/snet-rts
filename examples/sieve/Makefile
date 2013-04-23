@@ -1,6 +1,6 @@
 TARGETS    = sieve sieve2
 DEPS       = 
-SNETCFLAGS = -v 0 -g
+SNETCFLAGS = -v1 -g
 
 include $(SNET_MISC)/snet.mkf
 
