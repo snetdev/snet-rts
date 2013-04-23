@@ -37,7 +37,7 @@ net poweroftwo2 ({<N>} -> {<X>})
             net sum
             connect [{<V>,<W>,<L>} -> {<R=V+W>,<L=L-1>}];
         }
-        connect sync .. (sum | []);
+        connect sync .. (sum | [] | [{<L>,<M>,<V>}->] | [{<L>,<M>,<W>}->]);
 
         net Xpass
         connect [{<X>} -> {<X>}];

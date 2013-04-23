@@ -7,7 +7,7 @@ net poweroftwo ({<N>} -> {<X>})
 
     net recur ({<N>,<L>,<M>} -> {<M>,<L>,<R>})
     {
-        net leq1
+        net leq0
         connect [{<N>} -> if <N <= 0> then {<N>,<T>} else {<N>,<F>}];
 
         net true
@@ -17,7 +17,7 @@ net poweroftwo ({<N>} -> {<X>})
         connect [{<N>,<F>,<M>,<L>} -> {<N=N-1>,<L=L+1>,<M=(2*M)+1>}
                                     ; {<N=N-1>,<L=L+1>,<M=(2*M)+0>}];
     }
-    connect (leq1 .. (false | true)) * {<R>};
+    connect (leq0 .. (false | true)) * {<R>};
 
     net merge ({<M>,<L>,<R>} -> {<X>})
     {
@@ -25,7 +25,7 @@ net poweroftwo ({<N>} -> {<X>})
         connect [{<L>,<M>,<R>} -> if <L <= 0> then {<X=R>} else
                                   if <M % 2 == 0> then {<L=L>, <M=M/2>, <V=R>}
                                   else {<L=L>, <M=M/2>, <W=R>}];
-        net pair
+        net pair ({<L>,<M>,<V>} | {<L>,<M>,<W>} -> {<R>,<L>,<M>})
         {
             net sync
             {

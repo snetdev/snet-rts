@@ -1,4 +1,4 @@
-TARGETS    = poweroftwo poweroftwo2 poweroftwo3
+TARGETS    = poweroftwo poweroftwo2
 DEPS       = 
 SNETCFLAGS = -v 0 -g
 
