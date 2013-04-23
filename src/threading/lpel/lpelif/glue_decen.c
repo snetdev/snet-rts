@@ -4,7 +4,6 @@
 #include <assert.h>
 #include "glue_snet.h"
 #include "threading.h"
-#include <decen_lpel.h>
 #include <lpel.h>
 #include <lpel/monitor.h>
 #include "debug.h"

@@ -17,7 +17,7 @@
 
 /* IMPORTANT: following order of includes */
 #include "threading.h"
-#include <lpel.h>
+#include <lpel_common.h>
 #include <lpel/timing.h>
 #include <lpel/monitor.h>
 

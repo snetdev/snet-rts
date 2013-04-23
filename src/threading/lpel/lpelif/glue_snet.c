@@ -14,7 +14,7 @@
 /* S-Net threading backend interface */
 #include "threading.h"
 
-#include "lpel.h"
+#include "lpel_common.h"
 
 
 
