@@ -27,7 +27,7 @@ TARGETS := $(foreach t, $(TARGETS), $(COMBI:%=$t-%))
 
 ifeq ($(findstring clean, $(MAKECMDGOALS)), clean)
 $(firstword $(MAKECMDGOALS)):
-	$(MAKE) clean CLEANTARGETS="$(TARGETS) $(COMPOUT)"
+	$(MAKE) clean CLEANTARGETS="$(TARGETS) $(COMPOUT) $(CLEANS)"
 else
 $(firstword $(MAKECMDGOALS)):
 	$(MAKE) $(foreach t, $(TARGETS), $t.make)
