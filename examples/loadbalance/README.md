@@ -17,4 +17,4 @@ which applies the loadbalance design pattern
 to do dynamic domain composition.
 It demonstrates that the Front runtime system
 realizes this _very_ efficiently.
-
+More details are in theses/GijsbersMSc13.
