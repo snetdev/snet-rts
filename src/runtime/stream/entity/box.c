@@ -57,12 +57,12 @@ static void BoxTask(snet_entity_t *ent, void *arg)
   snet_stream_desc_t *instream, *outstream;
   bool terminate = false;
 
-  /* storage for the handle is within the box task */
-  snet_handle_t hnd;
-  memset(&hnd, 0, sizeof(snet_handle_t));
-
   instream = SNetStreamOpen(barg->input, 'r');
   outstream =  SNetStreamOpen(barg->output, 'w');
+  /* set out descriptor */
+  barg->hnd.out_sd = outstream;
+  /* set entity */
+  barg->hnd.ent = ent;
 
   /* MAIN LOOP */
   while(!terminate) {
