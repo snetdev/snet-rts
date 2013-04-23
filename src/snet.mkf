@@ -9,6 +9,7 @@ MAKE:=$(MAKE) _
 .PHONY: all everything clean _
 .SILENT: _ $(MAKECMDGOALS)
 _:
+	@#
 
 ifneq ($(firstword $(MAKECMDGOALS)), _)
 
@@ -21,11 +22,12 @@ DIST   := $(or $(filter $(MAKECMDGOALS), $(DIST)), nodist)
 endif
 
 COMBI   = $(foreach t, $(THREAD), $(foreach d, $(DIST), $t-$d))
+COMPOUT := $(TARGETS:%=%.[ch])
 TARGETS := $(foreach t, $(TARGETS), $(COMBI:%=$t-%))
 
 ifeq ($(findstring clean, $(MAKECMDGOALS)), clean)
 $(firstword $(MAKECMDGOALS)):
-	$(MAKE) clean CLEANTARGETS="$(TARGETS)"
+	$(MAKE) clean CLEANTARGETS="$(TARGETS) $(COMPOUT)"
 else
 $(firstword $(MAKECMDGOALS)):
 	$(MAKE) $(foreach t, $(TARGETS), $t.make)
