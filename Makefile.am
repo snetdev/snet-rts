@@ -243,7 +243,8 @@ snet-config.mkf: Makefile
 
 CLEANFILES = \
         compile_cmd \
-        link_cmd
+        link_cmd \
+        snet-config.mkf
 
 
 # re-generate the "libtool" script when it becomes deprecated
