@@ -6,9 +6,11 @@ snetstuffdir = $(pkglibdir)
 snetstuff_DATA = \
 	compile_cmd link_cmd
 
-pkgdata_DATA =\
+pkgdata_DATA = \
 	src/snet.mkf \
 	snet-config.mkf
+
+EXTRA_DIST = src/snet.mkf
 
 snetstuff_SCRIPTS = \
 	libtool
@@ -243,7 +245,7 @@ libdistribscc_la_CPPFLAGS = \
 endif
 
 # common flags
-INCLUDES = -I$(top_srcdir)/include
+AM_CPPFLAGS = -I$(top_srcdir)/include
 
 compile_cmd: Makefile
 	$(AM_V_at)rm -f $@
@@ -262,7 +264,8 @@ snet-config.mkf: Makefile
 
 CLEANFILES = \
         compile_cmd \
-        link_cmd
+        link_cmd \
+        snet-config.mkf
 
 
 # re-generate the "libtool" script when it becomes deprecated
