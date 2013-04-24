@@ -6,9 +6,11 @@ snetstuffdir = $(pkglibdir)
 snetstuff_DATA = \
 	compile_cmd link_cmd
 
-pkgdata_DATA =\
+pkgdata_DATA = \
 	src/snet.mkf \
 	snet-config.mkf
+
+EXTRA_DIST = src/snet.mkf
 
 snetstuff_SCRIPTS = \
 	libtool
