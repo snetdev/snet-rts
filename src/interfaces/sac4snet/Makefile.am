@@ -68,7 +68,7 @@ libSAC4SNetc_la_CPPFLAGS = \
         -I$(top_srcdir)/include
 
 libSAC4SNetc_la_LIBADD = \
-        -L$(top_srcdir) -lsnetutil
+        -L$(top_builddir) -lsnetutil
 
 #### Build rules ####
 
