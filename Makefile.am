@@ -222,7 +222,7 @@ libdistribscc_la_CPPFLAGS = \
 endif
 
 # common flags
-INCLUDES = -I$(top_srcdir)/include
+AM_CPPFLAGS = -I$(top_srcdir)/include
 
 compile_cmd: Makefile
 	$(AM_V_at)rm -f $@
