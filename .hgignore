@@ -31,3 +31,6 @@ netif/lexer.c
 netif/parser.h
 netif/parser.c
 Makefile
+snet-config.mkf
+*.dSYM
+examples/tests/C/*/out.bak
