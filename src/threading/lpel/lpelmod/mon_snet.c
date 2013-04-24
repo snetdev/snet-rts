@@ -850,12 +850,12 @@ static inline int comp(const void *a, const void *b) {
 }
 
 /* get the worker with the most task wait & update the global_wait */
-static int MonCbWorkerMostWaitProp() {
+static int MonCbWorkerMostWaitProp(void) {
 	qsort(worker_indexes, num_workers, sizeof(int), &comp);
 	return worker_indexes[0];
 }
 
-static double MonCbGetGlobalWaitProp() {
+static double MonCbGetGlobalWaitProp(void) {
 	double val;
 	pthread_mutex_lock(&global_lock);
 	val = global_wait_prop;
