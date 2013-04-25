@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "node.h"
 
 /* Allocate a new stream */
@@ -287,5 +288,12 @@ snet_stream_desc_t *SNetStreamOpen(
   } */
 
   return desc;
+}
+
+void *SNetStreamRead(snet_stream_desc_t *sd)
+{
+  /* impossible */
+  assert(0);
+  abort();
 }
 
