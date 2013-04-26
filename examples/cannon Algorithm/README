@@ -1,0 +1,23 @@
+
+Information
+=========
+There are two presentation about cannon's algorithm in this project.
+Also there are example for use in data folder.
+
+Remember for use the program, you need to create square sub matrix. Doesn't matter the size. But, for example, you can't create in a multiplication for matrix with size 3 (3x3), sub matrix with size 2. Because you don't have all the elements inside the sub matrix. Also it is a precondition of cannon's algorithm.   
+
+To create an example for the programs, you need to put the two matrix to multiplicate, the size of this matrix (remember both the same size and square) and how many sub matrix you want. 
+Something like this:
+
+    <field label="matrix_A">(int[16])0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15</field>
+    <field label="matrix_B">(int[16])0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15</field>
+    <field label="size_matrix">(int)4</field>
+    <field label="division">(int)4</field>
+
+Example
+-------
+
+In data folder you will find five example with different size: 3,4 and 6.
+
+
+

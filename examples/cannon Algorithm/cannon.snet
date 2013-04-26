@@ -1,0 +1,26 @@
+/* Multiply matrices A and B with cannon's algorithm.*/
+
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet" />
+  </boxdefault>
+</metadata>
+
+net cannon
+{
+	box Split ( (matrix_A, matrix_B, size_matrix, division) -> (total_ele, count, submatrix_in_one_row, size_matrix, size_submatrix, result) | (submatrix_A, submatrix_B, size_submatrix, position) );
+	box Multiplication ( (submatrix_A, submatrix_B, size_submatrix, position) -> (submatrix_result, position) );
+	box Merger ( (total_ele , count, submatrix_in_one_row, size_matrix, size_submatrix , result, submatrix_result, position) -> (total_ele, count, submatrix_in_one_row, size_matrix, size_submatrix, result) | (<stop> ));
+
+}
+connect
+	Split ..
+	(
+		 ( Multiplication)
+		| []
+	)
+	..
+	(
+		([| {total_ele, count, submatrix_in_one_row, size_matrix, size_submatrix, result}, {submatrix_result, position} |])
+		.. (Merger | [])
+	)*{<stop>};
