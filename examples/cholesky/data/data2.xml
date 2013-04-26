@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field 
+  label="Ain">(double[64]) 1,  2,  4,  7,  11,  16,  22,  29,
+			 2, 13, 23, 38,  58,  83, 113, 148,
+			 4, 23, 77,122, 182, 257, 347, 452,
+			 7, 38,122,294, 430, 600, 804,1042,
+			11, 58,182,430, 855,1180,1570,2025,
+			16, 83,257,600,1180,2071,2737,3514,
+			22,113,347,804,1570,2737,4403,5628,
+			29,148,452,1042,2025,3514,5628,8492</field>
+  <tag label="dim">8</tag>
+  <tag label="bs">2</tag>
+</record>
+<record type="terminate" />

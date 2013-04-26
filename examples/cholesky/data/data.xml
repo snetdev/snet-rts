@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="Ain">(double[16])1,2,4,7,2,13,23,38,4,23,77,122,7,38,122,294</field>
+  <tag label="dim">4</tag>
+  <tag label="bs">2</tag>
+</record>
+<record type="terminate" />
