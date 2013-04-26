@@ -1,0 +1,47 @@
+<metadata>
+	<boxdefault>
+		<interface value="C4SNet" />
+	</boxdefault>
+</metadata>
+
+net cholesky
+{
+	box decompose( (Ain, <dim>, <bs>) -> (A, L, <bs>, <p>, <k>, ts));
+	box gen_counter( -> (<counter>));
+	box finalize( (Lout, <bs>, <p>, ts) -> (result, time_elapsed));
+	
+	// Initial Factorization
+	box compute_s1( (A, L, <bs>, <p>, <k>, ts) -> (A, L, <bs>, <p>, <k>, <j>, ts) | (Lout, <bs>, <p>, ts));
+	
+	// Triangular Solve
+	net compute_s2
+	{
+		box solve_s2( (A, L, <bs>, <p>, <k>, <j>, ts) -> (A, L, <bs>, <p>, <k>, ts));
+		
+		// Block computation synchronization after step 2 (s2)
+		net s2_sync( {A, L, <bs>, <p>, <k>, ts} | {<counter>} -> {As, Ls, <bs>, <p>, <k>, ts})
+		{
+			box merge((A, L, <counter>, <bs>, <p>, <k>, ts) -> (<counter>) | (As, Ls, <bs>, <p>, <k>, ts));
+		}
+		connect ( [|{A, L, <bs>, <p>, <k>, ts},{<counter>}|]*{ts,<counter>} .. merge) \ {<counter>},{A,L};
+	} connect ((solve_s2!<j> | gen_counter) .. s2_sync);
+
+	// Symmetric Rank Update
+	net compute_s3
+	{
+		box distribute( (As, Ls, <bs>, <p>, <k>, ts) -> (As, Ls, <bs>, <p>, <k>, <j>, ts));
+		box update( (As, Ls, <bs>, <p>, <k>, <j>, ts) -> (As, Ls, <bs>, <p>, <k>, ts));
+
+		// Block computation synchronization after step 3 (s3)
+		net update_sync( {As, Ls, <bs>, <p>, <k>, ts} | {<counter>} -> {A, L, <bs>, <p>, <k>, ts})
+		{
+                        net s3_sync( {As, Ls, <bs>, <p>, <k>, ts} | {<counter>} -> {A, L, <bs>, <p>, <k>, ts})
+                        {
+                                box sync((As, Ls, <counter>, <bs>, <p>, <k>, ts) -> (<counter>) | (A, L, <bs>, <p>, <k>, ts));
+                        }
+                        connect ( [|{As, Ls, <bs>, <p>, <k>, ts},{<counter>}|]*{ts,<counter>} .. sync) \ {<counter>},{As,Ls};
+		}
+		connect s3_sync .. [{<k>} -> {<k=k+1>}];
+	} connect ( (distribute .. update!<j>) | gen_counter) .. update_sync;
+	
+} connect decompose .. (compute_s1 .. ( (compute_s2 .. compute_s3) | finalize))*{result, time_elapsed};
