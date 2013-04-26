@@ -1,5 +1,5 @@
 
-
+#include <assert.h>
 #include <string.h>
 #include <limits.h>
 #include <pthread.h>
@@ -74,43 +74,50 @@ int SNetAssignTask(int is_box, const char *boxname)
   int target = 0;
 
 
-#if 0
   pthread_mutex_lock( &lock);
+  switch(default_placement)
   {
+  case ASSIGN_ONE_THREAD:
+    target = 0;
+    break;
+  
+  case ASSIGN_ROUND_ROBIN_SHARED:
     target = box_next;
     if (is_box) {
-      box_next += 1;
-      if (box_next == num_workers) box_next = 0;
+        box_next = (box_next + 1) % num_workers;
     }
-  }
-  pthread_mutex_unlock( &lock);
+    break;
 
-#else
-  pthread_mutex_lock( &lock);
-  if (is_box) {
-    /* lookup name in list */
-    nameround_t *n = head;
-    while (n != NULL) {
-      if ( 0 == strcmp(n->boxname, boxname)) break;
-      n = n->next;
-    }
-    if (n == NULL) {
-      /* create entry */
-      n = (nameround_t *) SNetMemAlloc( sizeof(nameround_t));
-      n->round = findMinBoxes();
-      n->boxname = strdup(boxname);
-      n->next = head;
-      head = n;
-    }
-    target = n->round;
-    n->round = (n->round + 1) % num_workers;
-    boxcnt[target]++;
-  } else {
-    target = non_box;
-    non_box = (non_box + 1) % num_workers;
+  case ASSIGN_ROUND_ROBIN_PER_ENTITY:
+      if (is_box) {
+          /* lookup name in list */
+          nameround_t *n = head;
+          while (n != NULL) {
+              if ( 0 == strcmp(n->boxname, boxname)) break;
+              n = n->next;
+          }
+          if (n == NULL) {
+              /* create entry */
+              n = (nameround_t *) SNetMemAlloc( sizeof(nameround_t));
+              n->round = findMinBoxes();
+              n->boxname = strdup(boxname);
+              n->next = head;
+              head = n;
+          }
+          target = n->round;
+          n->round = (n->round + 1) % num_workers;
+          boxcnt[target]++;
+      } else {
+          target = non_box;
+          non_box = (non_box + 1) % num_workers;
+      }
+      break;
+  case ASSIGN_D_SNET_EXPLICIT:
+      // ASSIGN_D_SNET_EXPLICIT was handled in SNetTaskCreate
+      assert(0 && "unreachable");
+      break;
   }
   pthread_mutex_unlock( &lock);
-#endif
 
   return target;
 }
