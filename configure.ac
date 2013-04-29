@@ -142,15 +142,36 @@ AM_CONDITIONAL([ENABLE_TH_LPEL], [test $have_lpel = yes])
 
 dnl check for sac compiler in order to build sac4snet interface
 
-AC_CHECK_PROGS([SAC2C], [sac2c])
-AC_CHECK_PROGS([SAC4C], [sac4c])
-have_sac=no
-if test -n "$SAC2C" -a -n "$SAC4C"; then
-  have_sac=yes
+AC_ARG_ENABLE([sac4snet], [AS_HELP_STRING([--enable-sac4snet],
+[Enable the SAC interface to S-NET. Set to "yes", "no" (or --disable), or "auto" (default). If "auto", enable if SAC is available.])],
+[], [enable_sac4snet=auto])
+if test "x$enable_sac4snet" != xno; then
+  AC_CHECK_PROGS([SAC2C], [sac2c], [no])
+  AC_CHECK_PROGS([SAC4C], [sac4c], [no])
+  if test -z "$SAC2CBASE"; then
+     AC_MSG_WARN([SAC2CBASE is not set, expect problems during build.])
+  fi
+  if test "x$SAC2C" = xno -o "x$SAC4C" = xno; then
+    if test "x$enable_sac4snet" = xyes; then
+       AC_MSG_ERROR([sac2c or sac4c not found. Cannot build sac4snet (maybe use --disable-sac4snet?)])
+    fi
+    enable_sac4snet=no
+  else
+    enable_sac4snet=yes
+  fi
 fi
-AM_CONDITIONAL([ENABLE_SAC4SNET], [test $have_sac = yes])
+AM_CONDITIONAL([ENABLE_SAC4SNET], [test x$enable_sac4snet = xyes])
 
-
+AC_ARG_WITH([sac4snet-targets], [AC_HELP_STRING([--with-sac4snet-targets],
+[Select which back-end targets to build the sac4snet interface for. Defaults to "seq,mtpth,mtlpel"])],
+        [], [with_sac4snet_targets=seq,mtpth,mtlpel])
+with_sac4snet_targets=`echo "$with_sac4snet_targets" | tr ',' ' '`
+for target in $with_sac4snet_targets; do
+   eval enable_sac4snet__$target=yes
+done
+AM_CONDITIONAL([ENABLE_SAC4SNET_SEQ], [test x$enable_sac4snet__seq = xyes])
+AM_CONDITIONAL([ENABLE_SAC4SNET_MT_PTH], [test x$enable_sac4snet__mtpth = xyes])
+AM_CONDITIONAL([ENABLE_SAC4SNET_MT_LPEL], [test x$enable_sac4snet__mtlpel = xyes])
 
 dnl generate output
 

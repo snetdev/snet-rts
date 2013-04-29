@@ -1,5 +1,3 @@
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,10 +27,7 @@ static int num_workers = 0;
 static FILE *mapfile = NULL;
 static int mon_flags = 0;
 
-/**
- * use the Distributed S-Net placement operators for worker placement
- */
-static bool dloc_placement = false;
+default_task_assignment_t default_placement = ASSIGN_ROUND_ROBIN_PER_ENTITY;
 
 
 static size_t GetStacksize(snet_entity_t ent)
@@ -87,7 +82,19 @@ int SNetThreadingInit(int argc, char **argv)
       config.flags |= LPEL_FLAG_EXCLUSIVE;
     } else if(strcmp(argv[i], "-dloc") == 0 ) {
       /* Use distributed s-net location placement */
-      dloc_placement = true;
+      default_placement = ASSIGN_D_SNET_EXPLICIT;
+    } else if(strcmp(argv[i], "-dp") == 0 && i + 1 <= argc) {
+      /* use the specified default placement strategy */
+      i = i + 1;
+      if (strcmp(argv[i], "single") == 0) {
+          default_placement = ASSIGN_ONE_THREAD;
+      } else if (strcmp(argv[i], "shared-rr") == 0) {
+          default_placement = ASSIGN_ROUND_ROBIN_SHARED;
+      } else if (strcmp(argv[i], "entity-rr") == 0) {
+          default_placement = ASSIGN_ROUND_ROBIN_PER_ENTITY;
+      } else if (strcmp(argv[i], "dsnet") == 0) {
+          default_placement = ASSIGN_D_SNET_EXPLICIT;
+      }
     } else if(strcmp(argv[i], "-wo") == 0 && i + 1 <= argc) {
       /* Number of cores for others */
       i = i + 1;
@@ -214,7 +221,7 @@ void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
   buf[size-1] = '\0';
 
   if (ent != ENTITY_other) {
-    if (dloc_placement) {
+    if (default_placement == ASSIGN_D_SNET_EXPLICIT) {
       assert(loc != -1);
       worker = loc % num_workers;
     } else {

@@ -1,0 +1,35 @@
+Implemented by Pavel Zaichenkov, 2013.
+	       <zaichenkov@gmail.com>
+
+The implementation consists of
+
+* Coordination network definition
+
+* Implementation of main algorithms and supplimentary boxes
+    - Initial Factorization (`compute_s1.c`)
+    - Triangular Solve (`compute_s2.c`)
+    - Symmetric Rank Update (`compute_s3.c`)
+* Sample input data (`data.xml`, `data2.xml`)
+
+* Input data generator. The script generator.py takes three input arguments (N
+  - a dimension of the matrix, BS - a size of a block and a prefix for the file
+  name) and generates a file with input data `prefix_snet_in.xml` and file with
+  output data `prefix_snet_out.xml`. `prefix_snet_out.xml` contains only
+  aproximations of correct values because of the floating point. The sample
+  output can't be compared literally to the actual output.
+
+  ```
+  generator.py 512 16 foo
+  ``` 
+
+  will create files `foo_snet_in.xml` and `foo_snet_out.xml` where input matrix
+  is a generated 512x512 matrix and the size of the block will be 16.
+  
+  IMPORTANT: The application was tested only with sizes which are power of two.
+
+* Test script `test.sh`. The script generates input matrices of different size
+  and output the execution time suitable for plotting.
+
+[1] Kurzak, J.; Buttari, A.; Dongarra, J., "Solving Systems of Linear Equations
+    on the CELL Processor Using Cholesky Factorization," Parallel and Distributed
+    Systems, IEEE Transactions on , vol.19, no.9, pp.1175,1186, Sept. 2008

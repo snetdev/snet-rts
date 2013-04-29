@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="matrix_A">(int[16])0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15</field>
+    <field label="matrix_B">(int[16])1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1</field>
+    <field label="size_matrix">(int)4</field>
+    <field label="division">(int)4</field>
+</record>
+<record type="terminate" />
