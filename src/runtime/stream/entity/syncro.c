@@ -119,7 +119,7 @@ static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
 
   return res;
 }
-#endif
+#endif /*ENABLE_GARBAGE_COLLECTOR */
 
 
 /*****************************************************************************/
@@ -189,16 +189,39 @@ static void SyncBoxTask(void *arg)
         }
       }
 
-      sarg->match_cnt += new_matches;
-      if (new_matches == 0) {
-        SNetStreamWrite( sarg->outstream, rec);
-      } else if (sarg->match_cnt == num_patterns) {
-        snet_record_t *syncrec = MergeFromStorage( sarg->storage, sarg->patterns);
+        match_cnt += new_matches;
+        if (new_matches == 0) {
+          SNetStreamWrite( outstream, rec);
+        } else if (match_cnt == num_patterns) {
+
+        	snet_record_t *syncrec = MergeFromStorage( storage, sarg->patterns);
 
 #ifdef USE_USER_EVENT_LOGGING
-        /* Emit a monitoring message of firing syncro cell */
-        SNetThreadingEventSignal(
-            SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, syncrec));
+          /* Emit a monitoring message of firing syncro cell */
+          SNetThreadingEventSignal( ent,
+              SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, syncrec)
+              );
+#endif
+          /* this is the last sync */
+          SNetStreamWrite( outstream, syncrec);
+
+          /* follow by a sync record */
+          syncrec = SNetRecCreate(REC_sync, sarg->input);
+#ifdef ENABLE_GARBAGE_COLLECTOR
+          snet_variant_t *outtype;
+          /* if we read from a star entity, we store the outtype along
+             with the sync record */
+          if( SNetStreamGetSource( sarg->input) != NULL ) {
+            /*
+             * To trigger garbage collection at a following parallel dispatcher
+             * within a state-modeling network, the dispatcher needs knowledge about the
+             * type of the merged record ('outtype' of the synchrocell).
+             */
+            outtype = GetMergedTypeVariant(sarg->patterns);
+            /* is copied internally */
+            SNetRecSetVariant(syncrec, outtype);
+            SNetVariantDestroy(outtype);
+          }
 #endif
         /* this is the last sync */
         SNetStreamWrite( sarg->outstream, syncrec);

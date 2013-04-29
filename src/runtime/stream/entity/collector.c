@@ -238,112 +238,140 @@ static void CollectorTask(void *arg)
 {
   coll_arg_t *carg = arg;
   snet_stream_iter_t *wait_iter;
+  snet_stream_desc_t *outstream;
+  snet_stream_desc_t *curstream = NULL;
+  snet_stream_desc_t *last = NULL;		// when the paired parallel terminate, it sends the sort_end record to the last branch
+  snet_record_t *sort_rec = NULL;
+  snet_record_t *term_rec = NULL;
+  int incount;
+  bool terminate = false;
+
+
+  /* open outstream for writing */
+  outstream = SNetStreamOpen(carg->output, 'w');
+
+  readyset = waitingset = NULL;
+
+  if (carg->is_static) {
+    int i;
+    incount = CARG_ST(carg, num);
+    /* fill initial readyset of collector */
+    for (i=0; i<incount; i++) {
+      snet_stream_desc_t *tmp;
+      /* open each stream in listening set for reading */
+      tmp = SNetStreamOpen( CARG_ST(carg, inputs[i]), 'r');
+      /* add each stream instreams[i] to listening set of collector */
+      SNetStreamsetPut( &readyset, tmp);
+    }
+    SNetMemFree( CARG_ST(carg, inputs) );
+  } else {
+    incount = 1;
+    /* Open initial stream and put into readyset */
+    SNetStreamsetPut( &readyset,
+        SNetStreamOpen(CARG_DYN(carg, input), 'r')
+        );
+  }
 
   /* create an iterator for waiting set, is reused within main loop*/
-  wait_iter = SNetStreamIterCreate( &carg->waitingset);
+  wait_iter = SNetStreamIterCreate( &waitingset);
 
-  /* get a record */
-  snet_record_t *rec = GetRecord(&carg->readyset, carg->incount, &carg->curstream);
-  /* process the record */
-  switch( SNetRecGetDescriptor( rec)) {
+  /* MAIN LOOP */
+  while( !terminate) {
+    /* get a record */
+    snet_record_t *rec = GetRecord(&readyset, incount, &curstream);
+    /* process the record */
+    switch( SNetRecGetDescriptor( rec)) {
 
-    case REC_data:
-      /* data record: forward to output */
-      SNetStreamWrite( carg->outstream, rec);
-      break;
+      case REC_data:
+        /* data record: forward to output */
+        SNetStreamWrite( outstream, rec);
+        break;
 
-    case REC_sort_end:
-    	/* curstream == last, this is the last branch and the paired parallel already terminates
-    	 * increase the level by one because it was not increased by the paired parallel as it should be
-    	 * Also later when last becomes the only waiting branch, the collector should terminate. However before terminating, it should pretend that parallel has sent the sort end from all branches
-    	 */
-    	if (carg->curstream == carg->last) {			// imply last != NULL, this will be the last branch and the paired parallel already terminates
-    		SNetRecSetLevel(rec, SNetRecGetLevel(rec) + 1);			// increase the level by one because it was not increased by the paired parallel as it should be
-    	}
-    	if (carg->last == NULL && SNetRecGetLevel(rec) == 0 && SNetRecGetNum(rec) == -1) {		// if last was not set, and collector receives a sort_end (l0, c-1) --> set the curstream as last
-    		carg->last = carg->curstream;																															// from now on, any sort_end from last will be increased level by 1
-    		SNetRecDestroy( rec);
-    		break;			// ignore the sort_end
-    	}
+      case REC_sort_end:
+      	/* curstream == last, this is the last branch and the paired parallel already terminates
+      	 * increase the level by one because it was not increased by the paired parallel as it should be
+      	 * Also later when last becomes the only waiting branch, the collector should terminate. However before terminating, it should pretend that parallel has sent the sort end from all branches
+      	 */
+      	if (curstream == last) {			// imply last != NULL, this will be the last branch and the paired parallel already terminates
+      		SNetRecSetLevel(rec, SNetRecGetLevel(rec) + 1);			// increase the level by one because it was not increased by the paired parallel as it should be
+      	}
+      	if (last == NULL && SNetRecGetLevel(rec) == 0 && SNetRecGetNum(rec) == -1) {		// if last was not set, and collector receives a sort_end (l0, c-1) --> set the curstream as last
+      		last = curstream;																															// from now on, any sort_end from last will be increased level by 1
+      		SNetRecDestroy( rec);
+      		break;			// ignore the sort_end
+      	}
 
-      ProcessSortRecord(rec, &carg->sort_rec, carg->curstream, &carg->readyset, &carg->waitingset);
-      /* end processing this stream */
-      carg->curstream = NULL;
-      break;
+        ProcessSortRecord(ent, rec, &sort_rec, curstream, &readyset, &waitingset);
+        /* end processing this stream */
+        curstream = NULL;
+        break;
 
-    case REC_sync:
-      SNetStreamReplace( carg->curstream, SNetRecGetStream( rec));
-      SNetRecDestroy( rec);
-      break;
+      case REC_sync:
+        SNetStreamReplace( curstream, SNetRecGetStream( rec));
+        SNetRecDestroy( rec);
+        break;
 
-    case REC_collect:
-      /* only for dynamic collectors! */
-      assert( false == carg->is_static );
-      /* collect: add new stream to ready set */
+      case REC_collect:
+        /* only for dynamic collectors! */
+        assert( false == carg->is_static );
+        /* collect: add new stream to ready set */
 #ifdef DESTROY_TERM_IN_WAITING_UPON_COLLECT
       /* but first, check if we can free resources by checking the
          waiting set for arrival of termination records */
       carg->incount -= DestroyTermInWaitingSet(wait_iter, &carg->waitingset);
       assert(carg->incount > 0);
 #endif
-      /* finally, add new stream to ready set */
-      SNetStreamsetPut(
-          &carg->readyset,
-          SNetStreamOpen( SNetRecGetStream( rec), 'r')
-          );
-      /* update incoming counter */
-      carg->incount++;
-      /* destroy collect record */
-      SNetRecDestroy( rec);
-      break;
+        /* finally, add new stream to ready set */
+        SNetStreamsetPut(
+            &readyset,
+            SNetStreamOpen( SNetRecGetStream( rec), 'r')
+            );
+        /* update incoming counter */
+        incount++;
+        /* destroy collect record */
+        SNetRecDestroy( rec);
+        break;
 
-    case REC_terminate:
-      /* termination record: close stream and remove from ready set */
-      ProcessTermRecord(rec, &carg->term_rec, carg->curstream, &carg->readyset, &carg->incount);
-      /* stop processing this stream */
-      carg->curstream = NULL;
-      break;
+      case REC_terminate:
+        /* termination record: close stream and remove from ready set */
+        ProcessTermRecord(rec, &term_rec, curstream, &readyset, &incount);
+        /* stop processing this stream */
+        curstream = NULL;
+        break;
 
-    default:
-      assert(0);
-      /* if ignore, at least destroy ... */
-      SNetRecDestroy( rec);
-  } /* end switch */
+      default:
+        assert(0);
+        /* if ignore, at least destroy ... */
+        SNetRecDestroy( rec);
+    } /* end switch */
 
-  /************* termination conditions *****************/
-  if ( SNetStreamsetIsEmpty( &carg->readyset)) {
-    if ( carg->is_static && (1 == carg->incount) ) { /* static collector has only one incoming stream left, it can terminate itself */
-      snet_stream_desc_t *in = (carg->waitingset != NULL) ? carg->waitingset : carg->readyset;
+    /************* termination conditions *****************/
+    if ( SNetStreamsetIsEmpty( &readyset)) {
+      /* the streams which had a sort record are in the waitingset */
+      if ( !SNetStreamsetIsEmpty( &waitingset)) {
+        if ( carg->is_static && (1 == incount) ) {		// stat
+          snet_stream_desc_t *in = (waitingset != NULL) ? waitingset : readyset;
 
-      /* if last is the only one in the waitingset --> pretends that the already-terminated paired parallel has sent the sort end to all branches
-       * Therefore restore the waitingset before terminating (so that a relevant sort_end is sent out) */
-      if (in == carg->last)
-      	RestoreFromWaitingset(&carg->waitingset,
-      			&carg->readyset,
-      			&carg->sort_rec,
-      			carg->outstream);
+          /* if last is the only one in the waitingset --> pretends that the already-terminated paired parallel has sent the sort end to all branches
+           * Therefore restore the waitingset before terminating (so that a relevant sort_end is sent out) */
+          if (in == last)
+          	RestoreFromWaitingset(&waitingset, &readyset, &sort_rec, outstream);
 
-      SNetStreamWrite( carg->outstream,
-          SNetRecCreate( REC_sync, SNetStreamGet(in))
-          );
-      SNetStreamClose( in, false);
-      TerminateCollectorTask(carg->outstream, carg);
-      SNetStreamIterDestroy(wait_iter);
-      return;
+          SNetStreamWrite( outstream,
+              SNetRecCreate( REC_sync, SNetStreamGet(in))
+              );
+          SNetStreamClose( in, false);
+          terminate = true;
 #ifdef DEBUG_PRINT_GC
       /* terminating due to GC */
       SNetUtilDebugNoticeEnt( ent,
           "[COLL] Terminate static collector as only one branch left!"
           );
 #endif
-    }
-    else if ( !SNetStreamsetIsEmpty( &carg->waitingset)) {
-      RestoreFromWaitingset(&carg->waitingset,
-          &carg->readyset,
-          &carg->sort_rec,
-          carg->outstream);
-    } else {
-      /* both ready set and waitingset are empty */
+        } else
+          RestoreFromWaitingset(&waitingset, &readyset, &sort_rec, outstream);
+      } else {
+        /* both ready set and waitingset are empty */
 #ifdef DEBUG_PRINT_GC
       if (carg->is_static) {
         SNetUtilDebugNoticeEnt( ent,
@@ -357,6 +385,16 @@ static void CollectorTask(void *arg)
       SNetStreamIterDestroy(wait_iter);
       return;
     }
+
+     
+    /************* end of termination conditions **********/
+  } /* MAIN LOOP END */
+
+  if (term_rec != NULL) {
+    SNetRecDestroy(term_rec);
+  }
+  if (sort_rec != NULL) {
+    SNetRecDestroy(sort_rec);
   }
 
 

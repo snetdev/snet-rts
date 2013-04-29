@@ -40,6 +40,13 @@
 #define ENABLE_GARBAGE_COLLECTOR
 
 typedef struct {
+  snet_stream_t *input;
+  snet_stream_t **outputs;
+  snet_variant_list_list_t *variant_lists;
+  bool is_det;
+} parallel_arg_t;
+
+typedef struct {
   bool is_match;
   int count;
 } match_count_t;
@@ -477,8 +484,166 @@ static void InitParallelBoxTask(void *arg)
     parg->usedcounter[i] = 0;
   }
 
-  SNetThreadingRespawn(&ParallelBoxTask);
-}
+  /* MAIN LOOP START */
+  while( !terminate) {
+    /* read a record from the instream */
+    rec = SNetStreamRead( instream);
+
+    switch( SNetRecGetDescriptor( rec)) {
+
+      case REC_data:
+        {
+          int stream_index;
+          for( i=0; i<num; i++) {
+            CheckMatch( rec, SNetVariantListListGet( parg->variant_lists, i), matchcounter[i]);
+          }
+          // used first match stategy
+          stream_index = BestMatch( matchcounter, num);
+
+         // use Weighted Round Robin strategy
+         // stream_index = WeightedRoundRobin( matchcounter, usedcounter, num);
+
+          if (stream_index == -1) {
+            SNetUtilDebugFatalEnt( ent,
+                "[PAR] Cannot route data record, no matching branch!");
+          }
+          PutToBuffers( outstreams, num, stream_index, rec, (parg->is_det)? &counter : NULL);
+          usedcounter[stream_index] += 1;  // increase the number of usage
+
+        }
+        break;
+
+      case REC_sync:
+        {
+#ifdef ENABLE_GARBAGE_COLLECTOR
+          snet_variant_t *synctype = SNetRecGetVariant(rec);
+          if (synctype != NULL) {
+            snet_stream_desc_t *last = NULL;
+            int cnt = 0;
+
+            /* terminate affected branches */
+            for( i=0; i<num; i++) {
+              if ( VariantIsSupertypeOfAllOthers( synctype,
+                    SNetVariantListListGet( parg->variant_lists, i)) ) {
+                snet_record_t *term_rec = SNetRecCreate(REC_terminate);
+#ifdef DEBUG_PRINT_GC
+                SNetUtilDebugNoticeEnt( ent,
+                    "[PAR] Terminate branch %d due to outtype of synchrocell!", i);
+#endif
+                SNetRecSetFlag(term_rec);
+                SNetStreamWrite(outstreams[i], term_rec);
+                SNetStreamClose(outstreams[i], false);
+                outstreams[i] = NULL;
+              }
+            }
+
+            /* count remaining branches */
+            for (i=0;i<num;i++) {
+            	if (outstreams[i] != NULL) {
+            		cnt++;
+            		last = outstreams[i];
+            	}
+            }
+            counter++;
+
+            /* if only one branch left, we can terminate ourselves*/
+            if (cnt == 1) {
+
+            	/* send a sort end to notify the paired collector so that the collector know all sort_end records coming from the last branch was not rasied the level by the this parallel entity
+            	 * Special (l0, c-1) is used for this purpose
+            	 * On the path the sort_end may reach other parallel and collector, parallel increases the level by 1, and collector decreases by 1
+            	 * When the sort_end record reaches the relevant collector, its level should be zero
+            	 * One collector is supposed to receive at most 1 this special sort_end record. After receiving it, the collector will terminate soon as well
+            	 * */
+            	snet_record_t *notify_rec = SNetRecCreate(REC_sort_end, 0, -1);
+            	SNetStreamWrite(last, notify_rec);
+
+              /* forward stripped sync record */
+              SNetRecSetVariant(rec, NULL);
+              SNetStreamWrite(last, rec);
+
+              /* close instream */
+              SNetStreamClose( instream, true);
+              terminate = true;
+#ifdef DEBUG_PRINT_GC
+              SNetUtilDebugNoticeEnt( ent,
+                  "[PAR] Terminate self, as only one branch left!");
+#endif
+            } else {
+              /* usual sync replace */
+              parg->input = SNetRecGetStream( rec);
+              SNetStreamReplace( instream, parg->input);
+              SNetRecDestroy( rec);
+            }
+
+          } else
+#endif /* ENABLE_GARBAGE_COLLECTOR */
+          {
+            /* usual sync replace */
+            parg->input = SNetRecGetStream( rec);
+            SNetStreamReplace( instream, parg->input);
+            SNetRecDestroy( rec);
+          }
+        }
+        break;
+
+      case REC_collect:
+        SNetUtilDebugNoticeEnt( ent, "[PAR] Received REC_collect, destroying it");
+        SNetRecDestroy( rec);
+        break;
+
+      case REC_sort_end:
+        /* increase level */
+        SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
+        /* send a copy to all */
+        for( i=0; i<num; i++) {
+          if (outstreams[i] != NULL) {
+            SNetStreamWrite( outstreams[i], SNetRecCopy( rec));
+          }
+        }
+        /* destroy the original */
+        SNetRecDestroy( rec);
+        break;
+
+      case REC_terminate:
+        terminate = true;
+        /* send a copy to all */
+        for( i=0; i<num; i++) {
+          if (outstreams[i] != NULL) {
+            SNetStreamWrite( outstreams[i], SNetRecCopy( rec));
+          }
+        }
+        /* destroy the original */
+        SNetRecDestroy( rec);
+        /* close and destroy instream */
+        SNetStreamClose( instream, true);
+        /* note that no sort record needs to be appended */
+        break;
+
+      default:
+        SNetUtilDebugNoticeEnt( ent, "[PAR] Unknown control rec destroyed (%d).\n",
+            SNetRecGetDescriptor( rec));
+        SNetRecDestroy( rec);
+    }
+  } /* MAIN LOOP END */
+
+
+  /* close the outstreams */
+  for( i=0; i<num; i++) {
+    if (outstreams[i] != NULL) {
+      SNetStreamClose( outstreams[i], false);
+    }
+    SNetMemFree( matchcounter[i]);
+  }
+  SNetMemFree( matchcounter);
+  SNetMemFree( usedcounter);
+
+  SNetVariantListListDestroy( parg->variant_lists);
+  SNetMemFree( parg);
+} /* END of PARALLEL BOX TASK */
+
+
+
 
 /*****************************************************************************/
 /* CREATION FUNCTIONS                                                        */

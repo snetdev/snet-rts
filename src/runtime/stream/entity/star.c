@@ -12,6 +12,11 @@
 #include "distribution.h"
 
 
+
+extern int SNetLocvecTopval(snet_locvec_t *locvec);
+//#define DEBUG_PRINT_GC
+
+
 #define ENABLE_GARBAGE_COLLECTOR
 
 /**
@@ -147,10 +152,11 @@ static void StarBoxTask(void *arg)
   star_arg_t *sarg = arg;
   snet_record_t *rec;
 
-  /* read from input stream */
-  rec = SNetStreamRead( sarg->instream);
-
-  switch( SNetRecGetDescriptor( rec)) {
+  /* MAIN LOOP */
+  while( !terminate) {
+    /* read from input stream */
+    rec = SNetStreamRead( instream);
+    switch( SNetRecGetDescriptor( rec)) {
 
     case REC_data:
       if( MatchesExitPattern( rec, sarg->exit_patterns, sarg->guards)) {
@@ -166,45 +172,26 @@ static void StarBoxTask(void *arg)
         if( sarg->nextstream == NULL) {
           CreateOperandNetwork(&sarg->nextstream, sarg, sarg->outstream);
         }
-        /* send the record to the instance */
-        SNetStreamWrite( sarg->nextstream, rec);
-      } /* end if not matches exit pattern */
-
-      /* deterministic non-incarnate has to append control records */
-      if (sarg->is_det && !sarg->is_incarnate) {
-        /* send new sort record to collector level=0, counter=0*/
-        SNetStreamWrite( sarg->outstream,
-            SNetRecCreate( REC_sort_end, 0, sarg->counter) );
-
-        /* if has next instance, send new sort record */
-        if (sarg->nextstream != NULL) {
-          SNetStreamWrite( sarg->nextstream,
-              SNetRecCreate( REC_sort_end, 0, sarg->counter) );
-        }
-        /* increment counter */
-        sarg->counter++;
-
-      }
 #ifdef ENABLE_GARBAGE_COLLECTOR
-      else if (sarg->sync_cleanup) {
-        snet_record_t *term_rec;
-        /*
-         * If sync_cleanup is set, we decided to postpone termination
-         * due to garbage collection triggered by a sync record until now.
-         * Postponing was done in order not to create the operand network unnecessarily
-         * only to be able to forward the sync record.
-         */
-        assert( sarg->nextstream != NULL);
-        /* first send a sync record to the next instance */
-        SNetStreamWrite( sarg->nextstream,
-            SNetRecCreate( REC_sync, SNetStreamGet(sarg->instream)) );
+        else if (sync_cleanup) {
+          snet_record_t *term_rec;
+          /*
+           * If sync_cleanup is set, we decided to postpone termination
+           * due to garbage collection triggered by a sync record until now.
+           * Postponing was done in order not to create the operand network unnecessarily
+           * only to be able to forward the sync record.
+           */
+          assert( nextstream != NULL);
+          /* first send a sync record to the next instance */
+          SNetStreamWrite( nextstream,
+              SNetRecCreate( REC_sync, sarg->input) );
 
 
-        /* send a terminate record to collector, it will close and
-           destroy the stream */
-        term_rec = SNetRecCreate(REC_terminate);
-        SNetRecSetFlag(term_rec);
-        SNetStreamWrite( sarg->outstream, term_rec);
+          /* send a terminate record to collector, it will close and
+             destroy the stream */
+          term_rec = SNetRecCreate(REC_terminate);
+          SNetRecSetFlag(term_rec);
+          SNetStreamWrite( outstream, term_rec);
 
 #ifdef DEBUG_PRINT_GC
         /* terminating due to GC */
@@ -213,19 +200,17 @@ static void StarBoxTask(void *arg)
             "delayed until new data record!"
             );
 #endif
-        SNetStreamClose(sarg->nextstream, false);
-        SNetStreamClose(sarg->instream, false);
-        TerminateStarBoxTask(sarg->outstream,sarg);
-        return;
-      }
+          SNetStreamClose(nextstream, false);
+          SNetStreamClose(instream, false);
+        }
 #endif /* ENABLE_GARBAGE_COLLECTOR */
-      break;
+        break;
 
-    case REC_sync:
-      {
-        snet_stream_t *newstream = SNetRecGetStream( rec);
+      case REC_sync:
+        {
+          snet_stream_t *newstream = SNetRecGetStream( rec);
 #ifdef ENABLE_GARBAGE_COLLECTOR
-        snet_locvec_t *loc = SNetStreamGetSource( newstream);
+          snet_locvec_t *loc = SNetStreamGetSource( newstream);
 #ifdef DEBUG_PRINT_GC
         if (loc != NULL) {
           int size = SNetLocvecPrintSize(loc) + 1;
@@ -283,6 +268,14 @@ static void StarBoxTask(void *arg)
             SNetUtilDebugNoticeEnt( ent,
                 "[STAR] Notice: Remembering delayed destruction.");
 #endif
+              /* handle sync record as usual */
+              SNetStreamReplace( instream, newstream);
+              sarg->input = newstream;
+              SNetRecDestroy( rec);
+            }
+          } else
+#endif /* ENABLE_GARBAGE_COLLECTOR */
+          {
             /* handle sync record as usual */
             SNetStreamReplace( sarg->instream, newstream);
             SNetRecDestroy( rec);

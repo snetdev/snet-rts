@@ -143,12 +143,30 @@ libtblpel_la_SOURCES = \
 	src/threading/lpel/lpelmod/mon_snet.c \
 	src/threading/lpel/lpelmod/mon_snet.h \
 	src/threading/lpel/lpelif/glue_snet.c \
+	src/threading/lpel/lpelif/glue_snet.h \
+	src/threading/lpel/lpelif/glue_decen.c \
 	src/threading/lpel/lpelif/wrappers.c 
 libtblpel_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
         $(LPEL_INCLUDES) \
         -I$(srcdir)/src/threading/lpel/lpelmod
 libtblpel_la_LIBADD = $(LIBLPEL_LA)
+
+pkglib_LTLIBRARIES += libtblpel_hrc.la 
+libtblpel_hrc_la_SOURCES = \
+	src/threading/lpel/lpelmod/assign.c \
+	src/threading/lpel/lpelmod/assign.h \
+	src/threading/lpel/lpelmod/mon_snet.c \
+	src/threading/lpel/lpelmod/mon_snet.h \
+	src/threading/lpel/lpelif/glue_snet.c \
+	src/threading/lpel/lpelif/glue_snet.h \
+	src/threading/lpel/lpelif/glue_hrc.c \
+	src/threading/lpel/lpelif/wrappers.c 
+libtblpel_hrc_la_CPPFLAGS = \
+        $(AM_CPPFLAGS) \
+        $(LPEL_INCLUDES) \
+        -I$(srcdir)/src/threading/lpel/lpelmod
+libtblpel_hrc_la_LIBADD = $(LIBLPEL_HRC_LA)
 endif
 
 libC4SNet_la_SOURCES = \

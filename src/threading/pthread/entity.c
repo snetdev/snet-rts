@@ -215,6 +215,11 @@ void SNetThreadingYield(void)
 
 const char *SNetThreadingGetName(void) { return SNetThreadingSelf()->name; }
 
+/* void function, to support task migration for lpel_hrc */
+void SNetThreadingCheckMigrate() {
+}
+
+
 /******************************************************************************
  * Private functions
  *****************************************************************************/

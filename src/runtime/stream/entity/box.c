@@ -29,6 +29,7 @@ typedef struct {
   snet_handle_t* (*exerealm_create)(snet_handle_t*);
   snet_handle_t* (*exerealm_update)(snet_handle_t*);
   snet_handle_t* (*exerealm_destroy)(snet_handle_t*);
+  const char *boxname;
   snet_handle_t hnd;
 } box_arg_t;
 
@@ -50,16 +51,26 @@ static void BoxTask(void *arg)
   box_arg_t *barg = arg;
   snet_record_t *rec;
 
-  /* read from input stream */
-  rec = SNetStreamRead( barg->instream);
-  switch (SNetRecGetDescriptor(rec)) {
-    case REC_trigger_initialiser:
-    case REC_data:
-      barg->hnd.rec = rec;
-#if defined(DBG_RT_TRACE_BOX_TIMINGS) || defined(SNET_DEBUG_COUNTERS)
-      SNetDebugTimeGetTime(&time_in);
-      #ifdef DBG_RT_TRACE_BOX_TIMINGS
-        SNetUtilDebugNoticeTask(
+  instream = SNetStreamOpen(barg->input, 'r');
+  outstream =  SNetStreamOpen(barg->output, 'w');
+  /* set out descriptor */
+  barg->hnd.out_sd = outstream;
+  /* set entity */
+  barg->hnd.ent = ent;
+
+  /* MAIN LOOP */
+  while(!terminate) {
+    /* read from input stream */
+    rec = SNetStreamRead(instream);
+
+    switch(SNetRecGetDescriptor(rec)) {
+      case REC_trigger_initialiser:
+      case REC_data:
+      	barg->hnd.rec = rec;
+
+#ifdef DBG_RT_TRACE_BOX_TIMINGS
+        gettimeofday(&tv_in, NULL);
+        SNetUtilDebugNoticeEnt(ent,
             "[BOX] Firing box function at %lf.",
             SNetDebugTimeGetMilliseconds(&time_in));
      #endif
@@ -73,9 +84,9 @@ static void BoxTask(void *arg)
       }
 #endif
 
-      /* execute box function and update execution realm */
-      barg->hnd = *barg->boxfun(&barg->hnd);
-      barg->hnd = *barg->exerealm_update(&barg->hnd);
+        /* execute box function and update execution realm */
+        barg->hnd = *barg->boxfun(&barg->hnd);
+        barg->hnd = *barg->exerealm_update(&barg->hnd);
 
       /*
        * Emit an event here?
@@ -91,42 +102,49 @@ static void BoxTask(void *arg)
             "[BOX] Return from box function after %lf sec.", mseconds);
       #elif defined(SNET_DEBUG_COUNTERS)
         SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
-      #endif
-#endif
+#endif /* SNET_DEBUG_COUNTERS */
 
-      SNetRecDestroy( rec);
-      break;
+        SNetRecDestroy(rec);
 
-    case REC_sync:
-        SNetStreamReplace( barg->instream, SNetRecGetStream(rec));
-        SNetRecDestroy( rec);
-      break;
+        /* restrict to one data record per execution */
+        //SNetThreadingYield();
 
-    case REC_sort_end:
-      /* forward the sort record */
-      SNetStreamWrite( barg->outstream, rec);
-      break;
+        /* check the box task should be migrated after one record execution */
+        SNetThreadingCheckMigrate();
+        break;
 
-    case REC_terminate:
-      barg->hnd = *barg->exerealm_destroy(&barg->hnd);
-      SNetStreamWrite( barg->outstream, rec);
-      SNetStreamClose( barg->instream, true);
-      SNetStreamClose( barg->outstream, false);
+      case REC_sync:
+        {
+          snet_stream_t *newstream = SNetRecGetStream(rec);
+          SNetStreamReplace(instream, newstream);
+          SNetRecDestroy(rec);
+        }
+        break;
 
-      /* destroy box arg */
-      SNetVariantListDestroy(barg->hnd.vars);
-      SNetIntListListDestroy(barg->hnd.sign);
-      SNetMemFree( barg);
-      return;
-    case REC_collect:
-    default:
-      assert(0);
-      /* if ignore, destroy at least ...*/
-      SNetRecDestroy( rec);
-  }
+      case REC_sort_end:
+        /* forward the sort record */
+        SNetStreamWrite(outstream, rec);
+        break;
 
-  /* schedule new task */
-  SNetThreadingRespawn(NULL);
+      case REC_terminate:
+      	barg->hnd = *barg->exerealm_destroy(&barg->hnd);
+        SNetStreamWrite(outstream, rec);
+        terminate = true;
+        break;
+
+      case REC_collect:
+      default:
+        assert(0);
+    }
+  } /* MAIN LOOP END */
+  barg->hnd = *barg->exerealm_destroy(&barg->hnd);
+  SNetStreamClose(instream, true);
+  SNetStreamClose(outstream, false);
+ 
+  /* destroy box arg */
+  SNetVariantListDestroy(barg->hnd.vars);
+  SNetIntListListDestroy(barg->hnd.sign);
+  SNetMemFree( barg);
 }
 
 /**
@@ -185,16 +203,16 @@ snet_stream_t *SNetBox(snet_stream_t *input,
     barg->exerealm_destroy = er_destroy;
     /* set out signs */
     barg->hnd.sign = output_variants;
-    /* set out descriptor */
-    barg->hnd.out_sd = barg->outstream;
     /* mapping */
     barg->hnd.mapping = NULL;
     /* set variants */
     barg->hnd.vars = vlist;
     barg->hnd = *barg->exerealm_create(&barg->hnd);
 
-    SNetThreadingSpawn( ENTITY_box, location, SNetLocvecGet(info),
-          boxname, &BoxTask, barg);
+    SNetThreadingSpawn(
+        SNetEntityCreate(ENTITY_box, location, SNetLocvecGet(info),
+          boxname, BoxTask, (void*)barg)
+        );
 
 
   } else {

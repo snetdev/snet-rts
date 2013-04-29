@@ -327,3 +327,4 @@ poll_fastpath:
 int SNetStreamGetId(snet_stream_desc_t *sd) {
 	return -1;
 }
+

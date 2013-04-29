@@ -11,7 +11,7 @@ all: $(TARGET)
 %.o: %.c
 	gcc -g -c $< -o $@ $(INCLUDES)
 
-all: $(TARGET)
+all: $(TARGET) $(TARGET).lpel $(TARGET).lpel_hrc
 
 $(TARGET):  $(TARGET).snet $(BOXES)
 	snetc -g $(SNETCFLAGS) $< -o $@ $(INCLUDES)
@@ -20,6 +20,10 @@ lpel: $(TARGET).lpel
 $(TARGET).lpel: $(TARGET).snet $(BOXES)
 	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel $(INCLUDES)
 
+$(TARGET).lpel_hrc: $(TARGET).snet $(BOXES)
+	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel_hrc $(INCLUDES)
+
+
 clean:
 	rm -f $(TARGET).[och] $(BOXES) mon_*.log *tasks.map
-	$(SNET_LIBS)/libtool --mode=clean rm -f $(TARGET) $(TARGET).lo $(TARGET).lpel
+	$(SNET_LIBS)/libtool --mode=clean rm -f $(TARGET) $(TARGET).lo $(TARGET).lpel $(TARGET).lpel_hrc
