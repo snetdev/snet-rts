@@ -91,7 +91,6 @@ static void DestroyStorage( snet_record_t **storage,
 {
   int i;
   snet_variant_t *pattern;
-  (void) pattern;
 
   LIST_ENUMERATE(patterns, i, pattern) {
     /* free storage */
@@ -127,67 +126,74 @@ static snet_variant_t *GetMergedTypeVariant( snet_variant_list_t *patterns )
 /*****************************************************************************/
 
 typedef struct {
-  snet_stream_desc_t *outstream, *instream;
+  snet_stream_t *input, *output;
   snet_variant_list_t *patterns;
   snet_expr_list_t *guard_exprs;
-  snet_record_t **storage;
-  snet_record_t dummy; /* used to indicate unmatched pattern */
-  bool partial_sync;
-  int match_cnt;
 } sync_arg_t;
-
-static void TerminateSyncBoxTask(sync_arg_t *sarg)
-{
-  SNetMemFree( sarg->storage);
-  SNetVariantListDestroy( sarg->patterns);
-  SNetExprListDestroy( sarg->guard_exprs);
-  SNetMemFree( sarg);
-}
 
 /**
  * Sync box task
  */
-static void SyncBoxTask(void *arg)
+static void SyncBoxTask(snet_entity_t *ent, void *arg)
 {
-  sync_arg_t *sarg = arg;
-
   snet_expr_t *expr;
   snet_record_t *rec;
+  snet_record_t dummy; /* used to indicate unmatched pattern */
   snet_variant_t *pattern;
+  snet_stream_desc_t *outstream, *instream;
 
-  int i, new_matches;
+  bool terminate = false;
+  bool partial_sync = false;
+  int i, new_matches, match_cnt = 0;
+  sync_arg_t *sarg = (sync_arg_t *) arg;
   int num_patterns = SNetVariantListLength( sarg->patterns);
+  snet_record_t *storage[num_patterns];
 
+  instream  = SNetStreamOpen(sarg->input,  'r');
+  outstream = SNetStreamOpen(sarg->output, 'w');
 
-  /* read from input stream */
-  rec = SNetStreamRead( sarg->instream);
+  /* !! CAUTION !!
+   * Set all storage slots to &dummy, indicating unmatched pattern. This frees
+   * up NULL to indicate that a pattern was matched by a record which also
+   * matched an earlier pattern. This lets us avoid the storage container
+   * holding the same pointer multiple times, this means the merge function can
+   * safely free them all without freeing the same pointer multiple times.
+   */
+  for (i = 0; i < num_patterns; i++) {
+    storage[i] = &dummy;
+  }
 
-  switch (SNetRecGetDescriptor( rec)) {
-    case REC_data:
-      new_matches = 0;
-      LIST_ZIP_ENUMERATE(sarg->patterns, sarg->guard_exprs, i, pattern, expr) {
-        /* storage empty and guard accepts => store record*/
-        if (sarg->storage[i] == &sarg->dummy && SNetRecPatternMatches(pattern, rec) &&
-            SNetEevaluateBool(expr, rec)) {
-          if (new_matches == 0) {
-            sarg->storage[i] = rec;
-          } else {
-            /* Record already stored as match for another pattern. */
-            sarg->storage[i] = NULL;
-          }
-          new_matches += 1;
-          /* this is the first sync */
-          if (!sarg->partial_sync) {
-            sarg->partial_sync = true;
-          }
+  /* MAIN LOOP START */
+  while( !terminate) {
+    /* read from input stream */
+    rec = SNetStreamRead( instream);
+
+    switch (SNetRecGetDescriptor( rec)) {
+      case REC_data:
+        new_matches = 0;
+        LIST_ZIP_ENUMERATE(sarg->patterns, sarg->guard_exprs, i, pattern, expr) {
+          /* storage empty and guard accepts => store record*/
+          if (storage[i] == &dummy && SNetRecPatternMatches(pattern, rec) &&
+              SNetEevaluateBool(expr, rec)) {
+            if (new_matches == 0) {
+              storage[i] = rec;
+            } else {
+              /* Record already stored as match for another pattern. */
+              storage[i] = NULL;
+            }
+            new_matches += 1;
+            /* this is the first sync */
+            if (!partial_sync) {
+              partial_sync = true;
+            }
 #ifdef USE_USER_EVENT_LOGGING
-          /* Emit a monitoring message of first record entering syncro cell */
-          SNetThreadingEventSignal(
-                SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec));
+            /* Emit a monitoring message of another accepted record entering syncro cell */
+            SNetThreadingEventSignal( ent,
+            		SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
+            );
 #endif
-
+          }
         }
-      }
 
         match_cnt += new_matches;
         if (new_matches == 0) {
@@ -223,71 +229,59 @@ static void SyncBoxTask(void *arg)
             SNetVariantDestroy(outtype);
           }
 #endif
-        /* this is the last sync */
-        SNetStreamWrite( sarg->outstream, syncrec);
 
-        /* follow by a sync record */
-        syncrec = SNetRecCreate(REC_sync, SNetStreamGet(sarg->instream));
-#ifdef ENABLE_GARBAGE_COLLECTOR
-        snet_variant_t *outtype;
-        /* if we read from a star entity, we store the outtype along
-           with the sync record */
-        if( SNetStreamGetSource( SNetStreamGet(sarg->instream)) != NULL ) {
-          /*
-           * To trigger garbage collection at a following parallel dispatcher
-           * within a state-modeling network, the dispatcher needs knowledge about the
-           * type of the merged record ('outtype' of the synchrocell).
-           */
-          outtype = GetMergedTypeVariant(sarg->patterns);
-          /* is copied internally */
-          SNetRecSetVariant(syncrec, outtype);
-          SNetVariantDestroy(outtype);
+          SNetStreamWrite( outstream, syncrec);
+
+          /* the receiver of REC_sync will destroy the outstream */
+          SNetStreamClose( outstream, false);
+          /* instream has been sent to next entity, do not destroy  */
+          SNetStreamClose( instream, false);
+
+          terminate = true;
+          partial_sync = false;
         }
-#endif
+        break;
 
-        SNetStreamWrite( sarg->outstream, syncrec);
+      case REC_sync:
+        {
+          sarg->input = SNetRecGetStream( rec);
+          SNetStreamReplace( instream, sarg->input);
+          SNetRecDestroy( rec);
+        }
+        break;
 
-        /* the receiver of REC_sync will destroy the outstream */
-        SNetStreamClose( sarg->outstream, false);
-        /* instream has been sent to next entity, do not destroy  */
-        SNetStreamClose( sarg->instream, false);
+      case REC_sort_end:
+        /* forward sort record */
+        SNetStreamWrite( outstream, rec);
+        break;
 
-        sarg->partial_sync = false;
-        TerminateSyncBoxTask(sarg);
-        return;
-      }
-      break;
+      case REC_terminate:
+        if (partial_sync) {
+          DestroyStorage(storage, sarg->patterns, &dummy);
+          SNetUtilDebugNoticeEnt( ent,
+          "[SYNC] Warning: Destroying partially synchronized sync-cell!");
+        }
+        terminate = true;
+        SNetStreamWrite( outstream, rec);
+        SNetStreamClose( outstream, false);
+        SNetStreamClose( instream, true);
+        break;
 
-    case REC_sync:
-      SNetStreamReplace( sarg->instream, SNetRecGetStream(rec));
-      SNetRecDestroy( rec);
-      break;
+      case REC_collect:
+        /* invalid record */
+      default:
+        assert(0);
+        /* if ignore, destroy at least ... */
+        SNetRecDestroy( rec);
+    }
+  } /* MAIN LOOP END */
 
-    case REC_sort_end:
-      /* forward sort record */
-      SNetStreamWrite( sarg->outstream, rec);
-      break;
 
-    case REC_terminate:
-      if (sarg->partial_sync) {
-        DestroyStorage(sarg->storage, sarg->patterns, &sarg->dummy);
-        SNetUtilDebugNoticeTask(
-        "[SYNC] Warning: Destroying partially synchronized sync-cell!");
-      }
-      SNetStreamWrite( sarg->outstream, rec);
-      SNetStreamClose( sarg->outstream, false);
-      SNetStreamClose( sarg->instream, true);
-      TerminateSyncBoxTask(sarg);
-      return;
-    case REC_collect:
-      /* invalid record */
-    default:
-      assert(0);
-      /* if ignore, destroy at least ... */
-      SNetRecDestroy( rec);
-  }
-  SNetThreadingRespawn(NULL);
+  SNetVariantListDestroy( sarg->patterns);
+  SNetExprListDestroy( sarg->guard_exprs);
+  SNetMemFree( sarg);
 }
+
 
 /*****************************************************************************/
 /* CREATION FUNCTION                                                         */
@@ -311,31 +305,17 @@ snet_stream_t *SNetSync( snet_stream_t *input,
 
   input = SNetRouteUpdate(info, input, location);
   if(SNetDistribIsNodeLocation(location)) {
-    int i, num_patterns;
     output = SNetStreamCreate(0);
-    sarg = SNetMemAlloc( sizeof( sync_arg_t));
-    sarg->instream = SNetStreamOpen(input, 'r');
-    sarg->outstream = SNetStreamOpen(output, 'w');
+    sarg = (sync_arg_t *) SNetMemAlloc( sizeof( sync_arg_t));
+    sarg->input  = input;
+    sarg->output = output;
     sarg->patterns = patterns;
     sarg->guard_exprs = guard_exprs;
-    sarg->partial_sync = false;
-    sarg->match_cnt = 0;
-    num_patterns = SNetVariantListLength( sarg->patterns);
-    sarg->storage = SNetMemAlloc(num_patterns*sizeof(snet_record_t *));
 
-    /* !! CAUTION !!
-     * Set all storage slots to &dummy, indicating unmatched pattern. This frees
-     * up NULL to indicate that a pattern was matched by a record which also
-     * matched an earlier pattern. This lets us avoid the storage container
-     * holding the same pointer multiple times, this means the merge function can
-     * safely free them all without freeing the same pointer multiple times.
-     */
-    for (i = 0; i < num_patterns; i++) {
-      sarg->storage[i] = &sarg->dummy;
-    }
-
-    SNetThreadingSpawn( ENTITY_sync, location, locvec,
-          "<sync>", &SyncBoxTask, sarg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_sync, location, locvec,
+          "<sync>", SyncBoxTask, (void*)sarg)
+        );
   } else {
     SNetVariantListDestroy( patterns);
     SNetExprListDestroy( guard_exprs);

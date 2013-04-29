@@ -3,6 +3,7 @@
 
 #include "distribution.h" //XXX dependency?
 #include "locvec.h"
+#include "entities.h"
 #include "moninfo.h"
 
 /*
@@ -29,27 +30,12 @@
  *
  *
  * Author: Daniel Prokesch <dlp@snet-home.org>
- * Author: Stefan Kok
  * Date:   15/03/2011
  *
  *****************************************************************************/
 
-typedef enum {
-  ENTITY_box,
-  ENTITY_parallel,
-  ENTITY_star,
-  ENTITY_split,
-  ENTITY_fbcoll,
-  ENTITY_fbdisp,
-  ENTITY_fbbuf,
-  ENTITY_sync,
-  ENTITY_filter,
-  ENTITY_nameshift,
-  ENTITY_collect,
-  ENTITY_other
-} snet_entity_t;
 
-typedef void (*snet_taskfun_t)(void*);
+
 
 /*****************************************************************************
  * (1) Initialization and Shutdown
@@ -64,7 +50,11 @@ typedef void (*snet_taskfun_t)(void*);
 int SNetThreadingInit(int argc, char **argv);
 
 
-const char *SNetThreadingGetName();
+/**
+ * Return the thread id as integer value
+ *
+ */
+unsigned long SNetThreadingGetId();
 
 
 /**
@@ -102,7 +92,7 @@ int SNetThreadingCleanup(void);
  * @param moninfo   the monitoring info, can be NULL
  * @post  if moninfo != NULL, moninfo is destroyed
  */
-void SNetThreadingEventSignal(snet_moninfo_t *moninfo);
+void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo);
 
 
 
@@ -128,10 +118,10 @@ void SNetThreadingEventSignal(snet_moninfo_t *moninfo);
  *
  * @return 0 on success
  */
-void SNetThreadingSpawn(snet_entity_t ent, int loc, snet_locvec_t *locvec,
-                        const char *name, snet_taskfun_t f, void *arg);
+int SNetThreadingSpawn(snet_entity_t *ent);
 
-void SNetThreadingRespawn(snet_taskfun_t);
+
+
 
 /**
  * Let the current entity thread/task give up execution
@@ -263,14 +253,6 @@ void SNetStreamReplace(snet_stream_desc_t *sd, snet_stream_t *new_stream);
  */
 snet_stream_t *SNetStreamGet(snet_stream_desc_t *sd);
 
-
-
-/**
- * Get the stream id
- * @param sd  stream descriptor
- * @return  the stream id
- */
-int SNetStreamGetId(snet_stream_desc_t *sd);
 
 /**
  * Get the stream id

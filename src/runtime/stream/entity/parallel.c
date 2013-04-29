@@ -52,15 +52,6 @@ typedef struct {
 } match_count_t;
 
 
-typedef struct {
-  snet_stream_desc_t **outstreams, *instream;
-  snet_variant_list_list_t *variant_lists;
-  match_count_t **matchcounter;
-  bool is_det;
-  int num_init_branches;
-  int counter;
-  int *usedcounter; /* to keep track how many times the branch is used */
-} parallel_arg_t;
 
 static inline void MatchCountUpdate( match_count_t *mc, bool match_cond)
 {
@@ -78,7 +69,6 @@ static void CheckMatch( snet_record_t *rec,
   int name, val;
   snet_variant_t *variant;
   int max=-1;
-  (void) val;
 
   assert(rec != NULL);
   assert(variant_list != NULL);
@@ -234,254 +224,83 @@ static void PutToBuffers( snet_stream_desc_t **outstreams, int num,
   }
 }
 
-/**
- * Close outstreams and the arguments
- */
-static void TerminateParallelBoxTask( int num, parallel_arg_t *parg)
-{
-  int i;
-
-  /* close the outstreams */
-
-  for( i=0; i<num; i++) {
-    if (parg->outstreams[i] != NULL) {
-      SNetStreamClose( parg->outstreams[i], false);
-    }
-    if(parg->matchcounter != NULL && parg->matchcounter[i] != NULL){
-      SNetMemFree( parg->matchcounter[i]);
-    }
-  }
-  if(parg->matchcounter != NULL){
-    SNetMemFree( parg->matchcounter);
-  }
-  if(parg->usedcounter != NULL){
-    SNetMemFree( parg->usedcounter);
-  }
-  SNetMemFree( parg->outstreams);
-  SNetVariantListListDestroy( parg->variant_lists);
-  SNetMemFree( parg);
-}
 
 /**
  * Main Parallel Box Task
  */
-static void ParallelBoxTask(void *arg)
+static void ParallelBoxTask(snet_entity_t *ent, void *arg)
 {
   parallel_arg_t *parg = (parallel_arg_t *) arg;
-
   /* the number of outputs */
   int num = SNetVariantListListLength(parg->variant_lists);
+  snet_stream_desc_t *instream;
+  snet_stream_desc_t *outstreams[num];
   int i;
   snet_record_t *rec;
+  match_count_t **matchcounter;
+  int num_init_branches = 0;
+  bool terminate = false;
+  int counter = 0;
+  int *usedcounter; /* to keep track how many times the branch is used */
 
+  /* open instream for reading */
+  instream = SNetStreamOpen(parg->input, 'r');
 
-  /* read a record from the instream */
-  rec = SNetStreamRead( parg->instream);
-
-  switch( SNetRecGetDescriptor( rec)) {
-
-    case REC_data:
-      {
-        int stream_index;
-        for( i=0; i<num; i++) {
-          CheckMatch( rec,
-                      SNetVariantListListGet( parg->variant_lists, i),
-                      parg->matchcounter[i]);
-        }
-        // used first match stategy
-        stream_index = BestMatch( parg->matchcounter, num);
-
-       // use Weighted Round Robin strategy
-       // stream_index = WeightedRoundRobin( matchcounter, usedcounter, num);
-
-        if (stream_index == -1) {
-          SNetUtilDebugFatalTask(
-              "[PAR] Cannot route data record, no matching branch!");
-        }
-        PutToBuffers( parg->outstreams, num, stream_index, rec,
-                      (parg->is_det)? &parg->counter : NULL);
-        parg->usedcounter[stream_index] += 1;  // increase the number of usage
-
-      }
-      break;
-
-    case REC_sync:
-      {
-#ifdef ENABLE_GARBAGE_COLLECTOR
-        snet_variant_t *synctype = SNetRecGetVariant(rec);
-        if (synctype!=NULL) {
-          snet_stream_desc_t *last = NULL;
-          int cnt = 0;
-
-          /* terminate affected branches */
-          for( i=0; i<num; i++) {
-            if ( VariantIsSupertypeOfAllOthers( synctype,
-                  SNetVariantListListGet( parg->variant_lists, i)) ) {
-              snet_record_t *term_rec = SNetRecCreate(REC_terminate);
-#ifdef DEBUG_PRINT_GC
-              SNetUtilDebugNoticeEnt( ent,
-                  "[PAR] Terminate branch %d due to outtype of synchrocell!", i);
-#endif
-              SNetRecSetFlag(term_rec);
-              SNetStreamWrite(parg->outstreams[i], term_rec);
-              SNetStreamClose(parg->outstreams[i], false);
-              parg->outstreams[i] = NULL;
-            }
-          }
-
-          /* count remaining branches */
-          for (i=0;i<num;i++) {
-            if (parg->outstreams[i] != NULL) {
-              cnt++;
-              last = parg->outstreams[i];
-            }
-          }
-          parg->counter++;
-
-          /* if only one branch left, we can terminate ourselves*/
-          if (cnt == 1) {
-          	/* send a sort end to notify the paired collector so that the collector know all sort_end records coming from the last branch was not rasied the level by the this parallel entity
-          	 * Special (l0, c-1) is used for this purpose
-          	 * On the path the sort_end may reach other parallel and collector, parallel increases the level by 1, and collector decreases by 1
-          	 * When the sort_end record reaches the relevant collector, its level should be zero
-          	 * One collector is supposed to receive at most 1 this special sort_end record. After receiving it, the collector will terminate soon as well
-          	 * */
-          	snet_record_t *notify_rec = SNetRecCreate(REC_sort_end, 0, -1);
-          	SNetStreamWrite(last, notify_rec);
-
-            /* forward stripped sync record */
-            SNetRecSetVariant(rec, NULL);
-            SNetStreamWrite(last, rec);
-
-            /* close instream */
-            SNetStreamClose( parg->instream, true);
-#ifdef DEBUG_PRINT_GC
-            SNetUtilDebugNoticeEnt( ent,
-                "[PAR] Terminate self, as only one branch left!");
-#endif
-            TerminateParallelBoxTask(num,parg);
-            return;
-          } else {
-            /* usual sync replace */
-            SNetStreamReplace( parg->instream, SNetRecGetStream(rec));
-            SNetRecDestroy( rec);
-          }
-
-        } else
-#endif /* ENABLE_GARBAGE_COLLECTOR */
-        {
-          /* usual sync replace */
-          SNetStreamReplace( parg->instream, SNetRecGetStream(rec));
-          SNetRecDestroy( rec);
-        }
-      }
-      break;
-
-    case REC_collect:
-      SNetUtilDebugNoticeTask("[PAR] Received REC_collect, destroying it");
-      SNetRecDestroy( rec);
-      break;
-
-    case REC_sort_end:
-      /* increase level */
-      SNetRecSetLevel( rec, SNetRecGetLevel( rec) + 1);
-      /* send a copy to all */
-      for( i=0; i<num; i++) {
-        if(parg->outstreams[i] != NULL) {
-          SNetStreamWrite( parg->outstreams[i], SNetRecCopy( rec));
-        }
-      }
-      /* destroy the original */
-      SNetRecDestroy( rec);
-      break;
-
-    case REC_terminate:
-      /* send a copy to all */
-      for( i=0; i<num; i++) {
-        if(parg->outstreams[i] != NULL) {
-          SNetStreamWrite( parg->outstreams[i], SNetRecCopy( rec));
-        }
-      }
-      /* destroy the original */
-      SNetRecDestroy( rec);
-      /* close and destroy instream */
-      SNetStreamClose( parg->instream, true);
-      /* note that no sort record needs to be appended */
-      TerminateParallelBoxTask(num,parg);
-      return;
-
-    default:
-      SNetUtilDebugNoticeTask("[PAR] Unknown control rec destroyed (%d).\n",
-          SNetRecGetDescriptor( rec));
-      SNetRecDestroy( rec);
+  /* open outstreams for writing */
+  {
+    for (i=0; i<num; i++) {
+      outstreams[i] = SNetStreamOpen(parg->outputs[i], 'w');
+    }
+    /* the mem region is not needed anymore */
+    SNetMemFree( parg->outputs);
   }
-
-  SNetThreadingRespawn(NULL);
-}
-
-/**
- * Initialization Parallel Box Task
- */
-static void InitParallelBoxTask(void *arg)
-{
-  parallel_arg_t *parg = arg;
-
-  /* the number of outputs */
-  int num = SNetVariantListListLength(parg->variant_lists);
-  int i;
-  snet_record_t *rec;
-  parg->counter = 0;
-  parg->num_init_branches = 0;
-  parg->matchcounter = NULL;
-  parg->usedcounter = NULL;
 
   /* Handle initialiser branches */
   for( i=0; i<num; i++) {
     if (SNetVariantListLength( SNetVariantListListGet( parg->variant_lists, i)) == 0) {
 
-      PutToBuffers( parg->outstreams, num, i,
+      PutToBuffers( outstreams, num, i,
           SNetRecCreate( REC_trigger_initialiser),
-          (parg->is_det) ? &parg->counter : NULL
+          (parg->is_det) ? &counter : NULL
           );
       /* after terminate, it is not necessary to send a sort record */
       rec = SNetRecCreate( REC_terminate);
       SNetRecSetFlag(rec);
-      PutToBuffers( parg->outstreams, num, i, rec, NULL);
-      SNetStreamClose( parg->outstreams[i], false);
-      parg->outstreams[i] = NULL;
-      parg->num_init_branches += 1;
+      PutToBuffers( outstreams, num, i, rec, NULL);
+      SNetStreamClose( outstreams[i], false);
+      outstreams[i] = NULL;
+      num_init_branches += 1;
 #ifdef DEBUG_PRINT_GC
       SNetUtilDebugNoticeEnt( ent,
           "[PAR] Terminate initialiser branch %d!", i);
 #endif
     } else {
       /* on non-initialiser branches, send a sort record */
-      SNetStreamWrite( parg->outstreams[i], SNetRecCreate( REC_sort_end, 0, parg->counter));
+      SNetStreamWrite( outstreams[i], SNetRecCreate( REC_sort_end, 0, counter));
     }
   }
-  parg->counter++;
+  counter++;
 
-  switch( num - parg->num_init_branches) {
+  switch( num - num_init_branches) {
     case 1: /* remove dispatcher from network ... */
       for( i=0; i<num; i++) {
         if (SNetVariantListLength( SNetVariantListListGet( parg->variant_lists, i)) > 0) {
           /* send a sync record to the remaining branch */
-          SNetStreamWrite( parg->outstreams[i], SNetRecCreate( REC_sync, SNetStreamGet(parg->instream)));
-          SNetStreamClose( parg->instream, false);
+          SNetStreamWrite( outstreams[i], SNetRecCreate( REC_sync, parg->input));
+          SNetStreamClose( instream, false);
         }
       }
     case 0: /* and terminate */
-      TerminateParallelBoxTask(num, parg);
-      return;
+      terminate = true;
     break;
     default: ;/* or resume operation as normal */
   }
 
-  parg->matchcounter = SNetMemAlloc( num * sizeof( match_count_t*));
-  parg->usedcounter = SNetMemAlloc( num * sizeof( int));
+  matchcounter = SNetMemAlloc( num * sizeof( match_count_t*));
+  usedcounter = SNetMemAlloc( num * sizeof( int));
   for( i=0; i<num; i++) {
-    parg->matchcounter[i] = SNetMemAlloc( sizeof( match_count_t));
-    parg->usedcounter[i] = 0;
+    matchcounter[i] = SNetMemAlloc( sizeof( match_count_t));
+    usedcounter[i] = 0;
   }
 
   /* MAIN LOOP START */
@@ -668,7 +487,6 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   snet_startup_fun_t fun;
   snet_variant_list_t *variants;
   snet_locvec_t *locvec;
-  (void) variants;
 
   num = SNetVariantListListLength( variant_lists);
 
@@ -695,24 +513,23 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
 
     /* create parallel */
     parg = SNetMemAlloc( sizeof(parallel_arg_t));
-    parg->instream = SNetStreamOpen(instream, 'r');
-    parg->outstreams = SNetMemAlloc( num * sizeof(snet_stream_desc_t*));
+    parg->input   = instream;
     /* copy */
-    for (int i = 0; i < num; i++) {
-      parg->outstreams[i] = SNetStreamOpen(transits[i], 'w');
-    }
+    parg->outputs = transits;
     parg->variant_lists = variant_lists;
     parg->is_det = is_det;
 
-    SNetThreadingSpawn( ENTITY_parallel, location, locvec,
-          "<parallel>", &InitParallelBoxTask, parg);
+    SNetThreadingSpawn(
+        SNetEntityCreate( ENTITY_parallel, location, locvec,
+          "<parallel>", ParallelBoxTask, (void*)parg)
+        );
 
     /* create collector with collstreams */
     outstream = CollectorCreateStatic(num, collstreams, location, info);
 
     /* free collstreams array */
-    SNetMemFree(transits);
     SNetMemFree(collstreams);
+
 
   } else {
     LIST_ENUMERATE(variant_lists, i, variants) {

@@ -22,7 +22,7 @@ size_t GetStacksize(snet_entity_descr_t descr)
 {
 	size_t stack_size;
 
-	switch(ent) {
+	switch(descr) {
 	case ENTITY_parallel:
 	case ENTITY_star:
 	case ENTITY_split:
@@ -83,8 +83,9 @@ int SNetThreadingStop(void)
 /**
  * Signal an user event
  */
-void SNetThreadingEventSignal(snet_moninfo_t *moninfo)
+void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 {
+	(void) ent; /* NOT USED */
 	lpel_task_t *t = LpelTaskSelf();
 	assert(t != NULL);
 	mon_task_t *mt = LpelTaskGetMon(t);
@@ -114,12 +115,5 @@ char *strnstr(const char *s, const char *find, size_t slen)
 	return ((char *)s);
 }
 
-/**
- * Respawn a current task or if the task is on a different worker, create a
- * new task
- */
-void SNetThreadingRespawn(snet_taskfun_t f)
-{ LpelTaskRespawn(f); }
 
-const char *SNetThreadingGetName(void)
-{ return LpelGetName(LpelTaskSelf()); }
+
