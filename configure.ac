@@ -109,12 +109,13 @@ dnl check for building lpel threading backend
 
 AC_ARG_WITH([lpel-includes], [AC_HELP_STRING([--with-lpel-includes=DIR], [look up lpel.h in DIR])], [], [with_lpel_includes=])
 AC_MSG_CHECKING([for lpel.h in $with_lpel_includes])
-if test -r "$with_lpel_includes/lpel.h"; then
+if test -r "$with_lpel_includes/lpel_common.h" && test -r "$with_lpel_includes/lpel.h" && test -r "$with_lpel_includes/hrc_lpel.h"
+then
    with_lpel_includes=`(cd "$with_lpel_includes"; pwd)`
    AC_MSG_RESULT([yes])
 else
    AC_MSG_RESULT([no])
-   AC_MSG_WARN([unable to find $with_lpel_includes/lpel.h, cannot use LPEL])
+   AC_MSG_WARN([unable to find $with_lpel_includes/lpel_common.h, $with_lpel_includes/lpel.h, $with_lpel_includes/hrc_lpel.h. Cannot use LPEL])
    with_lpel_includes=
 fi
 
@@ -133,6 +134,8 @@ if test -n "$with_lpel_includes" -a -n "$with_lpel_libs"; then
    LPEL_INCLUDES=-I$with_lpel_includes
    LIBLPEL_LA=$with_lpel_libs/liblpel.la
    AC_SUBST([LIBLPEL_LA])
+   LIBLPEL_HRC_LA=$with_lpel_libs/liblpel_hrc.la
+   AC_SUBST([LIBLPEL_HRC_LA])
    AC_SUBST([LPEL_INCLUDES])
    have_lpel=yes
 fi

@@ -13,7 +13,6 @@ void *foo( void *hnd, c4snet_data_t *x, int children, int counter)
   assert( children >= 0);
 
   int_x= *(int *)C4SNetGetData( x);
-
   if (children > 0) {
     int i;
     for (i=0; i<children; i++) {

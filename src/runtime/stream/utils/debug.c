@@ -5,26 +5,74 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "threading.h"
+#include "entities.h"
 #include "debug.h"
 #include "bool.h"
 #include "memfun.h"
 #include "distribution.h"
 
-static void PrintDebugMessage(char *msg, char *category,
-  va_list arg, const char *name)
+#define MAX_SIZE 256
+
+
+/**
+ * Helper function to check overflow and
+ * keep track of written chars and space left
+ */
+static inline void CheckAndUpdate(int *ret, int *len, int *num)
 {
-  if (name) {
-    fprintf(stderr, "(SNET %s (NODE %d THREAD %s)", category,
-            SNetDistribGetNodeId(), name);
-  } else {
-    fprintf(stderr, "(SNET %s (NODE %d THREAD %lu)", category,
-            SNetDistribGetNodeId(), (unsigned long) pthread_self());
+  assert( *ret >= 0 );
+  if(*ret >= *len) {
+    SNetUtilDebugFatal("Debug message too long!");
   }
 
-  vfprintf(stderr, msg, arg);
-  fprintf(stderr, ")\n");
+  /* update counters */
+  *num += *ret; *len -= *ret;
+}
+
+
+static void PrintDebugMessage(char *msg, char *category,
+  va_list arg, snet_entity_t *ent)
+{
+  char *temp;
+  int num, ret, len;
+
+  /* NOTICE: the text is first printed into buffer to prevent it from
+   * breaking in to multiple pieces when printing to stderr!
+   */
+
+  len = strlen(msg) + MAX_SIZE;
+  num = 0;
+
+  temp = SNetMemAlloc(sizeof(char) * len);
+  //memset(temp, 0, len);
+
+  if (ent != NULL) {
+    ret = snprintf(temp, len, "(SNET %s (NODE %d in %s)",
+        category,
+        SNetDistribGetNodeId(),
+        SNetEntityStr(ent)
+        );
+    CheckAndUpdate( &ret, &len, &num);
+  } else {
+    ret = snprintf(temp, len, "(SNET %s (NODE %d THREAD %lu) ",
+        category,
+        SNetDistribGetNodeId(),
+        (unsigned long) pthread_self()
+        );
+    CheckAndUpdate( &ret, &len, &num);
+  }
+
+  ret = vsnprintf(temp+num, len, msg, arg);
+  CheckAndUpdate( &ret, &len, &num);
+
+  ret = snprintf(temp+num, len, ")\n");
+  CheckAndUpdate( &ret, &len, &num);
+
+  /* finally print to stderr */
+  fputs(temp, stderr);
   fflush(stderr);
+
+  SNetMemFree(temp);
 }
 
 
@@ -54,12 +102,16 @@ void SNetUtilDebugNotice(char *msg, ...)
   va_end(arg);
 }
 
-void SNetUtilDebugFatalTask(char* msg, ...)
+
+/**
+ * Print an error message on stderr and abort the program.
+ */
+void SNetUtilDebugFatalEnt(snet_entity_t *ent, char* msg, ...)
 {
   va_list arg;
 
   va_start(arg, msg);
-  PrintDebugMessage(msg, "FATAL", arg, SNetThreadingGetName());
+  PrintDebugMessage(msg, "FATAL", arg, ent);
   va_end(arg);
   abort();
 }
@@ -67,11 +119,13 @@ void SNetUtilDebugFatalTask(char* msg, ...)
 /**
  * Print a warning/notice message on stderr
  */
-void SNetUtilDebugNoticeTask(char *msg, ...)
+void SNetUtilDebugNoticeEnt(snet_entity_t *ent, char *msg, ...)
 {
   va_list arg;
 
   va_start(arg, msg);
-  PrintDebugMessage(msg, "NOTICE", arg, SNetThreadingGetName());
+  PrintDebugMessage(msg, "NOTICE", arg, ent);
   va_end(arg);
 }
+
+
