@@ -1,4 +1,4 @@
-THREAD=pthread lpel
+THREAD=pthread lpel lpel_hrc
 DIST=nodist mpi scc
 
 SNETC?=snetc
@@ -41,6 +41,10 @@ else
 %-lpel.make:
 	$(MAKE) $*.make DEPS="$(LPELDEPS) $(DEPS)" NAME="-lpel$(NAME)" \
 	    SNETCFLAGS='$(SNETCFLAGS) -threading lpel $(LPELFLAGS)'
+
+%-lpel_hrc.make:
+	$(MAKE) $*.make DEPS="$(LPELDEPS) $(DEPS)" NAME="-lpel_hrc$(NAME)" \
+	    SNETCFLAGS='$(SNETCFLAGS) -threading lpel_hrc $(LPELFLAGS)'
 
 %-nodist.make:
 	$(MAKE) $*.make DEPS="$(NODISTDEPS) $(DEPS)" NAME="-nodist$(NAME)" \

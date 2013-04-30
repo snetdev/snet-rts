@@ -1,6 +1,6 @@
 #include <assert.h>
 
-#include "lpel.h"
+#include "lpel_common.h"
 #include "threading.h"
 #include "memfun.h"
 
@@ -195,4 +195,13 @@ void SNetStreamIterAppend(snet_stream_iter_t * iter, snet_stream_desc_t * node)
 void SNetStreamIterRemove(snet_stream_iter_t * iter)
 {
   LpelStreamIterRemove((lpel_stream_iter_t *) iter);
+}
+
+int SNetStreamGetId(snet_stream_desc_t *sd) {
+	return LpelStreamGetId((lpel_stream_desc_t *)sd);
+}
+
+/* Task migration */
+void SNetThreadingCheckMigrate() {
+	LpelTaskCheckMigrate();
 }

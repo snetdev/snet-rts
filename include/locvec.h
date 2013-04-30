@@ -40,7 +40,6 @@ void SNetLocvecStarEnter(snet_locvec_t *);
 void SNetLocvecStarLeave(snet_locvec_t *);
 snet_locvec_t *SNetLocvecStarSpawn(snet_locvec_t *);
 snet_locvec_t *SNetLocvecStarSpawnRet(snet_locvec_t *);
-int SNetLocvecTopval(snet_locvec_t *locvec);
 
 /* for split combinator */
 void SNetLocvecSplitEnter(snet_locvec_t *);
@@ -59,7 +58,6 @@ snet_locvec_t *SNetLocvecGet(snet_info_t *info);
 /* set to info */
 void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec);
 
-int SNetLocvecPrintSize(snet_locvec_t *vec);
-void SNetLocvecPrint(char *sbuf, snet_locvec_t *vec);
+int SNetLocvecPrint(char *sbuf, int size, snet_locvec_t *vec);
 
 #endif /* _LOCVEC_H_ */
