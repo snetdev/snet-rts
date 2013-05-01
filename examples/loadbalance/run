@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# X is the size of the horizontal dimension
+X=800
+# Y is the size of the vertical dimension
+Y=600
+# N gives the number of compute nodes, which is usually one.
+N=1
+# M gives the number of states, which should be set to 
+# approximately the square root of the number of CPU cores.
+M=2
+
+[ $# -gt 0 ] && [[ $1 != *[!0-9]* ]] && X=$1 && shift
+[ $# -gt 0 ] && [[ $1 != *[!0-9]* ]] && Y=$1 && shift
+[ $# -gt 0 ] && [[ $1 != *[!0-9]* ]] && N=$1 && shift
+[ $# -gt 0 ] && [[ $1 != *[!0-9]* ]] && M=$1 && shift
+
+"$@" << EOI
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual"  interface="C4SNet">
+  <tag label="xdim">$X</tag>
+  <tag label="ydim">$Y</tag>
+  <tag label="nodes">$N</tag>
+  <tag label="states">$M</tag>
+</record>
+<record type="terminate" />
+EOI

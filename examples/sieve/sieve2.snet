@@ -1,0 +1,51 @@
+<metadata><default> <interface value="C4SNet" /> </default></metadata>
+
+net sieve2 ({<N>,<M>} -> {<X>} )
+{
+  net init
+  connect [{<N>,<M>} -> if <N >= 2 && M >= N>
+                        then {<P=2>,<Q>} ; {<A=3>,<N>,<M>}
+                        else ];
+
+  net iter ({<A>,<N>,<M>} -> {<I>,<N>})
+  {
+    net test ({<A>,<N>,<M>} -> {<I>,<N>} | {<A>,<N>,<M>})
+    connect [{<A>,<N>,<M>} -> if <A <= M>
+                              then {<I=A>,<N>} ; {<A=A+1>,<N>,<M>}
+                              else {<I=0>,<N>} ];
+  }
+  connect test \ {<A>,<N>,<M>};
+
+  net sieve ({<P>,<Q>} | {<I>,<N>} -> {<X>})
+  {
+    net filt ({<I>,<N>} | {<P>,<Q>} -> {<J>,<N>} |
+                                       {<S>,<Q>} |
+                                       {<X>})
+    {
+      net sync
+      connect [| {<P>,<Q>}, {<I>,<N>} |] * {<P>,<Q>,<I>,<N>};
+
+      net test ({<P>,<Q>,<I>,<N>} -> {<P>,<Q>} |
+                                     {<J>,<N>} |
+                                     {<S>,<Q>} |
+                                     {<X>})
+      connect [{<P>,<Q>,<I>,<N>} -> if <I == 0 && Q == 0> then
+                                    else if <I == 0> then {<J>,<N>}
+                                    else if <I % P == 0> then {<P>,<Q>} 
+                                    else if <Q == 0 && I <= N>
+                                    then {<S=I>,<Q=0>} ; {<P>,<Q=Q+1>}
+                                    else if <Q == 0>
+                                    then {<X=I>} ; {<P>,<Q>}
+                                    else {<J=I>,<N>} ; {<P>,<Q>}];
+    }
+    connect (sync .. test) \ {<P>,<Q>}, {<I>,<N>};
+
+    net rewrite
+    connect [{<J>,<N>} -> {<I=J>,<N>}] |
+            [{<S>,<Q>} -> {<P=S>,<Q>}] |
+            [];
+  }
+  connect (filt .. rewrite) * {<X>};
+}
+connect init .. (iter | []) .. sieve;
+

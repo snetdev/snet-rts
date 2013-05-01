@@ -39,11 +39,6 @@ static const char names_event[] = {
 		'O',
 };
 
-/* do not need yet, when use --> should use a compressed way, e.g, "r" for record */
-static const char *names_descr[] = {
-		"MON_RECORD",
-};
-
 
 
 /**
@@ -63,7 +58,6 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
 
 		/* initialize fields */
 		SNetRecIdGet( &REC_MONINFO( mon, id), rec);
-		//REC_MONINFO( mon, parent_ids) = SNetRecGetParentListCopy(rec);
 		REC_MONINFO( mon, add_moninfo_rec_data) = NULL; /*FIXME*/
 
 		switch ( MONINFO_EVENT(mon) ) {
@@ -130,9 +124,6 @@ void SNetMonInfoDestroy( snet_moninfo_t *mon)
 {
 	switch (MONINFO_DESCR( mon)) {
 	case MON_RECORD:
-//		if (REC_MONINFO( mon, parent_ids) != NULL) {
-//			SNetRecIdListDestroy( REC_MONINFO( mon, parent_ids));
-//		}
 		if (REC_MONINFO( mon, add_moninfo_rec_data) != NULL) {
 			SNetMemFree( REC_MONINFO( mon, add_moninfo_rec_data));
 		}
@@ -173,11 +164,9 @@ static void PrintMonInfoId( FILE *f, snet_record_id_t *id)
 
 void SNetMonInfoPrint( FILE *f, snet_moninfo_t *mon)
 {
-//	snet_record_id_t
 	fprintf(f,
 			"%c",
 			names_event[MONINFO_EVENT(mon)]
-			//, names_descr[MONINFO_DESCR(mon)] 	/* do not need print the description, since there is only one type
 	);
 
 

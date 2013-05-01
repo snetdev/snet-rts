@@ -18,6 +18,7 @@ snetstuff_SCRIPTS = \
 pkglib_LTLIBRARIES = \
 	libsnetutil.la  \
 	libruntimestream.la \
+	libfrontrt.la \
 	libC4SNet.la \
 	libC4SNetc.la \
 	libtbpthread.la \
@@ -106,8 +107,8 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/entity/split.c \
 	src/runtime/stream/entity/star.c \
 	src/runtime/stream/entity/syncro.c \
+	src/runtime/stream/entity/tertsrun.c \
 	src/runtime/stream/observer/observers.c \
-	src/runtime/stream/observer/observers.h \
 	src/runtime/stream/langif/interface_functions.c \
 	src/runtime/stream/netif/interface.c \
 	src/runtime/stream/netif/input.c \
@@ -124,6 +125,78 @@ libruntimestream_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/runtime/stream/shared \
 	-I$(srcdir)/src/runtime/stream/observer \
 	-I$(srcdir)/src/runtime/stream/netif
+
+libfrontrt_la_SOURCES = \
+	src/runtime/common/expression.c \
+	src/runtime/common/info.c \
+	src/runtime/common/list.c \
+	src/runtime/common/map.c \
+	src/runtime/common/moninfo.c \
+	src/runtime/common/record.c \
+	src/runtime/common/variant.c \
+	src/runtime/stream/utils/bitmap.c \
+	src/runtime/stream/utils/bitmap.h \
+	src/runtime/stream/utils/debug.c \
+	src/runtime/stream/utils/debugcounters.c \
+	src/runtime/stream/utils/debugcounters.h \
+	src/runtime/stream/utils/debugtime.c \
+	src/runtime/stream/utils/debugtime.h \
+	src/runtime/stream/utils/hashtab.c \
+	src/runtime/stream/utils/hashtab.h \
+	src/runtime/stream/utils/locvec.c \
+	src/runtime/stream/shared/handle.c \
+	src/runtime/stream/shared/handle_p.h \
+	src/runtime/stream/entity/alias.c \
+	src/runtime/stream/entity/out.c \
+	src/runtime/stream/langif/interface_functions.c \
+	src/runtime/stream/netif/interface.c \
+	src/runtime/stream/netif/label.c \
+	src/runtime/stream/netif/networkinterface.c \
+	src/runtime/stream/netif/parserutils.h \
+	src/runtime/stream/netif/parser.y \
+	src/runtime/stream/netif/lexer.l \
+	src/runtime/front/detref.h \
+	src/runtime/front/frontrun.c \
+	src/runtime/front/node.c \
+	src/runtime/front/node.h \
+	src/runtime/front/node-proto.h \
+	src/runtime/front/trace.c \
+	src/runtime/front/trace.h \
+	src/runtime/front/xbox.c \
+	src/runtime/front/xcoll.c \
+	src/runtime/front/xdet.c \
+	src/runtime/front/xdripback.c \
+	src/runtime/front/xfeedback.c \
+	src/runtime/front/xfifo.c \
+	src/runtime/front/xfifo.h \
+	src/runtime/front/xfilter.c \
+	src/runtime/front/xgarbage.c \
+	src/runtime/front/xhashptr.c \
+	src/runtime/front/xident.c \
+	src/runtime/front/xinput.c \
+	src/runtime/front/xlanding.c \
+	src/runtime/front/xlock.h \
+	src/runtime/front/xnameshift.c \
+	src/runtime/front/xobserve.c \
+	src/runtime/front/xoutput.c \
+	src/runtime/front/xpar.c \
+	src/runtime/front/xserial.c \
+	src/runtime/front/xsplit.c \
+	src/runtime/front/xstack.c \
+	src/runtime/front/xstack.h \
+	src/runtime/front/xstar.c \
+	src/runtime/front/xstream.c \
+	src/runtime/front/xsync.c \
+	src/runtime/front/xthread.c \
+	src/runtime/front/xtostring.c \
+	src/runtime/front/xworker.c \
+	src/runtime/front/xworker.h \
+	src/runtime/front/xzipper.c
+libfrontrt_la_CPPFLAGS = $(AM_CPPFLAGS) \
+	-I$(srcdir)/src/runtime/stream/utils \
+	-I$(srcdir)/src/runtime/stream/shared \
+	-I$(srcdir)/src/runtime/stream/netif \
+	-I$(srcdir)/src/distrib/common
 
 # for runtime/stream/netif
 BUILT_SOURCES = src/runtime/stream/netif/parser.h
