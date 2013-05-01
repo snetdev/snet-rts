@@ -25,7 +25,9 @@ typedef enum {
 } snet_entity_descr_t;
 
 
+#ifndef _RECORD_H_
 typedef struct snet_entity_t snet_entity_t;
+#endif
 
 typedef void (*snet_entityfunc_t)(snet_entity_t *ent, void *arg);
 
