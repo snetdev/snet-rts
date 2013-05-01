@@ -175,7 +175,7 @@ void SNetNodeFeedback(snet_stream_desc_t *desc, snet_record_t *rec)
         break;
 
       default:
-        SNetRecUnknownTask(__func__, rec);
+        SNetRecUnknown(__func__, rec);
     }
   }
   else if (land->type == LAND_feedback2) {
@@ -191,7 +191,7 @@ void SNetNodeFeedback(snet_stream_desc_t *desc, snet_record_t *rec)
         break;
 
       default:
-        SNetRecUnknownTask(__func__, rec);
+        SNetRecUnknown(__func__, rec);
     }
   }
   else if (land->type == LAND_feedback4) {
@@ -206,7 +206,7 @@ void SNetNodeFeedback(snet_stream_desc_t *desc, snet_record_t *rec)
         break;
 
       default:
-        SNetRecUnknownTask(__func__, rec);
+        SNetRecUnknown(__func__, rec);
     }
   }
   else if (land->type == LAND_feedback3) {
@@ -257,7 +257,7 @@ void SNetNodeFeedback(snet_stream_desc_t *desc, snet_record_t *rec)
           break;
 
         default:
-          SNetRecUnknownTask(__func__, rec);
+          SNetRecUnknown(__func__, rec);
       }
       if (fb3->terminate == FeedbackTerminating) {
         if (fb3->outdesc) {

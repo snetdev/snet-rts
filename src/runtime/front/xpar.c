@@ -122,7 +122,7 @@ static void ParallelOpen(int idx, snet_stream_desc_t *desc)
   } else {
     assert(land->outdescs[idx] == NULL);
     if (land->terminated && land->terminated[idx]) {
-      SNetUtilDebugFatalTask("[%s]: unexpected record on a terminated branch.",
+      SNetUtilDebugFatal("[%s]: unexpected record on a terminated branch.",
                              __func__);
     }
     land->outdescs[idx] = SNetStreamOpen(parg->outputs[idx], desc);
@@ -300,7 +300,7 @@ void SNetNodeParallel(snet_stream_desc_t *desc, snet_record_t *rec)
       } else {
         char buf[200];
         SNetRecordTypeString(rec, buf, sizeof buf);
-        SNetUtilDebugFatalTask(
+        SNetUtilDebugFatal(
             "[PAR] Cannot route data record %s: no matching branch!", buf);
       }
       break;
@@ -315,7 +315,7 @@ void SNetNodeParallel(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknownTask(__func__, rec);
+      SNetRecUnknown(__func__, rec);
   }
 }
 

@@ -75,7 +75,7 @@ void SNetNodeSplit(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknownTask(__func__, rec);
+      SNetRecUnknown(__func__, rec);
   }
 }
 

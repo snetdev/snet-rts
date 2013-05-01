@@ -209,6 +209,4 @@ const char* SNetRecTypeName(snet_record_t *rec);
 
 void SNetRecUnknown(const char *funcname, snet_record_t *rec);
 
-void SNetRecUnknownTask(const char *funcname, snet_record_t *rec);
-
 #endif /* _RECORD_H_ */

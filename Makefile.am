@@ -109,7 +109,6 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/entity/syncro.c \
 	src/runtime/stream/entity/tertsrun.c \
 	src/runtime/stream/observer/observers.c \
-	src/runtime/stream/observer/observers.h \
 	src/runtime/stream/langif/interface_functions.c \
 	src/runtime/stream/netif/interface.c \
 	src/runtime/stream/netif/input.c \
@@ -160,6 +159,7 @@ libfrontrt_la_SOURCES = \
 	src/runtime/front/frontrun.c \
 	src/runtime/front/node.c \
 	src/runtime/front/node.h \
+	src/runtime/front/node-proto.h \
 	src/runtime/front/trace.c \
 	src/runtime/front/trace.h \
 	src/runtime/front/xbox.c \

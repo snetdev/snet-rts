@@ -151,10 +151,10 @@ void SNetDetEnter(
         }
         SNetRecDetrefAdd(rec, land->counter, land->collland, land->detfifo);
       } else {
-        SNetUtilDebugFatalTask("[%s]: empty detref stack", __func__);
+        SNetUtilDebugFatal("[%s]: empty detref stack", __func__);
       }
     } else {
-      SNetUtilDebugFatalTask("[%s]: no detref stack", __func__);
+      SNetUtilDebugFatal("[%s]: no detref stack", __func__);
     }
   }
 }
@@ -173,7 +173,7 @@ void SNetDetLeaveDequeue(landing_t *landing)
     /* Verify sequence numbers are monotonically increasing. */
     if (detref->seqnr != leave->counter) {
       if (detref->seqnr < leave->counter) {
-        SNetUtilDebugFatalTask("[%s]: detref seqnr %ld < leave counter %ld",
+        SNetUtilDebugFatal("[%s]: detref seqnr %ld < leave counter %ld",
                                __func__, detref->seqnr, leave->counter);
       } else {
         /* Keep track of sequence number sequence. */
@@ -228,12 +228,12 @@ void SNetDetLeaveRec(snet_record_t *rec, landing_t *landing)
   trace(__func__);
   /* Record must have a stack of detrefs */
   if ((stack = DATA_REC(rec, detref)) == NULL) {
-    SNetUtilDebugFatalTask("[%s]: missing stack", __func__);
+    SNetUtilDebugFatal("[%s]: missing stack", __func__);
   }
 
   /* stack must have at least one detref */
   if ((detref = SNetStackPop(stack)) == NULL) {
-    SNetUtilDebugFatalTask("[%s]: empty stack", __func__);
+    SNetUtilDebugFatal("[%s]: empty stack", __func__);
   }
 
   /* destroy empty stacks */
@@ -244,13 +244,13 @@ void SNetDetLeaveRec(snet_record_t *rec, landing_t *landing)
 
   /* detref must refer to this DetLeave node */
   if (detref->leave != landing) {
-    SNetUtilDebugFatalTask("[%s]: leave %p != landing %p",
+    SNetUtilDebugFatal("[%s]: leave %p != landing %p",
                           __func__, detref->leave, landing);
   }
 
   /* reference counter must be at least two */
   if (detref->refcount < 2) {
-    SNetUtilDebugFatalTask("[%s]: refcnt %d < 1", __func__, detref->refcount);
+    SNetUtilDebugFatal("[%s]: refcnt %d < 1", __func__, detref->refcount);
   }
 
   /* Sequence number must be monotonically increasing. */

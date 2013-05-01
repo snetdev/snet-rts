@@ -116,6 +116,6 @@ void SNetInInputInit(
   iarg->indesc->landing->id = 0;
 
   /* Initialize the parser */
-  SNetInParserInit(file, labels, interfaces, NULL);
+  SNetInParserInit(file, labels, interfaces, NULL, NULL);
 }
 

@@ -180,7 +180,7 @@ void SNetNodeZipperData(
       assert(!prev || prev->unmatched != match->unmatched);
     }
   }
-  SNetUtilDebugNoticeTask(
+  SNetUtilDebugNotice(
       "[MERGE]: record doesn't match sync or exit pattern\n");
   SNetRecDestroy(rec);
 }
@@ -206,7 +206,7 @@ void SNetNodeZipperTerminate(landing_zipper_t *land, zipper_arg_t *zarg)
     } while ((match = same) != NULL);
   }
   if (count) {
-    SNetUtilDebugNoticeTask("[MERGE] Warning: "
+    SNetUtilDebugNotice("[MERGE] Warning: "
       "Destroying %u partially synchronized sync-cells!", count);
   }
 }
@@ -241,7 +241,7 @@ void SNetNodeZipper(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknownTask(__func__, rec);
+      SNetRecUnknown(__func__, rec);
   }
 }
 
@@ -301,7 +301,7 @@ snet_stream_t *SNetZipper(
     zarg->sync_guards   = sync_guards;
     zarg->sync_width    = SNetVariantListLength( zarg->sync_patterns);
     if (zarg->sync_width > 8*sizeof(mask_t)) {
-      SNetUtilDebugFatalTask("[%s]: number of patterns %u exceeds mask width %zu\n",
+      SNetUtilDebugFatal("[%s]: number of patterns %u exceeds mask width %zu\n",
                              __func__, zarg->sync_width, 8*sizeof(mask_t));
     }
   } else {

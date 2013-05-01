@@ -249,7 +249,7 @@ void SNetNodeSync(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknownTask(__func__, rec);
+      SNetRecUnknown(__func__, rec);
   }
 }
 
@@ -263,7 +263,7 @@ void SNetTermSync(landing_t *land, fifo_t *fifo)
   if (lsync->state == SYNC_partial) {
     sync_arg_t *sarg = NODE_SPEC(land->node, sync);
     DestroyStorage(sarg, lsync);
-    SNetUtilDebugNoticeTask(
+    SNetUtilDebugNotice(
       "[SYNC] Warning: Destroying partially synchronized sync-cell!");
   }
 
