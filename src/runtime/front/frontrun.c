@@ -45,3 +45,9 @@ void SNetRuntimeStartWait(snet_stream_t *in, snet_info_t *info, snet_stream_t *o
   SNetNodeRun(in, info, out);
 }
 
+typedef struct snet_entity_t snet_entity_t;
+const char *SNetEntityStr(snet_entity_t *ent)
+{
+  return "";
+}
+
