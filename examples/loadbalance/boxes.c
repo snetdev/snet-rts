@@ -14,7 +14,7 @@ typedef struct { char *map; int l, c, xdim;  } collect_t;
 
 static int ncores() { return (int)sysconf(_SC_NPROCESSORS_ONLN); }
 
-void init(void *hnd, int xdim, int ydim, int nodes, int states)
+void* init(void *hnd, int xdim, int ydim, int nodes, int states)
 {
   c4snet_data_t *c4state, *c4coll;
   void          *vptr;
@@ -58,17 +58,19 @@ void init(void *hnd, int xdim, int ydim, int nodes, int states)
   for (i = 0; i < nodes; ++i) {
     C4SNetOut( hnd, 3, NULL, i);
   }
+  return hnd;
 }
 
-void estimator(void *hnd, c4snet_data_t *probe, int node)
+void* estimator(void *hnd, c4snet_data_t *probe, int node)
 {
   int work = (node == 0) ? (ncores() - 1) : 2*ncores();
   do {
     C4SNetOut( hnd, 1, node);
   } while (--work > 0);
+  return hnd;
 }
 
-void inbox(void *hnd, c4snet_data_t *c4state, int node)
+void* inbox(void *hnd, c4snet_data_t *c4state, int node)
 {
   state_t *state = C4SNetGetData(c4state);
   if (state->x < state->xdim) {
@@ -90,9 +92,10 @@ void inbox(void *hnd, c4snet_data_t *c4state, int node)
   } else {
     C4SNetFree(c4state);
   }
+  return hnd;
 }
 
-void worker(void *hnd, c4snet_data_t *c4work, int node)
+void* worker(void *hnd, c4snet_data_t *c4work, int node)
 {
   work_t *work = C4SNetGetData(c4work);
   work->r = (int)floor(127.5 * (1.0 + sin(work->x / 100.0)));
@@ -100,9 +103,10 @@ void worker(void *hnd, c4snet_data_t *c4work, int node)
   work->b = (int)floor(255.0 * work->x / work->xdim);
   C4SNetOut( hnd, 1, c4work, work->i);
   C4SNetOut( hnd, 2, node);
+  return hnd;
 }
 
-void merge(void *hnd, c4snet_data_t *c4coll, c4snet_data_t *c4result)
+void* merge(void *hnd, c4snet_data_t *c4coll, c4snet_data_t *c4result)
 {
   work_t *work = C4SNetGetData(c4result);
   collect_t *coll = C4SNetGetData(c4coll);
@@ -118,5 +122,6 @@ void merge(void *hnd, c4snet_data_t *c4coll, c4snet_data_t *c4result)
     }
     C4SNetFree(c4coll);
   }
+  return hnd;
 }
 
