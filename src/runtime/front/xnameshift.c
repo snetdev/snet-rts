@@ -52,7 +52,7 @@ void SNetNodeNameShift(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknown(__func__, rec);
+      SNetRecUnknownEnt(__func__, rec, farg->entity);
   }
 }
 
@@ -83,6 +83,7 @@ void SNetStopNameShift(node_t *node, fifo_t *fifo)
     SNetMemFree( farg->filter_instructions);
   }
   SNetExprListDestroy( farg->guard_exprs);
+  SNetEntityDestroy(farg->entity);
   SNetMemFree(node);
 }
 
@@ -106,6 +107,8 @@ snet_stream_t *SNetNameShift(
   farg->input_variant = untouched;
   farg->guard_exprs = SNetExprListCreate( 1, SNetEconsti( offset));
   farg->filter_instructions = NULL; /* instructions */
+  farg->entity = SNetEntityCreate( ENTITY_nameshift, location, SNetLocvecGet(info),
+                                   "<nameshift>", NULL, (void*)farg);
 
   return output;
 }

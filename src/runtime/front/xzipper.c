@@ -180,7 +180,7 @@ void SNetNodeZipperData(
       assert(!prev || prev->unmatched != match->unmatched);
     }
   }
-  SNetUtilDebugNotice(
+  SNetUtilDebugNoticeEnt(zarg->entity,
       "[MERGE]: record doesn't match sync or exit pattern\n");
   SNetRecDestroy(rec);
 }
@@ -206,7 +206,7 @@ void SNetNodeZipperTerminate(landing_zipper_t *land, zipper_arg_t *zarg)
     } while ((match = same) != NULL);
   }
   if (count) {
-    SNetUtilDebugNotice("[MERGE] Warning: "
+    SNetUtilDebugNoticeEnt(zarg->entity, "[MERGE] Warning: "
       "Destroying %u partially synchronized sync-cells!", count);
   }
 }
@@ -241,7 +241,7 @@ void SNetNodeZipper(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknown(__func__, rec);
+      SNetRecUnknownEnt(__func__, rec, zarg->entity);
   }
 }
 
@@ -270,6 +270,7 @@ void SNetStopZipper(node_t *node, fifo_t *fifo)
   SNetExprListDestroy(zarg->exit_guards);
   SNetVariantListDestroy(zarg->sync_patterns);
   SNetExprListDestroy(zarg->sync_guards);
+  SNetEntityDestroy(zarg->entity);
   SNetMemFree(node);
 }
 
@@ -300,9 +301,12 @@ snet_stream_t *SNetZipper(
     zarg->sync_patterns = sync_patterns;
     zarg->sync_guards   = sync_guards;
     zarg->sync_width    = SNetVariantListLength( zarg->sync_patterns);
+    zarg->entity = SNetEntityCreate( ENTITY_star, location, SNetLocvecGet(info),
+                                     "<syncstar>", NULL, (void *) zarg);
     if (zarg->sync_width > 8*sizeof(mask_t)) {
-      SNetUtilDebugFatal("[%s]: number of patterns %u exceeds mask width %zu\n",
-                             __func__, zarg->sync_width, 8*sizeof(mask_t));
+      SNetUtilDebugFatalEnt(zarg->entity,
+                            "[%s]: number of patterns %u exceeds mask width %zu\n",
+                            __func__, zarg->sync_width, 8*sizeof(mask_t));
     }
   } else {
     SNetVariantListDestroy( exit_patterns);

@@ -35,6 +35,8 @@ static void SNetNodeBoxData(box_context_t *box)
   hnd.mapping = NULL;
   /* set variants */
   hnd.vars = barg->vars;
+  /* box entity */
+  hnd.ent = barg->entity;
   /* data record */
   hnd.rec = box->rec;
 
@@ -131,7 +133,7 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
       if (REC_DESCR(rec) == REC_data ||
           REC_DESCR(rec) == REC_trigger_initialiser)
       {
-        SNetDetEnter(rec, &land->detenter, true);
+        SNetDetEnter(rec, &land->detenter, true, barg->entity);
       }
     }
 
@@ -160,7 +162,7 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknown(__func__, rec);
+      SNetRecUnknownEnt(__func__, rec, barg->entity);
   }
 
   if (barg->concurrency == 1) {
@@ -228,6 +230,7 @@ void SNetStopBox(node_t *node, fifo_t *fifo)
   SNetDeleteN(barg->concurrency, barg->outputs);
   SNetIntListListDestroy(barg->output_variants);
   SNetVariantListDestroy(barg->vars);
+  SNetEntityDestroy(barg->entity);
   SNetDelete(node);
 }
 
@@ -302,6 +305,8 @@ snet_stream_t *SNetBox( snet_stream_t *input,
   barg->boxname = boxname;
   barg->concurrency = concurrency;
   barg->is_det = is_det;
+  barg->entity = SNetEntityCreate( ENTITY_box, location, SNetLocvecGet(info),
+                                   barg->boxname, NULL, (void *) barg);
 
   if (concurrency >= 2) {
     output = SNetCollectorStatic(concurrency, outstreams, location, info,

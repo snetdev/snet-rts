@@ -147,6 +147,7 @@ libfrontrt_la_SOURCES = \
 	src/runtime/stream/shared/handle.c \
 	src/runtime/stream/shared/handle_p.h \
 	src/runtime/stream/entity/alias.c \
+	src/runtime/stream/entity/entities.c \
 	src/runtime/stream/entity/out.c \
 	src/runtime/stream/langif/interface_functions.c \
 	src/runtime/stream/netif/interface.c \

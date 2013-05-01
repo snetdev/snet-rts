@@ -57,7 +57,7 @@ void SNetNodeCollector(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknown(__func__, rec);
+      SNetRecUnknownEnt(__func__, rec, carg->entity);
   }
 }
 
@@ -79,6 +79,7 @@ void SNetStopCollector(node_t *node, fifo_t *fifo)
   trace(__func__);
   if (++carg->stopped == carg->num) {
     SNetStopStream(carg->output, fifo);
+    SNetEntityDestroy(carg->entity);
     SNetDelete(node);
   }
 }
@@ -106,6 +107,8 @@ snet_stream_t *SNetCollectorDynamic(
   carg->is_detsup = (SNetDetGetLevel() > 0);
   carg->peer = peer;
   carg->stopped = 0;
+  carg->entity = SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
+                                   "<collector>", NULL, (void *) carg);
   return output;
 }
 
@@ -150,6 +153,8 @@ snet_stream_t *SNetCollectorStatic(
   carg->is_detsup = (SNetDetGetLevel() > 0);
   carg->peer = peer;
   carg->stopped = 0;
+  carg->entity = SNetEntityCreate( ENTITY_collect, location, SNetLocvecGet(info),
+                                   "<collector>", NULL, (void *) carg);
   return output;
 }
 

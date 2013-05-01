@@ -5,6 +5,9 @@
 
 typedef struct record snet_record_t;
 typedef union record_types snet_record_types_t;
+#ifndef _ENTITIES_H_
+typedef struct snet_entity_t snet_entity_t;
+#endif
 
 typedef enum {
   REC_data=1100,
@@ -208,5 +211,8 @@ void SNetRecDetrefCopy(snet_record_t *new_rec, snet_record_t *old_rec);
 const char* SNetRecTypeName(snet_record_t *rec);
 
 void SNetRecUnknown(const char *funcname, snet_record_t *rec);
+
+void SNetRecUnknownEnt(const char *funcname, snet_record_t *rec,
+                       snet_entity_t *ent);
 
 #endif /* _RECORD_H_ */

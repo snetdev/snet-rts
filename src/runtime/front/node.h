@@ -33,6 +33,9 @@ typedef struct node node_t;
 typedef enum node_type node_type_t;
 typedef enum landing_type landing_type_t;
 typedef struct snet_stream_desc_t snet_stream_desc_t;
+#ifndef _RECORD_H_
+typedef struct snet_entity_t snet_entity_t;
+#endif
 typedef struct worker worker_t;
 typedef struct landing landing_t;
 typedef struct hash_ptab hash_ptab_t;
@@ -104,6 +107,7 @@ typedef struct box_arg {
   snet_int_list_list_t  *output_variants;
   const char            *boxname;
   snet_variant_list_t   *vars;
+  snet_entity_t         *entity;
   int                    concurrency;
   bool                   is_det;
 } box_arg_t;
@@ -116,6 +120,7 @@ typedef struct collector_arg {
   bool                  is_detsup;
   node_t               *peer;
   int                   stopped;
+  snet_entity_t        *entity;
 } collector_arg_t;
 
 /* Argument for dripback nodes */
@@ -128,6 +133,7 @@ typedef struct dripback_arg {
   snet_variant_list_t  *back_patterns;
   snet_expr_list_t     *guards;
   int                   stopping;
+  snet_entity_t        *entity;
 } dripback_arg_t;
 
 /* Argument for feedback nodes */
@@ -141,6 +147,7 @@ typedef struct feedback_arg {
   snet_variant_list_t  *back_patterns;
   snet_expr_list_t     *guards;
   int                   stopping;
+  snet_entity_t        *entity;
 } feedback_arg_t;
 
 /* Argument for filter nodes */
@@ -149,6 +156,7 @@ typedef struct filter_arg {
   snet_variant_t        *input_variant;
   snet_expr_list_t      *guard_exprs;
   snet_filter_instr_list_list_t **filter_instructions;
+  snet_entity_t         *entity;
 } filter_arg_t;
 
 /* The state an input node can be in. */
@@ -182,6 +190,7 @@ typedef struct parallel_arg {
   bool                  is_det;
   bool                  is_detsup;
   snet_stream_t         *collector;
+  snet_entity_t         *entity;
 } parallel_arg_t;
 
 /* Argument for split nodes */
@@ -193,6 +202,7 @@ typedef struct split_arg {
   bool                  is_det;
   bool                  is_detsup;
   bool                  is_byloc;
+  snet_entity_t         *entity;
 } split_arg_t;
 
 /* Argument for the star nodes */
@@ -207,6 +217,7 @@ typedef struct star_arg {
   bool                  is_detsup;
   bool                  is_incarnate;
   int                   stopping;
+  snet_entity_t        *entity;
 } star_arg_t;
 
 /* Argument for synchrocell nodes */
@@ -216,6 +227,7 @@ typedef struct sync_arg {
   snet_expr_list_t     *guard_exprs;
   int                   num_patterns;
   snet_variant_t       *merged_pattern;
+  snet_entity_t        *entity;
   bool                  garbage_collect;
   bool                  merged_type_sync;
 } sync_arg_t;
@@ -228,6 +240,7 @@ typedef struct zipper_arg {
   snet_variant_list_t  *sync_patterns;
   snet_expr_list_t     *sync_guards;
   unsigned int          sync_width;
+  snet_entity_t        *entity;
 } zipper_arg_t;
 
 /* Argument for the file observer 1. */

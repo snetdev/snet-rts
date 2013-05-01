@@ -175,7 +175,7 @@ void SNetNodeFeedback(snet_stream_desc_t *desc, snet_record_t *rec)
         break;
 
       default:
-        SNetRecUnknown(__func__, rec);
+        SNetRecUnknownEnt(__func__, rec, farg->entity);
     }
   }
   else if (land->type == LAND_feedback2) {
@@ -191,7 +191,7 @@ void SNetNodeFeedback(snet_stream_desc_t *desc, snet_record_t *rec)
         break;
 
       default:
-        SNetRecUnknown(__func__, rec);
+        SNetRecUnknownEnt(__func__, rec, farg->entity);
     }
   }
   else if (land->type == LAND_feedback4) {
@@ -206,7 +206,7 @@ void SNetNodeFeedback(snet_stream_desc_t *desc, snet_record_t *rec)
         break;
 
       default:
-        SNetRecUnknown(__func__, rec);
+        SNetRecUnknownEnt(__func__, rec, farg->entity);
     }
   }
   else if (land->type == LAND_feedback3) {
@@ -257,7 +257,7 @@ void SNetNodeFeedback(snet_stream_desc_t *desc, snet_record_t *rec)
           break;
 
         default:
-          SNetRecUnknown(__func__, rec);
+          SNetRecUnknownEnt(__func__, rec, farg->entity);
       }
       if (fb3->terminate == FeedbackTerminating) {
         if (fb3->outdesc) {
@@ -343,6 +343,7 @@ void SNetStopFeedback(node_t *node, fifo_t *fifo)
     SNetExprListDestroy(farg->guards);
     SNetStreamDestroy(farg->selfref2);
     SNetStreamDestroy(farg->selfref4);
+    SNetEntityDestroy(farg->entity);
     SNetDelete(node);
   }
 }
@@ -399,6 +400,8 @@ snet_stream_t *SNetFeedback(
     farg->selfref4 = SNetNodeStreamCreate(node);
     STREAM_DEST(farg->selfref4) = node;
 
+    farg->entity = SNetEntityCreate( ENTITY_fbdisp, location, locvec,
+                                     "<feedback>", NULL, (void*)farg);
   } else {
     SNetExprListDestroy( guards);
     SNetVariantListDestroy(back_patterns);

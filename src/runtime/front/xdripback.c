@@ -128,7 +128,7 @@ void SNetNodeDripBack(snet_stream_desc_t *desc, snet_record_t *rec)
           break;
 
         default:
-          SNetRecUnknown(__func__, rec);
+          SNetRecUnknownEnt(__func__, rec, darg->entity);
       }
       rec = NULL;
       if (db2->state == DripBackBusy) {
@@ -225,6 +225,7 @@ void SNetStopDripBack(node_t *node, fifo_t *fifo)
     SNetVariantListDestroy(darg->back_patterns);
     SNetExprListDestroy(darg->guards);
     SNetStreamDestroy(darg->selfref);
+    SNetEntityDestroy(darg->entity);
     SNetDelete(node);
   }
 }
@@ -276,6 +277,8 @@ snet_stream_t *SNetDripBack(
     darg->selfref = SNetNodeStreamCreate(node);
     STREAM_DEST(darg->selfref) = node;
 
+    darg->entity = SNetEntityCreate( ENTITY_fbdisp, location, locvec,
+                                     "<feedback>", NULL, (void*)darg);
   } else {
     SNetExprListDestroy( guards);
     SNetVariantListDestroy(back_patterns);

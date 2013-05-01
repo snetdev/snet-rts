@@ -105,7 +105,8 @@ void SNetRecDetrefAdd(
 void SNetDetEnter(
     snet_record_t *rec,
     landing_detenter_t *land,
-    bool is_det);
+    bool is_det,
+    snet_entity_t *ent);
 
 /* Output queued records if allowed, while preserving determinism. */
 void SNetDetLeaveDequeue(landing_t *landing);

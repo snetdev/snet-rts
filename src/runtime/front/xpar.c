@@ -122,8 +122,9 @@ static void ParallelOpen(int idx, snet_stream_desc_t *desc)
   } else {
     assert(land->outdescs[idx] == NULL);
     if (land->terminated && land->terminated[idx]) {
-      SNetUtilDebugFatal("[%s]: unexpected record on a terminated branch.",
-                             __func__);
+      SNetUtilDebugFatalEnt(parg->entity,
+                            "[%s]: unexpected record on a terminated branch.",
+                            __func__);
     }
     land->outdescs[idx] = SNetStreamOpen(parg->outputs[idx], desc);
   }
@@ -288,7 +289,7 @@ void SNetNodeParallel(snet_stream_desc_t *desc, snet_record_t *rec)
   switch (REC_DESCR(rec)) {
     case REC_data:
       if (parg->is_det | parg->is_detsup) {
-        SNetDetEnter(rec, &land->detenter, parg->is_det);
+        SNetDetEnter(rec, &land->detenter, parg->is_det, parg->entity);
       }
       LIST_ENUMERATE(parg->variant_lists, i, variants) {
         CheckMatch( rec, variants, &land->matchcounter[i],
@@ -300,7 +301,7 @@ void SNetNodeParallel(snet_stream_desc_t *desc, snet_record_t *rec)
       } else {
         char buf[200];
         SNetRecordTypeString(rec, buf, sizeof buf);
-        SNetUtilDebugFatal(
+        SNetUtilDebugFatalEnt(parg->entity,
             "[PAR] Cannot route data record %s: no matching branch!", buf);
       }
       break;
@@ -315,7 +316,7 @@ void SNetNodeParallel(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknown(__func__, rec);
+      SNetRecUnknownEnt(__func__, rec, parg->entity);
   }
 }
 
@@ -354,6 +355,7 @@ void SNetStopParallel(node_t *node, fifo_t *fifo)
   SNetStopStream(parg->collector, fifo);
   SNetVariantListListDestroy(parg->variant_lists);
   SNetDeleteN(parg->num, parg->outputs);
+  SNetEntityDestroy(parg->entity);
   SNetDelete(node);
 }
 
@@ -405,6 +407,8 @@ static snet_stream_t *CreateParallel(
     parg->num = num;
     parg->is_det = is_det;
     parg->is_detsup = (SNetDetGetLevel() > 0);
+    parg->entity = SNetEntityCreate( ENTITY_parallel, location, locvec,
+                                     "<parallel>", NULL, (void*)parg);
 
     /* create collector with collstreams */
     parg->collector = collstreams[num] = SNetStreamCreate(0);

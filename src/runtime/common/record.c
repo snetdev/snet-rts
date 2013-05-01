@@ -592,3 +592,11 @@ void SNetRecUnknown(const char *funcname, snet_record_t *rec)
                      SNetRecTypeName(rec));
 }
 
+/* Print a message when a function encounters an unexpected record type. */
+void SNetRecUnknownEnt(const char *funcname, snet_record_t *rec,
+                       snet_entity_t *ent)
+{
+  SNetUtilDebugFatalEnt(ent, "[%s]: Unexpected record type: %s.", funcname,
+                        SNetRecTypeName(rec));
+}
+

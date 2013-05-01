@@ -50,7 +50,7 @@ void SNetNodeSplit(snet_stream_desc_t *desc, snet_record_t *rec)
     case REC_data:
       if (sarg->is_det | sarg->is_detsup) {
         landing_split_t *land = DESC_LAND_SPEC(desc, split);
-        SNetDetEnter(rec, &land->detenter, sarg->is_det);
+        SNetDetEnter(rec, &land->detenter, sarg->is_det, sarg->entity);
       }
 
       /* get lower and upper tag values */
@@ -75,7 +75,7 @@ void SNetNodeSplit(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknown(__func__, rec);
+      SNetRecUnknownEnt(__func__, rec, sarg->entity);
   }
 }
 
@@ -113,6 +113,7 @@ void SNetStopSplit(node_t *node, fifo_t *fifo)
 
   SNetStopStream(sarg->instance, fifo);
   SNetStopStream(sarg->collector, fifo);
+  SNetEntityDestroy(sarg->entity);
   SNetDelete(node);
 }
 
@@ -158,6 +159,8 @@ snet_stream_t *CreateSplit(
     sarg->is_det = is_det;
     sarg->is_detsup = (SNetDetGetLevel() > 0);
     sarg->is_byloc = is_byloc;
+    sarg->entity = SNetEntityCreate( ENTITY_split, location, locvec,
+                                     "<split>", NULL, (void*)sarg);
 
     /* create collector */
     output = SNetCollectorDynamic(sarg->collector, location, info, is_det, node);

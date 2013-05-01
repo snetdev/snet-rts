@@ -2,12 +2,12 @@
 #define _TRACE_H
 
 /* Choose whether to enable or disable function call tracing */
-#if !defined(ENABLE_TRACE) && !defined(NTRACE)
+#if !defined(ENABLE_TRACE) && !defined(NTRACE) && !defined( __APPLE__)
 #   define ENABLE_TRACE    1
 #endif
 
 /* Only trace when ENABLE_TRACE is true */
-#if ENABLE_TRACE
+#if ENABLE_TRACE && !defined(__APPLE__)
     extern void (*SNetTraceFunc)(const char *func);
 #   define trace(x)     (*SNetTraceFunc)(x)
 #else

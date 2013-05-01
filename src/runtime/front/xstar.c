@@ -113,7 +113,7 @@ void SNetNodeStar(snet_stream_desc_t *desc, snet_record_t *rec)
   switch (REC_DESCR(rec)) {
     case REC_data:
       if (land->star_leader && (sarg->is_det | sarg->is_detsup)) {
-        SNetDetEnter(rec, &land->detenter, sarg->is_det);
+        SNetDetEnter(rec, &land->detenter, sarg->is_det, sarg->entity);
       }
       if (MatchesExitPattern( rec, sarg->exit_patterns, sarg->guards)) {
         StarWrite(WriteCollector, rec, desc);
@@ -139,7 +139,7 @@ void SNetNodeStar(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknown(__func__, rec);
+      SNetRecUnknownEnt(__func__, rec, sarg->entity);
   }
 }
 
@@ -178,6 +178,7 @@ void SNetStopStar(node_t *node, fifo_t *fifo)
     SNetStopStream(sarg->collector, fifo);
     SNetExprListDestroy(sarg->guards);
     SNetVariantListDestroy(sarg->exit_patterns);
+    SNetEntityDestroy(sarg->entity);
     SNetDelete(node);
   }
 }
@@ -251,6 +252,7 @@ static snet_stream_t *CreateStar(
       } */
       output = SNetZipper(input, info, location, exit_patterns, guards,
                           sync->patterns, sync->guard_exprs);
+      SNetEntityDestroy(sync->entity);
       SNetVariantDestroy(sync->merged_pattern);
       SNetDelete(STREAM_DEST(sarg->instance));
       SNetStreamDestroy(sarg->instance);
@@ -258,6 +260,8 @@ static snet_stream_t *CreateStar(
       SNetStreamDestroy(sarg->collector);
       SNetMemFree(node);
     } else {
+      sarg->entity = SNetEntityCreate( ENTITY_star, location, locvec,
+                                       "<star>", NULL, (void *) sarg);
       if (!is_incarnate) {
         /* the "top-level" star also creates a collector */
         output = SNetCollectorDynamic(sarg->collector, location, info,

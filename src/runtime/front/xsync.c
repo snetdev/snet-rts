@@ -249,7 +249,7 @@ void SNetNodeSync(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknown(__func__, rec);
+      SNetRecUnknownEnt(__func__, rec, sarg->entity);
   }
 }
 
@@ -263,7 +263,7 @@ void SNetTermSync(landing_t *land, fifo_t *fifo)
   if (lsync->state == SYNC_partial) {
     sync_arg_t *sarg = NODE_SPEC(land->node, sync);
     DestroyStorage(sarg, lsync);
-    SNetUtilDebugNotice(
+    SNetUtilDebugNoticeEnt(LAND_NODE_SPEC(land, sync)->entity,
       "[SYNC] Warning: Destroying partially synchronized sync-cell!");
   }
 
@@ -282,6 +282,7 @@ void SNetStopSync(node_t *node, fifo_t *fifo)
   SNetVariantListDestroy(sarg->patterns);
   SNetExprListDestroy(sarg->guard_exprs);
   SNetVariantDestroy(sarg->merged_pattern);
+  SNetEntityDestroy(sarg->entity);
   SNetMemFree(node);
 }
 
@@ -312,6 +313,8 @@ snet_stream_t *SNetSync(
     sarg->garbage_collect = SNetGarbageCollection();
     sarg->merged_type_sync = (STREAM_FROM(input) &&
                               STREAM_FROM(input)->type == NODE_star);
+    sarg->entity = SNetEntityCreate( ENTITY_sync, location, SNetLocvecGet(info),
+                                     "<sync>", NULL, (void *) sarg);
 
   } else {
     SNetVariantListDestroy( patterns);

@@ -226,7 +226,7 @@ void SNetNodeFilter(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     default:
-      SNetRecUnknown(__func__, rec);
+      SNetRecUnknownEnt(__func__, rec, farg->entity);
   }
 }
 
@@ -257,6 +257,7 @@ void SNetStopFilter(node_t *node, fifo_t *fifo)
     SNetMemFree(farg->filter_instructions);
   }
   SNetExprListDestroy(farg->guard_exprs);
+  SNetEntityDestroy(farg->entity);
   SNetMemFree(node);
 }
 
@@ -296,6 +297,8 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
     farg->input_variant = input_variant;
     farg->guard_exprs = guard_exprs;
     farg->filter_instructions = instr_list;
+    farg->entity = SNetEntityCreate( ENTITY_filter, location, SNetLocvecGet(info),
+                                     "<filter>", NULL, (void*)farg);
 
   } else {
     int i;
