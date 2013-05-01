@@ -28,7 +28,8 @@
 extern void SNetInParserInit(FILE *file,
 			     snetin_label_t *labels,
 			     snetin_interface_t *interfaces,
-                             snet_stream_desc_t *output
+                             snet_stream_desc_t *output,
+                             snet_entity_t *ent
                              );
 
 

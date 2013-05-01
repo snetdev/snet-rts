@@ -113,7 +113,7 @@ static void UpdateBlocked(snet_stream_dest_map_t *map, snet_dest_list_t *list,
   pthread_mutex_unlock(&outputManagerMutex);
 }
 
-void SNetOutputManager(void *args);
+void SNetOutputManager(snet_entity_t *ent, void *args);
 
 void SNetOutputManagerInit(void)
 {
@@ -125,8 +125,9 @@ void SNetOutputManagerInit(void)
 void SNetOutputManagerStart(void)
 {
   wakeupStream = SNetStreamCreate(1);
-  SNetThreadingSpawn( ENTITY_other, -1, NULL,
-      "output_manager", &SNetOutputManager, NULL);
+  SNetThreadingSpawn(
+    SNetEntityCreate( ENTITY_other, -1, NULL,
+      "output_manager", &SNetOutputManager, NULL));
 }
 
 void SNetOutputManagerStop(void)
@@ -141,13 +142,14 @@ void SNetOutputManagerStop(void)
   pthread_mutex_unlock(&outputManagerMutex);
 }
 
-void SNetOutputManager(void *args)
+void SNetOutputManager(snet_entity_t *ent, void *args)
 {
-  (void) args; /* NOT USED */
   snet_streamset_t waiting = NULL;
   snet_streamset_t blocked = NULL;
   snet_stream_dest_map_t *streamMap = SNetStreamDestMapCreate(0);
   snet_stream_desc_t *wakeupDesc = SNetStreamOpen(wakeupStream, 'r');
+  (void) ent; /* NOT USED */
+  (void) args; /* NOT USED */
 
   SNetStreamsetPut(&waiting, wakeupDesc);
 

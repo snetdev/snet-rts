@@ -7,7 +7,7 @@ Flags:
  - T: task events
  - S: stream traces (only with task events)
  - M: message traces (only with task events)
- - L: load information (total compuatational time, waiting time, waiting count of each worker). Note that if flag W is set, the load information can be induced from worker events. 
+ - L: load information (total computational time, waiting time, waiting count of each worker). Note that if flag W is set, the load information can be induced from worker events. 
  - A: all flags are set
 
 =======================================
@@ -19,6 +19,7 @@ Old version: 2.1 (since 10/01/2012)
 Current version: 2.2 (since 05/03/2012)
 
 
+========= DECEN LPEL =========
 Map files
 ---------
 Map files records the mapping of all tasks among workers. Each entry descripes the mapping of one task. The format of mapping entries is defined as following:
@@ -83,4 +84,18 @@ There are 2 kinds of events: worker events, task events.
 - Load Information:
  + two entries for two worker events: worker started and worker ended --> provide the total running time of the worker (including computational time and waiting time)
  + WC<waiting count>WT<total waiting time>
+
+======================================================================
+========= HRC LPEL =========
+Tasks are not mapped specifically to any worker.
+Log entries are same as DECEN LPEL except for following points:
+
+- Map entry: there is no worker_it
+  <task-id> [ NET-PATH ] <space> <box-name> <space><end-character> 
+
+- Worker entry:
+  + Worker waited: Entry = <timestamp> <wait-character> <waiting time> <end-character>
+	Waiting time: is the time period from when worker send request to the master to a task is assigned.
+
+
 

@@ -32,6 +32,7 @@ pkginclude_HEADERS = \
 	include/constants.h \
 	include/debug.h \
 	include/distribution.h \
+	include/entities.h \
 	include/expression.h \
 	include/filter.h \
 	include/handle.h \
@@ -97,6 +98,7 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/entity/box.c \
 	src/runtime/stream/entity/collector.c \
 	src/runtime/stream/entity/collector.h \
+	src/runtime/stream/entity/entities.c \
 	src/runtime/stream/entity/feedback.c \
 	src/runtime/stream/entity/filter.c \
 	src/runtime/stream/entity/out.c \
@@ -107,6 +109,7 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/entity/syncro.c \
 	src/runtime/stream/entity/tertsrun.c \
 	src/runtime/stream/observer/observers.c \
+	src/runtime/stream/observer/observers.h \
 	src/runtime/stream/langif/interface_functions.c \
 	src/runtime/stream/netif/interface.c \
 	src/runtime/stream/netif/input.c \
@@ -216,12 +219,30 @@ libtblpel_la_SOURCES = \
 	src/threading/lpel/lpelmod/mon_snet.c \
 	src/threading/lpel/lpelmod/mon_snet.h \
 	src/threading/lpel/lpelif/glue_snet.c \
+	src/threading/lpel/lpelif/glue_snet.h \
+	src/threading/lpel/lpelif/glue_decen.c \
 	src/threading/lpel/lpelif/wrappers.c 
 libtblpel_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
         $(LPEL_INCLUDES) \
         -I$(srcdir)/src/threading/lpel/lpelmod
 libtblpel_la_LIBADD = $(LIBLPEL_LA)
+
+pkglib_LTLIBRARIES += libtblpel_hrc.la 
+libtblpel_hrc_la_SOURCES = \
+	src/threading/lpel/lpelmod/assign.c \
+	src/threading/lpel/lpelmod/assign.h \
+	src/threading/lpel/lpelmod/mon_snet.c \
+	src/threading/lpel/lpelmod/mon_snet.h \
+	src/threading/lpel/lpelif/glue_snet.c \
+	src/threading/lpel/lpelif/glue_snet.h \
+	src/threading/lpel/lpelif/glue_hrc.c \
+	src/threading/lpel/lpelif/wrappers.c 
+libtblpel_hrc_la_CPPFLAGS = \
+        $(AM_CPPFLAGS) \
+        $(LPEL_INCLUDES) \
+        -I$(srcdir)/src/threading/lpel/lpelmod
+libtblpel_hrc_la_LIBADD = $(LIBLPEL_HRC_LA)
 endif
 
 libC4SNet_la_SOURCES = \

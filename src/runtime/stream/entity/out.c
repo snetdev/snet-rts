@@ -79,8 +79,9 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
 #ifdef USE_USER_EVENT_LOGGING
   /* Emit a monitoring message of a record write by a box takes place */
-  SNetThreadingEventSignal(
-      SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, out_rec));
+  SNetThreadingEventSignal( hnd->ent,
+      SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, out_rec)
+      );
 #endif
 
   /* write to stream */
@@ -88,8 +89,10 @@ snet_handle_t *SNetOutRawArray( snet_handle_t *hnd,
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
-  SNetUtilDebugNoticeTask("[BOX] SNetOut finished after %lf sec.",
-      (tv_out.tv_sec-tv_in.tv_sec)+(tv_out.tv_usec-tv_in.tv_usec)/1000000.0);
+  SNetUtilDebugNoticeEnt( hnd->ent,
+      "[BOX] SNetOut finished after %lf sec.",
+      (tv_out.tv_sec-tv_in.tv_sec)+(tv_out.tv_usec-tv_in.tv_usec)/1000000.0
+      );
 #endif
   return hnd;
 }
@@ -145,7 +148,9 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
     }
   } else {
     out_rec = NULL;
-    SNetUtilDebugFatalTask("[BOX] SNetOut: variant_num <= 0");
+    SNetUtilDebugFatalEnt( hnd->ent,
+        "[BOX] SNetOut: variant_num <= 0"
+        );
   }
 
 
@@ -166,8 +171,9 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
 
 #ifdef USE_USER_EVENT_LOGGING
   /* Emit a monitoring message of a record write by a box takes place */
-  SNetThreadingEventSignal(
-      SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, out_rec));
+  SNetThreadingEventSignal( hnd->ent,
+      SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, out_rec)
+      );
 #endif
 
   /* write to stream */
@@ -175,8 +181,10 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
 
 #ifdef DBG_RT_TRACE_OUT_TIMINGS
   gettimeofday( &tv_out, NULL);
-  SNetUtilDebugNoticeTask("[BOX] SNetOut finished after %lf sec.",
-      (tv_out.tv_sec-tv_in.tv_sec)+(tv_out.tv_usec-tv_in.tv_usec)/1000000.0);
+  SNetUtilDebugNoticeEnt( hnd->ent,
+      "[BOX] SNetOut finished after %lf sec.",
+      (tv_out.tv_sec-tv_in.tv_sec)+(tv_out.tv_usec-tv_in.tv_usec)/1000000.0
+      );
 #endif
 
   return hnd;
