@@ -10,7 +10,7 @@ void *multiply( void *hnd, c4snet_data_t *a, c4snet_data_t *B, int A_width, int 
   int *array_B = C4SNetGetData(B);
   int *c;
 
-  c4snet_data_t *new = C4SNetAlloc(CTYPE_int, B_width * (last - first + 1), &c);
+  c4snet_data_t *new = C4SNetAlloc(CTYPE_int, B_width * (last - first + 1), (void **) &c);
 
   memset(c, 0, B_width * (last - first + 1) * sizeof(int));
 

@@ -1,0 +1,26 @@
+<metadata>
+  <net name="fileobserver">
+    <interface value="C4SNet"/>
+  </net>
+  <netdefault>
+    <observer />
+    <observer_type value="both" />
+    <observer_data value="tagvalues" />
+    <observer_file value="output.xml" />
+    <observer_code value="X" />
+  </netdefault>
+
+</metadata>
+ 
+net fileobserver
+{
+  net incr
+  connect [{<A>} -> {<A=A+1>}];
+
+  net plus
+  connect [{<A>} -> {<A=A+1>}];
+
+  net more
+  connect [{<A>} -> {<A=A+1>}];
+
+} connect incr .. plus .. more;

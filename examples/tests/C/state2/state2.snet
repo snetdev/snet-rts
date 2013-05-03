@@ -1,0 +1,14 @@
+<metadata>
+  <default>
+      <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+net state2 ({state} | {inval} -> {outval})
+{
+  net sync_star
+  connect [| {state}, {inval} |] * {state, inval};
+
+  box compute((state, inval) -> (outval) | (state));
+}
+connect (sync_star .. compute) \ {state},{inval};

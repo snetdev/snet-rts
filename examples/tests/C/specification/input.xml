@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)3</field>
+  <field label="B" >(int)5</field>
+</record>
+

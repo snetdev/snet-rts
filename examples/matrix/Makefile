@@ -1,8 +1,20 @@
 TARGETS    = matrix
-DEPS       = boxes/libboxes.a
-SNETCFLAGS = -g -Lboxes -lboxes
+BOXES      = boxes/libboxes.a
+DEPS	   = $(BOXES) inputrecord
+SNETCFLAGS = -v1 -g -Lboxes -lboxes
+CFLAGS	   = -std=gnu99 -Wall -O1 -g
+CLEANS	   = $(DEPS) boxes/*.o
 
 include $(SNET_MISC)/snet.mkf
 
-$(DEPS):
-	make -C boxes/
+$(BOXES): boxes/Makefile boxes/init.c boxes/merger.c boxes/multiply.c boxes/split.c
+	make -C boxes
+
+inputrecord: inputrecord.c
+
+test: inputrecord
+	@./inputrecord -w 1000 -h 1000 -n 1 -o input.xml
+	@for f in ./matrix*nodist; do \
+	    echo "### $$f"; \
+	    time -p $$f -i input.xml -o /dev/null || mv -vf core core-$${f#*-}; \
+	done

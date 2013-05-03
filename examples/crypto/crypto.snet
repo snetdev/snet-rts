@@ -26,7 +26,7 @@ net crypto ( {dictionary,
 
 	net load_balancer( {<entry>,<num_nodes>,<num_branches>}
                     -> {<entry>,<node>,<branch>})
-      connect 
+	connect 
         [ {<entry>,<num_nodes>,<num_branches>} 
            -> 
            {<entry>,
@@ -35,12 +35,12 @@ net crypto ( {dictionary,
 
 
 	net cracker( {password, salt, dictionary, <dictionary_size>, <branch>}
-              -> {word} | {<false>})
-  {
-		 box algorithm( (password, salt, dictionary, <dictionary_size>) 
-                   -> (word) | (<false>)); 
-	} connect 
-      algorithm!<branch>;	
+		      -> {word} | {<false>})
+	{
+		box algorithm( (password, salt, dictionary, <dictionary_size>) 
+			       -> (word) | (<false>)); 
+
+	} connect algorithm!<branch>;	
 
 } connect 
     (split .. load_balancer .. cracker!@<node>)@0;

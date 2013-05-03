@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <tag label="A" >10</tag>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <tag label="A" >20</tag>
+</record>
+<record xmlns="snet-home.org" type="terminate"/>
+

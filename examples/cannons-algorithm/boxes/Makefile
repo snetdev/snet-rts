@@ -1,14 +1,11 @@
 TARGET  = libboxes.a
-
-BOXOBJS = Split.o Multiplication.o Merger.o
+CFLAGS  = -std=gnu99 -Wall -g -I$(SNET_INCLUDES)
+BOXOBJS = $(TARGET)(Split.o) $(TARGET)(Multiplication.o) $(TARGET)(Merger.o)
+ARFLAGS = rcs
 
 .PHONY: clean
 
 $(TARGET): $(BOXOBJS)
-	$(AR) rcs $@ $^
-
-%.o: %.c *.h
-	$(CC) -std=c99 $(CCFLAGS) -I$(SNET_INCLUDES) -c $<
 
 clean:
 	rm -f $(TARGET) $(BOXOBJS)

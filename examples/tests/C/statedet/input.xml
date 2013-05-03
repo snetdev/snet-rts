@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+
+<!-- Initial state first -->
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="state" >(int)0</field>
+</record>
+
+
+<!-- then the input values -->
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="inval" >(int)1</field>
+</record>
+
+<!-- no state left in a synchrocell as MAXVAL=10 was reached -->
+
+
+<record type="terminate" />
+
+
+

@@ -1,0 +1,11 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+ 
+
+net pardet {
+  box dec((A) -> (A));
+  box inc((B) -> (B));
+} connect (dec || inc);

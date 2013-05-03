@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)1</field>
+</record>
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="C" >(int)2</field>
+</record>
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="E" >(int)1</field>
+</record>
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)2</field>
+</record>
+
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="F" >(int)2</field>
+</record>
+<record type="data" mode="textual" interface="C4SNet">
+  <field label="D" >(int)1</field>
+</record>
+<record type="terminate" />
+
+
+
