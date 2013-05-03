@@ -306,10 +306,12 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 
 		if(parser.terminate != SNET_PARSE_ERROR) {
 		  if(current.record != NULL) {
-                    /* write record to stream */
-                    SNetStreamWrite( parser.output, current.record);
+                    if (parser.output != NULL) {
+                      /* write record to stream */
+                      SNetStreamWrite( parser.output, current.record);
+                      current.record = NULL;
+                    }
 
-		    current.record = NULL;
 		    current.interface = INTERFACE_UNKNOWN;
 		  }
 		}else {
@@ -406,10 +408,12 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
                             );
                       }
 #endif
-                      /* write record to stream */
-                      SNetStreamWrite( parser.output, current.record);
+                      if (parser.output != NULL) {
+                        /* write record to stream */
+                        SNetStreamWrite( parser.output, current.record);
+                        current.record = NULL;
+                      }
 
-		      current.record = NULL;
 		      current.interface = INTERFACE_UNKNOWN;
 		    }
 		  }else {
@@ -420,7 +424,6 @@ Record:       RECORD_BEGIN Attributes STARTTAG_SHORTEND
 		    yyerror("Error encountered while parsing a record. Record discarded (3)!");
 		    parser.terminate = SNET_PARSE_CONTINUE;
 		  }
-		  current.record = NULL;
 		}
 
 		deleteAttributes($2);
@@ -708,7 +711,7 @@ Attributes:   NAME EQ SQUOTE SATTVAL SQUOTE Attributes
               }
 %%
 
-static void parserflush()
+static void parserflush(void)
 {
   if(current.record != NULL) {
     SNetRecDestroy(current.record);
@@ -752,7 +755,7 @@ void SNetInParserInit(FILE *file,
   parser.terminate = SNET_PARSE_CONTINUE;
 }
 
-int SNetInParserParse()
+int SNetInParserParse(void)
 {
   parserflush();
 
@@ -763,7 +766,21 @@ int SNetInParserParse()
   return parser.terminate;
 }
 
-void SNetInParserDestroy()
+int SNetInParserGetNextRecord(snet_record_t **record)
+{
+  parserflush();
+
+  *record = NULL;
+  if (parser.terminate == SNET_PARSE_CONTINUE) {
+    yyparse();
+    *record = current.record;
+    current.record = NULL;
+  }
+
+  return parser.terminate;
+}
+
+void SNetInParserDestroy(void)
 {
   yylex_destroy();
 }

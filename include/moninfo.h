@@ -62,7 +62,6 @@ typedef char* snet_add_moninfo_rec_data_t;
 /* data structure of monitoring information for records */
 typedef struct {
 	snet_record_id_t id;
-	//snet_recid_list_t *parent_ids;
 	snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
 } snet_moninfo_record_t;
 

@@ -170,16 +170,7 @@ int SNetInRun(int argc, char **argv,
   for(i = 1; i < argc; i++) {
     if(strcmp(argv[i], "-h") == 0) {
       /* Help */
-      printf("usage: <executable name> [options]\n");
-      printf("\nOptions:\n");
-      printf("\t-i <filename>\t\tInput from file.\n");
-      printf("\t-I <port>\t\tInput from socket.\n");
-      printf("\t-h \t\t\tDisplay this help text.\n");
-      printf("\t-o <filename>\t\tOutput to file.\n");
-      printf("\t-O <address:port>\tOutput to socket.\n");
-      printf("\t-m <mon_level>\t\tSet monitoring level (LPEL only).\n");
-      printf("\t-w <workers>\t\tSet number of workers (LPEL) / visible cores (PThread).\n");
-      printf("\n");
+      SNetRuntimeHelpText();
 
       if(input != stdin && input != NULL) {
 	SNetInClose(input);
@@ -246,7 +237,8 @@ int SNetInRun(int argc, char **argv,
 
   /* check for number of interfaces */
   if (0 == number_of_interfaces) {
-    SNetUtilDebugFatal("No language interfaces were specified by the source program!");
+    SNetUtilDebugNotice("No language interfaces were specified by the source program!");
+    exit(1);
   }
 
   labels     = SNetInLabelInit(static_labels, number_of_labels);
@@ -277,7 +269,7 @@ int SNetInRun(int argc, char **argv,
     SNetInInputInit(input, labels, interfaces, input_stream);
   }
 
-  SNetDistribWaitExit(info);
+  SNetRuntimeStartWait(input_stream, info, output_stream);
 
   /* tell the threading layer that it is ok to shutdown,
      and wait until it has stopped such that it can be cleaned up */

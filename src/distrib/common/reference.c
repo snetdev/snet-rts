@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "distribcommon.h"
 #include "distribution.h"
