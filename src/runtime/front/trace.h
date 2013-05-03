@@ -2,12 +2,12 @@
 #define _TRACE_H
 
 /* Choose whether to enable or disable function call tracing */
-#if !defined(ENABLE_TRACE) && !defined(NTRACE) && !defined( __APPLE__)
+#if !defined(ENABLE_TRACE) && !defined(NTRACE)
 #   define ENABLE_TRACE    1
 #endif
 
 /* Only trace when ENABLE_TRACE is true */
-#if ENABLE_TRACE && !defined(__APPLE__)
+#if ENABLE_TRACE
     extern void (*SNetTraceFunc)(const char *func);
 #   define trace(x)     (*SNetTraceFunc)(x)
 #else
@@ -24,9 +24,6 @@ void SNetTraceSimple(const char *func);
 
 /* Trace nothing. */
 void SNetTraceEmpty(const char *func);
-
-/* Called by trace(x). */
-void (*SNetTraceFunc)(const char *func);
 
 /* Set tracing: -1 disables, >= 0 sets call stack tracing depth. */
 void SNetEnableTracing(int trace_level);
