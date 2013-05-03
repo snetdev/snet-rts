@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)1</field>
+  <field label="B" >(int)1</field>
+  <field label="D" >(int)2</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)2</field>
+  <field label="C" >(int)2</field>
+  <field label="D" >(int)1</field>
+</record>
+<record xmlns="snet-home.org" type="terminate"/>

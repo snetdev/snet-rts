@@ -76,7 +76,7 @@ int closeBMPJPG()
     rows = bmpheader->height>>4;
     cols = bmpheader->width>>4;
 
-    printf("\nProcessed more than %d %dx%d-blocks.",(rows-1)*cols,MATRIX_SIZE,MATRIX_SIZE);  // +col
+    printf("Processed more than %d %dx%d-blocks.\n",(rows-1)*cols,MATRIX_SIZE,MATRIX_SIZE);  // +col
 
 	writejpegfooter();
 

@@ -1,0 +1,28 @@
+<metadata>
+  <net name="netobserver">
+    <interface value="C4SNet"/>
+  </net>
+  <netdefault>
+    <observer />
+    <observer_interactive />
+    <observer_address value="127.0.0.1" />
+    <observer_port value="6555" />
+    <observer_data value="tagvalues" />
+    <observer_type value="both" />
+    <observer_code value="X" />
+  </netdefault>
+
+</metadata>
+ 
+net netobserver
+{
+  net incr
+  connect [{<A>} -> {<A=A+1>}];
+
+  net plus
+  connect [{<A>} -> {<A=A+1>}];
+
+  net more
+  connect [{<A>} -> {<A=A+1>}];
+
+} connect incr .. plus .. more;

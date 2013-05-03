@@ -4,3 +4,9 @@ SNETCFLAGS = -v1 -g
 
 include $(SNET_MISC)/snet.mkf
 
+test: 
+	@for f in ./fibonacci*nodist; do \
+	    echo "### $$f"; \
+	    time -p ./run 15 $$f -o /dev/null || \
+	    mv -vf core core-$${f#*fibonacci}; \
+	done

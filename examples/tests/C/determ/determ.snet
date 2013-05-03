@@ -1,0 +1,31 @@
+<metadata>
+  <boxdefault>
+    <interface value="C4SNet"/>
+  </boxdefault>
+</metadata>
+ 
+
+net determ
+{
+  box showA((A) -> (A));
+
+  box delay((D) -> (D));
+
+  net intern
+  {
+    net split
+    {
+      net left
+      {
+        box showB((B) -> (B));
+      } connect (delay .. showB);
+
+      net right
+      {
+        box showC((C) -> (C));
+      } connect (delay .. showC);
+
+    } connect (left | right);
+  } connect (showA .. split .. showA);
+
+} connect ([] || intern);

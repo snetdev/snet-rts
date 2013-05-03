@@ -1,0 +1,23 @@
+<metadata>
+  <net name="starobserver">
+    <interface value="C4SNet"/>
+  </net>
+  <netdefault>
+    <observer />
+    <observer_type value="both" />
+    <observer_data value="tagvalues" />
+    <observer_file value="output.xml" />
+    <observer_code value="X" />
+  </netdefault>
+
+</metadata>
+ 
+net starobserver
+{
+  net decr
+  connect [{<A>} -> {<A=A-1>}];
+
+  net test
+  connect [{<A>} -> if <A <= 0> then {<B>} else {<A>}];
+
+} connect (decr .. test) * {<B>};
