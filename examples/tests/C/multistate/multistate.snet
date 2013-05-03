@@ -1,0 +1,28 @@
+<metadata>
+  <default>
+      <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+net multistate ({state} | {trigger} | {inval} -> 
+                {outval})
+{
+    net storage
+    connect [| {state}, {trigger} |] * {state, trigger};
+
+    net untrigger
+    connect [ {trigger} -> {} ];
+
+    net single_state ({state} | {inval} -> 
+                      {outval} | {trigger})
+    {
+        net sync_star
+        connect [| {state}, {inval} |] * {state, inval};
+
+        box compute((state, inval) -> 
+                    (outval) | (state) | (trigger));
+    }
+    connect (sync_star .. compute) \ {state},{inval};
+}
+connect (((storage .. untrigger) | []) .. single_state)
+        \ {state},{trigger},{inval};

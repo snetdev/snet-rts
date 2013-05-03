@@ -1,0 +1,5 @@
+This is a deterministic version of the 'state' test.
+
+Deterministic combinators should exhibit similar
+garbage collection behavior as the non-deterministic ones.
+

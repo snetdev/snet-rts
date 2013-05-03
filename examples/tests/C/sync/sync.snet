@@ -1,0 +1,9 @@
+<metadata>
+  <default>
+    <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+
+net sync
+connect [|{A},{B}|] .. [|{C},{D}|] .. [|{E},{F}|];

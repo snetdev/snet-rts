@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)200</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)190</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)180</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)170</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)160</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)155</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)145</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)135</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)125</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)115</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)110</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)100</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)90</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)80</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)70</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)65</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)55</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)45</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)35</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)25</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)20</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="B" >(int)15</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)10</field>
+</record>
+<record xmlns="snet-home.org" type="terminate"/>

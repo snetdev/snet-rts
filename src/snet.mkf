@@ -65,6 +65,6 @@ else
 	$(SNETC) $(SNETCFLAGS) -o $*$(NAME) $<
 
 clean:
-	rm -f $(CLEANTARGETS) mon_n*_info.log *.o *.lo
+	rm -f $(CLEANTARGETS) mon_n*_info.log *.o *.lo core core*nodist
 
 endif

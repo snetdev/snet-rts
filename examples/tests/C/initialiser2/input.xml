@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)1</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)2</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)3</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)4</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)5</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)6</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)7</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)8</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)9</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <field label="A" >(int)10</field>
+</record>
+<record xmlns="snet-home.org" type="terminate"/>
+

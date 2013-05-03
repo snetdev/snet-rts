@@ -1,0 +1,31 @@
+<metadata>
+  <default>
+    <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+net statedet {
+  /* the synchrocell to merge current state with input value
+   * into a single record
+   */
+  net merge connect [|{state}, {inval}|];
+
+  /*
+   * The bypass filter for successive input values
+   * that have not been processed yet.
+   *
+   * Commented out  typed filter will prevent garbage collection, but that
+   * behaviour needs to be fixed in future.
+   * Use an empty filter insted for now.
+   */
+  /* net bypass connect [{inval} -> {inval}]; */
+  net bypass connect [];
+
+  /*
+   * The processing box that updates the state by the input value,
+   * and emits the new state and an output value.
+   */
+  box add((state, inval) -> (state) | (outval));
+
+} connect (merge .. (bypass | add)) ** {outval};
+
