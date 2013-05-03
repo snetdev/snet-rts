@@ -66,9 +66,11 @@ static inline void MatchCountUpdate( match_count_t *mc, bool match_cond)
 static void CheckMatch( snet_record_t *rec,
     snet_variant_list_t *variant_list, match_count_t *mc)
 {
-  int name, val;
+  int name;
   snet_variant_t *variant;
   int max=-1;
+  int val;
+  (void) val; /* NOT USED */
 
   assert(rec != NULL);
   assert(variant_list != NULL);
@@ -132,6 +134,9 @@ static bool VariantIsSupertypeOfAllOthers(snet_variant_t *var,
 #endif /* ENABLE_GARBAGE_COLLECTOR */
 
 
+#if 0
+/* This is no longer used and can therefore be removed ? */
+
 /**
  * Using weighted round robin to decide which buffer to dispatch to:
  *   among all best match branches, choose the least-used one
@@ -174,6 +179,7 @@ static int WeightedRoundRobin( match_count_t **counter, int *usedcounter, int nu
   SNetMemFree( best);
   return res;
 }
+#endif
 
 /**
  * Check for "best match" and decide which buffer to dispatch to
@@ -487,6 +493,7 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
   snet_startup_fun_t fun;
   snet_variant_list_t *variants;
   snet_locvec_t *locvec;
+  (void) variants; /* NOT USED */
 
   num = SNetVariantListListLength( variant_lists);
 

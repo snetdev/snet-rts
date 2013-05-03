@@ -1,16 +1,25 @@
 #ifndef _RECORD_H_
 #define _RECORD_H_
 
+#include <stddef.h>
+
 typedef struct record snet_record_t;
 typedef union record_types snet_record_types_t;
+#ifndef _ENTITIES_H_
+typedef struct snet_entity_t snet_entity_t;
+#endif
 
 typedef enum {
-  REC_data=0,
+  REC_data=1100,
   REC_sync,
   REC_collect,
   REC_sort_end,
   REC_terminate,
   REC_trigger_initialiser,
+  REC_detref,
+  REC_observ,
+  REC_star_leader,
+  REC_wakeup,
 } snet_record_descr_t;
 
 typedef enum {
@@ -31,13 +40,16 @@ typedef struct {
 /* macros for record datastructure */
 #define REC_DESCR( name) name->rec_descr
 #define RECPTR( name) name->rec
-#define RECORD( name, type) RECPTR( name)->type
+#define RECORD( name, type) RECPTR( name).type
 
-#define DATA_REC( name, component) RECORD( name, data_rec)->component
-#define SYNC_REC( name, component) RECORD( name, sync_rec)->component
-#define SORT_E_REC( name, component) RECORD( name, sort_end_rec)->component
-#define TERM_REC( name, component) RECORD( name, terminate_rec)->component
-#define COLL_REC( name, component) RECORD( name, coll_rec)->component
+#define DATA_REC( name, component) RECORD( name, data_rec).component
+#define SYNC_REC( name, component) RECORD( name, sync_rec).component
+#define SORT_E_REC( name, component) RECORD( name, sort_end_rec).component
+#define TERM_REC( name, component) RECORD( name, terminate_rec).component
+#define COLL_REC( name, component) RECORD( name, coll_rec).component
+#define DETREF_REC( name, component) RECORD( name, detref_rec).component
+#define OBSERV_REC( name, component) RECORD( name, observ_rec).component
+#define LEADER_REC( name, component) RECORD( name, leader_rec).component
 
 #include "distribution.h"
 #include "map.h"
@@ -56,8 +68,6 @@ typedef struct {
 #undef LIST_NAME_H
 
 
-
-
 typedef struct {
   snet_int_map_t *tags;
   snet_int_map_t *btags;
@@ -65,7 +75,7 @@ typedef struct {
   int interface_id;
   snet_record_mode_t mode;
   snet_record_id_t rid;           /* system-wide unique id */
-  snet_recid_list_t *parent_rids; /* ids of parent records */
+  struct snet_stack *detref;
 } data_rec_t;
 
 typedef struct {
@@ -86,24 +96,45 @@ typedef struct {
   snet_stream_t *output;
 } coll_rec_t;
 
+typedef struct detref_rec {
+  long                   seqnr;
+  struct landing        *leave;
+  struct detref         *detref;
+} detref_rec_t;
 
+typedef struct observ_rec {
+  int                            oid;
+  snet_record_t                 *rec;
+  struct snet_stream_desc_t    **desc;
+} observ_rec_t;
+
+typedef struct leader_rec {
+  long  counter;
+  long  seqnr;
+} leader_rec_t;
 
 union record_types {
-  data_rec_t *data_rec;
-  sync_rec_t *sync_rec;
-  coll_rec_t *coll_rec;
-  sort_end_rec_t *sort_end_rec;
-  terminate_rec_t *terminate_rec;
+  data_rec_t data_rec;
+  sync_rec_t sync_rec;
+  coll_rec_t coll_rec;
+  sort_end_rec_t sort_end_rec;
+  terminate_rec_t terminate_rec;
+  detref_rec_t detref_rec;
+  observ_rec_t observ_rec;
+  leader_rec_t leader_rec;
 };
 
 struct record {
   snet_record_descr_t rec_descr;
-  snet_record_types_t *rec;
+  snet_record_types_t rec;
 };
 
 #define RECORD_FOR_EACH_TAG(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, tags), name, val)
 #define RECORD_FOR_EACH_BTAG(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, btags), name, val)
 #define RECORD_FOR_EACH_FIELD(rec, name, val) MAP_FOR_EACH(DATA_REC(rec, fields), name, val)
+
+/* return number of created records */
+unsigned SNetGetRecCounter(void);
 
 /* compares two record ids */
 bool SNetRecordIdEquals (snet_record_id_t rid1, snet_record_id_t rid2);
@@ -159,11 +190,6 @@ void SNetRecRenameField( snet_record_t *rec, int id, int newId);
 
 
 void SNetRecIdGet(snet_record_id_t *id, snet_record_t *from);
-snet_recid_list_t *SNetRecGetParentListCopy(snet_record_t *rec);
-#if 0
-void SNetRecAddParentsOf(snet_record_t *rec, snet_record_t *of);
-#endif
-void SNetRecAddAsParent(snet_record_t *rec, snet_record_t *parent);
 
 
 void SNetRecSerialise(
@@ -178,5 +204,15 @@ snet_record_t *SNetRecDeserialise(
         void (*unpackInts)(void*, int, int*),
         void (*unpackRefs)(void*, int, snet_ref_t**)
 );
+
+/* Copy the stack of detref references from one record to another. */
+void SNetRecDetrefCopy(snet_record_t *new_rec, snet_record_t *old_rec);
+
+const char* SNetRecTypeName(snet_record_t *rec);
+
+void SNetRecUnknown(const char *funcname, snet_record_t *rec);
+
+void SNetRecUnknownEnt(const char *funcname, snet_record_t *rec,
+                       snet_entity_t *ent);
 
 #endif /* _RECORD_H_ */

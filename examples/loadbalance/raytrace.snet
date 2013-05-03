@@ -1,0 +1,44 @@
+<metadata><default>
+    <interface value="C4SNet" />
+</default></metadata>
+
+net raytrace ({<xdim>, <ydim>, <nodes>, <states>} -> {output})
+{
+  box init ((<xdim>, <ydim>, <nodes>, <states>) ->
+            (state) | (collect, <C>) | (probe, <node>));
+
+  net estimate ({probe, <node>} -> {<node>})
+  {
+    box estimator ((probe, <node>) -> (<node>));
+  }
+  connect estimator !@ <node>;
+
+  net loop ({state} | {<node>} -> {result, <C>})
+  {
+    net sync ({state} | {<node>} -> {state, <node>})
+    connect [| {state}, {<node>} |] * {state, <node>};
+
+    box inbox ((state, <node>) -> (state) | (work, <node>));
+
+    net process
+    {
+      box worker ((work, <node>) -> (result, <C>) | (<node>));
+    }
+    connect [] | (worker !@ <node>);
+  }
+  connect (sync .. inbox .. process) \ {state}, {<node>};
+
+  net post ({collect, <C>} | {result, <C>} -> {output})
+  {
+    net clean
+    connect [{<C>} -> {}];
+
+    net sync ({collect} | {result} -> {collect, result})
+    connect [| {collect}, {result} |] * {collect, result};
+
+    box merge ((collect, result) -> (collect) | (output));
+  }
+  connect (clean .. sync .. merge) \ {collect}, {result};
+}
+connect init .. (estimate | []) .. ([] | loop) .. post!<C>;
+

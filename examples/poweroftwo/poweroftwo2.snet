@@ -1,0 +1,47 @@
+<metadata> <default> <interface value="C4SNet" /> </default> </metadata>
+
+net poweroftwo2 ({<N>} -> {<X>})
+{
+    net addlevel ({<N>} -> {<N>,<L>,<M>})
+    connect [{<N>} -> {<N>,<L=0>,<M=1>}];
+
+    net recur ({<N>,<L>,<M>} -> {<M>,<L>,<R>})
+    {
+        net leq0
+        connect [{<N>} -> if <N <= 0> then {<N>,<T>} else {<N>,<F>}];
+
+        net true
+        connect [{<N>,<T>} -> {<R=1>}];
+
+        net false
+        connect [{<N>,<F>,<M>,<L>} -> {<N=N-1>,<L=L+1>,<M=(2*M)+1>}
+                                    ; {<N=N-1>,<L=L+1>,<M=(2*M)+0>}];
+    }
+    connect (leq0 .. (false | true)) * {<R>};
+
+    net merge ({<M>,<L>,<R>} -> {<X>})
+    {
+        net rewrite ({<M>,<L>,<R>} -> {<X>} | {<L>,<M>,<V>} | {<L>,<M>,<W>})
+        connect [{<L>,<M>,<R>} -> if <L <= 0> then {<X=R>} else
+                                  if <M % 2 == 0> then {<L=L>, <M=M/2>, <V=R>}
+                                  else {<L=L>, <M=M/2>, <W=R>}];
+        net pair ({<L>,<M>,<V>} | {<L>,<M>,<W>} -> {<R>,<L>,<M>})
+        {
+            net sync
+            {
+                net cell
+                connect [| {<V>}, {<W>} |];
+            }
+            connect cell!<M>;
+
+            net sum
+            connect [{<V>,<W>,<L>} -> {<R=V+W>,<L=L-1>}];
+        }
+        connect sync .. (sum | [] | [{<L>,<M>,<V>}->] | [{<L>,<M>,<W>}->]);
+
+        net Xpass
+        connect [{<X>} -> {<X>}];
+    }
+    connect (rewrite .. (Xpass | pair)) * {<X>};
+}
+connect addlevel .. recur .. merge;

@@ -27,12 +27,20 @@
 #ifndef _ATOMICCNT_H_
 #define _ATOMICCNT_H_
 
+#ifndef LINE_SIZE
+#define LINE_SIZE       64
+#endif
+
+#ifndef CAS
+#define CAS(ptr, oldval, newval)   \
+        __sync_bool_compare_and_swap(ptr, oldval, newval)
+#endif
 
 #ifdef HAVE_SYNC_ATOMIC_BUILTINS
 
 typedef struct {
   volatile unsigned int counter;
-  unsigned char padding[64-sizeof(int)];
+  unsigned char padding[ LINE_SIZE - sizeof(int)];
 } snet_atomiccnt_t;
 
 #define SNET_ATOMICCNT_INITIALIZER(i)  {(i), {0}}
@@ -64,6 +72,7 @@ static inline unsigned int SNetAtomicCntGet(snet_atomiccnt_t *cnt)
 typedef struct {
   unsigned int counter;
   pthread_mutex_t lock;
+  unsigned char padding[ LINE_SIZE - sizeof(int) - sizeof(pthread_mutex_t)];
 } snet_atomiccnt_t;
 
 #define SNET_ATOMICCNT_INITIALIZER(i)  {(i),PTHREAD_MUTEX_INITIALIZER}
