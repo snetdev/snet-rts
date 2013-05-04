@@ -4,7 +4,8 @@
 #
 
 APPLICATIONS="fibonacci poweroftwo sieve loadbalance"
-APPLICATIONS="$APPLICATIONS cannons-algorithm matrix jpegCode"
+APPLICATIONS+=" cannons-algorithm matrix jpegCode"
+APPLICATIONS+=" cholesky"
 
 THREAD="pthread lpel lpel_hrc front"
 

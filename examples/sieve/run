@@ -17,7 +17,7 @@ M=$2
 shift 2
 [ $M -lt $N ] && let M=$N+10
 
-cat <<EOI | "$@"
+"$@" <<EOI
 <?xml version="1.0" ?>
 <record xmlns="snet-home.org" type="data" mode="textual"  interface="C4SNet">
   <tag label="N">$N</tag>
