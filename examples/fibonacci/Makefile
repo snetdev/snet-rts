@@ -8,5 +8,5 @@ test:
 	@for f in ./fibonacci*nodist; do \
 	    echo "### $$f"; \
 	    time -p ./run 15 $$f -o /dev/null || \
-	    mv -vf core core-$${f#*fibonacci}; \
+	    mv -vf core core-$${f#*fibonacci} 2>/dev/null; \
 	done

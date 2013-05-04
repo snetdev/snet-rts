@@ -13,6 +13,6 @@ test:
 	@for f in ./jpegCode*nodist; do \
 	    echo "### $$f"; \
 	    time -p ./run data/test.bmp /dev/null $$f -o /dev/null >/dev/null || \
-	    mv -vf core core-$${f#*jpegCode}; \
+	    mv -vf core core-$${f#*jpegCode} 2>/dev/null; \
 	done
 

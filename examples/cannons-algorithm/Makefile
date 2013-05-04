@@ -1,7 +1,7 @@
 TARGETS    = cannon
 BOXES      = boxes/libboxes.a
 DEPS       = $(BOXES) inputrecord
-SNETCFLAGS = -v1 -g -Lboxes -lboxes
+SNETCFLAGS = -v1 -g -Lboxes -lboxes -lm
 CLEANS     = $(DEPS) boxes/*.o
 
 include $(SNET_MISC)/snet.mkf
@@ -16,5 +16,5 @@ test: inputrecord
 	@for f in ./cannon*nodist; do \
 	    echo "### $$f"; \
 	    time -p $$f -i input.xml -o /dev/null >/dev/null || \
-	    mv -vf core core-$${f#*-}; \
+	    mv -vf core core-$${f#*cannon} 2>/dev/null; \
 	done

@@ -16,5 +16,6 @@ test: inputrecord
 	@./inputrecord -w 1000 -h 1000 -n 1 -o input.xml
 	@for f in ./matrix*nodist; do \
 	    echo "### $$f"; \
-	    time -p $$f -i input.xml -o /dev/null || mv -vf core core-$${f#*-}; \
+	    time -p $$f -i input.xml -o /dev/null || \
+	    mv -vf core core-$${f#*matrix} 2>/dev/null; \
 	done
