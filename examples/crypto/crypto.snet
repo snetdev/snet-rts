@@ -3,44 +3,37 @@
  *
  */
 
-<metadata>
-  <boxdefault>
-  <interface value="C4SNet" />
-  </boxdefault>
-</metadata>
+<metadata><default><interface value="C4SNet" /></default></metadata>
 
-net crypto ( {dictionary, 
-              entries, 
-              <dictionary_size>, 
-              <num_entries>, 
-              <num_nodes>, 
-              <num_branches>}
-             -> 
-             {word, 
-              <entry>}
-             |
-              {<false>, 
-              <entry>})
+net crypto ( {dictionary_filename, passwords_filename,
+              <num_nodes>, <num_branches>}
+          -> {word, <entry>}
+           | {<false>, <entry>})
 {
-	box split((entries, <num_entries>) -> (password, salt, <entry>));
+    box read_files ( (dictionary_filename, passwords_filename)
+                  -> (dictionary, entries,
+                      <dictionary_size>, <num_entries>) );
 
-	net load_balancer( {<entry>,<num_nodes>,<num_branches>}
+    box split( (entries, <num_entries>)
+            -> (password, salt, <entry>) );
+
+    net load_balancer( {<entry>,<num_nodes>,<num_branches>}
                     -> {<entry>,<node>,<branch>})
-	connect 
-        [ {<entry>,<num_nodes>,<num_branches>} 
-           -> 
-           {<entry>,
-            <node = entry % num_nodes>,
-            <branch = (entry / num_nodes) % num_branches>}]; 
+    connect [ {<entry>,<num_nodes>,<num_branches>} 
+           -> {<entry>,
+               <node = entry % num_nodes>,
+               <branch = (entry / num_nodes) % num_branches>}]; 
 
+    net cracker( {password, salt, dictionary, <dictionary_size>, <branch>}
+              -> {word, <branch>} | {<false>, <branch>})
+    {
+        box algorithm( (password, salt, dictionary, <dictionary_size>) 
+                    -> (word) | (<false>)); 
 
-	net cracker( {password, salt, dictionary, <dictionary_size>, <branch>}
-		      -> {word} | {<false>})
-	{
-		box algorithm( (password, salt, dictionary, <dictionary_size>) 
-			       -> (word) | (<false>)); 
+    } connect algorithm!<branch>;
 
-	} connect algorithm!<branch>;	
+    net clean ( {<branch>, <node>} -> {} )
+    connect [{<branch>, <node>} -> {}];
 
-} connect 
-    (split .. load_balancer .. cracker!@<node>)@0;
+} connect (read_files .. split .. load_balancer .. cracker!@<node>)@0 .. clean;
+
