@@ -28,7 +28,7 @@ void *algorithm( void *hnd,
 
     if (!strcmp(result, pw)) {
       C4SNetOut(hnd, 1,
-          C4SNetCreate(CTYPE_char, strlen(&dict[j]) + 1, &dict[j]));
+          C4SNetCreate(CTYPE_char, strlen(&dict[j]), &dict[j]));
 
       found = true;
       break;
