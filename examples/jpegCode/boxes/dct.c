@@ -19,40 +19,45 @@
 
 #include "dct.h"
 
-void *dct( void *hnd, c4snet_data_t *Matrix, c4snet_data_t *color, c4snet_data_t *row, c4snet_data_t *col,c4snet_data_t * sample)
+void *dct(
+        void *hnd,
+        c4snet_data_t *Matrix,
+        c4snet_data_t *color,
+        c4snet_data_t *row,
+        c4snet_data_t *col,
+        c4snet_data_t *sample)
 {
-	signed char *char_matrix  = C4SNetGetData(Matrix);
+    signed char *char_matrix  = C4SNetGetData(Matrix);
 
-	signed short short_dctresult [ MATRIX_SIZE * MATRIX_SIZE];
+    signed short short_dctresult [ MATRIX_SIZE * MATRIX_SIZE];
 
-    int inr, inc;       /* rows and columns of input image */
     int intr, intc;     /* rows and columns of intermediate image */
     int outr, outc;     /* rows and columns of dct */
     int f_val;      /* cumulative sum */
 
     int inter[8][8];    /* stores intermediate result */
 
-    int i,j,k;
+    int i,k;
         k=0;
 
     for (intr=0; intr<8; intr++)
     {
-    	for (intc=0; intc<8; intc++)
-    	{
+        for (intc=0; intc<8; intc++)
+        {
             for (i=0,f_val=0; i<8; i++)
             {
                 f_val +=((get_array_char(intr, MATRIX_SIZE, i, char_matrix))* weights[k]);//cos((double)(2*i+1)*(double)intc*PI/16);
-				k++;
+                k++;
             }
             if (intc!=0)
-			{
-            	inter[intr][intc] =  f_val>>15;
-			}
+            {
+                inter[intr][intc] =  f_val>>15;
+            }
             else
-			{
-            	inter[intr][intc] =  (11585*(f_val>>14))>>15;
-			}
-    	}
+            {
+                inter[intr][intc] =  (11585*(f_val>>14))>>15;
+            }
+        }
     }
 
     /* find 1-d dct along columns */
@@ -68,21 +73,22 @@ void *dct( void *hnd, c4snet_data_t *Matrix, c4snet_data_t *color, c4snet_data_t
             }
             if (outr!=0)
             {
-            	set_array_short(outr, MATRIX_SIZE, outc, (f_val>>15),short_dctresult);
+                set_array_short(outr, MATRIX_SIZE, outc, (f_val>>15),short_dctresult);
             }
             else
-			{
-            	set_array_short(outr, MATRIX_SIZE, outc, (11585*(f_val>>14)>>15), short_dctresult);
-			}
-		}
-	}
+            {
+                set_array_short(outr, MATRIX_SIZE, outc, (11585*(f_val>>14)>>15), short_dctresult);
+            }
+        }
+    }
 
 
     c4snet_data_t *dctresult;
 
-    dctresult 	= C4SNetCreate (CTYPE_short, (MATRIX_SIZE * MATRIX_SIZE), &short_dctresult);
+    dctresult   = C4SNetCreate (CTYPE_short, (MATRIX_SIZE * MATRIX_SIZE), &short_dctresult);
 
     C4SNetOut(hnd,  1, dctresult, color, row, col, sample);
+    C4SNetFree(Matrix);
 
     return hnd;
 }

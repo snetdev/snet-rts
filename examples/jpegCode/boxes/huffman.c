@@ -19,6 +19,7 @@ cr= 2
 */
 //---------------------------------------------------------------------------
 
+#define HUFFMAN_C_      1
 #include "huffman.h"
 
 
@@ -202,7 +203,6 @@ void HuffmanEncodeFinishSend(int row, int col, char nameMatrix)
 void HuffmanEncodeUsingDCTable(unsigned char magnitude, int row, int col, char nameMatrix)
 // Translate magnitude into needed data (from table) and send it
 {
-        unsigned char send;
         unsigned short int huffmancode, huffmanlengt;
         ConvertDCMagnitudeY(magnitude, &huffmancode, &huffmanlengt);
         WriteRawBits16(huffmanlengt,huffmancode, row, col, nameMatrix);
@@ -214,7 +214,6 @@ void HuffmanEncodeUsingDCTable(unsigned char magnitude, int row, int col, char n
 void HuffmanEncodeUsingACTable(unsigned char mag, int row, int col, char nameMatrix)
 // Translate magnitude into needed data (from table) and send it
 {
-        unsigned char send;
         unsigned short int huffmancode, huffmanlengt;
         ConvertACMagnitudeY(mag, &huffmancode, &huffmanlengt);
         WriteRawBits16(huffmanlengt,huffmancode, row, col, nameMatrix);

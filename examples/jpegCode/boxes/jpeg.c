@@ -34,7 +34,7 @@ unsigned char huffACvalues[162] = {0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x1
 int writejpegheader(INFOHEADER *header, JPEGHEADER *jpegheader)
 {
         unsigned int  huffmantablesize, previoussize;
-        unsigned char QTcount, i, j, components, id, huffmantablecount;
+        unsigned char QTcount, i, components, id, huffmantablecount;
         unsigned short length, headerlength;
 
         //Number of Quatization Tables
