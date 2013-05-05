@@ -23,6 +23,7 @@ do
         -c) com=1 ;;
         -r) run=1 ;;
         -t) shift ; thr+=" $1" ;;
+        pthread|lpel|lpel_hrc|front) thr+=" $1" ;;
         *) echo "$0: Unknown option: $1"  >&2
            echo "Usage: $0 [ -c | -r | -t threading ... ]" >&2; exit 1 ;;
     esac
@@ -47,7 +48,7 @@ then
     do
         echo
         echo "######################################################################"
-        echo "### make in $d "
+        echo "### make in $d for '$thr'"
         echo
         make -s -C $d clean everything >/dev/null || exit 1
         make -s -C $d all $thr >/dev/null || exit 1
