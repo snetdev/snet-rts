@@ -147,7 +147,7 @@ int getbmpheader(INFOHEADER *header)
     int retval;
 
     fseek(infile,14,SEEK_SET);
-    fread(header, sizeof(INFOHEADER), 1, infile);
+    (void) fread(header, sizeof(INFOHEADER), 1, infile);
     fseek(infile, SEEK_CUR, 1024);
 
     retval = 1;
@@ -182,7 +182,7 @@ void readbmpfile(signed char pixelmatrix[MACRO_BLOCK_SIZE][MACRO_BLOCK_SIZE*3], 
 
         fseek(infile,lposition,SEEK_END);
                 //Read row from matrix
-        fread(buffer, 1, MACRO_BLOCK_SIZE*3, infile);
+        (void) fread(buffer, 1, MACRO_BLOCK_SIZE*3, infile);
         for(col = 0; col < MACRO_BLOCK_SIZE*3; col++)
         {
             pixelmatrix[row][col] = buffer[col]- 128;

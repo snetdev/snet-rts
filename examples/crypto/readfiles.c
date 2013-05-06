@@ -34,7 +34,7 @@ static c4snet_data_t *slurp_file( c4snet_data_t *filename )
   fstat(fd, &st);
   entries_cdata = C4SNetAlloc(CTYPE_char, st.st_size + 1, &vptr);
   entries = (char *) vptr;
-  read(fd, entries, st.st_size);
+  (void) read(fd, entries, st.st_size);
   entries[st.st_size] = '\0';
   close(fd);
 

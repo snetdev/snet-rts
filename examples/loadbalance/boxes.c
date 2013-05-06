@@ -25,7 +25,7 @@ void* init(void *hnd, int xdim, int ydim, int nodes, int states)
   int fd = open("out.pnm", O_RDWR|O_TRUNC|O_CREAT, 0666);
 
   lseek(fd, 31 + 3 * xdim * ydim, SEEK_SET);
-  write(fd, "", 1);
+  (void) write(fd, "", 1);
   lseek(fd, 0, SEEK_SET);
   map = mmap(0, 32 + 3 * xdim * ydim,
              PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0L);
