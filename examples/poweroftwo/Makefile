@@ -8,5 +8,5 @@ test:
 	@for f in ./poweroftwo*nodist; do \
 	    echo "### $$f"; \
 	    time -p ./run 15 $$f -o /dev/null || \
-	    mv -vf core core-$${f#*poweroftwo}; \
+	    mv -vf core core-$${f#*poweroftwo} 2>/dev/null; \
 	done

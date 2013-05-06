@@ -1,0 +1,67 @@
+#!/bin/bash --norc
+#
+# Driver script for crypto.
+#
+# Usage: ./run [ passwords dictionary nodes branches ./executable -options ]
+#
+# First argument is name of the input passwords.
+I=data/crypted25
+# Second argument is name of the input dictionary
+O=data/dictionary
+# Third argument is the count of the number of nodes.
+N=1
+# Fourth argument is the number of branches (or cores per node).
+if [ "$(uname)" = Linux ]; then
+    M=`grep -e '^processor' /proc/cpuinfo | wc -l`
+else
+    M=8
+fi
+# The fifth argument is the executable
+X=./crypto-pthread-nodist
+
+function usage () {
+    echo "Usage: $0 [ passwords dictionary nodes branches ./executable -options ]" >&2
+    exit 1
+}
+
+# Loop over all options until we find an executable
+i=1
+while [ $i -gt 0 ] && [ $# -gt 0 ]
+do
+    case "$1" in
+        *crypto-*) X=$1 ; shift ; i=0 ;;
+        *)
+           [ $i -eq 5 ] && X=$1 && shift && let i=0
+           [ $i -eq 4 ] && M=$1 && shift && let i=$i+1
+           [ $i -eq 3 ] && N=$1 && shift && let i=$i+1
+           [ $i -eq 2 ] && O=$1 && shift && let i=$i+1
+           [ $i -eq 1 ] && I=$1 && shift && let i=$i+1
+           ;;
+     esac
+done
+
+function mkstr () {
+    s="(char[${#1}])"
+    for (( i=0; i<${#1}; i++ ))
+    do
+        if [ $i -gt 0 ]; then
+            s="${s},"
+        fi
+        s="${s}${1:$i:1}"
+    done
+    echo $s
+}
+
+pass=`mkstr $I`
+dict=`mkstr $O`
+
+$X "$@" << EOI
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual"  interface="C4SNet">
+    <field label="dictionary_filename">$dict</field>
+    <field label="passwords_filename">$pass</field>
+    <tag label="num_nodes">$N</tag>
+    <tag label="num_branches">$M</tag>
+</record>
+<record type="terminate" />
+EOI

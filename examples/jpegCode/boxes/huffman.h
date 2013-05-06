@@ -12,6 +12,7 @@
 #include "pc.h"
 #include <string.h>
 
+#if HUFFMAN_C_
 static unsigned int vlc_remaining;
 static unsigned char vlc_amount_remaining;
 static unsigned char dcvalue[4];   // 3 is enough
@@ -120,9 +121,10 @@ static unsigned short convertACMagnitudeYOut[256] = {
     0x0000, 0xFFEB, 0xFFEC, 0xFFED, 0xFFEE, 0xFFEF, 0xFFF0, 0xFFF1, 0xFFF2, 0xFFF3, 0xFFF4, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,    // e0 - ef
     0xFFF9, 0xFFF5, 0xFFF6, 0xFFF7, 0xFFF8, 0xFFF9, 0xFFFA, 0xFFFB, 0xFFFC, 0xFFFD, 0xFFFE, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 };
+#endif
 
 
-int vlc_init_start();
+int vlc_init_start(void);
 int vlc_stop_done(int row, int col, char nameMatrix);
 
 void ConvertDCMagnitudeC(unsigned char magnitude,unsigned short int *out, unsigned short int *lenght);
