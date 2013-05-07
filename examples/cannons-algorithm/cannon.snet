@@ -6,21 +6,30 @@
   </boxdefault>
 </metadata>
 
-net cannon
+net cannon ( {matrix_A, matrix_B, size_matrix, division} -> {<stop>} )
 {
-	box Split ( (matrix_A, matrix_B, size_matrix, division) -> (total_ele, count, submatrix_in_one_row, size_matrix, size_submatrix, result) | (submatrix_A, submatrix_B, size_submatrix, position) );
-	box Multiplication ( (submatrix_A, submatrix_B, size_submatrix, position) -> (submatrix_result, position) );
-	box Merger ( (total_ele , count, submatrix_in_one_row, size_matrix, size_submatrix , result, submatrix_result, position) -> (total_ele, count, submatrix_in_one_row, size_matrix, size_submatrix, result) | (<stop> ));
+	box Split ( (matrix_A, matrix_B, size_matrix, division)
+                 -> (total_ele, count, submatrix_in_one_row,
+                     size_matrix, size_submatrix, result)
+                  | (submatrix_A, submatrix_B, size_submatrix, position) );
 
-}
-connect
-	Split ..
-	(
-		 ( Multiplication)
-		| []
-	)
-	..
-	(
-		([| {total_ele, count, submatrix_in_one_row, size_matrix, size_submatrix, result}, {submatrix_result, position} |])
-		.. (Merger | [])
-	)*{<stop>};
+	box Multiplication ( (submatrix_A, submatrix_B, size_submatrix, position)
+                          -> (submatrix_result, position) );
+
+	box Merger ( (total_ele, count, submatrix_in_one_row, size_matrix,
+                      size_submatrix, result, submatrix_result, position)
+                  -> (total_ele, count, submatrix_in_one_row, size_matrix,
+                      size_submatrix, result)
+                   | (<stop> ));
+
+        net merge
+        {
+                net sync
+                connect [| {total_ele, count, submatrix_in_one_row,
+                            size_matrix, size_submatrix, result},
+                           {submatrix_result, position} |];
+
+        } connect (sync .. (Merger | [])) * {<stop>};
+
+} connect Split .. (Multiplication | []) .. merge;
+

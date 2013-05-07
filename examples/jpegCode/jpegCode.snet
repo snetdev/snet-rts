@@ -3,33 +3,47 @@
     <interface value="C4SNet" />
   </boxdefault>
 </metadata>
+
 net jpegCode ({bmpfilename, jpgfilename} -> {<stop>})
 {
-       box openBMPJPG ( (bmpfilename, jpgfilename) -> (rows, cols));
-       box get_MB ((rows, cols) -> (total_ele, count)| (YMatrix, color, row, col, sample) | (CrMatrix,color, row, col, sample) | (CbMatrix, color, row, col, sample));
-       box dct ((Matrix, color, row, col, sample) -> (dctresult, color, row, col, sample));
-       box zzq_encode ( (dctresult, color, row, col, sample) -> (bitstream, color, row, col, sample));
+    box openBMPJPG ( (bmpfilename, jpgfilename) -> (rows, cols) );
 
-       box saveResult ( (count, total_ele, bitstream, color, row, col, sample)-> (count, total_ele) | ( <stop>));
-       //box EncodeDataUnit ((bitstream,color) ->  (Result));
-}
-connect 
-	openBMPJPG .. get_MB ..
-	(   
-	     (  
-		      ([{YMatrix, color} -> {Matrix = YMatrix,  color}] .. dct .. zzq_encode )
-		   | ([{CrMatrix,color} -> {Matrix = CrMatrix, color}] .. dct .. zzq_encode )
-                  | ([{CbMatrix,color} -> {Matrix = CbMatrix, color}] .. dct .. zzq_encode )
-        		
-    	      )
-	   | []
-	)
-	.. 
-	(
-		([| {count, total_ele}, {bitstream, color, row, col, sample}|])
-	       ..  (saveResult | [])
-	)*{<stop>};
+    box get_MB ( (rows, cols)
+              -> (total_ele, count)
+               | (YMatrix,  color, row, col, sample)
+               | (CrMatrix, color, row, col, sample)
+               | (CbMatrix, color, row, col, sample) );
 
+    box dct ( (Matrix, color, row, col, sample)
+           -> (dctresult, color, row, col, sample) );
 
+    box zzq_encode ( (dctresult, color, row, col, sample)
+                  -> (bitstream, color, row, col, sample) );
+
+    box saveResult ( (count, total_ele, bitstream, color, row, col, sample)
+                  -> (count, total_ele)
+                   | ( <stop>));
+
+    net Encode
+    {
+        net YEncode
+        connect [{YMatrix} -> {Matrix = YMatrix}] .. dct .. zzq_encode;
+
+        net CrEncode
+        connect [{CrMatrix} -> {Matrix = CrMatrix}] .. dct .. zzq_encode;
+
+        net CbEncode
+        connect [{CbMatrix} -> {Matrix = CbMatrix}] .. dct .. zzq_encode;
+
+     } connect YEncode | CrEncode | CbEncode | [];
+
+     net Merge
+     {
+         net Sync
+         connect [| {count, total_ele}, {bitstream, color, row, col, sample} |];
+
+     } connect (Sync .. (saveResult | [])) * {<stop>};
+
+} connect openBMPJPG .. get_MB .. Encode .. Merge;
 
 

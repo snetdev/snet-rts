@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # X is the size of the horizontal dimension
 X=800

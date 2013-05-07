@@ -18,6 +18,7 @@ void *merger(void *hnd, c4snet_data_t *C, c4snet_data_t *c, int C_width,
 
   C4SNetOut(hnd, 1, new, C_width, C_height, first, last);
   C4SNetFree(c);
+  C4SNetFree(C);
 
   return hnd;
 }

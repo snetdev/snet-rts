@@ -13,6 +13,7 @@
 #define __I386
 #define __LITTLEENDIAN
 
+#if PC_C_
 FILE *infile, *outfile;
 double st, en;
 static unsigned char buffer[MACRO_BLOCK_SIZE*3];  // move array on main memory
@@ -20,6 +21,9 @@ static unsigned char buffer[MACRO_BLOCK_SIZE*3];  // move array on main memory
 INFOHEADER _bmpheader;
 INFOHEADER *bmpheader;
 JPEGHEADER _jpegheader;
+#else
+extern INFOHEADER *bmpheader;
+#endif
 
 
 void *openBMPJPG(void *hnd, c4snet_data_t * bmpfilename, c4snet_data_t * jpgfilename);
