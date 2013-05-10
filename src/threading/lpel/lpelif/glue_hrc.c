@@ -23,9 +23,12 @@ static int num_cpus = 0;
 static int num_workers = -1;
 static int proc_others = 0;
 static int proc_workers = -1;
-static int mon_flags = 0;
 static int rec_lim = 1;
+
+#ifdef USE_LOGGING
+static int mon_flags = 0;
 static FILE *mapfile = NULL;
+#endif
 
 /**
  * use the Distributed S-Net placement operators for worker placement
@@ -35,12 +38,14 @@ static bool sosi_placement = false;
 
 int SNetThreadingInit(int argc, char **argv)
 {
+#ifdef USE_LOGGING
+	char *mon_elts = NULL;
+#endif
+
 	lpel_config_t config;
 	int i;
-	char *mon_elts = NULL;
 	memset(&config, 0, sizeof(lpel_config_t));
 
-	char fname[20+1];
 	int priorf = 1;
 
 	config.type = HRC_LPEL;
@@ -51,7 +56,9 @@ int SNetThreadingInit(int argc, char **argv)
 		if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
 			/* Monitoring level */
 			i = i + 1;
+#ifdef USE_LOGGING
 			mon_elts = argv[i];
+#endif
 		} else if(strcmp(argv[i], "-excl") == 0 ) {
 			/* Assign realtime priority to workers*/
 			config.flags |= LPEL_FLAG_EXCLUSIVE;
@@ -86,6 +93,7 @@ int SNetThreadingInit(int argc, char **argv)
 	LpelTaskSetPriorityFunc(priorf);
 
 #ifdef USE_LOGGING
+	char fname[20+1];
 	if (mon_elts != NULL) {
 		if (strchr(mon_elts, MON_ALL_FLAG) != NULL) {
 			mon_flags = (1<<7) - 1;
