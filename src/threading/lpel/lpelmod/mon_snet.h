@@ -57,8 +57,8 @@ void SNetThreadingMonEvent(struct mon_task_t *mt,
 #define MON_LOAD_FLAG 'L'
 
 /* special characters */
-#define END_LOG_ENTRY '\n'		// for separate each log entry by one line --> for testing
-//#define END_LOG_ENTRY 			'#'			// more efficient for file writing, just send when the buffer is full
+//#define END_LOG_ENTRY '\n'		// for separate each log entry by one line --> for testing
+#define END_LOG_ENTRY 			'#'			// more efficient for file writing, just send when the buffer is full
 #define END_STREAM_TRACE 		'|'
 #define MESSAGE_TRACE_SEPARATOR ';'			// used to separate message traces
 #define WORKER_START_EVENT 		'S'
