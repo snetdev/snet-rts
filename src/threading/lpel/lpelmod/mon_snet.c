@@ -12,6 +12,11 @@
 #include "locvec.h"
 #include "moninfo.h"
 
+
+
+#ifdef USE_LOGGING
+
+
 #define PrintTiming(t, file)  PrintTimingNs((t),(file))
 #define PrintNormTS(t, file)  PrintNormTSns((t),(file))
 
@@ -168,6 +173,7 @@ static lpel_timing_t monitoring_begin = LPEL_TIMING_INITIALIZER;
 #define FLAG_WORKER(mt)  (mt->flags & SNET_MON_WORKER)
 #define FLAG_LOAD(mt)	(mt->flags & SNET_MON_LOAD)
 #define FLAG_TASK_WAIT(mt)	(mt->flags & SNET_MON_WAIT_PROP)
+
 
 /**
  * Print a time in usec
@@ -867,6 +873,8 @@ static double MonCbGetWorkerWaitProp(mon_task_t *mt) {
 	return mt->mw->avg_wait_prop;
 }
 
+
+#endif   /* USE_LOGGING*/
 /*****************************************************************************
  * PUBLIC FUNCTIONS
  ****************************************************************************/
@@ -960,6 +968,8 @@ void SNetThreadingMonCleanup(void)
 
 void SNetThreadingMonEvent(mon_task_t *mt, snet_moninfo_t *moninfo)
 {
+
+#ifdef USE_LOGGING
 	assert(mt != NULL);
 	mon_worker_t *mw = mt->mw;
 
@@ -988,6 +998,8 @@ void SNetThreadingMonEvent(mon_task_t *mt, snet_moninfo_t *moninfo)
 
 		mw->events.cnt++;
 	}
+
+#endif 	/* USE_LOGGING */
 }
 
 
