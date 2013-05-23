@@ -202,7 +202,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 
 	if ( type != ENTITY_other) {
 		if (sosi_placement && (strnstr(name, SNET_SOURCE_PREFIX, l1) || strnstr(name, SNET_SINK_PREFIX, l2))) {
-			location = LPEL_MAP_OTHERS;		// sosi placemnet and entity is source/sink
+			worker = LPEL_MAP_OTHERS;		// sosi placemnet and entity is source/sink
 		} else if (dloc_placement) {
 			assert(location != -1);
 			worker = location % num_workers;
