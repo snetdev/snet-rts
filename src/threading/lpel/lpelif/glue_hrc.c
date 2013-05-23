@@ -154,6 +154,45 @@ int SNetThreadingInit(int argc, char **argv)
 /*****************************************************************************
  * Spawn a new task
  ****************************************************************************/
+static void setTaskRecLimit(snet_entity_descr_t type, lpel_task_t *t){
+	/*
+	int limit;
+	switch(type) {
+	case ENTITY_box:
+		limit = BOX_REC_LIMIT;
+		break;
+	case ENTITY_parallel:
+		limit = PARALLEL_REC_LIMIT;
+		break;
+	case ENTITY_star:
+		limit = STAR_REC_LIMIT;
+		break;
+	case ENTITY_split:
+		limit = SPLIT_REC_LIMIT;
+		break;
+	case ENTITY_filter:
+		limit = FILTER_REC_LIMIT;
+		break;
+	default:
+		limit = OTHER_REC_LIMIT;
+		break;
+	}*/
+
+	int limit;
+	switch(type) {
+	case ENTITY_sync:
+	case ENTITY_nameshift:
+	case ENTITY_other:
+		limit = -1;
+		break;
+	default:
+		limit = rec_lim;
+		break;
+	}
+	LpelTaskSetRecLimit(t, limit);
+}
+
+
 int SNetThreadingSpawn(snet_entity_t *ent)
 /*
   snet_entity_type_t type,
@@ -182,7 +221,8 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 			GetStacksize(type)
 	);
 
-	LpelTaskSetRecLimit(t, rec_lim);
+	if (location != LPEL_MAP_OTHERS)
+			setTaskRecLimit(type, t);
 
 #ifdef USE_LOGGING
 	if (mon_flags & SNET_MON_TASK){
