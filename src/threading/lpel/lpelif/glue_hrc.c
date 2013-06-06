@@ -23,7 +23,7 @@ static int num_cpus = 0;
 static int num_workers = -1;
 static int proc_others = 0;
 static int proc_workers = -1;
-static int rec_lim = 1;
+static int rec_lim = -1;
 
 #ifdef USE_LOGGING
 static int mon_flags = 0;
@@ -183,6 +183,7 @@ static void setTaskRecLimit(snet_entity_descr_t type, lpel_task_t *t){
 	case ENTITY_sync:
 	case ENTITY_nameshift:
 	case ENTITY_other:
+	case ENTITY_collect:
 		limit = -1;
 		break;
 	default:
