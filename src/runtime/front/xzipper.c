@@ -188,7 +188,7 @@ void SNetNodeZipperData(
 /* Destroy the landing state of a Zipper node */
 void SNetNodeZipperTerminate(landing_zipper_t *land, zipper_arg_t *zarg)
 {
-  matching_t            *match, *same;
+  matching_t            *match, *same, *prev = NULL;
   int                    i;
   unsigned int           count = 0;
 
@@ -198,8 +198,16 @@ void SNetNodeZipperTerminate(landing_zipper_t *land, zipper_arg_t *zarg)
       same = match->same;
       for (i = 0; i < zarg->sync_width; ++i) {
         if (!HAS_BIT(match->unmatched, i) && match->storage[i] != NULL) {
+          if (prev != match) {
+            prev = match;
+            ++count;
+          }
+          if (SNetVerbose()) {
+            char buf[200];
+            SNetRecordTypeString(match->storage[i], buf, sizeof buf);
+            fprintf(stderr, "\tSync-cell %2d, Record %2d: %s\n", count, i, buf);
+          }
           SNetRecDestroy(match->storage[i]);
-          ++count;
         }
       }
       SNetDelete(match);

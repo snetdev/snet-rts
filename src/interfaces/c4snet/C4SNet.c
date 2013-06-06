@@ -340,14 +340,32 @@ void C4SNetOut( void *hnd, int variant, ...)
   va_end(args);
 }
 
+/* Retrieve the type of the data. */
+c4snet_type_t C4SNetGetType(c4snet_data_t *data)
+{ return data->type; }
+
 /* Return size of the data type. */
 int C4SNetSizeof(c4snet_data_t *data)
 { return sizeOfType(data->type); }
 
+/* Get the number of array elements. */
 size_t C4SNetArraySize(c4snet_data_t *data)
 { return data->size; }
 
-
+/* Get a copy of an unterminated char array as a proper C string. */
+char* C4SNetGetString(c4snet_data_t *data)
+{
+  if (data->type != CTYPE_char && data->type != CTYPE_uchar) {
+    SNetUtilDebugFatal("[%s]: Not a char array type %d.", __func__, data->type);
+    return NULL; /* NOT REACHED */
+  } else {
+    size_t size = C4SNetArraySize(data);
+    char* str = SNetMemAlloc(size + 1);
+    memcpy(str, C4SNetGetData(data), size);
+    str[size] = '\0';
+    return str;
+  }
+}
 
 /* Creates a new c4snet_data_t struct. */
 c4snet_data_t *C4SNetAlloc(c4snet_type_t type, size_t size, void **data)
