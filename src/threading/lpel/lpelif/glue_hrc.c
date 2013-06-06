@@ -44,6 +44,8 @@ int SNetThreadingInit(int argc, char **argv)
 
 	lpel_config_t config;
 	int i;
+	int neg_demand = 0;
+
 	memset(&config, 0, sizeof(lpel_config_t));
 
 	int priorf = 1;
@@ -87,10 +89,14 @@ int SNetThreadingInit(int argc, char **argv)
 		} else if(strcmp(argv[i], "-rl") == 0 && i + 1 <= argc) {
 			i = i + 1;
 			rec_lim = atoi(argv[i]);
+		} else if(strcmp(argv[i], "-nd") == 0 && i + 1 <= argc) {
+			i = i + 1;
+			neg_demand = atoi(argv[i]);
 		}
 	}
 
 	LpelTaskSetPriorityFunc(priorf);
+	LpelTaskSetNegLim(neg_demand);
 
 #ifdef USE_LOGGING
 	char fname[20+1];
