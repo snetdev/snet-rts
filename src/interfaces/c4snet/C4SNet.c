@@ -12,6 +12,7 @@
 #include "interface_functions.h"
 #include "out.h"
 #include "base64.h"
+#include "atomics.h"
 
 #define COUNTS      3
 #define F_COUNT( c) c->counter[0]
@@ -418,7 +419,9 @@ void *C4SNetGetData(c4snet_data_t *data)
 /* Frees the memory allocated for c4snet_data_t struct. */
 void C4SNetFree(c4snet_data_t *data)
 {
-  if (--data->ref_count == 0) {
+  unsigned int refs = FAS(&data->ref_count, 1);
+  assert(refs > 0);
+  if (refs == 1) {
     if (data->vtype == VTYPE_array) MemFree(data->data.ptr);
 
     SNetMemFree(data);
@@ -429,7 +432,7 @@ void C4SNetFree(c4snet_data_t *data)
 
 c4snet_data_t *C4SNetShallowCopy(c4snet_data_t *data)
 {
-  data->ref_count++;
+  AAF(&data->ref_count, 1);
   return data;
 }
 
