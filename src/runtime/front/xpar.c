@@ -1,5 +1,5 @@
 #include "node.h"
-
+#include <string.h>
 
 static inline void MatchCountUpdate( match_count_t *mc, bool match_cond)
 {
@@ -270,6 +270,35 @@ static bool ParallelInit(snet_stream_desc_t *desc, snet_record_t *rec)
   return true;
 }
 
+/* Report in detail on a routing problem. */
+static void RoutingError(snet_stream_desc_t *desc, snet_record_t *rec)
+{
+  const parallel_arg_t  *parg   = DESC_NODE_SPEC(desc, parallel);
+  snet_variant_list_t   *variants;
+  int                    i;
+  size_t                 len = 0;
+  char                   recbuf[200];
+  char                   report[2000];
+
+  SNetRecordTypeString(rec, recbuf, sizeof recbuf);
+  report[0] = '\0';
+  LIST_ENUMERATE(parg->variant_lists, i, variants) {
+    if (len + 100 >= sizeof(report)) {
+      break;
+    }
+    sprintf(report + len, "\tVariant %d: ", i + 1);
+    len += strlen(report + len);
+    SNetVariantListString(variants, report + len, sizeof(report) - len);
+    len += strlen(report + len);
+    if (len + 2 < sizeof(report)) {
+      strcpy(report + len, "\n");
+      len += strlen(report + len);
+    }
+  }
+  SNetUtilDebugFatalEnt(parg->entity,
+      "[PAR] Cannot route data record %s: no matching branch!\n%s", recbuf, report);
+}
+
 /* Process a record for a parallel node. */
 void SNetNodeParallel(snet_stream_desc_t *desc, snet_record_t *rec)
 {
@@ -299,10 +328,7 @@ void SNetNodeParallel(snet_stream_desc_t *desc, snet_record_t *rec)
       if (i >= 0) {
         ParallelWrite(i, rec, desc);
       } else {
-        char buf[200];
-        SNetRecordTypeString(rec, buf, sizeof buf);
-        SNetUtilDebugFatalEnt(parg->entity,
-            "[PAR] Cannot route data record %s: no matching branch!", buf);
+        RoutingError(desc, rec);
       }
       break;
 
