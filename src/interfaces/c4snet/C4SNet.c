@@ -12,7 +12,11 @@
 #include "interface_functions.h"
 #include "out.h"
 #include "base64.h"
+
+/* FIXME: Needs to be replaced with arch/atomic.h from LPEL. */
+#if HAVE_SYNC_ATOMIC_BUILTINS
 #include "atomics.h"
+#endif
 
 #define COUNTS      3
 #define F_COUNT( c) c->counter[0]
@@ -419,9 +423,16 @@ void *C4SNetGetData(c4snet_data_t *data)
 /* Frees the memory allocated for c4snet_data_t struct. */
 void C4SNetFree(c4snet_data_t *data)
 {
+#if HAVE_SYNC_ATOMIC_BUILTINS
+  /* Temporary fix for race condition: */
   unsigned int refs = FAS(&data->ref_count, 1);
   assert(refs > 0);
-  if (refs == 1) {
+  if (refs == 1)
+#else
+  /* Old code, which contains a race condition: */
+  if (--data->ref_count == 0)
+#endif
+  {
     if (data->vtype == VTYPE_array) MemFree(data->data.ptr);
 
     SNetMemFree(data);
@@ -432,7 +443,13 @@ void C4SNetFree(c4snet_data_t *data)
 
 c4snet_data_t *C4SNetShallowCopy(c4snet_data_t *data)
 {
+#if HAVE_SYNC_ATOMIC_BUILTINS
+  /* Temporary fix for race condition: */
   AAF(&data->ref_count, 1);
+#else
+  /* Old code, which contains a race condition: */
+  data->ref_count++;
+#endif
   return data;
 }
 
