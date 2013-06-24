@@ -3,5 +3,7 @@ Information
 =========
 Convert BMP file to JPEG file. 
 
+The BMP files need to be 24 bit without alpha channels. The size of the image is not important. 
+
 
 
