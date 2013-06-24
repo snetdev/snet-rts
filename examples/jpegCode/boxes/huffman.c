@@ -19,9 +19,7 @@ cr= 2
 */
 //---------------------------------------------------------------------------
 
-#define HUFFMAN_C_      1
 #include "huffman.h"
-
 
 int vlc_init_start()
 {
@@ -29,14 +27,6 @@ int vlc_init_start()
 	vlc_amount_remaining=0x00;
     memset(dcvalue, 0, 4);
     return 0;
-
-}
-
-
-int vlc_stop_done(int row, int col, char nameMatrix) {
-
-       HuffmanEncodeFinishSend(row, col, nameMatrix);
-       return 0;
 }
 
 void ConvertDCMagnitudeC(unsigned char magnitude,unsigned short int *out, unsigned short int *lenght)
@@ -50,7 +40,6 @@ void ConvertDCMagnitudeC(unsigned char magnitude,unsigned short int *out, unsign
     len=convertDCMagnitudeCLengthTable[magnitude];
     *lenght = len;
     *out = convertDCMagnitudeCOutTable[magnitude];
-
 }
 
 //===========================================================================
@@ -64,7 +53,6 @@ void ConvertACMagnitudeC(unsigned char magnitude,unsigned short int *out, unsign
         } */
     *lenght = len;
     *out = convertACMagnitudeCOutTable[magnitude];
-
 }
 
 
@@ -94,7 +82,6 @@ void ConvertACMagnitudeY(unsigned char magnitude,unsigned short int *out, unsign
         } */
     *lenght = len;
     *out = convertACMagnitudeYOut[magnitude];
-
 }
 
 char Extend (char additional, unsigned char magnitude)
@@ -126,14 +113,12 @@ void ReverseExtend (char value, unsigned char *magnitude, unsigned char *bits)
     return;
 }
 
-void WriteRawBits16(unsigned char amount_bits, unsigned int bits, int row, int col, char nameMatrix)
+void WriteRawBits16(unsigned char amount_bits, unsigned int bits, FILE *outfile)
 //*remaining needs bo be more than 8 bits because 8 bits could be added and ther ecould already be up ot 7 bits in *remaining
 // this function collects bits to send
 // if there less than 16 bits collected, nothing is send and these bits are stored in *remaining. In *amount_remaining there is stated how much bits are stored in *remaining
 // if more than 16 bits are collected, 16 bits are send and the remaining bits are stored again
 {
-
-
         unsigned short int send;
         unsigned int mask;
         unsigned char send2;
@@ -148,43 +133,56 @@ void WriteRawBits16(unsigned char amount_bits, unsigned int bits, int row, int c
 /* #ifndef __MICROBLAZE
 if (vlc_amount_remaining >= 32 ) printf("ERROR, more bits to send %d",vlc_amount_remaining);
 #endif */
-                send=vlc_remaining>>(vlc_amount_remaining-16);                        //this value can be send/stored (in art this can be dony by selecting bits)
-                send2=(send & 0xFF00) >>8;
-		  vlc_output_byte(send2, row, col, nameMatrix);
+        	send=vlc_remaining>>(vlc_amount_remaining-16);                        //this value can be send/stored (in art this can be dony by selecting bits)
+        	send2=(send & 0xFF00) >>8;
+        	//vlc_output_byte(send2, row, col, nameMatrix);
+        	fwrite(&send2, 1, 1, outfile);
+
                 if (send2==0xFF)
                 {
-                        send2=0x00;
-			  vlc_output_byte(send2, row, col, nameMatrix);
+                	send2=0x00;
+                	//vlc_output_byte(send2, row, col, nameMatrix);
+                	fwrite(&send2, 1, 1, outfile);
                 }
                 send2=send & 0xFF;
-		  vlc_output_byte(send2, row, col, nameMatrix);
+                //vlc_output_byte(send2, row, col, nameMatrix);
+                fwrite(&send2, 1, 1, outfile);
+
                 if (send2==0xFF)
                 {
-                        send2=0x00;
-		  	   vlc_output_byte(send2, row, col, nameMatrix);
+                	send2=0x00;
+                	//vlc_output_byte(send2, row, col, nameMatrix);
+                	fwrite(&send2, 1, 1, outfile);
                 }
                 vlc_amount_remaining=vlc_amount_remaining-16;                         //descrease by 16 because these are send
         }
         return;
 }
 
-void HuffmanEncodeFinishSend(int row, int col, char nameMatrix)
+void HuffmanEncodeFinishSend(FILE *outfile)
 // There are still some bits left to send at the end of the 8x8 matrix (or maybe the file),
 // the remaining bits are filled up with ones and send
 // possible fault: -must it be filled up with ones?
 {
         unsigned short int send;
+        unsigned short int send2;
         unsigned int mask;
         int  count;
         mask=0x00;                                                              //init mask
+
+
         if (vlc_amount_remaining >= 8)                                             //2 bytes to send, send first byte
         {
                 send=vlc_remaining>>(vlc_amount_remaining-8);                         //shift so that first byte is ready to send
-		  vlc_output_byte(send&0xff, row, col, nameMatrix);
+                //vlc_output_byte(send&0xff, row, col, nameMatrix);
+                send2 = send&0xff;
+		  	  	fwrite(&send2, 1, 1, outfile);
                 if (send==0xFF)                                                 //is this still needed????
                 {
                         send=0x00;
-			   vlc_output_byte(send&0xff, row, col, nameMatrix);
+                        //vlc_output_byte(send&0xff, row, col, nameMatrix);
+                        send2 = send&0xff;
+                        fwrite(&send2, 1, 1, outfile);
                 }
                 vlc_amount_remaining=vlc_amount_remaining -8;                         // lower the value to the amount of bits that still needs to be send
         }
@@ -194,34 +192,37 @@ void HuffmanEncodeFinishSend(int row, int col, char nameMatrix)
                 mask=0x00;                                                      //init mask
                 for (count=(8-vlc_amount_remaining); count>0; count--) mask=(mask<<1)|0x01; //create mask to fill byte up with ones
                 send=send | mask;                                               //add the ones to the byte
-                vlc_output_byte(send&0xff, row, col, nameMatrix);
+                //vlc_output_byte(send&0xff, row, col, nameMatrix);
+                send2 = send&0xff;
+				fwrite(&send2, 1, 1, outfile);
                 vlc_amount_remaining=0x00;                                         //is this needed?
         }
         return;
 }
 
-void HuffmanEncodeUsingDCTable(unsigned char magnitude, int row, int col, char nameMatrix)
+void HuffmanEncodeUsingDCTable(unsigned char magnitude, FILE *outfile)
 // Translate magnitude into needed data (from table) and send it
 {
+        unsigned char send;
         unsigned short int huffmancode, huffmanlengt;
         ConvertDCMagnitudeY(magnitude, &huffmancode, &huffmanlengt);
-        WriteRawBits16(huffmanlengt,huffmancode, row, col, nameMatrix);
+        WriteRawBits16(huffmanlengt,huffmancode, outfile);
    	//printf("Write DC magnitude= %2x \n",magnitude);
         //WriteRawBits16(0x08,magnitude,remaining,amount_remaining, file);
         return;
 }
 
-void HuffmanEncodeUsingACTable(unsigned char mag, int row, int col, char nameMatrix)
+void HuffmanEncodeUsingACTable(unsigned char mag, FILE *outfile)
 // Translate magnitude into needed data (from table) and send it
 {
+        unsigned char send;
         unsigned short int huffmancode, huffmanlengt;
         ConvertACMagnitudeY(mag, &huffmancode, &huffmanlengt);
-        WriteRawBits16(huffmanlengt,huffmancode, row, col, nameMatrix);
+        WriteRawBits16(huffmanlengt,huffmancode, outfile);
         return;
 }
 
-
-char EncodeDataUnit(char dataunit[64], unsigned int color, int row, int col, char nameMatrix, int sample)
+char EncodeDataUnit(char dataunit[64], unsigned int color, FILE *outfile)
 {
 	char difference;
 	char last_dc_value;
@@ -231,16 +232,14 @@ char EncodeDataUnit(char dataunit[64], unsigned int color, int row, int col, cha
 	unsigned char bit_char;
 
 	 //init
-  //    PrintMatrix(dataunit) ;
   	last_dc_value = dcvalue[color];
 	difference = dataunit[0] - last_dc_value;
 	last_dc_value=dataunit[0];
 	ReverseExtend(difference, &magnitude,&bit_char);
 	bits = bit_char;
-	HuffmanEncodeUsingDCTable(magnitude, row, col, nameMatrix);
+	HuffmanEncodeUsingDCTable(magnitude, outfile);
 
-
-	WriteRawBits16(magnitude,bits, row, col, nameMatrix);
+	WriteRawBits16(magnitude,bits, outfile);
 	zerorun=0;
 	ii=1;
 
@@ -250,7 +249,7 @@ char EncodeDataUnit(char dataunit[64], unsigned int color, int row, int col, cha
 		{
 			while ( zerorun >= 16 )
 			{
-				HuffmanEncodeUsingACTable(0xF0, row, col, nameMatrix);
+				HuffmanEncodeUsingACTable(0xF0, outfile);
 				zerorun=zerorun-16;
 			}
 
@@ -260,18 +259,21 @@ char EncodeDataUnit(char dataunit[64], unsigned int color, int row, int col, cha
 			ert= ((int)zerorun *16);                                     //ERROR !!!!!!!!!!!
 			ert=ert + magnitude;
 
-            HuffmanEncodeUsingACTable(ert, row, col, nameMatrix);
-			WriteRawBits16(magnitude,bits, row, col, nameMatrix);
+            HuffmanEncodeUsingACTable(ert, outfile);
+			WriteRawBits16(magnitude,bits, outfile);
                         zerorun=0;
 		}
 		else zerorun=zerorun+1;
-                ii++;
+
+		ii++;
 	}
+
 	if ( zerorun != 0 )
-        {
-                HuffmanEncodeUsingACTable(0x00, row, col, nameMatrix);
-        }
+	{
+		HuffmanEncodeUsingACTable(0x00, outfile);
+	}
  	dcvalue[color] = last_dc_value;
-        return 0;
+
+ 	return 0;
 }
 

@@ -3,4 +3,8 @@
     <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
     <field label="jpgfilename">(char[13])d,a,t,a,/,t,e,s,t,.,j,p,g</field>
 </record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,l,e,n,a,.,b,m,p</field>
+    <field label="jpgfilename">(char[13])d,a,t,a,/,t,i,d,e,.,j,p,g</field>
+</record>
 <record type="terminate" />
