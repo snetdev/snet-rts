@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
-    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
-    <field label="jpgfilename">(char[13])d,a,t,a,/,t,e,s,t,.,j,p,g</field>
+    <field label="bmpfilename">(char[13])d,a,t,a,/,b,r,i,d,.,b,m,p</field>
+    <field label="jpgfilename">(char[13])d,a,t,a,/,b,r,i,d,.,j,p,g</field>
 </record>
 <record type="terminate" />

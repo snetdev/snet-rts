@@ -1,14 +1,14 @@
 TARGET  = libboxes.a
-CFLAGS  = -std=gnu99 -g -O1 -Wall -I$(SNET_INCLUDES)
-ARFLAGS = rcs
-BOXOBJS = $(TARGET)(ejpgl.o) $(TARGET)(ColorConversion.o) $(TARGET)(dct.o) \
-          $(TARGET)(huffman.o) $(TARGET)(jpeg.o) $(TARGET)(pc.o) \
-	  $(TARGET)(zzq.o) $(TARGET)(saveResult.o)
+
+BOXOBJS = globalSettings.o get_MB.o dct.o huffman.o openBMP.o zzq.o saveResult.o
 
 .PHONY: clean
 
 $(TARGET): $(BOXOBJS)
+	$(AR) rcs $@ $^
+
+%.o: %.c *.h
+	$(CC) -std=c99 $(CCFLAGS) -I$(SNET_INCLUDES) -c $<
 
 clean:
-	rm -f $(TARGET) *.o core
-
+	rm -f $(TARGET) $(BOXOBJS)

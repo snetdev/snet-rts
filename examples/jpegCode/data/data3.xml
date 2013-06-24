@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[13])d,a,t,a,/,t,e,s,t,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[13])d,a,t,a,/,t,i,d,e,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,1,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,2,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,3,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,4,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,5,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,6,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,7,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,8,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,9,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,a,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,b,.,j,p,g</field>
+</record>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+    <field label="bmpfilename">(char[13])d,a,t,a,/,t,e,s,t,.,b,m,p</field>
+    <field label="jpgfilename">(char[11])d,a,t,a,/,p,c,.,j,p,g</field>
+</record>
+<record type="terminate" />
