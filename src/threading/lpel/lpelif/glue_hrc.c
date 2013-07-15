@@ -33,7 +33,6 @@ static FILE *mapfile = NULL;
 /**
  * use the Distributed S-Net placement operators for worker placement
  */
-static bool dloc_placement = false;
 static bool sosi_placement = false;
 
 int SNetThreadingInit(int argc, char **argv)
@@ -64,9 +63,6 @@ int SNetThreadingInit(int argc, char **argv)
 		} else if(strcmp(argv[i], "-excl") == 0 ) {
 			/* Assign realtime priority to workers*/
 			config.flags |= LPEL_FLAG_EXCLUSIVE;
-		} else if(strcmp(argv[i], "-dloc") == 0 ) {
-			/* Use distributed s-net location placement */
-			dloc_placement = true;
 		} else if(strcmp(argv[i], "-co") == 0 && i + 1 <= argc) {
 			/* Number of cores for others */
 			i = i + 1;
