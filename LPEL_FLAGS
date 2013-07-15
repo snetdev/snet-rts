@@ -28,7 +28,20 @@ When this mode is disable, worker/master are mapped to the set of cpus but not p
     + co > 0
     + #cpus >= cw + co
 
-For task migration in lpel_decen:
--tm <num>         : mechanims for task migration (1: random-based, 2: waiting-proportion-based)
--threshold <val>  : random threshold used in random-based migration
+
+** Extra option for LPEL_DECEN
+-dloc: enable user-specified mapping. User can specify which worker an SNet-entity is mapped by using @ symbol.
+
+  *For task migration in lpel_decen:
+    -tm <num>         : mechanims for task migration (1: random-based, 2: waiting-proportion-based)
+    -threshold <val>  : random threshold used in random-based migration
+
+
+** Extra options for HRC LPLE
+-pf <num>: choose priority function (14 options, see implementation document for more defail). Default priority function 14: f = SI - SO
+
+-nd <num>: set negative demand limit. A task will have the lowest priority when its negative demand (SO) is smaller than this limit. This option is used mostly for experiments. If the limit is negative, this mode is disabled. By default, this mode is disabled.
+
+-rl <num>: set scheduling cycle. This is the maximum number of records that a task can produce in one dispatch. By default, it is set as a negative value, i.e. this is not applied and a task can produce as much as it can in one dispatch. Syncrocell, nameshift, wrapper and collector tasks have unlimited scheduling cycle.
+
 

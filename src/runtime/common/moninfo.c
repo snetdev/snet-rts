@@ -179,3 +179,8 @@ void SNetMonInfoPrint( FILE *f, snet_moninfo_t *mon)
 	}
 
 }
+
+int SNetMonRecTypeData(void *item) {
+	snet_record_t *rec = (snet_record_t *)item;
+  return (REC_DESCR( rec) == REC_data);
+}

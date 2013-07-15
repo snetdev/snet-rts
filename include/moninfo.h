@@ -107,4 +107,10 @@ snet_add_moninfo_rec_data_t SNetMonInfoRecCopyAdditionalData(snet_add_moninfo_re
  ****************************************************************************/
 void SNetMonInfoPrint(FILE *f, snet_moninfo_t *moninfo);
 
+
+/***** Monitor record information ****/
+
+/* check if record is data or not */
+int SNetMonRecTypeData(void *item);
+
 #endif /* _MONINFO_H_ */

@@ -23,7 +23,7 @@ static int num_cpus = 0;
 static int num_workers = -1;
 static int proc_others = 0;
 static int proc_workers = -1;
-static int rec_lim = 1;
+static int rec_lim = -1;
 
 #ifdef USE_LOGGING
 static int mon_flags = 0;
@@ -33,7 +33,6 @@ static FILE *mapfile = NULL;
 /**
  * use the Distributed S-Net placement operators for worker placement
  */
-static bool dloc_placement = false;
 static bool sosi_placement = false;
 
 int SNetThreadingInit(int argc, char **argv)
@@ -44,6 +43,8 @@ int SNetThreadingInit(int argc, char **argv)
 
 	lpel_config_t config;
 	int i;
+	int neg_demand = 0;
+
 	memset(&config, 0, sizeof(lpel_config_t));
 
 	int priorf = 1;
@@ -62,9 +63,6 @@ int SNetThreadingInit(int argc, char **argv)
 		} else if(strcmp(argv[i], "-excl") == 0 ) {
 			/* Assign realtime priority to workers*/
 			config.flags |= LPEL_FLAG_EXCLUSIVE;
-		} else if(strcmp(argv[i], "-dloc") == 0 ) {
-			/* Use distributed s-net location placement */
-			dloc_placement = true;
 		} else if(strcmp(argv[i], "-co") == 0 && i + 1 <= argc) {
 			/* Number of cores for others */
 			i = i + 1;
@@ -87,10 +85,14 @@ int SNetThreadingInit(int argc, char **argv)
 		} else if(strcmp(argv[i], "-rl") == 0 && i + 1 <= argc) {
 			i = i + 1;
 			rec_lim = atoi(argv[i]);
+		} else if(strcmp(argv[i], "-nd") == 0 && i + 1 <= argc) {
+			i = i + 1;
+			neg_demand = atoi(argv[i]);
 		}
 	}
 
 	LpelTaskSetPriorityFunc(priorf);
+	LpelTaskSetNegLim(neg_demand);
 
 #ifdef USE_LOGGING
 	char fname[20+1];
@@ -154,6 +156,46 @@ int SNetThreadingInit(int argc, char **argv)
 /*****************************************************************************
  * Spawn a new task
  ****************************************************************************/
+static void setTaskRecLimit(snet_entity_descr_t type, lpel_task_t *t){
+	/*
+	int limit;
+	switch(type) {
+	case ENTITY_box:
+		limit = BOX_REC_LIMIT;
+		break;
+	case ENTITY_parallel:
+		limit = PARALLEL_REC_LIMIT;
+		break;
+	case ENTITY_star:
+		limit = STAR_REC_LIMIT;
+		break;
+	case ENTITY_split:
+		limit = SPLIT_REC_LIMIT;
+		break;
+	case ENTITY_filter:
+		limit = FILTER_REC_LIMIT;
+		break;
+	default:
+		limit = OTHER_REC_LIMIT;
+		break;
+	}*/
+
+	int limit;
+	switch(type) {
+	case ENTITY_sync:
+	case ENTITY_nameshift:
+	case ENTITY_other:
+	case ENTITY_collect:
+		limit = -1;
+		break;
+	default:
+		limit = rec_lim;
+		break;
+	}
+	LpelTaskSetRecLimit(t, limit);
+}
+
+
 int SNetThreadingSpawn(snet_entity_t *ent)
 /*
   snet_entity_type_t type,
@@ -182,7 +224,8 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 			GetStacksize(type)
 	);
 
-	LpelTaskSetRecLimit(t, rec_lim);
+	if (location != LPEL_MAP_OTHERS)
+			setTaskRecLimit(type, t);
 
 #ifdef USE_LOGGING
 	if (mon_flags & SNET_MON_TASK){
