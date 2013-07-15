@@ -19,8 +19,9 @@
 #include "bool.h"
 #include "record.h"
 
-// to activate/deactivate user event logging (message trace)
-#define USE_USER_EVENT_LOGGING
+// To activate/deactivate user event logging (message trace).
+// Activate this via configure, or compile_cmd, or Makefile.
+// #define USE_USER_EVENT_LOGGING
 
 
 typedef union moninfo_types snet_moninfo_types_t;

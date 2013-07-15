@@ -73,7 +73,9 @@ int SNetThreadingInit(int argc, char **argv)
   int i, num_cores;
   pthread_t selftid;
 #endif
+#ifdef USE_USER_EVENT_LOGGING
   char fname[32];
+#endif
   /* initialize the entity counter to 0 */
   entity_count = 0;
   (void) argc; /* NOT USED */
@@ -93,8 +95,10 @@ int SNetThreadingInit(int argc, char **argv)
   }
 #endif
 
+#ifdef USE_USER_EVENT_LOGGING
   snprintf(fname, 31, "mon_n%02u_info.log", SNetDistribGetNodeId());
   SNetThreadingMonitoringInit(fname);
+#endif
 
   return 0;
 }
@@ -195,10 +199,12 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 }
 
 
+#ifdef USE_USER_EVENT_LOGGING
 void SNetThreadingEventSignal(snet_entity_t *ent, snet_moninfo_t *moninfo)
 {
   SNetThreadingMonitoringAppend( moninfo, SNetEntityStr(ent) );
 }
+#endif
 
 void SNetThreadingYield(void)
 {

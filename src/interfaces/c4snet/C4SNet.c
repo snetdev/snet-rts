@@ -13,6 +13,11 @@
 #include "out.h"
 #include "base64.h"
 
+/* FIXME: Needs to be replaced with arch/atomic.h from LPEL. */
+#if HAVE_SYNC_ATOMIC_BUILTINS
+#include "atomics.h"
+#endif
+
 #define COUNTS      3
 #define F_COUNT( c) c->counter[0]
 #define T_COUNT( c) c->counter[1]
@@ -340,14 +345,32 @@ void C4SNetOut( void *hnd, int variant, ...)
   va_end(args);
 }
 
+/* Retrieve the type of the data. */
+c4snet_type_t C4SNetGetType(c4snet_data_t *data)
+{ return data->type; }
+
 /* Return size of the data type. */
 int C4SNetSizeof(c4snet_data_t *data)
 { return sizeOfType(data->type); }
 
+/* Get the number of array elements. */
 size_t C4SNetArraySize(c4snet_data_t *data)
 { return data->size; }
 
-
+/* Get a copy of an unterminated char array as a proper C string. */
+char* C4SNetGetString(c4snet_data_t *data)
+{
+  if (data->type != CTYPE_char && data->type != CTYPE_uchar) {
+    SNetUtilDebugFatal("[%s]: Not a char array type %d.", __func__, data->type);
+    return NULL; /* NOT REACHED */
+  } else {
+    size_t size = C4SNetArraySize(data);
+    char* str = SNetMemAlloc(size + 1);
+    memcpy(str, C4SNetGetData(data), size);
+    str[size] = '\0';
+    return str;
+  }
+}
 
 /* Creates a new c4snet_data_t struct. */
 c4snet_data_t *C4SNetAlloc(c4snet_type_t type, size_t size, void **data)
@@ -400,7 +423,16 @@ void *C4SNetGetData(c4snet_data_t *data)
 /* Frees the memory allocated for c4snet_data_t struct. */
 void C4SNetFree(c4snet_data_t *data)
 {
-  if (--data->ref_count == 0) {
+#if HAVE_SYNC_ATOMIC_BUILTINS
+  /* Temporary fix for race condition: */
+  unsigned int refs = FAS(&data->ref_count, 1);
+  assert(refs > 0);
+  if (refs == 1)
+#else
+  /* Old code, which contains a race condition: */
+  if (--data->ref_count == 0)
+#endif
+  {
     if (data->vtype == VTYPE_array) MemFree(data->data.ptr);
 
     SNetMemFree(data);
@@ -411,7 +443,13 @@ void C4SNetFree(c4snet_data_t *data)
 
 c4snet_data_t *C4SNetShallowCopy(c4snet_data_t *data)
 {
+#if HAVE_SYNC_ATOMIC_BUILTINS
+  /* Temporary fix for race condition: */
+  AAF(&data->ref_count, 1);
+#else
+  /* Old code, which contains a race condition: */
   data->ref_count++;
+#endif
   return data;
 }
 
