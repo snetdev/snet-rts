@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# Driver script for jpegCode.
+#
+# Usage: ./run [ input.bmp output.jpg ./executable -options ]
+#
+# First argument is name of the input BMP file.
+I=data/test.bmp
+# Second argument is name of the output JPEG file.
+O=out.jpg
+# Third argument is the name of the S-Net executable jpegCode program.
+X=./jpegCode-pthread-nodist
+# Optional further arguments are options to the program.
+
+# Extract optional arguments:
+[ $# -gt 0 ] && I=$1 && shift
+[ $# -gt 0 ] && O=$1 && shift
+[ $# -gt 0 ] && X=$1 && shift
+
+function mkstr () {
+    s="(char[${#1}])"
+    for (( i=0; i<${#1}; i++ ))
+    do
+        if [ $i -gt 0 ]; then
+            s="${s},"
+        fi
+        s="${s}${1:$i:1}"
+    done
+    echo $s
+}
+
+bmp=`mkstr $I`
+jpg=`mkstr $O`
+#echo "bmp=$bmp"
+#echo "jpg=$jpg"
+
+$X "$@" << EOI
+<?xml version="1.0" ?>
+<record xmlns="snet-home.org" type="data" mode="textual"  interface="C4SNet">
+    <field label="bmpfilename">$bmp</field>
+    <field label="jpgfilename">$jpg</field>
+</record>
+<record type="terminate" />
+EOI
