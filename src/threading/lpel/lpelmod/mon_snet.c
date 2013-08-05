@@ -944,6 +944,10 @@ void SNetThreadingMonInit(lpel_monitoring_cb_t *cb, int node, int flag)
 		cb->get_global_wait_prop 	= MonCbGetGlobalWaitProp;
 		cb->get_worker_wait_prop 	= MonCbGetWorkerWaitProp;
 	}
+
+
+	/* set up record call backs */
+	cb->rectype_data = SNetMonRecTypeData;
 	/* initialize timing */
 	LpelTimingNow(&monitoring_begin);
 #endif
