@@ -47,7 +47,11 @@ static void WorkerFreeInit(worker_free_list_t *free)
 }
 
 /* Create a new worker. */
-worker_t *SNetWorkerCreate(node_t *input_node, int worker_id, node_t *output_node)
+worker_t *SNetWorkerCreate(
+    node_t *input_node,
+    int worker_id,
+    node_t *output_node,
+    worker_role_t role)
 {
   worker_t *worker;
 
@@ -55,6 +59,7 @@ worker_t *SNetWorkerCreate(node_t *input_node, int worker_id, node_t *output_nod
 
   worker = SNetNewAlign(worker_t);
   worker->id = worker_id;
+  worker->role = role;
   worker->victim_id = worker_id;
 
   WorkerTodoInit(&worker->todo);
@@ -63,7 +68,13 @@ worker_t *SNetWorkerCreate(node_t *input_node, int worker_id, node_t *output_nod
 
   WorkerFreeInit(&worker->free);
 
-  worker->input_desc = NODE_SPEC(input_node, input)->indesc;
+  if (input_node) {
+    worker->input_desc = NODE_SPEC(input_node, input)->indesc;
+    worker->has_input = true;
+  } else {
+    worker->input_desc = NULL;
+    worker->has_input = false;
+  }
   worker->output_node = output_node;
   worker->steal_lock = SNetNewAlign(worker_lock_t);
   worker->steal_lock->id = 0;
@@ -77,7 +88,6 @@ worker_t *SNetWorkerCreate(node_t *input_node, int worker_id, node_t *output_nod
   worker->continue_desc = NULL;
   worker->continue_rec = NULL;
   worker->has_work = true;
-  worker->has_input = true;
   worker->is_idle = false;
   worker->idle_seqnr = 0;
 
@@ -99,7 +109,9 @@ void SNetWorkerDestroy(worker_t *worker)
   if ( ! SNetHashPtrTabEmpty(worker->hash_ptab)) {
     snet_stream_desc_t *desc = SNetHashPtrFirst(worker->hash_ptab);
     do {
-      printf("%s: desc %p\n", __func__, desc);
+      work_item_t *item = SNetHashPtrLookup(worker->hash_ptab, desc);
+      printf("%s(%d,%d): desc %p, count %d, refs %d\n", __func__,
+             worker->id, worker->role, desc, item->count, desc->refs);
     } while ((desc = SNetHashPtrNext(worker->hash_ptab, desc)) != NULL);
   }
 
@@ -447,6 +459,9 @@ void SNetWorkerStealVictim(worker_t *victim, worker_t *thief)
       unlock_work_item(item, thief);
     }
   }
+  if (thief->loot.desc && SNetDebugWS()) {
+    printf("steal\n");
+  }
 }
 
 /* Scan other workers for stealable items */
@@ -519,14 +534,30 @@ static void SNetWorkerLoot(worker_t *worker)
   }
 }
 
+/* Return the worker which is the input manager for Distributed S-Net. */
+worker_t* SNetWorkerGetInputManager(void)
+{
+  int   i;
+
+  for (i = snet_worker_count; i > 0; --i) {
+    worker_t *worker = snet_workers[i];
+    if (worker->role == InputManager) {
+      return worker;
+    }
+  }
+  return NULL;
+}
+
 /* Test if other workers have work to do. */
-static bool SNetWorkerOthersBusy(worker_t *worker)
+bool SNetWorkerOthersBusy(worker_t *worker)
 {
   int   i;
   bool  change = false;
 
-  if (NODE_SPEC(worker->output_node, output)->terminated) {
-    return false;
+  if (worker->output_node) {
+    if (NODE_SPEC(worker->output_node, output)->terminated) {
+      return false;
+    }
   }
 
   if (worker->is_idle < 1) {
@@ -566,6 +597,60 @@ static bool SNetWorkerOthersBusy(worker_t *worker)
   }
 
   return (worker->is_idle < 3);
+}
+
+/* Cleanup unused memory. */
+void SNetWorkerMaintenaince(worker_t *worker)
+{
+  /* Initialize iterator to the head of the to-do list. */
+  worker->prev = &worker->todo.head;
+  worker->iter = worker->prev->next_item;
+
+  /* Traverse the to-do list. */
+  while (worker->iter) {
+    work_item_t *item = worker->iter;
+
+    /* Look for empty items. */
+    if (item->count == 0) {
+
+      /* Lock the work item */
+      if (trylock_work_item(item, worker)) {
+
+        /* Remove item from hash table. */
+        if (item->desc) {
+          SNetHashPtrRemove(worker->hash_ptab, item->desc);
+        }
+
+        /* Delete item from list. */
+        worker->prev->next_item = item->next_item;
+
+        /* Thieves may still be accessing this, so put on free list. */
+        PutFreeWorkItem(worker, item);
+
+        /* Restore validity of item pointer. */
+        item = worker->prev;
+      }
+    }
+
+    /* Advance iterator by one step. */
+    worker->prev = item;
+    worker->iter = item->next_item;
+  }
+
+  /* Signal thieves about potential work. */
+  worker->has_work = (worker->todo.head.next_item != NULL);
+
+  /* Reduce length of free item list. */
+  ReduceWorkItems(worker);
+}
+
+/* Wait for other workers to finish. */
+void SNetWorkerWait(worker_t *worker)
+{
+  while (SNetWorkerOthersBusy(worker)) {
+    SNetWorkerMaintenaince(worker);
+    usleep(1000);
+  }
 }
 
 /* Process work forever and read input until EOF. */

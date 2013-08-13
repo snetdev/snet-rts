@@ -29,6 +29,12 @@
 #include "xfifo.h"
 #include "xlock.h"
 
+/* The root node in distributed S-Net. */
+#define ROOT_LOCATION           0
+
+/* Location may be determined by indexed placement combinators. */
+#define LOCATION_UNKNOWN        (-1)
+
 typedef struct node node_t;
 typedef enum node_type node_type_t;
 typedef enum landing_type landing_type_t;
@@ -68,6 +74,8 @@ enum node_type {
   NODE_observer  = 360,
   NODE_observer2 = 370,
   NODE_dripback  = 380,
+  NODE_transfer  = 390,
+  NODE_imanager  = 400,
 };
 
 enum landing_type {
@@ -90,12 +98,16 @@ enum landing_type {
   LAND_box       = 680,
   LAND_dripback1 = 690,
   LAND_dripback2 = 700,
+  LAND_transfer  = 710,
+  LAND_imanager  = 720,
+  LAND_remote    = 730,
 };
 
-/* Network stream connects network nodes using FIFOs */
+/* A stream is a static edge in the node graph. */
 struct snet_stream_t {
-  node_t *from;
-  node_t *dest;
+  node_t *from;         /* originating node */
+  node_t *dest;         /* destination node */
+  int     table_index;  /* index in stream table */
 };
 #define STREAM_FROM(stream)   ((stream)->from)
 #define STREAM_DEST(stream)   ((stream)->dest)
@@ -257,12 +269,21 @@ typedef struct observer_arg {
   int                   level;
 } observer_arg_t;
 
+/* Argument for input manager */
+typedef struct imanager_arg {
+  snet_stream_t        *input;
+  snet_stream_desc_t   *indesc;
+} imanager_arg_t;
+
 /* Network node */
 struct node {
-  node_type_t type;
-  node_work_fun_t work;
-  node_stop_fun_t stop;
-  node_term_fun_t term;
+  node_type_t           type;
+  node_work_fun_t       work;
+  node_stop_fun_t       stop;
+  node_term_fun_t       term;
+  int                   location;
+  int                   loc_split_level;
+  int                   subnet_level;
   union node_types {
     box_arg_t           box;
     collector_arg_t     collector;
@@ -277,6 +298,7 @@ struct node {
     sync_arg_t          sync;
     zipper_arg_t        zipper;
     observer_arg_t      observer;
+    imanager_arg_t      imanager;
   } u;
 };
 #define NODE_TYPE(nptr)        ((nptr)->type)
@@ -441,6 +463,25 @@ typedef struct landing_sync {
   sync_state_t          state;
 } landing_sync_t;
 
+/* Node instantiation for transfer, i.e. outgoing connections to other locations. */
+typedef struct landing_transfer {
+  int                   dest_loc;
+  int                   table_index;
+  int                   split_level;
+  struct connect       *connect;
+  snet_stream_t        *stream;
+} landing_transfer_t;
+
+/* Node instantiation for remote, i.e. continuations of incoming connections. */
+typedef struct landing_remote {
+  int                   cont_loc;
+  int                   cont_num;
+  int                   split_level;
+  int                   dyn_loc;
+  void                (*stackfunc)(landing_t *, snet_stream_desc_t *);
+  void                (*retfunc)(landing_t *, snet_stream_desc_t *, snet_stream_desc_t *);
+} landing_remote_t;
+
 /* Node instantiation for zipper */
 typedef struct matching matching_t;
 typedef struct landing_zipper {
@@ -478,6 +519,7 @@ struct landing {
   landing_type_t        type;           /* determine landing type in union */
   node_t               *node;           /* node in the fixed network */
   snet_stack_t          stack;          /* a stack of future landings */
+  int                  *dyn_locs;       /* indexed placement locations */
   worker_t             *worker;         /* which worker has locked the landing */
   int                   id;             /* lock */
   int                   refs;           /* reference counter */
@@ -500,6 +542,8 @@ struct landing {
     landing_input_t     input;
     landing_observer_t  observer;
     landing_empty_t     empty;
+    landing_transfer_t  transfer;
+    landing_remote_t    remote;
   } u;
 };
 #define LAND_SPEC(land,type)            (&(land)->u.type)

@@ -22,17 +22,29 @@ static void SplitWrite(
     }
     SNetWrite(&land->colldesc, rec, last);
   } else {
+    /* Write to an instance: look for an existing connection. */
     void **inst_ptr = HashtabGetPointer( land->hashtab, idx);
     if (inst_ptr == NULL) {
+      /* Make sure the collector landing is on top. */
       if (SNetTopLanding(desc) != land->collland) {
         SNetPushLanding(desc, land->collland);
       }
+      /* Check for indexed placement. */
+      if (sarg->is_byloc) {
+        /* Communicate destination location to subsequent landings. */
+        desc->landing->dyn_locs[DESC_NODE(desc)->loc_split_level - 1] = idx;
+      }
+      /* Connect via a stream to the subnetwork. */
       instdesc = SNetStreamOpen( sarg->instance, desc);
+      /* Remember the connection for future use. */
       HashtabPut( land->hashtab, idx, instdesc);
+      /* Count the number of outgoing connections. */
       land->split_count++;
-      /* Tricky, but the first write after open cannot be garbage collected. */
+      /* This is tricky because we pass a pointer to a local variable,
+       * but the first write after open cannot be garbage collected. */
       SNetWrite(&instdesc, rec, last);
     } else {
+      /* Reuse an existing connection. */
       SNetWrite((snet_stream_desc_t **) inst_ptr, rec, last);
     }
   }
@@ -122,13 +134,64 @@ void SNetStopSplit(node_t *node, fifo_t *fifo)
 /* CREATION FUNCTIONS                                                        */
 /*****************************************************************************/
 
+/* Keep track of the nesting level of indexed placement combinators. */
+static int snet_loc_split_level;
+
+/* Return the current indexed placement stack level. */
+int SNetLocSplitGetLevel(void)
+{
+  trace(__func__);
+  return snet_loc_split_level;
+}
+
+/* Increment the indexed placement stack level by one. */
+void SNetLocSplitIncrLevel(void)
+{
+  trace(__func__);
+  ++snet_loc_split_level;
+}
+
+/* Decrement the indexed placement stack level by one. */
+void SNetLocSplitDecrLevel(void)
+{
+  trace(__func__);
+  --snet_loc_split_level;
+  assert(snet_loc_split_level >= 0);
+}
+
+/* Keep track of the nesting level of combinator subnetworks. */
+static int snet_subnet_level;
+
+/* Return the current indexed placement stack level. */
+int SNetSubnetGetLevel(void)
+{
+  trace(__func__);
+  return snet_subnet_level;
+}
+
+/* Increment the indexed placement stack level by one. */
+void SNetSubnetIncrLevel(void)
+{
+  trace(__func__);
+  ++snet_subnet_level;
+}
+
+/* Decrement the indexed placement stack level by one. */
+void SNetSubnetDecrLevel(void)
+{
+  trace(__func__);
+  --snet_subnet_level;
+  assert(snet_subnet_level >= 0);
+}
+
 /**
- * Convenience function for creating
- * Split, DetSplit, LocSplit or LocSplitDet,
- * dependent on parameters is_byloc and is_det
+ * Convenience function for creating a Split, DetSplit, LocSplit or LocSplitDet.
+ * This is determined by the parameters 'is_byloc' and 'is_det'.
+ * Parameter 'is_byloc' says whether to create an indexed placement combinator.
+ * Parameter 'is_det' specifies if the combinator is deterministic.
  */
 snet_stream_t *CreateSplit(
-    snet_stream_t *instream,
+    snet_stream_t *input,
     snet_info_t *info,
     int location,
     snet_startup_fun_t box_a,
@@ -137,7 +200,7 @@ snet_stream_t *CreateSplit(
     bool is_byloc,
     bool is_det)
 {
-  snet_stream_t *input;
+  snet_stream_t *collector;
   snet_stream_t *output;
   snet_stream_t *instout;
   node_t        *node;
@@ -147,36 +210,39 @@ snet_stream_t *CreateSplit(
   locvec = SNetLocvecGet(info);
   SNetLocvecSplitEnter(locvec);
 
-  input = SNetRouteUpdate(info, instream, location);
-  if (SNetDistribIsNodeLocation(location)) {
-    output = SNetStreamCreate(0);
-    node = SNetNodeNew(NODE_split, &input, 1, &output, 1,
-                       SNetNodeSplit, SNetStopSplit, SNetTermSplit);
-    sarg = NODE_SPEC(node, split);
-    sarg->collector = output;
-    sarg->ltag = ltag;
-    sarg->utag = utag;
-    sarg->is_det = is_det;
-    sarg->is_detsup = (SNetDetGetLevel() > 0);
-    sarg->is_byloc = is_byloc;
-    sarg->entity = SNetEntityCreate( ENTITY_split, location, locvec,
-                                     "<split>", NULL, (void*)sarg);
-
-    /* create collector */
-    output = SNetCollectorDynamic(sarg->collector, location, info, is_det, node);
-
-    /* create replica */
-    sarg->instance = SNetStreamCreate(0);
-    STREAM_FROM(sarg->instance) = node;
-    SNetRouteDynamicEnter(info, 0, location, box_a);
-    instout = (*box_a)(sarg->instance, info, location);
-    instout = SNetRouteUpdate(info, instout, location);
-    SNetRouteDynamicExit(info, 0, location, box_a);
-    SNetCollectorAddStream(STREAM_DEST(sarg->collector), instout);
-
-  } else {
-    output = input;
+  /* keep track of entering indexed placement. */
+  if (is_byloc) {
+    SNetLocSplitIncrLevel();
   }
+
+  collector = SNetStreamCreate(0);
+  node = SNetNodeNew(NODE_split, location, &input, 1, &collector, 1,
+                     SNetNodeSplit, SNetStopSplit, SNetTermSplit);
+  sarg = NODE_SPEC(node, split);
+  sarg->collector = collector;
+  sarg->ltag = ltag;
+  sarg->utag = utag;
+  sarg->is_det = is_det;
+  sarg->is_detsup = (SNetDetGetLevel() > 0);
+  sarg->is_byloc = is_byloc;
+  sarg->entity = SNetEntityCreate( ENTITY_split, location, locvec,
+                                   "<split>", NULL, (void*)sarg);
+
+  /* create collector */
+  output = SNetCollectorDynamic(collector, location, info, is_det, node);
+
+  /* create replica */
+  sarg->instance = SNetNodeStreamCreate(node);
+  SNetSubnetIncrLevel();
+  instout = (*box_a)(sarg->instance, info, LOCATION_UNKNOWN);
+  SNetSubnetDecrLevel();
+  SNetCollectorAddStream(STREAM_DEST(sarg->collector), instout);
+
+  /* keep track of leaving indexed placement. */
+  if (is_byloc) {
+    SNetLocSplitDecrLevel();
+  }
+
   SNetLocvecSplitLeave(locvec);
 
   return output;
@@ -221,7 +287,7 @@ snet_stream_t *SNetLocSplit( snet_stream_t *input,
 {
   trace(__func__);
   return CreateSplit( input, info, location, box_a, ltag, utag,
-                      true, /* is by location */
+                      SNetDistribIsDistributed(), /* is by location */
                       false); /* not det */
 }
 
@@ -236,7 +302,7 @@ snet_stream_t *SNetLocSplitDet( snet_stream_t *input,
   trace(__func__);
   SNetDetIncrLevel();
   outstream = CreateSplit( input, info, location, box_a, ltag, utag,
-                           true, /* is by location */
+                           SNetDistribIsDistributed(), /* is by location */
                            true);  /* is det */
   SNetDetDecrLevel();
   return outstream;

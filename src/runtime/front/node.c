@@ -3,8 +3,18 @@
 #include "node.h"
 #include "debug.h"
 
-worker_t **snet_workers;
-int snet_worker_count;
+/* An array with pointers to all workers. */
+static worker_t      **snet_workers;
+static int             snet_worker_count;
+
+/* Keep track of all created streams in a static table.
+ * This is used in distributed S-Net when communicating
+ * destination streams for inter-location traffic. */
+static struct streams_table {
+  snet_stream_t  **streams;
+  int              size;
+  int              last;
+} snet_streams_table;
 
 worker_t **SNetNodeGetWorkers(void)
 {
@@ -16,9 +26,74 @@ int SNetNodeGetWorkerCount(void)
   return snet_worker_count;
 }
 
+/* Lookup a stream in the streams table. Return index. */
+static int SNetNodeTableLookup(snet_stream_t *stream)
+{
+  int i, found = 0;
+
+  assert(stream);
+  for (i = 1; i <= snet_streams_table.last; ++i) {
+    if (snet_streams_table.streams[i]->from == stream->from &&
+        snet_streams_table.streams[i]->dest == stream->dest) {
+      found = i;
+      break;
+    }
+  }
+  return found;
+}
+
+/* Assign a new index to a stream and add it to the stream table. */
+void SNetNodeTableAdd(snet_stream_t *stream)
+{
+  int found = SNetNodeTableLookup(stream);
+  if (found == 0) {
+    const int table_index = ++snet_streams_table.last;
+    if (table_index >= snet_streams_table.size) {
+      const int min_size = 16;
+      if (snet_streams_table.size < min_size) {
+        snet_streams_table.size = min_size;
+      } else {
+        /* Increase table size by 50 percent. */
+        snet_streams_table.size += snet_streams_table.size / 2;
+      }
+      snet_streams_table.streams = SNetMemResize( snet_streams_table.streams,
+                         snet_streams_table.size * sizeof(snet_stream_t *));
+      /* Table starts index one: index zero detects invalid indices. */
+      snet_streams_table.streams[0] = NULL;
+    }
+    snet_streams_table.streams[table_index] = stream;
+    /* Also copy the table index to the stream structure. */
+    stream->table_index = table_index;
+
+    if (SNetDebug()) {
+      printf("[%s.%d]: adding stream %2d from %9s to %9s for location %2d\n",
+             __func__, SNetDistribGetNodeId(), table_index,
+             stream->from ? SNetNodeName(stream->from) : " ",
+             SNetNodeName(stream->dest), stream->dest->location);
+    }
+  }
+}
+
+/* Retrieve the node table index from a node structure. */
+snet_stream_t* SNetNodeTableIndex(int table_index)
+{
+  assert(table_index >= 1 && table_index <= snet_streams_table.last);
+  return snet_streams_table.streams[table_index];
+}
+
+/* Cleanup the node table */
+void SNetNodeTableCleanup(void)
+{
+  snet_streams_table.last = 0;
+  snet_streams_table.size = 0;
+  SNetDelete(snet_streams_table.streams);
+  snet_streams_table.streams = NULL;
+}
+
 /* Create a new node and connect its in/output streams. */
 node_t *SNetNodeNew(
   node_type_t type,
+  int location,
   snet_stream_t **ins,
   int num_ins,
   snet_stream_t **outs,
@@ -33,12 +108,39 @@ node_t *SNetNodeNew(
   node->work = work;
   node->stop = stop;
   node->term = term;
+  node->location = location;
+  node->loc_split_level = SNetLocSplitGetLevel();
+  node->subnet_level = SNetSubnetGetLevel();
 
+  /* For all incoming streams: set destination to this node. */
   for (i = 0; i < num_ins; ++i) {
     STREAM_DEST(ins[i]) = node;
   }
+  /* For all outgoing streams: set source pointer to this node. */
   for (i = 0; i < num_outs; ++i) {
     STREAM_FROM(outs[i]) = node;
+  }
+
+  /* For the common entities: add all incoming streams to the table. */
+  switch (type) {
+    case NODE_box:
+    case NODE_parallel:
+    case NODE_star:
+    case NODE_split:
+    case NODE_feedback:
+    case NODE_sync:
+    case NODE_filter:
+    case NODE_nameshift:
+    case NODE_zipper:
+    case NODE_dripback:
+    case NODE_transfer:
+    case NODE_collector:
+      for (i = 0; i < num_ins; ++i) {
+        SNetNodeTableAdd(ins[i]);
+      }
+      break;
+    default:
+      break;
   }
 
   return node;
@@ -50,7 +152,11 @@ void SNetNodeStop(worker_t *worker)
   node_t        *initial;
   node_t        *node;
 
-  initial = DESC_NODE(worker->input_desc);
+  if (worker->input_desc) {
+    initial = DESC_NODE(worker->input_desc);
+  } else {
+    initial = SNetNodeTableIndex(1)->dest;
+  }
 
   SNetFifoInit(&fifo);
   SNetFifoPut(&fifo, initial);
@@ -62,9 +168,16 @@ void SNetNodeStop(worker_t *worker)
 
 void *SNetNodeThreadStart(void *arg)
 {
+  worker_t      *worker = (worker_t *) arg;
+
   trace(__func__);
-  SNetThreadSetSelf(arg);
-  SNetWorkerRun((worker_t *) arg);
+
+  SNetThreadSetSelf(worker);
+  if (worker->role == InputManager) {
+    SNetInputManagerRun(worker);
+  } else {
+    SNetWorkerRun(worker);
+  }
 
   return arg;
 }
@@ -72,36 +185,39 @@ void *SNetNodeThreadStart(void *arg)
 /* Create workers and start them. */
 void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
 {
-  int            id, num_workers;
+  int            id, num_workers, mg, num_managers;
 
   trace(__func__);
   assert(input->dest);
-  assert(input->from);
-  assert(NODE_TYPE(input->from) == NODE_input);
-  assert(output->dest);
   assert(output->from);
-  assert(NODE_TYPE(output->dest) == NODE_output);
 
   /* Allocate array of worker structures. */
   num_workers = SNetThreadingWorkers();
-  snet_worker_count = num_workers;
-  snet_workers = SNetNewN(num_workers + 1, worker_t*);
+  num_managers = SNetThreadedManagers();
+  snet_worker_count = num_workers + num_managers;
+  snet_workers = SNetNewN(snet_worker_count + 1, worker_t*);
 
   /* Set all workers to NULL to prevent premature stealing. */
-  for (id = 0; id <= num_workers; ++id) {
+  for (id = 0; id <= snet_worker_count; ++id) {
     snet_workers[id] = NULL;
   }
 
   /* Init global worker data. */
   SNetWorkerInit();
 
-  /* First create workers with new threads. */
+  /* Create managers with new threads. */
+  for (mg = 1; mg <= num_managers; ++mg) {
+    id = mg + num_workers;
+    snet_workers[id] = SNetWorkerCreate(input->from, id, output->dest, InputManager);
+    SNetThreadCreate(SNetNodeThreadStart, snet_workers[id]);
+  }
+  /* Create data workers with new threads. */
   for (id = 2; id <= num_workers; ++id) {
-    snet_workers[id] = SNetWorkerCreate(input->from, id, output->dest);
+    snet_workers[id] = SNetWorkerCreate(input->from, id, output->dest, DataWorker);
     SNetThreadCreate(SNetNodeThreadStart, snet_workers[id]);
   }
   /* Reuse main thread for worker with ID 1. */
-  snet_workers[1] = SNetWorkerCreate(input->from, 1, output->dest);
+  snet_workers[1] = SNetWorkerCreate(input->from, 1, output->dest, DataWorker);
   SNetNodeThreadStart(snet_workers[1]);
 }
 
@@ -109,6 +225,7 @@ void SNetNodeCleanup(void)
 {
   int i;
 
+  SNetNodeTableCleanup();
   SNetWorkerCleanup();
   for (i = snet_worker_count; i > 0; --i) {
     SNetWorkerDestroy(snet_workers[i]);
@@ -126,10 +243,10 @@ snet_stream_t *SNetNodeStreamCreate(node_t *node)
   return stream;
 }
 
-const char* SNetNodeName(node_t *node)
+const char* SNetNodeTypeName(node_type_t type)
 {
 #define NAME(x) #x
-#define NODE(l) node->type == l ? NAME(l)+5 :
+#define NODE(l) type == l ? NAME(l)+5 :
   return
   NODE(NODE_box)
   NODE(NODE_parallel)
@@ -151,6 +268,12 @@ const char* SNetNodeName(node_t *node)
   NODE(NODE_observer)
   NODE(NODE_observer2)
   NODE(NODE_dripback)
+  NODE(NODE_transfer)
   NULL;
+}
+
+const char* SNetNodeName(node_t *node)
+{
+  return SNetNodeTypeName(node->type);
 }
 

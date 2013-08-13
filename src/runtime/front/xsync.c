@@ -119,12 +119,6 @@ static int MatchPatterns(
         land->storage[i] = NULL;
       }
       land->state = SYNC_partial;
-
-#ifdef DONT_USE_USER_EVENT_LOGGING
-      /* Emit a monitoring message of a record entering syncro cell */
-      SNetThreadingEventSignal( ent,
-          SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec));
-#endif
     }
   }
 
@@ -147,12 +141,6 @@ static snet_record_t *SNetComposeSynchronizedRecord(
   rec_out = MergeFromStorage( sarg, land);
   DATA_REC(rec_out, detref) = detref;
 
-#ifdef DONT_USE_USER_EVENT_LOGGING
-  /* Emit a monitoring message of firing syncro cell */
-  SNetThreadingEventSignal( ent,
-      SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, rec_out));
-#endif
-  
   return rec_out;
 }
 
@@ -299,28 +287,20 @@ snet_stream_t *SNetSync(
   sync_arg_t    *sarg;
 
   trace(__func__);
-  input = SNetRouteUpdate(info, input, location);
-  if (SNetDistribIsNodeLocation(location)) {
-    output = SNetStreamCreate(0);
-    node = SNetNodeNew(NODE_sync, &input, 1, &output, 1,
-                       SNetNodeSync, SNetStopSync, SNetTermSync);
-    sarg = NODE_SPEC(node, sync);
-    sarg->output = output;
-    sarg->patterns = patterns;
-    sarg->guard_exprs = guard_exprs;
-    sarg->num_patterns = SNetVariantListLength( sarg->patterns);
-    sarg->merged_pattern = GetMergedTypeVariant(sarg->patterns);
-    sarg->garbage_collect = SNetGarbageCollection();
-    sarg->merged_type_sync = (STREAM_FROM(input) &&
-                              STREAM_FROM(input)->type == NODE_star);
-    sarg->entity = SNetEntityCreate( ENTITY_sync, location, SNetLocvecGet(info),
-                                     "<sync>", NULL, (void *) sarg);
-
-  } else {
-    SNetVariantListDestroy( patterns);
-    SNetExprListDestroy( guard_exprs);
-    output = input;
-  }
+  output = SNetStreamCreate(0);
+  node = SNetNodeNew(NODE_sync, location, &input, 1, &output, 1,
+                     SNetNodeSync, SNetStopSync, SNetTermSync);
+  sarg = NODE_SPEC(node, sync);
+  sarg->output = output;
+  sarg->patterns = patterns;
+  sarg->guard_exprs = guard_exprs;
+  sarg->num_patterns = SNetVariantListLength( sarg->patterns);
+  sarg->merged_pattern = GetMergedTypeVariant(sarg->patterns);
+  sarg->garbage_collect = SNetGarbageCollection();
+  sarg->merged_type_sync = (STREAM_FROM(input) &&
+                            STREAM_FROM(input)->type == NODE_star);
+  sarg->entity = SNetEntityCreate( ENTITY_sync, location, SNetLocvecGet(info),
+                                   "<sync>", NULL, (void *) sarg);
 
   return output;
 }

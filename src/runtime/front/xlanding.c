@@ -1,4 +1,36 @@
 #include "node.h"
+#include <string.h>
+#include <sys/param.h>
+
+/* Copy dynamic locations due to indexed placement, from prev to new landing. */
+static void CopyDynamicLocations(landing_t *land, snet_stream_desc_t *prev)
+{
+  /* Keep track of dynamic locations due to indexed placement. */
+  if (land->node && land->node->loc_split_level) {
+    const int my_level = land->node->loc_split_level;
+    land->dyn_locs = SNetNewN(my_level, int);
+    if (prev) {
+      const int prev_level = DESC_NODE(prev)->loc_split_level;
+      const int copy_count = MIN(my_level, prev_level);
+      memcpy(land->dyn_locs, prev->landing->dyn_locs, copy_count * sizeof(int));
+      if (my_level > copy_count) {
+        assert(my_level == 1 + copy_count);
+        assert(land->node->type == NODE_split || land->node->type == NODE_collector);
+        land->dyn_locs[my_level - 1] = SNetDistribGetNodeId();
+      }
+      else if (my_level < prev_level) {
+        assert(my_level + 1 == prev_level);
+        assert(DESC_NODE(prev)->type == NODE_collector);
+      }
+    } else {
+      assert(my_level == 1);
+      assert(land->node->type == NODE_split);
+      land->dyn_locs[my_level - 1] = SNetDistribGetNodeId();
+    }
+  } else {
+    land->dyn_locs = NULL;
+  }
+}
 
 /* Create a new landing with reference count 1. */
 landing_t *SNetNewLanding(
@@ -19,10 +51,16 @@ landing_t *SNetNewLanding(
 
   SNetStackInit(&land->stack);
   if (prev) {
+    /* Copy the small stack of indexed placement evaluations. */
+    CopyDynamicLocations(land, prev);
+
+    /* Copy the stack of landings and increment each landing reference count. */
     SNetStackCopy(&land->stack, &prev->landing->stack);
     STACK_FOR_EACH(&land->stack, elem, item) {
       LAND_INCR(item);
     }
+  } else {
+    land->dyn_locs = NULL;
   }
 
   return land;
@@ -40,9 +78,10 @@ void SNetPushLanding(snet_stream_desc_t *desc, landing_t *land)
 /* Take the first landing from the stack of future landings. */
 landing_t *SNetPopLanding(snet_stream_desc_t *desc)
 {
-  landing_t *land = (landing_t *) SNetStackPop(&desc->landing->stack);
+  landing_t *land;
   trace(__func__);
-  assert(land->refs > 0);
+  land = (landing_t *) SNetStackPop(&desc->landing->stack);
+  assert(land && land->refs > 0);
   return land;
 }
 
@@ -111,6 +150,8 @@ void SNetCleanupLanding(landing_t *land)
     landing_t *popped = SNetStackPop(&land->stack);
     SNetLandingDone(popped);
   }
+  SNetMemFree(land->dyn_locs);
+  land->dyn_locs = NULL;
 }
 
 /* Destroy a landing. */
@@ -128,22 +169,32 @@ void SNetLandingDone(landing_t *land)
   trace(__func__);
   assert(land->refs > 0);
   if (LAND_DECR(land) == 0) {
-    snet_stream_desc_t *desc;
-    fifo_t fifo;
-    SNetFifoInit(&fifo);
-    (*land->node->term)(land, &fifo);
-    while ((desc = SNetFifoGet(&fifo)) != NULL) {
-      assert(desc->refs > 0);
-      if (DESC_DECR(desc) == 0) {
-        land = desc->landing;
-        assert(land->refs > 0);
-        if (LAND_DECR(land) == 0) {
-          (*land->node->term)(land, &fifo);
+    if (land->node) {
+      snet_stream_desc_t *desc;
+      fifo_t fifo;
+      SNetFifoInit(&fifo);
+      (*land->node->term)(land, &fifo);
+      while ((desc = SNetFifoGet(&fifo)) != NULL) {
+        assert(desc->refs > 0);
+        if (DESC_DECR(desc) == 0) {
+          land = desc->landing;
+          assert(land->refs > 0);
+          if (LAND_DECR(land) == 0) {
+            if (land->node) {
+              (*land->node->term)(land, &fifo);
+            } else {
+              assert(land->type == LAND_remote);
+              SNetFreeLanding(land);
+            }
+          }
+          SNetStreamClose(desc);
         }
-        SNetStreamClose(desc);
       }
+      SNetFifoDone(&fifo);
+    } else /* land->node == NULL */ {
+      assert(land->type == LAND_remote);
+      SNetFreeLanding(land);
     }
-    SNetFifoDone(&fifo);
   }
 }
 
@@ -452,6 +503,8 @@ const char *SNetLandingTypeName(landing_type_t ltype)
   LAND(LAND_observer)
   LAND(LAND_dripback1)
   LAND(LAND_dripback2)
+  LAND(LAND_transfer)
+  LAND(LAND_remote)
   NULL;
 }
 

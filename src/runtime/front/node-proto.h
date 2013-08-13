@@ -3,9 +3,19 @@
 worker_t **SNetNodeGetWorkers(void);
 int SNetNodeGetWorkerCount(void);
 
+/* Assign a new index to a stream and add it to the stream table. */
+void SNetNodeTableAdd(snet_stream_t *stream);
+
+/* Retrieve the node table index from a node structure. */
+snet_stream_t* SNetNodeTableIndex(int table_index);
+
+/* Cleanup the node table */
+void SNetNodeTableCleanup(void);
+
 /* Create a new node and connect its in/output streams. */
 node_t *SNetNodeNew(
   node_type_t type,
+  int location,
   snet_stream_t **ins,
   int num_ins,
   snet_stream_t **outs,
@@ -22,6 +32,7 @@ void SNetNodeCleanup(void);
 
 /* Create a new stream emmanating from this node. */
 snet_stream_t *SNetNodeStreamCreate(node_t *node);
+const char* SNetNodeTypeName(node_type_t type);
 const char* SNetNodeName(node_t *node);
 
 /* xbox.c */
@@ -94,6 +105,9 @@ void SNetRecDetrefCopy(snet_record_t *new_rec, snet_record_t *old_rec);
 /* Destroy the stack of detrefs for a record. */
 void SNetRecDetrefDestroy(snet_record_t *rec, snet_stream_desc_t **desc_ptr);
 
+/* Create and initialize a new detref structure. */
+detref_t* SNetRecDetrefCreate(snet_record_t *rec, long seqnr, landing_t *leave);
+
 /* Add a sequence number to a record to support determinism. */
 void SNetRecDetrefAdd(
     snet_record_t *rec,
@@ -108,11 +122,34 @@ void SNetDetEnter(
     bool is_det,
     snet_entity_t *ent);
 
+/* Examine a REC_detref for remaining de-references from a remote location. */
+void SNetDetLeaveCheckDetref(snet_record_t *rec, fifo_t *fifo);
+
 /* Output queued records if allowed, while preserving determinism. */
 void SNetDetLeaveDequeue(landing_t *landing);
 
 /* Record leaves a deterministic network */
 void SNetDetLeaveRec(snet_record_t *rec, landing_t *landing);
+
+/* xdistrib.c */
+
+void hello(const char *s);
+
+/* Initialize distributed computing. Called by SNetInRun in networkinterface.c. */
+void SNetDistribInit(int argc, char **argv, snet_info_t *info);
+
+/* Start input+output managers. Called by SNetInRun in networkinterface.c. */
+void SNetDistribStart(void);
+
+/* Cause dist layer to terminate. */
+void SNetDistribStop(void);
+
+/* Dummy function needed for networkinterface.c */
+snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *in, int loc);
+void SNetRecDetrefStackSerialise(snet_record_t *rec, void *buf);
+void SNetRecDetrefRecSerialise(snet_record_t *rec, void *buf);
+void SNetRecDetrefStackDeserialise(snet_record_t *rec, void *buf);
+snet_record_t* SNetRecDetrefRecDeserialise(void *buf);
 
 /* xdripback.c */
 
@@ -367,6 +404,27 @@ const char *SNetLandingTypeName(landing_type_t ltype);
 /* Give a string representation of the landing type */
 const char *SNetLandingName(landing_t *land);
 
+/* xmanager.c */
+
+
+/* Setup data structures for input manager. */
+void SNetInputManagerInit(void);
+
+/* Start input manager thread. */
+void SNetInputManagerStart(void);
+
+/* Cleanup input manager. */
+void SNetInputManagerStop(void);
+
+/* Process one input message. */
+bool SNetInputManagerDoTask(worker_t *worker);
+
+/* Loop forever processing network input. */
+void SNetInputManagerRun(worker_t *worker);
+
+/* Convert a distributed communication protocol message type to a string. */
+const char* SNetCommName(int i);
+
 /* xnameshift.c */
 
 
@@ -384,6 +442,58 @@ snet_stream_t *SNetNameShift(
     int location,
     int offset,
     snet_variant_t *untouched);
+
+/* xnodist.c */
+
+void hello(const char *s);
+
+/* Initialize distributed computing. Called by SNetInRun in networkinterface.c. */
+void SNetDistribInit(int argc, char **argv, snet_info_t *info);
+
+/* Start input+output managers. Called by SNetInRun in networkinterface.c. */
+void SNetDistribStart(void);
+void SNetDistribGlobalStop(void);
+void SNetDistribWaitExit(snet_info_t *info);
+
+/* Needed frequently for record IDs and field references. */
+int SNetDistribGetNodeId(void);
+
+/* Are we identified by location? Needed frequently for field references. */
+bool SNetDistribIsNodeLocation(int location);
+
+/* Test for rootness. First call by SNetInRun in networkinterface.c. */
+bool SNetDistribIsRootNode(void);
+
+/* Is this application supporting distributed computations? */
+bool SNetDistribIsDistributed(void);
+
+/* Use by distribution layer in C4SNet.c. */
+void SNetDistribPack(void *src, ...);
+
+/* Use by distribution layer in C4SNet.c. */
+void SNetDistribUnpack(void *dst, ...);
+
+/* Request a field from transfer. Called when distributed. */
+void SNetDistribFetchRef(snet_ref_t *ref);
+
+/* Update field reference counter. Called when distributed. */
+void SNetDistribUpdateRef(snet_ref_t *ref, int count);
+
+/* Dummy function needed for networkinterface.c */
+snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *in, int loc);
+
+/* Dummy function which is irrelevant for non-Distributed S-Net. */
+void SNetInputManagerRun(worker_t *worker);
+
+/* Dummy function which is irrelevant for non-Distributed S-Net. */
+snet_stream_desc_t *SNetTransferOpen(
+    int loc,
+    snet_stream_desc_t *desc,
+    snet_stream_desc_t *prev);
+void SNetRecDetrefStackSerialise(snet_record_t *rec, void *buf);
+void SNetRecDetrefRecSerialise(snet_record_t *rec, void *buf);
+void SNetRecDetrefStackDeserialise(snet_record_t *rec, void *buf);
+snet_record_t* SNetRecDetrefRecDeserialise(void *buf);
 
 /* xobserve.c */
 
@@ -483,13 +593,32 @@ void SNetTermSplit(landing_t *land, fifo_t *fifo);
 /* Destroy a split node. */
 void SNetStopSplit(node_t *node, fifo_t *fifo);
 
+/* Return the current indexed placement stack level. */
+int SNetLocSplitGetLevel(void);
+
+/* Increment the indexed placement stack level by one. */
+void SNetLocSplitIncrLevel(void);
+
+/* Decrement the indexed placement stack level by one. */
+void SNetLocSplitDecrLevel(void);
+
+/* Return the current indexed placement stack level. */
+int SNetSubnetGetLevel(void);
+
+/* Increment the indexed placement stack level by one. */
+void SNetSubnetIncrLevel(void);
+
+/* Decrement the indexed placement stack level by one. */
+void SNetSubnetDecrLevel(void);
+
 /**
- * Convenience function for creating
- * Split, DetSplit, LocSplit or LocSplitDet,
- * dependent on parameters is_byloc and is_det
+ * Convenience function for creating a Split, DetSplit, LocSplit or LocSplitDet.
+ * This is determined by the parameters 'is_byloc' and 'is_det'.
+ * Parameter 'is_byloc' says whether to create an indexed placement combinator.
+ * Parameter 'is_det' specifies if the combinator is deterministic.
  */
 snet_stream_t *CreateSplit(
-    snet_stream_t *instream,
+    snet_stream_t *input,
     snet_info_t *info,
     int location,
     snet_startup_fun_t box_a,
@@ -533,6 +662,7 @@ snet_stack_t *SNetStackCreate(void);
 void SNetStackDone(snet_stack_t *stack);
 void SNetStackDestroy(snet_stack_t *stack);
 bool SNetStackIsEmpty(snet_stack_t *stack);
+bool SNetStackNonEmpty(snet_stack_t *stack);
 void SNetStackPush(snet_stack_t *stack, void *item);
 void *SNetStackTop(const snet_stack_t *stack);
 void *SNetStackPop(snet_stack_t *stack);
@@ -540,6 +670,15 @@ void SNetStackPopAll(snet_stack_t *stack);
 
 /* Shallow duplicate a stack. Stack 'dest' must exist as empty. */
 void SNetStackCopy(snet_stack_t *dest, const snet_stack_t *source);
+
+/* Construct a literal copy of an existing stack. */
+snet_stack_t* SNetStackClone(const snet_stack_t *source);
+
+/* Swap two stacks. */
+void SNetStackSwap(snet_stack_t *one, snet_stack_t *two);
+
+/* Compute number of elements in the stack. */
+int SNetStackElementCount(snet_stack_t *stack);
 
 /* xstar.c */
 
@@ -598,6 +737,9 @@ snet_stream_t *SNetStreamCreate(int capacity);
 /* Free a stream */
 void SNetStreamDestroy(snet_stream_t *stream);
 
+/* Dummy function needed for linking with other libraries. */
+void *SNetStreamRead(snet_stream_desc_t *sd);
+
 /* Enqueue a record to a stream and add a note to the todo list. */
 void SNetStreamWrite(snet_stream_desc_t *desc, snet_record_t *rec);
 
@@ -630,6 +772,13 @@ void SNetDescRelease(snet_stream_desc_t *desc, int count);
  * and push this landing onto a stack of future landings.
  * (2) Collectors should retrieve their designated landing from this stack
  * and verify that it is theirs.
+ * (3) Each star instance should create the subsequent star incarnation
+ * and push this incarnation onto the stack of landings.
+ * (4) When a destination landing is part of subnetwork of an
+ * indexed placement combinator then the node location must be
+ * retrieved from the 'dyn_locs' attribute of the previous landing.
+ * (5) When the location is on a different machine then a 'transfer'
+ * landing must be created instead which connects to a remote location.
  */
 snet_stream_desc_t *SNetStreamOpen(
     snet_stream_t *stream,
@@ -669,6 +818,9 @@ int SNetThreadingWorkers(void);
 /* How many thieves? */
 int SNetThreadingThieves(void);
 
+/* How many distributed computing threads? */
+int SNetThreadedManagers(void);
+
 /* What kind of garbage collection to use? */
 bool SNetGarbageCollection(void);
 
@@ -678,6 +830,21 @@ bool SNetVerbose(void);
 /* Whether to enable debugging information */
 bool SNetDebug(void);
 
+/* Whether debugging of distributed front is enabled */
+bool SNetDebugDF(void);
+
+/* Whether debugging of garbage collection is enabled */
+bool SNetDebugGC(void);
+
+/* Whether debugging of the streams layer is enabled */
+bool SNetDebugSL(void);
+
+/* Whether debugging of the threading layer is enabled */
+bool SNetDebugTL(void);
+
+/* Whether debugging of work stealing is enabled */
+bool SNetDebugWS(void);
+
 /* Whether to use a deterministic feedback */
 bool SNetFeedbackDeterministic(void);
 
@@ -685,7 +852,7 @@ bool SNetFeedbackDeterministic(void);
 bool SNetZipperEnabled(void);
 
 /* The stack size for worker threads in bytes */
-size_t SNetStackSize(void);
+size_t SNetThreadStackSize(void);
 
 /* Whether to apply an input throttle. */
 bool SNetInputThrottle(void);
@@ -715,8 +882,6 @@ int SNetThreadingInit(int argc, char**argv);
 void SNetThreadCreate(void *(*func)(void *), worker_t *worker);
 void SNetThreadSetSelf(worker_t *self);
 worker_t *SNetThreadGetSelf(void);
-const char *SNetThreadingGetName(void);
-void SNetThreadingEventSignal(void *moninfo);
 int SNetThreadingStop(void);
 int SNetThreadingCleanup(void);
 
@@ -741,6 +906,39 @@ void SNetVariantListString(snet_variant_list_t *vl, char *buf, size_t size);
 /* Convert a variant list type to a dynamically allocated string. */
 char *SNetGetVariantListString(snet_variant_list_t *vl);
 
+/* xtransfer.c */
+
+
+/* Combine two signed 32-bits integers into a 64-bit unsigned hash key. */
+uint64_t snet_ints_to_key(int i1, int i2);
+
+/* Initialize storage for continuations. */
+void SNetTransferInit(void);
+
+/* Delete storage for continuations. */
+void SNetTransferStop(void);
+
+/* Restore landing state from a continuation. */
+void SNetTransferRestore(landing_t *land, snet_stream_desc_t *desc);
+
+/* Forward a record to a different node. */
+void SNetNodeTransfer(snet_stream_desc_t *desc, snet_record_t *rec);
+
+/* Terminate a landing of type 'transfer'. */
+void SNetTermTransfer(landing_t *land, fifo_t *fifo);
+
+/* Initialize a transfer landing, which connects to a remote location. */
+snet_stream_desc_t *SNetTransferOpen(
+    int destination_location,
+    snet_stream_desc_t *desc,
+    snet_stream_desc_t *prev);
+
+/* Setup a transfer landing to connect back to a remote continuation. */
+void SNetTransferReturn(
+    landing_t *next,
+    snet_stream_desc_t *desc,
+    snet_stream_desc_t *prev);
+
 /* xworker.c */
 
 
@@ -751,7 +949,11 @@ void SNetWorkerInit(void);
 void SNetWorkerCleanup(void);
 
 /* Create a new worker. */
-worker_t *SNetWorkerCreate(node_t *input_node, int worker_id, node_t *output_node);
+worker_t *SNetWorkerCreate(
+    node_t *input_node,
+    int worker_id,
+    node_t *output_node,
+    worker_role_t role);
 
 /* Destroy a worker. */
 void SNetWorkerDestroy(worker_t *worker);
@@ -763,6 +965,18 @@ void SNetWorkerTodo(worker_t *worker, snet_stream_desc_t *desc);
 
 /* Steal a work item from another worker */
 void SNetWorkerStealVictim(worker_t *victim, worker_t *thief);
+
+/* Return the worker which is the input manager for Distributed S-Net. */
+worker_t* SNetWorkerGetInputManager(void);
+
+/* Test if other workers have work to do. */
+bool SNetWorkerOthersBusy(worker_t *worker);
+
+/* Cleanup unused memory. */
+void SNetWorkerMaintenaince(worker_t *worker);
+
+/* Wait for other workers to finish. */
+void SNetWorkerWait(worker_t *worker);
 
 /* Process work forever and read input until EOF. */
 void SNetWorkerRun(worker_t *worker);

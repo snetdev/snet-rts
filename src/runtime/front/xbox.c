@@ -50,14 +50,6 @@ static void SNetNodeBoxData(box_context_t *box)
 #ifdef SNET_DEBUG_COUNTERS
   SNetDebugTimeGetTime(&time_in);
 #endif
-#ifdef DONT_USE_USER_EVENT_LOGGING
-  /* Emit a monitoring message of a record read to be processed by a box */
-  if (REC_DESCR(rec) == REC_data) {
-    SNetThreadingEventSignal( barg->entity,
-        SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
-        );
-  }
-#endif
 
   (*barg->boxfun)( &hnd);
 
@@ -294,7 +286,7 @@ snet_stream_t *SNetBox( snet_stream_t *input,
   for (i = 0; i < concurrency; ++i) {
     outstreams[i] = SNetStreamCreate(0);
   }
-  node = SNetNodeNew(NODE_box, &input, 1, outstreams, concurrency,
+  node = SNetNodeNew(NODE_box, location, &input, 1, outstreams, concurrency,
                      SNetNodeBox, SNetStopBox, SNetTermBox);
 
   barg = NODE_SPEC(node, box);
