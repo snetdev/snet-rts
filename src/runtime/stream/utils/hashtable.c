@@ -1,65 +1,99 @@
 /* Hash table with 64bit keys and separate chaining */
+#include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
+#include <assert.h>
 
 #include "hashtable.h"
 #include "memfun.h"
 
+/* Calculate the number of elements in a static array. */
+#define NUM_ELEMS(x)    (sizeof(x) / sizeof((x)[0]))
+
+#define SMALLEST_PRIME  53
+
+/* Ideal primes for division hashing from planetmath.org/goodhashtableprimes */
+static struct ideal_primes {
+  size_t power;
+  size_t prime;
+} ideal_primes[] = {
+  {  5, 53 },
+  {  6, 97 },
+  {  7, 193 },
+  {  8, 389 },
+  {  9, 769 },
+  { 10, 1543 },
+  { 11, 3079 },
+  { 12, 6151 },
+  { 13, 12289 },
+  { 14, 24593 },
+  { 15, 49157 },
+  { 16, 98317 },
+  { 17, 196613 },
+  { 18, 393241 },
+  { 19, 786433 },
+  { 20, 1572869 },
+  { 21, 3145739 },
+  { 22, 6291469 },
+  { 23, 12582917 },
+  { 24, 25165843 },
+  { 25, 50331653 },
+  { 26, 100663319 },
+  { 27, 201326611 },
+  { 28, 402653189 },
+  { 29, 805306457 },
+  { 30, 1610612741 },
+};
+static const size_t num_ideal_primes = NUM_ELEMS(ideal_primes);
+
 typedef struct hashtable_entry {
-  uint64_t key;
-  void *value;
+  uint64_t                key;
+  void                   *value;
   struct hashtable_entry *next;
 } hashtable_entry_t;
 
 struct snet_hashtable{
-  snet_hashtable_compare_fun_t compare_fun;
-  unsigned int size;
-  unsigned int elements;
-  hashtable_entry_t **entries;
+  hashtable_entry_t   **entries;
+  int                   size;
+  int                   elements;
+  int                   prime;
+  int                   index;
 };
 
+#define SNetHashtableHash(table, key) ((int)((key) % (table)->prime))
 
-/* TODO: Implement more efficient hash function ;-)
- *
- * although, modulo hashing may be a good approach as 
- * ids are always created by incrementing the last id by one!
- *
- */
-
-#define SNetHashtableHash(table, key) (int)(key % table->size)
-
-snet_hashtable_t *SNetHashtableCreate(int size, snet_hashtable_compare_fun_t compare_fun)
+snet_hashtable_t *SNetHashtableCreate(int size)
 {
-  snet_hashtable_t *table;
+  snet_hashtable_t *table = SNetMemAlloc(sizeof(snet_hashtable_t));
+  int i;
 
-  if(size <= 0) {
-    return NULL;
-  } 
-
-  table = SNetMemAlloc(sizeof(snet_hashtable_t));
-
-  table->size = size;
+  assert(size >= 0);
+  if (size == 0) {
+    size = SMALLEST_PRIME;
+  }
+  for (i = 0; i < num_ideal_primes; ++i) {
+    if (ideal_primes[i].prime >= size || i + 1 == num_ideal_primes) {
+      table->size = size = ideal_primes[i].prime;
+      table->index = i;
+      table->prime = ideal_primes[i].prime;
+      break;
+    }
+  }
   table->elements = 0;
- 
   table->entries = SNetMemAlloc(sizeof(hashtable_entry_t *) * table->size);
-
   memset(table->entries, 0, sizeof(snet_hashtable_t *) * table->size);
-
-  table->compare_fun = compare_fun;
 
   return table;
 }
 
 void SNetHashtableDestroy(snet_hashtable_t *table)
 {
-  unsigned int i;
-  hashtable_entry_t *next;
+  int i;
 
-  for(i = 0; i < table->size; i++) {
-    while(table->entries[i] != NULL) {
-      next = table->entries[i];
-
+  for (i = 0; i < table->size; i++) {
+    while (table->entries[i] != NULL) {
+      hashtable_entry_t *next = table->entries[i];
       table->entries[i] = next->next;
-      
       SNetMemFree(next);
     }
   }
@@ -75,85 +109,36 @@ int SNetHashtableSize(snet_hashtable_t *table)
 
 void *SNetHashtableGet(snet_hashtable_t *table, uint64_t key)
 {
-  unsigned int index;
-  hashtable_entry_t *temp;
-
-  if(table->elements > 0) {
-    
-    index = SNetHashtableHash(table, key);
-    
-    temp = table->entries[index];
-    
-    while(temp != NULL && temp->key != key) {
-      temp = temp->next;
-    }
-
-    if(temp != NULL) {
-      return temp->value;
+  if (table->elements > 0) {
+    int index = SNetHashtableHash(table, key);
+    hashtable_entry_t *temp;
+    for (temp = table->entries[index]; temp; temp = temp->next) {
+      if (temp->key == key) {
+        return temp->value;
+      }
     }
   }
 
   return NULL;
 }
 
-uint64_t SNetHashtableGetKey(snet_hashtable_t *table, 
-			     void *value) 
-{
-  unsigned int i;
-  hashtable_entry_t *temp;
-
-  if(table->elements > 0) {
-    for(i = 0; i < table->size; i++) {
-      
-      temp = table->entries[i];
-      
-      while(temp != NULL) {
-	if(table->compare_fun(value, temp->value)) {
-	  return temp->key;
-	}
-      
-	temp = temp->next;
-      }
-    }
-  }
-
-  return UINT64_MAX;
-}
-
 int SNetHashtablePut(snet_hashtable_t *table, uint64_t key, void *value)
 {
-  unsigned int index;
-  hashtable_entry_t *temp;
+  int index = SNetHashtableHash(table, key);
+  hashtable_entry_t *temp = table->entries[index];
 
-  hashtable_entry_t *new;
-
-  index = SNetHashtableHash(table, key);
-
-  temp = table->entries[index];
-
-  while(temp != NULL) {
-    if(temp->key == key) {
+  for (; temp; temp = temp->next) {
+    if (temp->key == key) {
+      assert(false);
       return SNET_HASHTABLE_ERROR;
     }
-
-    if(temp->next == NULL) {
-      break;
-    }
-     
-    temp = temp->next;
   }
-  
-  new = SNetMemAlloc(sizeof(hashtable_entry_t));
 
-  new->key = key;
-  new->value = value;
-  new->next = NULL;
-
-  if(temp == NULL) {
-    table->entries[index] = new;
-  } else {
-    temp->next = new;
-  }
+  temp = SNetMemAlloc(sizeof(hashtable_entry_t));
+  temp->key = key;
+  temp->value = value;
+  temp->next = table->entries[index];
+  table->entries[index] = temp;
 
   table->elements++;
 
@@ -162,56 +147,83 @@ int SNetHashtablePut(snet_hashtable_t *table, uint64_t key, void *value)
 
 void *SNetHashtableReplace(snet_hashtable_t *table, uint64_t key, void *new_value)
 {
-  unsigned int index;
-  hashtable_entry_t *temp;
-  void *value = NULL;
+  int index = SNetHashtableHash(table, key);
+  hashtable_entry_t *temp = table->entries[index];
 
-  index = SNetHashtableHash(table, key);
-
-  temp = table->entries[index];
-
-  while(temp != NULL && temp->key != key) {
-    temp = temp->next;
+  for (; temp; temp = temp->next) {
+    if (temp->key == key) {
+      void *value = temp->value;
+      temp->value = new_value;
+      return value;
+    }
   }
 
-  if(temp != NULL) {
-    value = temp->value;
-
-    temp->value = new_value; 
-  }
-
-  return value;
+  return NULL;
 }
 
 void *SNetHashtableRemove(snet_hashtable_t *table, uint64_t key)
 {
-  unsigned int index;
-  hashtable_entry_t *temp;
+  int index = SNetHashtableHash(table, key);
+  hashtable_entry_t *temp = table->entries[index];
   hashtable_entry_t *last = NULL;
   void *value = NULL;
 
-  index = SNetHashtableHash(table, key);
-
-  temp = table->entries[index];
-
-  while(temp != NULL && temp->key != key) {
+  while (temp && temp->key != key) {
     last = temp;
     temp = temp->next;
   }
-
-  if(temp != NULL) {
+  if (temp) {
     value = temp->value;
-
-    if(last != NULL) {
+    if (last) {
       last->next = temp->next;
     } else {
       table->entries[index] = temp->next;
     }
-
     SNetMemFree(temp);
-
     table->elements--;
   }
 
   return value;
 }
+
+bool SNetHashtableFirstKey(snet_hashtable_t *table, uint64_t *first)
+{
+  bool found = false;
+  int i;
+  for (i = 0; i < table->size; ++i) {
+    if (table->entries[i]) {
+      *first = table->entries[i]->key;
+      found = true;
+    }
+  }
+  return found;
+}
+
+bool SNetHashtableNextKey(snet_hashtable_t *table, uint64_t key, uint64_t *next)
+{
+  bool                  found = false;
+  int                   index = SNetHashtableHash(table, key);
+  hashtable_entry_t    *temp;
+
+  for (temp = table->entries[index]; temp; temp = temp->next) {
+    if (temp->key == key) {
+      break;
+    }
+  }
+  if (temp) {
+    if (temp->next) {
+      *next = temp->next->key;
+      found = true;
+    } else {
+      while (++index < table->size) {
+        if (table->entries[index]) {
+          *next = table->entries[index]->key;
+          found = true;
+        }
+      }
+    }
+  }
+
+  return found;
+}
+
