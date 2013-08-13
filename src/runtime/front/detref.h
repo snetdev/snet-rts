@@ -6,15 +6,20 @@
 /*
  * A reference counter for deterministic ordering:
  *
- * All records that enter a deterministic network
- * receive a 'detref' structure to keep track of
- * their ordering in the streams of records.
- * Records which are created within the network
- * are always created in the context of an
- * existing record which carries a 'detref' structure.
- * The newly created records are also associated with
- * this 'detref' structure and for each one the reference
- * counter in this 'detref' structure is incremented.
+ * Every record that enters a deterministic network
+ * is associated with a new 'detref' structure
+ * to keep track of its ordering with respect to
+ * previous and subsequent records.
+ * Records which are created within the deterministic network
+ * are always created in the context of an existing record
+ * which already carries a 'detref' structure.
+ * The newly created records are then also associated with
+ * this same 'detref' structure and for each new record the
+ * reference counter in this 'detref' structure is incremented.
+ * For each records which is deleted the reference counter
+ * is decremented. Therefore, at each moment the detref structure
+ * tells how many records correspond to that sorting position
+ * in the deterministic output sorting.
  *
  * The order of records leaving the deterministic network
  * is restored according to the value of 'seqnr'.
@@ -29,14 +34,17 @@
  * have a stack of references to 'detref' structures.
  */
 typedef struct detref {
-  long                  seqnr;
-  landing_t            *leave;
-  int                   refcount;
-  fifo_t                recfifo;
+  long                  seqnr;          /* sequence number for sorting */
+  landing_t            *leave;          /* destination collector landing */
+  struct detref        *nonlocal;       /* non-NULL if on a remote location */
+  int                   location;       /* in distributed computing */
+  int                   refcount;       /* number of associated records */
+  fifo_t                recfifo;        /* record queue at collector */
 } detref_t;
 
 #define DETREF_INCR(detref)     AAF(&(detref)->refcount, 1)
 #define DETREF_DECR(detref)     SAF(&(detref)->refcount, 1)
+#define DETREF_MIN_REFCOUNT     2
 
 #endif
 

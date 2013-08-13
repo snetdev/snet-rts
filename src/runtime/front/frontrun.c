@@ -45,3 +45,8 @@ void SNetRuntimeStartWait(snet_stream_t *in, snet_info_t *info, snet_stream_t *o
   SNetNodeRun(in, info, out);
 }
 
+snet_runtime_t SNetRuntimeGet(void)
+{
+  return Front;
+}
+

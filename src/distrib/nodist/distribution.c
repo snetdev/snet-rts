@@ -13,7 +13,7 @@ void SNetDistribInit(int argc, char **argv, snet_info_t *info)
   (void) argc; /* NOT USED */
   (void) argv; /* NOT USED */
   (void) info; /* NOT USED */
-  node_location = 0;
+  node_location = ROOT_LOCATION;
   SNetReferenceInit();
 }
 
@@ -32,7 +32,6 @@ void SNetDistribWaitExit(snet_info_t *info)
   pthread_mutex_lock(&exitMutex);
   while (running) pthread_cond_wait(&exitCond, &exitMutex);
   pthread_mutex_unlock(&exitMutex);
-  SNetReferenceDestroy();
 }
 
 int SNetDistribGetNodeId(void) { return node_location; }
@@ -45,6 +44,8 @@ bool SNetDistribIsNodeLocation(int location)
 }
 
 bool SNetDistribIsRootNode(void) { return true; }
+
+bool SNetDistribIsDistributed(void) { return false; }
 
 snet_stream_t *SNetRouteUpdate(snet_info_t *info, snet_stream_t *input, int loc)
 {

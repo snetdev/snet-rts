@@ -28,6 +28,11 @@ bool SNetStackIsEmpty(snet_stack_t *stack)
   return stack->head == NULL;
 }
 
+bool SNetStackNonEmpty(snet_stack_t *stack)
+{
+  return stack->head != NULL;
+}
+
 void SNetStackPush(snet_stack_t *stack, void *item)
 {
   snet_stack_node_t *snet_stack_node = SNetNew(snet_stack_node_t);
@@ -82,5 +87,32 @@ void SNetStackCopy(snet_stack_t *dest, const snet_stack_t *source)
   }
   /* terminate new list */
   *copy = NULL;
+}
+
+/* Construct a literal copy of an existing stack. */
+snet_stack_t* SNetStackClone(const snet_stack_t *source)
+{
+  snet_stack_t *clone = SNetStackCreate();
+  SNetStackCopy(clone, source);
+  return clone;
+}
+
+/* Swap two stacks. */
+void SNetStackSwap(snet_stack_t *one, snet_stack_t *two)
+{
+  snet_stack_node_t *head = one->head;
+  one->head = two->head;
+  two->head = head;
+}
+
+/* Compute number of elements in the stack. */
+int SNetStackElementCount(snet_stack_t *stack)
+{
+  int count = 0;
+  snet_stack_node_t *node;
+  for (node = stack->head; node; node = node->next) {
+    ++count;
+  }
+  return count;
 }
 

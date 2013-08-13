@@ -4,6 +4,15 @@
   </default>
 </metadata>
 
-net serial
+net serial ({<T>,<S>} -> ...)
 { 
-  } connect ([{<T>} -> {<T=T+1>}]@1 .. [{<S>} -> {<S=S+2>}]@2)@3;
+  net dot
+  connect [{<T>} -> {<T=T+1>}];
+
+  net dos
+  connect [{<S>} -> {<S=S+2>}];
+
+  net sub
+  connect dot@1 .. dos@2;
+
+} connect sub@3;

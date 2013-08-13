@@ -6,6 +6,7 @@
  * This is the version for the Threaded-Entity RTS (Pthread/LPEL).
  */
 
+#include <assert.h>
 #include "distribution.h"
 #include "stream.h"
 #include "networkinterface.h"
@@ -34,4 +35,21 @@ void SNetRecDetrefCopy(snet_record_t *new_rec, snet_record_t *old_rec)
 {
   /* Only needed for the Front-RTS. */
 }
+
+snet_runtime_t SNetRuntimeGet(void)
+{
+  return Streams;
+}
+
+void SNetRecDetrefStackSerialise(snet_record_t *rec, void *buf)
+{ assert(false); }
+
+void SNetRecDetrefRecSerialise(snet_record_t *rec, void *buf)
+{ assert(false); }
+
+void SNetRecDetrefStackDeserialise(snet_record_t *rec, void *buf)
+{ assert(false); }
+
+snet_record_t* SNetRecDetrefRecDeserialise(void *buf)
+{ assert(false); }
 

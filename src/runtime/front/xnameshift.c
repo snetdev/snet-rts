@@ -99,8 +99,9 @@ snet_stream_t *SNetNameShift(
   filter_arg_t *farg;
 
   trace(__func__);
+
   output = SNetStreamCreate(0);
-  node = SNetNodeNew(NODE_nameshift, &input, 1, &output, 1,
+  node = SNetNodeNew(NODE_nameshift, location, &input, 1, &output, 1,
                      SNetNodeNameShift, SNetStopNameShift, SNetTermNameShift);
   farg = NODE_SPEC(node, filter);
   farg->output = output;

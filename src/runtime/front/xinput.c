@@ -66,6 +66,9 @@ void SNetStopInput(node_t *node, fifo_t *fifo)
   trace(__func__);
   iarg->indesc->landing->refs = 0;
   SNetFreeLanding(iarg->indesc->landing);
+  iarg->indesc->landing = NULL;
+  SNetStreamDestroy(iarg->indesc->stream);
+  iarg->indesc->stream = NULL;
   SNetDelete(iarg->indesc);
   SNetStopStream(iarg->output, fifo);
   SNetDelete(node);
@@ -95,7 +98,7 @@ void SNetInInputInit(
   trace(__func__);
 
   /* Create input node in the fixed network. */
-  node = SNetNodeNew(NODE_input, (snet_stream_t **)NULL, 0, &output, 1,
+  node = SNetNodeNew(NODE_input, ROOT_LOCATION, NULL, 0, &output, 1,
                      SNetNodeInput, SNetStopInput, SNetTermInput);
   iarg = NODE_SPEC(node, input);
   iarg->output = output;
@@ -104,6 +107,8 @@ void SNetInInputInit(
   /* Create an empty input descriptor: needed for SNetStreamOpen. */
   iarg->indesc = SNetNewAlign(snet_stream_desc_t);
   memset(iarg->indesc, 0, sizeof(snet_stream_desc_t));
+  iarg->indesc->stream = SNetStreamCreate(0);
+  iarg->indesc->stream->dest = node;
 
   /* Create landing: needed for locking the input node before use. */
   iarg->indesc->landing = SNetNewLanding(node, NULL, LAND_input);

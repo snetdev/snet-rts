@@ -59,15 +59,6 @@ typedef struct {
 #include "locvec.h"
 
 
-#define LIST_NAME_H RecId /* SNetRecIdListFUNC */
-#define LIST_TYPE_NAME_H recid
-#define LIST_VAL_H snet_record_id_t
-#include "list-template.h"
-#undef LIST_VAL_H
-#undef LIST_TYPE_NAME_H
-#undef LIST_NAME_H
-
-
 typedef struct {
   snet_int_map_t *tags;
   snet_int_map_t *btags;
@@ -97,9 +88,11 @@ typedef struct {
 } coll_rec_t;
 
 typedef struct detref_rec {
-  long                   seqnr;
-  struct landing        *leave;
-  struct detref         *detref;
+  long                   seqnr;         /* mono-incr ID for determ sorting */
+  int                    location;      /* location where pointers are valid */
+  int                    senderloc;     /* location of sender */
+  struct landing        *leave;         /* destination collector landing */
+  struct detref         *detref;        /* pointer to pertaining structure */
 } detref_rec_t;
 
 typedef struct observ_rec {
@@ -214,5 +207,10 @@ void SNetRecUnknown(const char *funcname, snet_record_t *rec);
 
 void SNetRecUnknownEnt(const char *funcname, snet_record_t *rec,
                        snet_entity_t *ent);
+
+void SNetRecDetrefStackSerialise(snet_record_t *rec, void *buf);
+void SNetRecDetrefStackDeserialise(snet_record_t *rec, void *buf);
+void SNetRecDetrefRecSerialise(snet_record_t *rec, void *buf);
+snet_record_t* SNetRecDetrefRecDeserialise(void *buf);
 
 #endif /* _RECORD_H_ */

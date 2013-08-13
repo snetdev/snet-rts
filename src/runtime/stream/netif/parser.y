@@ -512,8 +512,8 @@ Field:    FIELD_BEGIN Attributes STARTTAG_SHORTEND
 	
 	    if(iid != INTERFACE_UNKNOWN) {
 	
-        if(current.mode == MODE_TEXTUAL) {
-          data = SNetInterfaceGet(iid)->deserialisefun(yyin);
+              if (current.mode == MODE_TEXTUAL) {
+                data = SNetInterfaceGet(iid)->deserialisefun(yyin);
 	      } else if(current.mode == MODE_BINARY) {
 		        data = SNetInterfaceGet(iid)->decodefun(yyin);
 	      } else {

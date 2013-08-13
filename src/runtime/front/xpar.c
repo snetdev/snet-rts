@@ -386,7 +386,7 @@ void SNetStopParallel(node_t *node, fifo_t *fifo)
 }
 
 static snet_stream_t *CreateParallel(
-    snet_stream_t *instream,
+    snet_stream_t *input,
     snet_info_t *info,
     int location,
     snet_variant_list_list_t *variant_lists,
@@ -396,7 +396,6 @@ static snet_stream_t *CreateParallel(
   int i;
   node_t         *node;
   parallel_arg_t *parg;
-  snet_stream_t  *input;
   snet_stream_t  *output;
   snet_stream_t **transits;
   snet_stream_t **collstreams;
@@ -407,53 +406,39 @@ static snet_stream_t *CreateParallel(
   locvec = SNetLocvecGet(info);
   SNetLocvecParallelEnter(locvec);
 
-  input = SNetRouteUpdate(info, instream, location);
-  if (SNetDistribIsNodeLocation(location)) {
+  transits    = SNetNewN(num, snet_stream_t*);
+  collstreams = SNetNewN(num + 1, snet_stream_t*);
 
-    transits    = SNetNewN(num, snet_stream_t*);
-    collstreams = SNetNewN(num + 1, snet_stream_t*);
-
-    /* create branches */
-    LIST_ENUMERATE(variant_lists, i, variants) {
-      snet_info_t *newInfo = SNetInfoCopy(info);
-      transits[i] = SNetStreamCreate(0);
-      SNetLocvecParallelNext(locvec);
-      collstreams[i] = (*funs[i])(transits[i], newInfo, location);
-      SNetInfoDestroy(newInfo);
-      (void) variants;    /* prevent compiler warnings */
-    }
-
-    SNetLocvecParallelReset(locvec);
-
-    node = SNetNodeNew(NODE_parallel, &input, 1, transits, num,
-                       SNetNodeParallel, SNetStopParallel, SNetTermParallel);
-    parg = NODE_SPEC(node, parallel);
-    parg->outputs = transits;
-    parg->variant_lists = variant_lists;
-    parg->num = num;
-    parg->is_det = is_det;
-    parg->is_detsup = (SNetDetGetLevel() > 0);
-    parg->entity = SNetEntityCreate( ENTITY_parallel, location, locvec,
-                                     "<parallel>", NULL, (void*)parg);
-
-    /* create collector with collstreams */
-    parg->collector = collstreams[num] = SNetStreamCreate(0);
-    output = SNetCollectorStatic(num + 1, collstreams, location, info,
-                                 is_det, node);
-    SNetDeleteN(num + 1, collstreams);
-  } else {
-    /* create branches */
-    LIST_ENUMERATE(variant_lists, i, variants) {
-      snet_info_t *newInfo = SNetInfoCopy(info);
-      SNetLocvecParallelNext(locvec);
-      instream = (*funs[i])(instream, newInfo, location);
-      instream = SNetRouteUpdate(newInfo, instream, location);
-      SNetInfoDestroy(newInfo);
-    }
-
-    SNetVariantListListDestroy( variant_lists);
-    output = instream;
+  /* create branches */
+  SNetSubnetIncrLevel();
+  LIST_ENUMERATE(variant_lists, i, variants) {
+    snet_info_t *newInfo = SNetInfoCopy(info);
+    transits[i] = SNetStreamCreate(0);
+    SNetLocvecParallelNext(locvec);
+    collstreams[i] = (*funs[i])(transits[i], newInfo, location);
+    SNetInfoDestroy(newInfo);
+    (void) variants;    /* prevent compiler warnings */
   }
+  SNetSubnetDecrLevel();
+
+  SNetLocvecParallelReset(locvec);
+
+  node = SNetNodeNew(NODE_parallel, location, &input, 1, transits, num,
+                     SNetNodeParallel, SNetStopParallel, SNetTermParallel);
+  parg = NODE_SPEC(node, parallel);
+  parg->outputs = transits;
+  parg->variant_lists = variant_lists;
+  parg->num = num;
+  parg->is_det = is_det;
+  parg->is_detsup = (SNetDetGetLevel() > 0);
+  parg->entity = SNetEntityCreate( ENTITY_parallel, location, locvec,
+                                   "<parallel>", NULL, (void*)parg);
+
+  /* create collector with collstreams */
+  parg->collector = collstreams[num] = SNetStreamCreate(0);
+  output = SNetCollectorStatic(num + 1, collstreams, location, info,
+                               is_det, node);
+  SNetDeleteN(num + 1, collstreams);
 
   SNetLocvecParallelLeave(locvec);
   SNetDeleteN(num, funs);
