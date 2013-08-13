@@ -1,0 +1,36 @@
+<metadata>
+  <default>
+    <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+// This optional box displays the values of the tags:
+box tell ((<T>,<S>,<R>) -> (<T>,<S>,<R>));
+
+net nestedstar({<T>,<S>,<R>} -> ...)
+{
+  net dot
+  {
+    net dos
+    {
+      net dor
+      {
+        net ar
+        connect [{<R>} -> {<R=R+1>}];
+      }
+      connect tell .. ar;
+
+      net as
+      connect [{<S>,<R>} -> {<S=S+1>,<R=0>}];
+    }
+    connect dor!@<R> * {<R>} if <R >= 4> .. as;
+
+    net at
+    connect [{<T>,<S>} -> {<T=T+1>,<S=0>}];
+
+  }
+  connect dos!@<S> * {<S>} if <S >= 4> .. at;
+
+}
+connect dot!@<T> * {<T>} if <T >= 4>;
+

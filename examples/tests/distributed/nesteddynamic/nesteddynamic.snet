@@ -4,7 +4,8 @@
   </default>
 </metadata>
 
-net nesteddynamic {
+net nesteddynamic ({<T>} -> ...)
+{
   net buggy {
     net rename
     connect [{<T>} -> if <T==1> then {<S=T>} else {<T>}];

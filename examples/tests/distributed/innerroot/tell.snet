@@ -1,0 +1,16 @@
+<metadata> <default> <interface value="C4SNet"/> </default> </metadata>
+
+net tell({<I>} -> ...)
+{
+  box tell0( (<I>) -> (<I>) );
+  box tell1( (<I>) -> (<I>) );
+  box tell2( (<I>) -> (<I>) );
+  box tell4( (<I>) -> (<I>) );
+  box tell5( (<I>) -> (<I>) );
+
+  box incr3( (<I>) -> (<I>) );
+
+  net subnet
+  connect tell1 .. tell2@0 .. incr3@0 .. tell4;
+}
+connect tell0 .. subnet!@<I> .. tell5;

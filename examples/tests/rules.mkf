@@ -6,24 +6,26 @@ export SNET_EXTRA_LDFLAGS+=$(BOXES)
 
 all: $(TARGET)
 
-%.c: %.h
-
-%.o: %.c
+%.o: %.c %.h
 	gcc -g -c $< -o $@ $(INCLUDES)
 
-all: $(TARGET) $(TARGET).lpel $(TARGET).lpel_hrc
+all: $(TARGET)
 
-$(TARGET):  $(TARGET).snet $(BOXES)
-	snetc -g $(SNETCFLAGS) $< -o $@ $(INCLUDES)
+$(TARGET):  $(TARGET).snet $(BOXES) $(SOURCES)
+	snetc -g $(SNETCFLAGS) $< -o $@ -threading front $(INCLUDES) $(SOURCES)
+
+$(TARGET).pth:  $(TARGET).snet $(BOXES) $(SOURCES)
+	snetc -g $(SNETCFLAGS) $< -o $@ $(INCLUDES) $(SOURCES)
+
 lpel: $(TARGET).lpel
 
 $(TARGET).lpel: $(TARGET).snet $(BOXES)
-	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel $(INCLUDES)
+	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel $(INCLUDES) $(SOURCES)
 
 $(TARGET).lpel_hrc: $(TARGET).snet $(BOXES)
-	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel_hrc $(INCLUDES)
+	snetc -g $(SNETCFLAGS) $< -o $@ -threading lpel_hrc $(INCLUDES) $(SOURCES)
 
 
 clean:
-	rm -f $(TARGET).[och] $(BOXES) mon_*.log *tasks.map
-	$(SNET_LIBS)/libtool --mode=clean rm -f $(TARGET) $(TARGET).lo $(TARGET).lpel $(TARGET).lpel_hrc
+	rm -f $(TARGET).[och] $(patsubst %.c,%.o,$(BOXES)) mon_*.log *tasks.map core vgcore.*
+	$(SNET_LIBS)/libtool --mode=clean rm -f $(TARGET) $(TARGET).lo $(TARGET).lpel $(TARGET).lpel_hrc $(TARGET).pth

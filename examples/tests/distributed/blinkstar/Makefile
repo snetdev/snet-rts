@@ -1,7 +1,7 @@
 include ../../paths.mkf
 include ../dist.mkf
 
-TARGET = feedback
+TARGET = blinkstar
 BOXES  =
 
 include ../../rules.mkf

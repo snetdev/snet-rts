@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<record xmlns="snet-home.org" type="data" mode="textual" interface="C4SNet">
+  <tag label="T" >1</tag>
+  <tag label="S" >0</tag>
+  <tag label="R" >0</tag>
+</record>
+<record type="terminate" />

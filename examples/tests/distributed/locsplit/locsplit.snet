@@ -4,5 +4,5 @@
   </default>
 </metadata>
 
-net locsplit
+net locsplit({<T>} -> ...)
 connect [{<T>} -> {<T=T+1>}]!@<T>;
