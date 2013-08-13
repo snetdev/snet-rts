@@ -2,7 +2,7 @@
 #define DISTRIBCOMMON_H
 
 #include "memfun.h"
-#include "threading.h"
+#include "record.h"
 
 typedef enum {
   snet_rec,
@@ -28,8 +28,6 @@ typedef struct {
   snet_dest_t dest;
   snet_stream_t *stream;
 } snet_tuple_t;
-
-#include "record.h"
 
 typedef struct {
   snet_comm_type_t type;

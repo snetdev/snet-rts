@@ -19,6 +19,7 @@ typedef enum {
     CTYPE_float,   /* float */
     CTYPE_double,  /* double */
     CTYPE_ldouble, /* long double */
+    CTYPE_pointer, /* pointer to void */
 } c4snet_type_t;
 
 /* Language interface initialization function. */
