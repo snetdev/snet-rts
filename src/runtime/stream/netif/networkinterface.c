@@ -145,22 +145,13 @@ static void SNetInClose(FILE *file)
 
 
 /**
- * Main starting entry point of the SNet program
+ * Process commandline options.
  */
-int SNetInRun(int argc, char **argv,
-              char *static_labels[], int number_of_labels,
-              char *static_interfaces[], int number_of_interfaces,
-              snet_startup_fun_t fun)
+static int SNetInParseOptions(int argc, char **argv, FILE **input_ptr, FILE **output_ptr)
 {
   FILE *input = stdin;
   FILE *output = stdout;
-  snet_stream_t *input_stream = NULL;
-  snet_stream_t *output_stream = NULL;
   int i = 0;
-  snet_info_t *info;
-  snet_locvec_t *locvec;
-  snetin_label_t *labels = NULL;
-  snetin_interface_t *interfaces = NULL;
   char *brk;
   char addr[256];
   int len;
@@ -214,13 +205,16 @@ int SNetInRun(int argc, char **argv,
     }
   }
 
+  *input_ptr = input;
+  *output_ptr = output;
+
   if(input == NULL) {
 
     if(output != stdout && output != NULL) {
       SNetInClose(output);
     }
 
-    SNetUtilDebugFatal("");
+    SNetUtilDebugFatal("Could not open input");
   }
 
   if(output == NULL) {
@@ -229,9 +223,32 @@ int SNetInRun(int argc, char **argv,
       SNetInClose(input);
     }
 
-    SNetUtilDebugFatal("");
+    SNetUtilDebugFatal("Could not open output");
   }
 
+  return 1;
+}
+
+/**
+ * Main starting entry point of the SNet program
+ */
+int SNetInRun(int argc, char **argv,
+              char *static_labels[], int number_of_labels,
+              char *static_interfaces[], int number_of_interfaces,
+              snet_startup_fun_t fun)
+{
+  FILE *input = NULL;
+  FILE *output = NULL;
+  snet_stream_t *input_stream = NULL;
+  snet_stream_t *output_stream = NULL;
+  snet_info_t *info;
+  snet_locvec_t *locvec;
+  snetin_label_t *labels = NULL;
+  snetin_interface_t *interfaces = NULL;
+
+  if (0 == SNetInParseOptions(argc, argv, &input, &output)) {
+    return 0;
+  }
 
   /* Actual SNet network interface main: */
 
@@ -274,6 +291,10 @@ int SNetInRun(int argc, char **argv,
   /* tell the threading layer that it is ok to shutdown,
      and wait until it has stopped such that it can be cleaned up */
   (void) SNetThreadingStop();
+
+  if ( ! SNetDistribIsRootNode()) {
+    SNetStreamDestroy(input_stream);
+  }
 
   (void) SNetThreadingCleanup();
 
