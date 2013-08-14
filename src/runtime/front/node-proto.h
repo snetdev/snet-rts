@@ -664,6 +664,7 @@ void SNetStackDestroy(snet_stack_t *stack);
 bool SNetStackIsEmpty(snet_stack_t *stack);
 bool SNetStackNonEmpty(snet_stack_t *stack);
 void SNetStackPush(snet_stack_t *stack, void *item);
+void SNetStackAppend(snet_stack_t *stack, void *item);
 void *SNetStackTop(const snet_stack_t *stack);
 void *SNetStackPop(snet_stack_t *stack);
 void SNetStackPopAll(snet_stack_t *stack);

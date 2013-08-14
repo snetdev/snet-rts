@@ -72,7 +72,6 @@ void SNetRecDetrefStackSerialise(snet_record_t *rec, void *buf)
       vptr = (detref->nonlocal ? detref->nonlocal : detref);
       SNetPackVoid(buf, 1, &vptr);
       SNetPackInt(buf, 1, &detref->location);
-      DETREF_INCR(detref);
     }
   }
 }
@@ -113,15 +112,9 @@ void SNetRecDetrefStackDeserialise(snet_record_t *rec, void *buf)
         SNetMemFree(detref);
         detref = is_local;
       }
-      SNetStackPush(stack, detref);
+      SNetStackAppend(stack, detref);
     }
-    /* Reverse the order of the stack. */
-    DATA_REC(rec, detref) = SNetStackCreate();
-    for (i = 0; i < size; ++i) {
-      detref_t *detref = SNetStackPop(stack);
-      SNetStackPush(DATA_REC(rec, detref), detref);
-    }
-    SNetStackDestroy(stack);
+    DATA_REC(rec, detref) = stack;
   }
 }
 

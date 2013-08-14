@@ -42,6 +42,23 @@ void SNetStackPush(snet_stack_t *stack, void *item)
   stack->head = snet_stack_node;
 }
 
+void SNetStackAppend(snet_stack_t *stack, void *item)
+{
+  snet_stack_node_t *snet_stack_node = SNetNew(snet_stack_node_t);
+
+  snet_stack_node->item = item;
+  snet_stack_node->next = NULL;
+  if (stack->head == NULL) {
+    stack->head = snet_stack_node;
+  } else {
+    snet_stack_node_t *node = stack->head;
+    while (node->next) {
+      node = node->next;
+    }
+    node->next = snet_stack_node;
+  }
+}
+
 void *SNetStackTop(const snet_stack_t *stack)
 {
   return stack->head ? stack->head->item : NULL;
