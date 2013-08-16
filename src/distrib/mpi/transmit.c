@@ -118,6 +118,8 @@ snet_msg_t SNetDistribRecvMsg(void)
       result.ref = SNetRefDeserialise(&recvBuf, &SNetUnpackInt, &SNetUnpackByte);
       SNetUnpackInt(&recvBuf, 1, &result.val);
       break;
+    case snet_update:
+      break;
     case snet_stop:
       break;
     default:
