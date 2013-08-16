@@ -42,14 +42,14 @@ snet_runtime_t SNetRuntimeGet(void)
 }
 
 void SNetRecDetrefStackSerialise(snet_record_t *rec, void *buf)
-{ assert(false); }
+{ /* Only needed for the Front-RTS. */ }
 
 void SNetRecDetrefRecSerialise(snet_record_t *rec, void *buf)
-{ assert(false); }
+{ /* Only possible in the Front-RTS */ assert(false); }
 
 void SNetRecDetrefStackDeserialise(snet_record_t *rec, void *buf)
-{ assert(false); }
+{ /* Only needed for the Front-RTS. */ }
 
 snet_record_t* SNetRecDetrefRecDeserialise(void *buf)
-{ assert(false); }
+{ /* Only possible in the Front-RTS */ assert(false); }
 
