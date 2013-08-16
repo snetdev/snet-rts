@@ -49,6 +49,11 @@ snet_stream_t *SNetStreamCreate(int cap)
   return (snet_stream_t *) LpelStreamCreate(cap);
 }
 
+void SNetStreamDestroy(snet_stream_t *s)
+{
+  return LpelStreamDestroy( (struct lpel_stream_t *) s);
+}
+
 snet_stream_desc_t *SNetStreamOpen(snet_stream_t * stream, char mode)
 {
   return (snet_stream_desc_t *) LpelStreamOpen((lpel_stream_t *) stream,
