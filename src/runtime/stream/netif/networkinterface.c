@@ -292,10 +292,6 @@ int SNetInRun(int argc, char **argv,
      and wait until it has stopped such that it can be cleaned up */
   (void) SNetThreadingStop();
 
-  if ( ! SNetDistribIsRootNode()) {
-    SNetStreamDestroy(input_stream);
-  }
-
   (void) SNetThreadingCleanup();
 
   SNetInfoDestroy(info);
