@@ -47,6 +47,7 @@ function run () {
     tell "Test $exe successful"
   else
     tell "Test $exe failed!"
+    failed="$failed $exe"
   fi
 }
 
@@ -59,10 +60,17 @@ esac
 # Remember the current directory
 TOPLEVEL=$PWD
 
+# Limit CPU usage to abort infinite loops
+ulimit -t 10 2>/dev/null
+
 for test in $TESTS
 do
+  # Restore directory
   cd $TOPLEVEL || exit 1
-  if [ ! -d $test ]; then
+
+  if [ ! -d $test ]
+  then
+    failed="$failed $test"
     warn "Missing test directory $test"
   else
     cd $test || exit 1
@@ -70,10 +78,20 @@ do
     do
       if build
       then
-        run "exe=$exe"
+        run
+      else
+        failed="$failed $exe"
       fi
     done
   fi
-    
 done
+
+if [ "$failed" != "" ]
+then
+  show "The following tests failed:"
+  for f in $failed
+  do
+    printf '\t%s\n' $f
+  done
+fi
 
