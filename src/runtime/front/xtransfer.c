@@ -23,6 +23,9 @@ static node_t snet_transfer_node = {
 /* Store continuations hashed by continuation number. */
 static snet_hashtable_t* snet_continuations;
 
+/* A lock for mutual exclusion of the continuations hashtable. */
+static lock_t snet_continuations_lock;
+
 /* Combine two signed 32-bits integers into a 64-bit unsigned hash key. */
 uint64_t snet_ints_to_key(int i1, int i2)
 {
@@ -36,8 +39,10 @@ void SNetTransferInit(void)
 {
   /* Adjust node definition to current location. */
   snet_transfer_node.location = SNetDistribGetNodeId();
-  /* Create database of continuations */
+  /* Create database of continuations. */
   snet_continuations = SNetHashtableCreate(0);
+  /* Initialize continuations lock. */
+  LOCK_INIT(snet_continuations_lock);
 }
 
 /* Delete storage for continuations. */
@@ -47,6 +52,9 @@ void SNetTransferStop(void)
 
   hello(__func__);
 
+  LOCK(snet_continuations_lock);
+
+  /* No more continuation should remain: complain about that do. */
   if (SNetHashtableFirstKey(snet_continuations, &key)) {
     do {
       continuation_t *cont = SNetHashtableGet(snet_continuations, key);
@@ -55,7 +63,11 @@ void SNetTransferStop(void)
     } while (SNetHashtableNextKey(snet_continuations, key, &key));
   }
 
+  /* Free all resources. */
   SNetHashtableDestroy(snet_continuations);
+  snet_continuations = NULL;
+  UNLOCK(snet_continuations_lock);
+  LOCK_DESTROY(snet_continuations_lock);
 }
 
 /* Return a unique number for identification of continuations and connections. */
@@ -90,7 +102,9 @@ static continuation_t* CreateContinuation(snet_stream_desc_t *desc)
 
   /* Store the new continuation in the hash table for later referral. */
   key = snet_ints_to_key(SNetDistribGetNodeId(), cont->cont_num);
+  LOCK(snet_continuations_lock);
   SNetHashtablePut(snet_continuations, key, cont);
+  UNLOCK(snet_continuations_lock);
 
   return cont;
 }
@@ -100,9 +114,15 @@ void SNetTransferRestore(landing_t *land, snet_stream_desc_t *desc)
 {
   landing_remote_t      *remote = LAND_SPEC(land, remote);
   uint64_t               key = snet_ints_to_key(remote->cont_loc, remote->cont_num);
-  continuation_t        *cont = SNetHashtableRemove(snet_continuations, key);
+  continuation_t        *cont;
   landing_t             *temp;
 
+  /* Take continuation out of the hashtable. */
+  LOCK(snet_continuations_lock);
+  cont = SNetHashtableRemove(snet_continuations, key);
+  UNLOCK(snet_continuations_lock);
+
+  /* Verify that continuation is still meaningful. */
   assert(cont && cont->cont_num == remote->cont_num);
   assert(SNetStackNonEmpty(&cont->stack));
 
