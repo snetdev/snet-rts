@@ -172,5 +172,12 @@ snet_stream_t *SNetFeedback( snet_stream_t *inbuf,
     snet_expr_list_t *guards,
     snet_startup_fun_t box_a);
 
+snet_stream_t *SNetFeedbackDet( snet_stream_t *inbuf,
+    snet_info_t *info,
+    int location,
+    snet_variant_list_t *back_pattern,
+    snet_expr_list_t *guards,
+    snet_startup_fun_t box_a);
+
 
 #endif /* _SNETENTITIES_H_ */

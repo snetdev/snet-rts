@@ -5,8 +5,8 @@
  * with a non-deterministic merging of records in the
  * input stream with those from the feedback stream.
  *
- * To increase efficiency, promote simplicity and facilitate better
- * understandability, this combinator is implemented with only one entity.
+ * For reasons of efficiency and simplicity, this
+ * combinator is implemented with only one entity.
  * This is realized by closely keeping track of the number of records which
  * have already been written to the operand stream. When the stream buffer
  * is nearly full then a dummy sorting record is written. Together with an
@@ -52,6 +52,8 @@ typedef struct feed_state {
   int                   capacity;
   int                   section;
   int                   written;
+  int                   acked;
+  bool                  sorting;
 } feed_state_t;
 
 /* Check if a record matches the feedback pattern. */
@@ -73,10 +75,12 @@ static bool MatchesBackPattern(
   return false;
 }
 
+/* Check for enough buffer space for two records. */
 static bool FeedbackOperandWritable(feed_state_t *feed)
 {
-  assert(feed->written <= 2 * feed->section);
-  return feed->written < 2 * feed->section;
+  int delta = feed->written - feed->acked;
+  assert(delta >= 0 && delta <= 2 * feed->section);
+  return delta + 1 < 2 * feed->section;
 }
 
 /* Write a record to the operand stream.
@@ -84,17 +88,31 @@ static bool FeedbackOperandWritable(feed_state_t *feed)
  */
 static void FeedbackWriteOperand(feed_state_t *feed, snet_record_t *rec)
 {
+  /* Write must be non-blocking. */
   if (SNetStreamTryWrite(feed->opdesc, rec)) {
     assert(false);
   }
+  /* Count records written. */
   feed->written += 1;
-  assert(feed->written < 2 * feed->section);
-  if (((feed->written + 1) % feed->section) == 0) {
-    snet_record_t *rec = SNetRecCreate(REC_sort_end, 0, 1);
+  /* Always use less than the buffer capacity: keep one spare. */
+  assert(feed->written - feed->acked < 2 * feed->section);
+  /* Every section'th record must be a sorting record. */
+  if (((feed->written + 1) % feed->section) == 0 ||
+      (feed->terminate && SNetQueueSize(feed->queue) == 0))
+  {
+    /* Count records written. */
+    feed->written += 1;
+    /* Send a sorting record. */
+    rec = SNetRecCreate(REC_sort_end, 0, feed->written);
     if (SNetStreamTryWrite(feed->opdesc, rec)) {
+      /* Write should have been non-blocking. */
       assert(false);
-      feed->written += 1;
     }
+    /* Last record was a sort. */
+    feed->sorting = true;
+  } else {
+    /* Last record not a sort. */
+    feed->sorting = false;
   }
 }
 
@@ -114,8 +132,11 @@ static void FeedbackReadResult(feed_state_t *feed)
     case REC_sort_end:
       level = SNetRecGetLevel(rec);
       if (level == 0) {
-        assert(feed->written >= feed->section);
-        feed->written -= feed->section;
+        int num = SNetRecGetNum(rec);
+        int delta = feed->written - num;
+        assert(delta >= 0 && delta <= 2 * feed->section);
+        feed->acked = num;
+        SNetRecDestroy(rec);
       } else {
         assert(level > 0);
         SNetRecSetLevel(rec, level - 1);
@@ -123,13 +144,14 @@ static void FeedbackReadResult(feed_state_t *feed)
       }
       break;
     case REC_terminate:
-      assert(feed->terminate != NULL);
+      assert(feed->terminate == NULL);
       assert(feed->indesc == NULL);
       assert(SNetQueueSize(feed->queue) == 0);
-      SNetRecDestroy(rec);
-      SNetStreamWrite(feed->outdesc, feed->terminate);
+      assert(feed->written - feed->acked == 1);
+      SNetStreamWrite(feed->outdesc, rec);
       SNetStreamsetRemove(&feed->set, feed->redesc);
       SNetStreamClose(feed->redesc, true);
+      feed->redesc = NULL;
       break;
     case REC_sync:
       SNetStreamReplace(feed->redesc, SNetRecGetStream(rec));
@@ -140,7 +162,8 @@ static void FeedbackReadResult(feed_state_t *feed)
   }
 }
 
-/* Read one record from the combinator input stream. */
+/* Read one record from the combinator input stream.
+ * Only do this when the operand stream is non-full. */
 static void FeedbackReadInput(feed_state_t *feed)
 {
   snet_record_t *rec = SNetStreamRead(feed->indesc);
@@ -158,6 +181,7 @@ static void FeedbackReadInput(feed_state_t *feed)
       feed->terminate = rec;
       SNetStreamsetRemove(&feed->set, feed->indesc);
       SNetStreamClose(feed->indesc, true);
+      feed->indesc = NULL;
       break;
     case REC_sync:
       SNetStreamReplace(feed->indesc, SNetRecGetStream(rec));
@@ -188,12 +212,14 @@ static void FeedbackReadAny(feed_state_t *feed)
   }
 }
 
-/* Take a record from the queue and write it to the operand. */
+/* Take records from the queue and write them to the operand stream. */
 static void FeedbackFeedback(feed_state_t *feed)
 {
-  snet_record_t *rec = (snet_record_t *) SNetQueueGet(feed->queue);
-  assert(rec);
-  FeedbackWriteOperand(feed, rec);
+  do {
+    snet_record_t *rec = (snet_record_t *) SNetQueueGet(feed->queue);
+    assert(rec);
+    FeedbackWriteOperand(feed, rec);
+  } while (FeedbackOperandWritable(feed) && SNetQueueSize(feed->queue) > 0);
 }
 
 /* Feedback thread main loop. */
@@ -216,30 +242,52 @@ static void FeedbackTask(snet_entity_t *ent, void *arg)
   /* Loop while the operand is alive. */
   while (feed->redesc) {
 
-    /* Prefer to feed back records from the queue. */
+    /* Always prefer to feed back records from the queue. */
     if (SNetQueueSize(feed->queue) > 0) {
       /* Check for write buffer non-full. */
       if (FeedbackOperandWritable(feed)) {
         /* Loop back records. */
-        do {
-          FeedbackFeedback(feed);
-        } while (FeedbackOperandWritable(feed) && SNetQueueSize(feed->queue) > 0);
+        FeedbackFeedback(feed);
       } else {
         /* If buffer full then do a blocking read on result. */
         FeedbackReadResult(feed);
       }
-    } else {
-      /* Do a blocking read on any of the two input streams. */
-      FeedbackReadAny(feed);
+    }
+    else {
+      /* If no records in transit, check for termination. */
+      if (feed->terminate) {
+        if (feed->written == feed->acked) {
+          SNetStreamWrite(feed->opdesc, feed->terminate);
+          feed->terminate = NULL;
+          feed->written += 1;
+        }
+        else if (feed->sorting == false) {
+          snet_record_t *rec;
+          feed->written += 1;
+          rec = SNetRecCreate(REC_sort_end, 0, feed->written);
+          if (SNetStreamTryWrite(feed->opdesc, rec)) {
+            assert(false);
+          }
+          feed->sorting = true;
+        } else {
+          /* A blocking read on result. */
+          FeedbackReadResult(feed);
+        }
+      }
+      else if (FeedbackOperandWritable(feed)) {
+        /* Wait for any input. */
+        FeedbackReadAny(feed);
+      } else {
+        /* A blocking read on result. */
+        FeedbackReadResult(feed);
+      }
     }
   }
 
   SNetVariantListDestroy(feed->back_patterns);
   SNetExprListDestroy(feed->guards);
 
-  SNetStreamClose(feed->indesc, true);
   SNetStreamClose(feed->opdesc, false);
-  SNetStreamClose(feed->redesc, true);
   SNetStreamClose(feed->outdesc, false);
   SNetQueueDestroy(feed->queue);
   SNetDelete(feed);
@@ -272,6 +320,8 @@ snet_stream_t *SNetFeedback(
     assert(feed->capacity >= 6 /*min.stream.cap.*/);
     feed->section = (feed->capacity - 1) / 2;
     feed->written = 0;
+    feed->acked   = 0;
+    feed->sorting = 0;
 
     feed->back_patterns = back_patterns;
     feed->guards = guards;
