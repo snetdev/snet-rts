@@ -149,6 +149,57 @@ AM_CONDITIONAL([ENABLE_TH_LPEL], [test $have_lpel = yes])
 
 
 
+dnl check for support of portable hardware locality
+
+AC_ARG_WITH([hwloc-includes],
+            [AC_HELP_STRING([--with-hwloc-includes=DIR],
+                            [look up hwloc.h in DIR])],
+            [],
+            [with_hwloc_includes=])
+
+if test -n "$with_hwloc_includes"
+then
+  AC_MSG_CHECKING([for hwloc.h in $with_hwloc_includes])
+  if test -r "$with_hwloc_includes/hwloc.h"
+  then
+     with_hwloc_includes=`(cd "$with_hwloc_includes" && pwd)`
+     AC_MSG_RESULT([yes])
+  else
+     AC_MSG_RESULT([no])
+     AC_MSG_WARN([unable to find $with_hwloc_includes/hwloc.h. Cannot use hwloc!])
+     with_hwloc_includes=
+  fi
+fi
+
+if test -n "$with_hwloc_includes"
+then
+  AC_ARG_WITH([hwloc-libs],
+              [AC_HELP_STRING([--with-hwloc-libs=DIR],
+                              [look up libhwloc.la in DIR])],
+              [],
+              [with_hwloc_libs=])
+  AC_MSG_CHECKING([for libhwloc.la in $with_hwloc_libs])
+  if test -r "$with_hwloc_libs/libhwloc.la"; then
+     with_hwloc_libs=`(cd "$with_hwloc_libs" && pwd)`
+     AC_MSG_RESULT([yes])
+  else
+     AC_MSG_RESULT([no])
+     AC_MSG_WARN([unable to find $with_hwloc_libs/libhwloc.la. Cannot use hwloc!])
+     with_hwloc_libs=
+  fi
+fi
+
+if test -n "$with_hwloc_includes" -a -n "$with_hwloc_libs"
+then
+  HWLOC_INCLUDES=-I$with_hwloc_includes
+  LIBHWLOC_LA=$with_hwloc_libs/libhwloc.la
+  AC_SUBST([LIBHWLOC_LA])
+  AC_SUBST([HWLOC_INCLUDES])
+  AM_CONDITIONAL([ENABLE_HWLOC], [true])
+  AC_DEFINE([ENABLE_HWLOC], [1], [Set to 1 to enable the hwloc])
+fi
+
+
 dnl check for sac compiler in order to build sac4snet interface
 
 AC_ARG_ENABLE([sac4snet], [AS_HELP_STRING([--enable-sac4snet],

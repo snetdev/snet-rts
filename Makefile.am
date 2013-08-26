@@ -197,6 +197,18 @@ libfrontrt_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/runtime/stream/shared \
 	-I$(srcdir)/src/runtime/stream/netif \
 	-I$(srcdir)/src/distrib/common
+if ENABLE_HWLOC
+libfrontrt_la_CPPFLAGS += $(HWLOC_INCLUDES)
+libfrontrt_la_LIBADD = $(LIBHWLOC_LA)
+
+bin_PROGRAMS = src/resource/resserv
+
+src_resource_resserv_SOURCES = \
+	src/resource/resserv.c
+
+src_resource_resserv_CPPFLAGS = $(AM_CPPFLAGS) $(HWLOC_INCLUDES)
+src_resource_resserv_LDADD = $(LIBHWLOC_LA)
+endif
 
 libfrontnodist_la_SOURCES = \
 	src/distrib/common/reference.c \
