@@ -2,11 +2,21 @@
  * Nondeterministic Single-Entity Feedback Combinator
  *
  * This feedback combinator implements a real feedback loop,
- * with a non-deterministic merging of records in the
+ * with a non-deterministic merging of records from the
  * input stream with those from the feedback stream.
  *
- * For reasons of efficiency and simplicity, this
- * combinator is implemented with only one entity.
+ * For reasons of efficiency and simplicity, we implement this combinator
+ * with only a single entity. This reduces the setup time when instantiating
+ * a new feedback combinator and hence improves performance for dynamic S-Nets.
+ * It also allows to keep the number of sorting records to a minimum.
+ * Sorting records have a significant performance disadvantage when they have
+ * to traverse a wide parallel network with many branches like splits or stars.
+ *
+ * The main problem which has to be solved when implementing a feedback
+ * combinator is that of avoidance of deadlock. Every blocking read or write
+ * must be done with a guarantee that it is going to succeed eventually.
+ * I.e. it may not block forever waiting for input that is never going to arrive.
+ *
  * This is realized by closely keeping track of the number of records which
  * have already been written to the operand stream. When the stream buffer
  * is nearly full then a dummy sorting record is written. Together with an
@@ -34,26 +44,44 @@
 #include "threading.h"
 #include "distribution.h"
 
+/* All the state which is associated with one feedback instance. */
 typedef struct feed_state {
+
+  /* Four stream buffers. */
   snet_stream_t        *input;
   snet_stream_t        *operand;
   snet_stream_t        *result;
   snet_stream_t        *output;
-  snet_variant_list_t  *back_patterns;
-  snet_expr_list_t     *guards;
-  snet_entity_t        *entity;
-  snet_record_t        *terminate;
+
+  /* Four stream descriptors. */
   snet_stream_desc_t   *indesc;
   snet_stream_desc_t   *opdesc;
   snet_stream_desc_t   *redesc;
   snet_stream_desc_t   *outdesc;
-  snet_queue_t         *queue;
+
+  /* Input waiting set over indesc and redesc. */
   snet_streamset_t      set;
-  int                   capacity;
-  int                   section;
-  int                   written;
-  int                   acked;
-  bool                  sorting;
+
+  /* Internal queue with feedback records. */
+  snet_queue_t         *queue;
+
+  /* Guarded patterns control which records are fed back. */
+  snet_variant_list_t  *back_patterns;
+  snet_expr_list_t     *guards;
+
+  /* Single entity. */
+  snet_entity_t        *entity;
+
+  /* Termination record from input stream or else NULL. */
+  snet_record_t        *terminate;
+
+  /* Data about the operand stream: */
+  int                   capacity;       /* stream buffer capacity */
+  int                   section;        /* half the capacity minus 1 */
+  int                   written;        /* #records written total */
+  int                   acked;          /* #records acknowledged */
+  bool                  sorting;        /* is last record a sorting? */
+
 } feed_state_t;
 
 /* Check if a record matches the feedback pattern. */
@@ -84,11 +112,12 @@ static bool FeedbackOperandWritable(feed_state_t *feed)
 }
 
 /* Write a record to the operand stream.
- * Write a sorting record twice per buffer capacity.
+ * Write a sorting record twice per buffer capacity
+ * and also when the input stream has terminated.
  */
 static void FeedbackWriteOperand(feed_state_t *feed, snet_record_t *rec)
 {
-  /* Write must be non-blocking. */
+  /* Write must always be non-blocking. */
   if (SNetStreamTryWrite(feed->opdesc, rec)) {
     assert(false);
   }
@@ -124,8 +153,10 @@ static void FeedbackReadResult(feed_state_t *feed)
   switch (REC_DESCR(rec)) {
     case REC_data:
       if (MatchesBackPattern(rec, feed->back_patterns, feed->guards)) {
+        /* Append matching records to the internal feedback queue. */
         SNetQueuePut(feed->queue, rec);
       } else {
+        /* Forward everything else over the output stream. */
         SNetStreamWrite(feed->outdesc, rec);
       }
       break;
@@ -317,11 +348,11 @@ snet_stream_t *SNetFeedback(
     feed_state_t *feed = SNetNew(feed_state_t);
 
     feed->capacity = SNET_STREAM_DEFAULT_CAPACITY;
-    assert(feed->capacity >= 6 /*min.stream.cap.*/);
+    assert(feed->capacity >= 5 /*min.stream.cap.*/);
     feed->section = (feed->capacity - 1) / 2;
     feed->written = 0;
     feed->acked   = 0;
-    feed->sorting = 0;
+    feed->sorting = false;
 
     feed->back_patterns = back_patterns;
     feed->guards = guards;
