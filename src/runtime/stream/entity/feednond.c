@@ -5,30 +5,39 @@
  * with a non-deterministic merging of records from the
  * input stream with those from the feedback stream.
  *
- * For reasons of efficiency and simplicity, we implement this combinator
- * with only a single entity. This reduces the setup time when instantiating
- * a new feedback combinator and hence improves performance for dynamic S-Nets.
- * It also allows to keep the number of sorting records to a minimum.
- * Sorting records have a significant performance disadvantage when they have
- * to traverse a wide parallel network with many branches like splits or stars.
- *
- * The main problem which has to be solved when implementing a feedback
- * combinator is that of avoidance of deadlock. Every blocking read or write
- * must be done with a guarantee that it is going to succeed eventually.
- * I.e. it may not block forever waiting for input that is never going to arrive.
- *
- * This is realized by closely keeping track of the number of records which
- * have already been written to the operand stream. When the stream buffer
- * is nearly full then a dummy sorting record is written. Together with an
- * internal queue this allows the entity to avoid having to block waiting
- * for room in a full output buffer when writing to the operand network.
- *
  * This combinator uses the following four streams:
  * (1) The input stream to the combinator.
  * (2) The operand stream which goes to the internal operand network or box.
  * (3) The result stream which comes from the operand network.
  * (3) The output stream which connects the combinator to the outside world.
  * Records which match the feedback pattern are appended to an internal queue.
+ *
+ * For reasons of efficiency and simplicity, we implement this combinator
+ * with only a single entity. This reduces the setup time when instantiating
+ * a new feedback combinator and hence improves performance for dynamic S-Nets.
+ * It also keeps the number of sorting records to a minimum.
+ * Sorting records have a significant performance disadvantage when they have
+ * to traverse a wide parallel network with many branches like splits or stars.
+ *
+ * The main problem which has to be solved when implementing a feedback
+ * combinator is that of avoidance of deadlock. Every blocking read or write
+ * must be done with a guarantee that it is going to succeed eventually.
+ * This is realized here by two means:
+ *
+ * (1) We closely keep track of the number of records which have already
+ * been written to the operand stream. When the stream buffer is nearly full
+ * then a sorting record is written. The sorting records have a guarantee
+ * that they will come out of the operand network eventually. Hence when
+ * we know that we have written more sorting records than we have read then
+ * we are assured that a read on the result stream will eventually succeed.
+ *
+ * (2) We use the 'number' parameter of the sorting records as a count of
+ * the number of records which have been written sofar to the operand stream.
+ * When we read a sorting record we interpret this value as an acknowledgement
+ * of the records which are guaranteed no longer to be in the operand stream.
+ * This allows us to calculate the minimum number of available buffer slots
+ * in the operand stream. From this we can predict when a write operation
+ * to this stream is possible because it is guaranteed to be non-blocking.
  */
 
 #include <assert.h>
@@ -113,7 +122,8 @@ static bool FeedbackOperandWritable(feed_state_t *feed)
 
 /* Write a record to the operand stream.
  * Write a sorting record twice per buffer capacity
- * and also when the input stream has terminated.
+ * and also when the input stream has terminated
+ * and the internal feedback queue is empty.
  */
 static void FeedbackWriteOperand(feed_state_t *feed, snet_record_t *rec)
 {
@@ -163,12 +173,14 @@ static void FeedbackReadResult(feed_state_t *feed)
     case REC_sort_end:
       level = SNetRecGetLevel(rec);
       if (level == 0) {
+        /* 'number' is an acknowledgement of written records. */
         int num = SNetRecGetNum(rec);
         int delta = feed->written - num;
         assert(delta >= 0 && delta <= 2 * feed->section);
         feed->acked = num;
         SNetRecDestroy(rec);
       } else {
+        /* Decrease level and forward outwards. */
         assert(level > 0);
         SNetRecSetLevel(rec, level - 1);
         SNetStreamWrite(feed->outdesc, rec);
@@ -183,6 +195,8 @@ static void FeedbackReadResult(feed_state_t *feed)
       SNetStreamsetRemove(&feed->set, feed->redesc);
       SNetStreamClose(feed->redesc, true);
       feed->redesc = NULL;
+      SNetStreamClose(feed->outdesc, false);
+      feed->outdesc = NULL;
       break;
     case REC_sync:
       SNetStreamReplace(feed->redesc, SNetRecGetStream(rec));
@@ -284,42 +298,44 @@ static void FeedbackTask(snet_entity_t *ent, void *arg)
         FeedbackReadResult(feed);
       }
     }
-    else {
-      /* If no records in transit, check for termination. */
-      if (feed->terminate) {
-        if (feed->written == feed->acked) {
-          SNetStreamWrite(feed->opdesc, feed->terminate);
-          feed->terminate = NULL;
-          feed->written += 1;
-        }
-        else if (feed->sorting == false) {
-          snet_record_t *rec;
-          feed->written += 1;
-          rec = SNetRecCreate(REC_sort_end, 0, feed->written);
-          if (SNetStreamTryWrite(feed->opdesc, rec)) {
-            assert(false);
-          }
-          feed->sorting = true;
-        } else {
-          /* A blocking read on result. */
-          FeedbackReadResult(feed);
-        }
+    /* The internal feedback queue is empty! */
+    else if (feed->terminate) {
+      /* Only terminate when no records are in transit. */
+      if (feed->written == feed->acked) {
+        SNetStreamWrite(feed->opdesc, feed->terminate);
+        feed->terminate = NULL;
+        feed->written += 1;
+        SNetStreamClose(feed->opdesc, false);
+        feed->opdesc = NULL;
       }
-      else if (FeedbackOperandWritable(feed)) {
-        /* Wait for any input. */
-        FeedbackReadAny(feed);
-      } else {
+      else if (feed->sorting || SNetStreamPeek(feed->redesc)) {
         /* A blocking read on result. */
         FeedbackReadResult(feed);
       }
+      else {
+        /* Send a sorting record to guarantee a successful read. */
+        snet_record_t *rec;
+        feed->written += 1;
+        rec = SNetRecCreate(REC_sort_end, 0, feed->written);
+        if (SNetStreamTryWrite(feed->opdesc, rec)) {
+          /* Operand writes must always be non-blocking. */
+          assert(false);
+        }
+        feed->sorting = true;
+      }
+    }
+    else if (FeedbackOperandWritable(feed)) {
+      /* Wait for any input. */
+      FeedbackReadAny(feed);
+    } else {
+      /* A blocking read on result. */
+      FeedbackReadResult(feed);
     }
   }
 
   SNetVariantListDestroy(feed->back_patterns);
   SNetExprListDestroy(feed->guards);
 
-  SNetStreamClose(feed->opdesc, false);
-  SNetStreamClose(feed->outdesc, false);
   SNetQueueDestroy(feed->queue);
   SNetDelete(feed);
 }
