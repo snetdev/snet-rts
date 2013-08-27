@@ -205,7 +205,9 @@ bin_PROGRAMS = src/resource/resserv
 
 src_resource_resserv_SOURCES = \
 	src/resource/resserv.c \
-	src/resource/resnet.c
+	src/resource/resnet.c \
+	src/resource/resproto.h \
+	src/resource/resmain.c
 
 src_resource_resserv_CPPFLAGS = $(AM_CPPFLAGS) $(HWLOC_INCLUDES)
 src_resource_resserv_LDADD = $(LIBHWLOC_LA)
