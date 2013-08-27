@@ -1,6 +1,9 @@
+
+.PHONY: all clean proto
+
 all clean:
 	$(MAKE) -C ../.. $@
 
 proto:
-	getproto -C `ls *.c | sort` > $$$$ && mv $$$$ resproto.h
+	getproto -C -H resproto.h `ls *.c | sort` > $$$$ && mv $$$$ resproto.h
 
