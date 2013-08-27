@@ -204,7 +204,8 @@ libfrontrt_la_LIBADD = $(LIBHWLOC_LA)
 bin_PROGRAMS = src/resource/resserv
 
 src_resource_resserv_SOURCES = \
-	src/resource/resserv.c
+	src/resource/resserv.c \
+	src/resource/resnet.c
 
 src_resource_resserv_CPPFLAGS = $(AM_CPPFLAGS) $(HWLOC_INCLUDES)
 src_resource_resserv_LDADD = $(LIBHWLOC_LA)
