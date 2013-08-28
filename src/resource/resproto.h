@@ -1,6 +1,10 @@
 #ifndef RESPROTO_H
 #define RESPROTO_H
 
+/* resloop.c */
+
+void res_loop(int port);
+
 /* resmain.c */
 
 void pexit(const char *mesg);
@@ -19,12 +23,15 @@ char* xdup(const char *s);
 
 /* resnet.c */
 
-int res_listen_socket(int listen_port);
-int res_connect_socket(int connect_port, char *address);
+int res_nonblocking(int fd, bool nb);
+int res_listen_socket(int listen_port, bool nb);
+int res_connect_socket(int connect_port, char *address, bool nb);
+int res_accept_socket(int listen, bool nb);
 
 /* resserv.c */
 
-int hwinit(void);
+void res_hw_init(void);
+const char *res_kind_string(int kind);
 
 
 #endif

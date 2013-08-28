@@ -7,3 +7,6 @@ all clean:
 proto:
 	getproto -C -H resproto.h `ls *.c | sort` > $$$$ && mv $$$$ resproto.h
 
+ctags:
+	ctags *.[ch]
+

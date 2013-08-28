@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdbool.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +7,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <stdarg.h>
-#include "resproto.h"
+
 #include "resdefs.h"
 
 static const char* prog;
@@ -20,10 +19,10 @@ static void usage(void)
 {
   fprintf(stderr, "Usage: %s [ options ... ]\n", prog);
   fprintf(stderr, "Options:\n");
-  fprintf(stderr, "\t-c config: Read configuration from file 'config'.\n");
-  fprintf(stderr, "\t-p port  : Use 'port' for incoming TCP connections.\n");
-  fprintf(stderr, "\t-d       : Enable debugging information.\n");
-  fprintf(stderr, "\t-v       : Enable informational messages.\n");
+  fprintf(stderr, " -c config: Read configuration from file 'config'.\n");
+  fprintf(stderr, " -p port  : Use 'port' for incoming TCP connections.\n");
+  fprintf(stderr, " -d       : Enable debugging information.\n");
+  fprintf(stderr, " -v       : Enable informational messages.\n");
   exit(1);
 }
 
@@ -33,7 +32,7 @@ void pexit(const char *mesg)
   exit(1);
 }
 
-static bool getport(const char *spec)
+static bool get_port(const char *spec)
 {
   int p = 0;
   if (sscanf(spec, "%d", &p) == 1 && p >= 1024 && p < 65535) {
@@ -41,31 +40,23 @@ static bool getport(const char *spec)
   } else {
     fprintf(stderr, "%s: Invalid port '%s'.\n", prog, spec);
   }
-  return p == port;
+  return p == port && p >= 1024 && p < 65535;
 }
 
-static bool getbool(const char *spec, bool *result)
+static bool get_bool(const char *spec, bool *result)
 {
   bool success = true;
-  switch (*spec) {
-    case '1':
-    case 'y':
-    case 'Y':
-    case 't':
-    case 'T': *result = true; break;
-    case '0':
-    case 'n':
-    case 'N':
-    case 'f':
-    case 'F': *result = false; break;
-    default:
+
+  if (*spec && strchr("0nNfF", *spec)) *result = false;
+  else if (*spec && strchr("1yYtT", *spec)) *result = true;
+  else {
       fprintf(stderr, "%s: Invalid flag '%s'.\n", prog, spec);
       success = false;
   }
   return success;
 }
 
-static void config(const char *fname)
+static void get_config(const char *fname)
 {
   FILE *fp = fopen(fname, "r");
 
@@ -86,19 +77,13 @@ static void config(const char *fname)
         int n = sscanf(buf, " %s = %s %n", key, val, &len);
         if (n >= 2 && len == strlen(buf)) {
           if (!strcmp(key, "port")) {
-            if (getport(val)) {
-              valid = true;
-            }
+            valid = get_port(val);
           }
           else if (!strcmp(key, "verbose")) {
-            if (getbool(val, &verbose)) {
-              valid = true;
-            }
+            valid = get_bool(val, &verbose);
           }
           else if (!strcmp(key, "debug")) {
-            if (getbool(val, &debug)) {
-              valid = true;
-            }
+            valid = get_bool(val, &debug);
           }
         }
         if (!valid) {
@@ -152,7 +137,7 @@ void res_debug(const char *fmt, ...)
   }
 }
 
-static void options(int argc, char **argv)
+static void get_options(int argc, char **argv)
 {
   int c;
 
@@ -161,9 +146,9 @@ static void options(int argc, char **argv)
 
   while ((c = getopt(argc, argv, "c:dhp:v?")) != EOF) {
     switch (c) {
-      case 'c': config(optarg); break;
+      case 'c': get_config(optarg); break;
       case 'd': debug = true; break;
-      case 'p': if (!getport(optarg)) exit(1); break;
+      case 'p': if (!get_port(optarg)) exit(1); break;
       case 'v': verbose = true; break;
       default: usage();
     }
@@ -172,9 +157,11 @@ static void options(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-  options(argc, argv);
+  get_options(argc, argv);
 
-  hwinit();
+  res_hw_init();
+
+  res_loop(port);
 
   return 0;
 }
