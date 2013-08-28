@@ -7,7 +7,10 @@
 #include <assert.h>
 #include "resdefs.h"
 
-typedef enum res_kind {
+typedef enum res_kind res_kind_t;
+typedef struct res res_t;
+
+enum res_kind {
   System,
   Machine,
   Node,
@@ -16,9 +19,9 @@ typedef enum res_kind {
   Core,
   Proc,
   Other,
-} res_kind_t;
+};
 
-typedef struct res {
+struct res {
   int           depth;
   res_kind_t    kind;
   int           logical;
@@ -30,7 +33,7 @@ typedef struct res {
   int           max_children;
   int           first_pu;
   int           last_pu;
-} res_t;
+};
 
 static res_t *root;
 

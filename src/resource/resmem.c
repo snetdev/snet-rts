@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "resproto.h"
+#include "resdefs.h"
 
 void *xmalloc(size_t siz)
 {
@@ -25,6 +25,11 @@ void *xrealloc(void *p, size_t siz)
 }
 
 void xfree(void *p)
+{
+  free(p);
+}
+
+void xdel(void *p)
 {
   free(p);
 }

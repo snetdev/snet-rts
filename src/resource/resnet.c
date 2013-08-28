@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <errno.h>
-#include "resproto.h"
+#include "resdefs.h"
 
 int res_nonblocking(int fd, bool nb)
 {

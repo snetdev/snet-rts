@@ -210,7 +210,8 @@ src_resource_resserv_SOURCES = \
 	src/resource/resmem.c \
 	src/resource/resnet.c \
 	src/resource/resproto.h \
-	src/resource/resserv.c
+	src/resource/resserv.c \
+	src/resource/restypes.h
 
 src_resource_resserv_CPPFLAGS = $(AM_CPPFLAGS) $(HWLOC_INCLUDES)
 src_resource_resserv_LDADD = $(LIBHWLOC_LA)
