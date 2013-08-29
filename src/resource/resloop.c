@@ -3,110 +3,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/select.h>
 #include <sys/param.h>
+#include <setjmp.h>
+#include <ctype.h>
 
 #include "resdefs.h"
 
-typedef struct intmap intmap_t;
-typedef struct buffer buffer_t;
-typedef struct stream stream_t;
 typedef struct client client_t;
 
-struct intmap {
-  void        **map;
-  int           max;
-};
-
-struct buffer {
-  char*         data;
-  int           size;
-  int           start;
-  int           end;
-};
-
-struct stream {
-  int           fd;
-  buffer_t      read;
-  buffer_t      write;
-};
+static jmp_buf res_client_exception_context;
 
 struct client {
   stream_t      stream;
 };
-
-intmap_t* res_map_create(void)
-{
-  intmap_t*     map = xnew(intmap_t);
-  map->map = NULL;
-  map->max = 0;
-  return map;
-}
-
-void res_map_add(intmap_t* map, int key, void* val)
-{
-  assert(key >= 0);
-  assert(val != NULL);
-  if (key >= map->max) {
-    int i, newmax = key + 10;
-    map->map = xrealloc(map->map, newmax);
-    for (i = map->max; i < newmax; ++i) {
-      map->map[i] = NULL;
-    }
-    map->max = newmax;
-  }
-  assert(map->map[key] == NULL);
-  map->map[key] = val;
-}
-
-void* res_map_get(intmap_t* map, int key)
-{
-  assert(key >= 0);
-  assert(key < map->max);
-  assert(map->map[key] != NULL);
-  return map->map[key];
-}
-
-void res_map_del(intmap_t* map, int key)
-{
-  assert(key >= 0);
-  assert(key < map->max);
-  assert(map->map[key] != NULL);
-  map->map[key] = NULL;
-}
-
-void res_map_destroy(intmap_t* map)
-{
-  xfree(map->map);
-  xfree(map);
-}
-
-void res_buffer_init(buffer_t* buf)
-{
-  buf->data = NULL;
-  buf->size = 0;
-  buf->start = 0;
-  buf->end = 0;
-}
-
-void res_buffer_done(buffer_t* buf)
-{
-  xdel(buf->data);
-}
-
-void res_stream_init(stream_t* stream, int fd)
-{
-  stream->fd = fd;
-  res_buffer_init(&stream->read);
-  res_buffer_init(&stream->write);
-}
-
-void res_stream_done(stream_t* stream)
-{
-  res_buffer_done(&stream->read);
-  res_buffer_done(&stream->write);
-  close(stream->fd);
-}
 
 client_t* res_client_create(int fd)
 {
@@ -115,18 +26,113 @@ client_t* res_client_create(int fd)
   return client;
 }
 
-void res_client_delete(client_t* client)
+void res_client_destroy(client_t* client)
 {
   res_stream_done(&client->stream);
   xdel(client);
 }
 
-void res_client_read(client_t* client)
+int res_client_catch(void)
 {
+  return setjmp(res_client_exception_context);
 }
 
-void res_client_write(client_t* client)
+void res_client_throw(void)
 {
+  longjmp(res_client_exception_context, 1);
+}
+
+char res_client_char(client_t* client)
+{
+  int size = 0;
+  char* data = res_stream_incoming(&client->stream, &size);
+  char* end = data + size;
+  char* p;
+  for (p = data; p < end; ++p) {
+    if (!isspace((unsigned char) *p)) {
+      res_stream_take(&client->stream, p - data);
+      return *p;
+    }
+  }
+  res_client_throw();
+  return '\0';
+}
+
+void res_client_consume_char(client_t* client, char sym)
+{
+  char ch = res_client_char(client);
+  if (ch != sym) {
+    res_client_throw();
+  } else {
+    res_stream_take(&client->stream, 1);
+  }
+}
+
+void res_client_command(client_t* client)
+{
+
+}
+
+int res_client_process(client_t* client)
+{
+  if (res_client_catch()) {
+    return -1;
+  } else {
+    char *str;
+    res_client_consume_char(client, '{');
+    res_client_command(client);
+    res_client_consume_char(client, '}');
+  }
+  return 0;
+}
+
+int res_client_complete(client_t* client)
+{
+  int size = 0;
+  char* data = res_stream_incoming(&client->stream, &size);
+  int count = 0;
+  char* end = data + size;
+  char* p;
+  for (p = data; p < end; ++p) {
+    if (*p == '{') ++count;
+    if (*p == '}') {
+      if (--count <= 0) {
+        return (count < 0) ? -1 : (p + 1 - data);
+      }
+    }
+  }
+  return (size > 10*1024) ? -1 : 0;
+}
+
+int res_client_read(client_t* client)
+{
+  if (res_stream_read(&client->stream) == -1) {
+    return -1;
+  } else {
+    int complete = res_client_complete(client);
+    if (complete <= 0) {
+      return complete;
+    } else {
+      int parse = res_client_process(client);
+      if (parse == -1) {
+        return parse;
+      }
+    }
+  }
+  return 0;
+}
+
+int res_client_write(client_t* client)
+{
+  if (res_stream_write(&client->stream) == -1) {
+    return -1;
+  }
+  return 0;
+}
+
+bool res_client_writing(client_t* client)
+{
+  return res_stream_writing(&client->stream);
 }
 
 void res_loop(int port)
@@ -152,6 +158,7 @@ void res_loop(int port)
     }
 
     if (FD_ISSET(listen, &rout)) {
+      --num;
       if ((sock = res_accept_socket(listen, true)) == -1) {
         break;
       }
@@ -160,19 +167,36 @@ void res_loop(int port)
       res_map_add(map, sock, res_client_create(sock));
     }
 
-    for (i = 0; i <= max; ++i) {
-      if (FD_ISSET(i, &rset)) {
-        res_client_read(res_map_get(map, i));
-      }
-      else if (FD_ISSET(i, &wset)) {
-        res_client_write(res_map_get(map, i));
+    for (i = 0; num > 0 && i <= max; ++i) {
+      if (FD_ISSET(i, &rout) || FD_ISSET(i, &wout)) {
+        client_t* client = res_map_get(map, i);
+        int io;
+        --num;
+        if (FD_ISSET(i, &rout)) {
+          io = res_client_read(client);
+          FD_CLR(i, &rset);
+        } else {
+          io = res_client_write(client);
+          FD_CLR(i, &wset);
+        }
+        if (io == -1) {
+          res_client_destroy(client);
+        } else {
+          if (res_client_writing(client)) {
+            FD_SET(i, &wset);
+          } else {
+            FD_SET(i, &rset);
+          }
+        }
       }
     }
   }
 
-  for (i = 0; i < map->max; ++i) {
-    if (map->map[i]) {
-      res_client_delete(map->map[i]);
+  res_map_iter_new(map, &i);
+  {
+    client_t* client;
+    while ((client = res_map_iter_next(map, &i)) != NULL) {
+      res_client_destroy(client);
     }
   }
   res_map_destroy(map);

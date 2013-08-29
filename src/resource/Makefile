@@ -6,9 +6,9 @@ all clean:
 
 proto:
 	getproto -C -H resproto.h `ls *.c | sort` > $$$$ && \
-	mv $$$$ resproto.h && \
-	grep -h '^typedef ' *.c > $$$$ && \
-	mv $$$$ restypes.h
+	mv $$$$ resproto.h
+	rm -f restypes.h
+	grep -h '^typedef ' *.[ch] > restypes.h
 
 ctags:
 	ctags *.[ch]
