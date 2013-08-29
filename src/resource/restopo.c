@@ -53,7 +53,7 @@ char* res_topo_string(res_t* obj, char* str, int len, int *size)
   }
   snprintf(str + len, *size - len,
            "%*s{ kind %s depth %d logical %d ",
-           obj->depth * 2, "",
+           (obj->depth + 1) * 2, "",
            res_kind_string(obj->kind), obj->depth, obj->logical);
   len += strlen(str + len);
 
@@ -74,7 +74,7 @@ char* res_topo_string(res_t* obj, char* str, int len, int *size)
       len += strlen(str + len);
     }
     snprintf(str + len, *size - len,
-             "%*s} \n", obj->depth * 2, "");
+             "%*s} \n", (obj->depth + 1) * 2, "");
   } else {
     snprintf(str + len, *size - len, "} \n");
   }

@@ -84,6 +84,8 @@ int res_buffer_read(buffer_t* buf, int fd, int amount)
       perror("read");
       return -1;
     }
+  } else if (!n) {
+    return -1;
   } else {
     buf->end += n;
     return n;

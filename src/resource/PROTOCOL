@@ -68,8 +68,8 @@ of information about hardware details for computer system 'id'.
 
 This gives the receiving client a license to use the given processor cores
 on the computer system identified by 'id' to process the client workload.
-The list is a space separated list of logical core numbers. A client should
-identicate about each core whether it is going to use it (with an "accept"
+The list is a space separated list of logical core numbers. A client must
+indicate about each core whether it is going to use it (with an "accept"
 message) or not (with a "return" message).
 
 "revoke" id cores

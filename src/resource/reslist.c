@@ -55,3 +55,8 @@ int res_list_size(intlist_t* list)
   return list->num;
 }
 
+void res_list_append(intlist_t* list, int val)
+{
+  res_list_set(list, list->num, val);
+}
+

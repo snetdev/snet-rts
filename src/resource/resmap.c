@@ -25,7 +25,6 @@ void res_map_add(intmap_t* map, int key, void* val)
   if (key >= map->max) {
     int i, newmax = key + 10;
     void* p = xrealloc(map->map, newmax * sizeof(void *));
-    printf("%s: p = %p, mm = %p\n", __func__, p, map->map);
     map->map = p;
     assert(map->map);
     for (i = map->max; i < newmax; ++i) {

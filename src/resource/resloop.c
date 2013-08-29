@@ -37,6 +37,9 @@ static jmp_buf res_client_exception_context;
 
 struct client {
   stream_t      stream;
+  int           localwl;
+  int           remotewl;
+  bool          rebalance;
 };
 
 const char *res_token_string(token_t token)
@@ -66,6 +69,9 @@ client_t* res_client_create(int fd)
 {
   client_t *client = xnew(client_t);
   res_stream_init(&client->stream, fd);
+  client->localwl = 0;
+  client->remotewl = 0;
+  client->rebalance = false;
   return client;
 }
 
@@ -197,32 +203,126 @@ void res_client_reply(client_t* client, const char* fmt, ...)
   }
 }
 
+intlist_t* res_client_intlist(client_t* client)
+{
+  intlist_t* list = res_list_create();
+  int   length = 0;
+  char* data = res_stream_incoming(&client->stream, &length);
+  char* end = data + length;
+  char* p;
+  bool  found = true;
+
+  while (found) {
+    found = false;
+
+    for (p = data; p < end && isspace((unsigned char) *p); ++p) {
+      /* skip whitespace */
+    }
+
+    /* Check for numbers. */
+    if (p < end && isdigit((unsigned char) *p)) {
+      int n = *p - '0';
+      while (++p < end && isdigit((unsigned char) *p)) {
+        n = 10 * n + (*p - '0');
+      }
+      res_list_append(list, n);
+    }
+  }
+  if (res_list_size(list) == 0) {
+    res_list_destroy(list);
+    res_client_throw();
+  }
+  return list;
+}
+
+void res_client_command_systems(client_t* client)
+{
+  // Currently support only the local system
+  res_client_reply(client, "{ systems 0 }\n");
+}
+
+void res_client_command_topology(client_t* client)
+{
+  int id = 0;
+  res_client_number(client, &id);
+  if (id) {
+    res_info("Invalid topology id.\n");
+    res_client_throw();
+  } else {
+    int len, size = 10*1024;
+    char host[100];
+    char *str = xmalloc(size);
+    str[0] = '\0';
+    gethostname(host, sizeof host);
+    host[sizeof host - 1] = '\0';
+    snprintf(str, size, "{ hardware %d host %s \n", id, host);
+    len = strlen(str);
+    str = res_topo_string(NULL, str, len, &size);
+    len += strlen(str + len);
+    if (len + 10 > size) {
+      size = len + 10;
+      str = xrealloc(str, size);
+    }
+    snprintf(str + len, size - len, "} \n");
+    res_client_reply(client, str);
+    xfree(str);
+  }
+}
+
+void res_client_command_access(client_t* client)
+{
+  intlist_t* ints = res_client_intlist(client);
+  // Needed when we are going to support remote systems
+  res_list_destroy(ints);
+}
+
+void res_client_command_local(client_t* client)
+{
+  int load = 0;
+  res_client_number(client, &load);
+  if (client->localwl != load) {
+    client->localwl = load;
+    client->rebalance = true;
+  }
+}
+
+void res_client_command_remote(client_t* client)
+{
+  int load = 0;
+  res_client_number(client, &load);
+  client->remotewl = load;
+  if (client->remotewl != load) {
+    client->remotewl = load;
+    client->rebalance = true;
+  }
+}
+
+void res_client_command_accept(client_t* client)
+{
+  // intlist_t* ints = res_client_intlist(client);
+}
+
+void res_client_command_return(client_t* client)
+{
+  // intlist_t* ints = res_client_intlist(client);
+}
+
 void res_client_command(client_t* client)
 {
   token_t command = res_client_token(client, NULL);
-  int id;
-
   switch (command) {
-    case List: res_client_reply(client, "{ systems 0 }\n"); break;
-    case Topology:
-      res_client_number(client, &id);
-      if (id) {
-        res_info("Invalid id");
-        res_client_throw();
-      } else {
-        int size = 1024;
-        char *str = xmalloc(size);
-        str[0] = '\0';
-        str = res_topo_string(NULL, str, 0, &size);
-        res_client_reply(client, str);
-        xfree(str);
-      }
-      break;
-    case Access:
+    case List: res_client_command_systems(client); break;
+    case Topology: res_client_command_topology(client); break;
+    case Access: res_client_command_access(client); break;
+    case Local: res_client_command_local(client); break;
+    case Remote: res_client_command_remote(client); break;
+    case Accept: res_client_command_accept(client); break;
+    case Return: res_client_command_return(client); break;
     default:
       res_info("Unexpected token %s.\n", res_token_string(command));
+      res_client_throw();
+      break;
   }
-
 }
 
 int res_client_process(client_t* client)
@@ -245,6 +345,7 @@ int res_client_complete(client_t* client)
   char* end = data + size;
   char* p;
 
+  // res_stream_take(&client->stream, p - data);
   for (p = data; p < end; ++p) {
     if (*p == '{') ++count;
     if (*p == '}') {
@@ -290,9 +391,9 @@ bool res_client_writing(client_t* client)
 void res_loop(int port)
 {
   fd_set        rset, wset, rout, wout;
-  int           listen, max, num, sock, i;
+  int           listen, max, num, sock;
   intmap_t*     map = res_map_create();
-  int           loops = 20;
+  int           wcnt = 0, loops = 20;
   
   listen = res_listen_socket(port, true);
   if (listen < 0) exit(1);
@@ -305,7 +406,8 @@ void res_loop(int port)
   while (--loops >= 0) {
     rout = rset;
     wout = wset;
-    num = select(max + 1, &rout, &wout, NULL, NULL);
+    assert(wcnt >= 0);
+    num = select(max + 1, &rout, wcnt > 0 ? &wout : NULL, NULL, NULL);
     if (num <= 0) {
       pexit("select");
     }
@@ -320,26 +422,31 @@ void res_loop(int port)
       res_map_add(map, sock, res_client_create(sock));
     }
 
-    for (i = 0; num > 0 && i <= max; ++i) {
-      if (FD_ISSET(i, &rout) || FD_ISSET(i, &wout)) {
-        client_t* client = res_map_get(map, i);
+    for (sock = listen; num > 0 && sock <= max; ++sock) {
+      if (FD_ISSET(sock, &rout) || FD_ISSET(sock, &wout)) {
+        client_t* client = res_map_get(map, sock);
         int io;
         --num;
-        if (FD_ISSET(i, &rout)) {
+        if (FD_ISSET(sock, &rout)) {
           io = res_client_read(client);
-          FD_CLR(i, &rset);
+          FD_CLR(sock, &rset);
+          if (io >= 0 && res_client_writing(client)) {
+            io = res_client_write(client);
+          }
         } else {
           io = res_client_write(client);
-          FD_CLR(i, &wset);
+          FD_CLR(sock, &wset);
+          --wcnt;
         }
         if (io == -1) {
           res_client_destroy(client);
-          res_map_del(map, i);
+          res_map_del(map, sock);
         } else {
           if (res_client_writing(client)) {
-            FD_SET(i, &wset);
+            FD_SET(sock, &wset);
+            ++wcnt;
           } else {
-            FD_SET(i, &rset);
+            FD_SET(sock, &rset);
           }
         }
       }
@@ -347,10 +454,10 @@ void res_loop(int port)
   }
   res_info("%s: Maximum number of loops reached.\n", __func__);
 
-  res_map_iter_new(map, &i);
+  res_map_iter_new(map, &sock);
   {
     client_t* client;
-    while ((client = res_map_iter_next(map, &i)) != NULL) {
+    while ((client = res_map_iter_next(map, &sock)) != NULL) {
       res_client_destroy(client);
     }
   }
