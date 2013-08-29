@@ -1,0 +1,75 @@
+This documents the communication protocol between the resource server
+and the connecting clients.
+
+Each protocol message is surrounded by a left and right brace: { ... }
+
+After the left brace starts the message type (request or reply): { type ... }
+Each message type is a single name in lowercase alphabetical letters.
+______________________________________________________________________________
+
+Clients can issue the following message types (here enclosed in double quotes)
+with the given accompanying parameters:
+
+"list"
+
+Requests a space separated list of a computer system identification numbers
+for the currently managed set of systems, where id zero always represents
+the local computer system.
+
+"topology" id
+
+Requests a complete hardware topology description of the node/cache/core
+hierarchy of the system which is identified by number 'id'.
+
+"access" idlist
+
+Communicates to the server that the client can access and make use of
+the computer resources for all systems in the given space separated
+list of system identification number.
+
+"local" workload
+
+Here workload is a number which represents an estimate for the approximate
+number of processor cores which could be used to process the local workload.
+
+"remote" workload
+
+Here workload is a number which represents an estimate for the approximate
+number of processor cores which could be used to non-locally process workload.
+
+"accept" id cores
+
+This is a response to a server "grant" message which acknowledges to the server
+that the client will be using the cores on computer system 'id'. The cores are
+identified by the space separated list of logical core numbers.
+
+"return" id cores
+
+This communicates to the server a list of logical processor core numbers
+which the client is no longer using on the system identified by 'id'.
+The list is a space separated list of logical core numbers.
+______________________________________________________________________________
+
+Servers can issue the following message types (here enclosed in double quotes)
+with the given accompanying parameters:
+
+"systems" idlist
+
+Gives a space separated list of machine identification numbers for the
+currently managed set of computer systems. Zero is used to represent
+the local computer system.
+
+"grant" id cores
+
+This gives the receiving client a license to use the given processor cores
+on the computer system identified by 'id' to process the client workload.
+The list is a space separated list of logical core numbers. A client should
+identicate about each core whether it is going to use it (with an "accept"
+message) or not (with a "return" message).
+
+"revoke" id cores
+
+This requests to the client the stop using the given list of logical
+processor core numbers. The client should acknowledge this request with
+one or more "return" responses.
+
