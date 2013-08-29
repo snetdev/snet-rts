@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,12 +13,54 @@
 #include "resdefs.h"
 
 typedef struct client client_t;
+typedef enum token token_t;
+
+enum token {
+  Notoken,
+  Left,
+  Right,
+  Number,
+  List,
+  Topology,
+  Access,
+  Local,
+  Remote,
+  Accept,
+  Return,
+  Systems,
+  Hardware,
+  Grant,
+  Revoke,
+};
 
 static jmp_buf res_client_exception_context;
 
 struct client {
   stream_t      stream;
 };
+
+const char *res_token_string(token_t token)
+{
+  return
+#define NAME(x) #x
+#define TOK(k) token == k ? NAME(k) :
+  TOK(Notoken)
+  TOK(Left)
+  TOK(Right)
+  TOK(Number)
+  TOK(List)
+  TOK(Topology)
+  TOK(Access)
+  TOK(Local)
+  TOK(Remote)
+  TOK(Accept)
+  TOK(Return)
+  TOK(Systems)
+  TOK(Hardware)
+  TOK(Grant)
+  TOK(Revoke)
+  "Unknown";
+}
 
 client_t* res_client_create(int fd)
 {
@@ -32,58 +75,166 @@ void res_client_destroy(client_t* client)
   xdel(client);
 }
 
-int res_client_catch(void)
-{
-  return setjmp(res_client_exception_context);
-}
-
 void res_client_throw(void)
 {
   longjmp(res_client_exception_context, 1);
 }
 
-char res_client_char(client_t* client)
+token_t res_client_token(client_t* client, int* number)
 {
-  int size = 0;
-  char* data = res_stream_incoming(&client->stream, &size);
-  char* end = data + size;
+  token_t token = Notoken;
+  int length = 0;
+  char* data = res_stream_incoming(&client->stream, &length);
+  char* end = data + length;
   char* p;
-  for (p = data; p < end; ++p) {
-    if (!isspace((unsigned char) *p)) {
-      res_stream_take(&client->stream, p - data);
-      return *p;
+
+  for (p = data; p < end && isspace((unsigned char) *p); ++p) {
+    /* skip whitespace */
+  }
+
+  /* Impossible: a right brace must be present. */
+  if (p >= end) {
+    res_client_throw();
+  }
+
+  /* Check for numbers. */
+  if (isdigit((unsigned char) *p)) {
+    int n = *p - '0';
+    while (++p < end && isdigit((unsigned char) *p)) {
+      n = 10 * n + (*p - '0');
+    }
+    token = Number;
+    if (number != NULL) {
+      *number = n;
     }
   }
-  res_client_throw();
-  return '\0';
+  else {
+    /* Check for a list of textual tokens. */
+    static const struct {
+      token_t token;
+      char name[10];
+      int len;
+    } tokens[] = {
+      { Left, "{", 1 },
+      { Right, "}", 1 },
+      { List, "list", 4 },
+      { Topology, "topology", 8 },
+      { Access, "access", 6 },
+      { Local, "local", 5 },
+      { Remote, "remote", 6 },
+      { Accept, "accept", 6 },
+      { Return, "return", 6 },
+      { Systems, "systems", 7 },
+      { Hardware, "hardware", 8 },
+      { Grant, "grant", 5 },
+      { Revoke, "revoke", 6 },
+    };
+    const int num_tokens = sizeof(tokens) / sizeof(tokens[0]);
+    int i, max = end - p;
+    for (i = 0; i < num_tokens; ++i) {
+      if (tokens[i].len <= max &&
+          !strncmp(p, tokens[i].name, tokens[i].len))
+      {
+        token = tokens[i].token;
+        p += tokens[i].len;
+        break;
+      }
+    }
+  }
+
+  if (token == Notoken) {
+    res_info("%s: Unexpectedly got %s\n", __func__, res_token_string(token));
+    res_client_throw();
+  }
+
+  res_stream_take(&client->stream, p - data);
+
+  return token;
 }
 
-void res_client_consume_char(client_t* client, char sym)
+void res_client_expect(client_t* client, token_t expect)
 {
-  char ch = res_client_char(client);
-  if (ch != sym) {
+  token_t got = res_client_token(client, NULL);
+  if (got != expect) {
+    res_info("Expected %s, got %s\n", res_token_string(expect), res_token_string(got));
     res_client_throw();
-  } else {
-    res_stream_take(&client->stream, 1);
+  }
+}
+
+void res_client_number(client_t* client, int* number)
+{
+  const int expect = Number;
+  token_t got = res_client_token(client, number);
+  if (got != expect) {
+    res_info("Expected %s, got %s\n", expect, got);
+    res_client_throw();
+  }
+}
+
+void res_client_reply(client_t* client, const char* fmt, ...)
+{
+  int size = 0;
+  char* data = res_stream_outgoing(&client->stream, &size);
+  if (size < 512) {
+    res_stream_reserve(&client->stream, 1024);
+    data = res_stream_outgoing(&client->stream, &size);
+  }
+  assert(size >= 512);
+  while (true) {
+    int n;
+    va_list ap;
+    va_start(ap, fmt);
+    n = vsnprintf(data, size, fmt, ap);
+    va_end(ap);
+    if (n >= 0 && n < size) {
+      res_stream_appended(&client->stream, n);
+      break;
+    } else {
+      size = (n >= 0) ? (n + 1) : (2 * size);
+      res_stream_reserve(&client->stream, size);
+      data = res_stream_outgoing(&client->stream, &size);
+    }
   }
 }
 
 void res_client_command(client_t* client)
 {
+  token_t command = res_client_token(client, NULL);
+  int id;
+
+  switch (command) {
+    case List: res_client_reply(client, "{ systems 0 }\n"); break;
+    case Topology:
+      res_client_number(client, &id);
+      if (id) {
+        res_info("Invalid id");
+        res_client_throw();
+      } else {
+        int size = 1024;
+        char *str = xmalloc(size);
+        str[0] = '\0';
+        str = res_topo_string(NULL, str, 0, &size);
+        res_client_reply(client, str);
+        xfree(str);
+      }
+      break;
+    case Access:
+    default:
+      res_info("Unexpected token %s.\n", res_token_string(command));
+  }
 
 }
 
 int res_client_process(client_t* client)
 {
-  if (res_client_catch()) {
+  if (setjmp(res_client_exception_context)) {
     return -1;
   } else {
-    char *str;
-    res_client_consume_char(client, '{');
+    res_client_expect(client, Left);
     res_client_command(client);
-    res_client_consume_char(client, '}');
+    res_client_expect(client, Right);
+    return 0;
   }
-  return 0;
 }
 
 int res_client_complete(client_t* client)
@@ -93,6 +244,7 @@ int res_client_complete(client_t* client)
   int count = 0;
   char* end = data + size;
   char* p;
+
   for (p = data; p < end; ++p) {
     if (*p == '{') ++count;
     if (*p == '}') {
@@ -140,6 +292,7 @@ void res_loop(int port)
   fd_set        rset, wset, rout, wout;
   int           listen, max, num, sock, i;
   intmap_t*     map = res_map_create();
+  int           loops = 20;
   
   listen = res_listen_socket(port, true);
   if (listen < 0) exit(1);
@@ -149,7 +302,7 @@ void res_loop(int port)
   FD_SET(listen, &rset);
   max = listen;
 
-  while (true) {
+  while (--loops >= 0) {
     rout = rset;
     wout = wset;
     num = select(max + 1, &rout, &wout, NULL, NULL);
@@ -181,6 +334,7 @@ void res_loop(int port)
         }
         if (io == -1) {
           res_client_destroy(client);
+          res_map_del(map, i);
         } else {
           if (res_client_writing(client)) {
             FD_SET(i, &wset);
@@ -191,6 +345,7 @@ void res_loop(int port)
       }
     }
   }
+  res_info("%s: Maximum number of loops reached.\n", __func__);
 
   res_map_iter_new(map, &i);
   {

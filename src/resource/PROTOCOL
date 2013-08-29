@@ -25,7 +25,7 @@ hierarchy of the system which is identified by number 'id'.
 
 Communicates to the server that the client can access and make use of
 the computer resources for all systems in the given space separated
-list of system identification number.
+list of system identification numbers.
 
 "local" workload
 
@@ -59,6 +59,11 @@ Gives a space separated list of machine identification numbers for the
 currently managed set of computer systems. Zero is used to represent
 the local computer system.
 
+"hardware" id details
+
+In response to a client "topology" request this gives a detailed list
+of information about hardware details for computer system 'id'.
+
 "grant" id cores
 
 This gives the receiving client a license to use the given processor cores
@@ -69,7 +74,7 @@ message) or not (with a "return" message).
 
 "revoke" id cores
 
-This requests to the client the stop using the given list of logical
+This requests to the client to stop using the given list of logical
 processor core numbers. The client should acknowledge this request with
 one or more "return" responses.
 

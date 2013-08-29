@@ -205,6 +205,7 @@ bin_PROGRAMS = src/resource/resserv
 
 src_resource_resserv_SOURCES = \
 	src/resource/resdefs.h \
+	src/resource/reslist.c \
 	src/resource/resloop.c \
 	src/resource/resmain.c \
 	src/resource/resmap.c \

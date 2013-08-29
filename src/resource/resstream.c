@@ -19,6 +19,12 @@ void res_buffer_done(buffer_t* buf)
   xdel(buf->data);
 }
 
+void res_buffer_appended(buffer_t* buf, int amount)
+{
+  assert(buf->end + amount <= buf->size);
+  buf->end += amount;
+}
+
 void res_buffer_reserve(buffer_t* buf, int amount)
 {
   if (buf->size - buf->end < amount) {
@@ -42,13 +48,17 @@ void res_buffer_reserve(buffer_t* buf, int amount)
         buf->size = newsize;
       }
     }
-    assert(buf->size - buf->end == amount);
   }
+}
+
+int res_buffer_stored(buffer_t* buf)
+{
+  return buf->end - buf->start;
 }
 
 int res_buffer_avail(buffer_t* buf)
 {
-  return buf->end - buf->start;
+  return buf->size - buf->end;
 }
 
 char* res_buffer_data(buffer_t* buf)
@@ -120,18 +130,18 @@ int res_stream_read(stream_t* stream)
 
 int res_stream_write(stream_t* stream)
 {
-  int amount = res_buffer_avail(&stream->write);
+  int amount = res_buffer_stored(&stream->write);
   return res_buffer_write(&stream->write, stream->fd, amount);
 }
 
 bool res_stream_writing(stream_t* stream)
 {
-  return res_buffer_avail(&stream->write) > 0;
+  return res_buffer_stored(&stream->write) > 0;
 }
 
 char* res_stream_incoming(stream_t* stream, int* amount)
 {
-  *amount = res_buffer_avail(&stream->read);
+  *amount = res_buffer_stored(&stream->read);
   return res_buffer_data(&stream->read);
 }
 
@@ -140,4 +150,19 @@ void res_stream_take(stream_t* stream, int amount)
   res_buffer_take(&stream->read, amount);
 }
 
+void res_stream_reserve(stream_t* stream, int amount)
+{
+  res_buffer_reserve(&stream->write, amount);
+}
+
+void res_stream_appended(stream_t* stream, int amount)
+{
+  res_buffer_appended(&stream->write, amount);
+}
+
+char* res_stream_outgoing(stream_t* stream, int* amount)
+{
+  *amount = res_buffer_avail(&stream->write);
+  return res_buffer_data(&stream->write);
+}
 

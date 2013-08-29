@@ -1,7 +1,8 @@
 
-.PHONY: all clean proto
+.PHONY: all proto
 
-all clean:
+all:
+	@rm -f -- core*
 	$(MAKE) -C ../.. $@
 
 proto:
@@ -9,6 +10,9 @@ proto:
 	mv $$$$ resproto.h
 	rm -f restypes.h
 	grep -h '^typedef ' *.[ch] > restypes.h
+
+clean:
+	rm -rf -- core* *.o .deps .libs .dirstamp
 
 ctags:
 	ctags *.[ch]

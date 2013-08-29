@@ -37,6 +37,51 @@ struct res {
 
 static res_t *root;
 
+char* res_topo_string(res_t* obj, char* str, int len, int *size)
+{
+  if (!obj) {
+    obj = root;
+  }
+  assert(str);
+  assert(*size >= 100);
+  assert(len >= 0 && len < *size);
+  assert(str[len] == '\0');
+
+  if (*size - len < 1024) {
+    str = xrealloc(str, *size + 1024);
+    *size += 1024;
+  }
+  snprintf(str + len, *size - len,
+           "%*s{ kind %s depth %d logical %d ",
+           obj->depth * 2, "",
+           res_kind_string(obj->kind), obj->depth, obj->logical);
+  len += strlen(str + len);
+
+  if (obj->kind == Proc) {
+    snprintf(str + len, *size - len, "physical %d ", obj->physical);
+    len += strlen(str + len);
+  }
+  if (obj->kind == Cache) {
+    snprintf(str + len, *size - len, "level %d ", obj->cache_level);
+    len += strlen(str + len);
+  }
+  if (obj->num_children > 0) {
+    int i;
+    snprintf(str + len, *size - len, "children %d \n", obj->num_children);
+    len += strlen(str + len);
+    for (i = 0; i < obj->num_children; ++i) {
+      str = res_topo_string(obj->children[i], str, len, size);
+      len += strlen(str + len);
+    }
+    snprintf(str + len, *size - len,
+             "%*s} \n", obj->depth * 2, "");
+  } else {
+    snprintf(str + len, *size - len, "} \n");
+  }
+
+  return str;
+}
+
 static void res_relate(res_t *parent, res_t *child)
 {
   if (parent->num_children == parent->max_children) {

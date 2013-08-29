@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "resdefs.h"
 
@@ -23,7 +24,10 @@ void res_map_add(intmap_t* map, int key, void* val)
   assert(val != NULL);
   if (key >= map->max) {
     int i, newmax = key + 10;
-    map->map = xrealloc(map->map, newmax);
+    void* p = xrealloc(map->map, newmax * sizeof(void *));
+    printf("%s: p = %p, mm = %p\n", __func__, p, map->map);
+    map->map = p;
+    assert(map->map);
     for (i = map->max; i < newmax; ++i) {
       map->map[i] = NULL;
     }
