@@ -1,21 +1,7 @@
 #ifndef RESPROTO_H
 #define RESPROTO_H
 
-/* reslist.c */
-
-void res_list_init(intlist_t* list);
-intlist_t* res_list_create(void);
-void res_list_reset(intlist_t* list);
-void res_list_move(intlist_t* dest, intlist_t* src);
-void res_list_copy(intlist_t* dest, intlist_t* src);
-void res_list_set(intlist_t* list, int key, int val);
-int res_list_get(intlist_t* list, int key);
-void res_list_done(intlist_t* list);
-void res_list_destroy(intlist_t* list);
-int res_list_size(intlist_t* list);
-void res_list_append(intlist_t* list, int val);
-
-/* resloop.c */
+/* resclient.c */
 
 const char *res_token_string(token_t token);
 client_t* res_client_create(int fd);
@@ -36,9 +22,29 @@ void res_client_command_return(client_t* client);
 void res_client_command(client_t* client);
 int res_client_process(client_t* client);
 int res_client_complete(client_t* client);
-int res_client_read(client_t* client);
 int res_client_write(client_t* client);
 bool res_client_writing(client_t* client);
+int res_client_read(client_t* client);
+
+/* reslist.c */
+
+void res_list_init(intlist_t* list);
+void res_list_init_max(intlist_t* list, int max);
+intlist_t* res_list_create(void);
+intlist_t* res_list_create_max(int max);
+void res_list_reset(intlist_t* list);
+void res_list_move(intlist_t* dest, intlist_t* src);
+void res_list_copy(intlist_t* dest, intlist_t* src);
+void res_list_set(intlist_t* list, int key, int val);
+int res_list_get(intlist_t* list, int key);
+void res_list_done(intlist_t* list);
+void res_list_destroy(intlist_t* list);
+int res_list_size(intlist_t* list);
+void res_list_append(intlist_t* list, int val);
+
+/* resloop.c */
+
+void res_rebalance(intmap_t* map);
 void res_loop(int port);
 
 /* resmain.c */
@@ -56,7 +62,7 @@ void res_map_add(intmap_t* map, int key, void* val);
 void* res_map_get(intmap_t* map, int key);
 void res_map_del(intmap_t* map, int key);
 void res_map_destroy(intmap_t* map);
-void res_map_iter_new(intmap_t* map, int* iter);
+void res_map_iter_init(intmap_t* map, int* iter);
 void* res_map_iter_next(intmap_t* map, int* iter);
 
 /* resmem.c */
@@ -74,6 +80,7 @@ int res_nonblocking(int fd, bool nb);
 int res_listen_socket(int listen_port, bool nb);
 int res_connect_socket(int connect_port, char *address, bool nb);
 int res_accept_socket(int listen, bool nb);
+void res_socket_close(int sock);
 
 /* resstream.c */
 
@@ -100,8 +107,23 @@ char* res_stream_outgoing(stream_t* stream, int* amount);
 
 /* restopo.c */
 
+int res_local_cores(void);
+int res_local_procs(void);
+
+/*
+ * Convert a hierarchical resource topology to a single string.
+ * Input parameters:
+ *      obj: the resource and its children to convert to string.
+ *      str: the destination string where output is appended to.
+ *      len: the current length of the output string.
+ *      size: the current size of the destination string.
+ * Output result: Return the current string and its size.
+ * When the string memory is too small then the string must be
+ * dynamically reallocated to accomodate the new output.
+ * The new size of the string must be communicated via the size pointer.
+ */
 char* res_topo_string(res_t* obj, char* str, int len, int *size);
-void res_hw_init(void);
+void res_topo_init(void);
 const char *res_kind_string(int kind);
 
 

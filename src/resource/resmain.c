@@ -161,7 +161,7 @@ int main(int argc, char **argv)
 {
   get_options(argc, argv);
 
-  res_hw_init();
+  res_topo_init();
 
   res_loop(port);
 

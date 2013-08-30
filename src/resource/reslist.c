@@ -17,10 +17,24 @@ void res_list_init(intlist_t* list)
   list->max = 0;
 }
 
+void res_list_init_max(intlist_t* list, int max)
+{
+  list->list = xmalloc(max * sizeof(int));
+  list->num = 0;
+  list->max = max;
+}
+
 intlist_t* res_list_create(void)
 {
-  intlist_t*     list = xnew(intlist_t);
+  intlist_t* list = xnew(intlist_t);
   res_list_init(list);
+  return list;
+}
+
+intlist_t* res_list_create_max(int max)
+{
+  intlist_t* list = xnew(intlist_t);
+  res_list_init_max(list, max);
   return list;
 }
 

@@ -204,6 +204,8 @@ libfrontrt_la_LIBADD = $(LIBHWLOC_LA)
 bin_PROGRAMS = src/resource/resserv
 
 src_resource_resserv_SOURCES = \
+	src/resource/resclient.c \
+	src/resource/resclient.h \
 	src/resource/resdefs.h \
 	src/resource/reslist.c \
 	src/resource/resloop.c \

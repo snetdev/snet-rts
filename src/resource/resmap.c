@@ -4,6 +4,7 @@
 #include "resdefs.h"
 
 typedef struct intmap intmap_t;
+typedef int intmap_iter_t;
 
 struct intmap {
   void        **map;
@@ -12,7 +13,7 @@ struct intmap {
 
 intmap_t* res_map_create(void)
 {
-  intmap_t*     map = xnew(intmap_t);
+  intmap_t* map = xnew(intmap_t);
   map->map = NULL;
   map->max = 0;
   return map;
@@ -24,15 +25,14 @@ void res_map_add(intmap_t* map, int key, void* val)
   assert(val != NULL);
   if (key >= map->max) {
     int i, newmax = key + 10;
-    void* p = xrealloc(map->map, newmax * sizeof(void *));
-    map->map = p;
-    assert(map->map);
+    map->map = xrealloc(map->map, newmax * sizeof(void *));
     for (i = map->max; i < newmax; ++i) {
       map->map[i] = NULL;
     }
     map->max = newmax;
+  } else {
+    assert(map->map[key] == NULL);
   }
-  assert(map->map[key] == NULL);
   map->map[key] = val;
 }
 
@@ -58,7 +58,7 @@ void res_map_destroy(intmap_t* map)
   xfree(map);
 }
 
-void res_map_iter_new(intmap_t* map, int* iter)
+void res_map_iter_init(intmap_t* map, int* iter)
 {
   *iter = -1;
 }

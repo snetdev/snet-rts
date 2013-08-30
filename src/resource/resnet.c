@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -126,4 +125,10 @@ int res_accept_socket(int listen, bool nb)
 
   return s;
 }
+
+void res_socket_close(int sock)
+{
+  close(sock);
+}
+
 

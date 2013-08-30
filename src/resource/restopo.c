@@ -31,16 +31,44 @@ struct res {
   struct res  **children;
   int           num_children;
   int           max_children;
-  int           first_pu;
-  int           last_pu;
+  int           first_core;
+  int           last_core;
+  int           first_proc;
+  int           last_proc;
 };
 
-static res_t *root;
+static res_t *res_root;
 
+int res_local_cores(void)
+{
+  int count = res_root->last_core - res_root->first_core + 1;
+  assert(count > 0);
+  return count;
+}
+
+int res_local_procs(void)
+{
+  int count = res_root->last_proc - res_root->first_proc + 1;
+  assert(count > 0);
+  return count;
+}
+
+/*
+ * Convert a hierarchical resource topology to a single string.
+ * Input parameters:
+ *      obj: the resource and its children to convert to string.
+ *      str: the destination string where output is appended to.
+ *      len: the current length of the output string.
+ *      size: the current size of the destination string.
+ * Output result: Return the current string and its size.
+ * When the string memory is too small then the string must be
+ * dynamically reallocated to accomodate the new output.
+ * The new size of the string must be communicated via the size pointer.
+ */
 char* res_topo_string(res_t* obj, char* str, int len, int *size)
 {
   if (!obj) {
-    obj = root;
+    obj = res_root;
   }
   assert(str);
   assert(*size >= 100);
@@ -82,7 +110,7 @@ char* res_topo_string(res_t* obj, char* str, int len, int *size)
   return str;
 }
 
-static void res_relate(res_t *parent, res_t *child)
+static void res_relate_resources(res_t *parent, res_t *child)
 {
   if (parent->num_children == parent->max_children) {
     parent->max_children = parent->max_children
@@ -95,7 +123,7 @@ static void res_relate(res_t *parent, res_t *child)
   parent->children[parent->num_children++] = child;
 }
 
-static res_t* res_add(
+static res_t* res_add_resource(
   res_t *parent,
   res_kind_t kind,
   int topo_depth,
@@ -113,13 +141,15 @@ static res_t* res_add(
   res->children = 0;
   res->num_children = 0;
   res->max_children = 0;
-  res->first_pu = -1;
-  res->last_pu = -1;
+  res->first_core = 0;
+  res->last_core = 0;
+  res->first_proc = 0;
+  res->last_proc = 0;
   if (parent == NULL) {
-    assert(root == NULL);
-    root = res;
+    assert(res_root == NULL);
+    res_root = res;
   } else {
-    res_relate(parent, res);
+    res_relate_resources(parent, res);
   }
   return res;
 }
@@ -166,45 +196,60 @@ static void traverse_topo(
                 hwloc_obj_type_string(obj->type), depth);
       return;
   }
-  res = res_add(parent, kind, depth, obj->logical_index, obj->os_index,
-                (kind == Cache && obj->attr) ?  obj->attr->cache.depth : 0);
+
+  res = res_add_resource(parent, kind, depth,
+                         obj->logical_index, obj->os_index,
+                         (kind == Cache && obj->attr) ?
+                          obj->attr->cache.depth : 0);
+
   if (res->kind == Proc) {
     assert(obj->arity == 0);
-    res->first_pu = res->last_pu = obj->logical_index;
+    res->first_proc = res->last_proc = obj->logical_index;
   }
   else {
+    if (res->kind == Core) {
+      res->first_core = res->last_core = obj->logical_index;
+    }
+
     for (i = 0; i < obj->arity; i++) {
       traverse_topo(topo, obj->children[i], depth + 1, res);
     }
+
     for (i = 0; i < res->num_children; i++) {
       if (i == 0) {
-        res->first_pu = res->children[i]->first_pu;
-        res->last_pu = res->children[i]->last_pu;
+        res->first_proc = res->children[i]->first_proc;
+        res->last_proc = res->children[i]->last_proc;
       } else {
-        if (res->children[i]->first_pu != res->last_pu + 1) {
-          res_warn("Gap at depth %d, child %d, %d -> %d\n",
-                   depth, i, res->last_pu, res->children[i]->first_pu);
+        if (res->children[i]->first_proc != res->last_proc + 1) {
+          res_warn("Proc gap at depth %d, child %d, %d -> %d\n",
+                   depth, i, res->last_proc, res->children[i]->first_proc);
         }
-        res->last_pu = res->children[i]->last_pu;
+        res->last_proc = res->children[i]->last_proc;
+      }
+
+      if (res->children[i]->first_core != -1) {
+        if (i == 0) {
+          res->first_core = res->children[i]->first_core;
+          res->last_core = res->children[i]->last_core;
+        } else {
+          res->last_core = res->children[i]->last_core;
+        }
       }
     }
   }
-  res_info("Depth %d, %-7s, range %d -> %d\n",
+  res_info("Depth %d, %-7s, cores %d - %d, procs %d - %d\n",
            depth, res_kind_string(res->kind),
-           res->first_pu, res->last_pu);
+           res->first_core, res->last_core,
+           res->first_proc, res->last_proc);
 }
 
-void res_hw_init(void)
+void res_topo_init(void)
 {
   hwloc_topology_t topo;
-
-  /* Allocate and initialize topology object. */
   hwloc_topology_init(&topo);
-
-  /* Perform the topology detection. */
   hwloc_topology_load(topo);
 
-  traverse_topo(topo, hwloc_get_root_obj(topo), 0, root);
+  traverse_topo(topo, hwloc_get_root_obj(topo), 0, res_root);
 
   hwloc_topology_destroy(topo);
 }
