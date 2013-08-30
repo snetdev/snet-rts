@@ -10,13 +10,52 @@ struct intlist {
   int           max;
 };
 
-intlist_t* res_list_create(void)
+void res_list_init(intlist_t* list)
 {
-  intlist_t*     list = xnew(intlist_t);
   list->list = NULL;
   list->num = 0;
   list->max = 0;
+}
+
+intlist_t* res_list_create(void)
+{
+  intlist_t*     list = xnew(intlist_t);
+  res_list_init(list);
   return list;
+}
+
+void res_list_reset(intlist_t* list)
+{
+  if (list->num > 0) {
+    xfree(list->list);
+    list->num = 0;
+    list->max = 0;
+  }
+}
+
+void res_list_move(intlist_t* dest, intlist_t* src)
+{
+  if (dest != src) {
+    res_list_reset(dest);
+    *dest = *src;
+    src->list = NULL;
+    src->num = 0;
+    src->max = 0;
+  }
+}
+
+void res_list_copy(intlist_t* dest, intlist_t* src)
+{
+  if (dest != src) {
+    int i;
+    if (dest->max < src->num) {
+      dest->list = xrealloc(dest->list, src->num * sizeof(int));
+      dest->num = dest->max = src->num;
+    }
+    for (i = 0; i < src->num; ++i) {
+      dest->list[i] = src->list[i];
+    }
+  }
 }
 
 void res_list_set(intlist_t* list, int key, int val)
@@ -44,9 +83,15 @@ int res_list_get(intlist_t* list, int key)
   return list->list[key];
 }
 
-void res_list_destroy(intlist_t* list)
+void res_list_done(intlist_t* list)
 {
   xfree(list->list);
+  list->list = NULL;
+}
+
+void res_list_destroy(intlist_t* list)
+{
+  res_list_done(list);
   xfree(list);
 }
 

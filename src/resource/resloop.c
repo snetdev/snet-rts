@@ -37,8 +37,9 @@ static jmp_buf res_client_exception_context;
 
 struct client {
   stream_t      stream;
-  int           localwl;
-  int           remotewl;
+  unsigned long access;
+  int           local_workload;
+  int           remote_workload;
   bool          rebalance;
 };
 
@@ -69,8 +70,9 @@ client_t* res_client_create(int fd)
 {
   client_t *client = xnew(client_t);
   res_stream_init(&client->stream, fd);
-  client->localwl = 0;
-  client->remotewl = 0;
+  client->access = 1UL;
+  client->local_workload = 0;
+  client->remote_workload = 0;
   client->rebalance = false;
   return client;
 }
@@ -255,7 +257,7 @@ void res_client_command_topology(client_t* client)
     str[0] = '\0';
     gethostname(host, sizeof host);
     host[sizeof host - 1] = '\0';
-    snprintf(str, size, "{ hardware %d host %s \n", id, host);
+    snprintf(str, size, "{ hardware %d host %s children 1 \n", id, host);
     len = strlen(str);
     str = res_topo_string(NULL, str, len, &size);
     len += strlen(str + len);
@@ -272,7 +274,18 @@ void res_client_command_topology(client_t* client)
 void res_client_command_access(client_t* client)
 {
   intlist_t* ints = res_client_intlist(client);
-  // Needed when we are going to support remote systems
+  int size = res_list_size(ints);
+  int i;
+  client->access = 1UL;
+  for (i = 0; i < size; i++) {
+    int val = res_list_get(ints, i);
+    if (val < 0 || val >= 8*sizeof(client->access)) {
+      res_list_destroy(ints);
+      res_client_throw();
+    } else {
+      client->access |= (1UL << val);
+    }
+  }
   res_list_destroy(ints);
 }
 
@@ -280,8 +293,8 @@ void res_client_command_local(client_t* client)
 {
   int load = 0;
   res_client_number(client, &load);
-  if (client->localwl != load) {
-    client->localwl = load;
+  if (client->local_workload != load) {
+    client->local_workload = load;
     client->rebalance = true;
   }
 }
@@ -290,34 +303,38 @@ void res_client_command_remote(client_t* client)
 {
   int load = 0;
   res_client_number(client, &load);
-  client->remotewl = load;
-  if (client->remotewl != load) {
-    client->remotewl = load;
+  client->remote_workload = load;
+  if (client->remote_workload != load) {
+    client->remote_workload = load;
     client->rebalance = true;
   }
 }
 
 void res_client_command_accept(client_t* client)
 {
-  // intlist_t* ints = res_client_intlist(client);
+  intlist_t* ints = res_client_intlist(client);
+
+  res_list_destroy(ints);
 }
 
 void res_client_command_return(client_t* client)
 {
-  // intlist_t* ints = res_client_intlist(client);
+  intlist_t* ints = res_client_intlist(client);
+
+  res_list_destroy(ints);
 }
 
 void res_client_command(client_t* client)
 {
   token_t command = res_client_token(client, NULL);
   switch (command) {
-    case List: res_client_command_systems(client); break;
+    case List:     res_client_command_systems(client); break;
     case Topology: res_client_command_topology(client); break;
-    case Access: res_client_command_access(client); break;
-    case Local: res_client_command_local(client); break;
-    case Remote: res_client_command_remote(client); break;
-    case Accept: res_client_command_accept(client); break;
-    case Return: res_client_command_return(client); break;
+    case Access:   res_client_command_access(client); break;
+    case Local:    res_client_command_local(client); break;
+    case Remote:   res_client_command_remote(client); break;
+    case Accept:   res_client_command_accept(client); break;
+    case Return:   res_client_command_return(client); break;
     default:
       res_info("Unexpected token %s.\n", res_token_string(command));
       res_client_throw();

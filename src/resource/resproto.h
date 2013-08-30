@@ -3,9 +3,14 @@
 
 /* reslist.c */
 
+void res_list_init(intlist_t* list);
 intlist_t* res_list_create(void);
+void res_list_reset(intlist_t* list);
+void res_list_move(intlist_t* dest, intlist_t* src);
+void res_list_copy(intlist_t* dest, intlist_t* src);
 void res_list_set(intlist_t* list, int key, int val);
 int res_list_get(intlist_t* list, int key);
+void res_list_done(intlist_t* list);
 void res_list_destroy(intlist_t* list);
 int res_list_size(intlist_t* list);
 void res_list_append(intlist_t* list, int val);
