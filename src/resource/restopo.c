@@ -205,10 +205,14 @@ static void traverse_topo(
   if (res->kind == Proc) {
     assert(obj->arity == 0);
     res->first_proc = res->last_proc = obj->logical_index;
+    res->first_core = res->last_core = parent->first_core;
   }
   else {
     if (res->kind == Core) {
       res->first_core = res->last_core = obj->logical_index;
+    }
+    else if (res->kind > Core) {
+      res->first_core = res->last_core = parent->first_core;
     }
 
     for (i = 0; i < obj->arity; i++) {
@@ -227,7 +231,7 @@ static void traverse_topo(
         res->last_proc = res->children[i]->last_proc;
       }
 
-      if (res->children[i]->first_core != -1) {
+      if (res->kind < Core) {
         if (i == 0) {
           res->first_core = res->children[i]->first_core;
           res->last_core = res->children[i]->last_core;
