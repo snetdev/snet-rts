@@ -195,8 +195,10 @@ then
   LIBHWLOC_LA=$with_hwloc_libs/libhwloc.la
   AC_SUBST([LIBHWLOC_LA])
   AC_SUBST([HWLOC_INCLUDES])
-  AM_CONDITIONAL([ENABLE_HWLOC], [true])
   AC_DEFINE([ENABLE_HWLOC], [1], [Set to 1 to enable the hwloc])
+  AM_CONDITIONAL([ENABLE_HWLOC], [true])
+else
+  AM_CONDITIONAL([ENABLE_HWLOC], [false])
 fi
 
 
