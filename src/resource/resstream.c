@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
@@ -77,7 +76,7 @@ int res_buffer_read(buffer_t* buf, int fd, int amount)
 {
   int n;
   res_buffer_reserve(buf, amount);
-  if ((n = read(fd, buf->data + buf->end, amount)) == -1) {
+  if ((n = res_socket_receive(fd, buf->data + buf->end, amount)) == -1) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       return 0;
     } else {
@@ -94,10 +93,13 @@ int res_buffer_read(buffer_t* buf, int fd, int amount)
 
 int res_buffer_write(buffer_t* buf, int fd, int amount)
 {
+  char* data = buf->data + buf->start;
   int n;
+
   assert(buf->end > buf->start);
   assert(amount <= buf->end - buf->start);
-  if ((n = write(fd, buf->data + buf->start, buf->end - buf->start)) == -1) {
+
+  if ((n = res_socket_send(fd, data, amount)) == -1) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       return 0;
     } else {
@@ -121,7 +123,7 @@ void res_stream_done(stream_t* stream)
 {
   res_buffer_done(&stream->read);
   res_buffer_done(&stream->write);
-  close(stream->fd);
+  res_socket_close(stream->fd);
 }
 
 int res_stream_read(stream_t* stream)

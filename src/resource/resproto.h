@@ -4,7 +4,7 @@
 /* resclient.c */
 
 const char *res_token_string(token_t token);
-client_t* res_client_create(int fd);
+client_t* res_client_create(int bit, int fd);
 void res_client_destroy(client_t* client);
 void res_client_throw(void);
 token_t res_client_token(client_t* client, int* number);
@@ -42,10 +42,16 @@ void res_list_done(intlist_t* list);
 void res_list_destroy(intlist_t* list);
 int res_list_size(intlist_t* list);
 void res_list_append(intlist_t* list, int val);
+void res_list_sort(intlist_t* list, int (*compar)(const void *, const void *));
+void res_list_sort_ascend(intlist_t* list);
+void res_list_sort_descend(intlist_t* list);
 
 /* resloop.c */
 
-void res_rebalance_cores(intmap_t* map);
+int res_client_compare_local_workload_desc(const void *p, const void *q);
+
+/* Each task can be run on a dedicated core. */
+void res_rebalance_cores(intmap_t* map, int ncores, int nprocs);
 void res_rebalance_procs(intmap_t* map);
 void res_rebalance_proportional(intmap_t* map);
 void res_rebalance_minimal(intmap_t* map);
@@ -64,6 +70,8 @@ void res_debug(const char *fmt, ...);
 /* resmap.c */
 
 intmap_t* res_map_create(void);
+int res_map_max(intmap_t* map);
+int res_map_count(intmap_t* map);
 void res_map_add(intmap_t* map, int key, void* val);
 void* res_map_get(intmap_t* map, int key);
 void res_map_del(intmap_t* map, int key);
@@ -88,6 +96,8 @@ int res_listen_socket(int listen_port, bool nb);
 int res_connect_socket(int connect_port, char *address, bool nb);
 int res_accept_socket(int listen, bool nb);
 void res_socket_close(int sock);
+int res_socket_receive(int sock, char* buf, int count);
+int res_socket_send(int sock, const char* buf, int count);
 
 /* resstream.c */
 
@@ -114,6 +124,7 @@ char* res_stream_outgoing(stream_t* stream, int* amount);
 
 /* restopo.c */
 
+res_t* res_topo_root(void);
 int res_local_cores(void);
 int res_local_procs(void);
 

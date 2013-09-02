@@ -56,10 +56,12 @@ const char *res_token_string(token_t token)
   "Unknown";
 }
 
-client_t* res_client_create(int fd)
+client_t* res_client_create(int bit, int fd)
 {
   client_t *client = xnew(client_t);
   res_stream_init(&client->stream, fd);
+  client->bit = 0;
+  client->access = 0;
   client->access = 0;
   client->local_workload = 0;
   client->remote_workload = 0;

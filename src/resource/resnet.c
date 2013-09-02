@@ -131,4 +131,13 @@ void res_socket_close(int sock)
   close(sock);
 }
 
+int res_socket_receive(int sock, char* buf, int count)
+{
+  return read(sock, buf, count);
+}
+
+int res_socket_send(int sock, const char* buf, int count)
+{
+  return write(sock, buf, count);
+}
 

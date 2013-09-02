@@ -19,6 +19,7 @@ void res_list_init(intlist_t* list)
 
 void res_list_init_max(intlist_t* list, int max)
 {
+  assert(max > 0);
   list->list = xmalloc(max * sizeof(int));
   list->num = 0;
   list->max = max;
@@ -42,6 +43,7 @@ void res_list_reset(intlist_t* list)
 {
   if (list->num > 0) {
     xfree(list->list);
+    list->list = NULL;
     list->num = 0;
     list->max = 0;
   }
@@ -64,8 +66,9 @@ void res_list_copy(intlist_t* dest, intlist_t* src)
     int i;
     if (dest->max < src->num) {
       dest->list = xrealloc(dest->list, src->num * sizeof(int));
-      dest->num = dest->max = src->num;
+      dest->max = src->num;
     }
+    dest->num = src->num;
     for (i = 0; i < src->num; ++i) {
       dest->list[i] = src->list[i];
     }
@@ -101,6 +104,7 @@ void res_list_done(intlist_t* list)
 {
   xfree(list->list);
   list->list = NULL;
+  list->num = list->max = 0;
 }
 
 void res_list_destroy(intlist_t* list)
@@ -117,5 +121,30 @@ int res_list_size(intlist_t* list)
 void res_list_append(intlist_t* list, int val)
 {
   res_list_set(list, list->num, val);
+}
+
+static int res_list_compar_ascend(const void *p, const void *q)
+{
+  return *(const int *)q - *(const int *)p;
+}
+
+static int res_list_compar_descend(const void *p, const void *q)
+{
+  return *(const int *)p - *(const int *)q;
+}
+
+void res_list_sort(intlist_t* list, int (*compar)(const void *, const void *))
+{
+  qsort(list->list, list->num, sizeof(int), compar);
+}
+
+void res_list_sort_ascend(intlist_t* list)
+{
+  qsort(list->list, list->num, sizeof(int), res_list_compar_ascend);
+}
+
+void res_list_sort_descend(intlist_t* list)
+{
+  qsort(list->list, list->num, sizeof(int), res_list_compar_descend);
 }
 
