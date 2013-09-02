@@ -13,7 +13,6 @@
 #include "resdefs.h"
 
 typedef enum token token_t;
-
 enum token {
   Notoken,
   Left,
@@ -32,7 +31,7 @@ enum token {
   Revoke,
 };
 
-static jmp_buf res_client_exception_context;
+static jmp_buf res_parse_exception_context;
 
 const char *res_token_string(token_t token)
 {
@@ -77,7 +76,7 @@ void res_client_destroy(client_t* client)
 
 void res_client_throw(void)
 {
-  longjmp(res_client_exception_context, 1);
+  longjmp(res_parse_exception_context, 1);
 }
 
 token_t res_client_token(client_t* client, int* number)
@@ -348,47 +347,51 @@ void res_client_command(client_t* client)
   }
 }
 
+void res_client_parse(client_t* client)
+{
+  res_client_expect(client, Left);
+  res_client_command(client);
+  res_client_expect(client, Right);
+}
+
 int res_client_process(client_t* client)
 {
-  if (setjmp(res_client_exception_context)) {
+  if (setjmp(res_parse_exception_context)) {
     return -1;
   } else {
-    res_client_expect(client, Left);
-    res_client_command(client);
-    res_client_expect(client, Right);
+    res_client_parse(client);
     return 0;
   }
 }
 
 int res_client_complete(client_t* client)
 {
-  int   size = 0;
-  char* data = res_stream_incoming(&client->stream, &size);
-  char* end = data + size;
-  char* p;
+  int   size = 0, nesting = 1;
+  char *data = res_stream_incoming(&client->stream, &size);
+  char *p, *end = data + size;
+  enum { Complete = 1, Incomplete = 0, Failure = -1 };
 
   for (p = data; p < end && isspace((unsigned char) *p); ++p) {
     /* skip whitespace */
   }
-  if (p > data) {
-    res_stream_take(&client->stream, p - data);
-    size = 0;
-    data = res_stream_incoming(&client->stream, &size);
-    end = data + size;
-  }
-  if (p < end && *p != '{') {
-    res_info("Expected left brace, got 0x%02x\n", (unsigned char) *p);
-    return -1;
-  } else {
-    int count = 0;
-    for (p = data; p < end; ++p) {
-      if (*p == '{') ++count;
-      if (*p == '}' && --count == 0) {
-        return (p + 1 - data);
+  if (p < end) {
+    if (*p != '{') {
+      res_info("Expected left brace, got 0x%02x\n", (unsigned char) *p);
+      return Failure;
+    } else {
+      char *preamble = p;
+      while (++p < end) {
+        if (*p == '{') ++nesting;
+        if (*p == '}' && --nesting == 0) {
+          break;
+        }
+      }
+      if (preamble > data) {
+        res_stream_take(&client->stream, preamble - data);
       }
     }
-    return (size > 10*1024) ? -1 : 0;
   }
+  return nesting ? ((size < 10*1024) ? Incomplete : Failure) : Complete;
 }
 
 int res_client_write(client_t* client)
@@ -403,21 +406,22 @@ bool res_client_writing(client_t* client)
 
 int res_client_read(client_t* client)
 {
-  if (res_stream_read(&client->stream) == -1) {
-    return -1;
+  enum { Complete = 1, Incomplete = 0, Failure = -1 };
+
+  if (res_stream_read(&client->stream) == Failure) {
+    return Failure;
   } else {
-    int complete = res_client_complete(client);
-    if (complete <= 0) {
-      return complete;
-    } else {
-      int parse = res_client_process(client);
-      if (parse == -1) {
-        return parse;
-      } else {
-        if (res_client_writing(client)) {
-          return res_client_write(client);
-        }
+    int complete;
+    while ((complete = res_client_complete(client)) == Complete) {
+      if (res_client_process(client) == Failure) {
+        return Failure;
       }
+    }
+    if (complete == Failure) {
+      return Failure;
+    }
+    else if (res_client_writing(client)) {
+      return res_client_write(client);
     }
   }
   return 0;

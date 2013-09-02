@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 
   res_topo_init();
 
-  res_loop(port);
+  res_service(port);
 
   return 0;
 }

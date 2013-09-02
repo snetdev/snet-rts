@@ -20,6 +20,7 @@ void res_client_command_remote(client_t* client);
 void res_client_command_accept(client_t* client);
 void res_client_command_return(client_t* client);
 void res_client_command(client_t* client);
+void res_client_parse(client_t* client);
 int res_client_process(client_t* client);
 int res_client_complete(client_t* client);
 int res_client_write(client_t* client);
@@ -44,8 +45,13 @@ void res_list_append(intlist_t* list, int val);
 
 /* resloop.c */
 
+void res_rebalance_cores(intmap_t* map);
+void res_rebalance_procs(intmap_t* map);
+void res_rebalance_proportional(intmap_t* map);
+void res_rebalance_minimal(intmap_t* map);
 void res_rebalance(intmap_t* map);
-void res_loop(int port);
+void res_loop(int listen);
+void res_service(int port);
 
 /* resmain.c */
 
@@ -62,6 +68,7 @@ void res_map_add(intmap_t* map, int key, void* val);
 void* res_map_get(intmap_t* map, int key);
 void res_map_del(intmap_t* map, int key);
 void res_map_destroy(intmap_t* map);
+void res_map_apply(intmap_t* map, void (*func)(void *));
 void res_map_iter_init(intmap_t* map, int* iter);
 void* res_map_iter_next(intmap_t* map, int* iter);
 

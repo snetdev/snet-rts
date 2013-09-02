@@ -58,6 +58,16 @@ void res_map_destroy(intmap_t* map)
   xfree(map);
 }
 
+void res_map_apply(intmap_t* map, void (*func)(void *))
+{
+  int i;
+  for (i = 0; i < map->max; ++i) {
+    if (map->map[i]) {
+      (*func)(map->map[i]);
+    }
+  }
+}
+
 void res_map_iter_init(intmap_t* map, int* iter)
 {
   *iter = -1;

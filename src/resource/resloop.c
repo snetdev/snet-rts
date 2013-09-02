@@ -33,7 +33,7 @@ void res_rebalance(intmap_t* map)
 
   res_map_iter_init(map, &iter);
   while ((client = res_map_iter_next(map, &iter)) != NULL) {
-    if (client->local_workload > 0) {
+    if (client->local_workload >= 1) {
       ++count;
       load += client->local_workload;
     }
@@ -53,17 +53,14 @@ void res_rebalance(intmap_t* map)
   }
 }
 
-void res_loop(int port)
+void res_loop(int listen)
 {
   fd_set        rset, wset, rout, wout;
-  int           listen, max, num, sock;
+  int           max, num, sock;
   intmap_t*     map = res_map_create();
   int           wcnt = 0, loops = 0;
-  const int     max_loops = 20;
+  const int     max_loops = 10;
   
-  listen = res_listen_socket(port, true);
-  if (listen < 0) exit(1);
-
   FD_ZERO(&rset);
   FD_ZERO(&wset);
   FD_SET(listen, &rset);
@@ -131,14 +128,18 @@ void res_loop(int port)
   res_info("%s: Maximum number of loops reached (%d).\n",
            __func__, max_loops);
 
-  res_map_iter_init(map, &sock);
-  {
-    client_t* client;
-    while ((client = res_map_iter_next(map, &sock)) != NULL) {
-      res_client_destroy(client);
-    }
-  }
+  res_map_apply(map, (void (*)(void *)) res_client_destroy);
   res_map_destroy(map);
-  res_socket_close(listen);
+}
+
+void res_service(int port)
+{
+  int listen = res_listen_socket(port, true);
+  if (listen < 0) {
+    exit(1);
+  } else {
+    res_loop(listen);
+    res_socket_close(listen);
+  }
 }
 
