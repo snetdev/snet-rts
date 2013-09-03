@@ -165,6 +165,8 @@ int main(int argc, char **argv)
 
   res_service(port);
 
+  res_topo_destroy();
+
   return 0;
 }
 

@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <sys/select.h>
 #include <sys/param.h>
@@ -252,12 +251,10 @@ void res_client_command_topology(client_t* client)
     res_info("Invalid topology id.\n");
     res_client_throw();
   } else {
+    char *host = res_hostname();
     int len, size = 10*1024;
-    char host[100];
     char *str = xmalloc(size);
     str[0] = '\0';
-    gethostname(host, sizeof host);
-    host[sizeof host - 1] = '\0';
     snprintf(str, size, "{ hardware %d host %s children 1 \n", id, host);
     len = strlen(str);
     str = res_topo_string(NULL, str, len, &size);
@@ -269,6 +266,7 @@ void res_client_command_topology(client_t* client)
     snprintf(str + len, size - len, "} \n");
     res_client_reply(client, str);
     xfree(str);
+    xfree(host);
   }
 }
 

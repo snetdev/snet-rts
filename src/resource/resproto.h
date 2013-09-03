@@ -85,6 +85,7 @@ void* res_map_iter_next(intmap_t* map, int* iter);
 void *xmalloc(size_t siz);
 void *xcalloc(size_t n, size_t siz);
 void *xrealloc(void *p, size_t siz);
+char* xstrdup(const char* str);
 void xfree(void *p);
 void xdel(void *p);
 char* xdup(const char *s);
@@ -98,6 +99,7 @@ int res_accept_socket(int listen, bool nb);
 void res_socket_close(int sock);
 int res_socket_receive(int sock, char* buf, int count);
 int res_socket_send(int sock, const char* buf, int count);
+char* res_hostname(void);
 
 /* resstream.c */
 
@@ -124,7 +126,8 @@ char* res_stream_outgoing(stream_t* stream, int* amount);
 
 /* restopo.c */
 
-res_t* res_topo_root(void);
+topo_t* res_topo(void);
+resource_t* res_local_root(void);
 int res_local_cores(void);
 int res_local_procs(void);
 
@@ -140,8 +143,11 @@ int res_local_procs(void);
  * dynamically reallocated to accomodate the new output.
  * The new size of the string must be communicated via the size pointer.
  */
-char* res_topo_string(res_t* obj, char* str, int len, int *size);
+char* res_topo_string(resource_t* obj, char* str, int len, int *size);
+host_t* res_host_create(char* hostname, int index);
+void res_host_destroy(host_t* host);
 void res_topo_init(void);
+void res_topo_destroy(void);
 const char *res_kind_string(int kind);
 
 

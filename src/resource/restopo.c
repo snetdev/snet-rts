@@ -7,18 +7,27 @@
 #include "resdefs.h"
 
 typedef enum res_kind res_kind_t;
-typedef struct res res_t;
+typedef struct resource resource_t;
+typedef struct host host_t;
+typedef struct topo topo_t;
+
 #include "restopo.h"
 
-static res_t *res_root;
+static topo_t *global_topo;
 
-res_t* res_topo_root(void)
+topo_t* res_topo(void)
 {
-  return res_root;
+  return global_topo;
+}
+
+resource_t* res_local_root(void)
+{
+  return global_topo->host[0]->root;
 }
 
 int res_local_cores(void)
 {
+  resource_t *res_root = res_local_root();
   int count = res_root->last_core - res_root->first_core + 1;
   assert(count > 0);
   return count;
@@ -26,6 +35,7 @@ int res_local_cores(void)
 
 int res_local_procs(void)
 {
+  resource_t *res_root = res_local_root();
   int count = res_root->last_proc - res_root->first_proc + 1;
   assert(count > 0);
   return count;
@@ -43,9 +53,10 @@ int res_local_procs(void)
  * dynamically reallocated to accomodate the new output.
  * The new size of the string must be communicated via the size pointer.
  */
-char* res_topo_string(res_t* obj, char* str, int len, int *size)
+char* res_topo_string(resource_t* obj, char* str, int len, int *size)
 {
   if (!obj) {
+    resource_t *res_root = res_local_root();
     obj = res_root;
   }
   assert(str);
@@ -88,28 +99,28 @@ char* res_topo_string(res_t* obj, char* str, int len, int *size)
   return str;
 }
 
-static void res_relate_resources(res_t *parent, res_t *child)
+static void res_relate_resources(resource_t *parent, resource_t *child)
 {
   if (parent->num_children == parent->max_children) {
     parent->max_children = parent->max_children
                          ? 2 * parent->max_children
                          : 1;
     parent->children = xrealloc(parent->children,
-                                parent->max_children * sizeof(res_t *));
+                                parent->max_children * sizeof(resource_t *));
   }
   assert(parent->num_children < parent->max_children);
   parent->children[parent->num_children++] = child;
 }
 
-static res_t* res_add_resource(
-  res_t *parent,
+static resource_t* res_add_resource(
+  resource_t *parent,
   res_kind_t kind,
   int topo_depth,
   int logical_index,
   int physical_index,
   int cache_level)
 {
-  res_t *res = xnew(res_t);
+  resource_t *res = xnew(resource_t);
   res->depth = topo_depth;
   res->kind = kind;
   res->logical = logical_index;
@@ -123,10 +134,7 @@ static res_t* res_add_resource(
   res->last_core = 0;
   res->first_proc = 0;
   res->last_proc = 0;
-  if (parent == NULL) {
-    assert(res_root == NULL);
-    res_root = res;
-  } else {
+  if (parent) {
     res_relate_resources(parent, res);
   }
   return res;
@@ -149,15 +157,15 @@ static res_kind_t res_type_to_kind(hwloc_obj_type_t type)
   return kind;
 }
 
-static void traverse_topo(
+static resource_t* traverse_topo(
   hwloc_topology_t topo,
   hwloc_obj_t obj,
   int depth,
-  res_t* parent)
+  resource_t* parent)
 {
   int i;
   res_kind_t kind;
-  res_t* res;
+  resource_t* res;
 
   switch (obj->type) {
     case HWLOC_OBJ_SYSTEM:
@@ -172,7 +180,7 @@ static void traverse_topo(
     default:
       res_warn("Ignoring hwloc object %s at depth %d.\n",
                 hwloc_obj_type_string(obj->type), depth);
-      return;
+      return NULL;
   }
 
   res = res_add_resource(parent, kind, depth,
@@ -223,17 +231,62 @@ static void traverse_topo(
            depth, res_kind_string(res->kind),
            res->first_core, res->last_core,
            res->first_proc, res->last_proc);
+
+  return res;
+}
+
+static void collect_cores(resource_t* root)
+{
+}
+
+host_t* res_host_create(char* hostname, int index)
+{
+  host_t* host = xnew(host_t);
+  host->name = hostname;
+  host->index = index;
+  host->root = NULL;
+  host->size = 0;
+  host->cores = NULL;
+  host->ncores = 0;
+  host->procs = NULL;
+  host->nprocs = 0;
+  return host;
+}
+
+void res_host_destroy(host_t* host)
+{
+  xfree(host->name);
 }
 
 void res_topo_init(void)
 {
-  hwloc_topology_t topo;
-  hwloc_topology_init(&topo);
-  hwloc_topology_load(topo);
+  hwloc_topology_t      hwloc_topo;
 
-  traverse_topo(topo, hwloc_get_root_obj(topo), 0, res_root);
+  hwloc_topology_init(&hwloc_topo);
+  hwloc_topology_load(hwloc_topo);
 
-  hwloc_topology_destroy(topo);
+  global_topo = xnew(topo_t);
+  global_topo->size = 1;
+  global_topo->host = xnew(host_t *);
+  global_topo->host[0] = res_host_create(res_hostname(), 0);
+
+  global_topo->host[0]->root =
+    traverse_topo(hwloc_topo, hwloc_get_root_obj(hwloc_topo), 0, NULL);
+
+  hwloc_topology_destroy(hwloc_topo);
+
+  collect_cores(global_topo->host[0]->root);
+}
+
+void res_topo_destroy(void)
+{
+  int i;
+  for (i = 0; i < global_topo->size; ++i) {
+    res_host_destroy(global_topo->host[i]);
+  }
+  xfree(global_topo->host);
+  xfree(global_topo);
+  global_topo = NULL;
 }
 
 const char *res_kind_string(int kind)

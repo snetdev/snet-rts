@@ -24,6 +24,13 @@ void *xrealloc(void *p, size_t siz)
   return p;
 }
 
+char* xstrdup(const char* str)
+{
+  char* p = strdup(str);
+  if (!p) pexit("strdup");
+  return p;
+}
+
 void xfree(void *p)
 {
   free(p);

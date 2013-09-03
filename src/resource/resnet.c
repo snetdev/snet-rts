@@ -141,3 +141,13 @@ int res_socket_send(int sock, const char* buf, int count)
   return write(sock, buf, count);
 }
 
+char* res_hostname(void)
+{
+  char host[100];
+  if (gethostname(host, sizeof host)) {
+    pexit("gethostname");
+  }
+  host[sizeof host - 1] = '\0';
+  return xstrdup(host);
+}
+
