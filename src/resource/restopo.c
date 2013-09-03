@@ -207,7 +207,7 @@ static resource_t* traverse_topo(
     }
 
     for (i = 0; i < obj->arity; i++) {
-      if (i == 0 || obj->type >= HWLOC_OBJ_NODE) {
+      if (i == 0 || obj->children[i]->type >= HWLOC_OBJ_NODE) {
         traverse_topo(topo, obj->children[i], depth + 1, res);
       }
     }
