@@ -32,6 +32,9 @@ void pexit(const char *mesg)
   exit(1);
 }
 
+bool res_get_debug(void) { return debug; }
+bool res_get_verbose(void) { return verbose; }
+
 static bool get_port(const char *spec)
 {
   int p = 0;

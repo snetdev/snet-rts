@@ -31,7 +31,9 @@ struct resource {
 /* A schedulable processor unit. */
 struct proc {
   resource_t    *res;
+  core_t        *core;
   int            assigned;
+  client_t      *client;
 };
 
 /* A core with one or more hyperthreaded procs. */
@@ -40,6 +42,8 @@ struct core {
   int            hyper;
   int            nprocs;
   proc_t       **procs;
+  cache_t       *cache;
+  int            assigned;
 };
 
 /* A level 3 cache. */
@@ -48,6 +52,8 @@ struct cache {
   int            ncores;
   core_t       **cores;
   int            nprocs;
+  numa_t        *numa;
+  int            assigned;
 };
 
 /* A NUMA node. */
@@ -57,6 +63,8 @@ struct numa {
   cache_t      **caches;
   int            ncores;
   int            nprocs;
+  host_t        *host;
+  int            assigned;
 };
 
 /* A host is a set of tightly connected
@@ -70,6 +78,9 @@ struct host {
   numa_t       **numa;
   int            ncores;
   int            nprocs;
+  core_t       **cores;
+  proc_t       **procs;
+  int            assigned;
 };
 
 /* There is only one global topology.

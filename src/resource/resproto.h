@@ -62,6 +62,8 @@ void res_service(int port);
 /* resmain.c */
 
 void pexit(const char *mesg);
+bool res_get_debug(void);
+bool res_get_verbose(void);
 void res_warn(const char *fmt, ...);
 void res_error(const char *fmt, ...);
 void res_info(const char *fmt, ...);
@@ -144,10 +146,11 @@ int res_local_procs(void);
  * The new size of the string must be communicated via the size pointer.
  */
 char* res_topo_string(resource_t* obj, char* str, int len, int *size);
-host_t* res_host_create(char* hostname, int index);
+host_t* res_host_create(char* hostname, int index, resource_t* root);
 void res_host_destroy(host_t* host);
 void res_topo_create(void);
 void res_topo_add_host(host_t *host, int id);
+void res_host_dump(host_t* host);
 void res_topo_init(void);
 void res_topo_destroy(void);
 const char *res_kind_string(int kind);

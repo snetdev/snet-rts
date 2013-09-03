@@ -21,12 +21,14 @@ void res_rebalance_cores(intmap_t* map, int ncores, int nprocs)
   int i = 0, iter = -1, count = res_map_count(map);
   client_t *client, **all = xmalloc(count * sizeof(client_t *));
 
-  res_map_iter_init(map, &iter);
-  while ((client = res_map_iter_next(map, &iter)) != NULL) {
-    assert(i < count);
-    all[i++] = client;
+  if (count > 1) {
+    res_map_iter_init(map, &iter);
+    while ((client = res_map_iter_next(map, &iter)) != NULL) {
+      assert(i < count);
+      all[i++] = client;
+    }
+    qsort(all, count, sizeof(client_t *), res_client_compare_local_workload_desc);
   }
-  qsort(all, count, sizeof(client_t *), res_client_compare_local_workload_desc);
 
   for (i = 0; i < count; ++i) {
     client = all[i];
