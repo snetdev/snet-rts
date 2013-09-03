@@ -4,8 +4,14 @@
 #ifndef __bool_true_false_are_defined
 #include <stdbool.h>
 #endif
+#ifndef ULONG_MAX
+#include <limits.h>
+#endif
 
 #define RES_DEFAULT_LISTEN_PORT 56389
+
+#define BITMAP_ZERO     0UL
+#define BITMAP_ALL      ULONG_MAX
 
 #define NUM_BITS        ((int) (8 * sizeof(bitmap_t)))
 #define MAX_BIT         ((int) (8 * sizeof(bitmap_t) - 1))
@@ -14,6 +20,7 @@
 #define SET(map, bit)   ((map) |=  (1UL << (bit)))
 #define CLR(map, bit)   ((map) &= ~(1UL << (bit)))
 #define NOT(map, bit)   (HAS((map), (bit)) == 0)
+#define ZERO(map)       ((map) = BITMAP_ZERO)
 
 #define xnew(x)         ((x *) xmalloc(sizeof(x)))
 

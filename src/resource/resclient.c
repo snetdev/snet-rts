@@ -59,7 +59,7 @@ client_t* res_client_create(int bit, int fd)
 {
   client_t *client = xnew(client_t);
   res_stream_init(&client->stream, fd);
-  client->bit = 0;
+  client->bit = bit;
   client->access = 0;
   client->access = 0;
   client->local_workload = 0;

@@ -4,10 +4,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/param.h>
 #include "resdefs.h"
+
+#define LOCAL_HOST      0
+#define DEPTH_ZERO      0
 
 typedef enum res_kind res_kind_t;
 typedef struct resource resource_t;
+typedef struct proc proc_t;
+typedef struct core core_t;
+typedef struct cache cache_t;
+typedef struct numa numa_t;
 typedef struct host host_t;
 typedef struct topo topo_t;
 
@@ -22,7 +30,7 @@ topo_t* res_topo(void)
 
 resource_t* res_local_root(void)
 {
-  return global_topo->host[0]->root;
+  return global_topo->host[LOCAL_HOST]->root;
 }
 
 int res_local_cores(void)
@@ -102,11 +110,9 @@ char* res_topo_string(resource_t* obj, char* str, int len, int *size)
 static void res_relate_resources(resource_t *parent, resource_t *child)
 {
   if (parent->num_children == parent->max_children) {
-    parent->max_children = parent->max_children
-                         ? 2 * parent->max_children
-                         : 1;
-    parent->children = xrealloc(parent->children,
-                                parent->max_children * sizeof(resource_t *));
+    int max = MAX(1, 2 * parent->max_children);
+    parent->max_children = max;
+    parent->children = xrealloc(parent->children, max * sizeof(resource_t *));
   }
   assert(parent->num_children < parent->max_children);
   parent->children[parent->num_children++] = child;
@@ -163,9 +169,9 @@ static resource_t* traverse_topo(
   int depth,
   resource_t* parent)
 {
-  int i;
-  res_kind_t kind;
-  resource_t* res;
+  int           i, cache_depth;
+  res_kind_t    kind;
+  resource_t*   res;
 
   switch (obj->type) {
     case HWLOC_OBJ_SYSTEM:
@@ -183,10 +189,9 @@ static resource_t* traverse_topo(
       return NULL;
   }
 
+  cache_depth = ((kind == Cache && obj->attr) ? obj->attr->cache.depth : 0);
   res = res_add_resource(parent, kind, depth,
-                         obj->logical_index, obj->os_index,
-                         (kind == Cache && obj->attr) ?
-                          obj->attr->cache.depth : 0);
+                         obj->logical_index, obj->os_index, cache_depth);
 
   if (res->kind == Proc) {
     assert(obj->arity == 0);
@@ -202,7 +207,9 @@ static resource_t* traverse_topo(
     }
 
     for (i = 0; i < obj->arity; i++) {
-      traverse_topo(topo, obj->children[i], depth + 1, res);
+      if (i == 0 || obj->type >= HWLOC_OBJ_NODE) {
+        traverse_topo(topo, obj->children[i], depth + 1, res);
+      }
     }
 
     for (i = 0; i < res->num_children; i++) {
@@ -235,20 +242,149 @@ static resource_t* traverse_topo(
   return res;
 }
 
-static void collect_cores(resource_t* root)
+static proc_t* res_proc_create(resource_t* res)
 {
+  proc_t* proc = xnew(proc_t);
+  memset(proc, 0, sizeof(*proc));
+  proc->res = res;
+  assert(proc->res->kind == Proc);
+  return proc;
+}
+
+static void res_core_collect(core_t* core, resource_t* res)
+{
+  int   i;
+
+  switch (res->kind) {
+
+    case Proc:
+      core->nprocs += 1;
+      core->procs = xrealloc(core->procs, core->nprocs * sizeof(proc_t *));
+      core->procs[core->nprocs - 1] = res_proc_create(res);
+      break;
+
+    default:
+      for (i = 0; i < res->num_children; ++i) {
+        res_core_collect(core, res->children[i]);
+      }
+  }
+}
+
+static core_t* res_core_create(resource_t* res)
+{
+  core_t* core = xnew(core_t);
+  core->res = res;
+  core->hyper = 0;
+  core->nprocs = 0;
+  core->procs = NULL;
+  assert(core->res->kind >= Core);
+  res_core_collect(core, res);
+  if (core->nprocs >= 2) {
+    core->hyper = core->nprocs;
+  }
+  assert(core->nprocs >= 1);
+  return core;
+}
+
+static void res_cache_collect(cache_t* cache, resource_t* res)
+{
+  int   i;
+
+  switch (res->kind) {
+
+    case Core:
+    case Proc:
+      cache->ncores += 1;
+      cache->cores = xrealloc(cache->cores, cache->ncores * sizeof(core_t *));
+      cache->cores[cache->ncores - 1] = res_core_create(res);
+      cache->nprocs += cache->cores[cache->ncores - 1]->nprocs;
+      break;
+
+    default:
+      for (i = 0; i < res->num_children; ++i) {
+        res_cache_collect(cache, res->children[i]);
+      }
+  }
+}
+
+static cache_t* res_cache_create(resource_t* res)
+{
+  cache_t* cache = xnew(cache_t);
+  cache->res = res;
+  cache->ncores = 0;
+  cache->cores = NULL;
+  cache->nprocs = 0;
+  res_cache_collect(cache, res);
+  assert(cache->ncores >= 1);
+  return cache;
+}
+
+static void res_numa_collect(numa_t* numa, resource_t* res)
+{
+  int   i;
+
+  switch (res->kind) {
+
+    case Cache:
+    case Core:
+      numa->ncaches += 1;
+      numa->caches = xrealloc(numa->caches, numa->ncaches * sizeof(cache_t *));
+      numa->caches[numa->ncaches - 1] = res_cache_create(res);
+      numa->nprocs += numa->caches[numa->ncaches - 1]->nprocs;
+      numa->ncores += numa->caches[numa->ncaches - 1]->ncores;
+      break;
+
+    default:
+      for (i = 0; i < res->num_children; ++i) {
+        res_numa_collect(numa, res->children[i]);
+      }
+  }
+}
+
+static numa_t* res_numa_create(resource_t* res)
+{
+  numa_t* numa = xnew(numa_t);
+  numa->res = res;
+  numa->ncaches = 0;
+  numa->caches = NULL;
+  numa->ncores = 0;
+  numa->nprocs = 0;
+  res_numa_collect(numa, res);
+  assert(numa->ncaches >= 1);
+  return numa;
+}
+
+static void res_host_collect(host_t* host, resource_t* res)
+{
+  int   i;
+
+  switch (res->kind) {
+
+    case System:
+    case Machine:
+      for (i = 0; i < res->num_children; ++i) {
+        res_host_collect(host, res->children[i]);
+      }
+      break;
+
+    default:
+      host->size += 1;
+      host->numa = xrealloc(host->numa, host->size * sizeof(numa_t *));
+      host->numa[host->size - 1] = res_numa_create(res);
+      host->ncores += host->numa[host->size - 1]->ncores;
+      host->nprocs += host->numa[host->size - 1]->nprocs;
+  }
 }
 
 host_t* res_host_create(char* hostname, int index)
 {
   host_t* host = xnew(host_t);
   host->name = hostname;
-  host->index = index;
   host->root = NULL;
+  host->index = index;
   host->size = 0;
-  host->cores = NULL;
+  host->numa = NULL;
   host->ncores = 0;
-  host->procs = NULL;
   host->nprocs = 0;
   return host;
 }
@@ -258,24 +394,47 @@ void res_host_destroy(host_t* host)
   xfree(host->name);
 }
 
+void res_topo_create(void)
+{
+  global_topo = xnew(topo_t);
+  global_topo->size = 0;
+  global_topo->host = NULL;
+}
+
+void res_topo_add_host(host_t *host, int id)
+{
+  int i, max = MAX(id + 1, global_topo->size);
+  assert(id >= 0);
+  assert(id >= global_topo->size || global_topo->host[id] == NULL);
+  if (max > global_topo->size) {
+    global_topo->host = xrealloc(global_topo->host, max * sizeof(host_t *));
+    for (i = global_topo->size; i < max; ++i) {
+      global_topo->host[i] = NULL;
+    }
+    global_topo->size = max;
+  }
+  global_topo->host[id] = host;
+}
+
 void res_topo_init(void)
 {
+  host_t               *local_host;
   hwloc_topology_t      hwloc_topo;
+  hwloc_obj_t           hwloc_root;
 
   hwloc_topology_init(&hwloc_topo);
   hwloc_topology_load(hwloc_topo);
+  hwloc_root = hwloc_get_root_obj(hwloc_topo);
 
-  global_topo = xnew(topo_t);
-  global_topo->size = 1;
-  global_topo->host = xnew(host_t *);
-  global_topo->host[0] = res_host_create(res_hostname(), 0);
+  local_host = res_host_create(res_hostname(), LOCAL_HOST);
+  local_host->root = traverse_topo(hwloc_topo, hwloc_root, DEPTH_ZERO, NULL);
 
-  global_topo->host[0]->root =
-    traverse_topo(hwloc_topo, hwloc_get_root_obj(hwloc_topo), 0, NULL);
+  res_topo_create();
+  res_topo_add_host(local_host, local_host->index);
 
   hwloc_topology_destroy(hwloc_topo);
 
-  collect_cores(global_topo->host[0]->root);
+  res_host_collect(local_host, local_host->root);
 }
 
 void res_topo_destroy(void)
