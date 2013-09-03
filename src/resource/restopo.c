@@ -471,7 +471,7 @@ void res_host_dump(host_t* host)
       cache_t* cache = numa->caches[a];
       printf("        cache %d, %d cores, %d procs\n",
              a, numa->ncores, numa->nprocs);
-      for (o = 0; o < numa->ncores; ++o) {
+      for (o = 0; o < cache->ncores; ++o) {
         core_t* core = cache->cores[o];
         printf("            core %d, %d procs, hyper %d\n",
                o, core->nprocs, core->hyper);
