@@ -213,10 +213,13 @@ src_resource_resserv_SOURCES = \
 	src/resource/resmap.c \
 	src/resource/resmem.c \
 	src/resource/resnet.c \
+	src/resource/resource.c \
+	src/resource/resource.h \
 	src/resource/resproto.h \
 	src/resource/resstream.c \
 	src/resource/resstream.h \
 	src/resource/restopo.c \
+	src/resource/restopo.h \
 	src/resource/restypes.h
 
 src_resource_resserv_CPPFLAGS = $(AM_CPPFLAGS) $(HWLOC_INCLUDES)

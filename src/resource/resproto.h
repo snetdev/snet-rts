@@ -103,6 +103,29 @@ int res_socket_receive(int sock, char* buf, int count);
 int res_socket_send(int sock, const char* buf, int count);
 char* res_hostname(void);
 
+/* resource.c */
+
+int res_local_cores(void);
+int res_local_procs(void);
+
+/*
+ * Convert a hierarchical resource topology to a single string.
+ * Input parameters:
+ *      obj: the resource and its children to convert to string.
+ *      str: the destination string where output is appended to.
+ *      len: the current length of the output string.
+ *      size: the current size of the destination string.
+ * Output result: Return the current string and its size.
+ * When the string memory is too small then the string must be
+ * dynamically reallocated to accomodate the new output.
+ * The new size of the string must be communicated via the size pointer.
+ */
+char* res_resource_string(resource_t* obj, char* str, int len, int *size);
+resource_t* res_resource_init(void);
+
+/* Convert the kind of resource to a static string. */
+const char *res_kind_string(int kind);
+
 /* resstream.c */
 
 void res_buffer_init(buffer_t* buf);
@@ -130,22 +153,6 @@ char* res_stream_outgoing(stream_t* stream, int* amount);
 
 topo_t* res_topo(void);
 resource_t* res_local_root(void);
-int res_local_cores(void);
-int res_local_procs(void);
-
-/*
- * Convert a hierarchical resource topology to a single string.
- * Input parameters:
- *      obj: the resource and its children to convert to string.
- *      str: the destination string where output is appended to.
- *      len: the current length of the output string.
- *      size: the current size of the destination string.
- * Output result: Return the current string and its size.
- * When the string memory is too small then the string must be
- * dynamically reallocated to accomodate the new output.
- * The new size of the string must be communicated via the size pointer.
- */
-char* res_topo_string(resource_t* obj, char* str, int len, int *size);
 host_t* res_host_create(char* hostname, int index, resource_t* root);
 void res_host_destroy(host_t* host);
 void res_topo_create(void);
@@ -153,7 +160,6 @@ void res_topo_add_host(host_t *host, int id);
 void res_host_dump(host_t* host);
 void res_topo_init(void);
 void res_topo_destroy(void);
-const char *res_kind_string(int kind);
 
 
 #endif

@@ -257,7 +257,7 @@ void res_client_command_topology(client_t* client)
     str[0] = '\0';
     snprintf(str, size, "{ hardware %d host %s children 1 \n", id, host);
     len = strlen(str);
-    str = res_topo_string(NULL, str, len, &size);
+    str = res_resource_string(NULL, str, len, &size);
     len += strlen(str + len);
     if (len + 10 > size) {
       size = len + 10;
