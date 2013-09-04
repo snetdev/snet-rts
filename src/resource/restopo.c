@@ -7,6 +7,7 @@
 #include <sys/param.h>
 #include "resdefs.h"
 
+typedef enum proc_state proc_state_t;
 typedef struct proc proc_t;
 typedef struct core core_t;
 typedef struct cache cache_t;
@@ -24,17 +25,23 @@ topo_t* res_topo(void)
   return global_topo;
 }
 
+host_t* res_local_host(void)
+{
+  return global_topo->host[LOCAL_HOST];
+}
+
 resource_t* res_local_root(void)
 {
-  return global_topo->host[LOCAL_HOST]->root;
+  host_t *host = res_local_host();
+  return host->root;
 }
 
 static proc_t* res_proc_create(resource_t* res)
 {
   proc_t* proc = xnew(proc_t);
   proc->res = res;
-  proc->assigned = 0;
-  proc->client = NULL;
+  proc->state = Avail;
+  proc->clientbit = 0;
   assert(proc->res->kind == Proc);
   return proc;
 }
@@ -162,30 +169,53 @@ static void res_host_collect(host_t* host, resource_t* res)
       break;
 
     default:
-      host->size += 1;
-      host->numa = xrealloc(host->numa, host->size * sizeof(numa_t *));
-      host->numa[host->size - 1] = res_numa_create(res);
-      host->numa[host->size - 1]->host = host;
-      host->ncores += host->numa[host->size - 1]->ncores;
-      host->nprocs += host->numa[host->size - 1]->nprocs;
+      host->nnumas += 1;
+      host->numa = xrealloc(host->numa, host->nnumas * sizeof(numa_t *));
+      host->numa[host->nnumas - 1] = res_numa_create(res);
+      host->numa[host->nnumas - 1]->host = host;
+      host->ncores += host->numa[host->nnumas - 1]->ncores;
+      host->nprocs += host->numa[host->nnumas - 1]->nprocs;
   }
 }
 
 host_t* res_host_create(char* hostname, int index, resource_t* root)
 {
+  int n, a, o, p, core_index, proc_index;
+
   host_t* host = xnew(host_t);
   host->name = hostname;
   host->root = root;
   host->index = index;
-  host->size = 0;
+  host->nnumas = 0;
   host->numa = NULL;
   host->ncores = 0;
   host->nprocs = 0;
   host->cores = NULL;
   host->procs = NULL;
-  host->assigned = 0;
+  //host->assigned = 0;
 
   res_host_collect(host, root);
+
+  /* Also collect all cores/procs of a host in a single array. */
+  host->cores = xmalloc(host->ncores * sizeof(core_t *));
+  host->procs = xmalloc(host->nprocs * sizeof(proc_t *));
+  core_index = proc_index = 0;
+  for (n = 0; n < host->nnumas; ++n) {
+    numa_t* numa = host->numa[n];
+    for (a = 0; a < numa->ncaches; ++a) {
+      cache_t* cache = numa->caches[a];
+      for (o = 0; o < cache->ncores; ++o) {
+        core_t* core = cache->cores[o];
+        assert(core_index == core->res->logical);
+        host->cores[core_index++] = core;
+        for (p = 0; p < core->nprocs; ++p) {
+          proc_t* proc = core->procs[p];
+          assert(proc_index == proc->res->logical);
+          host->procs[proc_index++] = proc;
+        }
+      }
+    }
+  }
 
   if (res_get_debug()) {
     res_host_dump(host);
@@ -198,7 +228,7 @@ void res_host_destroy(host_t* host)
 {
   int n, a, o, p;
 
-  for (n = 0; n < host->size; ++n) {
+  for (n = 0; n < host->nnumas; ++n) {
     numa_t* numa = host->numa[n];
     for (a = 0; a < numa->ncaches; ++a) {
       cache_t* cache = numa->caches[a];
@@ -219,27 +249,29 @@ void res_host_destroy(host_t* host)
   }
   xfree(host->name);
   xfree(host->numa);
+  xfree(host->procs);
+  xfree(host->cores);
   xfree(host);
 }
 
 void res_topo_create(void)
 {
   global_topo = xnew(topo_t);
-  global_topo->size = 0;
+  global_topo->nhosts = 0;
   global_topo->host = NULL;
 }
 
 void res_topo_add_host(host_t *host, int id)
 {
-  int i, max = MAX(id + 1, global_topo->size);
+  int i, max = MAX(id + 1, global_topo->nhosts);
   assert(id >= 0);
-  assert(id >= global_topo->size || global_topo->host[id] == NULL);
-  if (max > global_topo->size) {
+  assert(id >= global_topo->nhosts || global_topo->host[id] == NULL);
+  if (max > global_topo->nhosts) {
     global_topo->host = xrealloc(global_topo->host, max * sizeof(host_t *));
-    for (i = global_topo->size; i < max; ++i) {
+    for (i = global_topo->nhosts; i < max; ++i) {
       global_topo->host[i] = NULL;
     }
-    global_topo->size = max;
+    global_topo->nhosts = max;
   }
   global_topo->host[id] = host;
 }
@@ -249,8 +281,8 @@ void res_host_dump(host_t* host)
   int n, a, o, p;
 
   printf("host %d, name %s, %d numas, %d cores, %d procs\n",
-         host->index, host->name, host->size, host->ncores, host->nprocs);
-  for (n = 0; n < host->size; ++n) {
+         host->index, host->name, host->nnumas, host->ncores, host->nprocs);
+  for (n = 0; n < host->nnumas; ++n) {
     numa_t* numa = host->numa[n];
     printf("    numa %d, %d caches, %d cores, %d procs\n",
            n, numa->ncaches, numa->ncores, numa->nprocs);
@@ -264,7 +296,7 @@ void res_host_dump(host_t* host)
                o, core->nprocs, core->hyper);
         for (p = 0; p < core->nprocs; ++p) {
           proc_t* proc = core->procs[p];
-          printf("                proc %d, id %d\n", p, proc->res->first_proc);
+          printf("                proc %d, id %d\n", p, proc->res->logical);
         }
       }
     }
@@ -285,7 +317,7 @@ void res_topo_init(void)
 void res_topo_destroy(void)
 {
   int i;
-  for (i = 0; i < global_topo->size; ++i) {
+  for (i = 0; i < global_topo->nhosts; ++i) {
     res_host_destroy(global_topo->host[i]);
   }
   xfree(global_topo->host);

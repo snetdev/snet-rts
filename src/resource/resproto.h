@@ -1,6 +1,17 @@
 #ifndef RESPROTO_H
 #define RESPROTO_H
 
+/* resbalance.c */
+
+int res_client_compare_local_workload_desc(const void *p, const void *q);
+
+/* Each task can be run on a dedicated core. */
+void res_rebalance_cores(intmap_t* map, int ncores, int nprocs);
+void res_rebalance_procs(intmap_t* map);
+void res_rebalance_proportional(intmap_t* map);
+void res_rebalance_minimal(intmap_t* map);
+void res_rebalance(intmap_t* map);
+
 /* resclient.c */
 
 const char *res_token_string(token_t token);
@@ -48,14 +59,6 @@ void res_list_sort_descend(intlist_t* list);
 
 /* resloop.c */
 
-int res_client_compare_local_workload_desc(const void *p, const void *q);
-
-/* Each task can be run on a dedicated core. */
-void res_rebalance_cores(intmap_t* map, int ncores, int nprocs);
-void res_rebalance_procs(intmap_t* map);
-void res_rebalance_proportional(intmap_t* map);
-void res_rebalance_minimal(intmap_t* map);
-void res_rebalance(intmap_t* map);
 void res_loop(int listen);
 void res_service(int port);
 
@@ -152,6 +155,7 @@ char* res_stream_outgoing(stream_t* stream, int* amount);
 /* restopo.c */
 
 topo_t* res_topo(void);
+host_t* res_local_host(void);
 resource_t* res_local_root(void);
 host_t* res_host_create(char* hostname, int index, resource_t* root);
 void res_host_destroy(host_t* host);

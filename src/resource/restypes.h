@@ -1,3 +1,4 @@
+typedef enum proc_state proc_state_t;
 typedef enum res_kind res_kind_t;
 typedef enum token token_t;
 typedef int intmap_iter_t;

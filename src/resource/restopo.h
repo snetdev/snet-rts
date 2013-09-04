@@ -1,12 +1,19 @@
 #ifndef RESTOPO_H_INCLUDED
 #define RESTOPO_H_INCLUDED
 
+enum proc_state {
+  Avail,
+  Grant,
+  Accept,
+  Revoke,
+};
+
 /* A schedulable processor unit. */
 struct proc {
   resource_t    *res;
   core_t        *core;
-  int            assigned;
-  client_t      *client;
+  proc_state_t   state;
+  int            clientbit;
 };
 
 /* A core with one or more hyperthreaded procs. */
@@ -47,20 +54,21 @@ struct host {
   char          *name;
   resource_t    *root;
   int            index;
-  int            size;
+  int            nnumas;
   numa_t       **numa;
   int            ncores;
   int            nprocs;
   core_t       **cores;
   proc_t       **procs;
-  int            assigned;
+  bitmap_t       procassign;
+  bitmap_t       coreassign;
 };
 
 /* There is only one global topology.
  * It consists of a set of hosts. */
 struct topo {
   host_t       **host;
-  int            size;
+  int            nhosts;
 };
 
 #endif

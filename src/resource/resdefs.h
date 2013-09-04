@@ -13,6 +13,7 @@
 #define LOCAL_HOST      0
 #define DEPTH_ZERO      0
 #define NO_PARENT       NULL
+#define MAX_LOGICAL     MAX_BIT
 
 #define BITMAP_ZERO     0UL
 #define BITMAP_ALL      ULONG_MAX

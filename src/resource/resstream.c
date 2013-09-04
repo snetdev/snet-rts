@@ -167,6 +167,7 @@ void res_stream_appended(stream_t* stream, int amount)
 char* res_stream_outgoing(stream_t* stream, int* amount)
 {
   *amount = res_buffer_avail(&stream->write);
-  return res_buffer_data(&stream->write);
+  return res_buffer_data(&stream->write)
+       + res_buffer_stored(&stream->write);
 }
 

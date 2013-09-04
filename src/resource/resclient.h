@@ -12,7 +12,9 @@ struct client {
   int           local_granted;
   int           local_accepted;
   int           local_revoked;
-  int           local_planned;
+  bitmap_t      local_assigning;
+  bitmap_t      local_grantmap;
+  bitmap_t      local_revoking;
   bool          rebalance;
 };
 

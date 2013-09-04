@@ -61,11 +61,15 @@ client_t* res_client_create(int bit, int fd)
   res_stream_init(&client->stream, fd);
   client->bit = bit;
   client->access = 0;
-  client->access = 0;
   client->local_workload = 0;
   client->remote_workload = 0;
-  client->rebalance = false;
   client->local_granted = 0;
+  client->local_accepted = 0;
+  client->local_revoked = 0;
+  client->local_assigning = BITMAP_ZERO;
+  client->local_grantmap = BITMAP_ZERO;
+  client->local_revoking = BITMAP_ZERO;
+  client->rebalance = false;
   return client;
 }
 
@@ -178,28 +182,91 @@ void res_client_number(client_t* client, int* number)
 
 void res_client_reply(client_t* client, const char* fmt, ...)
 {
+  const int max_reserve = 1024;
+  const int min_reserve = 512;
+  const char* str = fmt;
+  va_list ap;
   int size = 0;
   char* data = res_stream_outgoing(&client->stream, &size);
-  if (size < 512) {
-    res_stream_reserve(&client->stream, 1024);
+  char* start = data;
+  char* end = data + size;
+
+  if (size < min_reserve) {
+    res_stream_reserve(&client->stream, max_reserve);
     data = res_stream_outgoing(&client->stream, &size);
+    assert(size >= max_reserve);
+    start = data;
+    end = data + size;
   }
-  assert(size >= 512);
-  while (true) {
-    int n;
-    va_list ap;
-    va_start(ap, fmt);
-    n = vsnprintf(data, size, fmt, ap);
-    va_end(ap);
-    if (n >= 0 && n < size) {
-      res_stream_appended(&client->stream, n);
-      break;
+
+  va_start(ap, fmt);
+  for (str = fmt; *str; ++str) {
+    if (*str == '%') {
+      if (str[1]) {
+        switch (*++str) {
+          case 's': {
+            const char* arg = va_arg(ap, char*);
+            while (*arg) {
+              if (end - data < 10) {
+                res_stream_appended(&client->stream, start - data);
+                res_stream_reserve(&client->stream, max_reserve);
+                data = res_stream_outgoing(&client->stream, &size);
+                assert(size >= max_reserve);
+                start = data;
+                end = data + size;
+              }
+              *start++ = *arg++;
+              *start = '\0';
+            }
+          } break;
+          case 'd': {
+            int n = va_arg(ap, int);
+            char *first, *last;
+            assert(n >= 0);
+            if (end - data < 50) {
+              res_stream_appended(&client->stream, start - data);
+              res_stream_reserve(&client->stream, max_reserve);
+              data = res_stream_outgoing(&client->stream, &size);
+              assert(size >= max_reserve);
+              start = data;
+              end = data + size;
+            }
+            first = start;
+            do {
+              *start++ = ((n % 10) + '0');
+              *start = '\0';
+              n /= 10;
+            } while (n);
+            last = start - 1;
+            while (first > last) {
+              char save = *first;
+              *first = *last;
+              *last = save;
+              ++first;
+              --last;
+            }
+          } break;
+          default: assert(false);
+        }
+      } else {
+        assert(false);
+      }
     } else {
-      size = (n >= 0) ? (n + 1) : (2 * size);
-      res_stream_reserve(&client->stream, size);
-      data = res_stream_outgoing(&client->stream, &size);
+      if (end - start < 10) {
+        res_stream_appended(&client->stream, start - data);
+        res_stream_reserve(&client->stream, max_reserve);
+        data = res_stream_outgoing(&client->stream, &size);
+        assert(size >= max_reserve);
+        start = data;
+        end = data + size;
+      }
+      *start++ = *str;
+      *start = '\0';
     }
   }
+  va_end(ap);
+
+  res_stream_appended(&client->stream, start - data);
 }
 
 intlist_t* res_client_intlist(client_t* client)
@@ -240,7 +307,7 @@ intlist_t* res_client_intlist(client_t* client)
 void res_client_command_systems(client_t* client)
 {
   // Currently support only the local system
-  res_client_reply(client, "{ systems 0 }\n");
+  res_client_reply(client, "%s", "{ systems 0 }\n");
 }
 
 void res_client_command_topology(client_t* client)
@@ -264,7 +331,7 @@ void res_client_command_topology(client_t* client)
       str = xrealloc(str, size);
     }
     snprintf(str + len, size - len, "} \n");
-    res_client_reply(client, str);
+    res_client_reply(client, "%s", str);
     xfree(str);
     xfree(host);
   }

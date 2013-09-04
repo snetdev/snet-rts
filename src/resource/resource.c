@@ -152,6 +152,12 @@ static resource_t* traverse_resources(
   res_kind_t    kind;
   resource_t*   res;
 
+  if (obj->logical_index > MAX_LOGICAL) {
+    res_warn("Ignoring hwloc object %s at depth %d with logical %d.\n",
+              hwloc_obj_type_string(obj->type), depth, obj->logical_index);
+    return NULL;
+  }
+
   switch (obj->type) {
     case HWLOC_OBJ_SYSTEM:
     case HWLOC_OBJ_MACHINE:

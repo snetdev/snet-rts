@@ -5,84 +5,6 @@
 
 #include "resdefs.h"
 
-int res_client_compare_local_workload_desc(const void *p, const void *q)
-{
-  const client_t* P = (const client_t *) p;
-  const client_t* Q = (const client_t *) q;
-  int A = P->local_workload;
-  int B = Q->local_workload;
-  int comparison = ((A == B) ? (Q->bit - P->bit) : (A - B));
-  return comparison;
-}
-
-/* Each task can be run on a dedicated core. */
-void res_rebalance_cores(intmap_t* map, int ncores, int nprocs)
-{
-  int i = 0, iter = -1, count = res_map_count(map);
-  client_t *client, **all = xmalloc(count * sizeof(client_t *));
-
-  if (count > 1) {
-    res_map_iter_init(map, &iter);
-    while ((client = res_map_iter_next(map, &iter)) != NULL) {
-      assert(i < count);
-      all[i++] = client;
-    }
-    qsort(all, count, sizeof(client_t *), res_client_compare_local_workload_desc);
-  }
-
-  for (i = 0; i < count; ++i) {
-    client = all[i];
-    while (client->local_granted - client->local_revoked
-           > client->local_workload) {
-    }
-  }
-
-  xfree(all);
-}
-
-void res_rebalance_procs(intmap_t* map)
-{
-}
-
-void res_rebalance_proportional(intmap_t* map)
-{
-}
-
-void res_rebalance_minimal(intmap_t* map)
-{
-}
-
-void res_rebalance(intmap_t* map)
-{
-  client_t* client;
-  int count = 0;
-  int load = 0;
-  int nprocs = res_local_procs();
-  int ncores = res_local_cores();
-  intmap_iter_t iter;
-
-  res_map_iter_init(map, &iter);
-  while ((client = res_map_iter_next(map, &iter)) != NULL) {
-    if (client->local_workload >= 1) {
-      ++count;
-      load += client->local_workload;
-    }
-  }
-
-  if (load <= ncores) {
-    res_rebalance_cores(map, ncores, nprocs);
-  }
-  else if (load <= nprocs) {
-    res_rebalance_procs(map);
-  }
-  else if (count < nprocs) {
-    res_rebalance_proportional(map);
-  }
-  else {
-    res_rebalance_minimal(map);
-  }
-}
-
 void res_loop(int listen)
 {
   fd_set        rset, wset, rout, wout, *wptr;
@@ -155,6 +77,11 @@ void res_loop(int listen)
           res_map_del(client_map, client->bit);
           res_map_del(sock_map, sock);
           rebalance = BITMAP_ALL;
+          if (sock == max_sock) {
+            while (--max_sock > listen &&
+                   ! FD_ISSET(max_sock, &rset) &&
+                   ! FD_ISSET(max_sock, &wset)) { }
+          }
         } else {
           if (res_client_writing(client)) {
             FD_SET(sock, &wset);
@@ -168,6 +95,16 @@ void res_loop(int listen)
 
     if (rebalance) {
       res_rebalance(client_map);
+      for (sock = 1 + listen; sock <= max_sock; ++sock) {
+        if (FD_ISSET(sock, &rset)) {
+          client_t* client = res_map_get(sock_map, sock);
+          if (res_client_writing(client)) {
+            FD_SET(sock, &wset);
+            FD_CLR(sock, &rset);
+            ++wcnt;
+          }
+        }
+      }
     }
   }
   res_info("%s: Maximum number of loops reached (%d).\n",
