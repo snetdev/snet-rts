@@ -28,6 +28,7 @@ enum token {
   Hardware,
   Grant,
   Revoke,
+  Quit,
 };
 
 static jmp_buf res_parse_exception_context;
@@ -132,6 +133,7 @@ token_t res_client_token(client_t* client, int* number)
       { Hardware, "hardware", 8 },
       { Grant,    "grant",    5 },
       { Revoke,   "revoke",   6 },
+      { Quit,     "quit",     4 },
     };
     const int num_tokens = sizeof(tokens) / sizeof(tokens[0]);
     int i, max = end - p;
@@ -184,84 +186,51 @@ void res_client_reply(client_t* client, const char* fmt, ...)
 {
   const int max_reserve = 1024;
   const int min_reserve = 512;
-  const char* str = fmt;
+  const char *str = fmt, *arg;
   va_list ap;
   int size = 0;
   char* data = res_stream_outgoing(&client->stream, &size);
   char* start = data;
   char* end = data + size;
 
-  if (size < min_reserve) {
-    res_stream_reserve(&client->stream, max_reserve);
-    data = res_stream_outgoing(&client->stream, &size);
-    assert(size >= max_reserve);
-    start = data;
-    end = data + size;
-  }
-
   va_start(ap, fmt);
   for (str = fmt; *str; ++str) {
-    if (*str == '%') {
-      if (str[1]) {
-        switch (*++str) {
-          case 's': {
-            const char* arg = va_arg(ap, char*);
-            while (*arg) {
-              if (end - data < 10) {
-                res_stream_appended(&client->stream, start - data);
-                res_stream_reserve(&client->stream, max_reserve);
-                data = res_stream_outgoing(&client->stream, &size);
-                assert(size >= max_reserve);
-                start = data;
-                end = data + size;
-              }
-              *start++ = *arg++;
-              *start = '\0';
-            }
-          } break;
-          case 'd': {
-            int n = va_arg(ap, int);
-            char *first, *last;
-            assert(n >= 0);
-            if (end - data < 50) {
-              res_stream_appended(&client->stream, start - data);
-              res_stream_reserve(&client->stream, max_reserve);
-              data = res_stream_outgoing(&client->stream, &size);
-              assert(size >= max_reserve);
-              start = data;
-              end = data + size;
-            }
-            first = start;
-            do {
-              *start++ = ((n % 10) + '0');
-              *start = '\0';
-              n /= 10;
-            } while (n);
-            last = start - 1;
-            while (first > last) {
-              char save = *first;
-              *first = *last;
-              *last = save;
-              ++first;
-              --last;
-            }
-          } break;
-          default: assert(false);
-        }
-      } else {
-        assert(false);
-      }
-    } else {
-      if (end - start < 10) {
-        res_stream_appended(&client->stream, start - data);
-        res_stream_reserve(&client->stream, max_reserve);
-        data = res_stream_outgoing(&client->stream, &size);
-        assert(size >= max_reserve);
-        start = data;
-        end = data + size;
-      }
+    if (start + 50 > end) {
+      res_stream_appended(&client->stream, start - data);
+      res_stream_reserve(&client->stream, max_reserve);
+      data = res_stream_outgoing(&client->stream, &size);
+      assert(size >= max_reserve);
+      start = data;
+      end = data + size;
+    }
+    if (*str != '%') {
       *start++ = *str;
       *start = '\0';
+    } else if (str[1] == '\0') {
+      assert(false);
+    } else {
+      switch (*++str) {
+        case 's': {
+          for (arg = va_arg(ap, char*); *arg; ++arg) {
+            *start++ = *arg;
+            *start = '\0';
+          }
+        } break;
+        case 'd': {
+          char *first = start, *last;
+          int n = va_arg(ap, int);
+          assert(n >= 0);
+          do {
+            *start++ = ((n % 10) + '0');
+            *start = '\0';
+            n /= 10;
+          } while (n);
+          for (last = start - 1; last > first; --last, ++first) {
+            char save = *first; *first = *last; *last = save;
+          }
+        } break;
+        default: assert(false);
+      }
     }
   }
   va_end(ap);
@@ -396,6 +365,11 @@ void res_client_command_return(client_t* client)
   res_list_destroy(ints);
 }
 
+void res_client_command_quit(client_t* client)
+{
+  res_client_throw();
+}
+
 void res_client_command(client_t* client)
 {
   token_t command = res_client_token(client, NULL);
@@ -407,6 +381,7 @@ void res_client_command(client_t* client)
     case Remote:   res_client_command_remote(client); break;
     case Accept:   res_client_command_accept(client); break;
     case Return:   res_client_command_return(client); break;
+    case Quit:     res_client_command_quit(client); break;
     default:
       res_info("Unexpected token %s.\n", res_token_string(command));
       res_client_throw();
