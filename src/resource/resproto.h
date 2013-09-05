@@ -3,6 +3,17 @@
 
 /* resbalance.c */
 
+
+/* A client returns all its resources to the server (when it exits). */
+void res_release_client(client_t* client);
+
+/* A client confirms a previous processor grant. */
+int res_accept_procs(client_t* client, intlist_t* ints);
+
+/* A client returns previously granted processors. */
+int res_return_procs(client_t* client, intlist_t* ints);
+
+/* Compare the load of two clients, descending. */
 int res_client_compare_local_workload_desc(const void *p, const void *q);
 
 /* Each task can be run on a dedicated core. */
@@ -14,26 +25,23 @@ void res_rebalance(intmap_t* map);
 
 /* resclient.c */
 
-const char *res_token_string(token_t token);
 client_t* res_client_create(int bit, int fd);
 void res_client_destroy(client_t* client);
-void res_client_throw(void);
-token_t res_client_token(client_t* client, int* number);
 void res_client_expect(client_t* client, token_t expect);
 void res_client_number(client_t* client, int* number);
 void res_client_reply(client_t* client, const char* fmt, ...);
-intlist_t* res_client_intlist(client_t* client);
-void res_client_command_systems(client_t* client);
+void res_client_command_list(client_t* client);
 void res_client_command_topology(client_t* client);
 void res_client_command_access(client_t* client);
 void res_client_command_local(client_t* client);
 void res_client_command_remote(client_t* client);
 void res_client_command_accept(client_t* client);
 void res_client_command_return(client_t* client);
+void res_client_command_quit(client_t* client);
+void res_client_command_help(client_t* client);
 void res_client_command(client_t* client);
 void res_client_parse(client_t* client);
 int res_client_process(client_t* client);
-int res_client_complete(client_t* client);
 int res_client_write(client_t* client);
 bool res_client_writing(client_t* client);
 int res_client_read(client_t* client);
@@ -128,6 +136,14 @@ resource_t* res_resource_init(void);
 
 /* Convert the kind of resource to a static string. */
 const char *res_kind_string(int kind);
+
+/* resparse.c */
+
+const char *res_token_string(token_t token);
+void res_parse_throw(void);
+token_t res_parse_token(stream_t* stream, int* number);
+int res_parse_complete(stream_t* stream);
+intlist_t* res_parse_intlist(stream_t* stream);
 
 /* resstream.c */
 

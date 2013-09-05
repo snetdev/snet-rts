@@ -13,7 +13,7 @@ void res_loop(int listen)
   intmap_t*     client_map = res_map_create();
   bitmap_t      bitmap = 0;
   int           wcnt = 0, loops = 0;
-  const int     max_loops = 10;
+  const int     max_loops = 20;
 
   FD_ZERO(&rset);
   FD_ZERO(&wset);
@@ -73,6 +73,7 @@ void res_loop(int listen)
           io = res_client_write(client);
         }
         if (io == -1) {
+          res_release_client(client);
           res_client_destroy(client);
           res_map_del(client_map, client->bit);
           res_map_del(sock_map, sock);

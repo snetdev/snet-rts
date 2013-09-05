@@ -1,11 +1,12 @@
 #ifndef RESTOPO_H_INCLUDED
 #define RESTOPO_H_INCLUDED
 
+/* A processor cycles through the following states. */
 enum proc_state {
-  Avail,
-  Grant,
-  Accept,
-  Revoke,
+  Avail,        // When a processor is available for scheduling.
+  Grant,        // When the resource server has allocated it to a client.
+  Accept,       // When the client has acknowledged the allocation.
+  Revoke,       // When the server tells the client to stop using it.
 };
 
 /* A schedulable processor unit. */

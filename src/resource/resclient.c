@@ -10,51 +10,7 @@
 #include <ctype.h>
 
 #include "resdefs.h"
-
-typedef enum token token_t;
-enum token {
-  Notoken,
-  Left,
-  Right,
-  Number,
-  List,
-  Topology,
-  Access,
-  Local,
-  Remote,
-  Accept,
-  Return,
-  Systems,
-  Hardware,
-  Grant,
-  Revoke,
-  Quit,
-};
-
-static jmp_buf res_parse_exception_context;
-
-const char *res_token_string(token_t token)
-{
-  return
-#define NAME(x) #x
-#define TOK(k) token == k ? NAME(k) :
-  TOK(Notoken)
-  TOK(Left)
-  TOK(Right)
-  TOK(Number)
-  TOK(List)
-  TOK(Topology)
-  TOK(Access)
-  TOK(Local)
-  TOK(Remote)
-  TOK(Accept)
-  TOK(Return)
-  TOK(Systems)
-  TOK(Hardware)
-  TOK(Grant)
-  TOK(Revoke)
-  "Unknown";
-}
+#include "resparse.h"
 
 client_t* res_client_create(int bit, int fd)
 {
@@ -80,112 +36,30 @@ void res_client_destroy(client_t* client)
   xdel(client);
 }
 
-void res_client_throw(void)
-{
-  longjmp(res_parse_exception_context, 1);
-}
-
-token_t res_client_token(client_t* client, int* number)
-{
-  token_t token = Notoken;
-  int length = 0;
-  char* data = res_stream_incoming(&client->stream, &length);
-  char* end = data + length;
-  char* p;
-
-  for (p = data; p < end && isspace((unsigned char) *p); ++p) {
-    /* skip whitespace */
-  }
-
-  /* Impossible: a right brace must be present. */
-  if (p >= end) {
-    res_client_throw();
-  }
-
-  /* Check for numbers. */
-  if (isdigit((unsigned char) *p)) {
-    int n = *p - '0';
-    while (++p < end && isdigit((unsigned char) *p)) {
-      n = 10 * n + (*p - '0');
-    }
-    token = Number;
-    if (number != NULL) {
-      *number = n;
-    }
-  }
-  else {
-    /* Check for a list of textual tokens. */
-    static const struct {
-      token_t token;
-      char    name[10];
-      int     len;
-    } tokens[] = {
-      { Left,     "{",        1 },
-      { Right,    "}",        1 },
-      { List,     "list",     4 },
-      { Topology, "topology", 8 },
-      { Access,   "access",   6 },
-      { Local,    "local",    5 },
-      { Remote,   "remote",   6 },
-      { Accept,   "accept",   6 },
-      { Return,   "return",   6 },
-      { Systems,  "systems",  7 },
-      { Hardware, "hardware", 8 },
-      { Grant,    "grant",    5 },
-      { Revoke,   "revoke",   6 },
-      { Quit,     "quit",     4 },
-    };
-    const int num_tokens = sizeof(tokens) / sizeof(tokens[0]);
-    int i, max = end - p;
-    for (i = 0; i < num_tokens; ++i) {
-      if (*p == tokens[i].name[0] &&
-           (tokens[i].len == 1 ||
-             (tokens[i].len < max &&
-              !strncmp(p, tokens[i].name, tokens[i].len) &&
-              !isalpha((unsigned char) p[tokens[i].len]))))
-      {
-        token = tokens[i].token;
-        p += tokens[i].len;
-        break;
-      }
-    }
-  }
-
-  if (token == Notoken) {
-    res_info("%s: Unexpectedly got %s\n", __func__, res_token_string(token));
-    res_client_throw();
-  }
-
-  res_stream_take(&client->stream, p - data);
-
-  return token;
-}
-
 void res_client_expect(client_t* client, token_t expect)
 {
-  token_t got = res_client_token(client, NULL);
+  token_t got = res_parse_token(&client->stream, NULL);
   if (got != expect) {
     res_info("Expected %s, got %s\n",
              res_token_string(expect), res_token_string(got));
-    res_client_throw();
+    res_parse_throw();
   }
 }
 
 void res_client_number(client_t* client, int* number)
 {
   const int expect = Number;
-  token_t got = res_client_token(client, number);
+  token_t got = res_parse_token(&client->stream, number);
   if (got != expect) {
     res_info("Expected %s, got %s\n",
              res_token_string(expect), res_token_string(got));
-    res_client_throw();
+    res_parse_throw();
   }
 }
 
 void res_client_reply(client_t* client, const char* fmt, ...)
 {
   const int max_reserve = 1024;
-  const int min_reserve = 512;
   const char *str = fmt, *arg;
   va_list ap;
   int size = 0;
@@ -212,6 +86,14 @@ void res_client_reply(client_t* client, const char* fmt, ...)
       switch (*++str) {
         case 's': {
           for (arg = va_arg(ap, char*); *arg; ++arg) {
+            if (start + 10 > end) {
+              res_stream_appended(&client->stream, start - data);
+              res_stream_reserve(&client->stream, max_reserve);
+              data = res_stream_outgoing(&client->stream, &size);
+              assert(size >= max_reserve);
+              start = data;
+              end = data + size;
+            }
             *start++ = *arg;
             *start = '\0';
           }
@@ -220,11 +102,13 @@ void res_client_reply(client_t* client, const char* fmt, ...)
           char *first = start, *last;
           int n = va_arg(ap, int);
           assert(n >= 0);
+          /* First convert the number and store in reverse order. */
           do {
             *start++ = ((n % 10) + '0');
             *start = '\0';
             n /= 10;
           } while (n);
+          /* Then reverse the order of the stored digits. */
           for (last = start - 1; last > first; --last, ++first) {
             char save = *first; *first = *last; *last = save;
           }
@@ -238,42 +122,7 @@ void res_client_reply(client_t* client, const char* fmt, ...)
   res_stream_appended(&client->stream, start - data);
 }
 
-intlist_t* res_client_intlist(client_t* client)
-{
-  intlist_t* list = res_list_create();
-  int   length = 0;
-  char* data = res_stream_incoming(&client->stream, &length);
-  char* end = data + length;
-  char* p;
-  bool  found = true;
-
-  while (found) {
-    found = false;
-
-    for (p = data; p < end && isspace((unsigned char) *p); ++p) {
-      /* skip whitespace */
-    }
-
-    /* Check for numbers. */
-    if (p < end && isdigit((unsigned char) *p)) {
-      int n = *p - '0';
-      while (++p < end && isdigit((unsigned char) *p)) {
-        n = 10 * n + (*p - '0');
-      }
-      res_list_append(list, n);
-    }
-  }
-  if (res_list_size(list) == 0) {
-    res_list_destroy(list);
-    res_client_throw();
-  } else {
-    res_stream_take(&client->stream, p - data);
-  }
- 
-  return list;
-}
-
-void res_client_command_systems(client_t* client)
+void res_client_command_list(client_t* client)
 {
   // Currently support only the local system
   res_client_reply(client, "%s", "{ systems 0 }\n");
@@ -285,7 +134,7 @@ void res_client_command_topology(client_t* client)
   res_client_number(client, &id);
   if (id) {
     res_info("Invalid topology id.\n");
-    res_client_throw();
+    res_parse_throw();
   } else {
     char *host = res_hostname();
     int len, size = 10*1024;
@@ -308,7 +157,7 @@ void res_client_command_topology(client_t* client)
 
 void res_client_command_access(client_t* client)
 {
-  intlist_t* ints = res_client_intlist(client);
+  intlist_t* ints = res_parse_intlist(&client->stream);
   int size = res_list_size(ints);
   int i;
   unsigned long access = 0;
@@ -317,7 +166,7 @@ void res_client_command_access(client_t* client)
     int val = res_list_get(ints, i);
     if (val < 0 || val >= 8*sizeof(client->access)) {
       res_list_destroy(ints);
-      res_client_throw();
+      res_parse_throw();
     } else {
       access |= (1UL << val);
     }
@@ -353,28 +202,68 @@ void res_client_command_remote(client_t* client)
 
 void res_client_command_accept(client_t* client)
 {
-  intlist_t* ints = res_client_intlist(client);
-
+  intlist_t* ints = res_parse_intlist(&client->stream);
+  int result = res_accept_procs(client, ints);
   res_list_destroy(ints);
+  if (result == -1) {
+    res_parse_throw();
+  }
 }
 
 void res_client_command_return(client_t* client)
 {
-  intlist_t* ints = res_client_intlist(client);
-
+  intlist_t* ints = res_parse_intlist(&client->stream);
+  int result = res_return_procs(client, ints);
   res_list_destroy(ints);
+  if (result == -1) {
+    res_parse_throw();
+  }
 }
 
 void res_client_command_quit(client_t* client)
 {
-  res_client_throw();
+  res_parse_throw();
+}
+
+void res_client_command_help(client_t* client)
+{
+  static const char help_text[] =
+  "The following commands are supported:\n"
+  "{ list }\n"
+  "{ topology int }\n"
+  "{ access intlist }\n"
+  "{ local int }\n"
+  "{ remote int }\n"
+  "{ accept intlist }\n"
+  "{ return intlist }\n"
+  "{ quit }\n"
+  "{ help }\n"
+  "{ state }\n"
+  "Where 'intlist' is a space separated list of postive integers.\n"
+  "\n";
+
+  res_client_reply(client, "%s", help_text);
+}
+
+void res_client_command_state(client_t* client)
+{
+  res_client_reply(client,
+     "{ state \n"
+     "  { client client %d local %d remote %d \n"
+     "    granted %d accepted %d revoked %d \n"
+     "    grantmap %d rebalance %d } \n",
+     client->bit, client->local_workload, client->remote_workload,
+     client->local_granted, client->local_accepted, client->local_revoked,
+     client->local_grantmap, client->rebalance);
+
+  res_client_reply(client, "} \n");
 }
 
 void res_client_command(client_t* client)
 {
-  token_t command = res_client_token(client, NULL);
+  token_t command = res_parse_token(&client->stream, NULL);
   switch (command) {
-    case List:     res_client_command_systems(client); break;
+    case List:     res_client_command_list(client); break;
     case Topology: res_client_command_topology(client); break;
     case Access:   res_client_command_access(client); break;
     case Local:    res_client_command_local(client); break;
@@ -382,9 +271,11 @@ void res_client_command(client_t* client)
     case Accept:   res_client_command_accept(client); break;
     case Return:   res_client_command_return(client); break;
     case Quit:     res_client_command_quit(client); break;
+    case Help:     res_client_command_help(client); break;
+    case State:    res_client_command_state(client); break;
     default:
       res_info("Unexpected token %s.\n", res_token_string(command));
-      res_client_throw();
+      res_parse_throw();
       break;
   }
 }
@@ -406,36 +297,6 @@ int res_client_process(client_t* client)
   }
 }
 
-int res_client_complete(client_t* client)
-{
-  int   size = 0, nesting = 1;
-  char *data = res_stream_incoming(&client->stream, &size);
-  char *p, *end = data + size;
-  enum { Complete = 1, Incomplete = 0, Failure = -1 };
-
-  for (p = data; p < end && isspace((unsigned char) *p); ++p) {
-    /* skip whitespace */
-  }
-  if (p < end) {
-    if (*p != '{') {
-      res_info("Expected left brace, got 0x%02x\n", (unsigned char) *p);
-      return Failure;
-    } else {
-      char *preamble = p;
-      while (++p < end) {
-        if (*p == '{') ++nesting;
-        if (*p == '}' && --nesting == 0) {
-          break;
-        }
-      }
-      if (preamble > data) {
-        res_stream_take(&client->stream, preamble - data);
-      }
-    }
-  }
-  return nesting ? ((size < 10*1024) ? Incomplete : Failure) : Complete;
-}
-
 int res_client_write(client_t* client)
 {
   return res_stream_write(&client->stream);
@@ -454,7 +315,7 @@ int res_client_read(client_t* client)
     return Failure;
   } else {
     int complete;
-    while ((complete = res_client_complete(client)) == Complete) {
+    while ((complete = res_parse_complete(&client->stream)) == Complete) {
       if (res_client_process(client) == Failure) {
         return Failure;
       }

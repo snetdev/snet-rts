@@ -216,6 +216,8 @@ src_resource_resserv_SOURCES = \
 	src/resource/resnet.c \
 	src/resource/resource.c \
 	src/resource/resource.h \
+	src/resource/resparse.c \
+	src/resource/resparse.h \
 	src/resource/resproto.h \
 	src/resource/resstream.c \
 	src/resource/resstream.h \
