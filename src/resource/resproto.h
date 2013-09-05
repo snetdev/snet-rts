@@ -39,6 +39,7 @@ void res_client_command_accept(client_t* client);
 void res_client_command_return(client_t* client);
 void res_client_command_quit(client_t* client);
 void res_client_command_help(client_t* client);
+void res_client_command_state(client_t* client);
 void res_client_command(client_t* client);
 void res_client_parse(client_t* client);
 int res_client_process(client_t* client);
