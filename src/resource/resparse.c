@@ -164,14 +164,15 @@ intlist_t* res_parse_intlist(stream_t* stream)
   int   length = 0;
   char* data = res_stream_incoming(stream, &length);
   char* end = data + length;
-  char* p;
+  char* p = data;
   bool  found = true;
 
   while (found) {
     found = false;
 
-    for (p = data; p < end && isspace((unsigned char) *p); ++p) {
+    while (p < end && isspace((unsigned char) *p)) {
       /* skip whitespace */
+      ++p;
     }
 
     /* Check for numbers. */
@@ -181,6 +182,7 @@ intlist_t* res_parse_intlist(stream_t* stream)
         n = 10 * n + (*p - '0');
       }
       res_list_append(list, n);
+      found = true;
     }
   }
   if (res_list_size(list) == 0) {

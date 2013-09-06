@@ -17,7 +17,7 @@ int res_return_procs(client_t* client, intlist_t* ints);
 int res_client_compare_local_workload_desc(const void *p, const void *q);
 
 /* Each task can be run on a dedicated core. */
-void res_rebalance_cores(intmap_t* map, int ncores, int nprocs);
+void res_rebalance_cores(intmap_t* map);
 void res_rebalance_procs(intmap_t* map);
 void res_rebalance_proportional(intmap_t* map);
 void res_rebalance_minimal(intmap_t* map);
@@ -76,6 +76,7 @@ void res_service(int port);
 void pexit(const char *mesg);
 bool res_get_debug(void);
 bool res_get_verbose(void);
+void res_assert_failed(const char *fn, int ln, const char *msg);
 void res_warn(const char *fmt, ...);
 void res_error(const char *fmt, ...);
 void res_info(const char *fmt, ...);
@@ -160,6 +161,8 @@ int res_buffer_read(buffer_t* buf, int fd, int amount);
 int res_buffer_write(buffer_t* buf, int fd, int amount);
 void res_stream_init(stream_t* stream, int fd);
 void res_stream_done(stream_t* stream);
+stream_t* res_stream_create(int fd);
+void res_stream_destroy(stream_t* stream);
 int res_stream_read(stream_t* stream);
 int res_stream_write(stream_t* stream);
 bool res_stream_writing(stream_t* stream);
@@ -181,6 +184,7 @@ void res_topo_add_host(host_t *host, int id);
 void res_host_dump(host_t* host);
 void res_topo_init(void);
 void res_topo_destroy(void);
+void res_topo_state(client_t* client);
 
 
 #endif

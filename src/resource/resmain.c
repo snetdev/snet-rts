@@ -103,6 +103,12 @@ static void get_config(const char *fname)
   }
 }
 
+void res_assert_failed(const char *fn, int ln, const char *msg)
+{
+  fprintf(stderr, "%s: assertion failed:%s:%d: %s\n", prog, fn, ln, msg);
+  exit(1);
+}
+
 void res_warn(const char *fmt, ...)
 {
   va_list ap;

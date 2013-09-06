@@ -36,6 +36,10 @@ void res_release_client(client_t* client)
         assert(proc->core->cache->assigned >= 0);
         proc->core->cache->numa->assigned -= 1;
         assert(proc->core->cache->numa->assigned >= 0);
+        CLR(host->procassign, p);
+        if (proc->core->assigned == 0) {
+          CLR(host->coreassign, proc->core->res->logical);
+        }
         if (client->local_grantmap == 0) {
           break;
         }
@@ -50,78 +54,103 @@ void res_release_client(client_t* client)
 /* A client confirms a previous processor grant. */
 int res_accept_procs(client_t* client, intlist_t* ints)
 {
-  host_t* host = res_local_host();
   const int size = res_list_size(ints);
-  int procs_accepted = 0;
-  int i;
-  for (i = 0; i < size; ++i) {
-    int procnum = res_list_get(ints, i);
-    if (NOT(client->local_grantmap, procnum)) {
-      res_warn("Client accepts ungranted proc %d (%lu).",
-                procnum, client->local_grantmap);
+  if (size < 2) {
+    res_warn("Client accept list invalid length %d.\n", size);
+    return -1;
+  } else {
+    int sysid = res_list_get(ints, 0);
+    if (sysid != 0) {
+      res_warn("Client accept list for invalid system %d.\n", sysid);
       return -1;
     } else {
-      proc_t* proc = host->procs[procnum];
-      if (proc->state != Grant) {
-        res_warn("Client accepts proc %d in state %d.", procnum, proc->state);
-        return -1;
-      } else {
-        proc->state = Accept;
-        client->local_accepted += 1;
+      host_t* host = res_local_host();
+      int i, procs_accepted = 0;
 
-        ++procs_accepted;
+      for (i = 1; i < size; ++i) {
+        int procnum = res_list_get(ints, i);
+        if (NOT(client->local_grantmap, procnum)) {
+          res_warn("Client accepts ungranted proc %d (%lu).",
+                    procnum, client->local_grantmap);
+          return -1;
+        } else {
+          proc_t* proc = host->procs[procnum];
+          if (proc->state != Grant) {
+            res_warn("Client accepts proc %d in state %d.", procnum, proc->state);
+            return -1;
+          } else {
+            proc->state = Accept;
+            client->local_accepted += 1;
+            ++procs_accepted;
+          }
+        }
       }
+      return procs_accepted;
     }
   }
-  return procs_accepted;
 }
 
 /* A client returns previously granted processors. */
 int res_return_procs(client_t* client, intlist_t* ints)
 {
-  host_t* host = res_local_host();
   const int size = res_list_size(ints);
-  int procs_returned = 0;
-  int i;
-  for (i = 0; i < size; ++i) {
-    int procnum = res_list_get(ints, i);
-    if (NOT(client->local_grantmap, procnum)) {
-      res_warn("Client returns ungranted proc %d (%lu).",
-                procnum, client->local_grantmap);
+  if (size < 2) {
+    res_warn("Client return list invalid length %d.\n", size);
+    return -1;
+  } else {
+    int sysid = res_list_get(ints, 0);
+    if (sysid != 0) {
+      res_warn("Client return list for invalid system %d.\n", sysid);
       return -1;
     } else {
-      proc_t* proc = host->procs[procnum];
-      assert(proc->clientbit == client->bit);
-      if (proc->state >= Grant && proc->state <= Revoke) {
-        proc->state = Avail;
-        client->local_granted -= 1;
-        assert(client->local_granted >= 0);
-        if (proc->state >= Accept) {
-          client->local_accepted -= 1;
-          assert(client->local_accepted >= 0);
-          if (proc->state == Revoke) {
-            client->local_revoked -= 1;
-            assert(client->local_revoked >= 0);
+      host_t* host = res_local_host();
+      int i, procs_returned = 0;
+
+      for (i = 1; i < size; ++i) {
+        int procnum = res_list_get(ints, i);
+        if (NOT(client->local_grantmap, procnum)) {
+          res_warn("Client returns ungranted proc %d (%lu).",
+                    procnum, client->local_grantmap);
+          return -1;
+        } else {
+          proc_t* proc = host->procs[procnum];
+          assert(proc->clientbit == client->bit);
+          if (proc->state < Grant && proc->state > Revoke) {
+            res_warn("Client returns proc %d in state %d.", procnum, proc->state);
+            return -1;
+          } else {
+            client->local_granted -= 1;
+            assert(client->local_granted >= 0);
+            if (proc->state >= Accept) {
+              client->local_accepted -= 1;
+              assert(client->local_accepted >= 0);
+              if (proc->state == Revoke) {
+                client->local_revoked -= 1;
+                assert(client->local_revoked >= 0);
+              }
+            }
+            CLR(client->local_grantmap, procnum);
+
+            proc->state = Avail;
+            proc->core->assigned -= 1;
+            assert(proc->core->assigned >= 0);
+            proc->core->cache->assigned -= 1;
+            assert(proc->core->cache->assigned >= 0);
+            proc->core->cache->numa->assigned -= 1;
+            assert(proc->core->cache->numa->assigned >= 0);
+
+            CLR(host->procassign, procnum);
+            if (proc->core->assigned == 0) {
+              CLR(host->coreassign, proc->core->res->logical);
+            }
+
+            ++procs_returned;
           }
         }
-        CLR(client->local_grantmap, procnum);
-
-        proc->state = Avail;
-        proc->core->assigned -= 1;
-        assert(proc->core->assigned >= 0);
-        proc->core->cache->assigned -= 1;
-        assert(proc->core->cache->assigned >= 0);
-        proc->core->cache->numa->assigned -= 1;
-        assert(proc->core->cache->numa->assigned >= 0);
-
-        ++procs_returned;
-      } else {
-        res_warn("Client returns proc %d in state %d.", procnum, proc->state);
-        return -1;
       }
+      return procs_returned;
     }
   }
-  return procs_returned;
 }
 
 /* Compare the load of two clients, descending. */
@@ -154,9 +183,9 @@ static client_t** get_sorted_clients(intmap_t* map)
 }
 
 /* Each task can be run on a dedicated core. */
-void res_rebalance_cores(intmap_t* map, int ncores, int nprocs)
+void res_rebalance_cores(intmap_t* map)
 {
-  int           i = 0, p, o;
+  int           i, p, o;
   host_t       *host = res_local_host();
   const int     num_clients = res_map_count(map);
   client_t     *client, **all = get_sorted_clients(map);
@@ -166,7 +195,7 @@ void res_rebalance_cores(intmap_t* map, int ncores, int nprocs)
   int           nassigns = 0;
   
   /* Restrict use of hyperthreaded cores to one proc per core. */
-  for (i = 0; i < host->nprocs; ++i) {
+  for (i = 0; i < host->ncores; ++i) {
     core_t *core = host->cores[i];
     if (core->assigned >= 2) {
       int found = 0;
@@ -178,8 +207,8 @@ void res_rebalance_cores(intmap_t* map, int ncores, int nprocs)
             ++nrevokes;
             client = res_map_get(map, proc->clientbit);
             SET(client->local_revoking, p);
-            client->local_revoked += 1;
             proc->state = Revoke;
+            client->local_revoked += 1;
           }
         }
       }
@@ -188,7 +217,7 @@ void res_rebalance_cores(intmap_t* map, int ncores, int nprocs)
 
   /* Check all clients for a need for more or less cores. */
   for (i = 0; i < num_clients; ++i) {
-    client_t *client = all[i];
+    client = all[i];
     int used = client->local_granted - client->local_revoked;
     int need = client->local_workload - used;
     if (need > 0) {
@@ -208,6 +237,24 @@ void res_rebalance_cores(intmap_t* map, int ncores, int nprocs)
           core->cache->assigned += 1;
           core->cache->numa->assigned += 1;
           SET(host->coreassign, o);
+          --need;
+        }
+      }
+    }
+    else if (need < 0) {
+      /* Revoke excess assignments. */
+      for (p = 0; p <= MAX_BIT && need < 0; ++p) {
+        if (HAS(client->local_grantmap, p) &&
+            NOT(client->local_revoking, p)) {
+          proc_t* proc = host->procs[p];
+          if (proc->state >= Grant && proc->state <= Accept) {
+            SET(revoke, proc->clientbit);
+            ++nrevokes;
+            SET(client->local_revoking, p);
+            proc->state = Revoke;
+            client->local_revoked += 1;
+            ++need;
+          }
         }
       }
     }
@@ -223,7 +270,6 @@ void res_rebalance_cores(intmap_t* map, int ncores, int nprocs)
           res_client_reply(client, "%d ", p);
           CLR(client->local_revoking, p);
           --nrevokes;
-          client->local_revoked += 1;
         }
       }
       res_client_reply(client, "} \n");
@@ -256,7 +302,7 @@ void res_rebalance_cores(intmap_t* map, int ncores, int nprocs)
 
 void res_rebalance_procs(intmap_t* map)
 {
-  int           i = 0, p, o;
+  int           i, p;
   host_t       *host = res_local_host();
   const int     num_clients = res_map_count(map);
   client_t     *client, **all = get_sorted_clients(map);
@@ -267,26 +313,43 @@ void res_rebalance_procs(intmap_t* map)
   
   /* Check all clients for a need for more or less processors. */
   for (i = 0; i < num_clients; ++i) {
-    client_t *client = all[i];
+    client = all[i];
     int used = client->local_granted - client->local_revoked;
     int need = client->local_workload - used;
     if (need > 0) {
-      /* Find allocatable cores to satisfy the client need. */
-      for (o = 0; o < host->ncores && need > 0; ++o) {
-        if (NOT(host->coreassign, o)) {
-          core_t* core = host->cores[o];
-          proc_t* proc = core->procs[0];
-          assert(core->assigned == 0);
+      /* Find allocatable processors to satisfy the client need. */
+      for (p = 0; p < host->nprocs && need > 0; ++p) {
+        if (NOT(host->procassign, p)) {
+          proc_t* proc = host->procs[p];
           assert(proc->state == Avail);
           SET(assign, client->bit);
           ++nassigns;
-          SET(client->local_assigning, proc->res->logical);
+          SET(client->local_assigning, p);
           client->local_granted += 1;
           proc->state = Grant;
-          core->assigned += 1;
-          core->cache->assigned += 1;
-          core->cache->numa->assigned += 1;
-          SET(host->coreassign, o);
+          proc->core->assigned += 1;
+          proc->core->cache->assigned += 1;
+          proc->core->cache->numa->assigned += 1;
+          SET(host->procassign, p);
+          SET(host->coreassign, proc->core->res->logical);
+          --need;
+        }
+      }
+    }
+    else if (need < 0) {
+      /* Revoke excess assignments. */
+      for (p = 0; p <= MAX_BIT && need < 0; ++p) {
+        if (HAS(client->local_grantmap, p) &&
+            NOT(client->local_revoking, p)) {
+          proc_t* proc = host->procs[p];
+          if (proc->state >= Grant && proc->state <= Accept) {
+            SET(revoke, proc->clientbit);
+            ++nrevokes;
+            SET(client->local_revoking, p);
+            proc->state = Revoke;
+            client->local_revoked += 1;
+            ++need;
+          }
         }
       }
     }
@@ -302,7 +365,6 @@ void res_rebalance_procs(intmap_t* map)
           res_client_reply(client, "%d ", p);
           CLR(client->local_revoking, p);
           --nrevokes;
-          client->local_revoked += 1;
         }
       }
       res_client_reply(client, "} \n");
@@ -335,6 +397,122 @@ void res_rebalance_procs(intmap_t* map)
 
 void res_rebalance_proportional(intmap_t* map)
 {
+  int           i, p;
+  host_t       *host = res_local_host();
+  const int     num_clients = res_map_count(map);
+  client_t     *client, **all = get_sorted_clients(map);
+  bitmap_t      revoke = BITMAP_ZERO;
+  int           nrevokes = 0;
+  bitmap_t      assign = BITMAP_ZERO;
+  int           nassigns = 0;
+  int          *portions = xmalloc(num_clients * sizeof(int));
+  int           num_positives = 0;
+  int           total_load = 0;
+
+  /* Compute the proportional processor distribution. */
+  for (i = 0; i < num_clients; ++i) {
+    client = all[i];
+    if (client->local_workload >= 1) {
+      ++num_positives;
+      total_load += client->local_workload;
+      portions[i] = 1;
+    } else {
+      portions[i] = 0;
+    }
+  }
+  assert(host->nprocs < total_load);
+  for (i = 0; i < num_clients; ++i) {
+    client = all[i];
+    if (client->local_workload >= 2) {
+      portions[i] += (client->local_workload - 1)
+                   * (host->nprocs - num_positives)
+                   / (total_load - num_positives);
+    }
+  }
+  
+  /* Check all clients for a need for more or less processors. */
+  for (i = 0; i < num_clients; ++i) {
+    client = all[i];
+    int used = client->local_granted - client->local_revoked;
+    int need = portions[i] - used;
+    if (need > 0) {
+      /* Find allocatable processors to satisfy the client need. */
+      for (p = 0; p < host->nprocs && need > 0; ++p) {
+        if (NOT(host->procassign, p)) {
+          proc_t* proc = host->procs[p];
+          assert(proc->state == Avail);
+          SET(assign, client->bit);
+          ++nassigns;
+          SET(client->local_assigning, p);
+          client->local_granted += 1;
+          proc->state = Grant;
+          proc->core->assigned += 1;
+          proc->core->cache->assigned += 1;
+          proc->core->cache->numa->assigned += 1;
+          SET(host->procassign, p);
+          SET(host->coreassign, proc->core->res->logical);
+          --need;
+        }
+      }
+    }
+    else if (need < 0) {
+      /* Revoke excess assignments. */
+      for (p = 0; p <= MAX_BIT && need < 0; ++p) {
+        if (HAS(client->local_grantmap, p) &&
+            NOT(client->local_revoking, p)) {
+          proc_t* proc = host->procs[p];
+          if (proc->state >= Grant && proc->state <= Accept) {
+            SET(revoke, proc->clientbit);
+            ++nrevokes;
+            SET(client->local_revoking, p);
+            proc->state = Revoke;
+            client->local_revoked += 1;
+            ++need;
+          }
+        }
+      }
+    }
+  }
+
+  /* Issue revoke commands to the clients. */
+  for (i = 0; i < num_clients && nrevokes > 0; ++i) {
+    client = all[i];
+    if (HAS(revoke, client->bit)) {
+      res_client_reply(client, "{ revoke 0 ");
+      for (p = 0; p <= MAX_BIT && client->local_revoking; ++p) {
+        if (HAS(client->local_revoking, p)) {
+          res_client_reply(client, "%d ", p);
+          CLR(client->local_revoking, p);
+          --nrevokes;
+        }
+      }
+      res_client_reply(client, "} \n");
+    }
+    assert(!client->local_revoking);
+  }
+  assert(!nrevokes);
+
+  /* Communicate newly granted processors. */
+  for (i = 0; i < num_clients && nassigns > 0; ++i) {
+    client = all[i];
+    if (HAS(assign, client->bit)) {
+      res_client_reply(client, "{ grant 0 ");
+      for (p = 0; p <= MAX_BIT && client->local_assigning; ++p) {
+        if (HAS(client->local_assigning, p)) {
+          res_client_reply(client, "%d ", p);
+          CLR(client->local_assigning, p);
+          SET(client->local_grantmap, p);
+          --nassigns;
+        }
+      }
+      res_client_reply(client, "} \n");
+    }
+    assert(!client->local_assigning);
+  }
+  assert(!nassigns);
+
+  xfree(all);
+  xfree(portions);
 }
 
 void res_rebalance_minimal(intmap_t* map)
@@ -361,8 +539,8 @@ void res_rebalance(intmap_t* map)
   printf("%s: tl %d, nc %d, np %d\n", __func__,
          total_load, ncores, nprocs);
 
-  if (total_load <= ncores) {
-    res_rebalance_cores(map, ncores, nprocs);
+  if (ncores < nprocs && total_load <= ncores) {
+    res_rebalance_cores(map);
   }
   else if (total_load <= nprocs) {
     res_rebalance_procs(map);

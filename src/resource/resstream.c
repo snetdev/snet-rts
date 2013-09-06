@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
+#include <stdarg.h>
 #include "resdefs.h"
 
 void res_buffer_init(buffer_t* buf)
@@ -124,6 +125,19 @@ void res_stream_done(stream_t* stream)
   res_buffer_done(&stream->read);
   res_buffer_done(&stream->write);
   res_socket_close(stream->fd);
+}
+
+stream_t* res_stream_create(int fd)
+{
+  stream_t* stream = xnew(stream_t);
+  res_stream_init(stream, fd);
+  return stream;
+}
+
+void res_stream_destroy(stream_t* stream)
+{
+  res_stream_done(stream);
+  xfree(stream);
 }
 
 int res_stream_read(stream_t* stream)

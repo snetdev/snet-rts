@@ -280,23 +280,26 @@ void res_host_dump(host_t* host)
 {
   int n, a, o, p;
 
-  printf("host %d, name %s, %d numas, %d cores, %d procs\n",
-         host->index, host->name, host->nnumas, host->ncores, host->nprocs);
+  printf("host %d, name %s, %d numas, %d cores (%#lx), %d procs (%#lx)\n",
+         host->index, host->name, host->nnumas,
+         host->ncores, host->coreassign, host->nprocs, host->procassign);
+
   for (n = 0; n < host->nnumas; ++n) {
     numa_t* numa = host->numa[n];
-    printf("    numa %d, %d caches, %d cores, %d procs\n",
-           n, numa->ncaches, numa->ncores, numa->nprocs);
+    printf("    numa %d, %d caches, %d cores, %d procs, assigned %d\n",
+           n, numa->ncaches, numa->ncores, numa->nprocs, numa->assigned);
     for (a = 0; a < numa->ncaches; ++a) {
       cache_t* cache = numa->caches[a];
-      printf("        cache %d, %d cores, %d procs\n",
-             a, numa->ncores, numa->nprocs);
+      printf("        cache %d, %d cores, %d procs, assigned %d\n",
+             a, numa->ncores, numa->nprocs, numa->assigned);
       for (o = 0; o < cache->ncores; ++o) {
         core_t* core = cache->cores[o];
-        printf("            core %d, %d procs, hyper %d\n",
-               o, core->nprocs, core->hyper);
+        printf("            core %d, %d procs, hyper %d, assigned %d\n",
+               o, core->nprocs, core->hyper, core->assigned);
         for (p = 0; p < core->nprocs; ++p) {
           proc_t* proc = core->procs[p];
-          printf("                proc %d, id %d\n", p, proc->res->logical);
+          printf("                proc %d, id %d, state %d, bit %d\n",
+                 p, proc->res->logical, proc->state, proc->clientbit);
         }
       }
     }
@@ -323,5 +326,9 @@ void res_topo_destroy(void)
   xfree(global_topo->host);
   xfree(global_topo);
   global_topo = NULL;
+}
+
+void res_topo_state(client_t* client)
+{
 }
 

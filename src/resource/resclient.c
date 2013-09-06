@@ -101,7 +101,7 @@ void res_client_reply(client_t* client, const char* fmt, ...)
         case 'd': {
           char *first = start, *last;
           int n = va_arg(ap, int);
-          assert(n >= 0);
+          res_assert(n >= 0, "Negative numbers not implemented.");
           /* First convert the number and store in reverse order. */
           do {
             *start++ = ((n % 10) + '0');
@@ -113,7 +113,7 @@ void res_client_reply(client_t* client, const char* fmt, ...)
             char save = *first; *first = *last; *last = save;
           }
         } break;
-        default: assert(false);
+        default: res_assert(false, "Unimplemented conversion.");
       }
     }
   }
@@ -168,7 +168,7 @@ void res_client_command_access(client_t* client)
       res_list_destroy(ints);
       res_parse_throw();
     } else {
-      access |= (1UL << val);
+      SET(access, val);
     }
   }
   res_list_destroy(ints);
@@ -176,6 +176,7 @@ void res_client_command_access(client_t* client)
   if (client->access != access) {
     client->access = access;
     client->rebalance = true;
+    /* TODO: when reducing access: revoke inaccessible procs. */
   }
 }
 
@@ -184,8 +185,12 @@ void res_client_command_local(client_t* client)
   int load = 0;
   res_client_number(client, &load);
   if (client->local_workload != load) {
+    if (load < client->local_workload ||
+        load > client->local_workload + client->local_revoked)
+    {
+      client->rebalance = true;
+    }
     client->local_workload = load;
-    client->rebalance = true;
   }
 }
 
@@ -195,8 +200,8 @@ void res_client_command_remote(client_t* client)
   res_client_number(client, &load);
   client->remote_workload = load;
   if (client->remote_workload != load) {
-    client->remote_workload = load;
     client->rebalance = true;
+    client->remote_workload = load;
   }
 }
 
@@ -255,6 +260,8 @@ void res_client_command_state(client_t* client)
      client->bit, client->local_workload, client->remote_workload,
      client->local_granted, client->local_accepted, client->local_revoked,
      client->local_grantmap, client->rebalance);
+
+  res_host_dump(res_local_host());
 
   res_client_reply(client, "} \n");
 }
