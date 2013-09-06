@@ -517,6 +517,106 @@ void res_rebalance_proportional(intmap_t* map)
 
 void res_rebalance_minimal(intmap_t* map)
 {
+  int           i, p;
+  host_t       *host = res_local_host();
+  const int     num_clients = res_map_count(map);
+  client_t     *client, **all = get_sorted_clients(map);
+  bitmap_t      revoke = BITMAP_ZERO;
+  int           nrevokes = 0;
+  bitmap_t      assign = BITMAP_ZERO;
+  int           nassigns = 0;
+  int          *portions = xmalloc(num_clients * sizeof(int));
+
+  /* Compute the proportional processor distribution. */
+  assert(host->nprocs < num_clients);
+  for (i = 0; i < num_clients; ++i) {
+    client = all[i];
+    portions[i] = (i < host->nprocs) ? 1 : 0;
+  }
+
+  /* Check all clients for a need for more or less processors. */
+  for (i = 0; i < num_clients; ++i) {
+    client = all[i];
+    int used = client->local_granted - client->local_revoked;
+    int need = portions[i] - used;
+    if (need > 0) {
+      /* Find allocatable processors to satisfy the client need. */
+      for (p = 0; p < host->nprocs && need > 0; ++p) {
+        if (NOT(host->procassign, p)) {
+          proc_t* proc = host->procs[p];
+          assert(proc->state == Avail);
+          SET(assign, client->bit);
+          ++nassigns;
+          SET(client->local_assigning, p);
+          client->local_granted += 1;
+          proc->state = Grant;
+          proc->core->assigned += 1;
+          proc->core->cache->assigned += 1;
+          proc->core->cache->numa->assigned += 1;
+          SET(host->procassign, p);
+          SET(host->coreassign, proc->core->res->logical);
+          --need;
+        }
+      }
+    }
+    else if (need < 0) {
+      /* Revoke excess assignments. */
+      for (p = 0; p <= MAX_BIT && need < 0; ++p) {
+        if (HAS(client->local_grantmap, p) &&
+            NOT(client->local_revoking, p)) {
+          proc_t* proc = host->procs[p];
+          if (proc->state >= Grant && proc->state <= Accept) {
+            SET(revoke, proc->clientbit);
+            ++nrevokes;
+            SET(client->local_revoking, p);
+            proc->state = Revoke;
+            client->local_revoked += 1;
+            ++need;
+          }
+        }
+      }
+    }
+  }
+
+  /* Issue revoke commands to the clients. */
+  for (i = 0; i < num_clients && nrevokes > 0; ++i) {
+    client = all[i];
+    if (HAS(revoke, client->bit)) {
+      res_client_reply(client, "{ revoke 0 ");
+      for (p = 0; p <= MAX_BIT && client->local_revoking; ++p) {
+        if (HAS(client->local_revoking, p)) {
+          res_client_reply(client, "%d ", p);
+          CLR(client->local_revoking, p);
+          --nrevokes;
+        }
+      }
+      res_client_reply(client, "} \n");
+    }
+    assert(!client->local_revoking);
+  }
+  assert(!nrevokes);
+
+  /* Communicate newly granted processors. */
+  for (i = 0; i < num_clients && nassigns > 0; ++i) {
+    client = all[i];
+    if (HAS(assign, client->bit)) {
+      res_client_reply(client, "{ grant 0 ");
+      for (p = 0; p <= MAX_BIT && client->local_assigning; ++p) {
+        if (HAS(client->local_assigning, p)) {
+          res_client_reply(client, "%d ", p);
+          CLR(client->local_assigning, p);
+          SET(client->local_grantmap, p);
+          --nassigns;
+        }
+      }
+      res_client_reply(client, "} \n");
+    }
+    assert(!client->local_assigning);
+  }
+  assert(!nassigns);
+
+  xfree(all);
+  xfree(portions);
 }
 
 void res_rebalance(intmap_t* map)
