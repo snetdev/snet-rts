@@ -38,7 +38,7 @@ void res_release_client(client_t* client)
         assert(proc->core->cache->numa->assigned >= 0);
         CLR(host->procassign, p);
         if (proc->core->assigned == 0) {
-          CLR(host->coreassign, proc->core->res->logical);
+          CLR(host->coreassign, proc->core->logical);
         }
         if (client->local_grantmap == 0) {
           break;
@@ -141,7 +141,7 @@ int res_return_procs(client_t* client, intlist_t* ints)
 
             CLR(host->procassign, procnum);
             if (proc->core->assigned == 0) {
-              CLR(host->coreassign, proc->core->res->logical);
+              CLR(host->coreassign, proc->core->logical);
             }
 
             ++procs_returned;
@@ -230,7 +230,7 @@ void res_rebalance_cores(intmap_t* map)
           assert(proc->state == Avail);
           SET(assign, client->bit);
           ++nassigns;
-          SET(client->local_assigning, proc->res->logical);
+          SET(client->local_assigning, proc->logical);
           client->local_granted += 1;
           proc->state = Grant;
           core->assigned += 1;
@@ -331,7 +331,7 @@ void res_rebalance_procs(intmap_t* map)
           proc->core->cache->assigned += 1;
           proc->core->cache->numa->assigned += 1;
           SET(host->procassign, p);
-          SET(host->coreassign, proc->core->res->logical);
+          SET(host->coreassign, proc->core->logical);
           --need;
         }
       }
@@ -450,7 +450,7 @@ void res_rebalance_proportional(intmap_t* map)
           proc->core->cache->assigned += 1;
           proc->core->cache->numa->assigned += 1;
           SET(host->procassign, p);
-          SET(host->coreassign, proc->core->res->logical);
+          SET(host->coreassign, proc->core->logical);
           --need;
         }
       }
@@ -554,7 +554,7 @@ void res_rebalance_minimal(intmap_t* map)
           proc->core->cache->assigned += 1;
           proc->core->cache->numa->assigned += 1;
           SET(host->procassign, p);
-          SET(host->coreassign, proc->core->res->logical);
+          SET(host->coreassign, proc->core->logical);
           --need;
         }
       }

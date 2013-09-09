@@ -60,10 +60,11 @@ resource_t* res_topo_get_root(int sysid)
 static proc_t* res_proc_create(resource_t* res)
 {
   proc_t* proc = xnew(proc_t);
-  proc->res = res;
+  proc->logical = res->logical;
+  proc->physical = res->physical;
   proc->state = Avail;
   proc->clientbit = 0;
-  assert(proc->res->kind == Proc);
+  assert(res->kind == Proc);
   return proc;
 }
 
@@ -90,12 +91,13 @@ static void res_core_collect(core_t* core, resource_t* res)
 static core_t* res_core_create(resource_t* res)
 {
   core_t* core = xnew(core_t);
-  core->res = res;
+  core->logical = res->logical;
+  core->physical = res->physical;
   core->hyper = 0;
   core->nprocs = 0;
   core->procs = NULL;
   core->assigned = 0;
-  assert(core->res->kind >= Core);
+  assert(res->kind >= Core);
   res_core_collect(core, res);
   if (core->nprocs >= 2) {
     core->hyper = core->nprocs;
@@ -129,7 +131,8 @@ static void res_cache_collect(cache_t* cache, resource_t* res)
 static cache_t* res_cache_create(resource_t* res)
 {
   cache_t* cache = xnew(cache_t);
-  cache->res = res;
+  cache->logical = res->logical;
+  cache->physical = res->physical;
   cache->ncores = 0;
   cache->cores = NULL;
   cache->nprocs = 0;
@@ -165,7 +168,8 @@ static void res_numa_collect(numa_t* numa, resource_t* res)
 static numa_t* res_numa_create(resource_t* res)
 {
   numa_t* numa = xnew(numa_t);
-  numa->res = res;
+  numa->logical = res->logical;
+  numa->physical = res->physical;
   numa->ncaches = 0;
   numa->caches = NULL;
   numa->ncores = 0;
@@ -227,11 +231,11 @@ host_t* res_host_create(char* hostname, int index, resource_t* root)
       cache_t* cache = numa->caches[a];
       for (o = 0; o < cache->ncores; ++o) {
         core_t* core = cache->cores[o];
-        assert(core_index == core->res->logical);
+        assert(core_index == core->logical);
         host->cores[core_index++] = core;
         for (p = 0; p < core->nprocs; ++p) {
           proc_t* proc = core->procs[p];
-          assert(proc_index == proc->res->logical);
+          assert(proc_index == proc->logical);
           host->procs[proc_index++] = proc;
         }
       }
@@ -309,7 +313,7 @@ void res_host_dump(host_t* host)
         for (p = 0; p < core->nprocs; ++p) {
           proc_t* proc = core->procs[p];
           printf("                proc %d, id %d, state %d, bit %d\n",
-                 p, proc->res->logical, proc->state, proc->clientbit);
+                 p, proc->logical, proc->state, proc->clientbit);
         }
       }
     }
@@ -367,7 +371,8 @@ char* res_system_host_string(int id)
     str[0] = '\0';
 
     assert(id == host->index);
-    snprintf(str, size, "{ system %d hostname %s children %d \n",
+    snprintf(str, size,
+             "{ system %d hostname %s children %d \n",
              id, host->hostname, host->nnumas);
     len = strlen(str);
 
@@ -377,7 +382,9 @@ char* res_system_host_string(int id)
         size = 3 * size / 2;
         str = xrealloc(str, size);
       }
-      snprintf(str + len, size, "  { numa %d children %d \n", n, numa->ncaches);
+      snprintf(str + len, size,
+               "  { numa %d children %d \n",
+               n, numa->ncaches);
       len += strlen(str + len);
       for (a = 0; a < numa->ncaches; ++a) {
         cache_t* cache = numa->caches[a];
@@ -385,7 +392,8 @@ char* res_system_host_string(int id)
           size = 3 * size / 2;
           str = xrealloc(str, size);
         }
-        snprintf(str + len, size, "    { cache %d children %d \n",
+        snprintf(str + len, size,
+                 "    { cache %d children %d \n",
                  a, cache->ncores);
         len += strlen(str + len);
         for (o = 0; o < cache->ncores; ++o) {
@@ -396,7 +404,7 @@ char* res_system_host_string(int id)
           }
           snprintf(str + len, size,
                    "      { core %d logical %d physical %d children %d \n",
-                   o, core->res->logical, core->res->physical, core->nprocs);
+                   o, core->logical, core->physical, core->nprocs);
           len += strlen(str + len);
           for (p = 0; p < core->nprocs; ++p) {
             proc_t* proc = core->procs[p];
@@ -406,7 +414,7 @@ char* res_system_host_string(int id)
             }
             snprintf(str + len, size,
                      "        { proc %d logical %d physical %d } \n",
-                     o, proc->res->logical, proc->res->physical);
+                     p, proc->logical, proc->physical);
             len += strlen(str + len);
           }
           snprintf(str + len, size, "      } \n");

@@ -11,41 +11,45 @@ enum proc_state {
 
 /* A schedulable processor unit. */
 struct proc {
-  resource_t    *res;
-  core_t        *core;
-  proc_state_t   state;
-  int            clientbit;
+  core_t        *core;          /* parent core */
+  proc_state_t   state;         /* allocated? */
+  int            clientbit;     /* owner */
+  int            logical;       /* hwloc logical number */
+  int            physical;      /* identifier for OS */
 };
 
 /* A core with one or more hyperthreaded procs. */
 struct core {
-  resource_t    *res;
-  int            hyper;
-  int            nprocs;
-  proc_t       **procs;
-  cache_t       *cache;
-  int            assigned;
+  int            hyper;         /* degree of hyperthreading */
+  int            nprocs;        /* number of child processors */
+  proc_t       **procs;         /* child processors */
+  cache_t       *cache;         /* parent node */
+  int            assigned;      /* count of assigned procs */
+  int            logical;       /* hwloc logical number */
+  int            physical;      /* identifier for OS */
 };
 
 /* A level 3 cache. */
 struct cache {
-  resource_t    *res;
-  int            ncores;
-  core_t       **cores;
-  int            nprocs;
-  numa_t        *numa;
-  int            assigned;
+  int            ncores;        /* number of child cores */
+  core_t       **cores;         /* child cores */
+  int            nprocs;        /* total number of child procs */
+  numa_t        *numa;          /* parent node */
+  int            assigned;      /* count of assigned procs */
+  int            logical;       /* hwloc logical number */
+  int            physical;      /* identifier for OS */
 };
 
 /* A NUMA node. */
 struct numa {
-  resource_t    *res;
-  int            ncaches;
-  cache_t      **caches;
-  int            ncores;
-  int            nprocs;
-  host_t        *host;
-  int            assigned;
+  int            ncaches;       /* number of child caches */
+  cache_t      **caches;        /* child caches */
+  int            ncores;        /* total number of child cores */
+  int            nprocs;        /* total number of child procs */
+  host_t        *host;          /* parent node */
+  int            assigned;      /* count of assigned procs */
+  int            logical;       /* hwloc logical number */
+  int            physical;      /* identifier for OS */
 };
 
 /* A host is a set of tightly connected
