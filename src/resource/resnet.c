@@ -1,10 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <string.h>
-#include <signal.h>
+#include <limits.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -41,6 +42,11 @@ int res_listen_socket(const char* listen_addr, int listen_port, bool nb)
   }
 
   if (nb && res_nonblocking(s, nb)) {
+    close(s);
+    return -1;
+  }
+  if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
+    perror("ioctl FD_CLOEXEC");
     close(s);
     return -1;
   }
@@ -88,6 +94,11 @@ int res_connect_socket(int connect_port, char *address, bool nb)
   }
 
   if (nb && res_nonblocking(s, nb)) {
+    close(s);
+    return -1;
+  }
+  if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
+    perror("ioctl FD_CLOEXEC");
     close(s);
     return -1;
   }
@@ -140,6 +151,11 @@ int res_accept_socket(int listen, bool nb)
     close(s);
     return -1;
   }
+  if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
+    perror("ioctl FD_CLOEXEC");
+    close(s);
+    return -1;
+  }
 
   return s;
 }
@@ -161,11 +177,30 @@ int res_socket_send(int sock, const char* buf, int count)
 
 char* res_hostname(void)
 {
-  char host[100];
-  if (gethostname(host, sizeof host)) {
-    pexit("gethostname");
+  struct addrinfo hints, *info = NULL;
+  int gai_result;
+  char* canonical = NULL;
+  char hostname[HOST_NAME_MAX];
+
+  gethostname(hostname, HOST_NAME_MAX);
+  hostname[HOST_NAME_MAX - 1] = '\0';
+
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_CANONNAME;
+  hints.ai_protocol = IPPROTO_IP;
+  hints.ai_canonname = NULL;
+  hints.ai_addr = NULL;
+  hints.ai_next = NULL;
+
+  if ((gai_result = getaddrinfo(hostname, "ssh", &hints, &info)) != 0) {
+    res_error("getaddrinfo: %s\n", gai_strerror(gai_result));
+  } else {
+    canonical = xstrdup(info->ai_canonname);
+    freeaddrinfo(info);
   }
-  host[sizeof host - 1] = '\0';
-  return xstrdup(host);
+
+  return canonical;
 }
 

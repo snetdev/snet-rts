@@ -1,5 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include <sys/select.h>
 #include <sys/param.h>
 
@@ -116,12 +119,77 @@ void res_loop(int listen)
   res_map_destroy(sock_map);
 }
 
+char* res_slurp(FILE* fp)
+{
+  size_t size = MAX(20*1024, 3*PATH_MAX);
+  size_t len = 0;
+  char *str = xmalloc(size);
+  size_t n;
+  str[0] = '\0';
+  while ((n = fread(str + len, 1, size - len - 1, fp)) >= 1) {
+    len += n;
+    str[len] = '\0';
+    if (len + 1 < size) {
+      if (ferror(fp)) {
+        res_warn("Error while reading from slave: %s\n", strerror(errno));
+        break;
+      }
+      if (feof(fp)) {
+        break;
+      }
+    }
+    if (len + PATH_MAX >= size) {
+      size = 3 * size / 2;
+      str = xrealloc(str, size);
+    }
+    if (ferror(fp)) {
+      res_warn("Error while reading from slave: %s\n", strerror(errno));
+    }
+  }
+  str[len] = '\0';
+  return str;
+}
+
+void res_start_slave(int id, char* command)
+{
+  FILE* fp = popen(command, "r");
+  if (!fp) {
+    res_warn("Failed to start slave %d: %s.\n", id, strerror(errno));
+  } else {
+    char* str = res_slurp(fp);
+    int wait;
+    if ((wait = pclose(fp)) != 0) {
+      if (wait == -1) {
+        res_warn("Execution of slave failed %d: %s.\n", id, strerror(errno));
+      } else {
+        res_warn("Slave %d exited with code %d.\n", id, wait);
+      }
+    }
+  }
+}
+
+void res_start_slaves(intmap_t* slaves)
+{
+  if (slaves) {
+    intmap_iter_t iter = -1;
+    char* str;
+    res_map_iter_init(slaves, &iter);
+    while ((str = (char *) res_map_iter_next(slaves, &iter)) != NULL) {
+      printf("slave '%s'.\n", str);
+      res_start_slave(iter, str);
+    }
+    res_map_apply(slaves, xfree);
+    res_map_destroy(slaves);
+  }
+}
+
 void res_service(const char* listen_addr, int listen_port, intmap_t* slaves)
 {
   int listen = res_listen_socket(listen_addr, listen_port, true);
   if (listen < 0) {
     exit(1);
   } else {
+    res_start_slaves(slaves);
     res_loop(listen);
     res_socket_close(listen);
   }

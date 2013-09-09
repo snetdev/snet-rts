@@ -137,6 +137,8 @@ static void get_config(const char *fname)
           while (*++eq && isspace((unsigned char) *eq)) { }
           if (3 <= strlen(eq)) {
             int max = 1;
+            char* end = eq + strlen(eq);
+            while (--end >= eq && isspace((unsigned char) *end)) { *end = '\0'; }
             if (slaves == NULL) {
               slaves = res_map_create();
             } else {
