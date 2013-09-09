@@ -26,6 +26,7 @@ const char *res_token_string(token_t token)
   TOK(Number)
   TOK(List)
   TOK(Topology)
+  TOK(Resources)
   TOK(Access)
   TOK(Local)
   TOK(Remote)
@@ -85,22 +86,23 @@ token_t res_parse_token(stream_t* stream, int* number)
       char    name[10];
       int     len;
     } tokens[] = {
-      { Left,     "{",        1 },
-      { Right,    "}",        1 },
-      { List,     "list",     4 },
-      { Topology, "topology", 8 },
-      { Access,   "access",   6 },
-      { Local,    "local",    5 },
-      { Remote,   "remote",   6 },
-      { Accept,   "accept",   6 },
-      { Return,   "return",   6 },
-      { Systems,  "systems",  7 },
-      { Hardware, "hardware", 8 },
-      { Grant,    "grant",    5 },
-      { Revoke,   "revoke",   6 },
-      { Quit,     "quit",     4 },
-      { Help,     "help",     4 },
-      { State,    "state",    5 },
+      { Left,      "{",         1 },
+      { Right,     "}",         1 },
+      { List,      "list",      4 },
+      { Topology,  "topology",  8 },
+      { Resources, "resources", 9 },
+      { Access,    "access",    6 },
+      { Local,     "local",     5 },
+      { Remote,    "remote",    6 },
+      { Accept,    "accept",    6 },
+      { Return,    "return",    6 },
+      { Systems,   "systems",   7 },
+      { Hardware,  "hardware",  8 },
+      { Grant,     "grant",     5 },
+      { Revoke,    "revoke",    6 },
+      { Quit,      "quit",      4 },
+      { Help,      "help",      4 },
+      { State,     "state",     5 },
     };
     const int num_tokens = sizeof(tokens) / sizeof(tokens[0]);
     int i, max = end - p;

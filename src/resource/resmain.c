@@ -7,6 +7,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #include "resdefs.h"
 
@@ -17,6 +18,7 @@ static bool        debug;
 static bool        verbose;
 static bool        show_resource;
 static bool        show_topology;
+static intmap_t*   slaves;
 
 static void usage(void)
 {
@@ -112,9 +114,10 @@ static void get_config(const char *fname)
       ++line;
       if (sscanf(buf, " %c", &ch) > 0 && ch != '#') {
         char key[PATH_MAX], val[PATH_MAX];
-        int len = 0;
-        int n = sscanf(buf, " %s = %s %n", key, val, &len);
-        if (n >= 2 && len == strlen(buf)) {
+        int num, len = 0;
+        val[0] = '\0';
+        num = sscanf(buf, " %s %c %s %n", key, &ch, val, &len);
+        if (num >= 3 && ch == '=' && (num == 2 || len == strlen(buf))) {
           if (!strcmp(key, "listen")) {
             valid = get_listen_addr(val);
           }
@@ -128,9 +131,25 @@ static void get_config(const char *fname)
             valid = get_bool(val, &debug);
           }
         }
+
+        if (!valid && !strcmp(key, "slave") && ch == '=') {
+          char* eq = strchr(buf, '=');
+          while (*++eq && isspace((unsigned char) *eq)) { }
+          if (3 <= strlen(eq)) {
+            int max = 1;
+            if (slaves == NULL) {
+              slaves = res_map_create();
+            } else {
+              max += res_map_max(slaves);
+            }
+            res_map_add(slaves, max, xstrdup(eq));
+            valid = true;
+          }
+        }
+
         if (!valid) {
-          fprintf(stderr, "%s: Invalid configuration at line %d of %s.\n",
-                  prog, line, fname);
+          fprintf(stderr, "%s: Invalid configuration at line %d of %s. (%d,%d)\n",
+                  prog, line, fname, num, len);
           ++errors;
         }
       }
@@ -227,7 +246,7 @@ int main(int argc, char **argv)
     xfree(str);
   }
   else {
-    res_service(listen_addr, listen_port);
+    res_service(listen_addr, listen_port, slaves);
   }
 
   res_topo_destroy();

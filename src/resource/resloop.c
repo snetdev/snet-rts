@@ -116,7 +116,7 @@ void res_loop(int listen)
   res_map_destroy(sock_map);
 }
 
-void res_service(const char* listen_addr, int listen_port)
+void res_service(const char* listen_addr, int listen_port, intmap_t* slaves)
 {
   int listen = res_listen_socket(listen_addr, listen_port, true);
   if (listen < 0) {

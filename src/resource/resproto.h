@@ -32,6 +32,7 @@ void res_client_number(client_t* client, int* number);
 void res_client_reply(client_t* client, const char* fmt, ...);
 void res_client_command_list(client_t* client);
 void res_client_command_topology(client_t* client);
+void res_client_command_resources(client_t* client);
 void res_client_command_access(client_t* client);
 void res_client_command_local(client_t* client);
 void res_client_command_remote(client_t* client);
@@ -69,7 +70,7 @@ void res_list_sort_descend(intlist_t* list);
 /* resloop.c */
 
 void res_loop(int listen);
-void res_service(const char* listen_addr, int listen_port);
+void res_service(const char* listen_addr, int listen_port, intmap_t* slaves);
 
 /* resmain.c */
 
