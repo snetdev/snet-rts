@@ -40,11 +40,9 @@ int res_local_procs(void)
  * dynamically reallocated to accomodate the new output.
  * The new size of the string must be communicated via the size pointer.
  */
-char* res_resource_string(resource_t* obj, char* str, int len, int *size)
+char* res_resource_object_string(resource_t* obj, char* str, int len, int *size)
 {
-  if (!obj) {
-    obj= res_local_root();
-  }
+  assert(obj);
   assert(str);
   assert(*size >= 100);
   assert(len >= 0 && len < *size);
@@ -73,7 +71,7 @@ char* res_resource_string(resource_t* obj, char* str, int len, int *size)
     snprintf(str + len, *size - len, "children %d \n", obj->num_children);
     len += strlen(str + len);
     for (i = 0; i < obj->num_children; ++i) {
-      str = res_resource_string(obj->children[i], str, len, size);
+      str = res_resource_object_string(obj->children[i], str, len, size);
       len += strlen(str + len);
     }
     snprintf(str + len, *size - len,
@@ -219,10 +217,10 @@ static resource_t* traverse_resources(
       }
     }
   }
-  res_info("Depth %d, %-7s, cores %d - %d, procs %d - %d\n",
-           depth, res_kind_string(res->kind),
-           res->first_core, res->last_core,
-           res->first_proc, res->last_proc);
+  res_debug("Depth %d, %-7s, cores %d - %d, procs %d - %d\n",
+            depth, res_kind_string(res->kind),
+            res->first_core, res->last_core,
+            res->first_proc, res->last_proc);
 
   return res;
 }
@@ -239,6 +237,16 @@ resource_t* res_resource_init(void)
   local_root = traverse_resources(hwloc_topo, hwloc_root, DEPTH_ZERO, NO_PARENT);
   hwloc_topology_destroy(hwloc_topo);
   return local_root;
+}
+
+void res_resource_free(resource_t* res)
+{
+  int i;
+  for (i = 0; i < res->num_children; ++i) {
+    res_resource_free(res->children[i]);
+  }
+  xfree(res->children);
+  xfree(res);
 }
 
 /* Convert the kind of resource to a static string. */

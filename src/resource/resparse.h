@@ -10,6 +10,7 @@ enum token {
   Number,
   List,
   Topology,
+  Resources,
   Access,
   Local,
   Remote,

@@ -23,7 +23,7 @@ int res_nonblocking(int fd, bool nb)
   return 0;
 }
 
-int res_listen_socket(int listen_port, bool nb)
+int res_listen_socket(const char* listen_addr, int listen_port, bool nb)
 {
   struct sockaddr_in a;
   int s;
@@ -48,7 +48,25 @@ int res_listen_socket(int listen_port, bool nb)
   memset(&a, 0, sizeof(a));
   a.sin_family = AF_INET;
   a.sin_port = htons(listen_port);
-  a.sin_addr.s_addr = htonl(INADDR_ANY);
+
+  if (listen_addr == NULL) {
+    a.sin_addr.s_addr = htonl(INADDR_ANY);
+  }
+  else if (*listen_addr < '0' || *listen_addr > '9') {
+    struct hostent *host = gethostbyname(listen_addr);
+    if (!host) {
+      herror(listen_addr);
+      close(s);
+      return -1;
+    }
+    a.sin_addr = *(struct in_addr *)host->h_addr;
+  }
+  else if (!inet_aton(listen_addr, (struct in_addr *)&a.sin_addr.s_addr)) {
+    perror("bad IP address format");
+    close(s);
+    return -1;
+  }
+
   if (bind(s, (struct sockaddr *)&a, sizeof(a))) {
     perror("bind");
     close(s);

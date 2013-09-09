@@ -52,7 +52,7 @@ struct numa {
  * hardware resources which are managed
  * by an operating system. */
 struct host {
-  char          *name;
+  char          *hostname;
   resource_t    *root;
   int            index;
   int            nnumas;
@@ -63,13 +63,6 @@ struct host {
   proc_t       **procs;
   bitmap_t       procassign;
   bitmap_t       coreassign;
-};
-
-/* There is only one global topology.
- * It consists of a set of hosts. */
-struct topo {
-  host_t       **host;
-  int            nhosts;
 };
 
 #endif

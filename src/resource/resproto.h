@@ -69,7 +69,7 @@ void res_list_sort_descend(intlist_t* list);
 /* resloop.c */
 
 void res_loop(int listen);
-void res_service(int port);
+void res_service(const char* listen_addr, int listen_port);
 
 /* resmain.c */
 
@@ -108,7 +108,7 @@ char* xdup(const char *s);
 /* resnet.c */
 
 int res_nonblocking(int fd, bool nb);
-int res_listen_socket(int listen_port, bool nb);
+int res_listen_socket(const char* listen_addr, int listen_port, bool nb);
 int res_connect_socket(int connect_port, char *address, bool nb);
 int res_accept_socket(int listen, bool nb);
 void res_socket_close(int sock);
@@ -133,8 +133,9 @@ int res_local_procs(void);
  * dynamically reallocated to accomodate the new output.
  * The new size of the string must be communicated via the size pointer.
  */
-char* res_resource_string(resource_t* obj, char* str, int len, int *size);
+char* res_resource_object_string(resource_t* obj, char* str, int len, int *size);
 resource_t* res_resource_init(void);
+void res_resource_free(resource_t* res);
 
 /* Convert the kind of resource to a static string. */
 const char *res_kind_string(int kind);
@@ -174,9 +175,11 @@ char* res_stream_outgoing(stream_t* stream, int* amount);
 
 /* restopo.c */
 
-topo_t* res_topo(void);
 host_t* res_local_host(void);
+host_t* res_topo_get_host(int sysid);
+resource_t* res_host_get_root(host_t* host);
 resource_t* res_local_root(void);
+resource_t* res_topo_get_root(int sysid);
 host_t* res_host_create(char* hostname, int index, resource_t* root);
 void res_host_destroy(host_t* host);
 void res_topo_create(void);
@@ -184,6 +187,8 @@ void res_topo_add_host(host_t *host, int id);
 void res_host_dump(host_t* host);
 void res_topo_init(void);
 void res_topo_destroy(void);
+char* res_system_resource_string(int id);
+char* res_system_host_string(int id);
 void res_topo_state(client_t* client);
 
 

@@ -10,4 +10,3 @@ typedef struct intmap intmap_t;
 typedef struct numa numa_t;
 typedef struct proc proc_t;
 typedef struct resource resource_t;
-typedef struct topo topo_t;

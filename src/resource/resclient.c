@@ -130,28 +130,29 @@ void res_client_command_list(client_t* client)
 
 void res_client_command_topology(client_t* client)
 {
+  char* str;
   int id = 0;
   res_client_number(client, &id);
-  if (id) {
-    res_info("Invalid topology id.\n");
-    res_parse_throw();
-  } else {
-    char *host = res_hostname();
-    int len, size = 10*1024;
-    char *str = xmalloc(size);
-    str[0] = '\0';
-    snprintf(str, size, "{ hardware %d host %s children 1 \n", id, host);
-    len = strlen(str);
-    str = res_resource_string(NULL, str, len, &size);
-    len += strlen(str + len);
-    if (len + 10 > size) {
-      size = len + 10;
-      str = xrealloc(str, size);
-    }
-    snprintf(str + len, size - len, "} \n");
+  str = res_system_host_string(id);
+  if (str) {
     res_client_reply(client, "%s", str);
     xfree(str);
-    xfree(host);
+  } else {
+    res_parse_throw();
+  }
+}
+
+void res_client_command_resources(client_t* client)
+{
+  char* str;
+  int id = 0;
+  res_client_number(client, &id);
+  str = res_system_resource_string(id);
+  if (str) {
+    res_client_reply(client, "%s", str);
+    xfree(str);
+  } else {
+    res_parse_throw();
   }
 }
 
@@ -233,19 +234,21 @@ void res_client_command_quit(client_t* client)
 void res_client_command_help(client_t* client)
 {
   static const char help_text[] =
-  "The following commands are supported:\n"
-  "{ list }\n"
-  "{ topology int }\n"
-  "{ access intlist }\n"
-  "{ local int }\n"
-  "{ remote int }\n"
-  "{ accept intlist }\n"
-  "{ return intlist }\n"
-  "{ quit }\n"
-  "{ help }\n"
-  "{ state }\n"
-  "Where 'intlist' is a space separated list of postive integers.\n"
-  "\n";
+
+    "The following commands are supported:\n"
+    "{ list }\n"
+    "{ topology int }\n"
+    "{ resources int }\n"
+    "{ access intlist }\n"
+    "{ local int }\n"
+    "{ remote int }\n"
+    "{ accept intlist }\n"
+    "{ return intlist }\n"
+    "{ quit }\n"
+    "{ help }\n"
+    "{ state }\n"
+    "Where 'intlist' is a space separated list of postive integers.\n"
+    "\n";
 
   res_client_reply(client, "%s", help_text);
 }
@@ -270,16 +273,17 @@ void res_client_command(client_t* client)
 {
   token_t command = res_parse_token(&client->stream, NULL);
   switch (command) {
-    case List:     res_client_command_list(client); break;
-    case Topology: res_client_command_topology(client); break;
-    case Access:   res_client_command_access(client); break;
-    case Local:    res_client_command_local(client); break;
-    case Remote:   res_client_command_remote(client); break;
-    case Accept:   res_client_command_accept(client); break;
-    case Return:   res_client_command_return(client); break;
-    case Quit:     res_client_command_quit(client); break;
-    case Help:     res_client_command_help(client); break;
-    case State:    res_client_command_state(client); break;
+    case List:      res_client_command_list(client); break;
+    case Topology:  res_client_command_topology(client); break;
+    case Resources: res_client_command_resources(client); break;
+    case Access:    res_client_command_access(client); break;
+    case Local:     res_client_command_local(client); break;
+    case Remote:    res_client_command_remote(client); break;
+    case Accept:    res_client_command_accept(client); break;
+    case Return:    res_client_command_return(client); break;
+    case Quit:      res_client_command_quit(client); break;
+    case Help:      res_client_command_help(client); break;
+    case State:     res_client_command_state(client); break;
     default:
       res_info("Unexpected token %s.\n", res_token_string(command));
       res_parse_throw();
