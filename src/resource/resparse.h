@@ -4,7 +4,8 @@
 #include <setjmp.h>
 
 enum token {
-  Notoken,
+  /* Skip 10 to accommodate 'enum res_kind' values. */
+  Notoken = 10,
   Left,
   Right,
   Number,
@@ -23,6 +24,12 @@ enum token {
   Quit,
   Help,
   State,
+  Children,
+  Logical,
+  Physical,
+  Numa,
+  Hostname,
+  String,
 };
 
 extern jmp_buf res_parse_exception_context;

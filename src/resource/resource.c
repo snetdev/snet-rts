@@ -241,12 +241,16 @@ resource_t* res_resource_init(void)
 
 void res_resource_free(resource_t* res)
 {
-  int i;
-  for (i = 0; i < res->num_children; ++i) {
-    res_resource_free(res->children[i]);
+  if (res) {
+    if (res->children) {
+      int i;
+      for (i = 0; i < res->num_children; ++i) {
+        res_resource_free(res->children[i]);
+      }
+      xfree(res->children);
+    }
+    xfree(res);
   }
-  xfree(res->children);
-  xfree(res);
 }
 
 /* Convert the kind of resource to a static string. */

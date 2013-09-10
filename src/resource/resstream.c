@@ -113,6 +113,14 @@ int res_buffer_write(buffer_t* buf, int fd, int amount)
   }
 }
 
+void res_buffer_append(buffer_t* buf, const char* data, int size)
+{
+  res_buffer_reserve(buf, size);
+  assert(buf->end + size <= buf->size);
+  memcpy(buf->data + buf->end, data, size);
+  res_buffer_appended(buf, size);
+}
+
 void res_stream_init(stream_t* stream, int fd)
 {
   stream->fd = fd;
@@ -124,7 +132,9 @@ void res_stream_done(stream_t* stream)
 {
   res_buffer_done(&stream->read);
   res_buffer_done(&stream->write);
-  res_socket_close(stream->fd);
+  if (stream->fd >= 0) {
+    res_socket_close(stream->fd);
+  }
 }
 
 stream_t* res_stream_create(int fd)
@@ -183,5 +193,13 @@ char* res_stream_outgoing(stream_t* stream, int* amount)
   *amount = res_buffer_avail(&stream->write);
   return res_buffer_data(&stream->write)
        + res_buffer_stored(&stream->write);
+}
+
+stream_t* res_stream_from_string(const char* string)
+{
+  stream_t* stream = res_stream_create(-1);
+  int len = strlen(string);
+  res_buffer_append(&stream->read, string, len + 1);
+  return stream;
 }
 

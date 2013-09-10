@@ -17,19 +17,19 @@ void res_release_client(client_t* client)
       if (HAS(client->local_grantmap, p)) {
         proc_t* proc = host->procs[p];
         assert(proc->clientbit == client->bit);
-        assert(proc->state >= Grant);
+        assert(proc->state >= ProcGrant);
         CLR(client->local_grantmap, p);
         client->local_granted -= 1;
         assert(client->local_granted >= 0);
-        if (proc->state >= Accept) {
+        if (proc->state >= ProcAccept) {
           client->local_accepted -= 1;
           assert(client->local_accepted >= 0);
         }
-        if (proc->state == Revoke) {
+        if (proc->state == ProcRevoke) {
           client->local_revoked -= 1;
           assert(client->local_revoked >= 0);
         }
-        proc->state = Avail;
+        proc->state = ProcAvail;
         proc->core->assigned -= 1;
         assert(proc->core->assigned >= 0);
         proc->core->cache->assigned -= 1;
@@ -75,11 +75,11 @@ int res_accept_procs(client_t* client, intlist_t* ints)
           return -1;
         } else {
           proc_t* proc = host->procs[procnum];
-          if (proc->state != Grant) {
+          if (proc->state != ProcGrant) {
             res_warn("Client accepts proc %d in state %d.", procnum, proc->state);
             return -1;
           } else {
-            proc->state = Accept;
+            proc->state = ProcAccept;
             client->local_accepted += 1;
             ++procs_accepted;
           }
@@ -115,23 +115,23 @@ int res_return_procs(client_t* client, intlist_t* ints)
         } else {
           proc_t* proc = host->procs[procnum];
           assert(proc->clientbit == client->bit);
-          if (proc->state < Grant && proc->state > Revoke) {
+          if (proc->state < ProcGrant && proc->state > ProcRevoke) {
             res_warn("Client returns proc %d in state %d.", procnum, proc->state);
             return -1;
           } else {
             client->local_granted -= 1;
             assert(client->local_granted >= 0);
-            if (proc->state >= Accept) {
+            if (proc->state >= ProcAccept) {
               client->local_accepted -= 1;
               assert(client->local_accepted >= 0);
-              if (proc->state == Revoke) {
+              if (proc->state == ProcRevoke) {
                 client->local_revoked -= 1;
                 assert(client->local_revoked >= 0);
               }
             }
             CLR(client->local_grantmap, procnum);
 
-            proc->state = Avail;
+            proc->state = ProcAvail;
             proc->core->assigned -= 1;
             assert(proc->core->assigned >= 0);
             proc->core->cache->assigned -= 1;
@@ -168,7 +168,7 @@ static client_t** get_sorted_clients(intmap_t* map)
 {
   int           i = 0, iter = -1;
   const int     num_clients = res_map_count(map);
-  client_t    **all = xmalloc(num_clients * sizeof(client_t *));
+  client_t    **all = xcalloc(num_clients, sizeof(client_t *));
   client_t     *client;
 
   res_map_iter_init(map, &iter);
@@ -201,13 +201,13 @@ void res_rebalance_cores(intmap_t* map)
       int found = 0;
       for (p = 0; i < core->nprocs; ++p) {
         proc_t* proc = core->procs[p];
-        if (proc->state == Grant || proc->state == Accept) {
+        if (proc->state == ProcGrant || proc->state == ProcAccept) {
           if (++found >= 2) {
             SET(revoke, proc->clientbit);
             ++nrevokes;
             client = res_map_get(map, proc->clientbit);
             SET(client->local_revoking, p);
-            proc->state = Revoke;
+            proc->state = ProcRevoke;
             client->local_revoked += 1;
           }
         }
@@ -227,12 +227,12 @@ void res_rebalance_cores(intmap_t* map)
           core_t* core = host->cores[o];
           proc_t* proc = core->procs[0];
           assert(core->assigned == 0);
-          assert(proc->state == Avail);
+          assert(proc->state == ProcAvail);
           SET(assign, client->bit);
           ++nassigns;
           SET(client->local_assigning, proc->logical);
           client->local_granted += 1;
-          proc->state = Grant;
+          proc->state = ProcGrant;
           core->assigned += 1;
           core->cache->assigned += 1;
           core->cache->numa->assigned += 1;
@@ -247,11 +247,11 @@ void res_rebalance_cores(intmap_t* map)
         if (HAS(client->local_grantmap, p) &&
             NOT(client->local_revoking, p)) {
           proc_t* proc = host->procs[p];
-          if (proc->state >= Grant && proc->state <= Accept) {
+          if (proc->state >= ProcGrant && proc->state <= ProcAccept) {
             SET(revoke, proc->clientbit);
             ++nrevokes;
             SET(client->local_revoking, p);
-            proc->state = Revoke;
+            proc->state = ProcRevoke;
             client->local_revoked += 1;
             ++need;
           }
@@ -321,12 +321,12 @@ void res_rebalance_procs(intmap_t* map)
       for (p = 0; p < host->nprocs && need > 0; ++p) {
         if (NOT(host->procassign, p)) {
           proc_t* proc = host->procs[p];
-          assert(proc->state == Avail);
+          assert(proc->state == ProcAvail);
           SET(assign, client->bit);
           ++nassigns;
           SET(client->local_assigning, p);
           client->local_granted += 1;
-          proc->state = Grant;
+          proc->state = ProcGrant;
           proc->core->assigned += 1;
           proc->core->cache->assigned += 1;
           proc->core->cache->numa->assigned += 1;
@@ -342,11 +342,11 @@ void res_rebalance_procs(intmap_t* map)
         if (HAS(client->local_grantmap, p) &&
             NOT(client->local_revoking, p)) {
           proc_t* proc = host->procs[p];
-          if (proc->state >= Grant && proc->state <= Accept) {
+          if (proc->state >= ProcGrant && proc->state <= ProcAccept) {
             SET(revoke, proc->clientbit);
             ++nrevokes;
             SET(client->local_revoking, p);
-            proc->state = Revoke;
+            proc->state = ProcRevoke;
             client->local_revoked += 1;
             ++need;
           }
@@ -405,7 +405,7 @@ void res_rebalance_proportional(intmap_t* map)
   int           nrevokes = 0;
   bitmap_t      assign = BITMAP_ZERO;
   int           nassigns = 0;
-  int          *portions = xmalloc(num_clients * sizeof(int));
+  int          *portions = xcalloc(num_clients, sizeof(int));
   int           num_positives = 0;
   int           total_load = 0;
 
@@ -440,12 +440,12 @@ void res_rebalance_proportional(intmap_t* map)
       for (p = 0; p < host->nprocs && need > 0; ++p) {
         if (NOT(host->procassign, p)) {
           proc_t* proc = host->procs[p];
-          assert(proc->state == Avail);
+          assert(proc->state == ProcAvail);
           SET(assign, client->bit);
           ++nassigns;
           SET(client->local_assigning, p);
           client->local_granted += 1;
-          proc->state = Grant;
+          proc->state = ProcGrant;
           proc->core->assigned += 1;
           proc->core->cache->assigned += 1;
           proc->core->cache->numa->assigned += 1;
@@ -461,11 +461,11 @@ void res_rebalance_proportional(intmap_t* map)
         if (HAS(client->local_grantmap, p) &&
             NOT(client->local_revoking, p)) {
           proc_t* proc = host->procs[p];
-          if (proc->state >= Grant && proc->state <= Accept) {
+          if (proc->state >= ProcGrant && proc->state <= ProcAccept) {
             SET(revoke, proc->clientbit);
             ++nrevokes;
             SET(client->local_revoking, p);
-            proc->state = Revoke;
+            proc->state = ProcRevoke;
             client->local_revoked += 1;
             ++need;
           }
@@ -525,7 +525,7 @@ void res_rebalance_minimal(intmap_t* map)
   int           nrevokes = 0;
   bitmap_t      assign = BITMAP_ZERO;
   int           nassigns = 0;
-  int          *portions = xmalloc(num_clients * sizeof(int));
+  int          *portions = xcalloc(num_clients, sizeof(int));
 
   /* Compute the proportional processor distribution. */
   assert(host->nprocs < num_clients);
@@ -544,12 +544,12 @@ void res_rebalance_minimal(intmap_t* map)
       for (p = 0; p < host->nprocs && need > 0; ++p) {
         if (NOT(host->procassign, p)) {
           proc_t* proc = host->procs[p];
-          assert(proc->state == Avail);
+          assert(proc->state == ProcAvail);
           SET(assign, client->bit);
           ++nassigns;
           SET(client->local_assigning, p);
           client->local_granted += 1;
-          proc->state = Grant;
+          proc->state = ProcGrant;
           proc->core->assigned += 1;
           proc->core->cache->assigned += 1;
           proc->core->cache->numa->assigned += 1;
@@ -565,11 +565,11 @@ void res_rebalance_minimal(intmap_t* map)
         if (HAS(client->local_grantmap, p) &&
             NOT(client->local_revoking, p)) {
           proc_t* proc = host->procs[p];
-          if (proc->state >= Grant && proc->state <= Accept) {
+          if (proc->state >= ProcGrant && proc->state <= ProcAccept) {
             SET(revoke, proc->clientbit);
             ++nrevokes;
             SET(client->local_revoking, p);
-            proc->state = Revoke;
+            proc->state = ProcRevoke;
             client->local_revoked += 1;
             ++need;
           }

@@ -38,23 +38,13 @@ void res_client_destroy(client_t* client)
 
 void res_client_expect(client_t* client, token_t expect)
 {
-  token_t got = res_parse_token(&client->stream, NULL);
-  if (got != expect) {
-    res_info("Expected %s, got %s\n",
-             res_token_string(expect), res_token_string(got));
-    res_parse_throw();
-  }
+  res_parse_expect(&client->stream, expect, NULL);
 }
 
 void res_client_number(client_t* client, int* number)
 {
   const int expect = Number;
-  token_t got = res_parse_token(&client->stream, number);
-  if (got != expect) {
-    res_info("Expected %s, got %s\n",
-             res_token_string(expect), res_token_string(got));
-    res_parse_throw();
-  }
+  res_parse_expect(&client->stream, expect, number);
 }
 
 void res_client_reply(client_t* client, const char* fmt, ...)

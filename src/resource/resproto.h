@@ -70,7 +70,9 @@ void res_list_sort_descend(intlist_t* list);
 /* resloop.c */
 
 void res_loop(int listen);
-void res_start_slave(int id, char* command);
+char* res_slurp(void* vp);
+void res_parse_slave(int sysid, char* output);
+void res_start_slave(int sysid, char* command);
 void res_start_slaves(intmap_t* slaves);
 void res_service(const char* listen_addr, int listen_port, intmap_t* slaves);
 
@@ -145,11 +147,14 @@ const char *res_kind_string(int kind);
 
 /* resparse.c */
 
-const char *res_token_string(token_t token);
+const char *res_token_string(int token);
 void res_parse_throw(void);
-token_t res_parse_token(stream_t* stream, int* number);
+token_t res_parse_string(const char* data, int* length, void* result);
+token_t res_parse_token(stream_t* stream, void* result);
 int res_parse_complete(stream_t* stream);
 intlist_t* res_parse_intlist(stream_t* stream);
+token_t res_expect_string(stream_t* stream, char** result);
+void res_parse_expect(stream_t* stream, token_t expect, void* result);
 
 /* resstream.c */
 
@@ -163,6 +168,7 @@ char* res_buffer_data(buffer_t* buf);
 void res_buffer_take(buffer_t* buf, int amount);
 int res_buffer_read(buffer_t* buf, int fd, int amount);
 int res_buffer_write(buffer_t* buf, int fd, int amount);
+void res_buffer_append(buffer_t* buf, const char* data, int size);
 void res_stream_init(stream_t* stream, int fd);
 void res_stream_done(stream_t* stream);
 stream_t* res_stream_create(int fd);
@@ -175,6 +181,7 @@ void res_stream_take(stream_t* stream, int amount);
 void res_stream_reserve(stream_t* stream, int amount);
 void res_stream_appended(stream_t* stream, int amount);
 char* res_stream_outgoing(stream_t* stream, int* amount);
+stream_t* res_stream_from_string(const char* string);
 
 /* restopo.c */
 
@@ -192,7 +199,7 @@ void res_topo_init(void);
 void res_topo_destroy(void);
 char* res_system_resource_string(int id);
 char* res_system_host_string(int id);
-void res_topo_state(client_t* client);
+void res_parse_topology(int sysid, char* text);
 
 
 #endif

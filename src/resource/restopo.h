@@ -3,10 +3,10 @@
 
 /* A processor cycles through the following states. */
 enum proc_state {
-  Avail,        // When a processor is available for scheduling.
-  Grant,        // When the resource server has allocated it to a client.
-  Accept,       // When the client has acknowledged the allocation.
-  Revoke,       // When the server tells the client to stop using it.
+  ProcAvail,    // When a processor is available for scheduling.
+  ProcGrant,    // When the resource server has allocated it to a client.
+  ProcAccept,   // When the client has acknowledged the allocation.
+  ProcRevoke,   // When the server tells the client to stop using it.
 };
 
 /* A schedulable processor unit. */

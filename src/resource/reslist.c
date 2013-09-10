@@ -20,7 +20,7 @@ void res_list_init(intlist_t* list)
 void res_list_init_max(intlist_t* list, int max)
 {
   assert(max > 0);
-  list->list = xmalloc(max * sizeof(int));
+  list->list = xcalloc(max, sizeof(int));
   list->num = 0;
   list->max = max;
 }

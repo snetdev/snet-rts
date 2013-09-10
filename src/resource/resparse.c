@@ -10,12 +10,13 @@
 
 #include "resdefs.h"
 #include "resparse.h"
+#include "resource.h"
 
 typedef enum token token_t;
 
 jmp_buf res_parse_exception_context;
 
-const char *res_token_string(token_t token)
+const char *res_token_string(int token)
 {
   return
 #define NAME(x) #x
@@ -39,6 +40,20 @@ const char *res_token_string(token_t token)
   TOK(Quit)
   TOK(Help)
   TOK(State)
+  TOK(Children)
+  TOK(Logical)
+  TOK(Physical)
+  TOK(Numa)
+  TOK(Hostname)
+  TOK(String)
+  TOK(System)
+  TOK(Machine)
+  TOK(Node)
+  TOK(Socket)
+  TOK(Cache)
+  TOK(Core)
+  TOK(Proc)
+  TOK(Other)
   "Unknown";
 #undef NAME
 #undef TOK
@@ -49,13 +64,11 @@ void res_parse_throw(void)
   longjmp(res_parse_exception_context, 1);
 }
 
-token_t res_parse_token(stream_t* stream, int* number)
+token_t res_parse_string(const char* data, int* length, void* result)
 {
   token_t token = Notoken;
-  int length = 0;
-  char* data = res_stream_incoming(stream, &length);
-  char* end = data + length;
-  char* p;
+  const char* end = data + *length;
+  const char* p;
 
   for (p = data; p < end && isspace((unsigned char) *p); ++p) {
     /* skip whitespace */
@@ -74,8 +87,8 @@ token_t res_parse_token(stream_t* stream, int* number)
     }
     if ( ! isalpha((unsigned char) *p)) {
       token = Number;
-      if (number != NULL) {
-        *number = n;
+      if (result != NULL) {
+        *(int *)result = n;
       }
     }
   }
@@ -97,12 +110,21 @@ token_t res_parse_token(stream_t* stream, int* number)
       { Accept,    "accept",    6 },
       { Return,    "return",    6 },
       { Systems,   "systems",   7 },
+      { System,    "system",    6 },
       { Hardware,  "hardware",  8 },
       { Grant,     "grant",     5 },
       { Revoke,    "revoke",    6 },
       { Quit,      "quit",      4 },
       { Help,      "help",      4 },
       { State,     "state",     5 },
+      { Children,  "children",  8 },
+      { Core,      "core",      4 },
+      { Logical,   "logical",   7 },
+      { Physical,  "physical",  8 },
+      { Cache,     "cache",     5 },
+      { Proc,      "proc",      4 },
+      { Numa,      "numa",      4 },
+      { Hostname,  "hostname",  8 },
     };
     const int num_tokens = sizeof(tokens) / sizeof(tokens[0]);
     int i, max = end - p;
@@ -121,11 +143,26 @@ token_t res_parse_token(stream_t* stream, int* number)
   }
 
   if (token == Notoken) {
-    res_info("%s: Unexpectedly got %s\n", __func__, res_token_string(token));
+    res_info("%s: Unexpectedly got %s at '%.10s'.\n",
+             __func__, res_token_string(token), p);
     res_parse_throw();
   }
 
-  res_stream_take(stream, p - data);
+  *length = p - data;
+
+  return token;
+}
+
+token_t res_parse_token(stream_t* stream, void* result)
+{
+  int length = 0;
+  char* data = res_stream_incoming(stream, &length);
+  int taken = length;
+  token_t token = res_parse_string(data, &taken, result);
+
+  assert(taken >= 0 && taken <= length);
+
+  res_stream_take(stream, taken);
 
   return token;
 }
@@ -142,7 +179,8 @@ int res_parse_complete(stream_t* stream)
   }
   if (p < end) {
     if (*p != '{') {
-      res_info("Expected left brace, got 0x%02x\n", (unsigned char) *p);
+      res_info("%s: Expected left brace, got 0x%02x\n",
+               __func__, (unsigned char) *p);
       return Failure;
     } else {
       char *preamble = p;
@@ -195,5 +233,53 @@ intlist_t* res_parse_intlist(stream_t* stream)
   }
  
   return list;
+}
+
+token_t res_expect_string(stream_t* stream, char** result)
+{
+  int length = 0;
+  char* data = res_stream_incoming(stream, &length);
+  char* end = data + length;
+  char* p = data;
+  char* start;
+
+  while (p < end && isspace((unsigned char) *p)) {
+    /* skip whitespace */
+    ++p;
+  }
+  start = p;
+  while (p < end && (isalnum((unsigned char) *p) || *p == '.' || *p == '-')) {
+    ++p;
+  }
+  if (p > start) {
+    if (result) {
+      int amount = (p - start);
+      char* copy = xmalloc(1 + amount);
+      memcpy(copy, start, amount);
+      copy[amount] = '\0';
+      *result = copy;
+    }
+    res_stream_take(stream, p - data);
+    return String;
+  } else {
+    return Notoken;
+  }
+}
+
+void res_parse_expect(stream_t* stream, token_t expect, void* result)
+{
+  token_t got = Notoken;
+
+  if (expect == String) {
+    got = res_expect_string(stream, (char **) result);
+  } else {
+    got = res_parse_token(stream, result);
+  }
+
+  if (got != expect) {
+    res_info("%s: Expected %s, got %s\n", __func__,
+             res_token_string(expect), res_token_string(got));
+    res_parse_throw();
+  }
 }
 

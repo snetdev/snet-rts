@@ -5,6 +5,8 @@
 #include <string.h>
 #include <sys/select.h>
 #include <sys/param.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "resdefs.h"
 
@@ -150,7 +152,7 @@ char* res_slurp(void* vp)
   return str;
 }
 
-void res_parse_slave(int id, char* output)
+void res_parse_slave(int sysid, char* output)
 {
   char *start;
   if ((start = strstr(output, "{ system ")) != NULL) {
@@ -167,27 +169,34 @@ void res_parse_slave(int id, char* output)
       }
     }
     if (count == 0) {
-      res_parse_topology(id, start);
+      res_parse_topology(sysid, start);
     }
   }
 }
 
-void res_start_slave(int id, char* command)
+void res_start_slave(int sysid, char* command)
 {
   FILE* fp = popen(command, "r");
   if (!fp) {
-    res_warn("Failed to start slave %d: %s.\n", id, strerror(errno));
+    res_warn("Failed to start slave %d: %s.\n", sysid, strerror(errno));
   } else {
     char* output = res_slurp(fp);
     int wait;
     if ((wait = pclose(fp)) != 0) {
       if (wait == -1) {
-        res_warn("Execution of slave failed %d: %s.\n", id, strerror(errno));
-      } else {
-        res_warn("Slave %d exited with code %d.\n", id, wait);
+        res_warn("Execution of slave %d failed: %s.\n", sysid, strerror(errno));
+      }
+      else if (WIFEXITED(wait)) {
+        res_warn("Slave %d exited with code %d.\n", sysid, WEXITSTATUS(wait));
+      }
+      else if (WIFSIGNALED(wait)) {
+        res_warn("Slave %d died with signal %d.\n", sysid, WTERMSIG(wait));
+      }
+      else {
+        res_warn("Slave %d died magically: %d.\n", sysid, wait);
       }
     }
-    res_parse_slave(id, output);
+    res_parse_slave(sysid, output);
     xfree(output);
   }
 }
