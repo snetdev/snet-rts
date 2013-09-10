@@ -70,6 +70,8 @@ void res_list_sort_descend(intlist_t* list);
 /* resloop.c */
 
 void res_loop(int listen);
+void res_start_slave(int id, char* command);
+void res_start_slaves(intmap_t* slaves);
 void res_service(const char* listen_addr, int listen_port, intmap_t* slaves);
 
 /* resmain.c */

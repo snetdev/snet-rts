@@ -434,6 +434,10 @@ char* res_system_host_string(int id)
   }
 }
 
+void res_parse_topology(int sysid, char* text)
+{
+}
+
 void res_topo_state(client_t* client)
 {
 }

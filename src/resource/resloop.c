@@ -119,17 +119,18 @@ void res_loop(int listen)
   res_map_destroy(sock_map);
 }
 
-char* res_slurp(FILE* fp)
+char* res_slurp(void* vp)
 {
+  FILE* fp = (FILE *) vp;
   size_t size = MAX(20*1024, 3*PATH_MAX);
   size_t len = 0;
-  char *str = xmalloc(size);
+  char *str = xmalloc(size + 1);
   size_t n;
   str[0] = '\0';
-  while ((n = fread(str + len, 1, size - len - 1, fp)) >= 1) {
+  while ((n = fread(str + len, 1, size - len, fp)) >= 1) {
     len += n;
     str[len] = '\0';
-    if (len + 1 < size) {
+    if (len < size) {
       if (ferror(fp)) {
         res_warn("Error while reading from slave: %s\n", strerror(errno));
         break;
@@ -140,14 +141,35 @@ char* res_slurp(FILE* fp)
     }
     if (len + PATH_MAX >= size) {
       size = 3 * size / 2;
-      str = xrealloc(str, size);
+      str = xrealloc(str, size + 1);
     }
     if (ferror(fp)) {
       res_warn("Error while reading from slave: %s\n", strerror(errno));
     }
   }
-  str[len] = '\0';
   return str;
+}
+
+void res_parse_slave(int id, char* output)
+{
+  char *start;
+  if ((start = strstr(output, "{ system ")) != NULL) {
+    int count = 1;
+    char* str = start;
+    while (*++str) {
+      if (*str == '{') {
+        ++count;
+      }
+      if (*str == '}') {
+        if (--count == 0) {
+          break;
+        }
+      }
+    }
+    if (count == 0) {
+      res_parse_topology(id, start);
+    }
+  }
 }
 
 void res_start_slave(int id, char* command)
@@ -156,7 +178,7 @@ void res_start_slave(int id, char* command)
   if (!fp) {
     res_warn("Failed to start slave %d: %s.\n", id, strerror(errno));
   } else {
-    char* str = res_slurp(fp);
+    char* output = res_slurp(fp);
     int wait;
     if ((wait = pclose(fp)) != 0) {
       if (wait == -1) {
@@ -165,6 +187,8 @@ void res_start_slave(int id, char* command)
         res_warn("Slave %d exited with code %d.\n", id, wait);
       }
     }
+    res_parse_slave(id, output);
+    xfree(output);
   }
 }
 
@@ -175,7 +199,6 @@ void res_start_slaves(intmap_t* slaves)
     char* str;
     res_map_iter_init(slaves, &iter);
     while ((str = (char *) res_map_iter_next(slaves, &iter)) != NULL) {
-      printf("slave '%s'.\n", str);
       res_start_slave(iter, str);
     }
     res_map_apply(slaves, xfree);

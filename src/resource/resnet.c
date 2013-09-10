@@ -184,21 +184,24 @@ char* res_hostname(void)
 
   gethostname(hostname, HOST_NAME_MAX);
   hostname[HOST_NAME_MAX - 1] = '\0';
-
-  memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_flags = AI_CANONNAME;
-  hints.ai_protocol = IPPROTO_IP;
-  hints.ai_canonname = NULL;
-  hints.ai_addr = NULL;
-  hints.ai_next = NULL;
-
-  if ((gai_result = getaddrinfo(hostname, "ssh", &hints, &info)) != 0) {
-    res_error("getaddrinfo: %s\n", gai_strerror(gai_result));
+  if (strchr(hostname, '.')) {
+    canonical = xstrdup(hostname);
   } else {
-    canonical = xstrdup(info->ai_canonname);
-    freeaddrinfo(info);
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_CANONNAME;
+    hints.ai_protocol = IPPROTO_IP;
+    hints.ai_canonname = NULL;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
+
+    if ((gai_result = getaddrinfo(hostname, "ssh", &hints, &info)) != 0) {
+      res_error("getaddrinfo(%s): %s\n", hostname, gai_strerror(gai_result));
+    } else {
+      canonical = xstrdup(info->ai_canonname);
+      freeaddrinfo(info);
+    }
   }
 
   return canonical;
