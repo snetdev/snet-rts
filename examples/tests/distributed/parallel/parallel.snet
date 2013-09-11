@@ -4,5 +4,15 @@
   </default>
 </metadata>
 
-net parallel
-connect [{<T>} -> {<T=T+1>}]@1 | [{<S>} -> {<S=S+2>}]@2;
+net parallel ({<T>} | {<S>} -> ...)
+{
+  net t
+  connect [{<T>} -> {<T=T+1>}];
+
+  net s
+  connect [{<S>} -> {<S=S*2>}];
+
+  net ts
+  connect t@1 | s@2;
+}
+connect ts@3;

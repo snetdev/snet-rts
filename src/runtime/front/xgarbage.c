@@ -41,10 +41,9 @@ void SNetBecomeGarbage(landing_t *land)
   /* Only identity landings can become a garbage landing. */
   assert(land->type == LAND_identity);
 
-  if (SNetDebug()) {
-    printf("%s: node %s land %s (prev %s)\n",
-           __func__, SNetNodeName(land->node), SNetLandingName(land),
-           SNetLandingTypeName(ident->prev_type));
+  if (SNetDebugGC()) {
+    printf("%s: node %s land %s (prev %s)\n", __func__, SNetNodeName(land->node),
+           SNetLandingName(land), SNetLandingTypeName(ident->prev_type));
   }
 
   /* Init new state to ``garbage'' */

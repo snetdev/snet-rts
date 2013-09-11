@@ -3,8 +3,6 @@ SUBDIRS = . src/interfaces/sac4snet
 
 # stuff that gets installed
 snetstuffdir = $(pkglibdir)
-snetstuff_DATA = \
-	compile_cmd link_cmd
 
 pkgdata_DATA = \
 	src/snet.mkf \
@@ -13,12 +11,13 @@ pkgdata_DATA = \
 EXTRA_DIST = src/snet.mkf
 
 snetstuff_SCRIPTS = \
-	libtool
+	libtool compile_cmd link_cmd
 
 pkglib_LTLIBRARIES = \
 	libsnetutil.la  \
 	libruntimestream.la \
 	libfrontrt.la \
+	libfrontnodist.la \
 	libC4SNet.la \
 	libC4SNetc.la \
 	libtbpthread.la \
@@ -199,6 +198,14 @@ libfrontrt_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/runtime/stream/netif \
 	-I$(srcdir)/src/distrib/common
 
+libfrontnodist_la_SOURCES = \
+	src/distrib/common/reference.c \
+	src/runtime/front/xnodist.c
+libfrontnodist_la_CPPFLAGS = \
+        $(AM_CPPFLAGS) \
+	-I$(srcdir)/src/runtime/stream/utils \
+	-I$(srcdir)/src/distrib/common
+
 # for runtime/stream/netif
 BUILT_SOURCES = src/runtime/stream/netif/parser.h
 AM_YFLAGS = -d
@@ -272,7 +279,7 @@ libdistribnodist_la_CPPFLAGS = \
 
 
 if ENABLE_DIST_MPI
-pkglib_LTLIBRARIES += libdistribmpi.la
+pkglib_LTLIBRARIES += libdistribmpi.la libfrontmpi.la
 libdistribmpi_la_SOURCES = \
 	src/distrib/common/tuplelist.c \
 	src/distrib/common/tuplelist.h \
@@ -291,6 +298,28 @@ libdistribmpi_la_CPPFLAGS = \
         $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/distrib/mpi \
 	-I$(srcdir)/src/distrib/common
+
+libfrontmpi_la_SOURCES = \
+	src/runtime/front/node.h \
+	src/runtime/front/node-proto.h \
+	src/runtime/front/xdistrib.c \
+	src/runtime/front/xtransfer.c \
+	src/runtime/front/xmanager.c \
+	src/runtime/front/frontmpi.c \
+	src/distrib/common/reference.h \
+	src/distrib/common/reference.c \
+	src/distrib/common/distribcommon.h \
+	src/distrib/common/distribfront.h \
+	src/distrib/mpi/distribution.c \
+	src/distrib/mpi/pack.h \
+	src/distrib/mpi/transmit.c \
+	src/runtime/stream/utils/hashtable.c \
+	src/runtime/stream/utils/hashtable.h
+libfrontmpi_la_CPPFLAGS = \
+        $(AM_CPPFLAGS) \
+	-I$(srcdir)/src/runtime/stream/utils \
+	-I$(srcdir)/src/distrib/common \
+	-I$(srcdir)/src/distrib/mpi
 endif
 
 
@@ -323,13 +352,17 @@ AM_CPPFLAGS = -I$(top_srcdir)/include
 
 compile_cmd: Makefile
 	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
-	     $(CC) $(DEFS) $(AM_CPPFLAGS) -I'$${SNET_INCLUDES}' $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c >$@
+	$(AM_V_GEN)echo '#!/bin/sh' >$@ ; \
+	     echo $(SHELL) '$${SNET_LIBS}'/libtool --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
+	     $(CC) $(DEFS) $(AM_CPPFLAGS) -I'$${SNET_INCLUDES}' $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c '"$$@"' >>$@ ; \
+	     chmod +x $@
 
 link_cmd: Makefile
 	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
-	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS}' >$@
+	$(AM_V_GEN)echo '#!/bin/sh' >$@ ; \
+	     echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
+	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS}' '"$$@"' >>$@ ; \
+	     chmod +x $@
 
 snet-config.mkf: Makefile
 	$(AM_V_at)rm -f $@

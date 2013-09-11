@@ -82,6 +82,7 @@ static void printRec(snet_record_t *rec, output_arg_t *hnd)
 
     case REC_terminate:
       fprintf(hnd->file, "<record type=\"terminate\" />\n");
+      if (SNetDistribIsRootNode()) SNetDistribGlobalStop();
       break;
 
     default:
@@ -142,7 +143,7 @@ void SNetInOutputInit(FILE *file,
   output_arg_t *out;
 
   trace(__func__);
-  node = SNetNodeNew(NODE_output, &input, 1, NULL, 0,
+  node = SNetNodeNew(NODE_output, ROOT_LOCATION, &input, 1, NULL, 0,
                      SNetNodeOutput, SNetStopOutput, SNetTermOutput);
   out = NODE_SPEC(node, output);
   out->file = file;

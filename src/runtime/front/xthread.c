@@ -19,9 +19,14 @@ static pthread_t       *worker_threads;
 static bool             opt_garbage_collection;
 static bool             opt_verbose;
 static bool             opt_debug;
+static bool             opt_debug_df;
+static bool             opt_debug_gc;
+static bool             opt_debug_sl;
+static bool             opt_debug_tl;
+static bool             opt_debug_ws;
 static bool             opt_zipper;
 static bool             opt_feedback_deterministic;
-static size_t           opt_stack_size;
+static size_t           opt_thread_stack_size;
 static const char      *opt_concurrency;
 static bool             opt_input_throttle;
 static double           opt_input_offset;
@@ -48,6 +53,12 @@ int SNetThreadingThieves(void)
   return num_thieves;
 }
 
+/* How many distributed computing threads? */
+int SNetThreadedManagers(void)
+{
+  return SNetDistribIsDistributed() ? 1 : 0;
+}
+
 /* What kind of garbage collection to use? */
 bool SNetGarbageCollection(void)
 {
@@ -61,10 +72,22 @@ bool SNetVerbose(void)
 }
 
 /* Whether to enable debugging information */
-bool SNetDebug(void)
-{
-  return opt_debug;
-}
+bool SNetDebug(void) { return opt_debug; }
+
+/* Whether debugging of distributed front is enabled */
+bool SNetDebugDF(void) { return opt_debug_df | opt_debug; }
+
+/* Whether debugging of garbage collection is enabled */
+bool SNetDebugGC(void) { return opt_debug_gc | opt_debug; }
+
+/* Whether debugging of the streams layer is enabled */
+bool SNetDebugSL(void) { return opt_debug_sl | opt_debug; }
+
+/* Whether debugging of the threading layer is enabled */
+bool SNetDebugTL(void) { return opt_debug_tl | opt_debug; }
+
+/* Whether debugging of work stealing is enabled */
+bool SNetDebugWS(void) { return opt_debug_ws | opt_debug; }
 
 /* Whether to use a deterministic feedback */
 bool SNetFeedbackDeterministic(void)
@@ -79,9 +102,9 @@ bool SNetZipperEnabled(void)
 }
 
 /* The stack size for worker threads in bytes */
-size_t SNetStackSize(void)
+size_t SNetThreadStackSize(void)
 {
-  return opt_stack_size;
+  return opt_thread_stack_size;
 }
 
 /* Whether to apply an input throttle. */
@@ -177,6 +200,7 @@ static size_t GetSize(const char *str)
 int SNetThreadingInit(int argc, char**argv)
 {
   int   i;
+  int   num_managers;
 
   trace(__func__);
 
@@ -191,15 +215,23 @@ int SNetThreadingInit(int argc, char**argv)
     else if (EQ(argv[i], "-c") && ++i < argc) {
       opt_concurrency = argv[i];
     }
-    else if (EQ(argv[i], "-d")) {
-      opt_debug = true;
+    else if (EQN(argv[i], "-d", 2)) {
+      if (EQ(argv[i], "-d")) {
+        opt_debug = true;
+      } else {
+        if (strstr(argv[i], "df")) { opt_debug_df = true; }
+        if (strstr(argv[i], "gc")) { opt_debug_gc = true; }
+        if (strstr(argv[i], "sl")) { opt_debug_sl = true; }
+        if (strstr(argv[i], "tl")) { opt_debug_tl = true; }
+        if (strstr(argv[i], "ws")) { opt_debug_ws = true; }
+      }
     }
     else if (EQ(argv[i], "-g")) {
       opt_garbage_collection = false;
     }
     else if (EQ(argv[i], "-s") && ++i < argc) {
-      if ((opt_stack_size = GetSize(argv[i])) < PTHREAD_STACK_MIN) {
-        SNetUtilDebugFatal("[%s]: Invalid stack size %s (l.t. %d).",
+      if ((opt_thread_stack_size = GetSize(argv[i])) < PTHREAD_STACK_MIN) {
+        SNetUtilDebugFatal("[%s]: Invalid thread stack size %s (l.t. %d).",
                            __func__, argv[i], PTHREAD_STACK_MIN);
       }
     }
@@ -258,7 +290,8 @@ int SNetThreadingInit(int argc, char**argv)
   }
 
   pthread_key_create(&thread_self_key, NULL);
-  worker_threads = SNetNewN(num_workers + 1, pthread_t);
+  num_managers = SNetThreadedManagers();
+  worker_threads = SNetNewN(num_workers + num_managers + 1, pthread_t);
 
   return 0;
 }
@@ -269,21 +302,22 @@ void SNetThreadCreate(void *(*func)(void *), worker_t *worker)
   pthread_t            *thread;
   pthread_attr_t        attr;
   pthread_attr_t       *attr_ptr = NULL;
+  int                   num_managers = SNetThreadedManagers();
 
   trace(__func__);
 
-  if (opt_stack_size >= PTHREAD_STACK_MIN) {
+  if (opt_thread_stack_size >= PTHREAD_STACK_MIN) {
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, opt_stack_size);
+    pthread_attr_setstacksize(&attr, opt_thread_stack_size);
     attr_ptr = &attr;
   }
 
-  assert(worker->id <= num_workers);
+  assert(worker->id <= num_workers + num_managers);
   thread = &worker_threads[worker->id];
   if (pthread_create(thread, attr_ptr, func, worker)) {
     SNetUtilDebugFatal("[%s]: Failed to create a new thread.", __func__);
   }
-  if (SNetDebug()) {
+  if (SNetDebugTL()) {
     printf("created thread %lu for worker %d\n",
            *(unsigned long *)thread, worker->id);
   }
@@ -303,27 +337,18 @@ worker_t *SNetThreadGetSelf(void)
   return pthread_getspecific(thread_self_key);
 }
 
-const char *SNetThreadingGetName(void)
-{
-  return "";
-}
-
-void SNetThreadingEventSignal(void *moninfo)
-{
-  // SNetThreadingMonitoringAppend( moninfo, SNetThreadingGetName());
-}
-
 int SNetThreadingStop(void)
 {
   pthread_t     *thread;
   void          *arg;
   worker_t      *worker;
   int            i;
+  int            num_managers = SNetThreadedManagers();
 
   trace(__func__);
-  for (i = num_workers; i >= 2; --i) {
+  for (i = num_workers + num_managers; i >= 2; --i) {
     thread = &worker_threads[i];
-    if (SNetDebug()) {
+    if (SNetDebugTL()) {
       printf("joining with thread %lu for worker %d ...\n",
              *(unsigned long *)thread, i);
     }
@@ -347,7 +372,7 @@ int SNetThreadingCleanup(void)
   SNetThreadSetSelf(NULL);
   pthread_key_delete(thread_self_key);
 
-  SNetDeleteN(num_workers, worker_threads);
+  SNetDeleteN(num_workers + SNetThreadedManagers(), worker_threads);
   worker_threads = NULL;
 
   SNetReferenceDestroy();

@@ -297,31 +297,22 @@ snet_stream_t *SNetZipper(
   zipper_arg_t  *zarg;
 
   trace(__func__);
-  input = SNetRouteUpdate(info, input, location);
-  if (SNetDistribIsNodeLocation(location)) {
-    output = SNetStreamCreate(0);
-    node = SNetNodeNew(NODE_zipper, &input, 1, &output, 1,
-                       SNetNodeZipper, SNetStopZipper, SNetTermZipper);
-    zarg                = NODE_SPEC(node, zipper);
-    zarg->output        = output;
-    zarg->exit_patterns = exit_patterns;
-    zarg->exit_guards   = exit_guards;
-    zarg->sync_patterns = sync_patterns;
-    zarg->sync_guards   = sync_guards;
-    zarg->sync_width    = SNetVariantListLength( zarg->sync_patterns);
-    zarg->entity = SNetEntityCreate( ENTITY_star, location, SNetLocvecGet(info),
-                                     "<syncstar>", NULL, (void *) zarg);
-    if (zarg->sync_width > 8*sizeof(mask_t)) {
-      SNetUtilDebugFatalEnt(zarg->entity,
-                            "[%s]: number of patterns %u exceeds mask width %zu\n",
-                            __func__, zarg->sync_width, 8*sizeof(mask_t));
-    }
-  } else {
-    SNetVariantListDestroy( exit_patterns);
-    SNetExprListDestroy(    exit_guards);
-    SNetVariantListDestroy( sync_patterns);
-    SNetExprListDestroy(    sync_guards);
-    output = input;
+  output = SNetStreamCreate(0);
+  node = SNetNodeNew(NODE_zipper, location, &input, 1, &output, 1,
+                     SNetNodeZipper, SNetStopZipper, SNetTermZipper);
+  zarg                = NODE_SPEC(node, zipper);
+  zarg->output        = output;
+  zarg->exit_patterns = exit_patterns;
+  zarg->exit_guards   = exit_guards;
+  zarg->sync_patterns = sync_patterns;
+  zarg->sync_guards   = sync_guards;
+  zarg->sync_width    = SNetVariantListLength( zarg->sync_patterns);
+  zarg->entity = SNetEntityCreate( ENTITY_star, location, SNetLocvecGet(info),
+                                   "<syncstar>", NULL, (void *) zarg);
+  if (zarg->sync_width > 8*sizeof(mask_t)) {
+    SNetUtilDebugFatalEnt(zarg->entity,
+                          "[%s]: number of patterns %u exceeds mask width %zu\n",
+                          __func__, zarg->sync_width, 8*sizeof(mask_t));
   }
 
   return output;

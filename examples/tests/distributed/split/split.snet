@@ -4,7 +4,8 @@
   </default>
 </metadata>
 
-net split {
+net split ({<T>} -> ...)
+{
   net op
   connect [{<T>} -> {<T=T+1>}]@1;
 } connect op!<T>;

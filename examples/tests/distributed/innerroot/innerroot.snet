@@ -1,0 +1,12 @@
+<metadata> <default> <interface value="C4SNet"/> </default> </metadata>
+
+net innerroot({<I>} -> ...)
+{
+  box tell( (<I>) -> (<I>) );
+
+  box incr( (<I>) -> (<I>) );
+
+  net subnet
+  connect tell .. (tell .. incr)@0 .. tell;
+}
+connect tell .. incr@2 .. tell@1 .. subnet!@<I> .. tell;

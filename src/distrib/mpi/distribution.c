@@ -48,7 +48,9 @@ int SNetDistribGetNodeId(void) { return node_location; }
 
 bool SNetDistribIsNodeLocation(int loc) { return node_location == loc; }
 
-bool SNetDistribIsRootNode(void) { return node_location == 0; }
+bool SNetDistribIsRootNode(void) { return node_location == ROOT_LOCATION; }
+
+bool SNetDistribIsDistributed(void) { return true; }
 
 void SNetDistribPack(void *src, ...)
 {

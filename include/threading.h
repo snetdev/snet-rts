@@ -168,6 +168,13 @@ snet_stream_t *SNetStreamCreate(int capacity);
 
 
 /**
+ * Deallocate a stream
+ */
+void SNetStreamDestroy(snet_stream_t *s);
+
+
+
+/**
  * Set the source location vector of a stream
  *
  * @param s   the stream

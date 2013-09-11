@@ -421,7 +421,7 @@ static snet_stream_t *NewObserver(
   trace(__func__);
 
   output = SNetStreamCreate(0);
-  node = SNetNodeNew(NODE_observer, &input, 1, &output, 1,
+  node = SNetNodeNew(NODE_observer, location, &input, 1, &output, 1,
                      SNetNodeObserver, SNetStopObserver, SNetTermObserver);
   arg = NODE_SPEC(node, observer);
   arg->output1 = output;

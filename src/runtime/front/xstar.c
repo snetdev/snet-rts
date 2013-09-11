@@ -193,7 +193,7 @@ void SNetStopStar(node_t *node, fifo_t *fifo)
  * dependent on parameters is_incarnate and is_det.
  */
 static snet_stream_t *CreateStar(
-    snet_stream_t       *instream,
+    snet_stream_t       *input,
     snet_info_t         *info,
     int                  location,
     snet_variant_list_t *exit_patterns,
@@ -203,7 +203,6 @@ static snet_stream_t *CreateStar(
     bool                 is_incarnate,
     bool                 is_det)
 {
-  snet_stream_t *input;
   snet_stream_t *output;
   node_t        *node;
   star_arg_t    *sarg;
@@ -212,66 +211,61 @@ static snet_stream_t *CreateStar(
   locvec = SNetLocvecGet(info);
   if (!is_incarnate) {
     SNetLocvecStarEnter(locvec);
-  }
-  input = SNetRouteUpdate(info, instream, location);
-
-  if (SNetDistribIsNodeLocation(location)) {
-    output = SNetStreamCreate(0);
-    node = SNetNodeNew(NODE_star, &input, 1, &output, 1,
-                       SNetNodeStar, SNetStopStar, SNetTermStar);
-    sarg = NODE_SPEC(node, star);
-    sarg->input = input;
-    sarg->collector = output;
-    sarg->exit_patterns = exit_patterns;
-    sarg->guards = guards;
-    sarg->is_incarnate = is_incarnate;
-    sarg->is_det = is_det;
-    sarg->is_detsup = (SNetDetGetLevel() > 0);
-    sarg->stopping = 0;
-
-    /* create operand A */
-    sarg->instance = SNetNodeStreamCreate(node);
-    (void) SNetLocvecStarSpawn(locvec);
-    SNetRouteDynamicEnter(info, SNetLocvecTopval(locvec), location, box_a);
-    sarg->internal = (*box_a)(sarg->instance, info, location);
-    sarg->internal = SNetRouteUpdate(info, sarg->internal, location);
-    SNetRouteDynamicExit(info, SNetLocvecTopval(locvec), location, box_a);
-    (void) SNetLocvecStarSpawnRet(locvec);
-    /* direct destination of operand back to this node */
-    STREAM_DEST(sarg->internal) = node;
-
-    /* Is this a Star followed by only a Sync? */
-    if (SNetZipperEnabled() &&
-        NODE_TYPE(STREAM_DEST(sarg->instance)) == NODE_sync &&
-        STREAM_FROM(sarg->internal) == STREAM_DEST(sarg->instance))
-    {
-      /* Replace the combination of star + sync with a fused sync-star. */
-      sync_arg_t *sync = NODE_SPEC(STREAM_DEST(sarg->instance), sync);
-      /* if (SNetVerbose()) {
-        printf("Replacing a star + sync with a fused sync-star.\n");
-      } */
-      output = SNetZipper(input, info, location, exit_patterns, guards,
-                          sync->patterns, sync->guard_exprs);
-      SNetEntityDestroy(sync->entity);
-      SNetVariantDestroy(sync->merged_pattern);
-      SNetDelete(STREAM_DEST(sarg->instance));
-      SNetStreamDestroy(sarg->instance);
-      SNetStreamDestroy(sarg->internal);
-      SNetStreamDestroy(sarg->collector);
-      SNetMemFree(node);
-    } else {
-      sarg->entity = SNetEntityCreate( ENTITY_star, location, locvec,
-                                       "<star>", NULL, (void *) sarg);
-      if (!is_incarnate) {
-        /* the "top-level" star also creates a collector */
-        output = SNetCollectorDynamic(sarg->collector, location, info,
-                                      is_det, node);
-      }
-    }
   } else {
-    SNetExprListDestroy(guards);
-    SNetVariantListDestroy(exit_patterns);
-    output = input;
+    assert(false);
+  }
+
+  output = SNetStreamCreate(0);
+  node = SNetNodeNew(NODE_star, location, &input, 1, &output, 1,
+                     SNetNodeStar, SNetStopStar, SNetTermStar);
+  sarg = NODE_SPEC(node, star);
+  sarg->input = input;
+  sarg->collector = output;
+  sarg->exit_patterns = exit_patterns;
+  sarg->guards = guards;
+  sarg->is_incarnate = is_incarnate;
+  sarg->is_det = is_det;
+  sarg->is_detsup = (SNetDetGetLevel() > 0);
+  sarg->stopping = 0;
+
+  /* create operand A */
+  sarg->instance = SNetNodeStreamCreate(node);
+  (void) SNetLocvecStarSpawn(locvec);
+  SNetSubnetIncrLevel();
+  sarg->internal = (*box_a)(sarg->instance, info, location);
+  SNetSubnetDecrLevel();
+  (void) SNetLocvecStarSpawnRet(locvec);
+  /* direct destination of operand back to this node */
+  STREAM_DEST(sarg->internal) = node;
+
+  /* Is this a Star followed by only a Sync? */
+  if (SNetZipperEnabled() &&
+      NODE_TYPE(STREAM_DEST(sarg->instance)) == NODE_sync &&
+      STREAM_FROM(sarg->internal) == STREAM_DEST(sarg->instance))
+  {
+    /* Replace the combination of star + sync with a fused sync-star. */
+    sync_arg_t *sync = NODE_SPEC(STREAM_DEST(sarg->instance), sync);
+    /* if (SNetVerbose()) {
+      printf("Replacing a star + sync with a fused sync-star.\n");
+    } */
+    output = SNetZipper(input, info, location, exit_patterns, guards,
+                        sync->patterns, sync->guard_exprs);
+    SNetEntityDestroy(sync->entity);
+    SNetVariantDestroy(sync->merged_pattern);
+    SNetDelete(STREAM_DEST(sarg->instance));
+    SNetStreamDestroy(sarg->instance);
+    SNetStreamDestroy(sarg->internal);
+    SNetStreamDestroy(sarg->collector);
+    SNetMemFree(node);
+  } else {
+    sarg->entity = SNetEntityCreate( ENTITY_star, location, locvec,
+                                     "<star>", NULL, (void *) sarg);
+    if (!is_incarnate) {
+      /* the "top-level" star also creates a collector */
+      output = SNetCollectorDynamic(sarg->collector, location, info,
+                                    is_det, node);
+      SNetNodeTableAdd(sarg->internal);
+    }
   }
 
   if (!is_incarnate) {

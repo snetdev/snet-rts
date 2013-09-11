@@ -12,24 +12,29 @@ void SNetNodeCollector(snet_stream_desc_t *desc, snet_record_t *rec)
   }
   switch (REC_DESCR(rec)) {
     case REC_data:
+      /* Test if this collector is involved in preserving determinism. */
       if (carg->is_det | carg->is_detsup) {
         if (DATA_REC(rec, detref)) {
           detref_t *detref = SNetStackTop(DATA_REC(rec, detref));
-          if (detref->leave == desc->landing) {
+          if (detref->leave == desc->landing &&
+              detref->location == SNetDistribGetNodeId())
+          {
             SNetDetLeaveRec(rec, desc->landing);
             rec = NULL;
           }
         }
+        /* Test for a stray record. Not sure if this is still needed... */
         if (rec && SNetFifoNonEmpty(&land->detfifo)) {
+          /* Obtain the sequence number of the most recent detref. */
           detref_t *tail = SNetFifoPeekLast(&land->detfifo);
-          detref_t *detref = SNetNewAlign(detref_t);
-          detref->seqnr = tail->seqnr + 1;
-          detref->leave = desc->landing;
-          detref->refcount = 0;
-          SNetFifoInit(&detref->recfifo);
+          detref_t *detref = SNetRecDetrefCreate(rec, tail->seqnr + 1, desc->landing);
+          /* Queue record to process it later. */
           SNetFifoPut(&detref->recfifo, rec);
+          /* Mark record processing as done for now. */
           rec = NULL;
+          /* Append detref to list of detrefs. */
           SNetFifoPut(&land->detfifo, detref);
+          /* Check for ready detrefs. */
           SNetDetLeaveDequeue(desc->landing);
         }
       }
@@ -44,7 +49,10 @@ void SNetNodeCollector(snet_stream_desc_t *desc, snet_record_t *rec)
       break;
 
     case REC_detref:
-      if (DETREF_REC( rec, leave) == desc->landing) {
+      if (DETREF_REC( rec, leave) == desc->landing &&
+          DETREF_REC( rec, location) == SNetDistribGetNodeId())
+      {
+        SNetDetLeaveCheckDetref(rec, &land->detfifo);
         SNetRecDestroy(rec);
         SNetDetLeaveDequeue(desc->landing);
       } else {
@@ -98,7 +106,7 @@ snet_stream_t *SNetCollectorDynamic(
 
   trace(__func__);
   output = SNetStreamCreate(0);
-  node = SNetNodeNew(NODE_collector, &instream, 1, &output, 1,
+  node = SNetNodeNew(NODE_collector, location, &instream, 1, &output, 1,
                      SNetNodeCollector, SNetStopCollector, SNetTermCollector);
   carg = NODE_SPEC(node, collector);
   carg->output = output;
@@ -127,6 +135,11 @@ void SNetCollectorAddStream(
 
   STREAM_DEST(stream) = node;
   ++carg->num;
+  SNetNodeTableAdd(stream);
+  if (SNetDebugDF()) {
+    printf("[%s.%d]: table_index=%d\n", __func__, SNetDistribGetNodeId(),
+           stream->table_index);
+  }
 }
 
 snet_stream_t *SNetCollectorStatic(
@@ -144,7 +157,7 @@ snet_stream_t *SNetCollectorStatic(
   trace(__func__);
   assert(num >= 2);
   output = SNetStreamCreate(0);
-  node = SNetNodeNew(NODE_collector, instreams, num, &output, 1,
+  node = SNetNodeNew(NODE_collector, location, instreams, num, &output, 1,
                      SNetNodeCollector, SNetStopCollector, SNetTermCollector);
   carg = NODE_SPEC(node, collector);
   carg->output = output;

@@ -35,7 +35,7 @@ void SNetBecomeIdentity(landing_t *land, snet_stream_desc_t *out)
   };
   landing_type_t prev_type = land->type;
 
-  if (SNetDebug()) {
+  if (SNetDebugGC()) {
     printf("%s: node %s land %s\n",
            __func__, SNetNodeName(land->node), SNetLandingName(land));
   }

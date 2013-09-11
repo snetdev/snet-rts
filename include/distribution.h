@@ -9,6 +9,9 @@ typedef struct snet_ref snet_ref_t;
 #include "stream.h"
 #include "bool.h"
 
+/* The root node in distributed S-Net. */
+#define ROOT_LOCATION           0
+
 /* Provided by common distribution interface in src/distrib/common */
 void SNetDistribInit(int argc, char** argv, snet_info_t *info);
 void SNetDistribStart(void);
@@ -34,6 +37,7 @@ void SNetDistribGlobalStop(void);
 int SNetDistribGetNodeId(void);
 bool SNetDistribIsNodeLocation(int location);
 bool SNetDistribIsRootNode(void);
+bool SNetDistribIsDistributed(void);
 
 void SNetDistribPack(void *src, ...);
 void SNetDistribUnpack(void *dst, ...);

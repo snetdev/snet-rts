@@ -4,7 +4,18 @@
   </default>
 </metadata>
 
-net star {
+net star ({<T>,<S>} -> ...)
+{
+  net dot
+  connect [{<T>} -> {<T=T+1>}];
+
+  net dos
+  connect [{<S>} -> {<S=S+1>}];
+
   net op
-  connect ([{<T>} -> {<T=T+1>}] .. [{<S>} -> {<S=S+1>}])@1;
-} connect (op*{<T>} if <T==10>)@2;
+  connect (dot .. dos)@1;
+
+  net run
+  connect op * {<T>} if <T==10>;
+
+} connect run@2;
