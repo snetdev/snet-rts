@@ -20,10 +20,14 @@ typedef struct host host_t;
 
 static intmap_t* res_host_map;
 
-host_t* res_local_host(void)
+void res_topo_create(void)
 {
-  assert(res_host_map);
-  return res_map_get(res_host_map, LOCAL_HOST);
+  res_host_map = res_map_create();
+}
+
+void res_topo_add_host(host_t *host)
+{
+  res_map_add(res_host_map, host->index, host);
 }
 
 host_t* res_topo_get_host(int sysid)
@@ -35,6 +39,11 @@ host_t* res_topo_get_host(int sysid)
   } else {
     return res_map_get(res_host_map, sysid);
   }
+}
+
+host_t* res_local_host(void)
+{
+  return res_map_get(res_host_map, LOCAL_HOST);
 }
 
 resource_t* res_host_get_root(host_t* host)
@@ -55,6 +64,17 @@ resource_t* res_topo_get_root(int sysid)
     return res_host_get_root(host);
   } else {
     return NULL;
+  }
+}
+
+void res_topo_get_host_list(intlist_t* list)
+{
+  host_t* host;
+  intmap_iter_t iter = -1;
+  res_list_reset(list);
+  res_map_iter_init(res_host_map, &iter);
+  while ((host = res_map_iter_next(res_host_map, &iter)) != NULL) {
+    res_list_append(list, iter);
   }
 }
 
@@ -297,16 +317,6 @@ void res_host_destroy(host_t* host)
   xfree(host);
 }
 
-void res_topo_create(void)
-{
-  res_host_map = res_map_create();
-}
-
-void res_topo_add_host(host_t *host, int id)
-{
-  res_map_add(res_host_map, id, host);
-}
-
 void res_host_dump(host_t* host)
 {
   int n, a, o, p;
@@ -346,7 +356,7 @@ void res_topo_init(void)
   local_host = res_host_create(res_hostname(), LOCAL_HOST, local_root);
 
   res_topo_create();
-  res_topo_add_host(local_host, local_host->index);
+  res_topo_add_host(local_host);
 }
 
 void res_topo_destroy(void)
@@ -525,10 +535,10 @@ void res_parse_topology(int sysid, char* text)
           res_parse_expect(stream, Left, NULL);
           res_parse_expect(stream, Core, NULL);
           res_parse_expect(stream, Number, NULL);
-          res_parse_expect(stream, Logical, &logical);
-          res_parse_expect(stream, Number, NULL);
-          res_parse_expect(stream, Physical, &physical);
-          res_parse_expect(stream, Number, NULL);
+          res_parse_expect(stream, Logical, NULL);
+          res_parse_expect(stream, Number, &logical);
+          res_parse_expect(stream, Physical, NULL);
+          res_parse_expect(stream, Number, &physical);
           res_parse_expect(stream, Children, NULL);
           res_parse_expect(stream, Number, &nprocs);
 
@@ -548,10 +558,10 @@ void res_parse_topology(int sysid, char* text)
             res_parse_expect(stream, Left, NULL);
             res_parse_expect(stream, Proc, NULL);
             res_parse_expect(stream, Number, NULL);
-            res_parse_expect(stream, Logical, &logical);
-            res_parse_expect(stream, Number, NULL);
-            res_parse_expect(stream, Physical, &physical);
-            res_parse_expect(stream, Number, NULL);
+            res_parse_expect(stream, Logical, NULL);
+            res_parse_expect(stream, Number, &logical);
+            res_parse_expect(stream, Physical, NULL);
+            res_parse_expect(stream, Number, &physical);
 
             proc = core->procs[p] = xnew(proc_t);
             proc->logical = logical;
@@ -570,7 +580,7 @@ void res_parse_topology(int sysid, char* text)
     }
     res_parse_expect(stream, Right, NULL);
 
-    res_map_add(res_host_map, sysid, host);
+    res_topo_add_host(host);
   }
 }
 

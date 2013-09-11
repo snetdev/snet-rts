@@ -66,6 +66,8 @@ void res_list_append(intlist_t* list, int val);
 void res_list_sort(intlist_t* list, int (*compar)(const void *, const void *));
 void res_list_sort_ascend(intlist_t* list);
 void res_list_sort_descend(intlist_t* list);
+void res_list_iter_init(intlist_t* list, intlist_iter_t* iter);
+bool res_list_iter_next(intlist_t* list, intlist_iter_t* iter, int *value);
 
 /* resloop.c */
 
@@ -185,15 +187,16 @@ stream_t* res_stream_from_string(const char* string);
 
 /* restopo.c */
 
-host_t* res_local_host(void);
+void res_topo_create(void);
+void res_topo_add_host(host_t *host);
 host_t* res_topo_get_host(int sysid);
+host_t* res_local_host(void);
 resource_t* res_host_get_root(host_t* host);
 resource_t* res_local_root(void);
 resource_t* res_topo_get_root(int sysid);
+void res_topo_get_host_list(intlist_t* list);
 host_t* res_host_create(char* hostname, int index, resource_t* root);
 void res_host_destroy(host_t* host);
-void res_topo_create(void);
-void res_topo_add_host(host_t *host, int id);
 void res_host_dump(host_t* host);
 void res_topo_init(void);
 void res_topo_destroy(void);

@@ -114,8 +114,16 @@ void res_client_reply(client_t* client, const char* fmt, ...)
 
 void res_client_command_list(client_t* client)
 {
-  // Currently support only the local system
-  res_client_reply(client, "%s", "{ systems 0 }\n");
+  int sysid = 0;
+  intlist_iter_t iter = -1;
+  intlist_t* list = res_list_create();
+  res_topo_get_host_list(list);
+  res_list_iter_init(list, &iter);
+  res_client_reply(client, "%s", "{ systems ");
+  while (res_list_iter_next(list, &iter, &sysid)) {
+    res_client_reply(client, "%d ", sysid);
+  }
+  res_client_reply(client, "%s", "} \n");
 }
 
 void res_client_command_topology(client_t* client)

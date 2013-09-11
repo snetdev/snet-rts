@@ -3,6 +3,7 @@
 #include "resdefs.h"
 
 typedef struct intlist intlist_t;
+typedef int intlist_iter_t;
 
 struct intlist {
   int          *list;
@@ -146,5 +147,21 @@ void res_list_sort_ascend(intlist_t* list)
 void res_list_sort_descend(intlist_t* list)
 {
   qsort(list->list, list->num, sizeof(int), res_list_compar_descend);
+}
+
+void res_list_iter_init(intlist_t* list, intlist_iter_t* iter)
+{
+  *iter = -1;
+}
+
+bool res_list_iter_next(intlist_t* list, intlist_iter_t* iter, int *value)
+{
+  if (*iter + 1 < list->num) {
+    *iter += 1;
+    *value = list->list[*iter];
+    return true;
+  } else {
+    return false;
+  }
 }
 

@@ -179,8 +179,10 @@ int res_parse_complete(stream_t* stream)
   }
   if (p < end) {
     if (*p != '{') {
-      res_info("%s: Expected left brace, got 0x%02x\n",
-               __func__, (unsigned char) *p);
+      if ((unsigned char) *p >= '\x05') {
+        res_info("%s: Expected left brace, got 0x%02x\n",
+                 __func__, (unsigned char) *p);
+      }
       return Failure;
     } else {
       char *preamble = p;
