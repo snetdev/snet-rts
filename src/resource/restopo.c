@@ -370,19 +370,23 @@ char* res_system_resource_string(int id)
   host_t* host = res_topo_get_host(id);
   if (host) {
     resource_t* root = res_host_get_root(host);
-    int len, size = 10*1024;
-    char *str = xmalloc(size);
-    str[0] = '\0';
-    snprintf(str, size, "{ hardware %d host %s children 1 \n", id, host->hostname);
-    len = strlen(str);
-    str = res_resource_object_string(root, str, len, &size);
-    len += strlen(str + len);
-    if (len + 10 > size) {
-      size = len + 10;
-      str = xrealloc(str, size);
+    if (root) {
+      int len, size = 10*1024;
+      char *str = xmalloc(size);
+      str[0] = '\0';
+      snprintf(str, size, "{ hardware %d host %s children 1 \n", id, host->hostname);
+      len = strlen(str);
+      str = res_resource_object_string(root, str, len, &size);
+      len += strlen(str + len);
+      if (len + 10 > size) {
+        size = len + 10;
+        str = xrealloc(str, size);
+      }
+      snprintf(str + len, size - len, "} \n");
+      return str;
+    } else {
+      return NULL;
     }
-    snprintf(str + len, size - len, "} \n");
-    return str;
   } else {
     return NULL;
   }
