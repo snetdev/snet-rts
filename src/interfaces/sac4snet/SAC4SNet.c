@@ -475,7 +475,7 @@ static MPI_Datatype SAC4SNetBasetypeToMPIType( int basetype)
   return MPI_DATATYPE_NULL;
 }
 
-static void SAC4SNetMPIPackFun(void *sacdata, void *buf)
+static void SAC4SNetMPIPackFun(void *sacdata, mpi_buf_t *buf)
 {
   int *shape;
   void *contents = NULL;
@@ -491,9 +491,9 @@ static void SAC4SNetMPIPackFun(void *sacdata, void *buf)
     num_elems *= SACARGgetShape(data, i);
   }
 
-  SNetDistribPack(&type, buf, MPI_INT, 1);
-  SNetDistribPack(&dims, buf, MPI_INT, 1);
-  SNetDistribPack(shape, buf, MPI_INT, dims);
+  MPIPack(buf, &type, MPI_INT, 1);
+  MPIPack(buf, &dims, MPI_INT, 1);
+  MPIPack(buf, shape, MPI_INT, dims);
 
   SNetMemFree(shape);
 
@@ -512,28 +512,28 @@ static void SAC4SNetMPIPackFun(void *sacdata, void *buf)
       break;
   }
 
-  SNetDistribPack(contents, buf, SAC4SNetBasetypeToMPIType(type), num_elems);
+  MPIPack(buf, contents, SAC4SNetBasetypeToMPIType(type), num_elems);
   SNetMemFree(contents);
 }
 
-static void *SAC4SNetMPIUnpackFun(void *buf)
+static void *SAC4SNetMPIUnpackFun(mpi_buf_t *buf)
 {
   int *shape;
   SACarg *result = NULL;
   void *contents = NULL;
   int type, dims, num_elems = 1;
 
-  SNetDistribUnpack(&type, buf, MPI_INT, 1);
-  SNetDistribUnpack(&dims, buf, MPI_INT, 1);
+  MPIUnpack(buf, &type, MPI_INT, 1);
+  MPIUnpack(buf, &dims, MPI_INT, 1);
   shape = SNetMemAlloc(dims * sizeof(int));
-  SNetDistribUnpack(shape, buf, MPI_INT, dims);
+  MPIUnpack(buf, shape, MPI_INT, dims);
 
   for (int i = 0; i < dims; i++) {
     num_elems *= shape[i];
   }
 
   contents = SNetMemAlloc(num_elems * sizeOfType(type));
-  SNetDistribUnpack(contents, buf, SAC4SNetBasetypeToMPIType(type), num_elems);
+  MPIUnpack(buf, contents, SAC4SNetBasetypeToMPIType(type), num_elems);
 
   switch (type) {
     case SACint:

@@ -13,20 +13,6 @@
 static snet_atomiccnt_t recid_sequencer __attribute__ ((aligned (LINE_SIZE)))
                         = SNET_ATOMICCNT_INITIALIZER(0);
 
-/* ***************************************************************************/
-
-/* defines the snet_recid_list_t */
-#define LIST_NAME RecId /* SNetRecIdListFUNC */
-#define LIST_TYPE_NAME recid
-#define LIST_VAL snet_record_id_t
-#define LIST_CMP SNetRecordIdEquals
-#include "list-template.c"
-#undef LIST_CMP
-#undef LIST_VAL
-#undef LIST_TYPE_NAME
-#undef LIST_NAME
-
-
 /*****************************************************************************
  * Helper functions
  ****************************************************************************/
@@ -144,6 +130,8 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       break;
     case REC_detref:
       DETREF_REC( rec, seqnr) = va_arg( args, long);
+      DETREF_REC( rec, location) = va_arg( args, int);
+      DETREF_REC( rec, senderloc) = SNetDistribGetNodeId();
       DETREF_REC( rec, leave) = va_arg( args, void*);
       DETREF_REC( rec, detref) = va_arg( args, void*);
       break;
@@ -499,6 +487,8 @@ void SNetRecSerialise(
       enumConversion = DATA_REC( rec, interface_id);
       packInts(buf, 1, &enumConversion);
 
+      SNetRecDetrefStackSerialise(rec, buf);
+
       MAP_DEQUEUE_EACH( DATA_REC( rec, fields), key, val) {
         SNetMemFree(val);
         (void) key;
@@ -512,6 +502,9 @@ void SNetRecSerialise(
       packInts(buf, 1, &TERM_REC(rec, local));
       break;
     case REC_trigger_initialiser:
+      break;
+    case REC_detref:
+      SNetRecDetrefRecSerialise(rec, buf);
       break;
     default:
       SNetRecUnknown(__func__, rec);
@@ -540,7 +533,10 @@ snet_record_t *SNetRecDeserialise(
       DATA_REC( result, mode) = enumConversion;
 
       unpackInts(buf, 1, &enumConversion);
-      DATA_REC( result, mode) = enumConversion;
+      DATA_REC( result, interface_id) = enumConversion;
+
+      DATA_REC( result, detref) = NULL;
+      SNetRecDetrefStackDeserialise(result, buf);
       break;
     case REC_sort_end:
       result = SNetRecCreate(enumConversion, 0, 0);
@@ -553,6 +549,9 @@ snet_record_t *SNetRecDeserialise(
       break;
     case REC_trigger_initialiser:
       result = SNetRecCreate(enumConversion);
+      break;
+    case REC_detref:
+      result = SNetRecDetrefRecDeserialise(buf);
       break;
     default:
       SNetUtilDebugFatal("[%s]: Unknown control record description [%d].\n",

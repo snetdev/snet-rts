@@ -82,13 +82,14 @@ void SNetFeedbackLeave(snet_record_t *rec, landing_t *landing, fifo_t *detfifo)
   }
 
   // detref must refer to this DetLeave node
-  if (detref->leave != landing) {
-    SNetUtilDebugFatal("[%s]: leave %p != landing %p.", __func__,
-                       detref->leave, landing);
+  if (detref->leave != landing || detref->location != SNetDistribGetNodeId()) {
+    SNetUtilDebugFatal("[%s]: leave %p.%d != landing %p.%d.", __func__,
+                       detref->leave, detref->location,
+                       landing, SNetDistribGetNodeId());
   }
 
   // reference counter must be at least two
-  if (detref->refcount < 2) {
+  if (detref->refcount < DETREF_MIN_REFCOUNT) {
     SNetUtilDebugFatal("[%s]: refcnt %d < 1.", __func__, detref->refcount);
   }
 
@@ -242,10 +243,14 @@ void SNetNodeFeedback(snet_stream_desc_t *desc, snet_record_t *rec)
           break;
 
         case REC_detref:
-          if (DETREF_REC( rec, leave) == land) {
+          if (DETREF_REC( rec, leave) == land &&
+              DETREF_REC( rec, location) == SNetDistribGetNodeId())
+          {
             if (DETREF_REC( rec, seqnr) == -1L) {
               assert(fb3->terminate == FeedbackInitial);
               fb3->terminate = FeedbackDraining;
+            } else {
+              SNetDetLeaveCheckDetref(rec, &fb3->detfifo);
             }
             SNetRecDestroy(rec);
             FeedbackCheckBusy(fb3);
@@ -289,7 +294,11 @@ void SNetTermFeedback(landing_t *land, fifo_t *fifo)
       SNetFifoPut(fifo, fb1->outdesc);
     }
     if (fb1->instdesc) {
-      snet_record_t *recdet = SNetRecCreate(REC_detref, -1L, fb1->feedback3, NULL);
+      /* Send the instance a fake REC_detref to wake it up, if need be. */
+      const long fake_sequence_number = -1L;
+      const int dest_location = SNetDistribGetNodeId();
+      snet_record_t *recdet = SNetRecCreate(REC_detref, fake_sequence_number,
+                                            dest_location, fb1->feedback3, NULL);
       land->worker = SNetThreadGetSelf();
       SNetWrite(&fb1->instdesc, recdet, false);
       SNetFifoPut(fifo, fb1->instdesc);
@@ -367,46 +376,41 @@ snet_stream_t *SNetFeedback(
   if (SNetFeedbackDeterministic()) {
     return SNetDripBack(input, info, location, back_patterns, guards, box_a);
   }
+
   detlevel = SNetDetSwapLevel(0);
   locvec = SNetLocvecGet(info);
   SNetLocvecFeedbackEnter(locvec);
-  input = SNetRouteUpdate(info, input, location);
 
-  if (SNetDistribIsNodeLocation(location)) {
-    output = SNetStreamCreate(0);
-    node = SNetNodeNew(NODE_feedback, &input, 1, &output, 1,
-                       SNetNodeFeedback, SNetStopFeedback, SNetTermFeedback);
-    farg = NODE_SPEC(node, feedback);
+  output = SNetStreamCreate(0);
+  node = SNetNodeNew(NODE_feedback, location, &input, 1, &output, 1,
+                     SNetNodeFeedback, SNetStopFeedback, SNetTermFeedback);
+  farg = NODE_SPEC(node, feedback);
 
-    /* fill in the node argument */
-    farg->input = input;
-    farg->output = output;
-    farg->back_patterns = back_patterns;
-    farg->guards = guards;
-    farg->stopping = 0;
+  /* fill in the node argument */
+  farg->input = input;
+  farg->output = output;
+  farg->back_patterns = back_patterns;
+  farg->guards = guards;
+  farg->stopping = 0;
 
-    /* Create the instance network */
-    farg->instance = SNetNodeStreamCreate(node);
-    farg->feedback = (*box_a)(farg->instance, info, location);
-    farg->feedback = SNetRouteUpdate(info, farg->feedback, location);
+  /* Create the instance network */
+  farg->instance = SNetNodeStreamCreate(node);
+  SNetSubnetIncrLevel();
+  farg->feedback = (*box_a)(farg->instance, info, location);
+  SNetSubnetDecrLevel();
+  STREAM_DEST(farg->feedback) = node;
+  SNetNodeTableAdd(farg->feedback);
 
-    /* Feedback loop should end at this node. */
-    assert(STREAM_DEST(farg->feedback) == NULL);
-    STREAM_DEST(farg->feedback) = node;
+  /* Create two self-referencing streams. */
+  farg->selfref2 = SNetNodeStreamCreate(node);
+  STREAM_DEST(farg->selfref2) = node;
+  SNetNodeTableAdd(farg->selfref2);
+  farg->selfref4 = SNetNodeStreamCreate(node);
+  STREAM_DEST(farg->selfref4) = node;
+  SNetNodeTableAdd(farg->selfref4);
 
-    /* Create two self-referencing streams. */
-    farg->selfref2 = SNetNodeStreamCreate(node);
-    STREAM_DEST(farg->selfref2) = node;
-    farg->selfref4 = SNetNodeStreamCreate(node);
-    STREAM_DEST(farg->selfref4) = node;
-
-    farg->entity = SNetEntityCreate( ENTITY_fbdisp, location, locvec,
-                                     "<feedback>", NULL, (void*)farg);
-  } else {
-    SNetExprListDestroy( guards);
-    SNetVariantListDestroy(back_patterns);
-    output = input;
-  }
+  farg->entity = SNetEntityCreate( ENTITY_fbdisp, location, locvec,
+                                   "<feedback>", NULL, (void*)farg);
 
   SNetLocvecFeedbackLeave(locvec);
   SNetDetSwapLevel(detlevel);

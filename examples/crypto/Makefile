@@ -3,7 +3,7 @@ TARGETS    = crypto
 BOXLIB     = libcrypto.a
 ARFLAGS	   = rcs
 DEPS       = $(BOXLIB)
-SNETCFLAGS = -g -O1 -v1 -lcrypto -lcrypt -static
+SNETCFLAGS = -g -O1 -v1 -lcrypto -lcrypt
 CLEANS	   = $(DEPS)
 
 include $(SNET_MISC)/snet.mkf

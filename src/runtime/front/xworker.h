@@ -1,6 +1,15 @@
 #ifndef _XWORKER_H
 #define _XWORKER_H
 
+/* A worker can be in either of two roles: */
+typedef enum worker_role {
+  /* Data workers process records. */
+  DataWorker,
+
+  /* Input manager processes incoming connections. */
+  InputManager,
+} worker_role_t;
+
 /* A work item represents a license to read from a descriptor. */
 typedef struct work_item {
   /* A pointer to the next work item in the to-do list. */
@@ -71,6 +80,9 @@ typedef struct worker_loot {
 struct worker {
   /* A unique ID used in locking to identify owners. */
   int                    id;
+
+  /* The role a worker can be in: data worker or manager. */
+  worker_role_t          role;
 
   /* The ID of the current or last visited worker when stealing. */
   int                    victim_id;

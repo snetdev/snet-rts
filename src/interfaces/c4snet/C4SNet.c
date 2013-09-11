@@ -66,7 +66,7 @@ static void (*MemFree)(void*) = &SNetMemFree;
 #include <mpi.h>
 #include "pack.h"
 
-static void MPIPackFun(c4snet_data_t *data, void *buf);
+static void MPIPackFun(c4snet_data_t *data, mpi_buf_t *buf);
 static c4snet_data_t *MPIUnpackFun(void *buf);
 #endif
 
@@ -96,8 +96,10 @@ static int sizeOfType(c4snet_type_t type)
     case CTYPE_float: return sizeof(float);
     case CTYPE_double: return sizeof(double);
     case CTYPE_ldouble: return sizeof(long double);
+    case CTYPE_pointer: return sizeof(void*);
     default:
-      SNetUtilDebugFatal("Unknown type in C4SNet language interface!");
+      SNetUtilDebugFatal("[%s]: Unknown type %d in C4SNet language interface!",
+                         __func__, type);
   }
 
   return 0;
@@ -131,7 +133,8 @@ static void SerialiseData(FILE *file, c4snet_type_t type, void *data)
     case CTYPE_float: fprintf(file, "%.32f", *(float *) data); break;
     case CTYPE_double: fprintf(file, "%.32le", *(double *) data); break;
     case CTYPE_ldouble: fprintf(file, "%.32Le", *(long double *) data); break;
-    default: SNetUtilDebugFatal("Unknown type in C4SNet.");
+    case CTYPE_pointer: fprintf(file, "%p", *(void **) data); break;
+    default: SNetUtilDebugFatal("[%s]: Unknown type %d in C4SNet.", __func__, type);
   }
 }
 
@@ -150,7 +153,8 @@ static void C4SNetSerialise(FILE *file, c4snet_data_t *data)
     case CTYPE_float: fprintf(file, "(float"); break;
     case CTYPE_double: fprintf(file, "(double"); break;
     case CTYPE_ldouble: fprintf(file, "(long double"); break;
-    default: SNetUtilDebugFatal("Unknown type in C4SNet.");
+    case CTYPE_pointer: fprintf(file, "(pointer"); break;
+    default: SNetUtilDebugFatal("[%s]: Unknown type %d in C4SNet.", __func__, data->type);
   }
 
   if (data->vtype == VTYPE_array) fprintf(file, "[%lu]", data->size);
@@ -200,6 +204,7 @@ static void DeserialiseData(FILE *file, c4snet_type_t type, void *data)
     case CTYPE_float: fmt = "%f"; break;
     case CTYPE_double: fmt = "%lf"; break;
     case CTYPE_ldouble: fmt = "%Lf"; break;
+    case CTYPE_pointer: fmt = "%p"; break;
     default: SNetUtilDebugFatal("[%s]: FIXME invalid type %d.", __func__, type);
   }
 
@@ -234,15 +239,17 @@ static c4snet_data_t *C4SNetDeserialise(FILE *file)
   else if(strncmp(buf, "float", size) == 0)           temp->type = CTYPE_float;
   else if(strncmp(buf, "double", size) == 0)          temp->type = CTYPE_double;
   else if(strncmp(buf, "long double", size) == 0)     temp->type = CTYPE_ldouble;
-  else SNetUtilDebugFatal("C4SNet interface encountered an unknown type.");
+  else if(strncmp(buf, "pointer", size) == 0)         temp->type = CTYPE_pointer;
+  else SNetUtilDebugFatal("[%s]: C4SNet interface encountered an unknown type.", __func__);
 
   if (temp->vtype == VTYPE_simple) {
     DeserialiseData(file, temp->type, &temp->data);
   } else {
     temp->data.ptr = MemAlloc(AllocatedSpace(temp));
     for (int i = 0; i < temp->size; i++) {
-      if (i > 0 && fgetc(file) != ',') SNetUtilDebugFatal("C4SNet: Parse error deserialising data.");
-
+      if (i > 0 && fgetc(file) != ',') {
+        SNetUtilDebugFatal("[%s]: Parse error deserialising data.", __func__);
+      }
       DeserialiseData(file, temp->type,
                       (char*) temp->data.ptr + i * C4SNetSizeof(temp));
     }
@@ -467,37 +474,37 @@ c4snet_data_t *C4SNetDeepCopy(c4snet_data_t *data)
 static MPI_Datatype TypeToMPIType(c4snet_type_t type)
 {
   switch (type) {
-    case CTYPE_uchar: return MPI_UNSIGNED_CHAR;
-    case CTYPE_char: return MPI_CHAR;
-    case CTYPE_ushort: return MPI_UNSIGNED_SHORT;
-    case CTYPE_short: return MPI_SHORT;
-    case CTYPE_uint: return MPI_UNSIGNED;
-    case CTYPE_int: return MPI_INT;
-    case CTYPE_ulong: return MPI_UNSIGNED_LONG;
-    case CTYPE_long: return MPI_LONG;
-    case CTYPE_float: return MPI_FLOAT;
-    case CTYPE_double: return MPI_DOUBLE;
+    case CTYPE_uchar:   return MPI_UNSIGNED_CHAR;
+    case CTYPE_char:    return MPI_CHAR;
+    case CTYPE_ushort:  return MPI_UNSIGNED_SHORT;
+    case CTYPE_short:   return MPI_SHORT;
+    case CTYPE_uint:    return MPI_UNSIGNED;
+    case CTYPE_int:     return MPI_INT;
+    case CTYPE_ulong:   return MPI_UNSIGNED_LONG;
+    case CTYPE_long:    return MPI_LONG;
+    case CTYPE_float:   return MPI_FLOAT;
+    case CTYPE_double:  return MPI_DOUBLE;
     case CTYPE_ldouble: return MPI_LONG_DOUBLE;
-    default: SNetUtilDebugFatal("Unknown MPI datatype!\n");
+    case CTYPE_pointer: return MPI_VOID_POINTER;
+    default: SNetUtilDebugFatal("[%s]: Unknown C4SNet datatype %d.\n", __func__, type);
   }
 
   return MPI_CHAR;
 }
 
-static void MPIPackFun(c4snet_data_t *data, void *buf)
+static void MPIPackFun(c4snet_data_t *data, mpi_buf_t *buf)
 {
   int vtype = data->vtype,
       type = data->type;
 
-  SNetDistribPack(&vtype, buf, MPI_INT, 1);
-  SNetDistribPack(&data->size, buf, MPI_INT, 1);
-  SNetDistribPack(&type, buf, MPI_INT, 1);
+  MPIPack(buf, &vtype, MPI_INT, 1);
+  MPIPack(buf, &data->size, MPI_INT, 1);
+  MPIPack(buf, &type, MPI_INT, 1);
 
   if (data->vtype == VTYPE_array) {
-    SNetDistribPack(data->data.ptr, buf, TypeToMPIType(data->type),
-                    data->size);
+    MPIPack(buf, data->data.ptr, TypeToMPIType(data->type), data->size);
   } else {
-    SNetDistribPack(&data->data, buf, TypeToMPIType(data->type), 1);
+    MPIPack(buf, &data->data, TypeToMPIType(data->type), 1);
   }
 }
 
@@ -507,16 +514,16 @@ static c4snet_data_t *MPIUnpackFun(void *buf)
   c4snet_data_t *result;
   int vtype, type, count;
 
-  SNetDistribUnpack(&vtype, buf, MPI_INT, 1);
-  SNetDistribUnpack(&count, buf, MPI_INT, 1);
-  SNetDistribUnpack(&type, buf, MPI_INT, 1);
+  MPIUnpack(buf, &vtype, MPI_INT, 1);
+  MPIUnpack(buf, &count, MPI_INT, 1);
+  MPIUnpack(buf, &type, MPI_INT, 1);
 
   if (vtype == VTYPE_array) {
     result = C4SNetAlloc(type, count, &tmp);
-    SNetDistribUnpack(tmp, buf, TypeToMPIType(type), count);
+    MPIUnpack(buf, tmp, TypeToMPIType(type), count);
   } else {
-    result = C4SNetCreate(type, 1, &tmp);
-    SNetDistribUnpack(tmp, buf, TypeToMPIType(type), 1);
+    result = C4SNetAlloc(type, 1, &tmp);
+    MPIUnpack(buf, tmp, TypeToMPIType(type), 1);
   }
 
   return result;

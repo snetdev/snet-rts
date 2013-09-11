@@ -10,6 +10,7 @@ snet_stream_t *SNetStreamCreate(int capacity)
   stream = SNetNewAlign(snet_stream_t);
   STREAM_FROM(stream) = NULL;
   STREAM_DEST(stream) = NULL;
+  stream->table_index = 0;
 
   return stream;
 }
@@ -17,11 +18,15 @@ snet_stream_t *SNetStreamCreate(int capacity)
 /* Free a stream */
 void SNetStreamDestroy(snet_stream_t *stream)
 {
-  trace(__func__);
-
-  stream->from = NULL;
-  stream->dest = NULL;
   SNetDelete(stream);
+}
+
+/* Dummy function needed for linking with other libraries. */
+void *SNetStreamRead(snet_stream_desc_t *sd)
+{
+  /* impossible */
+  assert(0);
+  abort();
 }
 
 /* Enqueue a record to a stream and add a note to the todo list. */
@@ -60,8 +65,8 @@ static snet_stream_desc_t *SNetMergeStreams(snet_stream_desc_t **desc_ptr)
   /* Increase the reference count by the number of added records. */
   AAF(&(next->refs), count);
 
-  /* Report statistics. */
-  if (SNetDebug()) {
+  /* Report garbage collection statistics. */
+  if (SNetDebugGC()) {
     printf("%s: collecting %d recs, %d drefs, %d nrefs\n",
             __func__, count, desc->refs, next->refs);
   }
@@ -120,7 +125,11 @@ void SNetStreamWork(snet_stream_desc_t *desc, worker_t *worker)
   snet_record_t *rec    = (snet_record_t *) SNetFifoGet(&desc->fifo);
   landing_t     *land   = desc->landing;
 
-  assert(rec);
+  if (SNetDebugSL()) {
+    printf("work %s by %d@%d\n", SNetLandingName(land), worker->id,
+                                 SNetDistribGetNodeId());
+  }
+
   worker->continue_desc = NULL;
   (*land->node->work)(desc, rec);
   if (land->type != LAND_box && land->id == worker->id) {
@@ -132,6 +141,12 @@ void SNetStreamWork(snet_stream_desc_t *desc, worker_t *worker)
     rec = worker->continue_rec;
     desc = worker->continue_desc;
     land = desc->landing;
+
+    if (SNetDebugSL()) {
+      printf("work %s by %d@%d\n", SNetLandingName(land), worker->id,
+                                   SNetDistribGetNodeId());
+    }
+
     worker->continue_desc = NULL;
     (*land->node->work)(desc, rec);
     if (land->type != LAND_box && land->id == worker->id) {
@@ -153,7 +168,9 @@ void SNetStreamClose(snet_stream_desc_t *desc)
 /* Deallocate a stream, but remember it's destination node. */
 void SNetStopStream(snet_stream_t *stream, fifo_t *fifo)
 {
-  SNetFifoPut(fifo, STREAM_DEST(stream));
+  if (STREAM_DEST(stream)) {
+    SNetFifoPut(fifo, STREAM_DEST(stream));
+  }
   SNetStreamDestroy(stream);
 }
 
@@ -164,8 +181,24 @@ void SNetDescDone(snet_stream_desc_t *desc)
   assert(desc->refs > 0);
   if (DESC_DECR(desc) == 0) {
     landing_t *land = desc->landing;
+
+    if (SNetDebugSL()) {
+      printf("[%s.%d]: Closing stream (%s to %s) to %s %s\n", __func__,
+             SNetDistribGetNodeId(), SNetNodeName(desc->stream->from),
+             SNetNodeName(desc->stream->dest), SNetLandingName(land),
+             (land->type == LAND_box) ? LAND_NODE_SPEC(land, box)->boxname : "");
+    }
+
     SNetStreamClose(desc);
     SNetLandingDone(land);
+  }
+  else if (SNetDebugSL()) {
+    landing_t *land = desc->landing;
+    printf("[%s.%d]: Decrementing stream (%s to %s) to %s %s to %d refs\n", __func__,
+           SNetDistribGetNodeId(), SNetNodeName(desc->stream->from),
+           SNetNodeName(desc->stream->dest), SNetLandingName(land),
+           (land->type == LAND_box) ? LAND_NODE_SPEC(land, box)->boxname : "",
+           desc->refs);
   }
 }
 
@@ -181,6 +214,67 @@ void SNetDescRelease(snet_stream_desc_t *desc, int count)
   }
 }
 
+/* Maybe fill in a newly created descriptor structure for Distributed S-Net. */
+static bool SNetStreamDistributed(
+    snet_stream_desc_t *desc,
+    snet_stream_desc_t *prev)
+{
+  int   location;
+  int   delta = DESC_DEST(prev)->subnet_level - DESC_DEST(desc)->subnet_level;
+
+  /* Check for the end of a subnetwork. */
+  switch (delta) {
+    case 1: {
+        /* Peek at the top of the stack of future landings. */
+        landing_t *next = SNetStackTop(&prev->landing->stack);
+        /* If the top-of-stack is a 'remote' landing then insert a transfer stream. */
+        if (next->type == LAND_remote) {
+          landing_remote_t *remote = LAND_SPEC(next, remote);
+          if (remote->cont_loc == SNetDistribGetNodeId()) {
+            /* Restore a previously created continuation on this same location. */
+            (*remote->stackfunc)(next, prev);
+            return false;
+          } else {
+            /* Insert a 'transfer' landing to redirect to a remote location. */
+            landing_t *discard = SNetPopLanding(prev);
+            assert(remote->cont_loc >= 0);
+            desc->landing = SNetNewLanding(DESC_DEST(desc), prev, LAND_transfer);
+            (*remote->retfunc)(next, desc, prev);
+            SNetLandingDone(discard);
+            return true;
+          }
+        }
+      }
+      break;
+
+    case 0: /*OK*/
+      break;
+
+    case -1: /*OK*/
+      break;
+
+    default: SNetUtilDebugFatal("[%s.%d]: Invalid delta %d\n", __func__,
+                                SNetDistribGetNodeId(), delta);
+  }
+
+  /* Copy destination locations for indexed placement from previous landing. */
+  if ((location = DESC_DEST(desc)->location) == LOCATION_UNKNOWN) {
+    const int split_level = DESC_NODE(prev)->loc_split_level;
+    assert(split_level > 0);
+    location = prev->landing->dyn_locs[split_level - 1];
+    assert(location >= 0);
+  }
+  /* Redirect streams for remote locations to a transfer landing. */
+  if (location != SNetDistribGetNodeId()) {
+    desc->landing = SNetNewLanding(DESC_DEST(desc), prev, LAND_transfer);
+    SNetTransferOpen(location, desc, prev);
+    return true;
+  }
+
+  /* No landing has been created yet. */
+  return false;
+}
+
 /* Open a descriptor to an output stream.
  *
  * The source landing which opens the stream is determined by parameter 'prev'.
@@ -192,6 +286,13 @@ void SNetDescRelease(snet_stream_desc_t *desc, int count)
  * and push this landing onto a stack of future landings.
  * (2) Collectors should retrieve their designated landing from this stack
  * and verify that it is theirs.
+ * (3) Each star instance should create the subsequent star incarnation
+ * and push this incarnation onto the stack of landings.
+ * (4) When a destination landing is part of subnetwork of an
+ * indexed placement combinator then the node location must be
+ * retrieved from the 'dyn_locs' attribute of the previous landing.
+ * (5) When the location is on a different machine then a 'transfer'
+ * landing must be created instead which connects to a remote location.
  */
 snet_stream_desc_t *SNetStreamOpen(
     snet_stream_t *stream,
@@ -201,13 +302,31 @@ snet_stream_desc_t *SNetStreamOpen(
 
   trace(__func__);
 
+  /* Create and initialize a new descriptor. */
   desc = SNetNewAlign(snet_stream_desc_t);
   DESC_STREAM(desc) = stream;
   desc->source = prev->landing;
   desc->refs = 1;
   SNetFifoInit(&desc->fifo);
 
+  /* Distributed S-Net inserts extra streams for inter-node record transfer. */
+  if (SNetDistribIsDistributed()) {
+    if (SNetStreamDistributed(desc, prev)) {
+      return desc;
+    }
+  }
+
+  /* Construct a destination landing, which is node-specific. */
   switch (NODE_TYPE(stream->dest)) {
+
+    case NODE_collector:
+      /* Collectors receive the previously created landing from the stack */
+      desc->landing = SNetPopLanding(prev);
+      assert(desc->landing);
+      assert(desc->landing->type == LAND_collector);
+      assert(DESC_NODE(desc) == STREAM_DEST(stream));
+      assert(desc->landing->refs > 0);
+      break;
 
     case NODE_filter:
     case NODE_nameshift:
@@ -252,15 +371,6 @@ snet_stream_desc_t *SNetStreamOpen(
       DESC_LAND_SPEC(desc, zipper)->head = NULL;
       break;
 
-    case NODE_collector:
-      /* Collectors receive the previously created landing from the stack */
-      desc->landing = SNetPopLanding(prev);
-      assert(desc->landing);
-      assert(desc->landing->type == LAND_collector);
-      assert(DESC_NODE(desc) == STREAM_DEST(stream));
-      assert(desc->landing->refs > 0);
-      break;
-
     case NODE_observer:
       desc->landing = SNetNewLanding(DESC_DEST(desc), prev, LAND_observer);
       DESC_LAND_SPEC(desc, observer)->outdesc = NULL;
@@ -273,9 +383,11 @@ snet_stream_desc_t *SNetStreamOpen(
       assert(desc->landing->type == LAND_empty);
       break;
 
+    /* Impossible cases. */
     case NODE_input:
     case NODE_identity:
     case NODE_garbage:
+    case NODE_transfer:
     default:
       desc->landing = NULL;
       assert(0);
@@ -283,17 +395,10 @@ snet_stream_desc_t *SNetStreamOpen(
   }
 
   /* if (SNetVerbose() && SNetNodeGetWorkerCount() <= 1) {
-    printf("%s: %s, %s\n", __func__,
+    printf("[%s.%d]: %s -> %s\n", __func__, SNetDistribGetNodeId(),
            SNetNodeName(desc->landing->node), SNetLandingName(desc->landing));
   } */
 
   return desc;
-}
-
-void *SNetStreamRead(snet_stream_desc_t *sd)
-{
-  /* impossible */
-  assert(0);
-  abort();
 }
 

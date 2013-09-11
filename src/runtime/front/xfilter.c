@@ -132,13 +132,6 @@ static snet_record_t *ApplyFilter(
   bool                   done = false;
   int                    i;
 
-#ifdef DONT_USE_USER_EVENT_LOGGING
-  /* Emit a monitoring message of a record read to be processed by a filter */
-  SNetThreadingEventSignal( ent,
-      SNetMonInfoCreate( EV_MESSAGE_IN, MON_RECORD, rec)
-      );
-#endif
-
   LIST_ENUMERATE( farg->guard_exprs, i, expr) {
     if (SNetEevaluateBool( expr, rec) && !done) {
       done = true;
@@ -173,13 +166,6 @@ static snet_record_t *ApplyFilter(
         }
 
         SNetRecFlowInherit( farg->input_variant, rec, out_rec);
-
-#ifdef DONT_USE_USER_EVENT_LOGGING
-        /* Emit a monitoring message of a record write by a filter started */
-        SNetThreadingEventSignal( ent,
-            SNetMonInfoCreate( EV_MESSAGE_OUT, MON_RECORD, out_rec)
-            );
-#endif
       } /* forall instruction lists */
     } /* if a guard is true first time */
   }
@@ -268,7 +254,7 @@ void SNetStopFilter(node_t *node, fifo_t *fifo)
 /**
  * Convenience function for creating filter and translate
  */
-static snet_stream_t* CreateFilter( snet_stream_t *instream,
+static snet_stream_t* CreateFilter( snet_stream_t *input,
     snet_info_t *info,
     int location,
     snet_variant_t *input_variant,
@@ -283,14 +269,11 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
   /* Check for bypass
    * - if it is a bypass, exit out early and do not create any component
    */
-  instream = SNetRouteUpdate(info, instream, location);
-  if(SNetDistribIsNodeLocation(location) &&
-      !FilterIsBypass(input_variant, guard_exprs, instr_list))
-  {
+  if ( !FilterIsBypass(input_variant, guard_exprs, instr_list)) {
     assert(guard_exprs != NULL && SNetExprListLength(guard_exprs) > 0);
 
     output = SNetStreamCreate(0);
-    node = SNetNodeNew(NODE_filter, &instream, 1, &output, 1,
+    node = SNetNodeNew(NODE_filter, location, &input, 1, &output, 1,
                        SNetNodeFilter, SNetStopFilter, SNetTermFilter);
     farg = NODE_SPEC(node, filter);
     farg->output = output;
@@ -299,7 +282,6 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
     farg->filter_instructions = instr_list;
     farg->entity = SNetEntityCreate( ENTITY_filter, location, SNetLocvecGet(info),
                                      "<filter>", NULL, (void*)farg);
-
   } else {
     int i;
     snet_expr_t *expr;
@@ -312,7 +294,7 @@ static snet_stream_t* CreateFilter( snet_stream_t *instream,
 
     SNetMemFree( instr_list);
     SNetExprListDestroy(guard_exprs);
-    output = instream;
+    output = input;
   }
 
   return output;

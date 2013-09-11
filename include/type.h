@@ -12,7 +12,8 @@ typedef struct {
 typedef enum {
   nodist = 0,
   mpi,
-  scc
+  scc,
+  zmq,
 } snet_distrib_t;
 
 #endif

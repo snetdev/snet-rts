@@ -108,8 +108,11 @@ void SNetNodeDripBack(snet_stream_desc_t *desc, snet_record_t *rec)
           break;
 
         case REC_detref:
-          if (DETREF_REC( rec, leave) == land) {
+          if (DETREF_REC( rec, leave) == land &&
+              DETREF_REC( rec, location) == SNetDistribGetNodeId())
+          {
             assert(!via_access);
+            SNetDetLeaveCheckDetref(rec, &db2->detfifo);
             if (DETREF_REC( rec, detref) == SNetFifoPeekFirst(&db2->detfifo)) {
               DripBackCheckBusy(db2);
             }
@@ -246,44 +249,38 @@ snet_stream_t *SNetDripBack(
   int             detlevel;
 
   trace(__func__);
+
   detlevel = SNetDetSwapLevel(0);
   locvec = SNetLocvecGet(info);
   SNetLocvecFeedbackEnter(locvec);
-  input = SNetRouteUpdate(info, input, location);
 
-  if (SNetDistribIsNodeLocation(location)) {
-    output = SNetStreamCreate(0);
-    node = SNetNodeNew(NODE_dripback, &input, 1, &output, 1,
-                       SNetNodeDripBack, SNetStopDripBack, SNetTermDripBack);
-    darg = NODE_SPEC(node, dripback);
+  output = SNetStreamCreate(0);
+  node = SNetNodeNew(NODE_dripback, location, &input, 1, &output, 1,
+                     SNetNodeDripBack, SNetStopDripBack, SNetTermDripBack);
+  darg = NODE_SPEC(node, dripback);
 
-    /* fill in the node argument */
-    darg->input = input;
-    darg->output = output;
-    darg->back_patterns = back_patterns;
-    darg->guards = guards;
-    darg->stopping = 0;
+  /* fill in the node argument */
+  darg->input = input;
+  darg->output = output;
+  darg->back_patterns = back_patterns;
+  darg->guards = guards;
+  darg->stopping = 0;
 
-    /* Create the instance network */
-    darg->instance = SNetNodeStreamCreate(node);
-    darg->dripback = (*box_a)(darg->instance, info, location);
-    darg->dripback = SNetRouteUpdate(info, darg->dripback, location);
+  /* Create the instance network */
+  darg->instance = SNetNodeStreamCreate(node);
+  SNetSubnetIncrLevel();
+  darg->dripback = (*box_a)(darg->instance, info, location);
+  SNetSubnetDecrLevel();
+  STREAM_DEST(darg->dripback) = node;
+  SNetNodeTableAdd(darg->dripback);
 
-    /* DripBack loop should end at this node. */
-    assert(STREAM_DEST(darg->dripback) == NULL);
-    STREAM_DEST(darg->dripback) = node;
+  /* Create one self-referencing stream. */
+  darg->selfref = SNetNodeStreamCreate(node);
+  STREAM_DEST(darg->selfref) = node;
+  SNetNodeTableAdd(darg->selfref);
 
-    /* Create one self-referencing stream. */
-    darg->selfref = SNetNodeStreamCreate(node);
-    STREAM_DEST(darg->selfref) = node;
-
-    darg->entity = SNetEntityCreate( ENTITY_fbdisp, location, locvec,
-                                     "<feedback>", NULL, (void*)darg);
-  } else {
-    SNetExprListDestroy( guards);
-    SNetVariantListDestroy(back_patterns);
-    output = input;
-  }
+  darg->entity = SNetEntityCreate( ENTITY_fbdisp, location, locvec,
+                                   "<feedback>", NULL, (void*)darg);
 
   SNetLocvecFeedbackLeave(locvec);
   SNetDetSwapLevel(detlevel);

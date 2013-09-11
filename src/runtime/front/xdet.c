@@ -50,12 +50,9 @@ void SNetRecDetrefCopy(snet_record_t *new_rec, snet_record_t *old_rec)
   assert(DATA_REC(new_rec, detref) == NULL);
 
   if (old_stack) {
-    new_stack = SNetStackCreate();
-    SNetStackCopy(new_stack, old_stack);
+    new_stack = SNetStackClone(old_stack);
     STACK_FOR_EACH(new_stack, node, detref) {
-      int n = detref->refcount;
       DETREF_INCR(detref);
-      assert(n >= 2);
     }
     DATA_REC(new_rec, detref) = new_stack;
     BAR();
@@ -67,25 +64,47 @@ void SNetRecDetrefDestroy(snet_record_t *rec, snet_stream_desc_t **desc_ptr)
 {
   snet_stack_t  *stack = DATA_REC(rec, detref);
   detref_t      *detref;
+  snet_record_t *recdet;
 
   trace(__func__);
   if (stack) {
     DATA_REC(rec, detref) = NULL;
     STACK_POP_ALL(stack, detref) {
-      assert(detref->refcount >= 2);
+      assert(detref->refcount >= DETREF_MIN_REFCOUNT);
       if (DETREF_DECR(detref) == 1) {
         /* First create and send a REC_detref. */
-        snet_record_t *tmp = SNetRecCreate(REC_detref,
-                             detref->seqnr, detref->leave, detref);
+        recdet = SNetRecCreate(REC_detref, detref->seqnr, detref->location,
+                               detref->leave, detref);
         /* Then decrement refcount further down to zero. */
         assert(detref->refcount == 1);
         DETREF_DECR(detref);
         /* Now the collector may already have deallocated this detref. */
-        SNetWrite(desc_ptr, tmp, false);
+        SNetWrite(desc_ptr, recdet, false);
       }
     }
     SNetStackDestroy(stack);
   }
+}
+
+/* Create and initialize a new detref structure. */
+detref_t* SNetRecDetrefCreate(snet_record_t *rec, long seqnr, landing_t *leave)
+{
+  /* Allocate a new 'detref' structure. */
+  detref_t *detref = SNetNewAlign(detref_t);
+
+  /* Reference count 2 has a special meaning to prevent a race condition:
+   * the last single decrement ends at 1, then another decrement
+   * must be done to get the final value of zero. */
+  detref->refcount = DETREF_MIN_REFCOUNT;
+  detref->seqnr = seqnr;
+  detref->leave = leave;
+  detref->nonlocal = NULL;
+  detref->location = SNetDistribGetNodeId();
+
+  /* Initialize queue for pending output records. */
+  SNetFifoInit(&detref->recfifo);
+
+  return detref;
 }
 
 /* Add a sequence number to a record to support determinism. */
@@ -95,19 +114,8 @@ void SNetRecDetrefAdd(
     landing_t *leave,
     fifo_t *fifo)
 {
-  /* Allocate a new 'detref' structure. */
-  detref_t *detref = SNetNewAlign(detref_t);
-
-  trace(__func__);
-  /* Reference count 2 has a special meaning to prevent a race condition:
-   * the last single decrement ends at 1, then another decrement
-   * must be done to get the final value of zero. */
-  detref->refcount = 2;
-  detref->seqnr = seqnr;
-  detref->leave = leave;
-
-  /* Initialize queue for pending output records. */
-  SNetFifoInit(&detref->recfifo);
+  /* Create and initialize a new detref structure. */
+  detref_t *detref = SNetRecDetrefCreate(rec, seqnr, leave);
 
   /* Record needs a stack of detrefs. */
   if (DATA_REC(rec, detref) == NULL) {
@@ -157,6 +165,30 @@ void SNetDetEnter(
     } else {
       SNetUtilDebugFatalEnt(ent, "[%s]: no detref stack", __func__);
     }
+  }
+}
+
+/* Examine a REC_detref for remaining de-references from a remote location. */
+void SNetDetLeaveCheckDetref(snet_record_t *rec, fifo_t *fifo)
+{
+  if (DETREF_REC(rec, location) != DETREF_REC(rec, senderloc)) {
+    long        seqnr = DETREF_REC(rec, seqnr);
+    detref_t   *recdr = DETREF_REC(rec, detref);
+    detref_t   *detref;
+    fifo_node_t *node;
+    FIFO_FOR_EACH(fifo, node, detref) {
+      if (detref->seqnr == seqnr) {
+        if (detref == recdr) {
+          if (DETREF_DECR(detref) == 1) {
+            DETREF_DECR(detref);
+            return;
+          }
+        }
+      } else {
+        assert(detref->seqnr < seqnr);
+      }
+    }
+    assert(false);
   }
 }
 
@@ -246,13 +278,14 @@ void SNetDetLeaveRec(snet_record_t *rec, landing_t *landing)
   }
 
   /* detref must refer to this DetLeave node */
-  if (detref->leave != landing) {
-    SNetUtilDebugFatalEnt(ent, "[%s]: leave %p != landing %p",
-                          __func__, detref->leave, landing);
+  if (detref->leave != landing || detref->location != SNetDistribGetNodeId()) {
+    SNetUtilDebugFatalEnt(ent, "[%s]: leave %p.%d != landing %p.%d", __func__,
+                          detref->leave, detref->location,
+                          landing, SNetDistribGetNodeId());
   }
 
   /* reference counter must be at least two */
-  if (detref->refcount < 2) {
+  if (detref->refcount < DETREF_MIN_REFCOUNT) {
     SNetUtilDebugFatalEnt(ent, "[%s]: refcnt %d < 1", __func__,
                           detref->refcount);
   }

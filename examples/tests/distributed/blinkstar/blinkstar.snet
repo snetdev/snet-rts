@@ -1,0 +1,21 @@
+<metadata>
+  <default>
+    <interface value="C4SNet"/>
+  </default>
+</metadata>
+
+net blinkstar ({<T>, <S>} -> ...)
+{
+  net star
+  {
+    net blink
+    {
+      net s
+      connect [{<S>} -> {<S=S+1>}];
+    }
+    connect s !@ <T>;
+  }
+  connect blink * {<S>} if <S >= 4>;
+
+} connect star @ 1;
+

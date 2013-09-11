@@ -5,6 +5,6 @@
 </metadata>
  
 
-net singlebox {
+net singlebox({A} -> ...) {
   box dec((A) -> (A));
 } connect dec@1;

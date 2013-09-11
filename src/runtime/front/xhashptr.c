@@ -12,7 +12,7 @@
 #define LIMIT(x,l,u)    ((x) < (l) ? (l) : (x) > (u) ? (u) : (x))
 
 /* First power in the ideal primes table. */
-#define FIRST_POWER     6
+#define FIRST_POWER     5
 
 /* Last power in the ideal primes table. */
 #define LAST_POWER      30
@@ -23,11 +23,12 @@
 /* The type of a hashed pointer. */
 typedef uintptr_t hash_t;
 
-/* Ideal primes for division hashing from planetmath.org/Hashing.html */
+/* Ideal primes for division hashing from planetmath.org/goodhashtableprimes */
 static struct ideal_primes {
   size_t power;
   size_t prime;
 } ideal_primes[] = {
+  {  5, 53 },
   {  6, 97 },
   {  7, 193 },
   {  8, 389 },
