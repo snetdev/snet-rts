@@ -17,6 +17,7 @@ typedef enum {
   ENTITY_fbcoll,
   ENTITY_fbdisp,
   ENTITY_fbbuf,
+  ENTITY_fbnond,
   ENTITY_sync,
   ENTITY_filter,
   ENTITY_nameshift,

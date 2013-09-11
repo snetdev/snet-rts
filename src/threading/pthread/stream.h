@@ -6,6 +6,7 @@
 #include "threading.h"
 #include "entity.h"
 
+/* Keep this in sync with include/stream.h. */
 #define SNET_STREAM_DEFAULT_CAPACITY  16
 
 
