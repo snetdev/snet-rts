@@ -1,7 +1,5 @@
 /* node.c */
 
-worker_t **SNetNodeGetWorkers(void);
-int SNetNodeGetWorkerCount(void);
 
 /* Assign a new index to a stream and add it to the stream table. */
 void SNetNodeTableAdd(snet_stream_t *stream);
@@ -23,12 +21,7 @@ node_t *SNetNodeNew(
   node_work_fun_t work,
   node_stop_fun_t stop,
   node_term_fun_t term);
-void SNetNodeStop(worker_t *worker);
-void *SNetNodeThreadStart(void *arg);
-
-/* Create workers and start them. */
-void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output);
-void SNetNodeCleanup(void);
+void SNetNodeStop(void);
 
 /* Create a new stream emmanating from this node. */
 snet_stream_t *SNetNodeStreamCreate(node_t *node);
@@ -572,6 +565,14 @@ snet_stream_t *SNetParallelDet(
     snet_variant_list_list_t *variant_lists,
     ...);
 
+/* xrun.c */
+
+void *SNetNodeThreadStart(void *arg);
+
+/* Create workers and start them. */
+void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output);
+void SNetNodeCleanup(void);
+
 /* xserial.c */
 
 snet_stream_t *SNetSerial(
@@ -811,6 +812,7 @@ snet_stream_t *SNetSync(
 
 /* xthread.c */
 
+int SNetGetMaxProcs(void);
 int SNetGetNumProcs(void);
 
 /* How many workers? */
@@ -944,7 +946,7 @@ void SNetTransferReturn(
 
 
 /* Init worker data */
-void SNetWorkerInit(void);
+void SNetWorkerInit(worker_t** workers, int worker_count);
 
 /* Cleanup worker data */
 void SNetWorkerCleanup(void);

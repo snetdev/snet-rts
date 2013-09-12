@@ -3,9 +3,6 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <unistd.h>
-#if __gnu_linux__
-#include <sys/sysinfo.h>
-#endif
 #include "node.h"
 #include "reference.h"
 
@@ -32,13 +29,14 @@ static bool             opt_input_throttle;
 static double           opt_input_offset;
 static double           opt_input_factor;
 
+int SNetGetMaxProcs(void)
+{
+  return (int) sysconf(_SC_NPROCESSORS_CONF);
+}
+
 int SNetGetNumProcs(void)
 {
-#if __gnu_linux__
-  return get_nprocs();
-#else
   return (int) sysconf(_SC_NPROCESSORS_ONLN);
-#endif
 }
 
 /* How many workers? */
@@ -341,7 +339,6 @@ int SNetThreadingStop(void)
 {
   pthread_t     *thread;
   void          *arg;
-  worker_t      *worker;
   int            i;
   int            num_managers = SNetThreadedManagers();
 
@@ -359,8 +356,7 @@ int SNetThreadingStop(void)
     }
   }
 
-  worker = SNetThreadGetSelf();
-  SNetNodeStop(worker);
+  SNetNodeStop();
 
   return 0;
 }

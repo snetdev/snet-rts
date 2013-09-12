@@ -1,11 +1,4 @@
-#include <assert.h>
-#include <stdarg.h>
 #include "node.h"
-#include "debug.h"
-
-/* An array with pointers to all workers. */
-static worker_t      **snet_workers;
-static int             snet_worker_count;
 
 /* Keep track of all created streams in a static table.
  * This is used in distributed S-Net when communicating
@@ -15,16 +8,6 @@ static struct streams_table {
   int              size;
   int              last;
 } snet_streams_table;
-
-worker_t **SNetNodeGetWorkers(void)
-{
-  return snet_workers;
-}
-
-int SNetNodeGetWorkerCount(void)
-{
-  return snet_worker_count;
-}
 
 /* Lookup a stream in the streams table. Return index. */
 static int SNetNodeTableLookup(snet_stream_t *stream)
@@ -146,17 +129,16 @@ node_t *SNetNodeNew(
   return node;
 }
 
-void SNetNodeStop(worker_t *worker)
+void SNetNodeStop(void)
 {
   fifo_t         fifo;
   node_t        *initial;
   node_t        *node;
 
-  if (worker->input_desc) {
-    initial = DESC_NODE(worker->input_desc);
-  } else {
+  /* if (input_desc) {
+    initial = DESC_NODE(input_desc);
+  } else */
     initial = SNetNodeTableIndex(1)->dest;
-  }
 
   SNetFifoInit(&fifo);
   SNetFifoPut(&fifo, initial);
@@ -164,75 +146,6 @@ void SNetNodeStop(worker_t *worker)
     (*node->stop)(node, &fifo);
   }
   SNetFifoDone(&fifo);
-}
-
-void *SNetNodeThreadStart(void *arg)
-{
-  worker_t      *worker = (worker_t *) arg;
-
-  trace(__func__);
-
-  SNetThreadSetSelf(worker);
-  if (worker->role == InputManager) {
-    SNetInputManagerRun(worker);
-  } else {
-    SNetWorkerRun(worker);
-  }
-
-  return arg;
-}
-
-/* Create workers and start them. */
-void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
-{
-  int            id, num_workers, mg, num_managers;
-
-  trace(__func__);
-  assert(input->dest);
-  assert(output->from);
-
-  /* Allocate array of worker structures. */
-  num_workers = SNetThreadingWorkers();
-  num_managers = SNetThreadedManagers();
-  snet_worker_count = num_workers + num_managers;
-  snet_workers = SNetNewN(snet_worker_count + 1, worker_t*);
-
-  /* Set all workers to NULL to prevent premature stealing. */
-  for (id = 0; id <= snet_worker_count; ++id) {
-    snet_workers[id] = NULL;
-  }
-
-  /* Init global worker data. */
-  SNetWorkerInit();
-
-  /* Create managers with new threads. */
-  for (mg = 1; mg <= num_managers; ++mg) {
-    id = mg + num_workers;
-    snet_workers[id] = SNetWorkerCreate(input->from, id, output->dest, InputManager);
-    SNetThreadCreate(SNetNodeThreadStart, snet_workers[id]);
-  }
-  /* Create data workers with new threads. */
-  for (id = 2; id <= num_workers; ++id) {
-    snet_workers[id] = SNetWorkerCreate(input->from, id, output->dest, DataWorker);
-    SNetThreadCreate(SNetNodeThreadStart, snet_workers[id]);
-  }
-  /* Reuse main thread for worker with ID 1. */
-  snet_workers[1] = SNetWorkerCreate(input->from, 1, output->dest, DataWorker);
-  SNetNodeThreadStart(snet_workers[1]);
-}
-
-void SNetNodeCleanup(void)
-{
-  int i;
-
-  SNetNodeTableCleanup();
-  SNetWorkerCleanup();
-  for (i = snet_worker_count; i > 0; --i) {
-    SNetWorkerDestroy(snet_workers[i]);
-  }
-  SNetDeleteN(snet_worker_count + 1, snet_workers);
-  snet_worker_count = 0;
-  snet_workers = NULL;
 }
 
 /* Create a new stream emmanating from this node. */

@@ -1,24 +1,6 @@
 #include <unistd.h>
 #include "node.h"
 
-static worker_t       **snet_workers;
-static int              snet_worker_count;
-static int              snet_thief_limit;
-static lock_t           snet_idle_lock;
-
-/* Init worker data */
-void SNetWorkerInit(void)
-{
-  snet_workers = SNetNodeGetWorkers();
-  snet_worker_count = SNetNodeGetWorkerCount();
-  snet_thief_limit = SNetThreadingThieves();
-  if (snet_thief_limit > 1) {
-    LOCK_INIT2(snet_idle_lock, snet_thief_limit);
-  } else {
-    LOCK_INIT(snet_idle_lock);
-  }
-}
-
 /* Cleanup worker data */
 void SNetWorkerCleanup(void)
 {
@@ -80,7 +62,7 @@ worker_t *SNetWorkerCreate(
   worker->steal_lock->id = 0;
   worker->steal_turn = SNetNewAlign(worker_turn_t);
   worker->steal_turn->turn = 1;
-  
+
   worker->loot.desc = NULL;
   worker->loot.count = 0;
   worker->loot.item = NULL;

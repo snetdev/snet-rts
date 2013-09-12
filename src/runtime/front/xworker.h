@@ -1,6 +1,25 @@
 #ifndef _XWORKER_H
 #define _XWORKER_H
 
+/* A set of pointers to the currently running workers.
+ * Idle workers require this for work-stealing. */
+typedef struct worker_config {
+  /* Total number of workers including managers. */
+  int                   worker_count;
+
+  /* Pointers to other workers: valid for [1..worker_count]. */
+  worker_t            **workers;
+
+  /* A global limit on the number of concurrent thieves if non-zero. */
+  int                   thief_limit;
+
+  /* The lock to use when there is a thief_limit. */
+  lock_t                idle_lock;
+
+  /* An output file descriptor to a pipe to the initial thread. */
+  int                   pipe_send;
+} worker_config_t;
+
 /* A worker can be in either of two roles: */
 typedef enum worker_role {
   /* Data workers process records. */
@@ -78,6 +97,9 @@ typedef struct worker_loot {
  * or else from the input_node.
  */
 struct worker {
+  /* Pointer to globally shared configuration. */
+  const worker_config_t *config;
+
   /* A unique ID used in locking to identify owners. */
   int                    id;
 

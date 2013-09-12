@@ -180,6 +180,7 @@ libfrontrt_la_SOURCES = \
 	src/runtime/front/xobserve.c \
 	src/runtime/front/xoutput.c \
 	src/runtime/front/xpar.c \
+	src/runtime/front/xrun.c \
 	src/runtime/front/xserial.c \
 	src/runtime/front/xsplit.c \
 	src/runtime/front/xstack.c \
