@@ -1,14 +1,6 @@
 #include <unistd.h>
 #include "node.h"
 
-/* Cleanup worker data */
-void SNetWorkerCleanup(void)
-{
-  snet_worker_count = 0;
-  snet_workers = NULL;
-  LOCK_DESTROY(snet_idle_lock);
-}
-
 /* Initialize a new empty work list. */
 static void WorkerTodoInit(work_list_t *q)
 {
@@ -30,16 +22,18 @@ static void WorkerFreeInit(worker_free_list_t *free)
 
 /* Create a new worker. */
 worker_t *SNetWorkerCreate(
-    node_t *input_node,
     int worker_id,
+    node_t *input_node,
     node_t *output_node,
-    worker_role_t role)
+    worker_role_t role,
+    worker_config_t *config)
 {
   worker_t *worker;
 
   trace(__func__);
 
   worker = SNetNewAlign(worker_t);
+  worker->config = config;
   worker->id = worker_id;
   worker->role = role;
   worker->victim_id = worker_id;
@@ -454,10 +448,10 @@ static bool SNetWorkerSteal(worker_t *thief)
   assert(thief->loot.desc == NULL);
   assert(thief->loot.item == NULL);
 
-  for (i = 0; i < snet_worker_count && !thief->loot.desc; ++i) {
-    thief->victim_id = 1 + (thief->victim_id % snet_worker_count);
+  for (i = 0; i < thief->config->worker_count && !thief->loot.desc; ++i) {
+    thief->victim_id = 1 + (thief->victim_id % thief->config->worker_count);
     if (thief->victim_id != thief->id) {
-      worker_t *victim = snet_workers[thief->victim_id];
+      worker_t *victim = thief->config->workers[thief->victim_id];
       if (victim && trylock_worker(victim, thief)) {
         AAF(&victim->steal_turn->turn, 1);
         SNetWorkerStealVictim(victim, thief);
@@ -519,15 +513,10 @@ static void SNetWorkerLoot(worker_t *worker)
 /* Return the worker which is the input manager for Distributed S-Net. */
 worker_t* SNetWorkerGetInputManager(void)
 {
-  int   i;
-
-  for (i = snet_worker_count; i > 0; --i) {
-    worker_t *worker = snet_workers[i];
-    if (worker->role == InputManager) {
-      return worker;
-    }
-  }
-  return NULL;
+  worker_t* worker = SNetThreadGetSelf();
+  assert(worker);
+  assert(worker->role == InputManager);
+  return worker;
 }
 
 /* Test if other workers have work to do. */
@@ -547,8 +536,8 @@ bool SNetWorkerOthersBusy(worker_t *worker)
     worker->is_idle = 1;
   }
 
-  for (i = 1; i <= snet_worker_count; ++i) {
-    worker_t *other = snet_workers[i];
+  for (i = 1; i <= worker->config->worker_count; ++i) {
+    worker_t *other = worker->config->workers[i];
     if (!other) {
       worker->is_idle = 1;
       change = true;
@@ -668,12 +657,12 @@ void SNetWorkerRun(worker_t *worker)
       udelay = 10;
       do {
         sched_yield();
-        if (snet_thief_limit) {
-          LOCK(snet_idle_lock);
+        if (worker->config->thief_limit) {
+          LOCK(worker->config->idle_lock);
         }
         if (SNetWorkerSteal(worker)) {
-          if (snet_thief_limit) {
-            UNLOCK(snet_idle_lock);
+          if (worker->config->thief_limit) {
+            UNLOCK(worker->config->idle_lock);
           }
           break;
         }
@@ -683,8 +672,8 @@ void SNetWorkerRun(worker_t *worker)
             udelay = max_udelay;
           } */
         }
-        if (snet_thief_limit) {
-          UNLOCK(snet_idle_lock);
+        if (worker->config->thief_limit) {
+          UNLOCK(worker->config->idle_lock);
         }
       } while (!worker->has_work && SNetWorkerOthersBusy(worker));
       if (worker->loot.desc) {

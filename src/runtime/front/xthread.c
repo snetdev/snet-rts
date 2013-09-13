@@ -12,7 +12,6 @@
 static pthread_key_t    thread_self_key;
 static int              num_workers;
 static int              num_thieves;
-static pthread_t       *worker_threads;
 static bool             opt_garbage_collection;
 static bool             opt_verbose;
 static bool             opt_debug;
@@ -198,7 +197,6 @@ static size_t GetSize(const char *str)
 int SNetThreadingInit(int argc, char**argv)
 {
   int   i;
-  int   num_managers;
 
   trace(__func__);
 
@@ -288,8 +286,6 @@ int SNetThreadingInit(int argc, char**argv)
   }
 
   pthread_key_create(&thread_self_key, NULL);
-  num_managers = SNetThreadedManagers();
-  worker_threads = SNetNewN(num_workers + num_managers + 1, pthread_t);
 
   return 0;
 }
@@ -297,22 +293,18 @@ int SNetThreadingInit(int argc, char**argv)
 /* Create a thread to instantiate a worker */
 void SNetThreadCreate(void *(*func)(void *), worker_t *worker)
 {
-  pthread_t            *thread;
+  pthread_t             thread;
   pthread_attr_t        attr;
-  pthread_attr_t       *attr_ptr = NULL;
-  int                   num_managers = SNetThreadedManagers();
 
   trace(__func__);
 
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
   if (opt_thread_stack_size >= PTHREAD_STACK_MIN) {
-    pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, opt_thread_stack_size);
-    attr_ptr = &attr;
   }
 
-  assert(worker->id <= num_workers + num_managers);
-  thread = &worker_threads[worker->id];
-  if (pthread_create(thread, attr_ptr, func, worker)) {
+  if (pthread_create(&thread, &attr, func, worker)) {
     SNetUtilDebugFatal("[%s]: Failed to create a new thread.", __func__);
   }
   if (SNetDebugTL()) {
@@ -320,9 +312,7 @@ void SNetThreadCreate(void *(*func)(void *), worker_t *worker)
            *(unsigned long *)thread, worker->id);
   }
 
-  if (attr_ptr) {
-    pthread_attr_destroy(attr_ptr);
-  }
+  pthread_attr_destroy(&attr);
 }
 
 void SNetThreadSetSelf(worker_t *self)
@@ -337,24 +327,7 @@ worker_t *SNetThreadGetSelf(void)
 
 int SNetThreadingStop(void)
 {
-  pthread_t     *thread;
-  void          *arg;
-  int            i;
-  int            num_managers = SNetThreadedManagers();
-
   trace(__func__);
-  for (i = num_workers + num_managers; i >= 2; --i) {
-    thread = &worker_threads[i];
-    if (SNetDebugTL()) {
-      printf("joining with thread %lu for worker %d ...\n",
-             *(unsigned long *)thread, i);
-    }
-    arg = NULL;
-    if (pthread_join(*thread, &arg)) {
-      SNetUtilDebugNotice("[%s]: Failed to join with worker %d\n",
-                          __func__, i);
-    }
-  }
 
   SNetNodeStop();
 
@@ -365,11 +338,7 @@ int SNetThreadingCleanup(void)
 {
   trace(__func__);
 
-  SNetThreadSetSelf(NULL);
   pthread_key_delete(thread_self_key);
-
-  SNetDeleteN(num_workers + SNetThreadedManagers(), worker_threads);
-  worker_threads = NULL;
 
   SNetReferenceDestroy();
 

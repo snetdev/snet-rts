@@ -98,7 +98,7 @@ typedef struct worker_loot {
  */
 struct worker {
   /* Pointer to globally shared configuration. */
-  const worker_config_t *config;
+  worker_config_t       *config;
 
   /* A unique ID used in locking to identify owners. */
   int                    id;

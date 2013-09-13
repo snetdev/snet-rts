@@ -73,6 +73,11 @@ void SNetNodeTableCleanup(void)
   snet_streams_table.streams = NULL;
 }
 
+void SNetNodeCleanup(void)
+{
+  SNetNodeTableCleanup();
+}
+
 /* Create a new node and connect its in/output streams. */
 node_t *SNetNodeNew(
   node_type_t type,

@@ -9,6 +9,7 @@ snet_stream_t* SNetNodeTableIndex(int table_index);
 
 /* Cleanup the node table */
 void SNetNodeTableCleanup(void);
+void SNetNodeCleanup(void);
 
 /* Create a new node and connect its in/output streams. */
 node_t *SNetNodeNew(
@@ -567,11 +568,11 @@ snet_stream_t *SNetParallelDet(
 
 /* xrun.c */
 
+int SNetGetWorkerId(void);
 void *SNetNodeThreadStart(void *arg);
 
 /* Create workers and start them. */
 void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output);
-void SNetNodeCleanup(void);
 
 /* xserial.c */
 
@@ -945,18 +946,13 @@ void SNetTransferReturn(
 /* xworker.c */
 
 
-/* Init worker data */
-void SNetWorkerInit(worker_t** workers, int worker_count);
-
-/* Cleanup worker data */
-void SNetWorkerCleanup(void);
-
 /* Create a new worker. */
 worker_t *SNetWorkerCreate(
-    node_t *input_node,
     int worker_id,
+    node_t *input_node,
     node_t *output_node,
-    worker_role_t role);
+    worker_role_t role,
+    worker_config_t *config);
 
 /* Destroy a worker. */
 void SNetWorkerDestroy(worker_t *worker);
