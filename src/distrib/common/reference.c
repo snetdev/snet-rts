@@ -449,7 +449,7 @@ void SNetRefSet(snet_ref_t *ref, void *data)
       }
       break;
 
-    default: SNetUtilDebugFatal("[%s]: rt %d\n", runtime);
+    default: SNetUtilDebugFatal("[%s]: rt %d\n", __func__, runtime);
       break;
   }
 

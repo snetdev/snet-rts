@@ -34,20 +34,25 @@
 /*
  * Process out-of-memory errors.
  */
-void SNetMemFailed(void);
+void SNetMemFailed(void)
+     __attribute__ ((noreturn));
 
 
 /*
  * Allocates memory of size s.
  * RETURNS: pointer to memory.
  */
-void *SNetMemAlloc( size_t s);
+void *SNetMemAlloc( size_t s)
+      __attribute__ ((malloc))
+      __attribute__((alloc_size(1)));
 
 
 /*
  * Resize previously allocated memory.
  */
-void *SNetMemResize( void *ptr, size_t size);
+void *SNetMemResize( void *ptr, size_t size)
+      __attribute__ ((malloc))
+      __attribute__((alloc_size(2)));
 
 
 /*
@@ -65,6 +70,8 @@ void SNetMemSizeFree( void *ptr, size_t size);
 /*
  * Allocate memory which is aligned to a cache line boundary.
  */
-void* SNetMemAlign( size_t size);
+void* SNetMemAlign( size_t size)
+      __attribute__ ((malloc))
+      __attribute__((alloc_size(1)));
 
 #endif

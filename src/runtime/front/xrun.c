@@ -121,7 +121,7 @@ void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
             printf("[%s:%d]: worker %d done.\n", __func__, SNetDistribGetNodeId(), mesg.id);
           }
         } break;
-        default: SNetUtilDebugFatal("[%s.%s]: Invalid message type %d", __func__,
+        default: SNetUtilDebugFatal("[%s.%d]: Invalid message type %d", __func__,
                                     SNetDistribGetNodeId(), mesg.type);
       }
     }
