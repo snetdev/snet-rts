@@ -1,6 +1,14 @@
 #ifndef _XWORKER_H
 #define _XWORKER_H
 
+/* The state a worker can be in from start to exit. */
+typedef enum worker_state {
+  WorkerBusy = 0,       /* When a worker may have more work to do. */
+  WorkerIdle = 1,       /* No work and no input. */
+  WorkerStrike = 2,     /* First impression is that all workers are idle. */
+  WorkerExit = 3,       /* Nothing left to do: this worker has ceased to be. */
+} worker_state_t;
+
 /* A set of pointers to the currently running workers.
  * Idle workers require this for work-stealing. */
 typedef struct worker_config {
@@ -18,6 +26,13 @@ typedef struct worker_config {
 
   /* An output file descriptor to a pipe to the initial thread. */
   int                   pipe_send;
+
+  /* The input node which reads via the parser from standard input. */
+  struct node          *input_node;
+
+  /* The output node which stores the number of output records. */
+  struct node          *output_node;
+
 } worker_config_t;
 
 /* A worker can be in either of two roles: */
@@ -127,9 +142,6 @@ struct worker {
   /* A pointer to the input stream. */
   snet_stream_desc_t    *input_desc;
 
-  /* The output node which stores the number of output records. */
-  struct node           *output_node;
-
   /* An exclusive lock for visiting thieves. */
   worker_lock_t         *steal_lock;
 
@@ -149,10 +161,10 @@ struct worker {
   /* Whether the input node has not yet reached end-of-file. */
   bool                   has_input;
 
-  /* Whether this worker is busy processing. */
+  /* Whether this worker is busy processing; also see worker_state_t. */
   int                    is_idle;
 
-  /* The sequence number for the current idle state. */
+  /* The sequence number for an idle state: either WorkerIdle or WorkerStrike. */
   size_t                 idle_seqnr;
 };
 

@@ -31,11 +31,16 @@
 #define SNetDeleteN(num, ptr)   SNetMemFree(ptr)
 
 
+#ifndef __GNUC__
+#define __attribute__(x)
+#endif
+
+
 /*
  * Process out-of-memory errors.
  */
 void SNetMemFailed(void)
-     __attribute__ ((noreturn));
+     __attribute__((noreturn));
 
 
 /*
@@ -43,15 +48,24 @@ void SNetMemFailed(void)
  * RETURNS: pointer to memory.
  */
 void *SNetMemAlloc( size_t s)
-      __attribute__ ((malloc))
+      __attribute__((malloc))
       __attribute__((alloc_size(1)));
+
+
+/*
+ * Allocate and clear memory of n elements of size s.
+ * RETURNS: pointer to memory which is initialized to zero.
+ */
+void *SNetMemCalloc( size_t n, size_t s)
+      __attribute__((malloc))
+      __attribute__((alloc_size(1,2)));
 
 
 /*
  * Resize previously allocated memory.
  */
 void *SNetMemResize( void *ptr, size_t size)
-      __attribute__ ((malloc))
+      __attribute__((malloc))
       __attribute__((alloc_size(2)));
 
 
@@ -71,7 +85,7 @@ void SNetMemSizeFree( void *ptr, size_t size);
  * Allocate memory which is aligned to a cache line boundary.
  */
 void* SNetMemAlign( size_t size)
-      __attribute__ ((malloc))
+      __attribute__((malloc))
       __attribute__((alloc_size(1)));
 
 #endif

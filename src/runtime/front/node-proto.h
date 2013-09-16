@@ -568,8 +568,34 @@ snet_stream_t *SNetParallelDet(
 
 /* xrun.c */
 
+
+/* Return worker ID from a Pthread. */
 int SNetGetWorkerId(void);
+
+/* Create configuration which is shared by all workers. */
+worker_config_t* SNetCreateWorkerConfig(
+  int worker_count,
+  int max_worker,
+  int pipe_send,
+  snet_stream_t *input,
+  snet_stream_t *output);
+
+/* Transmit a MesgBusy to the master. */
+void SNetNodeWorkerBusy(worker_t* worker);
+
+/* Direct a newly created Pthread to work. */
 void *SNetNodeThreadStart(void *arg);
+
+/* Start a number of workers and wait for all to finish. */
+void SNetMasterStatic(
+  int num_workers,
+  int num_managers,
+  worker_config_t* config,
+  int recv);
+void SNetMasterStartOne(int id, worker_config_t* config);
+
+/* Throttle number of workers by work load. */
+void SNetMasterDynamic(worker_config_t* config, int recv);
 
 /* Create workers and start them. */
 void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output);
@@ -813,13 +839,17 @@ snet_stream_t *SNetSync(
 
 /* xthread.c */
 
+
+/* Total number of cores in system, whether currently online or not. */
 int SNetGetMaxProcs(void);
+
+/* The number of cores in the system which are currently operational. */
 int SNetGetNumProcs(void);
 
 /* How many workers? */
 int SNetThreadingWorkers(void);
 
-/* How many thieves? */
+/* Limit the number of actively stealing thieves, if non-zero. */
 int SNetThreadingThieves(void);
 
 /* How many distributed computing threads? */
@@ -852,7 +882,10 @@ bool SNetDebugWS(void);
 /* Whether to use a deterministic feedback */
 bool SNetFeedbackDeterministic(void);
 
-/* Whether to use optimized sync-star */
+/* Whether to use dynamic resource management. */
+bool SNetOptResource(void);
+
+/* Whether to use optimized sync-star. */
 bool SNetZipperEnabled(void);
 
 /* The stack size for worker threads in bytes */
@@ -949,8 +982,6 @@ void SNetTransferReturn(
 /* Create a new worker. */
 worker_t *SNetWorkerCreate(
     int worker_id,
-    node_t *input_node,
-    node_t *output_node,
     worker_role_t role,
     worker_config_t *config);
 
@@ -976,6 +1007,9 @@ void SNetWorkerMaintenaince(worker_t *worker);
 
 /* Wait for other workers to finish. */
 void SNetWorkerWait(worker_t *worker);
+
+/* Process input or work until stealing fails. */
+void SNetWorkerSlave(worker_t *worker);
 
 /* Process work forever and read input until EOF. */
 void SNetWorkerRun(worker_t *worker);

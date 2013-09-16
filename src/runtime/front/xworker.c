@@ -23,8 +23,6 @@ static void WorkerFreeInit(worker_free_list_t *free)
 /* Create a new worker. */
 worker_t *SNetWorkerCreate(
     int worker_id,
-    node_t *input_node,
-    node_t *output_node,
     worker_role_t role,
     worker_config_t *config)
 {
@@ -44,14 +42,13 @@ worker_t *SNetWorkerCreate(
 
   WorkerFreeInit(&worker->free);
 
-  if (input_node) {
-    worker->input_desc = NODE_SPEC(input_node, input)->indesc;
+  if (config->input_node) {
+    worker->input_desc = NODE_SPEC(config->input_node, input)->indesc;
     worker->has_input = true;
   } else {
     worker->input_desc = NULL;
     worker->has_input = false;
   }
-  worker->output_node = output_node;
   worker->steal_lock = SNetNewAlign(worker_lock_t);
   worker->steal_lock->id = 0;
   worker->steal_turn = SNetNewAlign(worker_turn_t);
@@ -82,12 +79,12 @@ void SNetWorkerDestroy(worker_t *worker)
   } */
 
   /* Verify hash table is empty. */
-  if ( ! SNetHashPtrTabEmpty(worker->hash_ptab)) {
+  if (false == SNetHashPtrTabEmpty(worker->hash_ptab)) {
     snet_stream_desc_t *desc = SNetHashPtrFirst(worker->hash_ptab);
     do {
       work_item_t *item = SNetHashPtrLookup(worker->hash_ptab, desc);
-      printf("%s(%d,%d): desc %p, count %d, refs %d\n", __func__,
-             worker->id, worker->role, desc, item->count, desc->refs);
+      fprintf(stderr, "%s(%d,%d) unprocessed item: desc %p, count %d, refs %d\n",
+              __func__, worker->id, worker->role, desc, item->count, desc->refs);
     } while ((desc = SNetHashPtrNext(worker->hash_ptab, desc)) != NULL);
   }
 
@@ -299,7 +296,7 @@ static bool SNetInputAllowed(worker_t *worker)
 
   if (SNetInputThrottle()) {
     /* Check if output has advanced enough for us to input more. */
-    size_t outs = NODE_SPEC(worker->output_node, output)->num_outputs;
+    size_t outs = NODE_SPEC(worker->config->output_node, output)->num_outputs;
     size_t ins = DESC_LAND_SPEC(worker->input_desc, input)->num_inputs;
     double limit = SNetInputOffset() + SNetInputFactor() * outs;
     allowed = (ins < limit);
@@ -525,37 +522,37 @@ bool SNetWorkerOthersBusy(worker_t *worker)
   int   i;
   bool  change = false;
 
-  if (worker->output_node) {
-    if (NODE_SPEC(worker->output_node, output)->terminated) {
+  if (worker->config->output_node) {
+    if (NODE_SPEC(worker->config->output_node, output)->terminated) {
       return false;
     }
   }
 
-  if (worker->is_idle < 1) {
+  if (worker->is_idle < WorkerIdle) {
     worker->idle_seqnr += 1;
-    worker->is_idle = 1;
+    worker->is_idle = WorkerIdle;
   }
 
   for (i = 1; i <= worker->config->worker_count; ++i) {
     worker_t *other = worker->config->workers[i];
     if (!other) {
-      worker->is_idle = 1;
+      worker->is_idle = WorkerIdle;
       change = true;
       break;
     }
     else if (other != worker) {
-      if (other->is_idle == 0) {
-        worker->is_idle = 1;
+      if (other->is_idle == false) {
+        worker->is_idle = WorkerIdle;
         change = true;
         break;
       }
       else if (worker->idle_seqnr < other->idle_seqnr) {
         worker->idle_seqnr = other->idle_seqnr;
-        worker->is_idle = 1;
+        worker->is_idle = WorkerIdle;
         change = true;
       }
       else if (worker->idle_seqnr > other->idle_seqnr) {
-        worker->is_idle = 1;
+        worker->is_idle = WorkerIdle;
         change = true;
       }
       else if (other->is_idle < worker->is_idle) {
@@ -567,7 +564,7 @@ bool SNetWorkerOthersBusy(worker_t *worker)
     worker->is_idle += 1;
   }
 
-  return (worker->is_idle < 3);
+  return (worker->is_idle < WorkerExit);
 }
 
 /* Cleanup unused memory. */
@@ -622,6 +619,38 @@ void SNetWorkerWait(worker_t *worker)
     SNetWorkerMaintenaince(worker);
     usleep(1000);
   }
+}
+
+/* Process input or work until stealing fails. */
+void SNetWorkerSlave(worker_t *worker)
+{
+  /* States a slave progresses through; starting from left, ending at right. */
+  enum slave_state { SlaveIdle, SlaveBusy, SlaveDone } state = SlaveIdle;
+
+  assert(worker->is_idle == WorkerBusy);
+
+  while (state < SlaveDone) {
+    if (worker->loot.desc) {
+      SNetWorkerLoot(worker);
+    }
+    else if (worker->has_work) {
+      SNetWorkerWork(worker);
+    }
+    else if (worker->has_input && SNetWorkerInput(worker)) {
+    }
+    else if (SNetWorkerSteal(worker)) {
+    }
+    else {
+      state = SlaveDone;
+    }
+    if (state == SlaveIdle) {
+      SNetNodeWorkerBusy(worker);
+      state = SlaveBusy;
+    }
+  } while (state < SlaveDone);
+  ReduceWorkItems(worker);
+
+  worker->is_idle = WorkerExit;
 }
 
 /* Process work forever and read input until EOF. */
@@ -691,8 +720,5 @@ void SNetWorkerRun(worker_t *worker)
     }
   }
   ReduceWorkItems(worker);
-  if (SNetVerbose()) {
-    printf("Worker %2d done\n", worker->id);
-  }
 }
 

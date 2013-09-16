@@ -25,6 +25,13 @@ void *SNetMemAlloc( size_t size)
   return ptr;
 }
 
+void *SNetMemCalloc( size_t nmemb, size_t size)
+{
+  void *ptr = calloc(nmemb, size);
+  if (!ptr) { SNetMemFailed(); }
+  return ptr;
+}
+
 void *SNetMemResize( void *ptr, size_t size)
 {
   if ((ptr = realloc(ptr, size)) == NULL) {

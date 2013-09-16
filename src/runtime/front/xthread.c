@@ -12,27 +12,30 @@
 static pthread_key_t    thread_self_key;
 static int              num_workers;
 static int              num_thieves;
-static bool             opt_garbage_collection;
-static bool             opt_verbose;
 static bool             opt_debug;
 static bool             opt_debug_df;
 static bool             opt_debug_gc;
 static bool             opt_debug_sl;
 static bool             opt_debug_tl;
 static bool             opt_debug_ws;
-static bool             opt_zipper;
 static bool             opt_feedback_deterministic;
+static bool             opt_garbage_collection;
+static bool             opt_resource;
+static bool             opt_verbose;
+static bool             opt_zipper;
 static size_t           opt_thread_stack_size;
 static const char      *opt_concurrency;
 static bool             opt_input_throttle;
 static double           opt_input_offset;
 static double           opt_input_factor;
 
+/* Total number of cores in system, whether currently online or not. */
 int SNetGetMaxProcs(void)
 {
   return (int) sysconf(_SC_NPROCESSORS_CONF);
 }
 
+/* The number of cores in the system which are currently operational. */
 int SNetGetNumProcs(void)
 {
   return (int) sysconf(_SC_NPROCESSORS_ONLN);
@@ -44,7 +47,7 @@ int SNetThreadingWorkers(void)
   return num_workers;
 }
 
-/* How many thieves? */
+/* Limit the number of actively stealing thieves, if non-zero. */
 int SNetThreadingThieves(void)
 {
   return num_thieves;
@@ -92,7 +95,13 @@ bool SNetFeedbackDeterministic(void)
   return opt_feedback_deterministic;
 }
 
-/* Whether to use optimized sync-star */
+/* Whether to use dynamic resource management. */
+bool SNetOptResource(void)
+{
+  return opt_resource;
+}
+
+/* Whether to use optimized sync-star. */
 bool SNetZipperEnabled(void)
 {
   return opt_zipper;
@@ -224,6 +233,9 @@ int SNetThreadingInit(int argc, char**argv)
     }
     else if (EQ(argv[i], "-g")) {
       opt_garbage_collection = false;
+    }
+    else if (EQ(argv[i], "-r")) {
+      opt_resource = true;
     }
     else if (EQ(argv[i], "-s") && ++i < argc) {
       if ((opt_thread_stack_size = GetSize(argv[i])) < PTHREAD_STACK_MIN) {
