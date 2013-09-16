@@ -24,7 +24,7 @@ double SNetDebugRealTime(void)
 {
   struct timespec ts = { 0, 0 };
   clock_gettime(CLOCK_REALTIME, &ts);
-  return ts.tv_sec * 1e9 + ts.tv_nsec;
+  return ts.tv_sec + 1e-9 * ts.tv_nsec;
 }
 #endif
 
@@ -34,7 +34,7 @@ double SNetDebugProcessTime(void)
 {
   struct timespec ts = { 0, 0 };
   clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
-  return ts.tv_sec * 1e9 + ts.tv_nsec;
+  return ts.tv_sec + 1e-9 * ts.tv_nsec;
 }
 #endif
 
@@ -44,7 +44,7 @@ double SNetDebugThreadTime(void)
 {
   struct timespec ts = { 0, 0 };
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
-  return ts.tv_sec * 1e9 + ts.tv_nsec;
+  return ts.tv_sec + 1e-9 * ts.tv_nsec;
 }
 #endif
 
