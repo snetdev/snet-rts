@@ -3,6 +3,12 @@
 
 #include "entities.h"
 
+#ifndef __GNUC__
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+#endif
+
 /*
  * reports an error and terminates the application after that.
  * parameters are equal to printf.

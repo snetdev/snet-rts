@@ -1,7 +1,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/param.h>
+#include <sys/select.h>
+#include <math.h>
 #include "node.h"
+#include "debugtime.h"
 
 /* Return worker ID from a Pthread. */
 int SNetGetWorkerId(void)
@@ -21,8 +24,8 @@ worker_config_t* SNetCreateWorkerConfig(
   int id;
   worker_config_t *config = SNetNewAlign(worker_config_t);
 
-  assert(input->dest);
-  assert(output->from);
+  assert(input->from);
+  assert(output->dest);
 
   /* Allocate globally shared worker configuration. */
   config->worker_count = worker_count;
@@ -34,8 +37,8 @@ worker_config_t* SNetCreateWorkerConfig(
     LOCK_INIT(config->idle_lock);
   }
   config->pipe_send = pipe_send;
-  config->input_node = input->dest;
-  config->output_node = output->from;
+  config->input_node = input->from;
+  config->output_node = output->dest;
 
   /* Set all workers to NULL to prevent premature stealing. */
   for (id = 0; id <= max_worker; ++id) {
@@ -148,7 +151,7 @@ void SNetMasterStatic(
       case MesgDone: {
         --alive;
         if (SNetDebugTL()) {
-          printf("[%s]: worker %d done.\n", __func__, mesg.id);
+          printf("[%s]: worker %d done, %d remain.\n", __func__, mesg.id, alive);
         }
       } break;
       default: SNetUtilDebugFatal("[%s]: Bad message %d", __func__, mesg.type);
@@ -170,24 +173,51 @@ void SNetMasterStartOne(int id, worker_config_t* config)
   SNetThreadCreate(SNetNodeThreadStart, config->workers[id]);
 }
 
+/* Return true iff input is available within a given delay. */
+bool SNetWaitForInput(int fd, double delay)
+{
+  struct timeval tv = { 0, 0 };
+  int n;
+  fd_set ins;
+  FD_ZERO(&ins);
+  FD_SET(fd, &ins);
+  if (delay > 0) {
+    SNetTimeFromDouble(&tv, delay);
+  }
+  if ((n = select(fd + 1, &ins, NULL, NULL, &tv)) < 0) {
+    SNetUtilDebugFatal("[%s]: select(%d,%d,%ld,%ld): %s", __func__,
+                       fd + 1, fd, tv.tv_sec, tv.tv_usec, strerror(errno));
+  }
+  return n > 0;
+}
+
 /* Throttle number of workers by work load. */
 void SNetMasterDynamic(worker_config_t* config, int recv)
 {
   const int     worker_limit = config->worker_count;
-  int           started = 0, wanted = 1;
+  int           i, started = 0, wanted = 1, alive = 0, idlers = 0;
   pipe_mesg_t   mesg;
-  char         *state = SNetMemCalloc(2 + worker_limit, 1);
+  char         *state = SNetMemCalloc(2 + worker_limit, sizeof(*state));
   enum state { SlaveDone, SlaveIdle, SlaveBusy };
+  const double  begin = SNetRealTime();
+  double        endtime = 0;
 
+  /* Reset for now; increase as needed. */
   config->worker_count = 0;
 
-  for (;;) {
-    for (; started < wanted; ++started) {
-      int i;
-      for (i = 1; state[i]; ++i) {}
-      assert(i <= worker_limit);
-      SNetMasterStartOne(i, config);
-      state[i] = SlaveIdle;
+  while (alive || started < wanted) {
+    if (started < wanted) {
+      const double now = SNetRealTime();
+      const double slowdown = 0.001;
+      const double delay = endtime + slowdown - now;
+      if (delay <= 0 || SNetWaitForInput(recv, delay) == false) {
+        for (; started < wanted; ++started, ++alive, ++idlers) {
+          for (i = 1; state[i]; ++i) {}
+          assert(i <= worker_limit);
+          SNetMasterStartOne(i, config);
+          state[i] = SlaveIdle;
+        }
+      }
     }
 
     SNetPipeReceive(recv, &mesg);
@@ -195,26 +225,42 @@ void SNetMasterDynamic(worker_config_t* config, int recv)
     switch (mesg.type) {
 
       case MesgDone: {
-        if (SNetDebugTL()) {
-          printf("[%s]: worker %d done.\n", __func__, mesg.id);
-        }
+        --alive;
+        --started;
         if (state[mesg.id] == SlaveIdle) {
-          if (started == wanted) {
-            ++wanted;
+          assert(idlers > 0 && started >= 0);
+          --idlers;
+          if (alive == 0) {
+            --wanted;
+          }
+        } else {
+          assert(state[mesg.id] == SlaveBusy);
+          if (idlers != 0 || alive == 0) {
+            --wanted;
           }
         }
+        if (SNetDebugTL()) {
+          printf("[%s,%.3f]: worker %d done (%d), %d alive, %d idle, %d more.\n",
+                 __func__, SNetRealTime() - begin,
+                 mesg.id, state[mesg.id], alive, idlers, wanted - started);
+        }
+        state[mesg.id] = SlaveDone;
+        endtime = SNetRealTime();
       } break;
 
       case MesgBusy: {
+        --idlers;
         if (SNetDebugTL()) {
-          printf("[%s]: worker %d busy.\n", __func__, mesg.id);
+          printf("[%s,%.3f]: worker %d busy (%d), %d alive, %d idle, %d more.\n",
+                 __func__, SNetRealTime() - begin,
+                 mesg.id, state[mesg.id], alive, idlers, wanted - started);
         }
         assert(state[mesg.id] == SlaveIdle);
-        if (wanted < config->worker_count) {
-          if (started == wanted) {
-            ++wanted;
-          }
+        state[mesg.id] = SlaveBusy;
+        if (alive < worker_limit && started == wanted) {
+          ++wanted;
         }
+        endtime = SNetRealTime();
       } break;
 
       default: SNetUtilDebugFatal("[%s]: Bad message %d", __func__, mesg.type);
@@ -227,10 +273,10 @@ void SNetMasterDynamic(worker_config_t* config, int recv)
 /* Create workers and start them. */
 void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
 {
-  int                   id, mg, fildes[2];
+  int                   mg, fildes[2];
   const int             num_workers = SNetThreadingWorkers();
   const int             num_managers = SNetThreadedManagers();
-  int                   total_workers = num_workers + num_managers;
+  const int             total_workers = num_workers + num_managers;
   const int             worker_limit = SNetGetMaxProcs() + num_managers;
   const int             max_worker = MAX(worker_limit, total_workers);
 
@@ -244,9 +290,8 @@ void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
 
     /* Create managers with new threads. */
     for (mg = 1; mg <= num_managers; ++mg) {
-      id = mg + num_workers;
-      config->workers[id] =
-        SNetWorkerCreate(id, InputManager, config);
+      int id = mg + num_workers;
+      config->workers[id] = SNetWorkerCreate(id, InputManager, config);
       SNetThreadCreate(SNetNodeThreadStart, config->workers[id]);
     }
 

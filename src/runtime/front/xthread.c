@@ -319,7 +319,7 @@ void SNetThreadCreate(void *(*func)(void *), worker_t *worker)
   if (pthread_create(&thread, &attr, func, worker)) {
     SNetUtilDebugFatal("[%s]: Failed to create a new thread.", __func__);
   }
-  if (SNetDebugTL()) {
+  if (SNetDebugTL() && SNetVerbose() && !SNetOptResource()) {
     printf("created thread %lu for worker %d\n",
            *(unsigned long *)thread, worker->id);
   }

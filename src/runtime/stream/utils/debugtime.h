@@ -7,13 +7,19 @@ void SNetDebugTimeGetTime(snet_time_t *time);
 long SNetDebugTimeGetMilliseconds(snet_time_t *time);
 long SNetDebugTimeDifferenceInMilliseconds(snet_time_t *time_a, snet_time_t *time_b);
 
+/* Convert number of seconds as a double to a struct timeval. */
+void SNetTimeFromDouble(snet_time_t *time, double real);
+
+/* Convert a struct timeval to number of seconds as a double. */
+double SNetTimeToDouble(snet_time_t *time);
+
 /* Return wall-clock time. */
-double SNetDebugRealTime(void);
+double SNetRealTime(void);
 
 /* Return per-process consumed CPU time. */
-double SNetDebugProcessTime(void);
+double SNetProcessTime(void);
 
 /* Return per-thread consumed CPU time. */
-double SNetDebugThreadTime(void);
+double SNetThreadTime(void);
 
 #endif

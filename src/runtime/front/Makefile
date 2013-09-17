@@ -1,6 +1,6 @@
 
-all:
-	make -C ../../..
+all install:
+	make -C ../../.. $@
 
 ctags:
 	mkctags
