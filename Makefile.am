@@ -116,6 +116,7 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/netif/output.h \
 	src/runtime/stream/netif/label.c \
 	src/runtime/stream/netif/networkinterface.c \
+	src/runtime/stream/netif/version.c \
 	src/runtime/stream/netif/parserutils.h \
 	src/runtime/stream/netif/parser.y \
 	src/runtime/stream/netif/lexer.l
@@ -152,6 +153,7 @@ libfrontrt_la_SOURCES = \
 	src/runtime/stream/netif/interface.c \
 	src/runtime/stream/netif/label.c \
 	src/runtime/stream/netif/networkinterface.c \
+	src/runtime/stream/netif/version.c \
 	src/runtime/stream/netif/parserutils.h \
 	src/runtime/stream/netif/parser.y \
 	src/runtime/stream/netif/lexer.l \
@@ -197,7 +199,8 @@ libfrontrt_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/runtime/stream/utils \
 	-I$(srcdir)/src/runtime/stream/shared \
 	-I$(srcdir)/src/runtime/stream/netif \
-	-I$(srcdir)/src/distrib/common
+	-I$(srcdir)/src/distrib/common \
+	-I$(srcdir)/src/resource
 if ENABLE_HWLOC
 libfrontrt_la_CPPFLAGS += $(HWLOC_INCLUDES)
 libfrontrt_la_LIBADD = $(LIBHWLOC_LA)
@@ -209,6 +212,7 @@ src_resource_resserv_SOURCES = \
 	src/resource/resclient.c \
 	src/resource/resclient.h \
 	src/resource/resdefs.h \
+	src/resource/reshwloc.c \
 	src/resource/reslist.c \
 	src/resource/resloop.c \
 	src/resource/resmain.c \

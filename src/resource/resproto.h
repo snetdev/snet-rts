@@ -48,6 +48,10 @@ int res_client_write(client_t* client);
 bool res_client_writing(client_t* client);
 int res_client_read(client_t* client);
 
+/* reshwloc.c */
+
+resource_t* res_hwloc_resource_init(void);
+
 /* reslist.c */
 
 void res_list_init(intlist_t* list);
@@ -141,6 +145,14 @@ int res_local_procs(void);
  * The new size of the string must be communicated via the size pointer.
  */
 char* res_resource_object_string(resource_t* obj, char* str, int len, int *size);
+void res_relate_resources(resource_t *parent, resource_t *child);
+resource_t* res_add_resource(
+  resource_t *parent,
+  res_kind_t kind,
+  int topo_depth,
+  int logical_index,
+  int physical_index,
+  int cache_level);
 resource_t* res_resource_init(void);
 void res_resource_free(resource_t* res);
 

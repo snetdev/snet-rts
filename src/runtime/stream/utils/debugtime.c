@@ -47,7 +47,6 @@ double SNetTimeToDouble(snet_time_t *time)
 #define NANO                  1e-9
 #define timespec_to_double(t) ((double)(t).tv_sec + NANO * (double)(t).tv_nsec)
 
-#ifdef CLOCK_REALTIME
 /* Return wall-clock time. */
 double SNetRealTime(void)
 {
@@ -56,7 +55,6 @@ double SNetRealTime(void)
   CHECK(r);
   return timespec_to_double(ts);
 }
-#endif
 
 #ifdef CLOCK_PROCESS_CPUTIME_ID
 /* Return per-process consumed CPU time. */

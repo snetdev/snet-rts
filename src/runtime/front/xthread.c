@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "node.h"
 #include "reference.h"
+#include "networkinterface.h"
 
 #define EQ(s1,s2)       !strcmp(s1,s2)
 #define EQN(s1,s2,n)    !strncmp(s1,s2,n)
@@ -12,6 +13,7 @@
 static pthread_key_t    thread_self_key;
 static int              num_workers;
 static int              num_thieves;
+static const char      *opt_concurrency;
 static bool             opt_debug;
 static bool             opt_debug_df;
 static bool             opt_debug_gc;
@@ -20,14 +22,14 @@ static bool             opt_debug_tl;
 static bool             opt_debug_ws;
 static bool             opt_feedback_deterministic;
 static bool             opt_garbage_collection;
+static double           opt_input_factor;
+static double           opt_input_offset;
+static bool             opt_input_throttle;
 static bool             opt_resource;
+static const char      *opt_resource_server;
+static size_t           opt_thread_stack_size;
 static bool             opt_verbose;
 static bool             opt_zipper;
-static size_t           opt_thread_stack_size;
-static const char      *opt_concurrency;
-static bool             opt_input_throttle;
-static double           opt_input_offset;
-static double           opt_input_factor;
 
 /* Total number of cores in system, whether currently online or not. */
 int SNetGetMaxProcs(void)
@@ -99,6 +101,12 @@ bool SNetFeedbackDeterministic(void)
 bool SNetOptResource(void)
 {
   return opt_resource;
+}
+
+/* Whether and how to connect to the resource management service. */
+const char* SNetOptResourceServer(void)
+{
+  return opt_resource_server;
 }
 
 /* Whether to use optimized sync-star. */
@@ -237,6 +245,15 @@ int SNetThreadingInit(int argc, char**argv)
     else if (EQ(argv[i], "-r")) {
       opt_resource = true;
     }
+    else if (EQ(argv[i], "-rs")) {
+      opt_resource = true;
+      if (i + 1 < argc && argv[i+1][0] != '-') {
+        opt_resource_server = argv[++i];
+      } else {
+        static const char default_resource_server[] = "localhost:56389";
+        opt_resource_server = default_resource_server;
+      }
+    }
     else if (EQ(argv[i], "-s") && ++i < argc) {
       if ((opt_thread_stack_size = GetSize(argv[i])) < PTHREAD_STACK_MIN) {
         SNetUtilDebugFatal("[%s]: Invalid thread stack size %s (l.t. %d).",
@@ -248,6 +265,9 @@ int SNetThreadingInit(int argc, char**argv)
     }
     else if (EQ(argv[i], "-v")) {
       opt_verbose = true;
+    }
+    else if (EQ(argv[i], "-V")) {
+      SNetRuntimeVersion();
     }
     else if (EQ(argv[i], "-T") && ++i < argc) {
       if ((num_thieves = atoi(argv[i])) <= 0) {
@@ -290,10 +310,12 @@ int SNetThreadingInit(int argc, char**argv)
   }
 
   if (opt_verbose) {
-    printf("W=%d,GC=%s,Z=%s.\n",
+    printf("W=%d,GC=%s,Z=%s,R=%s,RS=%s.\n",
            num_workers,
            opt_garbage_collection ? "true" : "false",
-           opt_zipper ? "true" : "false"
+           opt_zipper ? "true" : "false",
+           opt_resource ? "true" : "false",
+           opt_resource_server ? "true" : "false"
            );
   }
 

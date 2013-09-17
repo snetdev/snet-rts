@@ -1,4 +1,4 @@
-AC_INIT([SNet], [1.x], [info@snet-home.org])
+AC_INIT([SNet], [1.x], [info@snet-home.org], [snet], [http://www.snet-home.org/])
 AC_PREREQ([2.68])
 
 AC_CONFIG_AUX_DIR([build-aux])

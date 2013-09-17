@@ -240,9 +240,9 @@ void SNetMasterDynamic(worker_config_t* config, int recv)
           }
         }
         if (SNetDebugTL()) {
-          printf("[%s,%.3f]: worker %d done (%d), %d alive, %d idle, %d more.\n",
-                 __func__, SNetRealTime() - begin,
-                 mesg.id, state[mesg.id], alive, idlers, wanted - started);
+          printf("[%s,%.3f]: worker %d done, %d alive, %d idle, %d more.\n",
+                 __func__, SNetRealTime() - begin, mesg.id,
+                 alive, idlers, wanted - started);
         }
         state[mesg.id] = SlaveDone;
         endtime = SNetRealTime();
@@ -251,9 +251,9 @@ void SNetMasterDynamic(worker_config_t* config, int recv)
       case MesgBusy: {
         --idlers;
         if (SNetDebugTL()) {
-          printf("[%s,%.3f]: worker %d busy (%d), %d alive, %d idle, %d more.\n",
-                 __func__, SNetRealTime() - begin,
-                 mesg.id, state[mesg.id], alive, idlers, wanted - started);
+          printf("[%s,%.3f]: worker %d busy, %d alive, %d idle, %d more.\n",
+                 __func__, SNetRealTime() - begin, mesg.id,
+                 alive, idlers, wanted - started);
         }
         assert(state[mesg.id] == SlaveIdle);
         state[mesg.id] = SlaveBusy;

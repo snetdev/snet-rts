@@ -51,5 +51,6 @@ int SNetInRun(int argc, char *argv[],
 void SNetRuntimeHelpText(void);
 void SNetRuntimeStartWait(snet_stream_t *in, snet_info_t *info, snet_stream_t *out);
 snet_runtime_t SNetRuntimeGet(void);
+void SNetRuntimeVersion(void);
 
 #endif /* NETWORK_INTERFACE_H */

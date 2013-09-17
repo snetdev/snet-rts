@@ -171,8 +171,16 @@ static int SNetInParseOptions(int argc, char **argv, FILE **input_ptr, FILE **ou
 	SNetInClose(output);
       }
 
-      return 0;
-
+      return false;
+    } else if (strcmp(argv[i], "-V") == 0) {
+      SNetRuntimeVersion();
+      if (input != stdin && input != NULL) {
+	SNetInClose(input);
+      }
+      if (output != stdout && output != NULL) {
+	SNetInClose(output);
+      }
+      return false;
     } else if(strcmp(argv[i], "-i") == 0 && input == stdin && i + 1 <= argc) {
       /* Input from file */
       i = i + 1;
@@ -226,7 +234,7 @@ static int SNetInParseOptions(int argc, char **argv, FILE **input_ptr, FILE **ou
     SNetUtilDebugFatal("Could not open output");
   }
 
-  return 1;
+  return true;
 }
 
 /**
