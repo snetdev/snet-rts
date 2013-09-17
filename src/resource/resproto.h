@@ -48,6 +48,10 @@ int res_client_write(client_t* client);
 bool res_client_writing(client_t* client);
 int res_client_read(client_t* client);
 
+/* rescpuinfo.c */
+
+resource_t* res_cpuinfo_resource_init(void);
+
 /* reshwloc.c */
 
 resource_t* res_hwloc_resource_init(void);
@@ -210,7 +214,7 @@ void res_topo_get_host_list(intlist_t* list);
 host_t* res_host_create(char* hostname, int index, resource_t* root);
 void res_host_destroy(host_t* host);
 void res_host_dump(host_t* host);
-void res_topo_init(void);
+bool res_topo_init(void);
 void res_topo_destroy(void);
 char* res_system_resource_string(int id);
 char* res_system_host_string(int id);

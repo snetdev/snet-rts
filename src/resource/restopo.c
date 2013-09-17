@@ -347,15 +347,19 @@ void res_host_dump(host_t* host)
   fflush(stdout);
 }
 
-void res_topo_init(void)
+bool res_topo_init(void)
 {
   resource_t   *local_root = res_resource_init();
   host_t       *local_host;
 
-  local_host = res_host_create(res_hostname(), LOCAL_HOST, local_root);
+  if (local_root) {
+    local_host = res_host_create(res_hostname(), LOCAL_HOST, local_root);
 
-  res_topo_create();
-  res_topo_add_host(local_host);
+    res_topo_create();
+    res_topo_add_host(local_host);
+  }
+
+  return (local_root != NULL);
 }
 
 void res_topo_destroy(void)

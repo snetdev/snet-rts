@@ -235,23 +235,26 @@ int main(int argc, char **argv)
 {
   get_options(argc, argv);
 
-  res_topo_init();
+  if (res_topo_init() == false) {
+    res_error("%s: Could not initialize hardware topology information.\n",
+              *argv);
+  } else {
+    if (show_resource) {
+      char *str = res_system_resource_string(LOCAL_HOST);
+      fputs(str, stdout);
+      xfree(str);
+    }
+    else if (show_topology) {
+      char *str = res_system_host_string(LOCAL_HOST);
+      fputs(str, stdout);
+      xfree(str);
+    }
+    else {
+      res_service(listen_addr, listen_port, slaves);
+    }
 
-  if (show_resource) {
-    char *str = res_system_resource_string(LOCAL_HOST);
-    fputs(str, stdout);
-    xfree(str);
+    res_topo_destroy();
   }
-  else if (show_topology) {
-    char *str = res_system_host_string(LOCAL_HOST);
-    fputs(str, stdout);
-    xfree(str);
-  }
-  else {
-    res_service(listen_addr, listen_port, slaves);
-  }
-
-  res_topo_destroy();
 
   return 0;
 }

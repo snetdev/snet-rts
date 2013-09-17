@@ -211,6 +211,7 @@ src_resource_resserv_SOURCES = \
 	src/resource/resbalance.c \
 	src/resource/resclient.c \
 	src/resource/resclient.h \
+	src/resource/rescpuinfo.c \
 	src/resource/resdefs.h \
 	src/resource/reshwloc.c \
 	src/resource/reslist.c \
