@@ -12,6 +12,23 @@ static int EQ(const char* key, const char* str)
   return (*key == *str) && !strncmp(key, str, strlen(str));
 }
 
+static void res_fix_logical(resource_t* root)
+{
+  int s, c, p, num_procs = 0, num_cores = 0, num_socks = 0;
+  for (s = 0; s < root->num_children; ++s) {
+    resource_t* sock = root->children[s];
+    sock->logical = num_socks++;
+    for (c = 0; c < sock->num_children; ++c) {
+      resource_t* core = sock->children[c];
+      core->logical = num_cores++;
+      for (p = 0; p < core->num_children; ++p) {
+        resource_t* proc = core->children[p];
+        proc->logical = num_procs++;
+      }
+    }
+  }
+}
+
 static resource_t* res_parse_cpuinfo(FILE *fp)
 {
   struct cpuinfo {
@@ -79,21 +96,25 @@ static resource_t* res_parse_cpuinfo(FILE *fp)
       }
     }
   }
+  if (root) {
+    res_fix_logical(root);
+  }
   return root;
 }
 
 resource_t* res_cpuinfo_resource_init(void)
 {
   static const char cpuinfo[] = "/proc/cpuinfo";
-  FILE *fp = fopen(cpuinfo, "r");
+  const char* env = getenv("CPUINFOFILE");
+  const char* infile = env ? env : cpuinfo;
+  FILE *fp = fopen(infile, "r");
   resource_t* root = NULL;
 
   if (fp) {
     root = res_parse_cpuinfo(fp);
     fclose(fp);
-  }
-  else {
-    res_warn("Could not open %s: %s\n", cpuinfo, strerror(errno));
+  } else {
+    res_warn("Could not open file %s: %s.\n", infile, strerror(errno));
   }
 
   return root;
