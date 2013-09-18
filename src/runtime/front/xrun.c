@@ -6,6 +6,16 @@
 #include "node.h"
 #include "debugtime.h"
 
+typedef enum pipe_mesg_type {
+  MesgDone = 10,
+  MesgBusy = 20,
+} pipe_mesg_type_t;
+
+typedef struct pipe_mesg {
+  int   type;
+  int   id;
+} pipe_mesg_t;
+
 /* Return worker ID from a Pthread. */
 int SNetGetWorkerId(void)
 {
@@ -46,16 +56,6 @@ worker_config_t* SNetCreateWorkerConfig(
   }
   return config;
 }
-
-typedef enum pipe_mesg_type {
-  MesgDone = 10,
-  MesgBusy = 20,
-} pipe_mesg_type_t;
-
-typedef struct pipe_mesg {
-  int   type;
-  int   id;
-} pipe_mesg_t;
 
 /* Transmit a message from a worker to the master. */
 static void SNetPipeSend(int fd, const pipe_mesg_t* mesg)
@@ -159,6 +159,7 @@ void SNetMasterStatic(
   }
 }
 
+/* Activate a new worker. */
 void SNetMasterStartOne(int id, worker_config_t* config)
 {
   if (config->workers[id] == NULL) {
@@ -270,6 +271,85 @@ void SNetMasterDynamic(worker_config_t* config, int recv)
   SNetMemFree(state);
 }
 
+/* Dynamic resource management via the resource server. */
+void SNetMasterResource(worker_config_t* config, int recv)
+{
+  const int     worker_limit = config->worker_count;
+  int           i, started = 0, wanted = 1, alive = 0, idlers = 0;
+  pipe_mesg_t   mesg;
+  char         *state = SNetMemCalloc(2 + worker_limit, sizeof(*state));
+  enum state { SlaveDone, SlaveIdle, SlaveBusy };
+  const double  begin = SNetRealTime();
+  double        endtime = 0;
+
+  /* Reset for now; increase as needed. */
+  config->worker_count = 0;
+
+  while (alive || started < wanted) {
+    if (started < wanted) {
+      const double now = SNetRealTime();
+      const double slowdown = 0.001;
+      const double delay = endtime + slowdown - now;
+      if (delay <= 0 || SNetWaitForInput(recv, delay) == false) {
+        for (; started < wanted; ++started, ++alive, ++idlers) {
+          for (i = 1; state[i]; ++i) {}
+          assert(i <= worker_limit);
+          SNetMasterStartOne(i, config);
+          state[i] = SlaveIdle;
+        }
+      }
+    }
+
+    SNetPipeReceive(recv, &mesg);
+    assert(mesg.id >= 1 && mesg.id <= config->worker_count);
+    switch (mesg.type) {
+
+      case MesgDone: {
+        --alive;
+        --started;
+        if (state[mesg.id] == SlaveIdle) {
+          assert(idlers > 0 && started >= 0);
+          --idlers;
+          if (alive == 0) {
+            --wanted;
+          }
+        } else {
+          assert(state[mesg.id] == SlaveBusy);
+          if (idlers != 0 || alive == 0) {
+            --wanted;
+          }
+        }
+        if (SNetDebugTL()) {
+          printf("[%s,%.3f]: worker %d done, %d alive, %d idle, %d more.\n",
+                 __func__, SNetRealTime() - begin, mesg.id,
+                 alive, idlers, wanted - started);
+        }
+        state[mesg.id] = SlaveDone;
+        endtime = SNetRealTime();
+      } break;
+
+      case MesgBusy: {
+        --idlers;
+        if (SNetDebugTL()) {
+          printf("[%s,%.3f]: worker %d busy, %d alive, %d idle, %d more.\n",
+                 __func__, SNetRealTime() - begin, mesg.id,
+                 alive, idlers, wanted - started);
+        }
+        assert(state[mesg.id] == SlaveIdle);
+        state[mesg.id] = SlaveBusy;
+        if (alive < worker_limit && started == wanted) {
+          ++wanted;
+        }
+        endtime = SNetRealTime();
+      } break;
+
+      default: SNetUtilDebugFatal("[%s]: Bad message %d", __func__, mesg.type);
+    }
+  }
+
+  SNetMemFree(state);
+}
+
 /* Create workers and start them. */
 void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
 {
@@ -296,7 +376,10 @@ void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
     }
 
     /* Check for dynamic resource management. */
-    if (SNetOptResource()) {
+    if (SNetOptResourceServer()) {
+      SNetMasterResource(config, fildes[0]);
+    }
+    else if (SNetOptResource()) {
       /* Throttle number of workers dynamically by work load. */
       SNetMasterDynamic(config, fildes[0]);
     } else {

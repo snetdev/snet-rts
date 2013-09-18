@@ -592,10 +592,18 @@ void SNetMasterStatic(
   int num_managers,
   worker_config_t* config,
   int recv);
+
+/* Activate a new worker. */
 void SNetMasterStartOne(int id, worker_config_t* config);
+
+/* Return true iff input is available within a given delay. */
+bool SNetWaitForInput(int fd, double delay);
 
 /* Throttle number of workers by work load. */
 void SNetMasterDynamic(worker_config_t* config, int recv);
+
+/* Dynamic resource management via the resource server. */
+void SNetMasterResource(worker_config_t* config, int recv);
 
 /* Create workers and start them. */
 void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output);
@@ -884,6 +892,9 @@ bool SNetFeedbackDeterministic(void);
 
 /* Whether to use dynamic resource management. */
 bool SNetOptResource(void);
+
+/* Whether and how to connect to the resource management service. */
+const char* SNetOptResourceServer(void);
 
 /* Whether to use optimized sync-star. */
 bool SNetZipperEnabled(void);

@@ -209,6 +209,8 @@ pkglib_LTLIBRARIES += libresserv.la
 libfrontrt_la_CPPFLAGS += $(HWLOC_INCLUDES)
 libfrontrt_la_LIBADD    = $(LIBHWLOC_LA)
 
+LDFLAGS += libresserv.la $(LIBHWLOC_LA)
+
 bin_PROGRAMS = src/resource/resserv
 
 libresserv_la_SOURCES = \
