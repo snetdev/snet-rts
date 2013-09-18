@@ -1,6 +1,9 @@
 #ifndef RESDEFS_H_INCLUDED
 #define RESDEFS_H_INCLUDED
 
+#ifndef NULL
+#include <stdlib.h>
+#endif
 #ifndef __bool_true_false_are_defined
 #include <stdbool.h>
 #endif

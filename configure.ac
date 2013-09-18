@@ -149,7 +149,7 @@ AM_CONDITIONAL([ENABLE_TH_LPEL], [test $have_lpel = yes])
 
 
 
-dnl check for support of portable hardware locality
+dnl Check for support of portable hardware locality.
 
 AC_ARG_WITH([hwloc-includes],
             [AC_HELP_STRING([--with-hwloc-includes=DIR],
@@ -195,12 +195,21 @@ then
   LIBHWLOC_LA=$with_hwloc_libs/libhwloc.la
   AC_SUBST([LIBHWLOC_LA])
   AC_SUBST([HWLOC_INCLUDES])
-  AC_DEFINE([ENABLE_HWLOC], [1], [Set to 1 to enable the hwloc])
+  AC_DEFINE([ENABLE_HWLOC], [1], [Set to 1 to enable the hwloc.])
   AM_CONDITIONAL([ENABLE_HWLOC], [true])
 else
   AM_CONDITIONAL([ENABLE_HWLOC], [false])
 fi
 
+dnl Check for support for the resource management service.
+
+AC_ARG_ENABLE([resserv], [AS_HELP_STRING([--enable-resserv],
+    [Enable support for the resource management service (default is disabled).])],
+    [], [enable_resserv=no])
+if test x$enable_resserv = xyes; then
+  AC_DEFINE([ENABLE_RESSERV], [1], [Set to 1 to enable the resource management service.])
+fi
+AM_CONDITIONAL([ENABLE_RESSERV], [test x$enable_resserv = xyes])
 
 dnl check for sac compiler in order to build sac4snet interface
 

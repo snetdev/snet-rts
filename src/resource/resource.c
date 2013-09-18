@@ -125,11 +125,9 @@ resource_t* res_resource_init(void)
   resource_t    *local_root = NULL;
   const char    *env = getenv("RESSERV");
 
-#if ENABLE_HWLOC
   if (!env || strstr(env, "hwloc")) {
     local_root = res_hwloc_resource_init();
   }
-#endif
 
   if (local_root == NULL && (!env || strstr(env, "cpuinfo"))) {
     local_root = res_cpuinfo_resource_init();

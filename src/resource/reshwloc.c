@@ -1,6 +1,8 @@
-#include <hwloc.h>
 #include "resdefs.h"
 #include "resource.h"
+
+#if ENABLE_HWLOC
+#include <hwloc.h>
 
 /* Convert HWLOC type to resource kind. */
 static res_kind_t res_type_to_kind(hwloc_obj_type_t type)
@@ -104,18 +106,24 @@ static resource_t* traverse_resources(
 
   return res;
 }
+#endif
 
 resource_t* res_hwloc_resource_init(void)
 {
+  resource_t           *local_root = NULL;
+
+#if ENABLE_HWLOC
   hwloc_topology_t      hwloc_topo;
   hwloc_obj_t           hwloc_root;
-  resource_t           *local_root;
 
   hwloc_topology_init(&hwloc_topo);
   hwloc_topology_load(hwloc_topo);
   hwloc_root = hwloc_get_root_obj(hwloc_topo);
   local_root = traverse_resources(hwloc_topo, hwloc_root, DEPTH_ZERO, NO_PARENT);
   hwloc_topology_destroy(hwloc_topo);
+#endif
+
   return local_root;
 }
+
 

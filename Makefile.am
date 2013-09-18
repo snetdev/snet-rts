@@ -202,14 +202,8 @@ libfrontrt_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/distrib/common \
 	-I$(srcdir)/src/resource
 
-if ENABLE_HWLOC
-
+if ENABLE_RESSERV
 pkglib_LTLIBRARIES += libresserv.la
-
-libfrontrt_la_CPPFLAGS += $(HWLOC_INCLUDES)
-libfrontrt_la_LIBADD    = $(LIBHWLOC_LA)
-
-LDFLAGS += libresserv.la $(LIBHWLOC_LA)
 
 bin_PROGRAMS = src/resource/resserv
 
@@ -236,11 +230,17 @@ libresserv_la_SOURCES = \
 	src/resource/restopo.h \
 	src/resource/restypes.h \
 	src/resource/resutil.c
-libresserv_la_CPPFLAGS = $(AM_CPPFLAGS) $(HWLOC_INCLUDES)
+libresserv_la_CPPFLAGS = $(AM_CPPFLAGS)
 
-src_resource_resserv_SOURCES  = src/resource/resmain.c
-src_resource_resserv_CPPFLAGS = $(AM_CPPFLAGS) $(HWLOC_INCLUDES)
-src_resource_resserv_LDADD    = -lresserv $(LIBHWLOC_LA)
+src_resource_resserv_SOURCES   = src/resource/resmain.c
+src_resource_resserv_CPPFLAGS  = $(AM_CPPFLAGS)
+src_resource_resserv_LDADD     = -lresserv
+
+if ENABLE_HWLOC
+libresserv_la_CPPFLAGS        += $(HWLOC_INCLUDES)
+src_resource_resserv_LDADD    += $(LIBHWLOC_LA)
+endif
+
 endif
 
 libfrontnodist_la_SOURCES = \
