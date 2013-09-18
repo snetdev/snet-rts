@@ -33,7 +33,7 @@ void res_loop(int listen)
     wptr = ((wcnt > 0) ? &wout : NULL);
     num = select(max_sock + 1, &rout, wptr, NULL, NULL);
     if (num <= 0) {
-      pexit("select");
+      res_pexit("select");
     }
 
     if (FD_ISSET(listen, &rout)) {

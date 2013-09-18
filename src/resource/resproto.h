@@ -88,14 +88,6 @@ void res_service(const char* listen_addr, int listen_port, intmap_t* slaves);
 
 /* resmain.c */
 
-void pexit(const char *mesg);
-bool res_get_debug(void);
-bool res_get_verbose(void);
-void res_assert_failed(const char *fn, int ln, const char *msg);
-void res_warn(const char *fmt, ...);
-void res_error(const char *fmt, ...);
-void res_info(const char *fmt, ...);
-void res_debug(const char *fmt, ...);
 
 /* resmap.c */
 
@@ -219,6 +211,21 @@ void res_topo_destroy(void);
 char* res_system_resource_string(int id);
 char* res_system_host_string(int id);
 void res_parse_topology(int sysid, char* text);
+
+/* resutil.c */
+
+const char* res_get_program_name(void);
+void res_set_program_name(const char* prog);
+bool res_get_debug(void);
+void res_set_debug(bool flag);
+bool res_get_verbose(void);
+void res_set_verbose(bool flag);
+void res_pexit(const char *mesg);
+void res_assert_failed(const char *fn, int ln, const char *msg);
+void res_warn(const char *fmt, ...);
+void res_error(const char *fmt, ...);
+void res_info(const char *fmt, ...);
+void res_debug(const char *fmt, ...);
 
 
 #endif

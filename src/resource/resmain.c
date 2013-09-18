@@ -1,28 +1,20 @@
-#include <assert.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <libgen.h>
-#include <limits.h>
-#include <stdarg.h>
 #include <ctype.h>
 
 #include "resdefs.h"
 
-static const char* prog;
 static const char* listen_addr;
 static int         listen_port;
-static bool        debug;
-static bool        verbose;
 static bool        show_resource;
 static bool        show_topology;
 static intmap_t*   slaves;
 
 static void usage(void)
 {
-  fprintf(stderr, "Usage: %s [ options ... ]\n", prog);
+  fprintf(stderr, "Usage: %s [ options ... ]\n", res_get_program_name());
   fprintf(stderr, "Options:\n");
   fprintf(stderr, " -c config  : Read configuration from file 'config'.\n");
   fprintf(stderr, " -l address : Listen on IP address 'address'.\n");
@@ -34,28 +26,20 @@ static void usage(void)
   exit(1);
 }
 
-void pexit(const char *mesg)
-{
-  fprintf(stderr, "%s: %s: %s\n", prog, mesg, strerror(errno));
-  exit(1);
-}
-
 static void get_version(void)
 {
 #if defined(__DATE__) && defined(__TIME__)
-  fprintf(stderr, "%s:%s", prog, " compiled on " __TIME__  " " __DATE__ ".\n");
+  fprintf(stderr, "%s:%s", res_get_program_name(),
+          " compiled on " __TIME__  " " __DATE__ ".\n");
 #if defined(__GNUC_PATCHLEVEL__)
   fprintf(stderr, "%s: compiled by GCC version %d.%d.%d.\n",
-          prog, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+          res_get_program_name(), __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #endif
   exit(0);
 #else
   usage();
 #endif
 }
-
-bool res_get_debug(void) { return debug; }
-bool res_get_verbose(void) { return verbose; }
 
 static bool get_listen_addr(const char *spec)
 {
@@ -79,7 +63,7 @@ static bool get_listen_port(const char *spec)
     listen_port = port;
     return true;
   } else {
-    fprintf(stderr, "%s: Invalid port specification '%s'.\n", prog, spec);
+    fprintf(stderr, "%s: Invalid port specification '%s'.\n", res_get_program_name(), spec);
     return false;
   }
 }
@@ -91,7 +75,7 @@ static bool get_bool(const char *spec, bool *result)
   if (*spec && strchr("0nNfF", *spec)) *result = false;
   else if (*spec && strchr("1yYtT", *spec)) *result = true;
   else {
-      fprintf(stderr, "%s: Invalid flag '%s'.\n", prog, spec);
+      fprintf(stderr, "%s: Invalid flag '%s'.\n", res_get_program_name(), spec);
       success = false;
   }
   return success;
@@ -102,7 +86,7 @@ static void get_config(const char *fname)
   FILE *fp = fopen(fname, "r");
 
   if (!fp) {
-    pexit(fname);
+    res_pexit(fname);
   }
   else {
     int line = 0, errors = 0;
@@ -125,10 +109,14 @@ static void get_config(const char *fname)
             valid = get_listen_port(val);
           }
           else if (!strcmp(key, "verbose")) {
-            valid = get_bool(val, &verbose);
+            bool flag = false;
+            valid = get_bool(val, &flag);
+            if (valid) res_set_verbose(flag);
           }
           else if (!strcmp(key, "debug")) {
-            valid = get_bool(val, &debug);
+            bool flag = false;
+            valid = get_bool(val, &flag);
+            if (valid) res_set_debug(flag);
           }
         }
 
@@ -151,7 +139,7 @@ static void get_config(const char *fname)
 
         if (!valid) {
           fprintf(stderr, "%s: Invalid configuration at line %d of %s. (%d,%d)\n",
-                  prog, line, fname, num, len);
+                  res_get_program_name(), line, fname, num, len);
           ++errors;
         }
       }
@@ -163,68 +151,23 @@ static void get_config(const char *fname)
   }
 }
 
-void res_assert_failed(const char *fn, int ln, const char *msg)
-{
-  fprintf(stderr, "%s: assertion failed:%s:%d: %s\n", prog, fn, ln, msg);
-  exit(1);
-}
-
-void res_warn(const char *fmt, ...)
-{
-  va_list ap;
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  va_end(ap);
-}
-
-void res_error(const char *fmt, ...)
-{
-  va_list ap;
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  va_end(ap);
-  exit(1);
-}
-
-void res_info(const char *fmt, ...)
-{
-  if (verbose) {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stdout, fmt, ap);
-    va_end(ap);
-    fflush(stdout);
-  }
-}
-
-void res_debug(const char *fmt, ...)
-{
-  if (debug) {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stdout, fmt, ap);
-    va_end(ap);
-    fflush(stdout);
-  }
-}
-
 static void get_options(int argc, char **argv)
 {
   int c;
 
   setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
-  prog = basename(*argv);
+  res_set_program_name(basename(*argv));
   listen_port = RES_DEFAULT_LISTEN_PORT;
 
   while ((c = getopt(argc, argv, "c:dhl:p:rtvV?")) != EOF) {
     switch (c) {
       case 'c': get_config(optarg); break;
-      case 'd': debug = true; break;
+      case 'd': res_set_debug(true); break;
       case 'l': if (!get_listen_addr(optarg)) exit(1); break;
       case 'p': if (!get_listen_port(optarg)) exit(1); break;
       case 'r': show_resource = true; break;
       case 't': show_topology = true; break;
-      case 'v': verbose = true; break;
+      case 'v': res_set_verbose(true); break;
       case 'V': get_version(); break;
       default: usage();
     }
