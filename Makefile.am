@@ -201,13 +201,17 @@ libfrontrt_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/runtime/stream/netif \
 	-I$(srcdir)/src/distrib/common \
 	-I$(srcdir)/src/resource
+
 if ENABLE_HWLOC
+
+pkglib_LTLIBRARIES += libresserv.la
+
 libfrontrt_la_CPPFLAGS += $(HWLOC_INCLUDES)
-libfrontrt_la_LIBADD = $(LIBHWLOC_LA)
+libfrontrt_la_LIBADD    = $(LIBHWLOC_LA)
 
 bin_PROGRAMS = src/resource/resserv
 
-src_resource_resserv_SOURCES = \
+libresserv_la_SOURCES = \
 	src/resource/resbalance.c \
 	src/resource/resclient.c \
 	src/resource/resclient.h \
@@ -216,7 +220,6 @@ src_resource_resserv_SOURCES = \
 	src/resource/reshwloc.c \
 	src/resource/reslist.c \
 	src/resource/resloop.c \
-	src/resource/resmain.c \
 	src/resource/resmap.c \
 	src/resource/resmem.c \
 	src/resource/resnet.c \
@@ -229,10 +232,13 @@ src_resource_resserv_SOURCES = \
 	src/resource/resstream.h \
 	src/resource/restopo.c \
 	src/resource/restopo.h \
-	src/resource/restypes.h
+	src/resource/restypes.h \
+	src/resource/resutil.c
+libresserv_la_CPPFLAGS = $(AM_CPPFLAGS) $(HWLOC_INCLUDES)
 
+src_resource_resserv_SOURCES  = src/resource/resmain.c
 src_resource_resserv_CPPFLAGS = $(AM_CPPFLAGS) $(HWLOC_INCLUDES)
-src_resource_resserv_LDADD = $(LIBHWLOC_LA)
+src_resource_resserv_LDADD    = -lresserv $(LIBHWLOC_LA)
 endif
 
 libfrontnodist_la_SOURCES = \
