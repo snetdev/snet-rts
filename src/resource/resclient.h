@@ -1,7 +1,7 @@
 #ifndef RESCLIENT_H_INCLUDED
 #define RESCLIENT_H_INCLUDED
 
-typedef struct client client_t;
+#include "resstream.h"
 
 struct client {
   stream_t      stream;

@@ -2,9 +2,12 @@
 #include <unistd.h>
 #include <sys/param.h>
 #include <sys/select.h>
-#include <math.h>
+
 #include "node.h"
 #include "debugtime.h"
+#if ENABLE_RESSERV
+#include "resdefs.h"
+#endif
 
 typedef enum pipe_mesg_type {
   MesgDone = 10,
@@ -111,17 +114,20 @@ void *SNetNodeThreadStart(void *arg)
   worker_t     *worker = (worker_t *) arg;
 
   SNetThreadSetSelf(worker);
-  if (worker->role == InputManager) {
-    SNetInputManagerRun(worker);
-  }
-  else if (worker->role == DataWorker) {
-    if (SNetOptResource()) {
-      SNetWorkerSlave(worker);
-    } else {
-      SNetWorkerRun(worker);
-    }
-  } else {
-    assert(false);
+  switch (worker->role) {
+    case InputManager: {
+      SNetInputManagerRun(worker);
+    } break;
+
+    case DataWorker: {
+      if (SNetOptResource()) {
+        SNetWorkerSlave(worker);
+      } else {
+        SNetWorkerRun(worker);
+      }
+    } break;
+
+    default: assert(false);
   }
   SNetNodeWorkerDone(worker);
   return arg;
@@ -129,10 +135,10 @@ void *SNetNodeThreadStart(void *arg)
 
 /* Start a number of workers and wait for all to finish. */
 void SNetMasterStatic(
-  int num_workers,
-  int num_managers,
+  const int num_workers,
+  const int num_managers,
   worker_config_t* config,
-  int recv)
+  const int recv)
 {
   const int     total_workers = num_workers + num_managers;
   int           id, alive;
@@ -159,7 +165,7 @@ void SNetMasterStatic(
   }
 }
 
-/* Activate a new worker. */
+/* Activate a new worker thread. */
 void SNetMasterStartOne(int id, worker_config_t* config)
 {
   if (config->workers[id] == NULL) {
@@ -274,6 +280,7 @@ void SNetMasterDynamic(worker_config_t* config, int recv)
 /* Dynamic resource management via the resource server. */
 void SNetMasterResource(worker_config_t* config, int recv)
 {
+#if ENABLE_RESSERV
   const int     worker_limit = config->worker_count;
   int           i, started = 0, wanted = 1, alive = 0, idlers = 0;
   pipe_mesg_t   mesg;
@@ -281,6 +288,12 @@ void SNetMasterResource(worker_config_t* config, int recv)
   enum state { SlaveDone, SlaveIdle, SlaveBusy };
   const double  begin = SNetRealTime();
   double        endtime = 0;
+  server_t     *server;
+
+  res_set_debug(SNetDebug());
+  res_set_verbose(SNetVerbose());
+
+  server = res_server_create_option(SNetOptResourceServer());
 
   /* Reset for now; increase as needed. */
   config->worker_count = 0;
@@ -348,6 +361,10 @@ void SNetMasterResource(worker_config_t* config, int recv)
   }
 
   SNetMemFree(state);
+  res_server_destroy(server);
+#else
+  SNetUtilDebugFatal("[%s]: Resource management was not configured.", __func__);
+#endif
 }
 
 /* Create workers and start them. */
@@ -363,7 +380,7 @@ void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
   trace(__func__);
 
   if (pipe(fildes)) {
-    SNetUtilDebugFatal("no pipe: %s", strerror(errno));
+    SNetUtilDebugFatal("[%s]: no pipe: %s", __func__, strerror(errno));
   } else {
     worker_config_t* config =
       SNetCreateWorkerConfig(total_workers, max_worker, fildes[1], input, output);

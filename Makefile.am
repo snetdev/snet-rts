@@ -1,6 +1,9 @@
 
 SUBDIRS = . src/interfaces/sac4snet
 
+# common flags
+AM_CPPFLAGS = -I$(top_srcdir)/include
+
 # stuff that gets installed
 snetstuffdir = $(pkglibdir)
 
@@ -224,6 +227,7 @@ libresserv_la_SOURCES = \
 	src/resource/resparse.c \
 	src/resource/resparse.h \
 	src/resource/resproto.h \
+	src/resource/resserver.c \
 	src/resource/resstream.c \
 	src/resource/resstream.h \
 	src/resource/restopo.c \
@@ -233,8 +237,7 @@ libresserv_la_SOURCES = \
 libresserv_la_CPPFLAGS = $(AM_CPPFLAGS)
 
 src_resource_resserv_SOURCES   = src/resource/resmain.c
-src_resource_resserv_CPPFLAGS  = $(AM_CPPFLAGS)
-src_resource_resserv_LDADD     = -lresserv
+src_resource_resserv_LDADD     = libresserv.la
 
 if ENABLE_HWLOC
 libresserv_la_CPPFLAGS        += $(HWLOC_INCLUDES)
@@ -392,9 +395,6 @@ libdistribscc_la_CPPFLAGS = \
 	-I$(srcdir)/../../../scc-hg/rcce/include
 endif
 
-# common flags
-AM_CPPFLAGS = -I$(top_srcdir)/include
-
 compile_cmd: Makefile
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)echo '#!/bin/sh' >$@ ; \
@@ -404,9 +404,16 @@ compile_cmd: Makefile
 
 link_cmd: Makefile
 	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)echo '#!/bin/sh' >$@ ; \
-	     echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
-	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS}' '"$$@"' >>$@ ; \
+	$(AM_V_GEN)echo '#!/bin/sh' >$@
+if ENABLE_RESSERV
+	$(AM_V_GEN)echo 'RESSERV=-lresserv' >>$@
+else
+	$(AM_V_GEN)echo 'RESSERV=' >>$@
+endif
+	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps \
+	     --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
+	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	     -L'$${SNET_LIBS} $${RESSERV} "$$@"' >>$@ ; \
 	     chmod +x $@
 
 snet-config.mkf: Makefile

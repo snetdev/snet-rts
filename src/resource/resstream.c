@@ -5,6 +5,10 @@
 #include <assert.h>
 #include <stdarg.h>
 #include "resdefs.h"
+#include "resstream.h"
+
+typedef struct buffer buffer_t;
+typedef struct stream stream_t;
 
 void res_buffer_init(buffer_t* buf)
 {
@@ -203,3 +207,64 @@ stream_t* res_stream_from_string(const char* string)
   return stream;
 }
 
+void res_stream_reply(stream_t* stream, const char* fmt, va_list ap)
+{
+  const int max_reserve = 1024;
+  const char *str = fmt, *arg;
+  int size = 0;
+  char* data = res_stream_outgoing(stream, &size);
+  char* start = data;
+  char* end = data + size;
+
+  for (str = fmt; *str; ++str) {
+    if (start + 50 > end) {
+      res_stream_appended(stream, start - data);
+      res_stream_reserve(stream, max_reserve);
+      data = res_stream_outgoing(stream, &size);
+      assert(size >= max_reserve);
+      start = data;
+      end = data + size;
+    }
+    if (*str != '%') {
+      *start++ = *str;
+      *start = '\0';
+    } else if (str[1] == '\0') {
+      assert(false);
+    } else {
+      switch (*++str) {
+        case 's': {
+          for (arg = va_arg(ap, char*); *arg; ++arg) {
+            if (start + 10 > end) {
+              res_stream_appended(stream, start - data);
+              res_stream_reserve(stream, max_reserve);
+              data = res_stream_outgoing(stream, &size);
+              assert(size >= max_reserve);
+              start = data;
+              end = data + size;
+            }
+            *start++ = *arg;
+            *start = '\0';
+          }
+        } break;
+        case 'd': {
+          char *first = start, *last;
+          int n = va_arg(ap, int);
+          res_assert(n >= 0, "Negative numbers not implemented.");
+          /* First convert the number and store in reverse order. */
+          do {
+            *start++ = ((n % 10) + '0');
+            *start = '\0';
+            n /= 10;
+          } while (n);
+          /* Then reverse the order of the stored digits. */
+          for (last = start - 1; last > first; --last, ++first) {
+            char save = *first; *first = *last; *last = save;
+          }
+        } break;
+        default: res_assert(false, "Unimplemented conversion.");
+      }
+    }
+  }
+
+  res_stream_appended(stream, start - data);
+}

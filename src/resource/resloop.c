@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 
 #include "resdefs.h"
+#include "resclient.h"
 
 void res_loop(int listen)
 {
@@ -169,7 +170,11 @@ void res_parse_slave(int sysid, char* output)
       }
     }
     if (count == 0) {
-      res_parse_topology(sysid, start);
+      if (res_parse_topology(sysid, start) == false) {
+        res_error("[%s]: Parse error for output of slave %d\n", __func__, sysid);
+      }
+    } else {
+      res_error("[%s]: Incomplete output of slave %d\n", __func__, sysid);
     }
   }
 }

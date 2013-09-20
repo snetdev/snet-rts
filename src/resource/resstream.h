@@ -1,9 +1,6 @@
 #ifndef RESSTREAM_H_INCLUDED
 #define RESSTREAM_H_INCLUDED
 
-typedef struct buffer buffer_t;
-typedef struct stream stream_t;
-
 struct buffer {
   char*         data;
   int           size;

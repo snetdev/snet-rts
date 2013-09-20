@@ -28,17 +28,24 @@ static void usage(void)
 
 static void get_version(void)
 {
+  fprintf(stderr, "%s: hwloc is %s.\n", res_get_program_name(),
+#if ENABLE_HWLOC
+          "enabled"
+#else
+          "disabled"
+#endif
+          );
+
 #if defined(__DATE__) && defined(__TIME__)
-  fprintf(stderr, "%s:%s", res_get_program_name(),
-          " compiled on " __TIME__  " " __DATE__ ".\n");
+  fprintf(stderr, "%s: compiled on %s.\n", res_get_program_name(),
+          __TIME__  " " __DATE__);
+#endif
+
 #if defined(__GNUC_PATCHLEVEL__)
   fprintf(stderr, "%s: compiled by GCC version %d.%d.%d.\n",
           res_get_program_name(), __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #endif
   exit(0);
-#else
-  usage();
-#endif
 }
 
 static bool get_listen_addr(const char *spec)

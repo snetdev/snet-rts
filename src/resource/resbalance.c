@@ -5,6 +5,7 @@
 #include "resdefs.h"
 #include "restopo.h"
 #include "resource.h"
+#include "resclient.h"
 
 /* A client returns all its resources to the server (when it exits). */
 void res_release_client(client_t* client)

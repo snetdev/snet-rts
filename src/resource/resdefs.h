@@ -1,6 +1,7 @@
 #ifndef RESDEFS_H_INCLUDED
 #define RESDEFS_H_INCLUDED
 
+#include <stdarg.h>
 #ifndef NULL
 #include <stdlib.h>
 #endif
@@ -41,8 +42,6 @@
 typedef unsigned long bitmap_t;
 
 #include "restypes.h"
-#include "resstream.h"
-#include "resclient.h"
 #include "resproto.h"
 
 #endif

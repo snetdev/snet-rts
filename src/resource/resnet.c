@@ -93,10 +93,6 @@ int res_connect_socket(int connect_port, char *address, bool nb)
     return -1;
   }
 
-  if (nb && res_nonblocking(s, nb)) {
-    close(s);
-    return -1;
-  }
   if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
     perror("ioctl FD_CLOEXEC");
     close(s);
@@ -123,12 +119,19 @@ int res_connect_socket(int connect_port, char *address, bool nb)
   }
 
   if (connect(s, (struct sockaddr *)&a, sizeof(a)) == -1) {
-    if (errno != EINPROGRESS) {
-      perror("connect()");
-      close(s);
-      return -1;
-    }
+    perror("connect");
+    close(s);
+    return -1;
   }
+
+  /* We set non-blocking only after connection establishment, 
+   * because otherwise we'd have to select-wait for
+   * writability of the socket, which is complicating. */
+  if (nb && res_nonblocking(s, nb)) {
+    close(s);
+    return -1;
+  }
+
   return s;
 }
 

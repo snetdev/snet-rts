@@ -6,11 +6,13 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <sys/param.h>
-#include <setjmp.h>
 #include <ctype.h>
 
 #include "resdefs.h"
 #include "resparse.h"
+#include "resclient.h"
+
+typedef struct client client_t;
 
 client_t* res_client_create(int bit, int fd)
 {
@@ -49,67 +51,11 @@ void res_client_number(client_t* client, int* number)
 
 void res_client_reply(client_t* client, const char* fmt, ...)
 {
-  const int max_reserve = 1024;
-  const char *str = fmt, *arg;
   va_list ap;
-  int size = 0;
-  char* data = res_stream_outgoing(&client->stream, &size);
-  char* start = data;
-  char* end = data + size;
 
   va_start(ap, fmt);
-  for (str = fmt; *str; ++str) {
-    if (start + 50 > end) {
-      res_stream_appended(&client->stream, start - data);
-      res_stream_reserve(&client->stream, max_reserve);
-      data = res_stream_outgoing(&client->stream, &size);
-      assert(size >= max_reserve);
-      start = data;
-      end = data + size;
-    }
-    if (*str != '%') {
-      *start++ = *str;
-      *start = '\0';
-    } else if (str[1] == '\0') {
-      assert(false);
-    } else {
-      switch (*++str) {
-        case 's': {
-          for (arg = va_arg(ap, char*); *arg; ++arg) {
-            if (start + 10 > end) {
-              res_stream_appended(&client->stream, start - data);
-              res_stream_reserve(&client->stream, max_reserve);
-              data = res_stream_outgoing(&client->stream, &size);
-              assert(size >= max_reserve);
-              start = data;
-              end = data + size;
-            }
-            *start++ = *arg;
-            *start = '\0';
-          }
-        } break;
-        case 'd': {
-          char *first = start, *last;
-          int n = va_arg(ap, int);
-          res_assert(n >= 0, "Negative numbers not implemented.");
-          /* First convert the number and store in reverse order. */
-          do {
-            *start++ = ((n % 10) + '0');
-            *start = '\0';
-            n /= 10;
-          } while (n);
-          /* Then reverse the order of the stored digits. */
-          for (last = start - 1; last > first; --last, ++first) {
-            char save = *first; *first = *last; *last = save;
-          }
-        } break;
-        default: res_assert(false, "Unimplemented conversion.");
-      }
-    }
-  }
+  res_stream_reply(&client->stream, fmt, ap);
   va_end(ap);
-
-  res_stream_appended(&client->stream, start - data);
 }
 
 void res_client_command_list(client_t* client)

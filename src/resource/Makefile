@@ -1,7 +1,7 @@
 
 .PHONY: all proto
 
-all:
+all install:
 	@rm -f -- core*
 	$(MAKE) -C ../.. $@
 

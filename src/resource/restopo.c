@@ -468,117 +468,107 @@ char* res_system_host_string(int id)
   }
 }
 
-void res_parse_topology(int sysid, char* text)
+void res_parse_system(stream_t* stream, host_t* host)
 {
   char* hostname = NULL;
   int n, nnumas = 0, a, ncaches = 0, o, ncores = 0, p, nprocs = 0;
-  int logical = 0, physical = 0;
-  stream_t* stream = res_stream_from_string(text);
-  host_t* host = NULL;
+  int logical = 0, physical = 0, sysid = 0;
   numa_t* numa;
   cache_t* cache;
   core_t* core;
   proc_t* proc;
 
-  if (setjmp(res_parse_exception_context)) {
-    res_host_destroy(host);
-    return;
-  } else {
+  res_parse_expect(stream, Number, &sysid);
+  res_parse_expect(stream, Hostname, NULL);
+  res_parse_expect(stream, String, &hostname);
+  res_parse_expect(stream, Children, NULL);
+  res_parse_expect(stream, Number, &nnumas);
+
+  host = xnew(host_t);
+  host->hostname = hostname;
+  host->root = NULL;
+  host->index = sysid;
+  host->nnumas = nnumas;
+  host->numa = xcalloc(nnumas, sizeof(numa_t*));
+  host->ncores = 0;
+  host->nprocs = 0;
+  host->cores = NULL;
+  host->procs = NULL;
+
+  for (n = 0; n < nnumas; ++n) {
     res_parse_expect(stream, Left, NULL);
-    res_parse_expect(stream, System, NULL);
+    res_parse_expect(stream, Numa, NULL);
     res_parse_expect(stream, Number, NULL);
-    res_parse_expect(stream, Hostname, NULL);
-    res_parse_expect(stream, String, &hostname);
     res_parse_expect(stream, Children, NULL);
-    res_parse_expect(stream, Number, &nnumas);
+    res_parse_expect(stream, Number, &ncaches);
 
-    host = xnew(host_t);
-    host->hostname = hostname;
-    host->root = NULL;
-    host->index = sysid;
-    host->nnumas = nnumas;
-    host->numa = xcalloc(nnumas, sizeof(numa_t*));
-    host->ncores = 0;
-    host->nprocs = 0;
-    host->cores = NULL;
-    host->procs = NULL;
+    numa = host->numa[n] = xnew(numa_t);
+    numa->logical = 0;
+    numa->physical = 0;
+    numa->ncaches = ncaches;
+    numa->caches = xcalloc(ncaches, sizeof(cache_t*));
+    numa->ncores = 0;
+    numa->nprocs = 0;
+    numa->assigned = 0;
+    numa->host = host;
 
-    for (n = 0; n < nnumas; ++n) {
+    for (a = 0; a < ncaches; ++a) {
       res_parse_expect(stream, Left, NULL);
-      res_parse_expect(stream, Numa, NULL);
+      res_parse_expect(stream, Cache, NULL);
       res_parse_expect(stream, Number, NULL);
       res_parse_expect(stream, Children, NULL);
-      res_parse_expect(stream, Number, &ncaches);
+      res_parse_expect(stream, Number, &ncores);
 
-      numa = host->numa[n] = xnew(numa_t);
-      numa->logical = 0;
-      numa->physical = 0;
-      numa->ncaches = ncaches;
-      numa->caches = xcalloc(ncaches, sizeof(cache_t*));
-      numa->ncores = 0;
-      numa->nprocs = 0;
-      numa->assigned = 0;
-      numa->host = host;
+      cache = numa->caches[a] = xnew(cache_t);
+      cache->logical = 0;
+      cache->physical = 0;
+      cache->ncores = ncores;
+      cache->cores = xcalloc(ncores, sizeof(core_t*));
+      cache->nprocs = 0;
+      cache->assigned = 0;
+      cache->numa = numa;
+      numa->ncores += ncores;
+      host->ncores += ncores;
 
-      for (a = 0; a < ncaches; ++a) {
+      for (o = 0; o < ncores; ++o) {
         res_parse_expect(stream, Left, NULL);
-        res_parse_expect(stream, Cache, NULL);
+        res_parse_expect(stream, Core, NULL);
         res_parse_expect(stream, Number, NULL);
+        res_parse_expect(stream, Logical, NULL);
+        res_parse_expect(stream, Number, &logical);
+        res_parse_expect(stream, Physical, NULL);
+        res_parse_expect(stream, Number, &physical);
         res_parse_expect(stream, Children, NULL);
-        res_parse_expect(stream, Number, &ncores);
+        res_parse_expect(stream, Number, &nprocs);
 
-        cache = numa->caches[a] = xnew(cache_t);
-        cache->logical = 0;
-        cache->physical = 0;
-        cache->ncores = ncores;
-        cache->cores = xcalloc(ncores, sizeof(core_t*));
-        cache->nprocs = 0;
-        cache->assigned = 0;
-        cache->numa = numa;
-        numa->ncores += ncores;
-        host->ncores += ncores;
+        core = cache->cores[o] = xnew(core_t);
+        core->logical = logical;
+        core->physical = physical;
+        core->hyper = 0;
+        core->nprocs = nprocs;
+        core->procs = xcalloc(nprocs, sizeof(proc_t*));
+        core->assigned = 0;
+        core->cache = cache;
+        cache->nprocs += nprocs;
+        numa->nprocs += nprocs;
+        host->nprocs += nprocs;
 
-        for (o = 0; o < ncores; ++o) {
+        for (p = 0; p < nprocs; ++p) {
           res_parse_expect(stream, Left, NULL);
-          res_parse_expect(stream, Core, NULL);
+          res_parse_expect(stream, Proc, NULL);
           res_parse_expect(stream, Number, NULL);
           res_parse_expect(stream, Logical, NULL);
           res_parse_expect(stream, Number, &logical);
           res_parse_expect(stream, Physical, NULL);
           res_parse_expect(stream, Number, &physical);
-          res_parse_expect(stream, Children, NULL);
-          res_parse_expect(stream, Number, &nprocs);
 
-          core = cache->cores[o] = xnew(core_t);
-          core->logical = logical;
-          core->physical = physical;
-          core->hyper = 0;
-          core->nprocs = nprocs;
-          core->procs = xcalloc(nprocs, sizeof(proc_t*));
-          core->assigned = 0;
-          core->cache = cache;
-          cache->nprocs += nprocs;
-          numa->nprocs += nprocs;
-          host->nprocs += nprocs;
+          proc = core->procs[p] = xnew(proc_t);
+          proc->logical = logical;
+          proc->physical = physical;
+          proc->state = ProcAvail;
+          proc->clientbit = 0;
+          proc->core = core;
 
-          for (p = 0; p < nprocs; ++p) {
-            res_parse_expect(stream, Left, NULL);
-            res_parse_expect(stream, Proc, NULL);
-            res_parse_expect(stream, Number, NULL);
-            res_parse_expect(stream, Logical, NULL);
-            res_parse_expect(stream, Number, &logical);
-            res_parse_expect(stream, Physical, NULL);
-            res_parse_expect(stream, Number, &physical);
-
-            proc = core->procs[p] = xnew(proc_t);
-            proc->logical = logical;
-            proc->physical = physical;
-            proc->state = ProcAvail;
-            proc->clientbit = 0;
-            proc->core = core;
-
-            res_parse_expect(stream, Right, NULL);
-          }
           res_parse_expect(stream, Right, NULL);
         }
         res_parse_expect(stream, Right, NULL);
@@ -586,8 +576,26 @@ void res_parse_topology(int sysid, char* text)
       res_parse_expect(stream, Right, NULL);
     }
     res_parse_expect(stream, Right, NULL);
+  }
+}
 
+bool res_parse_topology(int sysid, char* text)
+{
+  stream_t* stream = res_stream_from_string(text);
+  host_t* host = NULL;
+
+  if (setjmp(res_parse_exception_context)) {
+    res_host_destroy(host);
+    return false;
+  } else {
+    res_parse_expect(stream, Left, NULL);
+    res_parse_expect(stream, System, NULL);
+    res_parse_system(stream, host);
+    res_parse_expect(stream, Right, NULL);
+
+    host->index = sysid;
     res_topo_add_host(host);
+    return true;
   }
 }
 

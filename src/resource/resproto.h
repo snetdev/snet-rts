@@ -166,6 +166,23 @@ intlist_t* res_parse_intlist(stream_t* stream);
 token_t res_expect_string(stream_t* stream, char** result);
 void res_parse_expect(stream_t* stream, token_t expect, void* result);
 
+/* resserver.c */
+
+server_t* res_server_create(int fd);
+void res_server_destroy(server_t* server);
+server_t* res_server_create_option(const char* arg);
+void res_server_expect(server_t* server, token_t expect);
+void res_server_number(server_t* server, int* number);
+void res_server_command_system(server_t* server);
+void res_server_command(server_t* server);
+void res_server_parse(server_t* server);
+int res_server_process(server_t* server);
+int res_server_write(server_t* server);
+bool res_server_writing(server_t* server);
+void res_server_reply(server_t* server, const char* fmt, ...);
+int res_server_read(server_t* server);
+void res_server_setup(server_t* server);
+
 /* resstream.c */
 
 void res_buffer_init(buffer_t* buf);
@@ -192,6 +209,7 @@ void res_stream_reserve(stream_t* stream, int amount);
 void res_stream_appended(stream_t* stream, int amount);
 char* res_stream_outgoing(stream_t* stream, int* amount);
 stream_t* res_stream_from_string(const char* string);
+void res_stream_reply(stream_t* stream, const char* fmt, va_list ap);
 
 /* restopo.c */
 
@@ -210,7 +228,8 @@ bool res_topo_init(void);
 void res_topo_destroy(void);
 char* res_system_resource_string(int id);
 char* res_system_host_string(int id);
-void res_parse_topology(int sysid, char* text);
+void res_parse_system(stream_t* stream, host_t* host);
+bool res_parse_topology(int sysid, char* text);
 
 /* resutil.c */
 
