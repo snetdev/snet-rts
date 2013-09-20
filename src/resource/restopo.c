@@ -21,6 +21,7 @@ static intmap_t* res_host_map;
 
 void res_topo_create(void)
 {
+  assert(!res_host_map);
   res_host_map = res_map_create();
 }
 
@@ -468,15 +469,18 @@ char* res_system_host_string(int id)
   }
 }
 
-void res_parse_system(stream_t* stream, host_t* host)
+void res_parse_system(stream_t* stream, host_t** host_ptr)
 {
   char* hostname = NULL;
   int n, nnumas = 0, a, ncaches = 0, o, ncores = 0, p, nprocs = 0;
   int logical = 0, physical = 0, sysid = 0;
+  host_t* host;
   numa_t* numa;
   cache_t* cache;
   core_t* core;
   proc_t* proc;
+
+  assert(host_ptr && !*host_ptr);
 
   res_parse_expect(stream, Number, &sysid);
   res_parse_expect(stream, Hostname, NULL);
@@ -484,7 +488,7 @@ void res_parse_system(stream_t* stream, host_t* host)
   res_parse_expect(stream, Children, NULL);
   res_parse_expect(stream, Number, &nnumas);
 
-  host = xnew(host_t);
+  host = *host_ptr = xnew(host_t);
   host->hostname = hostname;
   host->root = NULL;
   host->index = sysid;
@@ -590,7 +594,7 @@ bool res_parse_topology(int sysid, char* text)
   } else {
     res_parse_expect(stream, Left, NULL);
     res_parse_expect(stream, System, NULL);
-    res_parse_system(stream, host);
+    res_parse_system(stream, &host);
     res_parse_expect(stream, Right, NULL);
 
     host->index = sysid;

@@ -19,7 +19,7 @@ void res_loop(int listen)
   intmap_t*     client_map = res_map_create();
   bitmap_t      bitmap = 0;
   int           wcnt = 0, loops = 0;
-  const int     max_loops = 20;
+  const int     max_loops = 2000000000;
 
   FD_ZERO(&rset);
   FD_ZERO(&wset);

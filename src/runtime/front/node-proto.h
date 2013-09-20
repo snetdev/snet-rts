@@ -588,16 +588,16 @@ void *SNetNodeThreadStart(void *arg);
 
 /* Start a number of workers and wait for all to finish. */
 void SNetMasterStatic(
-  int num_workers,
-  int num_managers,
+  const int num_workers,
+  const int num_managers,
   worker_config_t* config,
-  int recv);
+  const int recv);
 
-/* Activate a new worker. */
+/* Activate a new worker thread. */
 void SNetMasterStartOne(int id, worker_config_t* config);
 
-/* Return true iff input is available within a given delay. */
-bool SNetWaitForInput(int fd, double delay);
+/* Return 1/2/3 when input is available within a given delay. */
+int SNetWaitForInput(int pipe, int sock, double delay);
 
 /* Throttle number of workers by work load. */
 void SNetMasterDynamic(worker_config_t* config, int recv);

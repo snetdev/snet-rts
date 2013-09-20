@@ -168,20 +168,18 @@ void res_parse_expect(stream_t* stream, token_t expect, void* result);
 
 /* resserver.c */
 
+int res_server_get_socket(server_t* server);
+int res_server_get_assigned(server_t* server);
+int res_server_get_local(server_t* server);
+void res_server_set_local(server_t* server, int local);
+void res_server_number(server_t* server, int* number);
+int res_server_flush(server_t* server);
+int res_server_read(server_t* server);
+void res_server_setup(server_t* server);
 server_t* res_server_create(int fd);
 void res_server_destroy(server_t* server);
 server_t* res_server_create_option(const char* arg);
-void res_server_expect(server_t* server, token_t expect);
-void res_server_number(server_t* server, int* number);
-void res_server_command_system(server_t* server);
-void res_server_command(server_t* server);
-void res_server_parse(server_t* server);
-int res_server_process(server_t* server);
-int res_server_write(server_t* server);
-bool res_server_writing(server_t* server);
-void res_server_reply(server_t* server, const char* fmt, ...);
-int res_server_read(server_t* server);
-void res_server_setup(server_t* server);
+void res_server_interact(server_t* server);
 
 /* resstream.c */
 
@@ -228,7 +226,7 @@ bool res_topo_init(void);
 void res_topo_destroy(void);
 char* res_system_resource_string(int id);
 char* res_system_host_string(int id);
-void res_parse_system(stream_t* stream, host_t* host);
+void res_parse_system(stream_t* stream, host_t** host_ptr);
 bool res_parse_topology(int sysid, char* text);
 
 /* resutil.c */

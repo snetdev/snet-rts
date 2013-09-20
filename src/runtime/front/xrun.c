@@ -180,22 +180,30 @@ void SNetMasterStartOne(int id, worker_config_t* config)
   SNetThreadCreate(SNetNodeThreadStart, config->workers[id]);
 }
 
-/* Return true iff input is available within a given delay. */
-bool SNetWaitForInput(int fd, double delay)
+/* Return 1/2/3 when input is available within a given delay. */
+int SNetWaitForInput(int pipe, int sock, double delay)
 {
-  struct timeval tv = { 0, 0 };
-  int n;
+  struct timeval tv = { 0, 0 }, *tv_ptr = NULL;
+  int num, max = MAX(pipe, sock);
   fd_set ins;
   FD_ZERO(&ins);
-  FD_SET(fd, &ins);
-  if (delay > 0) {
+  if (pipe >= 0) {
+    FD_SET(pipe, &ins);
+  }
+  if (sock >= 0) {
+    FD_SET(sock, &ins);
+  }
+  if (delay >= 0) {
     SNetTimeFromDouble(&tv, delay);
+    tv_ptr = &tv;
   }
-  if ((n = select(fd + 1, &ins, NULL, NULL, &tv)) < 0) {
-    SNetUtilDebugFatal("[%s]: select(%d,%d,%ld,%ld): %s", __func__,
-                       fd + 1, fd, tv.tv_sec, tv.tv_usec, strerror(errno));
+  if ((num = select(max + 1, &ins, NULL, NULL, tv_ptr)) < 0) {
+    SNetUtilDebugFatal("[%s]: select(%d,%d,%d,%ld,%ld): %s", __func__, max + 1,
+                       pipe, sock, tv.tv_sec, tv.tv_usec, strerror(errno));
   }
-  return n > 0;
+  return ((num > 0) ?
+         ((FD_ISSET(pipe, &ins) ? 1 : 0) +
+          (FD_ISSET(sock, &ins) ? 2 : 0)) : 0);
 }
 
 /* Throttle number of workers by work load. */
@@ -217,7 +225,7 @@ void SNetMasterDynamic(worker_config_t* config, int recv)
       const double now = SNetRealTime();
       const double slowdown = 0.001;
       const double delay = endtime + slowdown - now;
-      if (delay <= 0 || SNetWaitForInput(recv, delay) == false) {
+      if (delay <= 0 || SNetWaitForInput(recv, -1, delay) == false) {
         for (; started < wanted; ++started, ++alive, ++idlers) {
           for (i = 1; state[i]; ++i) {}
           assert(i <= worker_limit);
@@ -292,18 +300,32 @@ void SNetMasterResource(worker_config_t* config, int recv)
 
   res_set_debug(SNetDebug());
   res_set_verbose(SNetVerbose());
+  res_topo_create();
 
   server = res_server_create_option(SNetOptResourceServer());
+  if (server == NULL) {
+    res_topo_destroy();
+    return;
+  }
 
   /* Reset for now; increase as needed. */
   config->worker_count = 0;
 
   while (alive || started < wanted) {
-    if (started < wanted) {
+    const int sock = res_server_get_socket(server);
+    int input = 0;
+
+    if (wanted != res_server_get_local(server)) {
+      /* Update resource server about local load. */
+      res_server_set_local(server, wanted);
+    }
+
+    /* Start new threads if needed and if allowed. */
+    if (started < wanted && started < res_server_get_assigned(server)) {
       const double now = SNetRealTime();
       const double slowdown = 0.001;
       const double delay = endtime + slowdown - now;
-      if (delay <= 0 || SNetWaitForInput(recv, delay) == false) {
+      if (delay <= 0 || (input = SNetWaitForInput(recv, sock, delay)) == 0) {
         for (; started < wanted; ++started, ++alive, ++idlers) {
           for (i = 1; state[i]; ++i) {}
           assert(i <= worker_limit);
@@ -313,55 +335,67 @@ void SNetMasterResource(worker_config_t* config, int recv)
       }
     }
 
-    SNetPipeReceive(recv, &mesg);
-    assert(mesg.id >= 1 && mesg.id <= config->worker_count);
-    switch (mesg.type) {
+    if (!input) {
+      input = SNetWaitForInput(recv, sock, -1.0);
+      assert(input >= 1 && input <= 3);
+    }
 
-      case MesgDone: {
-        --alive;
-        --started;
-        if (state[mesg.id] == SlaveIdle) {
-          assert(idlers > 0 && started >= 0);
+    if ((input & 2) == 2) {
+      res_server_read(server);
+    }
+
+    if ((input & 1) == 1) {
+      SNetPipeReceive(recv, &mesg);
+      assert(mesg.id >= 1 && mesg.id <= config->worker_count);
+      switch (mesg.type) {
+
+        case MesgDone: {
+          --alive;
+          --started;
+          if (state[mesg.id] == SlaveIdle) {
+            assert(idlers > 0 && started >= 0);
+            --idlers;
+            if (alive == 0) {
+              --wanted;
+            }
+          } else {
+            assert(state[mesg.id] == SlaveBusy);
+            if (idlers != 0 || alive == 0) {
+              --wanted;
+            }
+          }
+          if (SNetDebugTL()) {
+            printf("[%s,%.3f]: worker %d done, %d alive, %d idle, %d more.\n",
+                   __func__, SNetRealTime() - begin, mesg.id,
+                   alive, idlers, wanted - started);
+          }
+          state[mesg.id] = SlaveDone;
+          endtime = SNetRealTime();
+        } break;
+
+        case MesgBusy: {
           --idlers;
-          if (alive == 0) {
-            --wanted;
+          if (SNetDebugTL()) {
+            printf("[%s,%.3f]: worker %d busy, %d alive, %d idle, %d more.\n",
+                   __func__, SNetRealTime() - begin, mesg.id,
+                   alive, idlers, wanted - started);
           }
-        } else {
-          assert(state[mesg.id] == SlaveBusy);
-          if (idlers != 0 || alive == 0) {
-            --wanted;
+          assert(state[mesg.id] == SlaveIdle);
+          state[mesg.id] = SlaveBusy;
+          if (alive < worker_limit && started == wanted) {
+            ++wanted;
           }
-        }
-        if (SNetDebugTL()) {
-          printf("[%s,%.3f]: worker %d done, %d alive, %d idle, %d more.\n",
-                 __func__, SNetRealTime() - begin, mesg.id,
-                 alive, idlers, wanted - started);
-        }
-        state[mesg.id] = SlaveDone;
-        endtime = SNetRealTime();
-      } break;
+          endtime = SNetRealTime();
+        } break;
 
-      case MesgBusy: {
-        --idlers;
-        if (SNetDebugTL()) {
-          printf("[%s,%.3f]: worker %d busy, %d alive, %d idle, %d more.\n",
-                 __func__, SNetRealTime() - begin, mesg.id,
-                 alive, idlers, wanted - started);
-        }
-        assert(state[mesg.id] == SlaveIdle);
-        state[mesg.id] = SlaveBusy;
-        if (alive < worker_limit && started == wanted) {
-          ++wanted;
-        }
-        endtime = SNetRealTime();
-      } break;
-
-      default: SNetUtilDebugFatal("[%s]: Bad message %d", __func__, mesg.type);
+        default: SNetUtilDebugFatal("[%s]: Bad message %d", __func__, mesg.type);
+      }
     }
   }
 
   SNetMemFree(state);
   res_server_destroy(server);
+  res_topo_destroy();
 #else
   SNetUtilDebugFatal("[%s]: Resource management was not configured.", __func__);
 #endif
