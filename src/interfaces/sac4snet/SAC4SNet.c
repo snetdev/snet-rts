@@ -63,7 +63,13 @@ const char *t_descr[] = {
 
 int my_interface_id;
 
-typedef enum { SACint=3, SACflt=11, SACdbl=12} SACbasetype_t; 
+enum simpletype_t {
+	#define TYP_IFname(name) name
+	#include "type_info.mac" 
+	#undef TYP_IFname
+};
+
+typedef enum simpletype_t SACbasetype_t;
 
 extern void SACARGfree( void*);
 extern void *SACARGcopy( void*);
@@ -137,9 +143,9 @@ static void *SAC4SNetDataDecode(FILE *file)
 static size_t sizeOfType(SACbasetype_t type)
 {
   switch (type) {
-    case SACint: return sizeof(int);
-    case SACdbl: return sizeof(double);
-    case SACflt: return sizeof(float);
+    case T_int: return sizeof(int);
+    case T_double: return sizeof(double);
+    case T_float: return sizeof(float);
     default:
       SNetUtilDebugFatal("Unknown SAC type!\n");
       break;
@@ -290,19 +296,19 @@ static void SAC4SNetDataSerialise( FILE *file, void *ptr)
     SAC_AttachHive(SAC_AllocHive(1, 2, NULL, NULL));
 
     switch( SACARGgetBasetype( arg)) {
-      case SACint: 
+      case T_int: 
         SAC4SNetFibreIO__PrintIntArray2( 
             &ret,
             SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
             SACARGnewReference( arg));
       break;
-      case SACflt: 
+      case T_float: 
         SAC4SNetFibreIO__PrintFloatArray2( 
             &ret,
             SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
             SACARGnewReference( arg));
       break;
-      case SACdbl: 
+      case T_double: 
         SAC4SNetFibreIO__PrintDoubleArray2( 
             &ret,
             SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, file),
@@ -357,21 +363,21 @@ static void *SAC4SNetDataDeserialise( FILE *file)
 
       sac_shp = SACARGconvertFromIntPointerVect( shape, 1, &dim);
       switch( basetype) {
-        case SACint:
+        case T_int:
           SAC4SNetFibreIO__ScanIntArray2( 
               &dummy, 
               &scanres, 
               SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, datafile),
               sac_shp);
           break;
-        case SACdbl:
+        case T_double:
           SAC4SNetFibreIO__ScanDoubleArray2( 
               &dummy, 
               &scanres, 
               SACARGconvertFromVoidPointer( SACTYPE_StdIO_File, datafile),
               sac_shp);
           break;
-        case SACflt:
+        case T_float:
           SAC4SNetFibreIO__ScanFloatArray2( 
               &dummy, 
               &scanres, 
@@ -381,7 +387,7 @@ static void *SAC4SNetDataDeserialise( FILE *file)
         default: /* unsupported base type */
             scanres = NULL;
             printf( "\n>%d<\n", basetype);
-            Error("Unsupported Base Type");
+            Error("Unsupported Base Type. We only support int, float and double.");
           break;
       }
       fclose( datafile);
@@ -464,9 +470,9 @@ void SAC4SNetDebugPrintMapping(const char *msg, int *defmap, int cnt)
 static MPI_Datatype SAC4SNetBasetypeToMPIType( int basetype)
 {
   switch (basetype) {
-    case SACint: return MPI_INT;
-    case SACflt: return MPI_FLOAT;
-    case SACdbl: return MPI_DOUBLE;
+    case T_int: return MPI_INT;
+    case T_float: return MPI_FLOAT;
+    case T_double: return MPI_DOUBLE;
     default:
       Error( "Unsupported basetype in type conversion.");
       break;
@@ -498,13 +504,13 @@ static void SAC4SNetMPIPackFun(void *sacdata, mpi_buf_t *buf)
   SNetMemFree(shape);
 
   switch (type) {
-    case SACint:
+    case T_int:
       contents = SACARGconvertToIntArray(SACARGnewReference(data));
       break;
-    case SACdbl:
+    case T_double:
       contents = SACARGconvertToDoubleArray(SACARGnewReference(data));
       break;
-    case SACflt:
+    case T_float:
       contents = SACARGconvertToFloatArray(SACARGnewReference(data));
       break;
     default:
@@ -536,13 +542,13 @@ static void *SAC4SNetMPIUnpackFun(mpi_buf_t *buf)
   MPIUnpack(buf, contents, SAC4SNetBasetypeToMPIType(type), num_elems);
 
   switch (type) {
-    case SACint:
+    case T_int:
       result = SACARGconvertFromIntPointerVect(contents, dims, shape);
       break;
-    case SACflt:
+    case T_float:
       result = SACARGconvertFromFloatPointerVect(contents, dims, shape);
       break;
-    case SACdbl:
+    case T_double:
       result = SACARGconvertFromDoublePointerVect(contents, dims, shape);
       break;
     default:
