@@ -22,13 +22,13 @@ void res_release_client(client_t* client)
         CLR(client->local_grantmap, p);
         client->local_granted -= 1;
         assert(client->local_granted >= 0);
-        if (proc->state >= ProcAccept) {
-          client->local_accepted -= 1;
-          assert(client->local_accepted >= 0);
-        }
         if (proc->state == ProcRevoke) {
           client->local_revoked -= 1;
           assert(client->local_revoked >= 0);
+        }
+        if (proc->state >= ProcAccept) {
+          client->local_accepted -= 1;
+          assert(client->local_accepted >= 0);
         }
         proc->state = ProcAvail;
         proc->core->assigned -= 1;

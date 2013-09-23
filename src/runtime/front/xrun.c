@@ -340,11 +340,11 @@ void SNetMasterResource(worker_config_t* config, int recv)
       assert(input >= 1 && input <= 3);
     }
 
-    if ((input & 2) == 2) {
+    if (HAS(input, 1)) {
       res_server_read(server);
     }
 
-    if ((input & 1) == 1) {
+    if (HAS(input, 0)) {
       SNetPipeReceive(recv, &mesg);
       assert(mesg.id >= 1 && mesg.id <= config->worker_count);
       switch (mesg.type) {

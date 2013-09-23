@@ -172,7 +172,6 @@ int res_server_get_socket(server_t* server);
 int res_server_get_assigned(server_t* server);
 int res_server_get_local(server_t* server);
 void res_server_set_local(server_t* server, int local);
-void res_server_number(server_t* server, int* number);
 int res_server_flush(server_t* server);
 int res_server_read(server_t* server);
 void res_server_setup(server_t* server);
