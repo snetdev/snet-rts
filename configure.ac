@@ -77,6 +77,7 @@ dnl check network functions
 AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([inet_aton], [resolv])
+AC_SEARCH_LIBS([clock_gettime], [rt])
 
 
 dnl check for compiler builtins for
@@ -192,9 +193,11 @@ fi
 if test -n "$with_hwloc_includes" -a -n "$with_hwloc_libs"
 then
   HWLOC_INCLUDES=-I$with_hwloc_includes
+  HWLOC_LIBS=-L$with_hwloc_libs
   LIBHWLOC_LA=$with_hwloc_libs/libhwloc.la
   AC_SUBST([LIBHWLOC_LA])
   AC_SUBST([HWLOC_INCLUDES])
+  AC_SUBST([HWLOC_LIBS])
   AC_DEFINE([ENABLE_HWLOC], [1], [Set to 1 to enable the hwloc.])
   AM_CONDITIONAL([ENABLE_HWLOC], [true])
 else

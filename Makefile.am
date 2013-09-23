@@ -406,14 +406,18 @@ link_cmd: Makefile
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)echo '#!/bin/sh' >$@
 if ENABLE_RESSERV
+if ENABLE_HWLOC
+	$(AM_V_GEN)echo 'RESSERV="-lresserv $(HWLOC_LIBS) -lhwloc"' >>$@
+else
 	$(AM_V_GEN)echo 'RESSERV=-lresserv' >>$@
+endif
 else
 	$(AM_V_GEN)echo 'RESSERV=' >>$@
 endif
 	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps \
 	     --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
 	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
-	     -L'$${SNET_LIBS} $${RESSERV} "$$@"' >>$@ ; \
+	     -L'$${SNET_LIBS} "$$@" $${RESSERV}' $(LIBS) >>$@ ; \
 	     chmod +x $@
 
 snet-config.mkf: Makefile
