@@ -99,6 +99,7 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/entity/collector.h \
 	src/runtime/stream/entity/entities.c \
 	src/runtime/stream/entity/feedback.c \
+	src/runtime/stream/entity/feednond.c \
 	src/runtime/stream/entity/filter.c \
 	src/runtime/stream/entity/out.c \
 	src/runtime/stream/entity/parallel.c \
