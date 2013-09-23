@@ -1,9 +1,11 @@
 /**
- * Feedback Combinator
+ * Deterministic Feedback Combinator
  *
  * The feedback combinator implements a real feedback loop.
  * Special care must be taken to avoid the situation of
  * artificial deadlock.
+ *
+ * Full documentation in snet/docs/reports/feedback/report.tex.
  *
  * Author: Daniel Prokesch <daniel.prokesch@gmail.com>
  * Date:   2011-04-11
@@ -497,7 +499,7 @@ feedback_buf_epilogue:
 /****************************************************************************/
 /* CREATION FUNCTION                                                        */
 /****************************************************************************/
-snet_stream_t *SNetFeedback( snet_stream_t *input,
+snet_stream_t *SNetFeedbackDet( snet_stream_t *input,
     snet_info_t *info,
     int location,
     snet_variant_list_t *back_patterns,

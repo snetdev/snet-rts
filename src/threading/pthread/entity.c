@@ -279,6 +279,7 @@ static size_t StackSize(snet_entity_descr_t descr)
     case ENTITY_fbcoll:
     case ENTITY_fbdisp:
     case ENTITY_fbbuf:
+    case ENTITY_fbnond:
     case ENTITY_sync:
     case ENTITY_filter:
     case ENTITY_nameshift:
