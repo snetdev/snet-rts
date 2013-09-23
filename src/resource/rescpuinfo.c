@@ -21,12 +21,25 @@ static void res_fix_logical(resource_t* root)
     for (c = 0; c < sock->num_children; ++c) {
       resource_t* core = sock->children[c];
       core->logical = num_cores++;
+      core->first_core = core->last_core = core->logical;
       for (p = 0; p < core->num_children; ++p) {
         resource_t* proc = core->children[p];
         proc->logical = num_procs++;
+        proc->first_proc = proc->last_proc = proc->logical;
+        proc->first_core = proc->last_core = core->logical;
       }
+      core->first_proc = core->children[0]->logical;
+      core->last_proc = core->children[core->num_children - 1]->logical;
     }
+    sock->first_proc = sock->children[0]->first_proc;
+    sock->first_core = sock->children[0]->first_core;
+    sock->last_proc = sock->children[sock->num_children - 1]->last_proc;
+    sock->last_core = sock->children[sock->num_children - 1]->last_core;
   }
+  root->first_proc = root->children[0]->first_proc;
+  root->first_core = root->children[0]->first_core;
+  root->last_proc = root->children[root->num_children - 1]->last_proc;
+  root->last_core = root->children[root->num_children - 1]->last_core;
 }
 
 static resource_t* res_parse_cpuinfo(FILE *fp)
@@ -111,6 +124,9 @@ resource_t* res_cpuinfo_resource_init(void)
   resource_t* root = NULL;
 
   if (fp) {
+    if (env && res_get_verbose()) {
+      res_warn("Using cpuinfofile %s.\n", env);
+    }
     root = res_parse_cpuinfo(fp);
     fclose(fp);
   } else {

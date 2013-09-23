@@ -2,7 +2,7 @@
 .PHONY: all proto
 
 all install:
-	@rm -f -- core*
+	@rm -f -- core* vgcore*
 	$(MAKE) -C ../.. $@
 
 proto:

@@ -130,6 +130,9 @@ resource_t* res_resource_init(void)
   }
 
   if (local_root == NULL && (!env || strstr(env, "cpuinfo"))) {
+    if (env && strstr(env, "cpuinfo") && res_get_verbose()) {
+      res_warn("Using cpuinfo resources.\n");
+    }
     local_root = res_cpuinfo_resource_init();
   }
 

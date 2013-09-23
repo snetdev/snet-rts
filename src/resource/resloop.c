@@ -57,6 +57,7 @@ void res_loop(int listen)
           res_map_add(sock_map, sock, client);
           FD_SET(sock, &rset);
           max_sock = MAX(max_sock, sock);
+          SET(bitmap, bit);
         }
       }
     }
@@ -80,9 +81,11 @@ void res_loop(int listen)
         }
         if (io == -1) {
           res_release_client(client);
-          res_client_destroy(client);
           res_map_del(client_map, client->bit);
           res_map_del(sock_map, sock);
+          assert(HAS(bitmap, client->bit));
+          CLR(bitmap, client->bit);
+          res_client_destroy(client);
           rebalance = BITMAP_ALL;
           if (sock == max_sock) {
             while (--max_sock > listen &&

@@ -70,6 +70,7 @@ void res_client_command_list(client_t* client)
     res_client_reply(client, "%d ", sysid);
   }
   res_client_reply(client, "%s", "} \n");
+  res_list_destroy(list);
 }
 
 void res_client_command_topology(client_t* client)

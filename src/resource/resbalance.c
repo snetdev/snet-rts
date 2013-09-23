@@ -70,6 +70,7 @@ int res_accept_procs(client_t* client, intlist_t* ints)
             res_warn("Client accepts proc %d in state %d.", procnum, proc->state);
             return -1;
           } else {
+            assert(proc->clientbit == client->bit);
             proc->state = ProcAccept;
             client->local_accepted += 1;
             ++procs_accepted;
@@ -147,8 +148,8 @@ int res_return_procs(client_t* client, intlist_t* ints)
 /* Compare the load of two clients, descending. */
 int res_client_compare_local_workload_desc(const void *p, const void *q)
 {
-  const client_t* P = (const client_t *) p;
-  const client_t* Q = (const client_t *) q;
+  const client_t* P = * (client_t * const *) p;
+  const client_t* Q = * (client_t * const *) q;
   int A = P->local_workload;
   int B = Q->local_workload;
   int comparison = ((A == B) ? (Q->bit - P->bit) : (A - B));
@@ -197,7 +198,8 @@ void res_rebalance_cores(intmap_t* map)
             SET(revoke, proc->clientbit);
             ++nrevokes;
             client = res_map_get(map, proc->clientbit);
-            SET(client->local_revoking, p);
+            assert(NOT(client->local_revoking, proc->logical));
+            SET(client->local_revoking, proc->logical);
             proc->state = ProcRevoke;
             client->local_revoked += 1;
           }
@@ -227,6 +229,7 @@ void res_rebalance_cores(intmap_t* map)
           core->assigned += 1;
           core->cache->assigned += 1;
           core->cache->numa->assigned += 1;
+          proc->clientbit = client->bit;
           SET(host->coreassign, o);
           SET(host->procassign, proc->logical);
           --need;
@@ -242,6 +245,7 @@ void res_rebalance_cores(intmap_t* map)
           if (proc->state >= ProcGrant && proc->state <= ProcAccept) {
             SET(revoke, proc->clientbit);
             ++nrevokes;
+            assert(NOT(client->local_revoking, p));
             SET(client->local_revoking, p);
             proc->state = ProcRevoke;
             client->local_revoked += 1;
@@ -249,6 +253,7 @@ void res_rebalance_cores(intmap_t* map)
           }
         }
       }
+      assert(need == 0);
     }
   }
 
@@ -322,6 +327,7 @@ void res_rebalance_procs(intmap_t* map)
           proc->core->assigned += 1;
           proc->core->cache->assigned += 1;
           proc->core->cache->numa->assigned += 1;
+          proc->clientbit = client->bit;
           SET(host->procassign, p);
           SET(host->coreassign, proc->core->logical);
           --need;
@@ -335,6 +341,7 @@ void res_rebalance_procs(intmap_t* map)
             NOT(client->local_revoking, p)) {
           proc_t* proc = host->procs[p];
           if (proc->state >= ProcGrant && proc->state <= ProcAccept) {
+            assert(client->bit == proc->clientbit);
             SET(revoke, proc->clientbit);
             ++nrevokes;
             SET(client->local_revoking, p);
@@ -344,6 +351,7 @@ void res_rebalance_procs(intmap_t* map)
           }
         }
       }
+      assert(need == 0);
     }
   }
 
@@ -441,6 +449,7 @@ void res_rebalance_proportional(intmap_t* map)
           proc->core->assigned += 1;
           proc->core->cache->assigned += 1;
           proc->core->cache->numa->assigned += 1;
+          proc->clientbit = client->bit;
           SET(host->procassign, p);
           SET(host->coreassign, proc->core->logical);
           --need;
@@ -545,6 +554,7 @@ void res_rebalance_minimal(intmap_t* map)
           proc->core->assigned += 1;
           proc->core->cache->assigned += 1;
           proc->core->cache->numa->assigned += 1;
+          proc->clientbit = client->bit;
           SET(host->procassign, p);
           SET(host->coreassign, proc->core->logical);
           --need;
