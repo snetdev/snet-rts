@@ -190,7 +190,7 @@ void res_rebalance_cores(intmap_t* map)
     core_t *core = host->cores[i];
     if (core->assigned >= 2) {
       int found = 0;
-      for (p = 0; i < core->nprocs; ++p) {
+      for (p = 0; p < core->nprocs; ++p) {
         proc_t* proc = core->procs[p];
         if (proc->state == ProcGrant || proc->state == ProcAccept) {
           if (++found >= 2) {
@@ -228,6 +228,7 @@ void res_rebalance_cores(intmap_t* map)
           core->cache->assigned += 1;
           core->cache->numa->assigned += 1;
           SET(host->coreassign, o);
+          SET(host->procassign, proc->logical);
           --need;
         }
       }
