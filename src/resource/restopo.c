@@ -229,16 +229,10 @@ host_t* res_host_create(char* hostname, int index, resource_t* root)
   int n, a, o, p, core_index, proc_index;
 
   host_t* host = xnew(host_t);
+  memset(host, 0, sizeof(host_t));
   host->hostname = hostname;
   host->root = root;
   host->index = index;
-  host->nnumas = 0;
-  host->numa = NULL;
-  host->ncores = 0;
-  host->nprocs = 0;
-  host->cores = NULL;
-  host->procs = NULL;
-  //host->assigned = 0;
 
   res_host_collect(host, root);
 

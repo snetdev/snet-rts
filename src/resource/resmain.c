@@ -23,6 +23,7 @@ static void usage(void)
   fprintf(stderr, " -t         : Give processor/cache topology information.\n");
   fprintf(stderr, " -d         : Enable debugging output.\n");
   fprintf(stderr, " -v         : Enable informational messages.\n");
+  fprintf(stderr, " -V         : Give version information.\n");
   exit(1);
 }
 

@@ -878,6 +878,9 @@ bool SNetDebugDF(void);
 /* Whether debugging of garbage collection is enabled */
 bool SNetDebugGC(void);
 
+/* Whether debugging of resource management service is enabled */
+bool SNetDebugRS(void);
+
 /* Whether debugging of the streams layer is enabled */
 bool SNetDebugSL(void);
 

@@ -298,7 +298,7 @@ void SNetMasterResource(worker_config_t* config, int recv)
   double        endtime = 0;
   server_t     *server;
 
-  res_set_debug(SNetDebug());
+  res_set_debug(SNetDebugRS());
   res_set_verbose(SNetVerbose());
   res_topo_create();
 

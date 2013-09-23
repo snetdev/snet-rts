@@ -17,6 +17,7 @@ static const char      *opt_concurrency;
 static bool             opt_debug;
 static bool             opt_debug_df;
 static bool             opt_debug_gc;
+static bool             opt_debug_rs;
 static bool             opt_debug_sl;
 static bool             opt_debug_tl;
 static bool             opt_debug_ws;
@@ -77,19 +78,22 @@ bool SNetVerbose(void)
 bool SNetDebug(void) { return opt_debug; }
 
 /* Whether debugging of distributed front is enabled */
-bool SNetDebugDF(void) { return opt_debug_df | opt_debug; }
+bool SNetDebugDF(void) { return opt_debug_df; }
 
 /* Whether debugging of garbage collection is enabled */
-bool SNetDebugGC(void) { return opt_debug_gc | opt_debug; }
+bool SNetDebugGC(void) { return opt_debug_gc; }
+
+/* Whether debugging of resource management service is enabled */
+bool SNetDebugRS(void) { return opt_debug_rs; }
 
 /* Whether debugging of the streams layer is enabled */
-bool SNetDebugSL(void) { return opt_debug_sl | opt_debug; }
+bool SNetDebugSL(void) { return opt_debug_sl; }
 
 /* Whether debugging of the threading layer is enabled */
-bool SNetDebugTL(void) { return opt_debug_tl | opt_debug; }
+bool SNetDebugTL(void) { return opt_debug_tl; }
 
 /* Whether debugging of work stealing is enabled */
-bool SNetDebugWS(void) { return opt_debug_ws | opt_debug; }
+bool SNetDebugWS(void) { return opt_debug_ws; }
 
 /* Whether to use a deterministic feedback */
 bool SNetFeedbackDeterministic(void)
@@ -234,6 +238,7 @@ int SNetThreadingInit(int argc, char**argv)
       } else {
         if (strstr(argv[i], "df")) { opt_debug_df = true; }
         if (strstr(argv[i], "gc")) { opt_debug_gc = true; }
+        if (strstr(argv[i], "rs")) { opt_debug_rs = true; }
         if (strstr(argv[i], "sl")) { opt_debug_sl = true; }
         if (strstr(argv[i], "tl")) { opt_debug_tl = true; }
         if (strstr(argv[i], "ws")) { opt_debug_ws = true; }

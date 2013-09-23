@@ -20,16 +20,6 @@ void res_release_client(client_t* client)
         assert(proc->clientbit == client->bit);
         assert(proc->state >= ProcGrant);
         CLR(client->local_grantmap, p);
-        client->local_granted -= 1;
-        assert(client->local_granted >= 0);
-        if (proc->state == ProcRevoke) {
-          client->local_revoked -= 1;
-          assert(client->local_revoked >= 0);
-        }
-        if (proc->state >= ProcAccept) {
-          client->local_accepted -= 1;
-          assert(client->local_accepted >= 0);
-        }
         proc->state = ProcAvail;
         proc->core->assigned -= 1;
         assert(proc->core->assigned >= 0);
@@ -47,9 +37,9 @@ void res_release_client(client_t* client)
       }
     }
   }
-  assert(client->local_granted == 0);
-  assert(client->local_accepted == 0);
-  assert(client->local_revoked == 0);
+  client->local_granted = 0;
+  client->local_accepted = 0;
+  client->local_revoked = 0;
 }
 
 /* A client confirms a previous processor grant. */

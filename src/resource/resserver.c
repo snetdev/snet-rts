@@ -73,6 +73,7 @@ void res_server_set_local(server_t* server, int local)
 {
   if (server->local != local) {
     server->local = local;
+    res_debug("Send local %d\n", server->local);
     res_server_reply(server, "{ local %d }", server->local);
     res_server_flush(server);
   }
@@ -115,7 +116,9 @@ static void res_server_command_systems(server_t* server)
 
   server->access = 1;
 
+  res_debug("Send access 0\n");
   res_server_reply(server, "%s", "{ access 0 }");
+  res_debug("Send topology 0\n");
   res_server_reply(server, "%s", "{ topology 0 }");
 
   res_server_change_state(server, ServerListRcvd, ServerTopoSent);
@@ -145,22 +148,52 @@ static void res_server_command_grant(server_t* server)
   } else {
     intlist_t* ints = res_parse_intlist(&server->stream);
     int i, size = res_list_size(ints);
+    res_server_reply(server, "{ accept 0 ");
     for (i = 0; i < size; ++i) {
       int proc = res_list_get(ints, i);
       assert(NOT(server->assignmask, proc));
       SET(server->assignmask, proc);
       server->assigned += 1;
+      res_server_reply(server, "%d ", proc);
     }
+    res_server_reply(server, "} \n");
+  }
+}
+
+static void res_server_command_revoke(server_t* server)
+{
+  int sysid;
+
+  res_server_expect_state(server, ServerTopoRcvd);
+  res_server_number(server, &sysid);
+
+  if (NOT(server->access, sysid)) {
+    res_error("[%s]: Invalid sysid\n", __func__, sysid);
+  } else {
+    intlist_t* ints = res_parse_intlist(&server->stream);
+    int i, size = res_list_size(ints);
+    res_server_reply(server, "{ return 0 ");
+    for (i = 0; i < size; ++i) {
+      int proc = res_list_get(ints, i);
+      assert(HAS(server->assignmask, proc));
+      CLR(server->assignmask, proc);
+      server->assigned -= 1;
+      assert(server->assigned >= 0);
+      res_server_reply(server, "%d ", proc);
+    }
+    res_server_reply(server, "} \n");
   }
 }
 
 static void res_server_command(server_t* server)
 {
   int command = res_parse_token(&server->stream, NULL);
+  res_debug("Got %s\n", res_token_string(command));
   switch (command) {
     case Systems: res_server_command_systems(server); break;
     case System: res_server_command_system(server); break;
     case Grant: res_server_command_grant(server); break;
+    case Revoke: res_server_command_revoke(server); break;
     default:
       res_warn("[%s]: Unexpected token %s.\n", __func__, res_token_string(command));
       res_parse_throw();
@@ -219,6 +252,7 @@ int res_server_read(server_t* server)
 
 void res_server_setup(server_t* server)
 {
+  res_debug("Send list\n");
   res_server_reply(server, "%s", "{ list }");
   res_server_change_state(server, ServerInit, ServerListSent);
 
