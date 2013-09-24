@@ -70,14 +70,15 @@ if test x$enable_setaffinity != xno; then
 fi
 AC_CHECK_FUNCS([pthread_yield_np])
 AC_CHECK_FUNCS([pthread_yield])
+AC_CHECK_FUNCS([localtime_r])
 
 AC_SEARCH_LIBS([sqrt], [m])
+AC_SEARCH_LIBS([clock_gettime], [rt])
 
 dnl check network functions
 AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([inet_aton], [resolv])
-AC_SEARCH_LIBS([clock_gettime], [rt])
 
 
 dnl check for compiler builtins for
