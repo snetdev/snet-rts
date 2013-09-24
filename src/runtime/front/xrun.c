@@ -17,6 +17,7 @@ typedef enum pipe_mesg_type {
 typedef struct pipe_mesg {
   int   type;
   int   id;
+  int   more;
 } pipe_mesg_t;
 
 /* Return worker ID from a Pthread. */
@@ -52,6 +53,7 @@ worker_config_t* SNetCreateWorkerConfig(
   config->pipe_send = pipe_send;
   config->input_node = input->from;
   config->output_node = output->dest;
+  config->excess_threads = 0;
 
   /* Set all workers to NULL to prevent premature stealing. */
   for (id = 0; id <= max_worker; ++id) {
@@ -91,6 +93,7 @@ static void SNetNodeWorkerDone(worker_t* worker)
 
   mesg.type = MesgDone;
   mesg.id = worker->id;
+  mesg.more = (worker->has_work || worker->has_input);
   SNetPipeSend(worker->config->pipe_send, &mesg);
 }
 
@@ -105,6 +108,7 @@ void SNetNodeWorkerBusy(worker_t* worker)
 
   mesg.type = MesgBusy;
   mesg.id = worker->id;
+  mesg.more = true;
   SNetPipeSend(worker->config->pipe_send, &mesg);
 }
 
@@ -147,7 +151,7 @@ void SNetMasterStatic(
   /* Create a fixed number of data workers with new threads. */
   for (id = 1; id <= num_workers; ++id) {
     config->workers[id] = SNetWorkerCreate(id, DataWorker, config);
-    SNetThreadCreate(SNetNodeThreadStart, config->workers[id]);
+    SNetThreadCreate(SNetNodeThreadStart, config->workers[id], NO_PROC);
   }
 
   /* Wait for all to finish. */
@@ -166,7 +170,7 @@ void SNetMasterStatic(
 }
 
 /* Activate a new worker thread. */
-void SNetMasterStartOne(int id, worker_config_t* config)
+void SNetMasterStartOne(int id, worker_config_t* config, int proc)
 {
   if (config->workers[id] == NULL) {
     config->workers[id] = SNetWorkerCreate(id, DataWorker, config);
@@ -177,10 +181,10 @@ void SNetMasterStartOne(int id, worker_config_t* config)
     assert(config->workers[id]->is_idle == WorkerExit);
     config->workers[id]->is_idle = WorkerBusy;
   }
-  SNetThreadCreate(SNetNodeThreadStart, config->workers[id]);
+  SNetThreadCreate(SNetNodeThreadStart, config->workers[id], proc);
 }
 
-/* Return 1/2/3 when input is available within a given delay. */
+/* Return a bitmask of 1/2/3 when input is available within a given delay. */
 int SNetWaitForInput(int pipe, int sock, double delay)
 {
   struct timeval tv = { 0, 0 }, *tv_ptr = NULL;
@@ -229,7 +233,7 @@ void SNetMasterDynamic(worker_config_t* config, int recv)
         for (; started < wanted; ++started, ++alive, ++idlers) {
           for (i = 1; state[i]; ++i) {}
           assert(i <= worker_limit);
-          SNetMasterStartOne(i, config);
+          SNetMasterStartOne(i, config, NO_PROC);
           state[i] = SlaveIdle;
         }
       }
@@ -290,18 +294,21 @@ void SNetMasterResource(worker_config_t* config, int recv)
 {
 #if ENABLE_RESSERV
   const int     worker_limit = config->worker_count;
-  int           i, started = 0, wanted = 1, alive = 0, idlers = 0;
+  int           i, started = 0, wanted = 1, idlers = 0, granted = 0;
   pipe_mesg_t   mesg;
   char         *state = SNetMemCalloc(2 + worker_limit, sizeof(*state));
+  int          *procs = SNetMemCalloc(2 + worker_limit, sizeof(*procs));
   enum state { SlaveDone, SlaveIdle, SlaveBusy };
   const double  begin = SNetRealTime();
   double        endtime = 0;
   server_t     *server;
 
+  /* Initialize the resource management library. */
   res_set_debug(SNetDebugRS());
   res_set_verbose(SNetVerbose());
   res_topo_create();
 
+  /* Create a connection with the resource server. */
   server = res_server_create_option(SNetOptResourceServer());
   if (server == NULL) {
     res_topo_destroy();
@@ -311,27 +318,55 @@ void SNetMasterResource(worker_config_t* config, int recv)
   /* Reset for now; increase as needed. */
   config->worker_count = 0;
 
-  while (alive || started < wanted) {
+  while (started > 0 || wanted > 0) {
     const int sock = res_server_get_socket(server);
+    const int bit_sock = 1;
+    const int bit_recv = 0;
     int input = 0;
 
     if (wanted != res_server_get_local(server)) {
       /* Update resource server about local load. */
       res_server_set_local(server, wanted);
     }
+    if (granted != res_server_get_granted(server)) {
+      /* Update our notion about how many resources we can use. */
+      const int new_grant = res_server_get_granted(server);
+      if (new_grant < granted) {
+        /* Hmm, we may have to kill some threads... */
+        int delta = granted - new_grant;
+        AAF(&(config->excess_threads), delta);
+      }
+      else {
+        volatile int *viptr = &(config->excess_threads);
+        int old = *viptr;
+        int new = old + 1;
+        while (new_grant > granted && old > 0) {
+          /* Stop asking threads to terminate. */
+          CAS(viptr, old, new);
+          old = *viptr;
+          new = old + 1;
+          ++granted;
+        }
+      }
+      granted = new_grant;
+    }
 
-    /* Start new threads if needed and if allowed. */
-    if (started < wanted && started < res_server_get_assigned(server)) {
+    /* Start new threads when needed, given enough resources. */
+    if (started < wanted && started < granted) {
       const double now = SNetRealTime();
       const double slowdown = 0.001;
       const double delay = endtime + slowdown - now;
       if (delay <= 0 || (input = SNetWaitForInput(recv, sock, delay)) == 0) {
-        for (; started < wanted; ++started, ++alive, ++idlers) {
+        do {
+          int proc = res_server_allocate_proc(server);
           for (i = 1; state[i]; ++i) {}
           assert(i <= worker_limit);
-          SNetMasterStartOne(i, config);
+          SNetMasterStartOne(i, config, proc);
           state[i] = SlaveIdle;
-        }
+          procs[i] = proc;
+
+          ++started, ++idlers;
+        } while (started < wanted && started < granted);
       }
     }
 
@@ -340,34 +375,37 @@ void SNetMasterResource(worker_config_t* config, int recv)
       assert(input >= 1 && input <= 3);
     }
 
-    if (HAS(input, 1)) {
+    if (HAS(input, bit_sock)) {
       res_server_read(server);
     }
 
-    if (HAS(input, 0)) {
+    if (HAS(input, bit_recv)) {
       SNetPipeReceive(recv, &mesg);
       assert(mesg.id >= 1 && mesg.id <= config->worker_count);
       switch (mesg.type) {
 
         case MesgDone: {
-          --alive;
           --started;
           if (state[mesg.id] == SlaveIdle) {
             assert(idlers > 0 && started >= 0);
             --idlers;
-            if (alive == 0) {
+            if (started == 0 && mesg.more == false) {
               --wanted;
             }
           } else {
             assert(state[mesg.id] == SlaveBusy);
-            if (idlers != 0 || alive == 0) {
+            if (mesg.more == false && (idlers != 0 || started == 0)) {
               --wanted;
             }
           }
+          if (wanted > started + 1) {
+            wanted = started + 1;
+          }
+          res_server_release_proc(server, procs[mesg.id]);
           if (SNetDebugTL()) {
             printf("[%s,%.3f]: worker %d done, %d alive, %d idle, %d more.\n",
                    __func__, SNetRealTime() - begin, mesg.id,
-                   alive, idlers, wanted - started);
+                   started, idlers, wanted - started);
           }
           state[mesg.id] = SlaveDone;
           endtime = SNetRealTime();
@@ -378,11 +416,11 @@ void SNetMasterResource(worker_config_t* config, int recv)
           if (SNetDebugTL()) {
             printf("[%s,%.3f]: worker %d busy, %d alive, %d idle, %d more.\n",
                    __func__, SNetRealTime() - begin, mesg.id,
-                   alive, idlers, wanted - started);
+                   started, idlers, wanted - started);
           }
           assert(state[mesg.id] == SlaveIdle);
           state[mesg.id] = SlaveBusy;
-          if (alive < worker_limit && started == wanted) {
+          if (started < worker_limit && started == wanted) {
             ++wanted;
           }
           endtime = SNetRealTime();
@@ -423,7 +461,7 @@ void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
     for (mg = 1; mg <= num_managers; ++mg) {
       int id = mg + num_workers;
       config->workers[id] = SNetWorkerCreate(id, InputManager, config);
-      SNetThreadCreate(SNetNodeThreadStart, config->workers[id]);
+      SNetThreadCreate(SNetNodeThreadStart, config->workers[id], NO_PROC);
     }
 
     /* Check for dynamic resource management. */

@@ -140,6 +140,9 @@ int res_return_procs(client_t* client, intlist_t* ints)
           }
         }
       }
+      if (procs_returned) {
+        client->rebalance = true;
+      }
       return procs_returned;
     }
   }
@@ -527,12 +530,14 @@ void res_rebalance_minimal(intmap_t* map)
   bitmap_t      assign = BITMAP_ZERO;
   int           nassigns = 0;
   int          *portions = xcalloc(num_clients, sizeof(int));
+  int           num_avails = host->nprocs;
 
   /* Compute the proportional processor distribution. */
-  assert(host->nprocs < num_clients);
+  assert(host->nprocs <= num_clients);
   for (i = 0; i < num_clients; ++i) {
     client = all[i];
-    portions[i] = (i < host->nprocs) ? 1 : 0;
+    portions[i] = (client->local_workload > 0 && num_avails > 0);
+    num_avails -= portions[i];
   }
 
   /* Check all clients for a need for more or less processors. */

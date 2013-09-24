@@ -17,19 +17,55 @@
 typedef struct server server_t;
 typedef enum server_state server_state_t;
 
+static void res_server_reply(server_t* server, const char* fmt, ...);
+
 int res_server_get_socket(server_t* server)
 {
   return server->stream.fd;
 }
 
-int res_server_get_assigned(server_t* server)
+int res_server_get_granted(server_t* server)
 {
-  return server->assigned;
+  return server->granted - server->revoked;
 }
 
 int res_server_get_local(server_t* server)
 {
   return server->local;
+}
+
+int res_server_allocate_proc(server_t* server)
+{
+  int i;
+  for(i = 0; i < MAX_BIT; ++i) {
+    if (HAS(server->grantmask, i) &&
+        NOT(server->assignmask, i) &&
+        NOT(server->revokemask, i)) {
+      break;
+    }
+  }
+  if (i >= MAX_BIT) {
+    res_error("[%s]: No proc.\n", __func__);
+  } else {
+    SET(server->assignmask, i);
+  }
+  return i;
+}
+
+void res_server_release_proc(server_t* server, int proc)
+{
+  assert(HAS(server->grantmask, proc));
+  assert(HAS(server->assignmask, proc));
+  CLR(server->assignmask, proc);
+  if (HAS(server->revokemask, proc)) {
+    res_server_reply(server, "{ return %d %d } ", LOCAL_HOST, proc);
+    CLR(server->revokemask, proc);
+    CLR(server->grantmask, proc);
+    server->granted -= 1;
+    server->revoked -= 1;
+    assert(server->granted >= 0);
+    assert(server->revoked >= 0);
+  }
 }
 
 static void res_server_change_state(server_t* server, server_state_t A, server_state_t B)
@@ -98,7 +134,7 @@ static void res_server_command_systems(server_t* server)
 
   for (i = 0; i < size; ++i) {
     int val = res_list_get(ints, i);
-    if (val < 0 || val >= 8*sizeof(server->systems)) {
+    if (val < 0 || val >= NUM_BITS) {
       res_list_destroy(ints);
       res_parse_throw();
     } else {
@@ -114,7 +150,7 @@ static void res_server_command_systems(server_t* server)
     res_parse_throw();
   }
 
-  server->access = 1;
+  SET(server->access, 0);
 
   res_debug("Send access 0\n");
   res_server_reply(server, "%s", "{ access 0 }");
@@ -148,16 +184,20 @@ static void res_server_command_grant(server_t* server)
   } else {
     intlist_t* ints = res_parse_intlist(&server->stream);
     int i, size = res_list_size(ints);
-    res_server_reply(server, "{ accept 0 ");
+    res_server_reply(server, "{ accept %d ", sysid);
     for (i = 0; i < size; ++i) {
       int proc = res_list_get(ints, i);
-      assert(NOT(server->assignmask, proc));
-      SET(server->assignmask, proc);
-      server->assigned += 1;
+      assert(NOT(server->grantmask, proc));
+      SET(server->grantmask, proc);
+      if (HAS(server->revokemask, proc)) {
+        CLR(server->revokemask, proc);
+      }
+      server->granted += 1;
       res_server_reply(server, "%d ", proc);
     }
     res_server_reply(server, "} \n");
   }
+  res_debug("Grant is %d.\n", server->granted);
 }
 
 static void res_server_command_revoke(server_t* server)
@@ -172,17 +212,18 @@ static void res_server_command_revoke(server_t* server)
   } else {
     intlist_t* ints = res_parse_intlist(&server->stream);
     int i, size = res_list_size(ints);
-    res_server_reply(server, "{ return 0 ");
+    res_server_reply(server, "{ return %d ", sysid);
     for (i = 0; i < size; ++i) {
       int proc = res_list_get(ints, i);
-      assert(HAS(server->assignmask, proc));
-      CLR(server->assignmask, proc);
-      server->assigned -= 1;
-      assert(server->assigned >= 0);
+      assert(HAS(server->grantmask, proc));
+      CLR(server->grantmask, proc);
+      server->granted -= 1;
+      assert(server->granted >= 0);
       res_server_reply(server, "%d ", proc);
     }
     res_server_reply(server, "} \n");
   }
+  res_debug("Grant is %d.\n", server->granted);
 }
 
 static void res_server_command(server_t* server)
@@ -296,12 +337,15 @@ server_t* res_server_create(int fd)
 {
   server_t *server = xnew(server_t);
   res_stream_init(&server->stream, fd);
-  server->systems = 0;
-  server->access = 0;
+  ZERO(server->systems);
+  ZERO(server->access);
   server->state = ServerInit;
   server->local = 0;
-  server->assigned = 0;
-  server->assignmask = 0;
+  server->granted = 0;
+  server->revoked = 0;
+  ZERO(server->grantmask);
+  ZERO(server->assignmask);
+  ZERO(server->revokemask);
   return server;
 }
 
@@ -318,7 +362,7 @@ server_t* res_server_create_option(const char* arg)
   server_t* server = NULL;
   const char* colon = strchr(arg, ':');
 
-  if (colon && isdigit((unsigned char)colon[1])) {
+  if (colon && isdigit((unsigned char) colon[1])) {
     char* copy = xstrdup(arg);
     char* save = NULL;
     char* addr = strtok_r(copy, ":", &save);

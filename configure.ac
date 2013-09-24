@@ -30,9 +30,9 @@ dnl pick `mpicc' as compiler name.
 
 use_mpi=no
 AX_PROG_CC_MPI([test x"$enable_dist_mpi" != xno], [use_mpi=yes],
-               [if test x"$with_mpi" = xyes; then
+               [if test x"$enable_dist_mpi" = xyes; then
   AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
-else
+elif test x"$enable_dist_mpi" = xauto; then
   AC_MSG_WARN([No MPI compiler found, won't use MPI.])
 fi])
 if test $use_mpi = yes; then
@@ -70,14 +70,15 @@ if test x$enable_setaffinity != xno; then
 fi
 AC_CHECK_FUNCS([pthread_yield_np])
 AC_CHECK_FUNCS([pthread_yield])
+AC_CHECK_FUNCS([localtime_r])
 
 AC_SEARCH_LIBS([sqrt], [m])
+AC_SEARCH_LIBS([clock_gettime], [rt])
 
 dnl check network functions
 AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([inet_aton], [resolv])
-AC_SEARCH_LIBS([clock_gettime], [rt])
 
 
 dnl check for compiler builtins for

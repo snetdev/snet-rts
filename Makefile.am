@@ -229,6 +229,7 @@ libresserv_la_SOURCES = \
 	src/resource/resparse.h \
 	src/resource/resproto.h \
 	src/resource/resserver.c \
+	src/resource/resserver.h \
 	src/resource/resstream.c \
 	src/resource/resstream.h \
 	src/resource/restopo.c \

@@ -1,6 +1,10 @@
 #ifndef _SNET_DEBUG_TIME_H_
 #define _SNET_DEBUG_TIME_H_
 
+#ifndef NULL
+#include <stddef.h>
+#endif
+
 typedef struct timeval snet_time_t;
 
 void SNetDebugTimeGetTime(snet_time_t *time);
@@ -21,5 +25,8 @@ double SNetProcessTime(void);
 
 /* Return per-thread consumed CPU time. */
 double SNetThreadTime(void);
+
+/* Return current time in a string as HH:MM:SS.mmm. */
+void SNetLocalTimeString(char *buf, size_t size);
 
 #endif

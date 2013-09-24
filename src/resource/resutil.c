@@ -3,12 +3,35 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "resdefs.h"
 
 static const char* res_program_name;
 static bool        res_opt_debug;
 static bool        res_opt_verbose;
+
+/* Return current time in a string as HH:MM:SS.mmm. */
+void res_local_time_string(char *buf, size_t size)
+{
+  struct timeval tv;
+  if (gettimeofday(&tv, NULL) == 0) {
+    struct tm *tm;
+#if HAVE_LOCALTIME_R
+    struct tm localbuf;
+    tm = localtime_r(&tv.tv_sec, &localbuf);
+#else
+    tm = localtime(&tv.tv_sec);
+#endif
+    snprintf(buf, size, "%02d:%02d:%02d.%03d",
+             tm->tm_hour, tm->tm_min, tm->tm_sec,
+             (int) (tv.tv_usec / 1000));
+  } else {
+    /* Unlikely. */
+    buf[0] = '\0';
+  }
+}
 
 const char* res_get_program_name(void)
 {
@@ -67,7 +90,10 @@ void res_debug(const char *fmt, ...)
 {
   if (res_get_debug()) {
     va_list ap;
+    char buf[100];
+    res_local_time_string(buf, sizeof buf);
     va_start(ap, fmt);
+    printf("%s: ", buf);
     vfprintf(stdout, fmt, ap);
     va_end(ap);
     fflush(stdout);

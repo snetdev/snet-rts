@@ -23,7 +23,7 @@
 #define BITMAP_ALL      ULONG_MAX
 
 #define NUM_BITS        ((int) (8 * sizeof(bitmap_t)))
-#define MAX_BIT         ((int) (8 * sizeof(bitmap_t) - 1))
+#define MAX_BIT         (NUM_BITS - 1)
 
 #define HAS(map, bit)   ((map)  &  (1UL << (bit)))
 #define SET(map, bit)   ((map) |=  (1UL << (bit)))

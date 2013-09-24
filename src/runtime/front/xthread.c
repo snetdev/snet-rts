@@ -330,7 +330,7 @@ int SNetThreadingInit(int argc, char**argv)
 }
 
 /* Create a thread to instantiate a worker */
-void SNetThreadCreate(void *(*func)(void *), worker_t *worker)
+void SNetThreadCreate(void *(*func)(void *), worker_t *worker, int proc)
 {
   pthread_t             thread;
   pthread_attr_t        attr;

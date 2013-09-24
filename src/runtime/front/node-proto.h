@@ -594,9 +594,9 @@ void SNetMasterStatic(
   const int recv);
 
 /* Activate a new worker thread. */
-void SNetMasterStartOne(int id, worker_config_t* config);
+void SNetMasterStartOne(int id, worker_config_t* config, int proc);
 
-/* Return 1/2/3 when input is available within a given delay. */
+/* Return a bitmask of 1/2/3 when input is available within a given delay. */
 int SNetWaitForInput(int pipe, int sock, double delay);
 
 /* Throttle number of workers by work load. */
@@ -930,7 +930,7 @@ int SNetGetBoxConcurrency(const char *box, bool *is_det);
 int SNetThreadingInit(int argc, char**argv);
 
 /* Create a thread to instantiate a worker */
-void SNetThreadCreate(void *(*func)(void *), worker_t *worker);
+void SNetThreadCreate(void *(*func)(void *), worker_t *worker, int proc);
 void SNetThreadSetSelf(worker_t *self);
 worker_t *SNetThreadGetSelf(void);
 int SNetThreadingStop(void);
@@ -1021,6 +1021,9 @@ void SNetWorkerMaintenaince(worker_t *worker);
 
 /* Wait for other workers to finish. */
 void SNetWorkerWait(worker_t *worker);
+
+/* Check if worker needs to stop. */
+bool SNetWorkerSuperfluous(worker_t *worker);
 
 /* Process input or work until stealing fails. */
 void SNetWorkerSlave(worker_t *worker);
