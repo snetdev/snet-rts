@@ -30,9 +30,9 @@ dnl pick `mpicc' as compiler name.
 
 use_mpi=no
 AX_PROG_CC_MPI([test x"$enable_dist_mpi" != xno], [use_mpi=yes],
-               [if test x"$with_mpi" = xyes; then
+               [if test x"$enable_dist_mpi" = xyes; then
   AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
-else
+elif test x"$enable_dist_mpi" = xauto; then
   AC_MSG_WARN([No MPI compiler found, won't use MPI.])
 fi])
 if test $use_mpi = yes; then
