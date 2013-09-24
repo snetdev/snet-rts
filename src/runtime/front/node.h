@@ -35,6 +35,9 @@
 /* Location may be determined by indexed placement combinators. */
 #define LOCATION_UNKNOWN        (-1)
 
+/* Indicate absence of thread-processor-binding. */
+#define NO_PROC (-1)
+
 typedef struct node node_t;
 typedef enum node_type node_type_t;
 typedef enum landing_type landing_type_t;

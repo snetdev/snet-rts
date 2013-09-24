@@ -376,6 +376,11 @@ static bool SNetWorkerWork(worker_t *worker)
       worker->prev = item;
       worker->iter = item->next_item;
     }
+
+    if (worker->config->excess_threads) {
+      assert(SNetOptResource());
+      break;
+    }
   }
 
   worker->has_work = (worker->todo.head.next_item != NULL);
@@ -621,6 +626,26 @@ void SNetWorkerWait(worker_t *worker)
   }
 }
 
+/* Check if worker needs to stop. */
+bool SNetWorkerSuperfluous(worker_t *worker)
+{
+  bool excessive = false;
+  if (worker->config->excess_threads > 0) {
+    volatile int *viptr = (volatile int *) &(worker->config->excess_threads);
+    int old = *viptr;
+    int new = old - 1;
+    while (old > 0 && excessive == false) {
+      if (CAS(viptr, old, new)) {
+        excessive = true;
+      } else {
+        old = *viptr;
+        new = old - 1;
+      }
+    }
+  }
+  return excessive;
+}
+
 /* Process input or work until stealing fails. */
 void SNetWorkerSlave(worker_t *worker)
 {
@@ -641,6 +666,9 @@ void SNetWorkerSlave(worker_t *worker)
     else if (SNetWorkerSteal(worker)) {
     }
     else {
+      state = SlaveDone;
+    }
+    if (SNetWorkerSuperfluous(worker)) {
       state = SlaveDone;
     }
     if (state == SlaveIdle) {

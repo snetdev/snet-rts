@@ -169,8 +169,10 @@ void res_parse_expect(stream_t* stream, token_t expect, void* result);
 /* resserver.c */
 
 int res_server_get_socket(server_t* server);
-int res_server_get_assigned(server_t* server);
+int res_server_get_granted(server_t* server);
 int res_server_get_local(server_t* server);
+int res_server_allocate_proc(server_t* server);
+void res_server_release_proc(server_t* server, int proc);
 void res_server_set_local(server_t* server, int local);
 int res_server_flush(server_t* server);
 int res_server_read(server_t* server);
@@ -230,6 +232,9 @@ bool res_parse_topology(int sysid, char* text);
 
 /* resutil.c */
 
+
+/* Return current time in a string as HH:MM:SS.mmm. */
+void res_local_time_string(char *buf, size_t size);
 const char* res_get_program_name(void);
 void res_set_program_name(const char* prog);
 bool res_get_debug(void);
