@@ -9,6 +9,8 @@
 #include "resdefs.h"
 #endif
 
+#define WAIT_FOREVER    (-1.0)
+
 typedef enum pipe_mesg_type {
   MesgDone = 10,
   MesgBusy = 20,
@@ -302,6 +304,7 @@ void SNetMasterResource(worker_config_t* config, int recv)
   const double  begin = SNetRealTime();
   double        endtime = 0;
   server_t     *server;
+  bitmap_t      revokes = BITMAP_ZERO;
 
   /* Initialize the resource management library. */
   res_set_debug(SNetDebugRS());
@@ -332,20 +335,20 @@ void SNetMasterResource(worker_config_t* config, int recv)
       /* Update our notion about how many resources we can use. */
       const int new_grant = res_server_get_granted(server);
       if (new_grant < granted) {
-        /* Hmm, we may have to kill some threads... */
-        int delta = granted - new_grant;
-        AAF(&(config->excess_threads), delta);
+        /* We may have to kill some threads... */
+        const int delta = granted - new_grant;
+        const int stop = MIN(delta, started);
+        AAF(&(config->excess_threads), stop);
       }
       else {
+        /* Stop the termination of threads. */
+        const int delta = new_grant - granted;
         volatile int *viptr = &(config->excess_threads);
         int old = *viptr;
-        int new = old + 1;
-        while (new_grant > granted && old > 0) {
-          /* Stop asking threads to terminate. */
-          CAS(viptr, old, new);
+        int new = MAX(0, old - delta);
+        while (old > new && !CAS(viptr, old, new)) {
           old = *viptr;
-          new = old + 1;
-          ++granted;
+          new = MAX(0, old - delta);
         }
       }
       granted = new_grant;
@@ -371,7 +374,7 @@ void SNetMasterResource(worker_config_t* config, int recv)
     }
 
     if (!input) {
-      input = SNetWaitForInput(recv, sock, -1.0);
+      input = SNetWaitForInput(recv, sock, WAIT_FOREVER);
       assert(input >= 1 && input <= 3);
     }
 
