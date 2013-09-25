@@ -213,6 +213,7 @@ bin_PROGRAMS = src/resource/resserv
 
 libresserv_la_SOURCES = \
 	src/resource/resbalance.c \
+	src/resource/resbitmap.h \
 	src/resource/resclient.c \
 	src/resource/resclient.h \
 	src/resource/rescpuinfo.c \

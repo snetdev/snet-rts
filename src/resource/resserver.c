@@ -29,6 +29,11 @@ int res_server_get_granted(server_t* server)
   return server->granted - server->revoked;
 }
 
+void res_server_get_revoke_mask(server_t* server, bitmap_t* mask)
+{
+  *mask = server->revokemask;
+}
+
 int res_server_get_local(server_t* server)
 {
   return server->local;
@@ -36,11 +41,11 @@ int res_server_get_local(server_t* server)
 
 int res_server_allocate_proc(server_t* server)
 {
+  bitmap_t availmask = BITMAP_AND(server->grantmask, BITMAP_NOT(
+                           BITMAP_OR(server->assignmask, server->revokemask)));
   int i;
   for(i = 0; i < MAX_BIT; ++i) {
-    if (HAS(server->grantmask, i) &&
-        NOT(server->assignmask, i) &&
-        NOT(server->revokemask, i)) {
+    if (HAS(availmask, i)) {
       break;
     }
   }
@@ -68,13 +73,13 @@ void res_server_release_proc(server_t* server, int proc)
   }
 }
 
-static void res_server_change_state(server_t* server, server_state_t A, server_state_t B)
+static void res_server_change_state(server_t* s, server_state_t A, server_state_t B)
 {
-  if (server->state != A) {
-    res_error("[%s]: Expected state %d, found state %d, intended state %d\n",
-              __func__, A, server->state, B);
+  if (s->state != A) {
+    res_error("[%s]: Expected state %d, found state %d, intended state %d.\n",
+              __func__, A, s->state, B);
   } else {
-    server->state = B;
+    s->state = B;
   }
 }
 
