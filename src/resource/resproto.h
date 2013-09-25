@@ -242,6 +242,7 @@ bool res_get_debug(void);
 void res_set_debug(bool flag);
 bool res_get_verbose(void);
 void res_set_verbose(bool flag);
+void res_perror(const char *mesg);
 void res_pexit(const char *mesg);
 void res_assert_failed(const char *fn, int ln, const char *msg);
 void res_warn(const char *fmt, ...);

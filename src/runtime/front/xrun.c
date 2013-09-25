@@ -55,7 +55,6 @@ worker_config_t* SNetCreateWorkerConfig(
   config->pipe_send = pipe_send;
   config->input_node = input->from;
   config->output_node = output->dest;
-  config->excess_threads = 0;
 
   /* Set all workers to NULL to prevent premature stealing. */
   for (id = 0; id <= max_worker; ++id) {
@@ -307,8 +306,9 @@ void SNetMasterResource(worker_config_t* config, int recv)
   bitmap_t      revokes = BITMAP_ZERO;
 
   /* Initialize the resource management library. */
-  res_set_debug(SNetDebugRS());
+  res_set_program_name(SNetGetProgramName());
   res_set_verbose(SNetVerbose());
+  res_set_debug(SNetDebugRS());
   res_topo_create();
 
   /* Create a connection with the resource server. */
@@ -326,36 +326,53 @@ void SNetMasterResource(worker_config_t* config, int recv)
     const int bit_sock = 1;
     const int bit_recv = 0;
     int input = 0;
+    bitmap_t mask = BITMAP_ZERO;
 
     if (wanted != res_server_get_local(server)) {
-      /* Update resource server about local load. */
+      /* Update resource server about the local workload. */
       res_server_set_local(server, wanted);
     }
     if (granted != res_server_get_granted(server)) {
       /* Update our notion about how many resources we can use. */
-      const int new_grant = res_server_get_granted(server);
-      if (new_grant < granted) {
-        /* We may have to kill some threads... */
-        const int delta = granted - new_grant;
-        const int stop = MIN(delta, started);
-        AAF(&(config->excess_threads), stop);
-      }
-      else {
-        /* Stop the termination of threads. */
-        const int delta = new_grant - granted;
-        volatile int *viptr = &(config->excess_threads);
-        int old = *viptr;
-        int new = MAX(0, old - delta);
-        while (old > new && !CAS(viptr, old, new)) {
-          old = *viptr;
-          new = MAX(0, old - delta);
+      granted = res_server_get_granted(server);
+    }
+    /* Check for new revokes. */
+    res_server_get_revoke_mask(server, &mask);
+    if (BITMAP_NEQ(revokes, mask)) {
+      int i, k;
+      for (i = 0; i < MAX_BIT; ++i) {
+        if (HAS(mask, i)) {
+          if (NOT(revokes, i)) {
+            SET(revokes, i);
+            /* Request worker to stop. */
+            for (k = 1; k <= config->worker_count; ++k) {
+              if (procs[k] == i) {
+                if (config->workers[k]->proc_revoked == false) {
+                  config->workers[k]->proc_revoked = true;
+                }
+                break;
+              }
+            }
+            assert(k <= config->worker_count);
+          }
+        }
+        else if (HAS(revokes, i)) {
+          /* Remove stop request from worker. */
+          for (k = 1; k <= config->worker_count; ++k) {
+            if (procs[k] == i) {
+              if (config->workers[k]->proc_revoked == true) {
+                config->workers[k]->proc_revoked = false;
+              }
+              break;
+            }
+          }
+          assert(k <= config->worker_count);
         }
       }
-      granted = new_grant;
     }
 
     /* Start new threads when needed, given enough resources. */
-    if (started < wanted && started < granted) {
+    if (started < MIN(wanted, granted)) {
       const double now = SNetRealTime();
       const double slowdown = 0.001;
       const double delay = endtime + slowdown - now;
@@ -367,9 +384,7 @@ void SNetMasterResource(worker_config_t* config, int recv)
           SNetMasterStartOne(i, config, proc);
           state[i] = SlaveIdle;
           procs[i] = proc;
-
-          ++started, ++idlers;
-        } while (started < wanted && started < granted);
+        } while (++idlers, ++started < MIN(wanted, granted));
       }
     }
 
@@ -389,9 +404,10 @@ void SNetMasterResource(worker_config_t* config, int recv)
 
         case MesgDone: {
           --started;
+          assert(started >= 0);
           if (state[mesg.id] == SlaveIdle) {
-            assert(idlers > 0 && started >= 0);
             --idlers;
+            assert(idlers >= 0);
             if (started == 0 && mesg.more == false) {
               --wanted;
             }
@@ -404,7 +420,16 @@ void SNetMasterResource(worker_config_t* config, int recv)
           if (wanted > started + 1) {
             wanted = started + 1;
           }
+          if (idlers > 0 && wanted > started) {
+            wanted = started;
+          }
           res_server_release_proc(server, procs[mesg.id]);
+          if (HAS(revokes, procs[mesg.id])) {
+            CLR(revokes, procs[mesg.id]);
+            if (config->workers[mesg.id]->proc_revoked) {
+              config->workers[mesg.id]->proc_revoked = false;
+            }
+          }
           if (SNetDebugTL()) {
             printf("[%s,%.3f]: worker %d done, %d alive, %d idle, %d more.\n",
                    __func__, SNetRealTime() - begin, mesg.id,
@@ -416,6 +441,7 @@ void SNetMasterResource(worker_config_t* config, int recv)
 
         case MesgBusy: {
           --idlers;
+          assert(idlers >= 0);
           if (SNetDebugTL()) {
             printf("[%s,%.3f]: worker %d busy, %d alive, %d idle, %d more.\n",
                    __func__, SNetRealTime() - begin, mesg.id,
@@ -423,7 +449,7 @@ void SNetMasterResource(worker_config_t* config, int recv)
           }
           assert(state[mesg.id] == SlaveIdle);
           state[mesg.id] = SlaveBusy;
-          if (started < worker_limit && started == wanted) {
+          if (started < worker_limit && started == wanted && idlers == 0) {
             ++wanted;
           }
           endtime = SNetRealTime();

@@ -16,11 +16,13 @@
 #define CLR(map, bit)   ((map) &= ~(1UL << (bit)))
 #define NOT(map, bit)   (HAS((map), (bit)) == 0)
 #define ZERO(map)       ((map) = BITMAP_ZERO)
+#define NON_ZERO(map)   ((map) != 0UL)
 
 #define BITMAP_EQ(a,b)  ((a) == (b))
+#define BITMAP_NEQ(a,b) ((a) != (b))
 #define BITMAP_OR(a,b)  ((a) | (b))
 #define BITMAP_AND(a,b) ((a) & (b))
-#define BITMAP_NOT(a,b) (~(a))
+#define BITMAP_NOT(a)   (~(a))
 
 typedef unsigned long   bitmap_t;
 

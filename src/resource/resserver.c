@@ -63,6 +63,7 @@ void res_server_release_proc(server_t* server, int proc)
   assert(HAS(server->assignmask, proc));
   CLR(server->assignmask, proc);
   if (HAS(server->revokemask, proc)) {
+    res_debug("Returning %d %d.\n", LOCAL_HOST, proc);
     res_server_reply(server, "{ return %d %d } ", LOCAL_HOST, proc);
     CLR(server->revokemask, proc);
     CLR(server->grantmask, proc);
@@ -70,6 +71,7 @@ void res_server_release_proc(server_t* server, int proc)
     server->revoked -= 1;
     assert(server->granted >= 0);
     assert(server->revoked >= 0);
+    res_server_flush(server);
   }
 }
 
@@ -180,6 +182,12 @@ static void res_server_command_system(server_t* server)
 static void res_server_command_grant(server_t* server)
 {
   int sysid;
+  int len = 0;
+  char* p = res_stream_incoming(&server->stream, &len);
+  char* q = strchr(p, '}');
+  len = q - p;
+
+  res_debug("Got Grant %*.*s.\n", len, len, p);
 
   res_server_expect_state(server, ServerTopoRcvd);
   res_server_number(server, &sysid);
@@ -188,26 +196,37 @@ static void res_server_command_grant(server_t* server)
     res_error("[%s]: Invalid sysid\n", __func__, sysid);
   } else {
     intlist_t* ints = res_parse_intlist(&server->stream);
-    int i, size = res_list_size(ints);
+    int i, na, size = res_list_size(ints);
     res_server_reply(server, "{ accept %d ", sysid);
     for (i = 0; i < size; ++i) {
       int proc = res_list_get(ints, i);
       assert(NOT(server->grantmask, proc));
       SET(server->grantmask, proc);
+      server->granted += 1;
       if (HAS(server->revokemask, proc)) {
         CLR(server->revokemask, proc);
+        server->revoked -= 1;
+        assert(server->revoked >= 0);
       }
-      server->granted += 1;
       res_server_reply(server, "%d ", proc);
     }
     res_server_reply(server, "} \n");
+    for (i = na = 0; i < MAX_BIT; ++i) {
+      na += HAS(server->assignmask, i) != 0;
+    }
+    res_debug("Granted %d, total %d, assigned %d.\n", size, server->granted, na);
   }
-  res_debug("Grant is %d.\n", server->granted);
 }
 
 static void res_server_command_revoke(server_t* server)
 {
   int sysid;
+  int len = 0;
+  char* p = res_stream_incoming(&server->stream, &len);
+  char* q = strchr(p, '}');
+  len = q - p;
+
+  res_debug("Got Revoke %*.*s.\n", len, len, p);
 
   res_server_expect_state(server, ServerTopoRcvd);
   res_server_number(server, &sysid);
@@ -217,24 +236,35 @@ static void res_server_command_revoke(server_t* server)
   } else {
     intlist_t* ints = res_parse_intlist(&server->stream);
     int i, size = res_list_size(ints);
-    res_server_reply(server, "{ return %d ", sysid);
+    bool replying = false;
     for (i = 0; i < size; ++i) {
       int proc = res_list_get(ints, i);
       assert(HAS(server->grantmask, proc));
-      CLR(server->grantmask, proc);
-      server->granted -= 1;
-      assert(server->granted >= 0);
-      res_server_reply(server, "%d ", proc);
+      if (HAS(server->assignmask, proc)) {
+        SET(server->revokemask, proc);
+        server->revoked += 1;
+      } else {
+        CLR(server->grantmask, proc);
+        server->granted -= 1;
+        assert(server->granted >= 0);
+        if (replying == false) {
+          res_server_reply(server, "{ return %d ", sysid);
+          replying = true;
+        }
+        res_server_reply(server, "%d ", proc);
+      }
     }
-    res_server_reply(server, "} \n");
+    if (replying) {
+      res_server_reply(server, "} \n");
+    }
+    res_debug("Revoked %d, remain %d, grants %d.\n",
+              size, server->revoked, server->granted);
   }
-  res_debug("Grant is %d.\n", server->granted);
 }
 
 static void res_server_command(server_t* server)
 {
   int command = res_parse_token(&server->stream, NULL);
-  res_debug("Got %s\n", res_token_string(command));
   switch (command) {
     case Systems: res_server_command_systems(server); break;
     case System: res_server_command_system(server); break;
@@ -317,7 +347,7 @@ void res_server_setup(server_t* server)
 
     num = select(sock + 1, &rset, wptr, NULL, NULL);
     if (num == -1) {
-      perror("select");
+      res_perror("select");
       break;
     }
     assert(num > 0);

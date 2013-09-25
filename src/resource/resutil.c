@@ -35,7 +35,8 @@ void res_local_time_string(char *buf, size_t size)
 
 const char* res_get_program_name(void)
 {
-  return res_program_name ? res_program_name : "";
+  static const char default_program_name[] = "libresserv.so";
+  return res_program_name ? res_program_name : default_program_name;
 }
 
 void res_set_program_name(const char* prog) { res_program_name = prog; }
@@ -44,10 +45,15 @@ void res_set_debug(bool flag) { res_opt_debug = flag; }
 bool res_get_verbose(void) { return res_opt_verbose; }
 void res_set_verbose(bool flag) { res_opt_verbose = flag; }
 
+void res_perror(const char *mesg)
+{
+  char *buf = strerror(errno);
+  fprintf(stderr, "%s: %s: %s\n", res_get_program_name(), mesg, buf);
+}
+
 void res_pexit(const char *mesg)
 {
-  fprintf(stderr, "%s: %s: %s\n",
-          res_get_program_name(), mesg, strerror(errno));
+  res_perror(mesg);
   exit(1);
 }
 

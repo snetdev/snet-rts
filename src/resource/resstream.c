@@ -85,7 +85,7 @@ int res_buffer_read(buffer_t* buf, int fd, int amount)
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       return 0;
     } else {
-      perror("read");
+      res_perror("read");
       return -1;
     }
   } else if (!n) {
@@ -108,7 +108,7 @@ int res_buffer_write(buffer_t* buf, int fd, int amount)
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       return 0;
     } else {
-      perror("write");
+      res_perror("write");
       return -1;
     }
   } else {

@@ -13,6 +13,7 @@
 static pthread_key_t    thread_self_key;
 static int              num_workers;
 static int              num_thieves;
+static const char      *program_name;
 static const char      *opt_concurrency;
 static bool             opt_debug;
 static bool             opt_debug_df;
@@ -60,6 +61,12 @@ int SNetThreadingThieves(void)
 int SNetThreadedManagers(void)
 {
   return SNetDistribIsDistributed() ? 1 : 0;
+}
+
+/* Name of this program. */
+const char* SNetGetProgramName(void)
+{
+  return program_name;
 }
 
 /* What kind of garbage collection to use? */
@@ -225,6 +232,7 @@ int SNetThreadingInit(int argc, char**argv)
   num_workers = SNetGetNumProcs();
   opt_garbage_collection = true;
   opt_zipper = true;
+  program_name = basename(argv[0]);
 
   for (i = 0; i < argc; ++i) {
     if (argv[i][0] != '-') {
