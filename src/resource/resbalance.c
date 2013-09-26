@@ -143,15 +143,13 @@ int res_return_procs(client_t* client, intlist_t* ints)
       if (procs_returned) {
         client->rebalance = true;
       }
-      res_debug("[%s]: %d returned, rebalance %d.\n",
-                __func__, procs_returned, client->rebalance);
       return procs_returned;
     }
   }
 }
 
 /* Compare the load of two clients, descending. */
-int res_client_compare_local_workload_desc(const void *p, const void *q)
+int res_client_compare_local(const void *p, const void *q)
 {
   const client_t* P = * (client_t * const *) p;
   const client_t* Q = * (client_t * const *) q;
@@ -173,8 +171,7 @@ static client_t** get_sorted_clients(intmap_t* map)
     assert(i < num_clients);
     all[i++] = client;
   }
-  qsort(all, num_clients, sizeof(client_t *),
-        res_client_compare_local_workload_desc);
+  qsort(all, num_clients, sizeof(client_t *), res_client_compare_local);
 
   return all;
 }
@@ -411,7 +408,9 @@ void res_rebalance_proportional(intmap_t* map)
   bitmap_t      assign = BITMAP_ZERO;
   int           nassigns = 0;
   int          *portions = xcalloc(num_clients, sizeof(int));
+  double       *remains = xcalloc(num_clients, sizeof(double));
   int           num_positives = 0;
+  int           num_assigned = 0;
   int           total_load = 0;
 
   /* Compute the proportional processor distribution. */
@@ -424,6 +423,7 @@ void res_rebalance_proportional(intmap_t* map)
     } else {
       portions[i] = 0;
     }
+    remains[i] = 0.0;
   }
   assert(host->nprocs < total_load);
   for (i = 0; i < num_clients; ++i) {
@@ -432,6 +432,26 @@ void res_rebalance_proportional(intmap_t* map)
       portions[i] += (client->local_workload - 1)
                    * (host->nprocs - num_positives)
                    / (total_load - num_positives);
+      remains[i] = ((double) ((client->local_workload - 1)
+                            * (host->nprocs - num_positives))
+                            / ((double) (total_load - num_positives)))
+                 - (double) (portions[i] - 1);
+    }
+    num_assigned += portions[i];
+  }
+  while (num_assigned < host->nprocs) {
+    p = 0;
+    for (i = 1; i < num_clients; ++i) {
+      if (remains[i] > remains[p]) {
+        p = i;
+      }
+    }
+    if (remains[p] > 0) {
+      portions[p] += 1;
+      num_assigned += 1;
+      remains[p] = 0.0;
+    } else {
+      break;
     }
   }
   
@@ -519,6 +539,7 @@ void res_rebalance_proportional(intmap_t* map)
 
   xfree(all);
   xfree(portions);
+  xfree(remains);
 }
 
 void res_rebalance_minimal(intmap_t* map)

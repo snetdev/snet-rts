@@ -29,6 +29,7 @@ client_t* res_client_create(int bit, int fd)
   client->local_grantmap = BITMAP_ZERO;
   client->local_revoking = BITMAP_ZERO;
   client->rebalance = false;
+  client->shutdown = false;
   return client;
 }
 
@@ -214,6 +215,11 @@ void res_client_command_state(client_t* client)
   res_client_reply(client, "} \n");
 }
 
+void res_client_command_shutdown(client_t* client)
+{
+  client->shutdown = true;
+}
+
 void res_client_command(client_t* client)
 {
   token_t command = res_parse_token(&client->stream, NULL);
@@ -229,6 +235,7 @@ void res_client_command(client_t* client)
     case Quit:      res_client_command_quit(client); break;
     case Help:      res_client_command_help(client); break;
     case State:     res_client_command_state(client); break;
+    case Shutdown:  res_client_command_shutdown(client); break;
     default:
       res_info("Unexpected token %s.\n", res_token_string(command));
       res_parse_throw();

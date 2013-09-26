@@ -379,7 +379,6 @@ static bool SNetWorkerWork(worker_t *worker)
     }
 
     if (worker->proc_revoked) {
-      printf("%s: %d: proc is revoked\n", __func__, __LINE__);
       assert(SNetOptResource());
       break;
     }
@@ -651,7 +650,6 @@ void SNetWorkerSlave(worker_t *worker)
       state = SlaveDone;
     }
     if (worker->proc_revoked) {
-      printf("%s: %d: proc is revoked\n", __func__, __LINE__);
       state = SlaveDone;
     }
     else if (state == SlaveIdle) {

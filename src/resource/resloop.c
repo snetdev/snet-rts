@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/select.h>
 #include <sys/param.h>
 #include <sys/types.h>
@@ -11,6 +12,8 @@
 #include "resdefs.h"
 #include "resclient.h"
 
+static bool res_shutdown;
+
 void res_loop(int listen)
 {
   fd_set        rset, wset, rout, wout, *wptr;
@@ -18,7 +21,7 @@ void res_loop(int listen)
   intmap_t*     sock_map = res_map_create();
   intmap_t*     client_map = res_map_create();
   bitmap_t      bitmap = 0;
-  int           wcnt = 0, loops = 0;
+  int           wcnt = 0, loops = -1;
   const int     max_loops = 2000000000;
 
   FD_ZERO(&rset);
@@ -26,7 +29,7 @@ void res_loop(int listen)
   FD_SET(listen, &rset);
   max_sock = listen;
 
-  while (++loops <= max_loops) {
+  while (++loops <= max_loops && res_shutdown == false) {
     bitmap_t rebalance = BITMAP_ZERO;
 
     rout = rset;
@@ -34,7 +37,11 @@ void res_loop(int listen)
     wptr = ((wcnt > 0) ? &wout : NULL);
     num = select(max_sock + 1, &rout, wptr, NULL, NULL);
     if (num <= 0) {
-      res_pexit("select");
+      if (num == -1 && errno == EINTR) {
+        continue;
+      } else {
+        res_pexit("select");
+      }
     }
 
     if (FD_ISSET(listen, &rout)) {
@@ -85,6 +92,9 @@ void res_loop(int listen)
           res_map_del(sock_map, sock);
           assert(HAS(bitmap, client->bit));
           CLR(bitmap, client->bit);
+          if (client->shutdown == true) {
+            res_shutdown = true;
+          }
           res_client_destroy(client);
           rebalance = BITMAP_ALL;
           if (sock == max_sock) {
@@ -117,12 +127,11 @@ void res_loop(int listen)
       }
     }
   }
-  res_info("%s: Maximum number of loops reached (%d).\n",
-           __func__, max_loops);
-
   res_map_apply(client_map, (void (*)(void *)) res_client_destroy);
   res_map_destroy(client_map);
   res_map_destroy(sock_map);
+
+  res_info("%s: Terminating after %d loops.\n", __func__, loops);
 }
 
 char* res_slurp(void* vp)
@@ -223,6 +232,24 @@ void res_start_slaves(intmap_t* slaves)
   }
 }
 
+void res_catch_sigint(int s)
+{
+  res_debug("%s: Caught SIGINT.\n", res_get_program_name());
+  res_shutdown = true;
+}
+
+void res_catch_signals(void)
+{
+  struct sigaction act;
+
+  memset(&act, 0, sizeof act);
+  act.sa_sigaction = NULL;
+  act.sa_restorer = NULL;
+  act.sa_handler = res_catch_sigint;
+
+  sigaction(SIGINT, &act, NULL);
+}
+
 void res_service(const char* listen_addr, int listen_port, intmap_t* slaves)
 {
   int listen = res_listen_socket(listen_addr, listen_port, true);
@@ -230,6 +257,7 @@ void res_service(const char* listen_addr, int listen_port, intmap_t* slaves)
     exit(1);
   } else {
     res_start_slaves(slaves);
+    res_catch_signals();
     res_loop(listen);
     res_socket_close(listen);
   }
