@@ -30,6 +30,7 @@ enum token {
   Numa,
   Hostname,
   String,
+  Shutdown,
 };
 
 extern jmp_buf res_parse_exception_context;

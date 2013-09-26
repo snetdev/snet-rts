@@ -46,6 +46,7 @@ const char *res_token_string(int token)
   TOK(Numa)
   TOK(Hostname)
   TOK(String)
+  TOK(Shutdown)
   TOK(System)
   TOK(Machine)
   TOK(Node)
@@ -127,6 +128,7 @@ token_t res_parse_string(const char* data, int* length, void* result)
       { Proc,      "proc",      4 },
       { Numa,      "numa",      4 },
       { Hostname,  "hostname",  8 },
+      { Shutdown,  "shutdown",  8 },
     };
     const int num_tokens = sizeof(tokens) / sizeof(tokens[0]);
     int i, max = end - p;
