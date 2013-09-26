@@ -33,9 +33,6 @@ typedef struct worker_config {
   /* The output node which stores the number of output records. */
   struct node          *output_node;
 
-  /* The number of threads which have to stop executing. */
-  int                   excess_threads;
-
 } worker_config_t;
 
 /* A worker can be in either of two roles: */
@@ -169,6 +166,9 @@ struct worker {
 
   /* The sequence number for an idle state: either WorkerIdle or WorkerStrike. */
   size_t                 idle_seqnr;
+
+  /* Whether the processor this worker is executing on has been revoked. */
+  bool                   proc_revoked;
 };
 
 

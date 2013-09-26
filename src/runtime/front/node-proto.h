@@ -863,6 +863,9 @@ int SNetThreadingThieves(void);
 /* How many distributed computing threads? */
 int SNetThreadedManagers(void);
 
+/* Name of this program. */
+const char* SNetGetProgramName(void);
+
 /* What kind of garbage collection to use? */
 bool SNetGarbageCollection(void);
 
@@ -1021,9 +1024,6 @@ void SNetWorkerMaintenaince(worker_t *worker);
 
 /* Wait for other workers to finish. */
 void SNetWorkerWait(worker_t *worker);
-
-/* Check if worker needs to stop. */
-bool SNetWorkerSuperfluous(worker_t *worker);
 
 /* Process input or work until stealing fails. */
 void SNetWorkerSlave(worker_t *worker);

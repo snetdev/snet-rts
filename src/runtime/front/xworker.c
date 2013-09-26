@@ -63,6 +63,7 @@ worker_t *SNetWorkerCreate(
   worker->has_work = true;
   worker->is_idle = false;
   worker->idle_seqnr = 0;
+  worker->proc_revoked = false;
 
   return worker;
 }
@@ -377,7 +378,8 @@ static bool SNetWorkerWork(worker_t *worker)
       worker->iter = item->next_item;
     }
 
-    if (worker->config->excess_threads) {
+    if (worker->proc_revoked) {
+      printf("%s: %d: proc is revoked\n", __func__, __LINE__);
       assert(SNetOptResource());
       break;
     }
@@ -626,26 +628,6 @@ void SNetWorkerWait(worker_t *worker)
   }
 }
 
-/* Check if worker needs to stop. */
-bool SNetWorkerSuperfluous(worker_t *worker)
-{
-  bool excessive = false;
-  if (worker->config->excess_threads > 0) {
-    volatile int *viptr = (volatile int *) &(worker->config->excess_threads);
-    int old = *viptr;
-    int new = old - 1;
-    while (old > 0 && excessive == false) {
-      if (CAS(viptr, old, new)) {
-        excessive = true;
-      } else {
-        old = *viptr;
-        new = old - 1;
-      }
-    }
-  }
-  return excessive;
-}
-
 /* Process input or work until stealing fails. */
 void SNetWorkerSlave(worker_t *worker)
 {
@@ -668,14 +650,15 @@ void SNetWorkerSlave(worker_t *worker)
     else {
       state = SlaveDone;
     }
-    if (SNetWorkerSuperfluous(worker)) {
+    if (worker->proc_revoked) {
+      printf("%s: %d: proc is revoked\n", __func__, __LINE__);
       state = SlaveDone;
     }
-    if (state == SlaveIdle) {
+    else if (state == SlaveIdle) {
       SNetNodeWorkerBusy(worker);
       state = SlaveBusy;
     }
-  } while (state < SlaveDone);
+  }
   ReduceWorkItems(worker);
 
   worker->is_idle = WorkerExit;

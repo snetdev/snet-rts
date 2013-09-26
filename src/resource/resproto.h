@@ -170,6 +170,7 @@ void res_parse_expect(stream_t* stream, token_t expect, void* result);
 
 int res_server_get_socket(server_t* server);
 int res_server_get_granted(server_t* server);
+void res_server_get_revoke_mask(server_t* server, bitmap_t* mask);
 int res_server_get_local(server_t* server);
 int res_server_allocate_proc(server_t* server);
 void res_server_release_proc(server_t* server, int proc);
@@ -241,6 +242,7 @@ bool res_get_debug(void);
 void res_set_debug(bool flag);
 bool res_get_verbose(void);
 void res_set_verbose(bool flag);
+void res_perror(const char *mesg);
 void res_pexit(const char *mesg);
 void res_assert_failed(const char *fn, int ln, const char *msg);
 void res_warn(const char *fmt, ...);

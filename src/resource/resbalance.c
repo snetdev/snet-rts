@@ -143,6 +143,8 @@ int res_return_procs(client_t* client, intlist_t* ints)
       if (procs_returned) {
         client->rebalance = true;
       }
+      res_debug("[%s]: %d returned, rebalance %d.\n",
+                __func__, procs_returned, client->rebalance);
       return procs_returned;
     }
   }

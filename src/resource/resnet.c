@@ -18,7 +18,7 @@ int res_nonblocking(int fd, bool nb)
 {
   int yes = nb;
   if (ioctl(fd, FIONBIO, (char *)&yes)) {
-    perror("ioctl FIONBIO");
+    res_perror("ioctl FIONBIO");
     return -1;
   }
   return 0;
@@ -31,12 +31,12 @@ int res_listen_socket(const char* listen_addr, int listen_port, bool nb)
   int yes = 1;
 
   if ((s = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-    perror("socket");
+    res_perror("socket");
     return -1;
   }
 
   if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
-    perror("setsockopt");
+    res_perror("setsockopt");
     close(s);
     return -1;
   }
@@ -46,7 +46,7 @@ int res_listen_socket(const char* listen_addr, int listen_port, bool nb)
     return -1;
   }
   if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
-    perror("ioctl FD_CLOEXEC");
+    res_perror("ioctl FD_CLOEXEC");
     close(s);
     return -1;
   }
@@ -68,13 +68,13 @@ int res_listen_socket(const char* listen_addr, int listen_port, bool nb)
     a.sin_addr = *(struct in_addr *)host->h_addr;
   }
   else if (!inet_aton(listen_addr, (struct in_addr *)&a.sin_addr.s_addr)) {
-    perror("bad IP address format");
+    res_perror("bad IP address format");
     close(s);
     return -1;
   }
 
   if (bind(s, (struct sockaddr *)&a, sizeof(a))) {
-    perror("bind");
+    res_perror("bind");
     close(s);
     return -1;
   }
@@ -88,13 +88,13 @@ int res_connect_socket(int connect_port, char *address, bool nb)
   int s;
 
   if ((s = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-    perror("socket");
+    res_perror("socket");
     close(s);
     return -1;
   }
 
   if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
-    perror("ioctl FD_CLOEXEC");
+    res_perror("ioctl FD_CLOEXEC");
     close(s);
     return -1;
   }
@@ -113,13 +113,13 @@ int res_connect_socket(int connect_port, char *address, bool nb)
     a.sin_addr = *(struct in_addr *)host->h_addr;
   }
   else if (!inet_aton(address, (struct in_addr *)&a.sin_addr.s_addr)) {
-    perror("bad IP address format");
+    res_perror("bad IP address format");
     close(s);
     return -1;
   }
 
   if (connect(s, (struct sockaddr *)&a, sizeof(a)) == -1) {
-    perror("connect");
+    res_perror("connect");
     close(s);
     return -1;
   }
@@ -143,7 +143,7 @@ int res_accept_socket(int listen, bool nb)
   char *str;
 
   if ((s = accept(listen, &a, &len)) == -1) {
-    perror("accept");
+    res_perror("accept");
     return -1;
   }
   str = inet_ntoa(a.sin_addr);
@@ -155,7 +155,7 @@ int res_accept_socket(int listen, bool nb)
     return -1;
   }
   if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
-    perror("ioctl FD_CLOEXEC");
+    res_perror("ioctl FD_CLOEXEC");
     close(s);
     return -1;
   }
