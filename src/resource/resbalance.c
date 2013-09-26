@@ -61,17 +61,19 @@ int res_accept_procs(client_t* client, intlist_t* ints)
       for (i = 1; i < size; ++i) {
         int procnum = res_list_get(ints, i);
         if (NOT(client->local_grantmap, procnum)) {
-          res_warn("Client accepts ungranted proc %d (%lu).",
+          res_warn("Client accepts ungranted proc %d (%lu).\n",
                     procnum, client->local_grantmap);
           return -1;
         } else {
           proc_t* proc = host->procs[procnum];
-          if (proc->state != ProcGrant) {
-            res_warn("Client accepts proc %d in state %d.", procnum, proc->state);
+          if (proc->state != ProcGrant && proc->state != ProcRevoke) {
+            res_warn("Client accepts proc %d in state %d.\n", procnum, proc->state);
             return -1;
           } else {
             assert(proc->clientbit == client->bit);
-            proc->state = ProcAccept;
+            if (proc->state == ProcGrant) {
+              proc->state = ProcAccept;
+            }
             client->local_accepted += 1;
             ++procs_accepted;
           }
@@ -101,14 +103,14 @@ int res_return_procs(client_t* client, intlist_t* ints)
       for (i = 1; i < size; ++i) {
         int procnum = res_list_get(ints, i);
         if (NOT(client->local_grantmap, procnum)) {
-          res_warn("Client returns ungranted proc %d (%lu).",
+          res_warn("Client returns ungranted proc %d (%lu).\n",
                     procnum, client->local_grantmap);
           return -1;
         } else {
           proc_t* proc = host->procs[procnum];
           assert(proc->clientbit == client->bit);
           if (proc->state < ProcGrant && proc->state > ProcRevoke) {
-            res_warn("Client returns proc %d in state %d.", procnum, proc->state);
+            res_warn("Client returns proc %d in state %d.\n", procnum, proc->state);
             return -1;
           } else {
             client->local_granted -= 1;
