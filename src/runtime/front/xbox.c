@@ -8,18 +8,18 @@ static void SNetNodeBoxData(box_context_t *box)
   box_arg_t     *barg = LAND_NODE_SPEC(box->land, box);
   snet_handle_t   hnd;
 
-  /* set out descriptor */
-  hnd.out_sd = box->outdesc;
+  /* data record */
+  hnd.rec = box->rec;
   /* set out signs */
   hnd.sign = barg->output_variants;
   /* mapping */
   hnd.mapping = NULL;
+  /* set out descriptor */
+  hnd.out_sd = box->outdesc;
   /* set variants */
   hnd.vars = barg->vars;
   /* box entity */
   hnd.ent = barg->entity;
-  /* data record */
-  hnd.rec = box->rec;
 
   (*barg->boxfun)( &hnd);
 
