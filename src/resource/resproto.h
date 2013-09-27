@@ -125,7 +125,7 @@ char* xdup(const char *s);
 
 int res_nonblocking(int fd, bool nb);
 int res_listen_socket(const char* listen_addr, int listen_port, bool nb);
-int res_connect_socket(int connect_port, char *address, bool nb);
+int res_connect_socket(int connect_port, const char *address, bool nb);
 int res_accept_socket(int listen, bool nb);
 void res_socket_close(int sock);
 int res_socket_receive(int sock, char* buf, int count);

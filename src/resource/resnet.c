@@ -82,7 +82,7 @@ int res_listen_socket(const char* listen_addr, int listen_port, bool nb)
   return s;
 }
 
-int res_connect_socket(int connect_port, char *address, bool nb)
+int res_connect_socket(int connect_port, const char *address, bool nb)
 {
   struct sockaddr_in a;
   int s;

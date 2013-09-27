@@ -397,20 +397,30 @@ server_t* res_server_create_option(const char* arg)
   server_t* server = NULL;
   const char* colon = strchr(arg, ':');
 
-  if (colon && isdigit((unsigned char) colon[1])) {
-    char* copy = xstrdup(arg);
-    char* save = NULL;
-    char* addr = strtok_r(copy, ":", &save);
-    char* srvc = strtok_r(NULL, "", &save);
-    int port = atoi(srvc);
-    int fd = res_connect_socket(port, addr, false);
+  if (colon) {
+    if (isdigit((unsigned char) colon[1])) {
+      char* copy = xstrdup(arg);
+      char* save = NULL;
+      char* addr = strtok_r(copy, ":", &save);
+      char* srvc = strtok_r(NULL, "", &save);
+      int port = atoi(srvc);
+      int fd = res_connect_socket(port, addr, false);
+      if (fd >= 0) {
+        server = res_server_create(fd);
+        res_server_setup(server);
+      }
+      xfree(copy);
+    }
+  }
+  else {
+    int fd = res_connect_socket(RES_DEFAULT_LISTEN_PORT, arg, false);
     if (fd >= 0) {
       server = res_server_create(fd);
       res_server_setup(server);
     }
-    xfree(copy);
   }
-  else {
+
+  if (!server) {
     res_warn("[%s]: Invalid resource server specification '%s'.\n", __func__, arg);
   }
   return server;
