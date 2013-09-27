@@ -290,6 +290,15 @@ void SNetMasterDynamic(worker_config_t* config, int recv)
   SNetMemFree(state);
 }
 
+void SNetBindLogicalProc(int proc)
+{
+#if ENABLE_RESSERV
+  if (proc >= 0) {
+    res_bind_logical_proc(proc);
+  }
+#endif
+}
+
 /* Dynamic resource management via the resource server. */
 void SNetMasterResource(worker_config_t* config, int recv)
 {

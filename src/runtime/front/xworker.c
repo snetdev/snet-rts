@@ -63,6 +63,7 @@ worker_t *SNetWorkerCreate(
   worker->has_work = true;
   worker->is_idle = false;
   worker->idle_seqnr = 0;
+  worker->proc_bind = NO_PROC;
   worker->proc_revoked = false;
 
   return worker;
@@ -634,6 +635,10 @@ void SNetWorkerSlave(worker_t *worker)
   enum slave_state { SlaveIdle, SlaveBusy, SlaveDone } state = SlaveIdle;
 
   assert(worker->is_idle == WorkerBusy);
+
+  if (worker->proc_bind >= 0) {
+    SNetBindLogicalProc(worker->proc_bind);
+  }
 
   while (state < SlaveDone) {
     if (worker->loot.desc) {

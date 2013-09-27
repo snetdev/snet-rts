@@ -345,6 +345,8 @@ void SNetThreadCreate(void *(*func)(void *), worker_t *worker, int proc)
 
   trace(__func__);
 
+  worker->proc_bind = proc;
+
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
   if (opt_thread_stack_size >= PTHREAD_STACK_MIN) {

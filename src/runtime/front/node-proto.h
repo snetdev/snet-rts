@@ -601,6 +601,7 @@ int SNetWaitForInput(int pipe, int sock, double delay);
 
 /* Throttle number of workers by work load. */
 void SNetMasterDynamic(worker_config_t* config, int recv);
+void SNetBindLogicalProc(int proc);
 
 /* Dynamic resource management via the resource server. */
 void SNetMasterResource(worker_config_t* config, int recv);

@@ -167,6 +167,9 @@ struct worker {
   /* The sequence number for an idle state: either WorkerIdle or WorkerStrike. */
   size_t                 idle_seqnr;
 
+  /* Which processor to bind this thread to (if greater or equal to zero). */
+  int                    proc_bind;
+
   /* Whether the processor this worker is executing on has been revoked. */
   bool                   proc_revoked;
 };
