@@ -2,29 +2,10 @@
 #define _THREADING_H_
 #include "handle_p.h"
 
-#ifdef SNET_DEBUG_COUNTERS
-#include "debugcounters.h"
-#endif
-
-//#define DBG_RT_TRACE_BOX_TIMINGS
-
-#ifdef DBG_RT_TRACE_BOX_TIMINGS
-#include <sys/time.h>
-#endif
 
 static void SNetNodeBoxData(box_context_t *box)
 {
   box_arg_t     *barg = LAND_NODE_SPEC(box->land, box);
-
-#ifdef DBG_RT_TRACE_BOX_TIMINGS
-  static struct timeval tv_in;
-  static struct timeval tv_out;
-#endif
-#ifdef SNET_DEBUG_COUNTERS
-  snet_time_t time_in;
-  snet_time_t time_out;
-  long mseconds;
-#endif
   snet_handle_t   hnd;
 
   /* set out descriptor */
@@ -40,30 +21,7 @@ static void SNetNodeBoxData(box_context_t *box)
   /* data record */
   hnd.rec = box->rec;
 
-#ifdef DBG_RT_TRACE_BOX_TIMINGS
-  gettimeofday( &tv_in, NULL);
-  SNetUtilDebugNoticeEnt( barg->entity,
-      "[BOX] Firing box function at %lf.",
-      tv_in.tv_sec + tv_in.tv_usec / 1000000.0
-      );
-#endif
-#ifdef SNET_DEBUG_COUNTERS
-  SNetDebugTimeGetTime(&time_in);
-#endif
-
   (*barg->boxfun)( &hnd);
-
-#ifdef DBG_RT_TRACE_BOX_TIMINGS
-  gettimeofday( &tv_out, NULL);
-  SNetUtilDebugNoticeEnt( barg->entity,
-      "[BOX] Return from box function after %lf sec.",
-      (tv_out.tv_sec - tv_in.tv_sec) + (tv_out.tv_usec - tv_in.tv_usec)*1e-6);
-#endif
-#ifdef SNET_DEBUG_COUNTERS
-  SNetDebugTimeGetTime(&time_out);
-  mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
-  SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
-#endif
 
   if (REC_DESCR( box->rec) == REC_data) {
     SNetRecDetrefDestroy(box->rec, &box->outdesc);
