@@ -14,7 +14,7 @@ int res_accept_procs(client_t* client, intlist_t* ints);
 int res_return_procs(client_t* client, intlist_t* ints);
 
 /* Compare the load of two clients, descending. */
-int res_client_compare_local_workload_desc(const void *p, const void *q);
+int res_client_compare_local(const void *p, const void *q);
 
 /* Each task can be run on a dedicated core. */
 void res_rebalance_cores(intmap_t* map);
@@ -41,12 +41,19 @@ void res_client_command_return(client_t* client);
 void res_client_command_quit(client_t* client);
 void res_client_command_help(client_t* client);
 void res_client_command_state(client_t* client);
+void res_client_command_shutdown(client_t* client);
 void res_client_command(client_t* client);
 void res_client_parse(client_t* client);
 int res_client_process(client_t* client);
 int res_client_write(client_t* client);
 bool res_client_writing(client_t* client);
 int res_client_read(client_t* client);
+
+/* rescpubind.c */
+
+pid_t res_gettid(void);
+int res_bind_physical_proc(int physical_proc);
+int res_bind_logical_proc(int logical_proc);
 
 /* rescpuinfo.c */
 
@@ -84,6 +91,8 @@ char* res_slurp(void* vp);
 void res_parse_slave(int sysid, char* output);
 void res_start_slave(int sysid, char* command);
 void res_start_slaves(intmap_t* slaves);
+void res_catch_sigint(int s);
+void res_catch_signals(void);
 void res_service(const char* listen_addr, int listen_port, intmap_t* slaves);
 
 /* resmain.c */

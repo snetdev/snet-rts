@@ -35,7 +35,7 @@ void res_local_time_string(char *buf, size_t size)
 
 const char* res_get_program_name(void)
 {
-  static const char default_program_name[] = "libresserv.so";
+  static const char default_program_name[] = "libresserv";
   return res_program_name ? res_program_name : default_program_name;
 }
 

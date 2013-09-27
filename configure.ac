@@ -71,6 +71,7 @@ fi
 AC_CHECK_FUNCS([pthread_yield_np])
 AC_CHECK_FUNCS([pthread_yield])
 AC_CHECK_FUNCS([localtime_r])
+AC_CHECK_FUNCS([sched_setaffinity])
 
 AC_SEARCH_LIBS([sqrt], [m])
 AC_SEARCH_LIBS([clock_gettime], [rt])
