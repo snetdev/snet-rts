@@ -201,13 +201,16 @@ void SNetLandingDone(landing_t *land)
 /* Initialize a deterministic enter structure. */
 static void SNetInitDetEnter(landing_detenter_t *detenter, landing_t *collland)
 {
-  landing_collector_t *land = LAND_SPEC(collland, collector);
-
   trace(__func__);
   detenter->counter = 0;
   detenter->seqnr = 0;
   detenter->collland = collland;
-  detenter->detfifo = &(land->detfifo);
+  if (collland) {
+    landing_collector_t *land = LAND_SPEC(collland, collector);
+    detenter->detfifo = &(land->detfifo);
+  } else {
+    detenter->detfifo = NULL;
+  }
 }
 
 /* Construct a new collector landing. */
