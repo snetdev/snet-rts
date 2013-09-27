@@ -461,6 +461,7 @@ void SNetMasterResource(worker_config_t* config, int recv)
   }
 
   SNetMemFree(state);
+  SNetMemFree(procs);
   res_server_destroy(server);
   res_topo_destroy();
 #else
