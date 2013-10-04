@@ -5,12 +5,10 @@
 #include <ctype.h>
 
 #include "resdefs.h"
+#include "resconf.h"
 
-static const char* listen_addr;
-static int         listen_port;
 static bool        show_resource;
 static bool        show_topology;
-static intmap_t*   slaves;
 
 static void usage(void)
 {
@@ -49,142 +47,46 @@ static void get_version(void)
   exit(0);
 }
 
-static bool get_listen_addr(const char *spec)
+static void get_config(const char *fname, res_server_conf_t *conf)
 {
-  if (listen_addr) {
-    xfree((void *) listen_addr);
-  }
-  if (spec && *spec) {
-    listen_addr = xstrdup(spec);
-  } else {
-    listen_addr = NULL;
-  }
-  return true;
+  res_init_server_conf(conf);
+  res_get_server_config(fname, conf);
 }
 
-static bool get_listen_port(const char *spec)
-{
-  int port = 0, num, len = 0;
-
-  num = sscanf(spec, "%d%n", &port, &len);
-  if (num >= 1 && port >= 1024 && port < 65535 && len == strlen(spec)) {
-    listen_port = port;
-    return true;
-  } else {
-    fprintf(stderr, "%s: Invalid port specification '%s'.\n", res_get_program_name(), spec);
-    return false;
-  }
-}
-
-static bool get_bool(const char *spec, bool *result)
-{
-  bool success = true;
-
-  if (*spec && strchr("0nNfF", *spec)) *result = false;
-  else if (*spec && strchr("1yYtT", *spec)) *result = true;
-  else {
-      fprintf(stderr, "%s: Invalid flag '%s'.\n", res_get_program_name(), spec);
-      success = false;
-  }
-  return success;
-}
-
-static void get_config(const char *fname)
-{
-  FILE *fp = fopen(fname, "r");
-
-  if (!fp) {
-    res_pexit(fname);
-  }
-  else {
-    int line = 0, errors = 0;
-    char buf[PATH_MAX];
-
-    while (fgets(buf, sizeof buf, fp)) {
-      bool valid = false;
-      char ch;
-      ++line;
-      if (sscanf(buf, " %c", &ch) > 0 && ch != '#') {
-        char key[PATH_MAX], val[PATH_MAX];
-        int num, len = 0;
-        val[0] = '\0';
-        num = sscanf(buf, " %s %c %s %n", key, &ch, val, &len);
-        if (num >= 3 && ch == '=' && (num == 2 || len == strlen(buf))) {
-          if (!strcmp(key, "listen")) {
-            valid = get_listen_addr(val);
-          }
-          else if (!strcmp(key, "port")) {
-            valid = get_listen_port(val);
-          }
-          else if (!strcmp(key, "verbose")) {
-            bool flag = false;
-            valid = get_bool(val, &flag);
-            if (valid) res_set_verbose(flag);
-          }
-          else if (!strcmp(key, "debug")) {
-            bool flag = false;
-            valid = get_bool(val, &flag);
-            if (valid) res_set_debug(flag);
-          }
-        }
-
-        if (!valid && !strcmp(key, "slave") && ch == '=') {
-          char* eq = strchr(buf, '=');
-          while (*++eq && isspace((unsigned char) *eq)) { }
-          if (3 <= strlen(eq)) {
-            int max = 1;
-            char* end = eq + strlen(eq);
-            while (--end >= eq && isspace((unsigned char) *end)) { *end = '\0'; }
-            if (slaves == NULL) {
-              slaves = res_map_create();
-            } else {
-              max += res_map_max(slaves);
-            }
-            res_map_add(slaves, max, xstrdup(eq));
-            valid = true;
-          }
-        }
-
-        if (!valid) {
-          fprintf(stderr, "%s: Invalid configuration at line %d of %s. (%d,%d)\n",
-                  res_get_program_name(), line, fname, num, len);
-          ++errors;
-        }
-      }
-    }
-    fclose(fp);
-    if (errors) {
-      exit(1);
-    }
-  }
-}
-
-static void get_options(int argc, char **argv)
+static void get_options(int argc, char **argv, res_server_conf_t *conf)
 {
   int c;
 
   setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
   res_set_program_name(basename(*argv));
-  listen_port = RES_DEFAULT_LISTEN_PORT;
+  res_init_server_conf(conf);
 
   while ((c = getopt(argc, argv, "c:dhl:p:rtvV?")) != EOF) {
     switch (c) {
-      case 'c': get_config(optarg); break;
-      case 'd': res_set_debug(true); break;
-      case 'l': if (!get_listen_addr(optarg)) exit(1); break;
-      case 'p': if (!get_listen_port(optarg)) exit(1); break;
+      case 'c': get_config(optarg, conf); break;
+      case 'd': conf->debug = true; break;
+      case 'l': if (!res_get_listen_addr(optarg, &conf->listen_addr)) {
+                  exit(1); 
+                } break;
+      case 'p': if (!res_get_listen_port(optarg, &conf->listen_port)) {
+                  exit(1);
+                } break;
       case 'r': show_resource = true; break;
       case 't': show_topology = true; break;
-      case 'v': res_set_verbose(true); break;
+      case 'v': conf->verbose = true; break;
       case 'V': get_version(); break;
       default: usage();
     }
   }
+  res_set_debug(conf->debug);
+  res_set_verbose(conf->verbose);
 }
 
 int main(int argc, char **argv)
 {
-  get_options(argc, argv);
+  res_server_conf_t  config;
+
+  get_options(argc, argv, &config);
 
   if (res_topo_init() == false) {
     res_error("%s: Could not initialize hardware topology information.\n",
@@ -201,7 +103,7 @@ int main(int argc, char **argv)
       xfree(str);
     }
     else {
-      res_service(listen_addr, listen_port, slaves);
+      res_service(config.listen_addr, config.listen_port, config.slaves);
     }
 
     res_topo_destroy();

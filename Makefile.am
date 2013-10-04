@@ -216,6 +216,8 @@ libresserv_la_SOURCES = \
 	src/resource/resbitmap.h \
 	src/resource/resclient.c \
 	src/resource/resclient.h \
+	src/resource/resconf.c \
+	src/resource/resconf.h \
 	src/resource/rescpubind.c \
 	src/resource/rescpuinfo.c \
 	src/resource/resdefs.h \

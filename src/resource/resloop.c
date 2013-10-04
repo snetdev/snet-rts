@@ -252,7 +252,9 @@ void res_catch_signals(void)
 
 void res_service(const char* listen_addr, int listen_port, intmap_t* slaves)
 {
-  int listen = res_listen_socket(listen_addr, listen_port, true);
+  static const char def_addr[] = "localhost";
+  const char* addr = listen_addr ? listen_addr : def_addr;
+  int listen = res_listen_socket(addr, listen_port, true);
   if (listen < 0) {
     exit(1);
   } else {

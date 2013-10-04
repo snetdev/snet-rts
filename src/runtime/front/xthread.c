@@ -203,7 +203,7 @@ ok: free(copy);
 }
 
 /* Convert a string number which may be suffixed with K or M to bytes. */
-static size_t GetSize(const char *str)
+static size_t SNetOptGetSize(const char *str)
 {
   double size = 0;
   char ch = '\0';
@@ -219,6 +219,13 @@ static size_t GetSize(const char *str)
     size = 0;
   }
   return (size_t) (size + 0.5);
+}
+
+static void SNetConfResourceServer(const char* conf)
+{
+  static const char default_resource_server[] = "localhost:56389";
+  opt_resource = true;
+  opt_resource_server = conf ? conf : default_resource_server;
 }
 
 /* Process command line options. */
@@ -259,16 +266,13 @@ int SNetThreadingInit(int argc, char**argv)
       opt_resource = true;
     }
     else if (EQ(argv[i], "-rs")) {
-      opt_resource = true;
-      if (i + 1 < argc && argv[i+1][0] != '-') {
-        opt_resource_server = argv[++i];
-      } else {
-        static const char default_resource_server[] = "localhost:56389";
-        opt_resource_server = default_resource_server;
-      }
+      const char *conf = (i + 1 < argc && !strchr("-+", argv[i+1][0]))
+                       ? argv[++i] : NULL;
+      SNetConfResourceServer(conf);
     }
     else if (EQ(argv[i], "-s") && ++i < argc) {
-      if ((opt_thread_stack_size = GetSize(argv[i])) < PTHREAD_STACK_MIN) {
+      opt_thread_stack_size = SNetOptGetSize(argv[i]);
+      if (opt_thread_stack_size < PTHREAD_STACK_MIN) {
         SNetUtilDebugFatal("[%s]: Invalid thread stack size %s (l.t. %d).",
                            __func__, argv[i], PTHREAD_STACK_MIN);
       }

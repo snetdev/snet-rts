@@ -23,7 +23,7 @@ static const char snet_front_help_text[] =
 "\t-o <filename>\tOutput to the file <filename>.\n"
 "\t-O <addr:port>\tOutput to destination host <addr> and port <port>.\n"
 "\t-r \t\tEnable dynamic control of the number of worker threads.\n"
-"\t-rs [<host:port>] Use the distributed resource management service.\n"
+"\t-rs [<host:port> | <conffile>] Use distributed resource management service.\n"
 "\t-s <size(K|M)>\tSet thread stack size to <size> K or M.\n"
 "\t-t <depth>\tEnable function call tracing with call stack <depth>.\n"
 "\t-T <count>\tLimit the number of thieves to <count>.\n"

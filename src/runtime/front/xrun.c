@@ -7,6 +7,7 @@
 #include "debugtime.h"
 #if ENABLE_RESSERV
 #include "resdefs.h"
+#include "resconf.h"
 #endif
 
 #define WAIT_FOREVER    (-1.0)
@@ -313,15 +314,18 @@ void SNetMasterResource(worker_config_t* config, int recv)
   double        endtime = 0;
   server_t     *server;
   bitmap_t      revokes = BITMAP_ZERO;
+  res_client_conf_t client_spec;
 
   /* Initialize the resource management library. */
   res_set_program_name(SNetGetProgramName());
   res_set_verbose(SNetVerbose());
   res_set_debug(SNetDebugRS());
   res_topo_create();
+  res_init_client_conf(&client_spec);
+  res_get_client_config(SNetOptResourceServer(), &client_spec);
 
   /* Create a connection with the resource server. */
-  server = res_server_create_option(SNetOptResourceServer());
+  server = res_server_connect(client_spec.server_addr, client_spec.server_port);
   if (server == NULL) {
     res_topo_destroy();
     return;

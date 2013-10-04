@@ -467,7 +467,7 @@ void res_parse_system(stream_t* stream, host_t** host_ptr)
 {
   char* hostname = NULL;
   int n, nnumas = 0, a, ncaches = 0, o, ncores = 0, p, nprocs = 0;
-  int logical = 0, physical = 0, sysid = 0;
+  int logical = 0, physical = 0, sysid = 0, maxcores = 0, maxprocs = 0;
   host_t* host;
   numa_t* numa;
   cache_t* cache;
@@ -525,8 +525,6 @@ void res_parse_system(stream_t* stream, host_t** host_ptr)
       cache->nprocs = 0;
       cache->assigned = 0;
       cache->numa = numa;
-      numa->ncores += ncores;
-      host->ncores += ncores;
 
       for (o = 0; o < ncores; ++o) {
         res_parse_expect(stream, Left, NULL);
@@ -547,9 +545,6 @@ void res_parse_system(stream_t* stream, host_t** host_ptr)
         core->procs = xcalloc(nprocs, sizeof(proc_t*));
         core->assigned = 0;
         core->cache = cache;
-        cache->nprocs += nprocs;
-        numa->nprocs += nprocs;
-        host->nprocs += nprocs;
 
         for (p = 0; p < nprocs; ++p) {
           res_parse_expect(stream, Left, NULL);
@@ -567,10 +562,31 @@ void res_parse_system(stream_t* stream, host_t** host_ptr)
           proc->clientbit = 0;
           proc->core = core;
 
+          if (host->nprocs + 1 > maxprocs) {
+            maxprocs = MAX(4, 3 * maxprocs / 2);
+            host->procs = xrealloc(host->procs, maxprocs * sizeof(proc_t*));
+          }
+          host->procs[host->nprocs + p] = proc;
+
           res_parse_expect(stream, Right, NULL);
         }
+
+        cache->nprocs += nprocs;
+        numa->nprocs += nprocs;
+        host->nprocs += nprocs;
+
+        if (host->ncores + 1 > maxcores) {
+          maxcores = MAX(4, 3 * maxcores / 2);
+          host->cores = xrealloc(host->cores, maxcores * sizeof(core_t*));
+        }
+        host->cores[host->ncores + o] = core;
+
         res_parse_expect(stream, Right, NULL);
       }
+
+      numa->ncores += ncores;
+      host->ncores += ncores;
+
       res_parse_expect(stream, Right, NULL);
     }
     res_parse_expect(stream, Right, NULL);

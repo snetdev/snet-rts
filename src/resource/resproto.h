@@ -49,6 +49,16 @@ int res_client_write(client_t* client);
 bool res_client_writing(client_t* client);
 int res_client_read(client_t* client);
 
+/* resconf.c */
+
+bool res_get_listen_addr(const char *spec, const char **listen_addr);
+bool res_get_listen_port(const char *spec, int *listen_port);
+bool res_get_bool_conf(const char *spec, bool *result);
+void res_init_server_conf(res_server_conf_t *conf);
+void res_init_client_conf(res_client_conf_t *conf);
+void res_get_server_config(const char *fname, res_server_conf_t *conf);
+void res_get_client_config(const char *arg, res_client_conf_t *conf);
+
 /* rescpubind.c */
 
 pid_t res_gettid(void);
@@ -189,7 +199,7 @@ int res_server_read(server_t* server);
 void res_server_setup(server_t* server);
 server_t* res_server_create(int fd);
 void res_server_destroy(server_t* server);
-server_t* res_server_create_option(const char* arg);
+server_t* res_server_connect(const char* addr, int port);
 void res_server_interact(server_t* server);
 
 /* resstream.c */
