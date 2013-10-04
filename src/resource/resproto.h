@@ -130,7 +130,6 @@ void *xrealloc(void *p, size_t siz);
 char* xstrdup(const char* str);
 void xfree(void *p);
 void xdel(void *p);
-char* xdup(const char *s);
 
 /* resnet.c */
 

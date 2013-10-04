@@ -13,6 +13,7 @@ typedef struct intlist intlist_t;
 typedef struct intmap intmap_t;
 typedef struct numa numa_t;
 typedef struct proc proc_t;
+typedef struct remote remote_t;
 typedef struct remt remt_t;
 typedef struct res_client_conf res_client_conf_t;
 typedef struct res_server_conf res_server_conf_t;

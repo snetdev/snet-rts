@@ -10,36 +10,39 @@
 /* A client returns all its resources to the server (when it exits). */
 void res_release_client_remote(client_t* client)
 {
-  int           p;
-  host_t       *host = res_local_host();
+  int           p, r;
 
-  if (client->local_grantmap) {
-    for (p = 0; p < host->nprocs; ++p) {
-      if (HAS(client->local_grantmap, p)) {
-        proc_t* proc = host->procs[p];
-        assert(proc->clientbit == client->bit);
-        assert(proc->state >= ProcGrant);
-        CLR(client->local_grantmap, p);
-        proc->state = ProcAvail;
-        proc->core->assigned -= 1;
-        assert(proc->core->assigned >= 0);
-        proc->core->cache->assigned -= 1;
-        assert(proc->core->cache->assigned >= 0);
-        proc->core->cache->numa->assigned -= 1;
-        assert(proc->core->cache->numa->assigned >= 0);
-        CLR(host->procassign, p);
-        if (proc->core->assigned == 0) {
-          CLR(host->coreassign, proc->core->logical);
-        }
-        if (client->local_grantmap == 0) {
-          break;
+  for (r = 1; r < client->nremotes; ++r) {
+    remote_t* remote = client->remotes[r];
+    if (remote->grantmap) {
+      host_t* host = res_topo_get_host(r);
+      for (p = 0; p < host->nprocs; ++p) {
+        if (HAS(client->local_grantmap, p)) {
+          proc_t* proc = host->procs[p];
+          assert(proc->clientbit == client->bit);
+          assert(proc->state >= ProcGrant);
+          CLR(client->local_grantmap, p);
+          proc->state = ProcAvail;
+          proc->core->assigned -= 1;
+          assert(proc->core->assigned >= 0);
+          proc->core->cache->assigned -= 1;
+          assert(proc->core->cache->assigned >= 0);
+          proc->core->cache->numa->assigned -= 1;
+          assert(proc->core->cache->numa->assigned >= 0);
+          CLR(host->procassign, p);
+          if (proc->core->assigned == 0) {
+            CLR(host->coreassign, proc->core->logical);
+          }
+          if (client->local_grantmap == 0) {
+            break;
+          }
         }
       }
     }
+    client->local_granted = 0;
+    client->local_accepted = 0;
+    client->local_revoked = 0;
   }
-  client->local_granted = 0;
-  client->local_accepted = 0;
-  client->local_revoked = 0;
 }
 
 /* A client confirms a previous remote processor grant. */

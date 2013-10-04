@@ -3,6 +3,12 @@
 
 #include "resstream.h"
 
+struct remote {
+  bitmap_t      assigning;
+  bitmap_t      grantmap;
+  bitmap_t      revoking;
+};
+
 struct client {
   stream_t      stream;
   unsigned long access;
@@ -15,6 +21,8 @@ struct client {
   bitmap_t      local_assigning;
   bitmap_t      local_grantmap;
   bitmap_t      local_revoking;
+  remote_t     *remotes;
+  int           nremotes;
   bool          rebalance_local;
   bool          rebalance_remote;
   bool          shutdown;

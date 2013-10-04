@@ -13,6 +13,7 @@
 #include "resclient.h"
 
 typedef struct client client_t;
+typedef struct remote remote_t;
 
 client_t* res_client_create(int bit, int fd)
 {

@@ -41,10 +41,3 @@ void xdel(void *p)
   free(p);
 }
 
-char* xdup(const char *s)
-{
-  char *p = strdup(s);
-  if (!p) res_pexit("strdup");
-  return p;
-}
-

@@ -40,8 +40,12 @@ void res_topo_add_host(host_t *host)
 
   if (host->index > 0) {
     if (host->index >= res_remt.nhosts) {
+      int i, newmax = host->index + 1;
+      res_remt.hosts = xrealloc(res_remt.hosts, newmax * sizeof(host_t*));
+      for (i = res_remt.nhosts; i < newmax; ++i) {
+        res_remt.hosts[i] = NULL;
+      }
       res_remt.nhosts = host->index + 1;
-      res_remt.hosts = xrealloc(res_remt.hosts, res_remt.nhosts * sizeof(host_t*));
     }
     res_remt.hosts[host->index] = host;
     res_remt.ncores += host->ncores;
@@ -413,6 +417,10 @@ void res_topo_destroy(void)
 {
   res_map_apply(res_host_map, (void(*)(void*)) res_host_destroy);
   res_map_destroy(res_host_map);
+  if (res_remt.hosts) {
+    xfree(res_remt.hosts);
+    memset(&res_remt, 0, sizeof(res_remt));
+  }
 }
 
 char* res_system_resource_string(int id)
