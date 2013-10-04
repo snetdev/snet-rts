@@ -323,6 +323,9 @@ void SNetMasterResource(worker_config_t* config, int recv)
   res_topo_create();
   res_init_client_conf(&client_spec);
   res_get_client_config(SNetOptResourceServer(), &client_spec);
+  if (client_spec.slowdown <= 0 || client_spec.slowdown > 1) {
+    res_error("[%s]: Invalid slowdown %g.\n", __func__, client_spec.slowdown);
+  }
 
   /* Create a connection with the resource server. */
   server = res_server_connect(client_spec.server_addr, client_spec.server_port);
@@ -387,7 +390,7 @@ void SNetMasterResource(worker_config_t* config, int recv)
     /* Start new threads when needed, given enough resources. */
     if (started < MIN(wanted, granted)) {
       const double now = SNetRealTime();
-      const double slowdown = 0.001;
+      const double slowdown = client_spec.slowdown;
       const double delay = endtime + slowdown - now;
       if (delay <= 0 || (input = SNetWaitForInput(recv, sock, delay)) == 0) {
         do {

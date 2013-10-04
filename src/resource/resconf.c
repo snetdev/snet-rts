@@ -38,6 +38,22 @@ bool res_get_listen_port(const char *spec, int *listen_port)
   }
 }
 
+bool res_get_double_conf(const char *spec, double *result)
+{
+  double val = 0;
+  int num, len = 0;
+
+  num = sscanf(spec, "%lf%n", &val, &len);
+  if (num >= 1 && len == strlen(spec)) {
+    *result = val;
+    return true;
+  } else {
+    res_warn("%s: Invalid double precision floating point value '%s'.\n",
+             res_get_program_name(), spec);
+    return false;
+  }
+}
+
 bool res_get_bool_conf(const char *spec, bool *result)
 {
   bool success = true;
@@ -64,6 +80,7 @@ void res_init_client_conf(res_client_conf_t *conf)
   memset(conf, 0, sizeof(*conf));
   conf->server_addr = NULL;
   conf->server_port = RES_DEFAULT_LISTEN_PORT;
+  conf->slowdown = 0.001;
 }
 
 void res_get_server_config(const char *fname, res_server_conf_t *conf)
@@ -161,6 +178,9 @@ void res_get_client_config(const char *arg, res_client_conf_t *conf)
             }
             else if (!strcmp(key, "port")) {
               valid = res_get_listen_port(val, &conf->server_port);
+            }
+            else if (!strcmp(key, "slowdown")) {
+              valid = res_get_double_conf(val, &conf->slowdown);
             }
           }
 

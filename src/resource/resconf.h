@@ -12,6 +12,7 @@ struct res_server_conf {
 struct res_client_conf {
   const char*   server_addr;
   int           server_port;
+  double        slowdown;
 };
 
 #endif
