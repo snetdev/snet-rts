@@ -10,22 +10,6 @@ typedef struct resource resource_t;
 
 #include "resource.h"
 
-int res_local_cores(void)
-{
-  resource_t *res_root = res_local_root();
-  int count = res_root->last_core - res_root->first_core + 1;
-  assert(count > 0);
-  return count;
-}
-
-int res_local_procs(void)
-{
-  resource_t *res_root = res_local_root();
-  int count = res_root->last_proc - res_root->first_proc + 1;
-  assert(count > 0);
-  return count;
-}
-
 /*
  * Convert a hierarchical resource topology to a single string.
  * Input parameters:

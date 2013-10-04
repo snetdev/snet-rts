@@ -28,7 +28,8 @@ client_t* res_client_create(int bit, int fd)
   client->local_assigning = BITMAP_ZERO;
   client->local_grantmap = BITMAP_ZERO;
   client->local_revoking = BITMAP_ZERO;
-  client->rebalance = false;
+  client->rebalance_local = false;
+  client->rebalance_remote = false;
   client->shutdown = false;
   return client;
 }
@@ -122,7 +123,8 @@ void res_client_command_access(client_t* client)
 
   if (client->access != access) {
     client->access = access;
-    client->rebalance = true;
+    client->rebalance_local = true;
+    client->rebalance_remote = true;
     /* TODO: when reducing access: revoke inaccessible procs. */
   }
 }
@@ -135,7 +137,7 @@ void res_client_command_local(client_t* client)
     if (load < client->local_workload ||
         load > client->local_workload + client->local_revoked)
     {
-      client->rebalance = true;
+      client->rebalance_local = true;
     }
     client->local_workload = load;
   }
@@ -147,7 +149,7 @@ void res_client_command_remote(client_t* client)
   res_client_number(client, &load);
   client->remote_workload = load;
   if (client->remote_workload != load) {
-    client->rebalance = true;
+    client->rebalance_remote = true;
     client->remote_workload = load;
   }
 }
@@ -205,10 +207,10 @@ void res_client_command_state(client_t* client)
      "{ state \n"
      "  { client client %d local %d remote %d \n"
      "    granted %d accepted %d revoked %d \n"
-     "    grantmap %d rebalance %d } \n",
+     "    grantmap %d rebalance %d %d } \n",
      client->bit, client->local_workload, client->remote_workload,
      client->local_granted, client->local_accepted, client->local_revoked,
-     client->local_grantmap, client->rebalance);
+     client->local_grantmap, client->rebalance_local, client->rebalance_remote);
 
   res_host_dump(res_local_host());
 

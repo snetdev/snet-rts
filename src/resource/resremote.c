@@ -8,7 +8,7 @@
 #include "resclient.h"
 
 /* A client returns all its resources to the server (when it exits). */
-void res_release_client(client_t* client)
+void res_release_client_remote(client_t* client)
 {
   int           p;
   host_t       *host = res_local_host();
@@ -40,12 +40,10 @@ void res_release_client(client_t* client)
   client->local_granted = 0;
   client->local_accepted = 0;
   client->local_revoked = 0;
-
-  res_release_client_remote(client);
 }
 
-/* A client confirms a previous local processor grant. */
-int res_accept_procs(client_t* client, intlist_t* ints)
+/* A client confirms a previous remote processor grant. */
+int res_accept_procs_remote(client_t* client, intlist_t* ints)
 {
   const int size = res_list_size(ints);
   if (size < 2) {
@@ -53,8 +51,9 @@ int res_accept_procs(client_t* client, intlist_t* ints)
     return -1;
   } else {
     int sysid = res_list_get(ints, 0);
-    if (sysid != 0) {
-      return res_accept_procs_remote(client, ints);
+    if (sysid <= 0) {
+      res_warn("Client remote accept list for invalid system %d.\n", sysid);
+      return -1;
     } else {
       host_t* host = res_local_host();
       int i, procs_accepted = 0;
@@ -86,7 +85,7 @@ int res_accept_procs(client_t* client, intlist_t* ints)
 }
 
 /* A client returns previously granted processors. */
-int res_return_procs(client_t* client, intlist_t* ints)
+int res_return_procs_remote(client_t* client, intlist_t* ints)
 {
   const int size = res_list_size(ints);
   if (size < 2) {
@@ -95,7 +94,8 @@ int res_return_procs(client_t* client, intlist_t* ints)
   } else {
     int sysid = res_list_get(ints, 0);
     if (sysid != 0) {
-      return res_return_procs_remote(client, ints);
+      res_warn("Client return list for invalid system %d.\n", sysid);
+      return -1;
     } else {
       host_t* host = res_local_host();
       int i, procs_returned = 0;
@@ -151,12 +151,12 @@ int res_return_procs(client_t* client, intlist_t* ints)
 }
 
 /* Compare the load of two clients, descending. */
-int res_client_compare_local(const void *p, const void *q)
+int res_client_compare_remote(const void *p, const void *q)
 {
   const client_t* P = * (client_t * const *) p;
   const client_t* Q = * (client_t * const *) q;
-  int A = P->local_workload;
-  int B = Q->local_workload;
+  int A = P->remote_workload;
+  int B = Q->remote_workload;
   int comparison = ((A == B) ? (Q->bit - P->bit) : (A - B));
   return comparison;
 }
@@ -173,13 +173,13 @@ static client_t** get_sorted_clients(intmap_t* map)
     assert(i < num_clients);
     all[i++] = client;
   }
-  qsort(all, num_clients, sizeof(client_t *), res_client_compare_local);
+  qsort(all, num_clients, sizeof(client_t *), res_client_compare_remote);
 
   return all;
 }
 
 /* Each task can be run on a dedicated core. */
-void res_rebalance_local_cores(intmap_t* map)
+void res_rebalance_remote_cores(intmap_t* map)
 {
   int           i, p, o;
   host_t       *host = res_local_host();
@@ -301,7 +301,7 @@ void res_rebalance_local_cores(intmap_t* map)
   xfree(all);
 }
 
-void res_rebalance_local_procs(intmap_t* map)
+void res_rebalance_remote_procs(intmap_t* map)
 {
   int           i, p;
   host_t       *host = res_local_host();
@@ -399,7 +399,7 @@ void res_rebalance_local_procs(intmap_t* map)
   xfree(all);
 }
 
-void res_rebalance_local_proportional(intmap_t* map)
+void res_rebalance_remote_proportional(intmap_t* map)
 {
   int           i, p;
   host_t       *host = res_local_host();
@@ -544,7 +544,7 @@ void res_rebalance_local_proportional(intmap_t* map)
   xfree(remains);
 }
 
-void res_rebalance_local_minimal(intmap_t* map)
+void res_rebalance_remote_minimal(intmap_t* map)
 {
   int           i, p;
   host_t       *host = res_local_host();
@@ -651,20 +651,20 @@ void res_rebalance_local_minimal(intmap_t* map)
   xfree(portions);
 }
 
-void res_rebalance_local(intmap_t* map)
+void res_rebalance_remote(intmap_t* map)
 {
   client_t* client;
   int num_clients = 0;
   int total_load = 0;
-  int nprocs = res_local_procs();
-  int ncores = res_local_cores();
+  int nprocs = res_remote_procs();
+  int ncores = res_remote_cores();
   intmap_iter_t iter;
 
   res_map_iter_init(map, &iter);
   while ((client = res_map_iter_next(map, &iter)) != NULL) {
-    if (client->local_workload >= 1) {
+    if (client->remote_workload >= 1) {
       ++num_clients;
-      total_load += client->local_workload;
+      total_load += client->remote_workload;
     }
   }
 
@@ -672,16 +672,16 @@ void res_rebalance_local(intmap_t* map)
          total_load, ncores, nprocs);
 
   if (ncores < nprocs && total_load <= ncores) {
-    res_rebalance_local_cores(map);
+    res_rebalance_remote_cores(map);
   }
   else if (total_load <= nprocs) {
-    res_rebalance_local_procs(map);
+    res_rebalance_remote_procs(map);
   }
   else if (num_clients < nprocs) {
-    res_rebalance_local_proportional(map);
+    res_rebalance_remote_proportional(map);
   }
   else {
-    res_rebalance_local_minimal(map);
+    res_rebalance_remote_minimal(map);
   }
 }
 

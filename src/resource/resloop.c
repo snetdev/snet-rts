@@ -30,7 +30,8 @@ void res_loop(int listen)
   max_sock = listen;
 
   while (++loops <= max_loops && res_shutdown == false) {
-    bitmap_t rebalance = BITMAP_ZERO;
+    bitmap_t rebalance_local = BITMAP_ZERO;
+    bitmap_t rebalance_remote = BITMAP_ZERO;
 
     rout = rset;
     wout = wset;
@@ -76,9 +77,15 @@ void res_loop(int listen)
         if (FD_ISSET(sock, &rout)) {
           FD_CLR(sock, &rset);
           io = res_client_read(client);
-          if (io >= 0 && client->rebalance) {
-            client->rebalance = false;
-            SET(rebalance, client->bit);
+          if (io >= 0) {
+            if (client->rebalance_local) {
+              client->rebalance_local = false;
+              SET(rebalance_local, client->bit);
+            }
+            if (client->rebalance_remote) {
+              client->rebalance_remote = false;
+              SET(rebalance_remote, client->bit);
+            }
           }
         } else {
           FD_CLR(sock, &wset);
@@ -96,7 +103,8 @@ void res_loop(int listen)
             res_shutdown = true;
           }
           res_client_destroy(client);
-          rebalance = BITMAP_ALL;
+          rebalance_local = BITMAP_ALL;
+          rebalance_remote = BITMAP_ALL;
           if (sock == max_sock) {
             while (--max_sock > listen &&
                    ! FD_ISSET(max_sock, &rset) &&
@@ -113,8 +121,21 @@ void res_loop(int listen)
       }
     }
 
-    if (rebalance) {
-      res_rebalance(client_map);
+    if (rebalance_local) {
+      res_rebalance_local(client_map);
+      for (sock = 1 + listen; sock <= max_sock; ++sock) {
+        if (FD_ISSET(sock, &rset)) {
+          client_t* client = res_map_get(sock_map, sock);
+          if (res_client_writing(client)) {
+            FD_SET(sock, &wset);
+            FD_CLR(sock, &rset);
+            ++wcnt;
+          }
+        }
+      }
+    }
+    if (rebalance_remote) {
+      res_rebalance_remote(client_map);
       for (sock = 1 + listen; sock <= max_sock; ++sock) {
         if (FD_ISSET(sock, &rset)) {
           client_t* client = res_map_get(sock_map, sock);

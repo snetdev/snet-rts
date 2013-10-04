@@ -12,22 +12,41 @@ typedef struct core core_t;
 typedef struct cache cache_t;
 typedef struct numa numa_t;
 typedef struct host host_t;
+typedef struct remt remt_t;
 
 #include "resource.h"
 #include "restopo.h"
 #include "resparse.h"
 
 static intmap_t* res_host_map;
+static remt_t res_remt;
 
 void res_topo_create(void)
 {
   assert(!res_host_map);
   res_host_map = res_map_create();
+
+  res_remt.nhosts = 0;
+  res_remt.hosts = NULL;
+  res_remt.ncores = 0;
+  res_remt.nprocs = 0;
+  ZERO(res_remt.procassign);
+  ZERO(res_remt.coreassign);
 }
 
 void res_topo_add_host(host_t *host)
 {
   res_map_add(res_host_map, host->index, host);
+
+  if (host->index > 0) {
+    if (host->index >= res_remt.nhosts) {
+      res_remt.nhosts = host->index + 1;
+      res_remt.hosts = xrealloc(res_remt.hosts, res_remt.nhosts * sizeof(host_t*));
+    }
+    res_remt.hosts[host->index] = host;
+    res_remt.ncores += host->ncores;
+    res_remt.nprocs += host->nprocs;
+  }
 }
 
 host_t* res_topo_get_host(int sysid)
@@ -39,6 +58,11 @@ host_t* res_topo_get_host(int sysid)
   } else {
     return res_map_get(res_host_map, sysid);
   }
+}
+
+remt_t* res_topo_get_remt(void)
+{
+  return &res_remt;
 }
 
 host_t* res_local_host(void)
@@ -55,6 +79,34 @@ resource_t* res_local_root(void)
 {
   host_t* host = res_local_host();
   return res_host_get_root(host);
+}
+
+int res_local_cores(void)
+{
+  host_t* host = res_local_host();
+  int count = host->ncores;
+  assert(count > 0);
+  return count;
+}
+
+int res_local_procs(void)
+{
+  host_t* host = res_local_host();
+  int count = host->nprocs;
+  assert(count > 0);
+  return count;
+}
+
+int res_remote_cores(void)
+{
+  assert(res_remt.ncores >= 0);
+  return res_remt.ncores;
+}
+
+int res_remote_procs(void)
+{
+  assert(res_remt.nprocs >= 0);
+  return res_remt.nprocs;
 }
 
 resource_t* res_topo_get_root(int sysid)

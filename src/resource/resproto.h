@@ -7,7 +7,7 @@
 /* A client returns all its resources to the server (when it exits). */
 void res_release_client(client_t* client);
 
-/* A client confirms a previous processor grant. */
+/* A client confirms a previous local processor grant. */
 int res_accept_procs(client_t* client, intlist_t* ints);
 
 /* A client returns previously granted processors. */
@@ -17,11 +17,11 @@ int res_return_procs(client_t* client, intlist_t* ints);
 int res_client_compare_local(const void *p, const void *q);
 
 /* Each task can be run on a dedicated core. */
-void res_rebalance_cores(intmap_t* map);
-void res_rebalance_procs(intmap_t* map);
-void res_rebalance_proportional(intmap_t* map);
-void res_rebalance_minimal(intmap_t* map);
-void res_rebalance(intmap_t* map);
+void res_rebalance_local_cores(intmap_t* map);
+void res_rebalance_local_procs(intmap_t* map);
+void res_rebalance_local_proportional(intmap_t* map);
+void res_rebalance_local_minimal(intmap_t* map);
+void res_rebalance_local(intmap_t* map);
 
 /* resclient.c */
 
@@ -53,6 +53,7 @@ int res_client_read(client_t* client);
 
 bool res_get_listen_addr(const char *spec, const char **listen_addr);
 bool res_get_listen_port(const char *spec, int *listen_port);
+bool res_get_double_conf(const char *spec, double *result);
 bool res_get_bool_conf(const char *spec, bool *result);
 void res_init_server_conf(res_server_conf_t *conf);
 void res_init_client_conf(res_client_conf_t *conf);
@@ -144,8 +145,6 @@ char* res_hostname(void);
 
 /* resource.c */
 
-int res_local_cores(void);
-int res_local_procs(void);
 
 /*
  * Convert a hierarchical resource topology to a single string.
@@ -184,6 +183,28 @@ int res_parse_complete(stream_t* stream);
 intlist_t* res_parse_intlist(stream_t* stream);
 token_t res_expect_string(stream_t* stream, char** result);
 void res_parse_expect(stream_t* stream, token_t expect, void* result);
+
+/* resremote.c */
+
+
+/* A client returns all its resources to the server (when it exits). */
+void res_release_client_remote(client_t* client);
+
+/* A client confirms a previous remote processor grant. */
+int res_accept_procs_remote(client_t* client, intlist_t* ints);
+
+/* A client returns previously granted processors. */
+int res_return_procs_remote(client_t* client, intlist_t* ints);
+
+/* Compare the load of two clients, descending. */
+int res_client_compare_remote(const void *p, const void *q);
+
+/* Each task can be run on a dedicated core. */
+void res_rebalance_remote_cores(intmap_t* map);
+void res_rebalance_remote_procs(intmap_t* map);
+void res_rebalance_remote_proportional(intmap_t* map);
+void res_rebalance_remote_minimal(intmap_t* map);
+void res_rebalance_remote(intmap_t* map);
 
 /* resserver.c */
 
@@ -235,9 +256,14 @@ void res_stream_reply(stream_t* stream, const char* fmt, va_list ap);
 void res_topo_create(void);
 void res_topo_add_host(host_t *host);
 host_t* res_topo_get_host(int sysid);
+remt_t* res_topo_get_remt(void);
 host_t* res_local_host(void);
 resource_t* res_host_get_root(host_t* host);
 resource_t* res_local_root(void);
+int res_local_cores(void);
+int res_local_procs(void);
+int res_remote_cores(void);
+int res_remote_procs(void);
 resource_t* res_topo_get_root(int sysid);
 void res_topo_get_host_list(intlist_t* list);
 host_t* res_host_create(char* hostname, int index, resource_t* root);

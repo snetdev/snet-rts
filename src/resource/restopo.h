@@ -69,4 +69,14 @@ struct host {
   bitmap_t       coreassign;
 };
 
+/* A set of non-local hosts. */
+struct remt {
+  int            nhosts;
+  host_t       **hosts;
+  int            ncores;
+  int            nprocs;
+  bitmap_t       procassign;
+  bitmap_t       coreassign;
+};
+
 #endif

@@ -15,7 +15,8 @@ struct client {
   bitmap_t      local_assigning;
   bitmap_t      local_grantmap;
   bitmap_t      local_revoking;
-  bool          rebalance;
+  bool          rebalance_local;
+  bool          rebalance_remote;
   bool          shutdown;
 };
 
