@@ -186,7 +186,7 @@ void res_parse_expect(stream_t* stream, token_t expect, void* result);
 /* resremote.c */
 
 
-/* A client returns all its resources to the server (when it exits). */
+/* Return all remote client resources to the server (on client exit). */
 void res_release_client_remote(client_t* client);
 
 /* A client confirms a previous remote processor grant. */
@@ -195,14 +195,8 @@ int res_accept_procs_remote(client_t* client, intlist_t* ints);
 /* A client returns previously granted processors. */
 int res_return_procs_remote(client_t* client, intlist_t* ints);
 
-/* Compare the load of two clients, descending. */
+/* Compare the unfulfilled load of two clients, descending. */
 int res_client_compare_remote(const void *p, const void *q);
-
-/* Each task can be run on a dedicated core. */
-void res_rebalance_remote_cores(intmap_t* map);
-void res_rebalance_remote_procs(intmap_t* map);
-void res_rebalance_remote_proportional(intmap_t* map);
-void res_rebalance_remote_minimal(intmap_t* map);
 void res_rebalance_remote(intmap_t* map);
 
 /* resserver.c */
@@ -261,8 +255,11 @@ resource_t* res_host_get_root(host_t* host);
 resource_t* res_local_root(void);
 int res_local_cores(void);
 int res_local_procs(void);
+int res_remote_hosts(void);
 int res_remote_cores(void);
 int res_remote_procs(void);
+int res_host_unassigned_cores(host_t* host);
+int res_host_unassigned_procs(host_t* host);
 resource_t* res_topo_get_root(int sysid);
 void res_topo_get_host_list(intlist_t* list);
 host_t* res_host_create(char* hostname, int index, resource_t* root);

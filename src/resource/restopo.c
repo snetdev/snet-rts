@@ -18,26 +18,19 @@ typedef struct remt remt_t;
 #include "restopo.h"
 #include "resparse.h"
 
-static intmap_t* res_host_map;
 static remt_t res_remt;
+static host_t *res_local;
 
 void res_topo_create(void)
 {
-  assert(!res_host_map);
-  res_host_map = res_map_create();
-
   res_remt.nhosts = 0;
   res_remt.hosts = NULL;
   res_remt.ncores = 0;
   res_remt.nprocs = 0;
-  ZERO(res_remt.procassign);
-  ZERO(res_remt.coreassign);
 }
 
 void res_topo_add_host(host_t *host)
 {
-  res_map_add(res_host_map, host->index, host);
-
   if (host->index > 0) {
     if (host->index >= res_remt.nhosts) {
       int i, newmax = host->index + 1;
@@ -45,23 +38,30 @@ void res_topo_add_host(host_t *host)
       for (i = res_remt.nhosts; i < newmax; ++i) {
         res_remt.hosts[i] = NULL;
       }
-      res_remt.nhosts = host->index + 1;
+      res_remt.nhosts = newmax;
     }
     res_remt.hosts[host->index] = host;
     res_remt.ncores += host->ncores;
     res_remt.nprocs += host->nprocs;
+  }
+  else {
+    assert(host->index == 0);
+    assert(res_local == NULL);
+    res_local = host;
   }
 }
 
 host_t* res_topo_get_host(int sysid)
 {
   assert(sysid >= 0);
-  assert(res_host_map);
-  if (sysid > res_map_max(res_host_map)) {
-    return NULL;
-  } else {
-    return res_map_get(res_host_map, sysid);
+
+  if (sysid == LOCAL_HOST) {
+    return res_local;
   }
+  else if (sysid < res_remt.nhosts) {
+    return res_remt.hosts[sysid];
+  }
+  return NULL;
 }
 
 remt_t* res_topo_get_remt(void)
@@ -71,7 +71,7 @@ remt_t* res_topo_get_remt(void)
 
 host_t* res_local_host(void)
 {
-  return res_map_get(res_host_map, LOCAL_HOST);
+  return res_local;
 }
 
 resource_t* res_host_get_root(host_t* host)
@@ -101,6 +101,12 @@ int res_local_procs(void)
   return count;
 }
 
+int res_remote_hosts(void)
+{
+  assert(res_remt.nhosts >= 0);
+  return res_remt.nhosts;
+}
+
 int res_remote_cores(void)
 {
   assert(res_remt.ncores >= 0);
@@ -111,6 +117,28 @@ int res_remote_procs(void)
 {
   assert(res_remt.nprocs >= 0);
   return res_remt.nprocs;
+}
+
+int res_host_unassigned_cores(host_t* host)
+{
+  int n, count = 0;
+  for (n = 0; n < host->ncores; ++n) {
+    if (NOT(host->coreassign, n)) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+int res_host_unassigned_procs(host_t* host)
+{
+  int n, count = 0;
+  for (n = 0; n < host->nprocs; ++n) {
+    if (NOT(host->procassign, n)) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 resource_t* res_topo_get_root(int sysid)
@@ -125,12 +153,15 @@ resource_t* res_topo_get_root(int sysid)
 
 void res_topo_get_host_list(intlist_t* list)
 {
-  host_t* host;
-  intmap_iter_t iter = -1;
+  int i;
   res_list_reset(list);
-  res_map_iter_init(res_host_map, &iter);
-  while ((host = res_map_iter_next(res_host_map, &iter)) != NULL) {
-    res_list_append(list, iter);
+  if (res_local) {
+    res_list_append(list, LOCAL_HOST);
+  }
+  for (i = 1; i < res_remt.nhosts; ++i) {
+    if (res_remt.hosts[i]) {
+      res_list_append(list, i);
+    }
   }
 }
 
@@ -415,8 +446,17 @@ bool res_topo_init(void)
 
 void res_topo_destroy(void)
 {
-  res_map_apply(res_host_map, (void(*)(void*)) res_host_destroy);
-  res_map_destroy(res_host_map);
+  int i;
+  if (res_local) {
+    res_host_destroy(res_local);
+    res_local = NULL;
+  }
+  for (i = 1; i < res_remt.nhosts; ++i) {
+    if (res_remt.hosts[i]) {
+      res_host_destroy(res_remt.hosts[i]);
+      res_remt.hosts[i] = NULL;
+    }
+  }
   if (res_remt.hosts) {
     xfree(res_remt.hosts);
     memset(&res_remt, 0, sizeof(res_remt));

@@ -75,8 +75,6 @@ struct remt {
   host_t       **hosts;
   int            ncores;
   int            nprocs;
-  bitmap_t       procassign;
-  bitmap_t       coreassign;
 };
 
 #endif

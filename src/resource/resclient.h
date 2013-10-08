@@ -23,6 +23,9 @@ struct client {
   bitmap_t      local_revoking;
   remote_t     *remotes;
   int           nremotes;
+  int           remote_granted;
+  int           remote_accepted;
+  int           remote_revoked;
   bool          rebalance_local;
   bool          rebalance_remote;
   bool          shutdown;
