@@ -4,6 +4,7 @@ typedef enum server_state server_state_t;
 typedef enum token token_t;
 typedef int intlist_iter_t;
 typedef int intmap_iter_t;
+typedef struct alloc alloc_t;
 typedef struct buffer buffer_t;
 typedef struct cache cache_t;
 typedef struct client client_t;

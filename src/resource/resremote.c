@@ -199,13 +199,35 @@ static client_t** get_sorted_remote_clients(intmap_t* map, int* count)
   return all;
 }
 
+typedef struct alloc alloc_t;
+struct alloc {
+  client_t     *client;
+  int           sysid;
+  int           proc;
+};
+
+static int res_compare_alloc(const void *p, const void *q)
+{
+  const alloc_t* P = * (alloc_t * const *) p;
+  const alloc_t* Q = * (alloc_t * const *) q;
+
+  return (P < Q) ? -1 :
+         (Q > P) ? 1 :
+         (P->sysid != Q->sysid) ? (P->sysid - Q->sysid) :
+         (P->proc - Q->proc);
+}
+
 void res_rebalance_remote(intmap_t* map)
 {
   const int     nhosts = res_remote_hosts();
-  int           c, i, n, r, nall = 0;
+  int           c, i, r, nall = 0;
   client_t    **all = get_sorted_remote_clients(map, &nall);
+  alloc_t      *allocs = NULL;
+  int           num_allocs = 0, max_allocs = 0, old_allocs;
+  bitmap_t      assign = BITMAP_ZERO;
+  int           nassigns = 0;
 
-  if (nall > 0 && nhosts > 0) {
+  while (nall > 0 && nhosts > 0) {
     for (i = 0; i < nall; ++i) {
       client_t* client = all[i];
       if (res_prio(client) > 0) {
@@ -213,10 +235,32 @@ void res_rebalance_remote(intmap_t* map)
           if (HAS(client->access, r)) {
             host_t* host = res_topo_get_host(r);
             if (host) {
-              int nc = res_host_unassigned_cores(host);
-              if (nc > 0) {
+              int uc = res_host_unassigned_cores(host);
+              if (uc > 0) {
                 for (c = 0; c < host->ncores; ++c) {
                   if (NOT(host->coreassign, c)) {
+                    core_t* core = host->cores[c];
+                    proc_t* proc = core->procs[0];
+                    assert(core->assigned == 0);
+                    assert(proc->state == ProcAvail);
+                    SET(assign, client->bit);
+                    ++nassigns;
+                    proc->state = ProcGrant;
+                    core->assigned += 1;
+                    core->cache->assigned += 1;
+                    core->cache->numa->assigned += 1;
+                    proc->clientbit = client->bit;
+                    SET(host->coreassign, c);
+                    SET(host->procassign, proc->logical);
+                    if (num_allocs >= max_allocs) {
+                      max_allocs = (max_allocs > 2) ? (3*max_allocs/2) : 4;
+                      allocs = xrealloc(allocs, max_allocs * sizeof(*allocs));
+                    }
+                    allocs[num_allocs].client = client;
+                    allocs[num_allocs].sysid = r;
+                    allocs[num_allocs].proc = proc->logical;
+                    num_allocs += 1;
+                    goto redo;
                   }
                 }
               }
@@ -225,8 +269,33 @@ void res_rebalance_remote(intmap_t* map)
         }
       }
     }
+redo:
+    if (old_allocs < num_allocs) {
+      old_allocs = num_allocs;
+      nall = 0;
+      xfree(all);
+      all = get_sorted_remote_clients(map, &nall);
+    } else {
+      break;
+    }
   }
 
   xfree(all);
+
+  qsort(allocs, num_allocs, sizeof(*allocs), res_compare_alloc);
+
+  for (i = 0; i < num_allocs; ++i) {
+    if (i == 0 || allocs[i].client != allocs[i - 1].client ||
+        allocs[i].sysid != allocs[i - 1].sysid)
+    {
+      res_client_reply(allocs[i].client, "{ grant %d ", allocs[i].sysid);
+    }
+    res_client_reply(allocs[i].client, "%d ", allocs[i].proc);
+    if (i + 1 >= num_allocs || allocs[i].client != allocs[i + 1].client ||
+        allocs[i].sysid != allocs[i + 1].sysid)
+    {
+      res_client_reply(allocs[i].client, "} \n");
+    }
+  }
 }
 
