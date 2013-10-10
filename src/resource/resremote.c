@@ -19,20 +19,8 @@ void res_release_client_remote(client_t* client)
       for (p = 0; p < host->nprocs; ++p) {
         if (HAS(remote->grantmap, p)) {
           proc_t* proc = host->procs[p];
-          assert(proc->clientbit == client->bit);
-          assert(proc->state >= ProcGrant);
+          res_free_proc(client, proc, host);
           CLR(remote->grantmap, p);
-          proc->state = ProcAvail;
-          proc->core->assigned -= 1;
-          assert(proc->core->assigned >= 0);
-          proc->core->cache->assigned -= 1;
-          assert(proc->core->cache->assigned >= 0);
-          proc->core->cache->numa->assigned -= 1;
-          assert(proc->core->cache->numa->assigned >= 0);
-          CLR(host->procassign, p);
-          if (proc->core->assigned == 0) {
-            CLR(host->coreassign, proc->core->logical);
-          }
           if (remote->grantmap == 0) {
             break;
           }
@@ -229,17 +217,9 @@ void res_rebalance_remote(intmap_t* map)
                   if (NOT(host->coreassign, c)) {
                     core_t* core = host->cores[c];
                     proc_t* proc = core->procs[0];
-                    assert(core->assigned == 0);
-                    assert(proc->state == ProcAvail);
+                    res_alloc_core(client, core, host);
                     SET(assign, client->bit);
                     ++nassigns;
-                    proc->state = ProcGrant;
-                    core->assigned += 1;
-                    core->cache->assigned += 1;
-                    core->cache->numa->assigned += 1;
-                    proc->clientbit = client->bit;
-                    SET(host->coreassign, c);
-                    SET(host->procassign, proc->logical);
                     if (num_allocs >= max_allocs) {
                       max_allocs = (max_allocs > 2) ? (3*max_allocs/2) : 4;
                       allocs = xrealloc(allocs, max_allocs * sizeof(*allocs));
@@ -256,16 +236,9 @@ void res_rebalance_remote(intmap_t* map)
                 for (p = 0; p < host->nprocs; ++p) {
                   if (NOT(host->procassign, p)) {
                     proc_t* proc = host->procs[p];
-                    assert(proc->state == ProcAvail);
+                    res_alloc_proc(client, proc, host);
                     SET(assign, client->bit);
                     ++nassigns;
-                    proc->state = ProcGrant;
-                    proc->core->assigned += 1;
-                    proc->core->cache->assigned += 1;
-                    proc->core->cache->numa->assigned += 1;
-                    proc->clientbit = client->bit;
-                    SET(host->procassign, p);
-                    SET(host->coreassign, proc->core->logical);
                     if (num_allocs >= max_allocs) {
                       max_allocs = (max_allocs > 2) ? (3*max_allocs/2) : 4;
                       allocs = xrealloc(allocs, max_allocs * sizeof(*allocs));

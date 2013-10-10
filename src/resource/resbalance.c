@@ -473,18 +473,11 @@ void res_rebalance_local_proportional(intmap_t* map)
       for (p = 0; p < host->nprocs && need > 0; ++p) {
         if (NOT(host->procassign, p)) {
           proc_t* proc = host->procs[p];
-          assert(proc->state == ProcAvail);
+          res_alloc_proc(client, proc, host);
           SET(assign, client->bit);
           ++nassigns;
           SET(client->local_assigning, p);
           client->local_granted += 1;
-          proc->state = ProcGrant;
-          proc->core->assigned += 1;
-          proc->core->cache->assigned += 1;
-          proc->core->cache->numa->assigned += 1;
-          proc->clientbit = client->bit;
-          SET(host->procassign, p);
-          SET(host->coreassign, proc->core->logical);
           --need;
         }
       }
@@ -581,18 +574,11 @@ void res_rebalance_local_minimal(intmap_t* map)
       for (p = 0; p < host->nprocs && need > 0; ++p) {
         if (NOT(host->procassign, p)) {
           proc_t* proc = host->procs[p];
-          assert(proc->state == ProcAvail);
+          res_alloc_proc(client, proc, host);
           SET(assign, client->bit);
           ++nassigns;
           SET(client->local_assigning, p);
           client->local_granted += 1;
-          proc->state = ProcGrant;
-          proc->core->assigned += 1;
-          proc->core->cache->assigned += 1;
-          proc->core->cache->numa->assigned += 1;
-          proc->clientbit = client->bit;
-          SET(host->procassign, p);
-          SET(host->coreassign, proc->core->logical);
           --need;
         }
       }
