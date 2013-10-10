@@ -3,6 +3,9 @@
 
 /* resbalance.c */
 
+void res_alloc_proc(client_t* client, proc_t* proc, host_t* host);
+void res_alloc_core(client_t* client, core_t* core, host_t* host);
+void res_free_proc(client_t* client, proc_t* proc, host_t* host);
 
 /* A client returns all its resources to the server (when it exits). */
 void res_release_client(client_t* client);

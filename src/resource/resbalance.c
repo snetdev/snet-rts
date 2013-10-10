@@ -7,6 +7,51 @@
 #include "resource.h"
 #include "resclient.h"
 
+void res_alloc_proc(client_t* client, proc_t* proc, host_t* host)
+{
+  assert(proc->state == ProcAvail);
+  proc->state = ProcGrant;
+  proc->core->assigned += 1;
+  proc->core->cache->assigned += 1;
+  proc->core->cache->numa->assigned += 1;
+  proc->clientbit = client->bit;
+  SET(host->procassign, proc->logical);
+  SET(host->coreassign, proc->core->logical);
+}
+
+void res_alloc_core(client_t* client, core_t* core, host_t* host)
+{
+  proc_t* proc = core->procs[0];
+  assert(core->assigned == 0);
+  assert(proc->state == ProcAvail);
+  proc->state = ProcGrant;
+  core->assigned += 1;
+  core->cache->assigned += 1;
+  core->cache->numa->assigned += 1;
+  proc->clientbit = client->bit;
+  SET(host->coreassign, core->logical);
+  SET(host->procassign, proc->logical);
+}
+
+void res_free_proc(client_t* client, proc_t* proc, host_t* host)
+{
+  assert(proc->clientbit == client->bit);
+  assert(proc->state >= ProcGrant);
+  proc->state = ProcAvail;
+  proc->core->assigned -= 1;
+  assert(proc->core->assigned >= 0);
+  proc->core->cache->assigned -= 1;
+  assert(proc->core->cache->assigned >= 0);
+  proc->core->cache->numa->assigned -= 1;
+  assert(proc->core->cache->numa->assigned >= 0);
+  CLR(host->procassign, proc->logical);
+  if (proc->core->assigned == 0) {
+    CLR(host->coreassign, proc->core->logical);
+  }
+}
+
+// void res_free_core(client_t* client, core_t* core) { }
+
 /* A client returns all its resources to the server (when it exits). */
 void res_release_client(client_t* client)
 {
@@ -16,21 +61,8 @@ void res_release_client(client_t* client)
   if (client->local_grantmap) {
     for (p = 0; p < host->nprocs; ++p) {
       if (HAS(client->local_grantmap, p)) {
-        proc_t* proc = host->procs[p];
-        assert(proc->clientbit == client->bit);
-        assert(proc->state >= ProcGrant);
+        res_free_proc(client, host->procs[p], host);
         CLR(client->local_grantmap, p);
-        proc->state = ProcAvail;
-        proc->core->assigned -= 1;
-        assert(proc->core->assigned >= 0);
-        proc->core->cache->assigned -= 1;
-        assert(proc->core->cache->assigned >= 0);
-        proc->core->cache->numa->assigned -= 1;
-        assert(proc->core->cache->numa->assigned >= 0);
-        CLR(host->procassign, p);
-        if (proc->core->assigned == 0) {
-          CLR(host->coreassign, proc->core->logical);
-        }
         if (client->local_grantmap == 0) {
           break;
         }
@@ -113,6 +145,7 @@ int res_return_procs(client_t* client, intlist_t* ints)
             res_warn("Client returns proc %d in state %d.\n", procnum, proc->state);
             return -1;
           } else {
+
             client->local_granted -= 1;
             assert(client->local_granted >= 0);
             if (proc->state >= ProcAccept) {
@@ -125,19 +158,7 @@ int res_return_procs(client_t* client, intlist_t* ints)
             }
             CLR(client->local_grantmap, procnum);
 
-            proc->state = ProcAvail;
-            proc->core->assigned -= 1;
-            assert(proc->core->assigned >= 0);
-            proc->core->cache->assigned -= 1;
-            assert(proc->core->cache->assigned >= 0);
-            proc->core->cache->numa->assigned -= 1;
-            assert(proc->core->cache->numa->assigned >= 0);
-
-            CLR(host->procassign, procnum);
-            if (proc->core->assigned == 0) {
-              CLR(host->coreassign, proc->core->logical);
-            }
-
+            res_free_proc(client, proc, host);
             ++procs_returned;
           }
         }
@@ -223,19 +244,11 @@ void res_rebalance_local_cores(intmap_t* map)
         if (NOT(host->coreassign, o)) {
           core_t* core = host->cores[o];
           proc_t* proc = core->procs[0];
-          assert(core->assigned == 0);
-          assert(proc->state == ProcAvail);
+          res_alloc_core(client, core, host);
           SET(assign, client->bit);
           ++nassigns;
           SET(client->local_assigning, proc->logical);
           client->local_granted += 1;
-          proc->state = ProcGrant;
-          core->assigned += 1;
-          core->cache->assigned += 1;
-          core->cache->numa->assigned += 1;
-          proc->clientbit = client->bit;
-          SET(host->coreassign, o);
-          SET(host->procassign, proc->logical);
           --need;
         }
       }
@@ -322,18 +335,11 @@ void res_rebalance_local_procs(intmap_t* map)
       for (p = 0; p < host->nprocs && need > 0; ++p) {
         if (NOT(host->procassign, p)) {
           proc_t* proc = host->procs[p];
-          assert(proc->state == ProcAvail);
+          res_alloc_proc(client, proc, host);
           SET(assign, client->bit);
           ++nassigns;
           SET(client->local_assigning, p);
           client->local_granted += 1;
-          proc->state = ProcGrant;
-          proc->core->assigned += 1;
-          proc->core->cache->assigned += 1;
-          proc->core->cache->numa->assigned += 1;
-          proc->clientbit = client->bit;
-          SET(host->procassign, p);
-          SET(host->coreassign, proc->core->logical);
           --need;
         }
       }

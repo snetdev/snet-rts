@@ -54,7 +54,7 @@ int res_accept_procs_remote(client_t* client, intlist_t* ints)
     return -1;
   } else {
     const int sysid = res_list_get(ints, 0);
-    if (sysid <= 0) {
+    if (sysid <= 0 || sysid >= client->nremotes) {
       res_warn("Client remote accept list for invalid system %d.\n", sysid);
       return -1;
     } else {
@@ -130,19 +130,7 @@ int res_return_procs_remote(client_t* client, intlist_t* ints)
             }
             CLR(remote->grantmap, procnum);
 
-            proc->state = ProcAvail;
-            proc->core->assigned -= 1;
-            assert(proc->core->assigned >= 0);
-            proc->core->cache->assigned -= 1;
-            assert(proc->core->cache->assigned >= 0);
-            proc->core->cache->numa->assigned -= 1;
-            assert(proc->core->cache->numa->assigned >= 0);
-
-            CLR(host->procassign, procnum);
-            if (proc->core->assigned == 0) {
-              CLR(host->coreassign, proc->core->logical);
-            }
-
+            res_free_proc(client, proc, host);
             ++procs_returned;
           }
         }
@@ -211,8 +199,8 @@ static int res_compare_alloc(const void *p, const void *q)
   const alloc_t* P = * (alloc_t * const *) p;
   const alloc_t* Q = * (alloc_t * const *) q;
 
-  return (P < Q) ? -1 :
-         (Q > P) ? 1 :
+  return (P->client < Q->client) ? -1 :
+         (P->client > Q->client) ? +1 :
          (P->sysid != Q->sysid) ? (P->sysid - Q->sysid) :
          (P->proc - Q->proc);
 }
@@ -220,23 +208,23 @@ static int res_compare_alloc(const void *p, const void *q)
 void res_rebalance_remote(intmap_t* map)
 {
   const int     nhosts = res_remote_hosts();
-  int           c, i, r, nall = 0;
-  client_t    **all = get_sorted_remote_clients(map, &nall);
+  int           c, i, p, r, num_clients = 0;
+  client_t    **sorted_clients = get_sorted_remote_clients(map, &num_clients);
   alloc_t      *allocs = NULL;
-  int           num_allocs = 0, max_allocs = 0, old_allocs;
+  int           num_allocs = 0, max_allocs = 0, old_allocs = 0;
   bitmap_t      assign = BITMAP_ZERO;
   int           nassigns = 0;
 
-  while (nall > 0 && nhosts > 0) {
-    for (i = 0; i < nall; ++i) {
-      client_t* client = all[i];
+  while (num_clients > 0 && nhosts > 0) {
+    for (i = 0; i < num_clients; ++i) {
+      client_t* client = sorted_clients[i];
       if (res_prio(client) > 0) {
         for (r = 1; r < nhosts; r++) {
           if (HAS(client->access, r)) {
             host_t* host = res_topo_get_host(r);
             if (host) {
-              int uc = res_host_unassigned_cores(host);
-              if (uc > 0) {
+              int avail = res_host_unassigned_cores(host);
+              if (avail > 0) {
                 for (c = 0; c < host->ncores; ++c) {
                   if (NOT(host->coreassign, c)) {
                     core_t* core = host->cores[c];
@@ -264,6 +252,32 @@ void res_rebalance_remote(intmap_t* map)
                   }
                 }
               }
+              else if ((avail = res_host_unassigned_procs(host)) > 0) {
+                for (p = 0; p < host->nprocs; ++p) {
+                  if (NOT(host->procassign, p)) {
+                    proc_t* proc = host->procs[p];
+                    assert(proc->state == ProcAvail);
+                    SET(assign, client->bit);
+                    ++nassigns;
+                    proc->state = ProcGrant;
+                    proc->core->assigned += 1;
+                    proc->core->cache->assigned += 1;
+                    proc->core->cache->numa->assigned += 1;
+                    proc->clientbit = client->bit;
+                    SET(host->procassign, p);
+                    SET(host->coreassign, proc->core->logical);
+                    if (num_allocs >= max_allocs) {
+                      max_allocs = (max_allocs > 2) ? (3*max_allocs/2) : 4;
+                      allocs = xrealloc(allocs, max_allocs * sizeof(*allocs));
+                    }
+                    allocs[num_allocs].client = client;
+                    allocs[num_allocs].sysid = r;
+                    allocs[num_allocs].proc = proc->logical;
+                    num_allocs += 1;
+                    goto redo;
+                  }
+                }
+              }
             }
           }
         }
@@ -272,15 +286,15 @@ void res_rebalance_remote(intmap_t* map)
 redo:
     if (old_allocs < num_allocs) {
       old_allocs = num_allocs;
-      nall = 0;
-      xfree(all);
-      all = get_sorted_remote_clients(map, &nall);
+      num_clients = 0;
+      xfree(sorted_clients);
+      sorted_clients = get_sorted_remote_clients(map, &num_clients);
     } else {
       break;
     }
   }
 
-  xfree(all);
+  xfree(sorted_clients);
 
   qsort(allocs, num_allocs, sizeof(*allocs), res_compare_alloc);
 
