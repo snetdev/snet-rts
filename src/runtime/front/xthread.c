@@ -232,6 +232,7 @@ static void SNetConfResourceServer(const char* conf)
 int SNetThreadingInit(int argc, char**argv)
 {
   int   i;
+  char *snet_args = NULL;
 
   trace(__func__);
 
@@ -324,6 +325,26 @@ int SNetThreadingInit(int argc, char**argv)
     else if (EQ(argv[i], "-z")) {
       opt_zipper = false;
     }
+
+    if (i + 1 >= argc &&
+        snet_args == NULL &&
+        (snet_args = getenv("SNET_ARGS")) != NULL)
+    {
+      char *save = NULL;
+      char *copy = SNetStrDup(snet_args);
+      int max = 10;
+      argv = SNetNewN(max, char*);
+      for (argv[argc=0] = strtok_r(copy, " \t\r\n", &save);
+           argv[argc] != NULL;
+           argv[++argc] = strtok_r(NULL, " \t\r\n", &save)) {
+        if (argc + 1 >= max) {
+          max *= 2;
+          argv = SNetMemResize(argv, max * sizeof(char*));
+        }
+      }
+      assert(argc > 0 && argc < max && argv[argc] == NULL);
+      i = -1;
+    }
   }
 
   if (opt_verbose) {
@@ -337,6 +358,10 @@ int SNetThreadingInit(int argc, char**argv)
   }
 
   pthread_key_create(&thread_self_key, NULL);
+
+  if (snet_args) {
+    SNetMemFree(argv);
+  }
 
   return 0;
 }
