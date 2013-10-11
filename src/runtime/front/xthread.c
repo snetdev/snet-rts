@@ -234,13 +234,14 @@ int SNetThreadingInit(int argc, char**argv)
   int   i;
   char *snet_args = NULL;
 
+  program_name = basename(argv[0]);
   trace(__func__);
 
   /* default options */
   num_workers = SNetGetNumProcs();
   opt_garbage_collection = true;
   opt_zipper = true;
-  program_name = basename(argv[0]);
+  opt_concurrency = "2D";
 
   for (i = 0; i < argc; ++i) {
     if (argv[i][0] != '-') {
