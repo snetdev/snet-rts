@@ -322,23 +322,17 @@ typedef struct landing_detenter {
 
 /* The state of a worker when it processes a record in a concurrent box. */
 typedef struct box_context {
+  struct box_context   *next;
   snet_stream_desc_t   *outdesc;
   snet_record_t        *rec;
   landing_t            *land;
-  int                   index;
   bool                  busy;
 } box_context_t;
-
-/* Extend a box context to cache line size. */
-typedef struct box_context_union {
-  box_context_t         context;
-  unsigned char         unused[LINE_SIZE];
-} box_context_union_t;
 
 /* Node instantiation for a box. */
 typedef struct landing_box {
   int                   concurrency;
-  box_context_union_t  *contexts;
+  box_context_t        *context;
   landing_t            *collland;
   landing_detenter_t    detenter;
 } landing_box_t;

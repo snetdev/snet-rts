@@ -35,46 +35,44 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
 {
   const box_arg_t       *barg = DESC_NODE_SPEC(desc, box);
   landing_box_t         *land = DESC_LAND_SPEC(desc, box);
-  box_context_t         *box = NULL;
-  int                    i, conc;
+  box_context_t         *box = NULL, *last = NULL;
 
   trace(__func__);
 
-  if (barg->concurrency == 1) {
-    box = &land->contexts[0].context;
-    box->busy = true;
-    box->rec = rec;
-    if (!box->outdesc) {
-      box->outdesc = SNetStreamOpen(barg->output, desc);
-    }
+  /* Search for an unused context in the linked list. */
+  for (box = land->context; box && box->busy; box = box->next) {
+    /* Remember previous context. */
+    last = box;
   }
-  else {
-
-    /* Find an unused box context. */
-    i = 0;
-    while (land->contexts[i].context.busy) {
-      ++i;
-      assert(i < barg->concurrency);
-    }
-    box = &land->contexts[i].context;
-    box->busy = true;
-    /* if (!CAS(&box->busy, false, true)) {
-      assert(0);
-    } */
-    box->rec = rec;
-
-    /* Open output first. */
-    if (!box->outdesc) {
+  if (box == NULL) {
+    box = SNetNewAlign(box_context_t);
+    box->next = NULL;
+    if (barg->concurrency >= 2) {
       /* Push collector landing. */
       SNetPushLanding(desc, land->collland);
-
+      /* Open stream to collector. */
       box->outdesc = SNetStreamOpen(barg->output, desc);
-
       /* To allow concurrent unlocking we need our own source landing. */
       box->outdesc->source = SNetNewAlign(landing_t);
       *(box->outdesc->source) = *(desc->landing);
+    } else {
+      /* Open output stream. */
+      box->outdesc = SNetStreamOpen(barg->output, desc);
     }
+    box->rec = rec;
+    box->land = desc->landing;
+    box->busy = true;
+    if (last) {
+      last->next = box;
+    } else {
+      land->context = box;
+    }
+  } else {
+    box->rec = rec;
+    box->busy = true;
+  }
 
+  if (barg->concurrency >= 2) {
     /* Make concurrent unlocking work. */
     box->outdesc->source->worker = desc->landing->worker;
 
@@ -87,13 +85,8 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
       }
     }
 
-    /* Increase concurrency counter. */
-    conc = AAF(&(land->concurrency), 1);
-
-    /* Allow more workers if below concurrency limit. */
-    if (conc < barg->concurrency) {
-      unlock_landing(desc->landing);
-    }
+    /* Allow more workers. */
+    unlock_landing(desc->landing);
   }
 
   switch (REC_DESCR(rec)) {
@@ -124,18 +117,8 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
     box->rec = NULL;
     box->outdesc->source->worker = NULL;
     box->outdesc->source->id = 0;
+    BAR();
     box->busy = false;
-    /* if (!CAS(&box->busy, true, false)) {
-      assert(0);
-    } */
-
-    /* Decrease concurrency counter. */
-    conc = FAS(&(land->concurrency), 1);
-
-    /* Only unlock when leaving a full house. */
-    if (conc == barg->concurrency) {
-      unlock_landing(desc->landing);
-    }
   }
 }
 
@@ -145,21 +128,18 @@ void SNetTermBox(landing_t *land, fifo_t *fifo)
   box_arg_t     *barg = LAND_NODE_SPEC(land, box);
   landing_box_t *lbox = LAND_SPEC(land, box);
   box_context_t *box;
-  int            i;
 
   trace(__func__);
 
-  for (i = 0; i < barg->concurrency; ++i) {
-    box = &lbox->contexts[i].context;
-    assert(box->index == i);
+  while ((box = lbox->context) != NULL) {
+    lbox->context = box->next;
     assert(box->busy == false);
-    if (box->outdesc) {
-      if (barg->concurrency >= 2) {
-        SNetDelete(box->outdesc->source);
-        box->outdesc->source = NULL;
-      }
-      SNetFifoPut(fifo, box->outdesc);
+    assert(box->outdesc != NULL);
+    if (barg->concurrency >= 2) {
+      SNetDelete(box->outdesc->source);
+      box->outdesc->source = NULL;
     }
+    SNetFifoPut(fifo, box->outdesc);
   }
   if (lbox->collland) {
     SNetLandingDone(lbox->collland);

@@ -100,11 +100,6 @@ void SNetCleanupLanding(landing_t *land)
 
   trace(__func__);
   switch (land->type) {
-    case LAND_box:
-      SNetDeleteN(LAND_NODE_SPEC(land, box)->concurrency,
-                  LAND_SPEC(land, box)->contexts);
-      break;
-
     case LAND_collector:
       lcoll = LAND_SPEC(land, collector);
       SNetFifoDone(&lcoll->detfifo);
@@ -235,25 +230,16 @@ void SNetNewBoxLanding(snet_stream_desc_t *desc, snet_stream_desc_t *prev)
 {
   box_arg_t             *barg = NODE_SPEC(DESC_DEST(desc), box);
   landing_box_t         *lbox;
-  int                    i;
 
   trace(__func__);
   desc->landing = SNetNewLanding(DESC_DEST(desc), prev, LAND_box);
   lbox = DESC_LAND_SPEC(desc, box);
   lbox->concurrency = 0;
-  lbox->contexts = SNetNewAlignN(barg->concurrency, box_context_union_t);
-  for (i = 0; i < barg->concurrency; ++i) {
-    box_context_t *box = &lbox->contexts[i].context;
-    box->index = i;
-    box->outdesc = NULL;
-    box->rec = NULL;
-    box->land = desc->landing;
-    box->busy = false;
-  }
+  lbox->context = NULL;
 
   /* Create landing for future collector node */
   if (barg->concurrency >= 2) {
-    assert(STREAM_DEST(barg->output)->type == NODE_collector);
+    assert(NODE_TYPE(STREAM_DEST(barg->output)) == NODE_collector);
     lbox->collland = NewCollectorLanding(STREAM_DEST(barg->output),
                                          prev, desc->landing);
   } else {
