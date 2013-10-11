@@ -59,3 +59,12 @@ void* SNetMemAlign( size_t size)
   return vptr;
 }
 
+char *SNetStrDup(const char *str)
+{
+  char *ptr = strdup(str);
+  if (ptr == NULL) {
+    SNetMemFailed();
+  }
+  return ptr;
+}
+

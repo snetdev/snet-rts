@@ -90,4 +90,11 @@ void* SNetMemAlign( size_t size)
       __attribute__((malloc))
       __attribute__((alloc_size(1)));
 
+
+/*
+ * Duplicate a string to dynamically allocated memory.
+ */
+char *SNetStrDup(const char *str)
+      __attribute__((malloc));
+
 #endif
