@@ -23,7 +23,8 @@ static void SNetNodeBoxData(box_context_t *box)
 
   (*barg->boxfun)( &hnd);
 
-  if (REC_DESCR( box->rec) == REC_data) {
+  if (REC_DESCR( box->rec) == REC_data ||
+      REC_DESCR( box->rec) == REC_trigger_initialiser) {
     SNetRecDetrefDestroy(box->rec, &box->outdesc);
   }
   SNetRecDestroy( box->rec);
