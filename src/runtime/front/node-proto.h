@@ -4,6 +4,9 @@
 /* Assign a new index to a stream and add it to the stream table. */
 void SNetNodeTableAdd(snet_stream_t *stream);
 
+/* Delete a stream from the stream table. */
+void SNetNodeTableRemove(snet_stream_t *stream);
+
 /* Retrieve the node table index from a node structure. */
 snet_stream_t* SNetNodeTableIndex(int table_index);
 

@@ -16,8 +16,8 @@ static int SNetNodeTableLookup(snet_stream_t *stream)
 
   assert(stream);
   for (i = 1; i <= snet_streams_table.last; ++i) {
-    if (snet_streams_table.streams[i]->from == stream->from &&
-        snet_streams_table.streams[i]->dest == stream->dest) {
+    snet_stream_t *s = snet_streams_table.streams[i];
+    if (s && s->from == stream->from && s->dest == stream->dest) {
       found = i;
       break;
     }
@@ -54,6 +54,24 @@ void SNetNodeTableAdd(snet_stream_t *stream)
              stream->from ? SNetNodeName(stream->from) : " ",
              SNetNodeName(stream->dest), stream->dest->location);
     }
+  }
+}
+
+/* Delete a stream from the stream table. */
+void SNetNodeTableRemove(snet_stream_t *stream)
+{
+  int i;
+  for (i = snet_streams_table.last; i >= 1; --i) {
+    if (stream == snet_streams_table.streams[i]) {
+      snet_streams_table.streams[i] = NULL;
+      if (snet_streams_table.last == i) {
+        snet_streams_table.last -= 1;
+      }
+      break;
+    }
+  }
+  if (i < 1) {
+    fprintf(stderr, "[%s]: Could not remove table entry (%d).\n", __func__, i);
   }
 }
 
