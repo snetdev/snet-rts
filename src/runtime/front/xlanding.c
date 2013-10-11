@@ -253,7 +253,8 @@ void SNetNewBoxLanding(snet_stream_desc_t *desc, snet_stream_desc_t *prev)
 
   /* Create landing for future collector node */
   if (barg->concurrency >= 2) {
-    lbox->collland = NewCollectorLanding(STREAM_DEST(barg->outputs[0]),
+    assert(STREAM_DEST(barg->output)->type == NODE_collector);
+    lbox->collland = NewCollectorLanding(STREAM_DEST(barg->output),
                                          prev, desc->landing);
   } else {
     lbox->collland = NULL;

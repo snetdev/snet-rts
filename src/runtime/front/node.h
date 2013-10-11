@@ -117,7 +117,7 @@ struct snet_stream_t {
 
 /* Argument for box nodes */
 typedef struct box_arg {
-  snet_stream_t        **outputs;
+  snet_stream_t         *output;
   snet_handle_t*        (*boxfun)( snet_handle_t*);
   snet_int_list_list_t  *output_variants;
   const char            *boxname;

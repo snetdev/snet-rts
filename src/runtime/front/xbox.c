@@ -45,7 +45,7 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
     box->busy = true;
     box->rec = rec;
     if (!box->outdesc) {
-      box->outdesc = SNetStreamOpen(barg->outputs[box->index], desc);
+      box->outdesc = SNetStreamOpen(barg->output, desc);
     }
   }
   else {
@@ -68,7 +68,7 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
       /* Push collector landing. */
       SNetPushLanding(desc, land->collland);
 
-      box->outdesc = SNetStreamOpen(barg->outputs[box->index], desc);
+      box->outdesc = SNetStreamOpen(barg->output, desc);
 
       /* To allow concurrent unlocking we need our own source landing. */
       box->outdesc->source = SNetNewAlign(landing_t);
@@ -171,13 +171,9 @@ void SNetTermBox(landing_t *land, fifo_t *fifo)
 void SNetStopBox(node_t *node, fifo_t *fifo)
 {
   box_arg_t    *barg = NODE_SPEC(node, box);
-  int           i;
 
   trace(__func__);
-  for (i = 0; i < barg->concurrency; ++i) {
-    SNetStopStream(barg->outputs[i], fifo);
-  }
-  SNetDeleteN(barg->concurrency, barg->outputs);
+  SNetStopStream(barg->output, fifo);
   SNetIntListListDestroy(barg->output_variants);
   SNetVariantListDestroy(barg->vars);
   SNetEntityDestroy(barg->entity);
@@ -224,9 +220,8 @@ snet_stream_t *SNetBox( snet_stream_t *input,
                         snet_exerealm_destroy_fun_t exerealm_destroy,
                         snet_int_list_list_t *output_variants)
 {
-  int                    i;
   snet_stream_t         *output = NULL;
-  snet_stream_t        **outstreams = NULL;
+  snet_stream_t         *outstream = NULL;
   node_t                *node;
   box_arg_t             *barg;
   int                    concurrency;
@@ -240,15 +235,12 @@ snet_stream_t *SNetBox( snet_stream_t *input,
             boxname, concurrency, is_det ? 'D' : 'N');
   }
 
-  outstreams = SNetNewN(concurrency, snet_stream_t *);
-  for (i = 0; i < concurrency; ++i) {
-    outstreams[i] = SNetStreamCreate(0);
-  }
-  node = SNetNodeNew(NODE_box, location, &input, 1, outstreams, concurrency,
+  outstream = SNetStreamCreate(0);
+  node = SNetNodeNew(NODE_box, location, &input, 1, &outstream, 1,
                      SNetNodeBox, SNetStopBox, SNetTermBox);
 
   barg = NODE_SPEC(node, box);
-  barg->outputs = outstreams;
+  barg->output = outstream;
   barg->boxfun = boxfun;
   barg->output_variants = output_variants;
   barg->vars = CreateVarList(output_variants);
@@ -259,10 +251,9 @@ snet_stream_t *SNetBox( snet_stream_t *input,
                                    barg->boxname, NULL, (void *) barg);
 
   if (concurrency >= 2) {
-    output = SNetCollectorStatic(concurrency, outstreams, location, info,
-                                 is_det, node);
+    output = SNetCollectorDynamic(outstream, location, info, is_det, node);
   } else {
-    output = outstreams[0];
+    output = outstream;
   }
 
   return output;
