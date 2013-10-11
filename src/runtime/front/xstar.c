@@ -245,9 +245,7 @@ static snet_stream_t *CreateStar(
   {
     /* Replace the combination of star + sync with a fused sync-star. */
     sync_arg_t *sync = NODE_SPEC(STREAM_DEST(sarg->instance), sync);
-    /* if (SNetVerbose()) {
-      printf("Replacing a star + sync with a fused sync-star.\n");
-    } */
+    SNetNodeTableRemove(sarg->instance);
     output = SNetZipper(input, info, location, exit_patterns, guards,
                         sync->patterns, sync->guard_exprs);
     SNetEntityDestroy(sync->entity);
