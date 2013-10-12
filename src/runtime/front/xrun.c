@@ -64,6 +64,18 @@ worker_config_t* SNetCreateWorkerConfig(
   return config;
 }
 
+static void SNetDestroyWorkerConfig(worker_config_t* config, int max_worker)
+{
+  int id;
+  for (id = 0; id <= max_worker; ++id) {
+    if (config->workers[id]) {
+      SNetWorkerDestroy(config->workers[id]);
+    }
+  }
+  SNetMemFree(config->workers);
+  SNetMemFree(config);
+}
+
 /* Transmit a message from a worker to the master. */
 static void SNetPipeSend(int fd, const pipe_mesg_t* mesg)
 {
@@ -524,7 +536,7 @@ void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output)
 
     close(fildes[0]);
     close(fildes[1]);
-    SNetDelete(config);
+    SNetDestroyWorkerConfig(config, max_worker);
   }
 }
 
