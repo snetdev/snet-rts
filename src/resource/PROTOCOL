@@ -21,6 +21,10 @@ the local computer system.
 Requests a complete hardware topology description of the node/cache/core
 hierarchy of the system which is identified by number 'id'.
 
+"resources" id
+
+Requests a hardware topology description in HWLOC format (for debugging).
+
 "access" idlist
 
 Communicates to the server that the client can access and make use of
@@ -48,6 +52,23 @@ identified by the space separated list of logical core numbers.
 This communicates to the server a list of logical processor core numbers
 which the client is no longer using on the system identified by 'id'.
 The list is a space separated list of logical core numbers.
+
+"quit"
+
+Asks the server to terminate the connection.
+
+"help"
+
+Requests an overview of the available commands and their syntax.
+
+"state"
+
+Requests an overview of the resources which have been granted to the client.
+
+"shutdown"
+
+Requests the server to close all connections and stop execution.
+
 ______________________________________________________________________________
 
 Servers can issue the following message types (here enclosed in double quotes)
