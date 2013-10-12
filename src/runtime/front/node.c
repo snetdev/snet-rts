@@ -129,6 +129,7 @@ node_t *SNetNodeNew(
 
   /* For the common entities: add all incoming streams to the table. */
   switch (type) {
+    case NODE_input:
     case NODE_box:
     case NODE_parallel:
     case NODE_star:
@@ -157,11 +158,17 @@ void SNetNodeStop(void)
   fifo_t         fifo;
   node_t        *initial;
   node_t        *node;
+  snet_stream_t *stream;
 
   /* if (input_desc) {
     initial = DESC_NODE(input_desc);
   } else */
-    initial = SNetNodeTableIndex(1)->dest;
+  stream = SNetNodeTableIndex(1);
+  if (STREAM_FROM(stream)) {
+    initial = STREAM_FROM(stream);
+  } else {
+    initial = STREAM_DEST(stream);
+  }
 
   SNetFifoInit(&fifo);
   SNetFifoPut(&fifo, initial);
