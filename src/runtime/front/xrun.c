@@ -41,8 +41,8 @@ worker_config_t* SNetCreateWorkerConfig(
   int id;
   worker_config_t *config = SNetNewAlign(worker_config_t);
 
-  assert(input->from);
-  assert(output->dest);
+  assert(input->from || SNetDistribGetNodeId());
+  assert(output->dest || SNetDistribGetNodeId());
 
   /* Allocate globally shared worker configuration. */
   config->worker_count = worker_count;
