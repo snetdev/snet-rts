@@ -18,20 +18,10 @@ typedef struct remote remote_t;
 client_t* res_client_create(int bit, int fd)
 {
   client_t *client = xnew(client_t);
+  memset(client, 0, sizeof(client_t));
   res_stream_init(&client->stream, fd);
   client->bit = bit;
-  client->access = 0;
-  client->local_workload = 0;
-  client->remote_workload = 0;
-  client->local_granted = 0;
-  client->local_accepted = 0;
-  client->local_revoked = 0;
-  client->local_assigning = BITMAP_ZERO;
-  client->local_grantmap = BITMAP_ZERO;
-  client->local_revoking = BITMAP_ZERO;
-  client->rebalance_local = false;
-  client->rebalance_remote = false;
-  client->shutdown = false;
+  client->remotes = NULL;
   return client;
 }
 
