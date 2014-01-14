@@ -100,6 +100,22 @@ bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v)
   return true;
 }
 
+int SNetLocvecGreater(snet_locvec_t *u, snet_locvec_t *v)
+{
+	int i;
+	for (i = 0; i < u->size; i++) {
+		if (i >= v->size)	/* v is greater */
+			return 0;
+
+		if (u->arr[i].num > v->arr[i].num)
+			return 1;
+		else if (u->arr[i].num < v->arr[i].num)
+			return 0;
+	}
+	/* all equals until u->size and u->size <= v->size, in any case, u < v*/
+	return 0;
+}
+
 bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v)
 {
   int i;

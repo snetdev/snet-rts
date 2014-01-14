@@ -47,11 +47,13 @@ int SNetThreadingInit(int argc, char **argv)
 
 	memset(&config, 0, sizeof(lpel_config_t));
 
-	int priorf = 1;
+	int priorf = -1;
 
 	config.type = HRC_LPEL;
 
 	config.flags = LPEL_FLAG_PINNED;
+
+	config.callback_config.locvec_greater = SNetEntityLocvecGreater;
 
 	for (i=0; i<argc; i++) {
 		if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
@@ -91,8 +93,8 @@ int SNetThreadingInit(int argc, char **argv)
 		}
 	}
 
-	LpelTaskSetPriorityFunc(priorf);
-	LpelTaskSetNegLim(neg_demand);
+	config.neg_demand_lim = neg_demand;
+	config.prior_func_index = priorf;
 
 #ifdef USE_LOGGING
 	char fname[20+1];
@@ -142,6 +144,9 @@ int SNetThreadingInit(int argc, char **argv)
 	/* initialise monitoring module */
 	SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_flags);
 #endif
+
+	/* set call back functions to rts */
+	config.callback_config.locvec_greater = SNetEntityLocvecGreater;
 
 	LpelInit(&config);
 

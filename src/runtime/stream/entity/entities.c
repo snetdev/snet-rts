@@ -210,3 +210,8 @@ const char *SNetEntityStr(snet_entity_t *ent)
   }
 }
 
+int SNetEntityLocvecGreater(void *e1, void *e2) {
+	snet_entity_t *ent1 = (snet_entity_t *) e1;
+	snet_entity_t *ent2 = (snet_entity_t *) e2;
+	return SNetLocvecGreater(ent1->locvec, ent2->locvec);
+}

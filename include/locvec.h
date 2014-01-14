@@ -21,6 +21,7 @@ snet_locvec_t *SNetLocvecCopy(snet_locvec_t *vec);
 
 bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v);
 bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v);
+int  SNetLocvecGreater(snet_locvec_t *u, snet_locvec_t *v);
 
 
 /* for serial combinator */
