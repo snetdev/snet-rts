@@ -255,8 +255,9 @@ snet_stream_t *CreateSplit( snet_stream_t *input,
           "<split>", SplitBoxTask, (void*)sarg)
         );
 
+    SNetLocvecEndBorder(locvec);
     output = CollectorCreateDynamic( initial, location, info);
-
+    SNetLocvecResetBorder(locvec);
   } else {
     SNetLocvecDestroy(SNetLocvecGet(newInfo));
     SNetInfoDestroy(newInfo);

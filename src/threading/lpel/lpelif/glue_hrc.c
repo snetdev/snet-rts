@@ -50,10 +50,8 @@ int SNetThreadingInit(int argc, char **argv)
 	int priorf = -1;
 
 	config.type = HRC_LPEL;
-
 	config.flags = LPEL_FLAG_PINNED;
 
-	config.callback_config.locvec_greater = SNetEntityLocvecGreater;
 
 	for (i=0; i<argc; i++) {
 		if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
@@ -146,7 +144,7 @@ int SNetThreadingInit(int argc, char **argv)
 #endif
 
 	/* set call back functions to rts */
-	config.callback_config.locvec_greater = SNetEntityLocvecGreater;
+	config.callback_config.locvec_greater = SNetEntityLocvecCompare;
 
 	LpelInit(&config);
 

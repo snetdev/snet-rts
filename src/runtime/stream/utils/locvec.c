@@ -9,8 +9,10 @@
 #define LOCVEC_INFO_TAG 493
 
 
-#define LOCVEC_CAPACITY_DELTA 1
+#define LOCVEC_CAPACITY_DELTA 	 1
 
+#define	LOCVEC_BORDER_BEG 		-1
+#define	LOCVEC_BORDER_END			-2
 
 
 typedef enum {
@@ -44,6 +46,7 @@ static void SNetLocvecPop(snet_locvec_t *vec);
 static snet_loctype_t SNetLocvecToptype(snet_locvec_t *vec);
 static void SNetLocvecTopinc(snet_locvec_t *vec);
 static void SNetLocvecTopdec(snet_locvec_t *vec);
+static void SNetLocvecTopset(snet_locvec_t *vec, int val);
 int SNetLocvecTopval(snet_locvec_t *vec);
 
 
@@ -100,20 +103,42 @@ bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v)
   return true;
 }
 
-int SNetLocvecGreater(snet_locvec_t *u, snet_locvec_t *v)
+/* < 0: u < v
+ * = 0: u = v
+ * > 0: u > v
+ */
+int SNetLocvecCompare(snet_locvec_t *u, snet_locvec_t *v)
 {
 	int i;
 	for (i = 0; i < u->size; i++) {
-		if (i >= v->size)	/* v is greater */
-			return 0;
+		if (i >= v->size)	/* u is greater */
+			return 1;
+
+		if (u->arr[i].type == v->arr[i].type && (u->arr[i].type == LOC_SPLIT || u->arr[i].type == LOC_PARALLEL || u->arr[i].type == LOC_STAR)) {	// parallel and star branches
+			if (u->arr[i].num == LOCVEC_BORDER_BEG)
+				return -1;
+			if (u->arr[1].num == LOCVEC_BORDER_END)
+				return 1;
+			if (v->arr[i].num == LOCVEC_BORDER_BEG)
+				return 1;
+			if (v->arr[i].num == LOCVEC_BORDER_END)
+				return -1;
+
+			if (u->arr[i].type != LOC_STAR)	/* for split and parallel cases, skip comparing branch indices, e.g. S1P1... ~ S2P2... */
+				continue;
+		}
 
 		if (u->arr[i].num > v->arr[i].num)
 			return 1;
 		else if (u->arr[i].num < v->arr[i].num)
-			return 0;
+			return -1;
 	}
-	/* all equals until u->size and u->size <= v->size, in any case, u < v*/
-	return 0;
+
+	/* all equals until u->size and u->size <= v->size */
+	if (u->size < v->size)
+		return -1;
+	else
+		return 0;
 }
 
 bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v)
@@ -180,7 +205,7 @@ void SNetLocvecSerialLeave(snet_locvec_t *vec, bool enter)
 /* for parallel combinator */
 void SNetLocvecParallelEnter(snet_locvec_t *vec)
 {
-  SNetLocvecAppend(vec, LOC_PARALLEL, -1);
+  SNetLocvecAppend(vec, LOC_PARALLEL, LOCVEC_BORDER_BEG);
 }
 
 
@@ -207,7 +232,7 @@ void SNetLocvecParallelReset(snet_locvec_t *vec)
 /* for split combinator */
 void SNetLocvecSplitEnter(snet_locvec_t *vec)
 {
-  SNetLocvecAppend(vec, LOC_SPLIT, -1);
+  SNetLocvecAppend(vec, LOC_SPLIT, LOCVEC_BORDER_BEG);
 }
 
 void SNetLocvecSplitLeave(snet_locvec_t *vec)
@@ -238,7 +263,7 @@ void SNetLocvecStarEnter(snet_locvec_t *vec)
 {
   assert( SNetLocvecToptype(vec) != LOC_STAR );
 
-  SNetLocvecAppend(vec, LOC_STAR, -1);
+  SNetLocvecAppend(vec, LOC_STAR, LOCVEC_BORDER_BEG);
 }
 
 snet_locvec_t *SNetLocvecStarSpawn(snet_locvec_t *vec)
@@ -247,6 +272,22 @@ snet_locvec_t *SNetLocvecStarSpawn(snet_locvec_t *vec)
   SNetLocvecTopinc(vec);
   return vec;
 }
+
+/* used to differentiate locvec for operand a and operand b in star */
+snet_locvec_t *SNetLocvecStarNext(snet_locvec_t *vec) {
+	 assert( SNetLocvecToptype(vec) == LOC_STAR );
+	 SNetLocvecTopinc(vec);
+	 return vec;
+}
+
+snet_locvec_t *SNetLocvecStarSpawnRetNext(snet_locvec_t *vec)
+{
+  assert( SNetLocvecToptype(vec) == LOC_STAR );
+  SNetLocvecTopdec(vec);
+  SNetLocvecTopdec(vec);	/* the second dec is needed when SNetLocvecStarNext is used */
+  return vec;
+}
+
 
 snet_locvec_t *SNetLocvecStarSpawnRet(snet_locvec_t *vec)
 {
@@ -258,7 +299,7 @@ snet_locvec_t *SNetLocvecStarSpawnRet(snet_locvec_t *vec)
 void SNetLocvecStarLeave(snet_locvec_t *vec)
 {
   assert( SNetLocvecToptype(vec) == LOC_STAR );
-  assert( SNetLocvecTopval(vec) == -1);
+  assert( SNetLocvecTopval(vec) == LOCVEC_BORDER_BEG);
 
   SNetLocvecPop(vec);
 }
@@ -268,7 +309,7 @@ void SNetLocvecStarLeave(snet_locvec_t *vec)
 /* for feedback combinator */
 void SNetLocvecFeedbackEnter(snet_locvec_t *vec)
 {
-  SNetLocvecAppend(vec, LOC_FEEDBACK, -1);
+  SNetLocvecAppend(vec, LOC_FEEDBACK, LOCVEC_BORDER_BEG);
 
 }
 
@@ -295,9 +336,19 @@ void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec)
   SNetInfoSetTag(info, LOCVEC_INFO_TAG, (uintptr_t) vec, NULL);
 }
 
+/* set end border value */
+void SNetLocvecEndBorder(snet_locvec_t *vec) {
+	snet_loctype_t type = SNetLocvecToptype(vec);
+	assert (type == LOC_PARALLEL || type == LOC_STAR || type == LOC_SPLIT || type == LOC_FEEDBACK);
+	SNetLocvecTopset(vec, LOCVEC_BORDER_END);
+}
 
-
-
+/* always reset after set end border --> for consistency in dynamic entity creation */
+void SNetLocvecResetBorder(snet_locvec_t *vec) {
+	snet_loctype_t type = SNetLocvecToptype(vec);
+	assert (type == LOC_PARALLEL || type == LOC_STAR || type == LOC_SPLIT || type == LOC_FEEDBACK);
+	SNetLocvecTopset(vec, LOCVEC_BORDER_BEG);
+}
 
 
 /**
@@ -394,3 +445,8 @@ static void SNetLocvecTopdec(snet_locvec_t *vec)
   item->num--;
 }
 
+static void SNetLocvecTopset(snet_locvec_t *vec, int val)
+{
+  snet_locitem_t *item = &vec->arr[vec->size-1];
+  item->num = val;
+}

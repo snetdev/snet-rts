@@ -21,7 +21,7 @@ snet_locvec_t *SNetLocvecCopy(snet_locvec_t *vec);
 
 bool SNetLocvecEqual(snet_locvec_t *u, snet_locvec_t *v);
 bool SNetLocvecEqualParent(snet_locvec_t *u, snet_locvec_t *v);
-int  SNetLocvecGreater(snet_locvec_t *u, snet_locvec_t *v);
+int  SNetLocvecCompare(snet_locvec_t *u, snet_locvec_t *v);
 
 
 /* for serial combinator */
@@ -40,7 +40,9 @@ bool SNetLocvecStarWithin(snet_locvec_t *);
 void SNetLocvecStarEnter(snet_locvec_t *);
 void SNetLocvecStarLeave(snet_locvec_t *);
 snet_locvec_t *SNetLocvecStarSpawn(snet_locvec_t *);
+snet_locvec_t *SNetLocvecStarNext(snet_locvec_t *vec);
 snet_locvec_t *SNetLocvecStarSpawnRet(snet_locvec_t *);
+snet_locvec_t *SNetLocvecStarSpawnRetNext(snet_locvec_t *);
 
 /* for split combinator */
 void SNetLocvecSplitEnter(snet_locvec_t *);
@@ -51,7 +53,9 @@ snet_locvec_t *SNetLocvecSplitSpawn(snet_locvec_t *, int);
 void SNetLocvecFeedbackEnter(snet_locvec_t *);
 void SNetLocvecFeedbackLeave(snet_locvec_t *);
 
-
+/* for bordered combinator e.g. split, star, parallel, feedback */
+void SNetLocvecEndBorder(snet_locvec_t *vec);
+void SNetLocvecResetBorder(snet_locvec_t *vec);
 
 /* get from info */
 snet_locvec_t *SNetLocvecGet(snet_info_t *info);
@@ -62,5 +66,6 @@ void SNetLocvecSet(snet_info_t *info, snet_locvec_t *vec);
 int SNetLocvecTopval(snet_locvec_t *locvec);
 
 int SNetLocvecPrint(char *sbuf, int size, snet_locvec_t *vec);
+
 
 #endif /* _LOCVEC_H_ */
