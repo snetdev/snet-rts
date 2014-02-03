@@ -50,6 +50,4 @@ extern const char *SNetEntityName(snet_entity_t *);
 
 extern const char *SNetEntityStr(snet_entity_t *);
 
-extern int SNetEntityLocvecCompare(void *e1, void *e2);
-
 #endif /* _ENTITIES_H_ */

@@ -35,6 +35,22 @@ static FILE *mapfile = NULL;
  */
 static bool sosi_placement = false;
 
+void *copyPrio(void *p) {
+	snet_locvec_t *vec = (snet_locvec_t *)p;
+	return (void *)SNetLocvecCopy(vec);
+}
+
+void delPrio(void *p) {
+	snet_locvec_t *vec = (snet_locvec_t *)p;
+	SNetLocvecDestroy(vec);
+}
+
+int comparePrio(void *p1, void *p2) {
+	snet_locvec_t *vec1 = (snet_locvec_t *)p1;
+	snet_locvec_t *vec2 = (snet_locvec_t *)p2;
+	return SNetLocvecCompare(vec1, vec2);
+}
+
 int SNetThreadingInit(int argc, char **argv)
 {
 #ifdef USE_LOGGING
@@ -91,8 +107,8 @@ int SNetThreadingInit(int argc, char **argv)
 		}
 	}
 
-	config.neg_demand_lim = neg_demand;
-	config.prior_func_index = priorf;
+	config.prio_config.neg_demand_lim = neg_demand;
+	config.prio_config.prio_index = priorf;
 
 #ifdef USE_LOGGING
 	char fname[20+1];
@@ -144,7 +160,9 @@ int SNetThreadingInit(int argc, char **argv)
 #endif
 
 	/* set call back functions to rts */
-	config.callback_config.locvec_greater = SNetEntityLocvecCompare;
+	config.prio_config.rts_prio_cmp = comparePrio;
+	config.prio_config.rts_cpy_prio = copyPrio;
+	config.prio_config.rts_del_prio = delPrio;
 
 	LpelInit(&config);
 
@@ -224,7 +242,8 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 			//(lpel_taskfunc_t) func,
 			EntityTask,
 			ent,
-			GetStacksize(type)
+			GetStacksize(type),
+			(void *) SNetEntityGetLocvec(ent)
 	);
 
 	if (location != LPEL_MAP_OTHERS)
