@@ -233,9 +233,10 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 	int location = LPEL_MAP_MASTER;
 	int l1 = strlen(SNET_SOURCE_PREFIX);
 	int l2 = strlen(SNET_SINK_PREFIX);
-	if ((sosi_placement && (strnstr(name, SNET_SOURCE_PREFIX, l1) || strnstr(name, SNET_SINK_PREFIX, l2))) 	// sosi placemnet and entity is source/sink
-			|| type == ENTITY_other)	// wrappers
-		location = LPEL_MAP_OTHERS;
+	if (sosi_placement && (strnstr(name, SNET_SOURCE_PREFIX, l1) || strnstr(name, SNET_SINK_PREFIX, l2))) 	// sosi placemnet and entity is source/sink
+		location = LPEL_MAP_SOSI;
+	else if (type == ENTITY_other)	// wrappers
+		location = SNetEntityNode(ent);
 
 	lpel_task_t *t = LpelTaskCreate(
 			location,
@@ -246,7 +247,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 			(void *) SNetEntityGetLocvec(ent)
 	);
 
-	if (location != LPEL_MAP_OTHERS)
+	if (location == LPEL_MAP_MASTER)
 			setTaskRecLimit(type, t);
 
 #ifdef USE_LOGGING

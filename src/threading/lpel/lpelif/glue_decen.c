@@ -193,7 +193,7 @@ int SNetThreadingSpawn(snet_entity_t *ent)
   )
  */
 {
-	int worker = LPEL_MAP_OTHERS;
+	int worker;
 	snet_entity_descr_t type = SNetEntityDescr(ent);
 	int location = SNetEntityNode(ent);
 	const char *name = SNetEntityName(ent);
@@ -202,13 +202,14 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 
 	if ( type != ENTITY_other) {
 		if (sosi_placement && (strnstr(name, SNET_SOURCE_PREFIX, l1) || strnstr(name, SNET_SINK_PREFIX, l2))) {
-			worker = LPEL_MAP_OTHERS;		// sosi placemnet and entity is source/sink
+			worker = LPEL_MAP_SOSI;		// sosi placemnet and entity is source/sink
 		} else if (dloc_placement) {
 			assert(location != -1);
 			worker = location % num_workers;
 		} else
 			worker = SNetAssignTask( (type==ENTITY_box), name );
-	}
+	} else
+		worker = SNetEntityNode(ent);	//wrapper
 
 	lpel_task_t *t = LpelTaskCreate(
 			worker,

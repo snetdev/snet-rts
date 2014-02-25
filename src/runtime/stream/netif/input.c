@@ -79,7 +79,7 @@ void SNetInInputInit(FILE *file,
   hnd->buffer = in_buf;
 
   SNetThreadingSpawn(
-      SNetEntityCreate( ENTITY_other, -1, NULL,
+      SNetEntityCreate( ENTITY_other, -2, NULL,			/* SOSI */
         "glob_input", GlobInputTask, (void*)hnd)
       );
 }

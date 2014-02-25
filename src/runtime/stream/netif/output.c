@@ -205,7 +205,7 @@ void SNetInOutputInit(FILE *file,
   hnd->buffer = out_buf;
 
   SNetThreadingSpawn(
-      SNetEntityCreate( ENTITY_other, -1, NULL,
+      SNetEntityCreate( ENTITY_other, -2, NULL,			/* SOSI */
         "glob_output", GlobOutputTask, (void*)hnd)
       );
 }
