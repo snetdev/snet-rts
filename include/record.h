@@ -183,7 +183,7 @@ void SNetRecRenameField( snet_record_t *rec, int id, int newId);
 
 
 void SNetRecIdGet(snet_record_id_t *id, snet_record_t *from);
-
+size_t SNetRecGetSize(snet_record_t *rec);
 
 void SNetRecSerialise(
         snet_record_t *rec,

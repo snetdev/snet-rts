@@ -187,6 +187,27 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
   return new_rec;
 }
 
+size_t SNetRecGetSize( snet_record_t *rec) {
+	int name, val;
+  snet_ref_t *field;
+  size_t size = 0;
+  switch (REC_DESCR( rec)) {
+    case REC_data:
+    	RECORD_FOR_EACH_FIELD(rec, name, field) {
+    		size += SNetRefGetDataSize(SNetRefGetData(field));
+    	}
+    	RECORD_FOR_EACH_TAG(rec, name, val) {
+    		size += sizeof(int);
+    	}
+    	RECORD_FOR_EACH_BTAG(rec, name, val) {
+    		size += sizeof(int);
+    	}
+    	return size;
+    default:
+    	return -1;
+  }
+}
+
 void SNetRecDestroy( snet_record_t *rec)
 {
   int name;

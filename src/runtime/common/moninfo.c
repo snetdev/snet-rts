@@ -58,6 +58,7 @@ void MonInfoInitRec(snet_moninfo_t *mon, va_list args)
 
 		/* initialize fields */
 		SNetRecIdGet( &REC_MONINFO( mon, id), rec);
+		REC_MONINFO(mon, size) = SNetRecGetSize(rec);
 		REC_MONINFO( mon, add_moninfo_rec_data) = NULL; /*FIXME*/
 
 		switch ( MONINFO_EVENT(mon) ) {
@@ -162,6 +163,10 @@ static void PrintMonInfoId( FILE *f, snet_record_id_t *id)
 	);
 }
 
+static void PrintMonInfoSize( FILE *f, size_t s) {
+	fprintf(f, "S%zu", s);
+}
+
 void SNetMonInfoPrint( FILE *f, snet_moninfo_t *mon)
 {
 	fprintf(f,
@@ -173,6 +178,7 @@ void SNetMonInfoPrint( FILE *f, snet_moninfo_t *mon)
 	switch (mon->mon_descr) {
 	case MON_RECORD: /* monitoring of a record */
 		PrintMonInfoId( f, &(REC_MONINFO( mon, id)) );
+		PrintMonInfoSize( f, (REC_MONINFO( mon, size)) );
 		break;
 	default: /*ignore*/
 		break;
