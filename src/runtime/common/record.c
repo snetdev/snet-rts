@@ -147,6 +147,10 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       break;
     case REC_wakeup:
       break;
+    case REC_fetch:
+    	FETCH_REC( rec, ref) = va_arg( args, snet_ref_t *);
+    	FETCH_REC( rec, dest) = va_arg( args, void *);
+    	break;
     default:
       SNetRecUnknown(__func__, rec);
   }
@@ -247,6 +251,8 @@ void SNetRecDestroy( snet_record_t *rec)
       break;
     case REC_wakeup:
       break;
+    case REC_fetch:
+    	break;
     default:
       SNetRecUnknown(__func__, rec);
   }
