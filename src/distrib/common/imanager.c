@@ -255,6 +255,7 @@ void SNetInputManager(snet_entity_t *ent, void *args)
 //        SNetMemFree(msg.ref);
       	rec = SNetRecCreate(REC_fetch, msg.ref, msg.data);
       	SNetStreamWrite(fetchSd, rec);
+      	msg.ref = NULL;
         break;
 
       case snet_stop:
@@ -271,6 +272,8 @@ exit:
   rec = SNetRecCreate(REC_terminate);
   SNetStreamWrite(fetchSd, rec);
   SNetStreamClose(fetchSd, 0);
+  /* wait for fetcher to stop */
+  SNetFetcherWaitExit();
 
   SNetDestStreamMapDestroy(destMap);
   SNetOutputManagerStop();

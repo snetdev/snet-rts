@@ -15,5 +15,6 @@ typedef struct {
 } fetch_arg_t;
 
 void SNetFetcher(snet_stream_t *input);
+void SNetFetcherWaitExit(void);
 
 #endif /* FETCHER_H_ */
