@@ -17,7 +17,7 @@ void *ident( void *hnd, c4snet_data_t *x, int T)
 
   C4SNetFree(x);
 
-  usleep(1000*(1000+200+30));
+  usleep(1230);
 
   C4SNetOut( hnd, 1, result, T+1);
   return( hnd);

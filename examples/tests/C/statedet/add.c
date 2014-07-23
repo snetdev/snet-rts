@@ -3,12 +3,10 @@
 
 #include "add.h"
 
-#define MAXVAL 10
-
-
 /**
- * Update state by adding inval and emitting new state and old state as output
- * if new state >= MAXVAL, no new state is emitted.
+ * Update state by subtracting inval.
+ * Emit the previous state as outval.
+ * If new state > 0, emit a new state.
  */
 void *add( void *hnd, c4snet_data_t *state, c4snet_data_t *inval)
 {
@@ -19,9 +17,9 @@ void *add( void *hnd, c4snet_data_t *state, c4snet_data_t *inval)
   int_inval = *(int *) C4SNetGetData(inval);
 
   /* update state */
-  int_newstate = int_state + int_inval;
+  int_newstate = int_state - int_inval;
 
-  if (int_newstate < MAXVAL) {
+  if (int_newstate > 0) {
     data_newstate = C4SNetCreate(CTYPE_int, 1, &int_newstate);
     C4SNetOut( hnd, 1, data_newstate);
   }
