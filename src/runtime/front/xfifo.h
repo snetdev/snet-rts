@@ -18,9 +18,7 @@ struct fifo {
 
 /* Get the first FIFO node. */
 #define FIFO_FIRST_NODE(fif)    (fif)->head->next
-
-/* Iterate over all FIFO elements. */
-#define FIFO_FOR_EACH(fif, nod, itm)    \
-        for (nod = (fif)->head->next; nod && (itm = nod->item) != NULL; nod = nod->next)
+#define FIFO_NODE_NEXT(node)    (node)->next
+#define FIFO_NODE_ITEM(node)    (node)->item
 
 #endif

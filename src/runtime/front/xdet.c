@@ -129,6 +129,8 @@ void SNetRecDetrefAdd(
 
   /* Notify collector of upcoming detref. */
   SNetFifoPut(fifo, detref);
+
+  BAR();
 }
 
 /* Record needs support for determinism when entering a network. */
@@ -174,9 +176,9 @@ void SNetDetLeaveCheckDetref(snet_record_t *rec, fifo_t *fifo)
   if (DETREF_REC(rec, location) != DETREF_REC(rec, senderloc)) {
     long        seqnr = DETREF_REC(rec, seqnr);
     detref_t   *recdr = DETREF_REC(rec, detref);
-    detref_t   *detref;
-    fifo_node_t *node;
-    FIFO_FOR_EACH(fifo, node, detref) {
+    fifo_node_t *node = FIFO_FIRST_NODE(fifo);
+    for (; node; node = FIFO_NODE_NEXT(node)) {
+      detref_t *detref = (detref_t *) FIFO_NODE_ITEM(node);
       if (detref->seqnr == seqnr) {
         if (detref == recdr) {
           if (DETREF_DECR(detref) == 1) {
