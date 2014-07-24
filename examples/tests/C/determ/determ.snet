@@ -5,7 +5,7 @@
 </metadata>
  
 
-net determ
+net determ ({A,B,D} | {A,C,D} -> {A,B,D} | {A,C,D})
 {
   box showA((A) -> (A));
 

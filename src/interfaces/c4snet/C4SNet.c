@@ -208,7 +208,7 @@ static void DeserialiseData(FILE *file, c4snet_type_t type, void *data)
     default: SNetUtilDebugFatal("[%s]: FIXME invalid type %d.", __func__, type);
   }
 
-  fscanf(file, fmt, data);
+  (void) fscanf(file, fmt, data);
 }
 
 /* Deserializes textual data from a file. */
@@ -224,7 +224,7 @@ static c4snet_data_t *C4SNetDeserialise(FILE *file)
     temp->vtype = VTYPE_array;
   } else {
     temp->vtype = VTYPE_simple;
-    fscanf(file, ")");
+    (void) fscanf(file, ")");
   }
 
   int size = strlen(buf);

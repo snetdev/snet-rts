@@ -4,7 +4,7 @@
   </default>
 </metadata>
 
-net statedet {
+net statedet ({state} | {inval} -> {outval}) {
   /* the synchrocell to merge current state with input value
    * into a single record
    */
@@ -27,5 +27,5 @@ net statedet {
    */
   box add((state, inval) -> (state) | (outval));
 
-} connect (merge .. (bypass | add)) ** {outval};
+} connect (merge .. (bypass || add)) ** {outval};
 

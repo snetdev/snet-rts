@@ -1,6 +1,9 @@
 
 SUBDIRS = . src/interfaces/sac4snet
 
+# common flags
+AM_CPPFLAGS = -I$(top_srcdir)/include
+
 # stuff that gets installed
 snetstuffdir = $(pkglibdir)
 
@@ -117,6 +120,7 @@ libruntimestream_la_SOURCES = \
 	src/runtime/stream/netif/output.h \
 	src/runtime/stream/netif/label.c \
 	src/runtime/stream/netif/networkinterface.c \
+	src/runtime/stream/netif/version.c \
 	src/runtime/stream/netif/parserutils.h \
 	src/runtime/stream/netif/parser.y \
 	src/runtime/stream/netif/lexer.l
@@ -153,6 +157,7 @@ libfrontrt_la_SOURCES = \
 	src/runtime/stream/netif/interface.c \
 	src/runtime/stream/netif/label.c \
 	src/runtime/stream/netif/networkinterface.c \
+	src/runtime/stream/netif/version.c \
 	src/runtime/stream/netif/parserutils.h \
 	src/runtime/stream/netif/parser.y \
 	src/runtime/stream/netif/lexer.l \
@@ -181,6 +186,7 @@ libfrontrt_la_SOURCES = \
 	src/runtime/front/xobserve.c \
 	src/runtime/front/xoutput.c \
 	src/runtime/front/xpar.c \
+	src/runtime/front/xrun.c \
 	src/runtime/front/xserial.c \
 	src/runtime/front/xsplit.c \
 	src/runtime/front/xstack.c \
@@ -197,7 +203,55 @@ libfrontrt_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/runtime/stream/utils \
 	-I$(srcdir)/src/runtime/stream/shared \
 	-I$(srcdir)/src/runtime/stream/netif \
-	-I$(srcdir)/src/distrib/common
+	-I$(srcdir)/src/distrib/common \
+	-I$(srcdir)/src/resource
+
+if ENABLE_RESSERV
+pkglib_LTLIBRARIES += libresserv.la
+
+bin_PROGRAMS = src/resource/resserv
+
+libresserv_la_SOURCES = \
+	src/resource/resbalance.c \
+	src/resource/resbitmap.h \
+	src/resource/resclient.c \
+	src/resource/resclient.h \
+	src/resource/resconf.c \
+	src/resource/resconf.h \
+	src/resource/rescpubind.c \
+	src/resource/rescpuinfo.c \
+	src/resource/resdefs.h \
+	src/resource/reshwloc.c \
+	src/resource/reslist.c \
+	src/resource/resloop.c \
+	src/resource/resmap.c \
+	src/resource/resmem.c \
+	src/resource/resnet.c \
+	src/resource/resource.c \
+	src/resource/resource.h \
+	src/resource/resparse.c \
+	src/resource/resparse.h \
+	src/resource/resproto.h \
+	src/resource/resremote.c \
+	src/resource/resserver.c \
+	src/resource/resserver.h \
+	src/resource/resstream.c \
+	src/resource/resstream.h \
+	src/resource/restopo.c \
+	src/resource/restopo.h \
+	src/resource/restypes.h \
+	src/resource/resutil.c
+libresserv_la_CPPFLAGS = $(AM_CPPFLAGS)
+
+src_resource_resserv_SOURCES   = src/resource/resmain.c
+src_resource_resserv_LDADD     = libresserv.la
+
+if ENABLE_HWLOC
+libresserv_la_CPPFLAGS        += $(HWLOC_INCLUDES)
+src_resource_resserv_LDADD    += $(LIBHWLOC_LA)
+endif
+
+endif
 
 libfrontnodist_la_SOURCES = \
 	src/distrib/common/reference.c \
@@ -348,9 +402,6 @@ libdistribscc_la_CPPFLAGS = \
 	-I$(srcdir)/../../../scc-hg/rcce/include
 endif
 
-# common flags
-AM_CPPFLAGS = -I$(top_srcdir)/include
-
 compile_cmd: Makefile
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)echo '#!/bin/sh' >$@ ; \
@@ -360,9 +411,20 @@ compile_cmd: Makefile
 
 link_cmd: Makefile
 	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)echo '#!/bin/sh' >$@ ; \
-	     echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
-	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -L'$${SNET_LIBS}' '"$$@"' >>$@ ; \
+	$(AM_V_GEN)echo '#!/bin/sh' >$@
+if ENABLE_RESSERV
+if ENABLE_HWLOC
+	$(AM_V_GEN)echo 'RESSERV="-lresserv $(HWLOC_LIBS) -lhwloc"' >>$@
+else
+	$(AM_V_GEN)echo 'RESSERV=-lresserv' >>$@
+endif
+else
+	$(AM_V_GEN)echo 'RESSERV=' >>$@
+endif
+	$(AM_V_GEN)echo $(SHELL) '$${SNET_LIBS}'/libtool --preserve-dup-deps \
+	     --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
+	     $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	     -L'$${SNET_LIBS} "$$@" $${RESSERV}' $(LIBS) >>$@ ; \
 	     chmod +x $@
 
 snet-config.mkf: Makefile

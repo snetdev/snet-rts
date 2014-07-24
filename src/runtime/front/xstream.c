@@ -394,11 +394,6 @@ snet_stream_desc_t *SNetStreamOpen(
       break;
   }
 
-  /* if (SNetVerbose() && SNetNodeGetWorkerCount() <= 1) {
-    printf("[%s.%d]: %s -> %s\n", __func__, SNetDistribGetNodeId(),
-           SNetNodeName(desc->landing->node), SNetLandingName(desc->landing));
-  } */
-
   return desc;
 }
 

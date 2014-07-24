@@ -234,7 +234,7 @@ snet_stream_t *CreateSplit(
   /* create replica */
   sarg->instance = SNetNodeStreamCreate(node);
   SNetSubnetIncrLevel();
-  instout = (*box_a)(sarg->instance, info, LOCATION_UNKNOWN);
+  instout = (*box_a)(sarg->instance, info, is_byloc ? LOCATION_UNKNOWN : location);
   SNetSubnetDecrLevel();
   SNetCollectorAddStream(STREAM_DEST(sarg->collector), instout);
 

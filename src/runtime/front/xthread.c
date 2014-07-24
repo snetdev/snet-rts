@@ -3,11 +3,9 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <unistd.h>
-#if __gnu_linux__
-#include <sys/sysinfo.h>
-#endif
 #include "node.h"
 #include "reference.h"
+#include "networkinterface.h"
 
 #define EQ(s1,s2)       !strcmp(s1,s2)
 #define EQN(s1,s2,n)    !strncmp(s1,s2,n)
@@ -15,30 +13,36 @@
 static pthread_key_t    thread_self_key;
 static int              num_workers;
 static int              num_thieves;
-static pthread_t       *worker_threads;
-static bool             opt_garbage_collection;
-static bool             opt_verbose;
+static const char      *program_name;
+static const char      *opt_concurrency;
 static bool             opt_debug;
 static bool             opt_debug_df;
 static bool             opt_debug_gc;
+static bool             opt_debug_rs;
 static bool             opt_debug_sl;
 static bool             opt_debug_tl;
 static bool             opt_debug_ws;
-static bool             opt_zipper;
 static bool             opt_feedback_deterministic;
-static size_t           opt_thread_stack_size;
-static const char      *opt_concurrency;
-static bool             opt_input_throttle;
-static double           opt_input_offset;
+static bool             opt_garbage_collection;
 static double           opt_input_factor;
+static double           opt_input_offset;
+static bool             opt_input_throttle;
+static bool             opt_resource;
+static const char      *opt_resource_server;
+static size_t           opt_thread_stack_size;
+static bool             opt_verbose;
+static bool             opt_zipper;
 
+/* Total number of cores in system, whether currently online or not. */
+int SNetGetMaxProcs(void)
+{
+  return (int) sysconf(_SC_NPROCESSORS_CONF);
+}
+
+/* The number of cores in the system which are currently operational. */
 int SNetGetNumProcs(void)
 {
-#if __gnu_linux__
-  return get_nprocs();
-#else
   return (int) sysconf(_SC_NPROCESSORS_ONLN);
-#endif
 }
 
 /* How many workers? */
@@ -47,7 +51,7 @@ int SNetThreadingWorkers(void)
   return num_workers;
 }
 
-/* How many thieves? */
+/* Limit the number of actively stealing thieves, if non-zero. */
 int SNetThreadingThieves(void)
 {
   return num_thieves;
@@ -57,6 +61,12 @@ int SNetThreadingThieves(void)
 int SNetThreadedManagers(void)
 {
   return SNetDistribIsDistributed() ? 1 : 0;
+}
+
+/* Name of this program. */
+const char* SNetGetProgramName(void)
+{
+  return program_name;
 }
 
 /* What kind of garbage collection to use? */
@@ -75,19 +85,22 @@ bool SNetVerbose(void)
 bool SNetDebug(void) { return opt_debug; }
 
 /* Whether debugging of distributed front is enabled */
-bool SNetDebugDF(void) { return opt_debug_df | opt_debug; }
+bool SNetDebugDF(void) { return opt_debug_df; }
 
 /* Whether debugging of garbage collection is enabled */
-bool SNetDebugGC(void) { return opt_debug_gc | opt_debug; }
+bool SNetDebugGC(void) { return opt_debug_gc; }
+
+/* Whether debugging of resource management service is enabled */
+bool SNetDebugRS(void) { return opt_debug_rs; }
 
 /* Whether debugging of the streams layer is enabled */
-bool SNetDebugSL(void) { return opt_debug_sl | opt_debug; }
+bool SNetDebugSL(void) { return opt_debug_sl; }
 
 /* Whether debugging of the threading layer is enabled */
-bool SNetDebugTL(void) { return opt_debug_tl | opt_debug; }
+bool SNetDebugTL(void) { return opt_debug_tl; }
 
 /* Whether debugging of work stealing is enabled */
-bool SNetDebugWS(void) { return opt_debug_ws | opt_debug; }
+bool SNetDebugWS(void) { return opt_debug_ws; }
 
 /* Whether to use a deterministic feedback */
 bool SNetFeedbackDeterministic(void)
@@ -95,7 +108,19 @@ bool SNetFeedbackDeterministic(void)
   return opt_feedback_deterministic;
 }
 
-/* Whether to use optimized sync-star */
+/* Whether to use dynamic resource management. */
+bool SNetOptResource(void)
+{
+  return opt_resource;
+}
+
+/* Whether and how to connect to the resource management service. */
+const char* SNetOptResourceServer(void)
+{
+  return opt_resource_server;
+}
+
+/* Whether to use optimized sync-star. */
 bool SNetZipperEnabled(void)
 {
   return opt_zipper;
@@ -178,7 +203,7 @@ ok: free(copy);
 }
 
 /* Convert a string number which may be suffixed with K or M to bytes. */
-static size_t GetSize(const char *str)
+static size_t SNetOptGetSize(const char *str)
 {
   double size = 0;
   char ch = '\0';
@@ -196,18 +221,27 @@ static size_t GetSize(const char *str)
   return (size_t) (size + 0.5);
 }
 
+static void SNetConfResourceServer(const char* conf)
+{
+  static const char default_resource_server[] = "localhost:56389";
+  opt_resource = true;
+  opt_resource_server = conf ? conf : default_resource_server;
+}
+
 /* Process command line options. */
 int SNetThreadingInit(int argc, char**argv)
 {
   int   i;
-  int   num_managers;
+  char *snet_args = NULL;
 
+  program_name = basename(argv[0]);
   trace(__func__);
 
   /* default options */
   num_workers = SNetGetNumProcs();
   opt_garbage_collection = true;
   opt_zipper = true;
+  opt_concurrency = "2D";
 
   for (i = 0; i < argc; ++i) {
     if (argv[i][0] != '-') {
@@ -221,6 +255,7 @@ int SNetThreadingInit(int argc, char**argv)
       } else {
         if (strstr(argv[i], "df")) { opt_debug_df = true; }
         if (strstr(argv[i], "gc")) { opt_debug_gc = true; }
+        if (strstr(argv[i], "rs")) { opt_debug_rs = true; }
         if (strstr(argv[i], "sl")) { opt_debug_sl = true; }
         if (strstr(argv[i], "tl")) { opt_debug_tl = true; }
         if (strstr(argv[i], "ws")) { opt_debug_ws = true; }
@@ -229,8 +264,17 @@ int SNetThreadingInit(int argc, char**argv)
     else if (EQ(argv[i], "-g")) {
       opt_garbage_collection = false;
     }
+    else if (EQ(argv[i], "-r")) {
+      opt_resource = true;
+    }
+    else if (EQ(argv[i], "-rs")) {
+      const char *conf = (i + 1 < argc && !strchr("-+", argv[i+1][0]))
+                       ? argv[++i] : NULL;
+      SNetConfResourceServer(conf);
+    }
     else if (EQ(argv[i], "-s") && ++i < argc) {
-      if ((opt_thread_stack_size = GetSize(argv[i])) < PTHREAD_STACK_MIN) {
+      opt_thread_stack_size = SNetOptGetSize(argv[i]);
+      if (opt_thread_stack_size < PTHREAD_STACK_MIN) {
         SNetUtilDebugFatal("[%s]: Invalid thread stack size %s (l.t. %d).",
                            __func__, argv[i], PTHREAD_STACK_MIN);
       }
@@ -240,6 +284,9 @@ int SNetThreadingInit(int argc, char**argv)
     }
     else if (EQ(argv[i], "-v")) {
       opt_verbose = true;
+    }
+    else if (EQ(argv[i], "-V")) {
+      SNetRuntimeVersion();
     }
     else if (EQ(argv[i], "-T") && ++i < argc) {
       if ((num_thieves = atoi(argv[i])) <= 0) {
@@ -279,52 +326,72 @@ int SNetThreadingInit(int argc, char**argv)
     else if (EQ(argv[i], "-z")) {
       opt_zipper = false;
     }
+
+    if (i + 1 >= argc &&
+        snet_args == NULL &&
+        (snet_args = getenv("SNET_ARGS")) != NULL)
+    {
+      char *save = NULL;
+      char *copy = SNetStrDup(snet_args);
+      int max = 10;
+      argv = SNetNewN(max, char*);
+      for (argv[argc=0] = strtok_r(copy, " \t\r\n", &save);
+           argv[argc] != NULL;
+           argv[++argc] = strtok_r(NULL, " \t\r\n", &save)) {
+        if (argc + 1 >= max) {
+          max *= 2;
+          argv = SNetMemResize(argv, max * sizeof(char*));
+        }
+      }
+      assert(argc > 0 && argc < max && argv[argc] == NULL);
+      i = -1;
+    }
   }
 
   if (opt_verbose) {
-    printf("W=%d,GC=%s,Z=%s.\n",
+    printf("W=%d,GC=%s,Z=%s,R=%s,RS=%s.\n",
            num_workers,
            opt_garbage_collection ? "true" : "false",
-           opt_zipper ? "true" : "false"
+           opt_zipper ? "true" : "false",
+           opt_resource ? "true" : "false",
+           opt_resource_server ? "true" : "false"
            );
   }
 
   pthread_key_create(&thread_self_key, NULL);
-  num_managers = SNetThreadedManagers();
-  worker_threads = SNetNewN(num_workers + num_managers + 1, pthread_t);
+
+  if (snet_args) {
+    SNetMemFree(argv);
+  }
 
   return 0;
 }
 
 /* Create a thread to instantiate a worker */
-void SNetThreadCreate(void *(*func)(void *), worker_t *worker)
+void SNetThreadCreate(void *(*func)(void *), worker_t *worker, int proc)
 {
-  pthread_t            *thread;
+  pthread_t             thread;
   pthread_attr_t        attr;
-  pthread_attr_t       *attr_ptr = NULL;
-  int                   num_managers = SNetThreadedManagers();
 
   trace(__func__);
 
+  worker->proc_bind = proc;
+
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
   if (opt_thread_stack_size >= PTHREAD_STACK_MIN) {
-    pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, opt_thread_stack_size);
-    attr_ptr = &attr;
   }
 
-  assert(worker->id <= num_workers + num_managers);
-  thread = &worker_threads[worker->id];
-  if (pthread_create(thread, attr_ptr, func, worker)) {
+  if (pthread_create(&thread, &attr, func, worker)) {
     SNetUtilDebugFatal("[%s]: Failed to create a new thread.", __func__);
   }
-  if (SNetDebugTL()) {
+  if (SNetDebugTL() && SNetVerbose() && !SNetOptResource()) {
     printf("created thread %lu for worker %d\n",
            *(unsigned long *)thread, worker->id);
   }
 
-  if (attr_ptr) {
-    pthread_attr_destroy(attr_ptr);
-  }
+  pthread_attr_destroy(&attr);
 }
 
 void SNetThreadSetSelf(worker_t *self)
@@ -339,28 +406,9 @@ worker_t *SNetThreadGetSelf(void)
 
 int SNetThreadingStop(void)
 {
-  pthread_t     *thread;
-  void          *arg;
-  worker_t      *worker;
-  int            i;
-  int            num_managers = SNetThreadedManagers();
-
   trace(__func__);
-  for (i = num_workers + num_managers; i >= 2; --i) {
-    thread = &worker_threads[i];
-    if (SNetDebugTL()) {
-      printf("joining with thread %lu for worker %d ...\n",
-             *(unsigned long *)thread, i);
-    }
-    arg = NULL;
-    if (pthread_join(*thread, &arg)) {
-      SNetUtilDebugNotice("[%s]: Failed to join with worker %d\n",
-                          __func__, i);
-    }
-  }
 
-  worker = SNetThreadGetSelf();
-  SNetNodeStop(worker);
+  SNetNodeStop();
 
   return 0;
 }
@@ -369,11 +417,7 @@ int SNetThreadingCleanup(void)
 {
   trace(__func__);
 
-  SNetThreadSetSelf(NULL);
   pthread_key_delete(thread_self_key);
-
-  SNetDeleteN(num_workers + SNetThreadedManagers(), worker_threads);
-  worker_threads = NULL;
 
   SNetReferenceDestroy();
 

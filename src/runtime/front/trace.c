@@ -8,10 +8,7 @@
 #include "bool.h"
 #include "debug.h"
 
-#define snet_stream_desc_t void
-#define snet_record_t void
-#include "xworker.h"
-extern struct worker* SNetThreadGetSelf(void);
+extern int SNetGetWorkerId(void);
 
 void (*SNetTraceFunc)(const char *func);
 
@@ -53,7 +50,6 @@ void SNetTraceCalls(const char *func)
   int           indent;
   char          string[max * TRACE_FUNC_NAME_LEN];
   char        **syms;
-  struct worker *self;
   char         *strptr = string;
 
   count = backtrace(array, max);
@@ -61,8 +57,7 @@ void SNetTraceCalls(const char *func)
   indent = 2 * (todo - 3);
   if (todo > snet_trace_level) todo = snet_trace_level;
   syms = backtrace_symbols(array + skip, todo);
-  self = SNetThreadGetSelf();
-  sprintf(strptr, "%s %d:\n", blue(func, string), self ? self->id : 0);
+  sprintf(strptr, "%s %d:\n", blue(func, string), SNetGetWorkerId());
   strptr += strlen(strptr);
   for (int i = 0; i < todo; ++i) {
     char *p = strrchr(syms[i], '/');
@@ -78,9 +73,8 @@ void SNetTraceCalls(const char *func)
 void SNetTraceSimple(const char *func)
 {
   char           string[TRACE_FUNC_NAME_LEN];
-  struct worker *self = SNetThreadGetSelf();
 
-  printf("%s %d\n", blue(func, string), self ? self->id : 0);
+  printf("%s %d\n", blue(func, string), SNetGetWorkerId());
 }
 
 /* Trace nothing. */

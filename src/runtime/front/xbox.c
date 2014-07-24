@@ -2,70 +2,29 @@
 #define _THREADING_H_
 #include "handle_p.h"
 
-#ifdef SNET_DEBUG_COUNTERS
-#include "debugcounters.h"
-#endif
-
-//#define DBG_RT_TRACE_BOX_TIMINGS
-
-#ifdef DBG_RT_TRACE_BOX_TIMINGS
-#include <sys/time.h>
-#endif
 
 static void SNetNodeBoxData(box_context_t *box)
 {
   box_arg_t     *barg = LAND_NODE_SPEC(box->land, box);
-
-#ifdef DBG_RT_TRACE_BOX_TIMINGS
-  static struct timeval tv_in;
-  static struct timeval tv_out;
-#endif
-#ifdef SNET_DEBUG_COUNTERS
-  snet_time_t time_in;
-  snet_time_t time_out;
-  long mseconds;
-#endif
   snet_handle_t   hnd;
 
-  /* set out descriptor */
-  hnd.out_sd = box->outdesc;
+  /* data record */
+  hnd.rec = box->rec;
   /* set out signs */
   hnd.sign = barg->output_variants;
   /* mapping */
   hnd.mapping = NULL;
+  /* set out descriptor */
+  hnd.out_sd = box->outdesc;
   /* set variants */
   hnd.vars = barg->vars;
   /* box entity */
   hnd.ent = barg->entity;
-  /* data record */
-  hnd.rec = box->rec;
-
-#ifdef DBG_RT_TRACE_BOX_TIMINGS
-  gettimeofday( &tv_in, NULL);
-  SNetUtilDebugNoticeEnt( barg->entity,
-      "[BOX] Firing box function at %lf.",
-      tv_in.tv_sec + tv_in.tv_usec / 1000000.0
-      );
-#endif
-#ifdef SNET_DEBUG_COUNTERS
-  SNetDebugTimeGetTime(&time_in);
-#endif
 
   (*barg->boxfun)( &hnd);
 
-#ifdef DBG_RT_TRACE_BOX_TIMINGS
-  gettimeofday( &tv_out, NULL);
-  SNetUtilDebugNoticeEnt( barg->entity,
-      "[BOX] Return from box function after %lf sec.",
-      (tv_out.tv_sec - tv_in.tv_sec) + (tv_out.tv_usec - tv_in.tv_usec)*1e-6);
-#endif
-#ifdef SNET_DEBUG_COUNTERS
-  SNetDebugTimeGetTime(&time_out);
-  mseconds = SNetDebugTimeDifferenceInMilliseconds(&time_in, &time_out);
-  SNetDebugCountersIncreaseCounter(mseconds, SNET_COUNTER_TIME_BOX);
-#endif
-
-  if (REC_DESCR( box->rec) == REC_data) {
+  if (REC_DESCR( box->rec) == REC_data ||
+      REC_DESCR( box->rec) == REC_trigger_initialiser) {
     SNetRecDetrefDestroy(box->rec, &box->outdesc);
   }
   SNetRecDestroy( box->rec);
@@ -77,46 +36,44 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
 {
   const box_arg_t       *barg = DESC_NODE_SPEC(desc, box);
   landing_box_t         *land = DESC_LAND_SPEC(desc, box);
-  box_context_t         *box = NULL;
-  int                    i, conc;
+  box_context_t         *box = NULL, *last = NULL;
 
   trace(__func__);
 
-  if (barg->concurrency == 1) {
-    box = &land->contexts[0].context;
-    box->busy = true;
-    box->rec = rec;
-    if (!box->outdesc) {
-      box->outdesc = SNetStreamOpen(barg->outputs[box->index], desc);
-    }
+  /* Search for an unused context in the linked list. */
+  for (box = land->context; box && box->busy; box = box->next) {
+    /* Remember previous context. */
+    last = box;
   }
-  else {
-
-    /* Find an unused box context. */
-    i = 0;
-    while (land->contexts[i].context.busy) {
-      ++i;
-      assert(i < barg->concurrency);
-    }
-    box = &land->contexts[i].context;
-    box->busy = true;
-    /* if (!CAS(&box->busy, false, true)) {
-      assert(0);
-    } */
-    box->rec = rec;
-
-    /* Open output first. */
-    if (!box->outdesc) {
+  if (box == NULL) {
+    box = SNetNewAlign(box_context_t);
+    box->next = NULL;
+    if (barg->concurrency >= 2) {
       /* Push collector landing. */
       SNetPushLanding(desc, land->collland);
-
-      box->outdesc = SNetStreamOpen(barg->outputs[box->index], desc);
-
+      /* Open stream to collector. */
+      box->outdesc = SNetStreamOpen(barg->output, desc);
       /* To allow concurrent unlocking we need our own source landing. */
       box->outdesc->source = SNetNewAlign(landing_t);
       *(box->outdesc->source) = *(desc->landing);
+    } else {
+      /* Open output stream. */
+      box->outdesc = SNetStreamOpen(barg->output, desc);
     }
+    box->rec = rec;
+    box->land = desc->landing;
+    box->busy = true;
+    if (last) {
+      last->next = box;
+    } else {
+      land->context = box;
+    }
+  } else {
+    box->rec = rec;
+    box->busy = true;
+  }
 
+  if (barg->concurrency >= 2) {
     /* Make concurrent unlocking work. */
     box->outdesc->source->worker = desc->landing->worker;
 
@@ -129,13 +86,8 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
       }
     }
 
-    /* Increase concurrency counter. */
-    conc = AAF(&(land->concurrency), 1);
-
-    /* Allow more workers if below concurrency limit. */
-    if (conc < barg->concurrency) {
-      unlock_landing(desc->landing);
-    }
+    /* Allow more workers. */
+    unlock_landing(desc->landing);
   }
 
   switch (REC_DESCR(rec)) {
@@ -166,18 +118,8 @@ void SNetNodeBox(snet_stream_desc_t *desc, snet_record_t *rec)
     box->rec = NULL;
     box->outdesc->source->worker = NULL;
     box->outdesc->source->id = 0;
+    BAR();
     box->busy = false;
-    /* if (!CAS(&box->busy, true, false)) {
-      assert(0);
-    } */
-
-    /* Decrease concurrency counter. */
-    conc = FAS(&(land->concurrency), 1);
-
-    /* Only unlock when leaving a full house. */
-    if (conc == barg->concurrency) {
-      unlock_landing(desc->landing);
-    }
   }
 }
 
@@ -187,21 +129,18 @@ void SNetTermBox(landing_t *land, fifo_t *fifo)
   box_arg_t     *barg = LAND_NODE_SPEC(land, box);
   landing_box_t *lbox = LAND_SPEC(land, box);
   box_context_t *box;
-  int            i;
 
   trace(__func__);
 
-  for (i = 0; i < barg->concurrency; ++i) {
-    box = &lbox->contexts[i].context;
-    assert(box->index == i);
+  while ((box = lbox->context) != NULL) {
+    lbox->context = box->next;
     assert(box->busy == false);
-    if (box->outdesc) {
-      if (barg->concurrency >= 2) {
-        SNetDelete(box->outdesc->source);
-        box->outdesc->source = NULL;
-      }
-      SNetFifoPut(fifo, box->outdesc);
+    assert(box->outdesc != NULL);
+    if (barg->concurrency >= 2) {
+      SNetDelete(box->outdesc->source);
+      box->outdesc->source = NULL;
     }
+    SNetFifoPut(fifo, box->outdesc);
   }
   if (lbox->collland) {
     SNetLandingDone(lbox->collland);
@@ -213,13 +152,9 @@ void SNetTermBox(landing_t *land, fifo_t *fifo)
 void SNetStopBox(node_t *node, fifo_t *fifo)
 {
   box_arg_t    *barg = NODE_SPEC(node, box);
-  int           i;
 
   trace(__func__);
-  for (i = 0; i < barg->concurrency; ++i) {
-    SNetStopStream(barg->outputs[i], fifo);
-  }
-  SNetDeleteN(barg->concurrency, barg->outputs);
+  SNetStopStream(barg->output, fifo);
   SNetIntListListDestroy(barg->output_variants);
   SNetVariantListDestroy(barg->vars);
   SNetEntityDestroy(barg->entity);
@@ -266,9 +201,8 @@ snet_stream_t *SNetBox( snet_stream_t *input,
                         snet_exerealm_destroy_fun_t exerealm_destroy,
                         snet_int_list_list_t *output_variants)
 {
-  int                    i;
   snet_stream_t         *output = NULL;
-  snet_stream_t        **outstreams = NULL;
+  snet_stream_t         *outstream = NULL;
   node_t                *node;
   box_arg_t             *barg;
   int                    concurrency;
@@ -282,15 +216,12 @@ snet_stream_t *SNetBox( snet_stream_t *input,
             boxname, concurrency, is_det ? 'D' : 'N');
   }
 
-  outstreams = SNetNewN(concurrency, snet_stream_t *);
-  for (i = 0; i < concurrency; ++i) {
-    outstreams[i] = SNetStreamCreate(0);
-  }
-  node = SNetNodeNew(NODE_box, location, &input, 1, outstreams, concurrency,
+  outstream = SNetStreamCreate(0);
+  node = SNetNodeNew(NODE_box, location, &input, 1, &outstream, 1,
                      SNetNodeBox, SNetStopBox, SNetTermBox);
 
   barg = NODE_SPEC(node, box);
-  barg->outputs = outstreams;
+  barg->output = outstream;
   barg->boxfun = boxfun;
   barg->output_variants = output_variants;
   barg->vars = CreateVarList(output_variants);
@@ -301,10 +232,9 @@ snet_stream_t *SNetBox( snet_stream_t *input,
                                    barg->boxname, NULL, (void *) barg);
 
   if (concurrency >= 2) {
-    output = SNetCollectorStatic(concurrency, outstreams, location, info,
-                                 is_det, node);
+    output = SNetCollectorDynamic(outstream, location, info, is_det, node);
   } else {
-    output = outstreams[0];
+    output = outstream;
   }
 
   return output;

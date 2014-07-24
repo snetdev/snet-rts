@@ -1,4 +1,4 @@
-AC_INIT([SNet], [1.x], [info@snet-home.org])
+AC_INIT([SNet], [1.x], [info@snet-home.org], [snet], [http://www.snet-home.org/])
 AC_PREREQ([2.68])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -30,9 +30,9 @@ dnl pick `mpicc' as compiler name.
 
 use_mpi=no
 AX_PROG_CC_MPI([test x"$enable_dist_mpi" != xno], [use_mpi=yes],
-               [if test x"$with_mpi" = xyes; then
+               [if test x"$enable_dist_mpi" = xyes; then
   AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
-else
+elif test x"$enable_dist_mpi" = xauto; then
   AC_MSG_WARN([No MPI compiler found, won't use MPI.])
 fi])
 if test $use_mpi = yes; then
@@ -70,8 +70,11 @@ if test x$enable_setaffinity != xno; then
 fi
 AC_CHECK_FUNCS([pthread_yield_np])
 AC_CHECK_FUNCS([pthread_yield])
+AC_CHECK_FUNCS([localtime_r])
+AC_CHECK_FUNCS([sched_setaffinity])
 
 AC_SEARCH_LIBS([sqrt], [m])
+AC_SEARCH_LIBS([clock_gettime], [rt])
 
 dnl check network functions
 AC_SEARCH_LIBS([socket], [socket])
@@ -148,6 +151,70 @@ fi
 AM_CONDITIONAL([ENABLE_TH_LPEL], [test $have_lpel = yes])
 
 
+
+dnl Check for support of portable hardware locality.
+
+AC_ARG_WITH([hwloc-includes],
+            [AC_HELP_STRING([--with-hwloc-includes=DIR],
+                            [look up hwloc.h in DIR])],
+            [],
+            [with_hwloc_includes=])
+
+if test -n "$with_hwloc_includes"
+then
+  AC_MSG_CHECKING([for hwloc.h in $with_hwloc_includes])
+  if test -r "$with_hwloc_includes/hwloc.h"
+  then
+     with_hwloc_includes=`(cd "$with_hwloc_includes" && pwd)`
+     AC_MSG_RESULT([yes])
+  else
+     AC_MSG_RESULT([no])
+     AC_MSG_WARN([unable to find $with_hwloc_includes/hwloc.h. Cannot use hwloc!])
+     with_hwloc_includes=
+  fi
+fi
+
+if test -n "$with_hwloc_includes"
+then
+  AC_ARG_WITH([hwloc-libs],
+              [AC_HELP_STRING([--with-hwloc-libs=DIR],
+                              [look up libhwloc.la in DIR])],
+              [],
+              [with_hwloc_libs=])
+  AC_MSG_CHECKING([for libhwloc.la in $with_hwloc_libs])
+  if test -r "$with_hwloc_libs/libhwloc.la"; then
+     with_hwloc_libs=`(cd "$with_hwloc_libs" && pwd)`
+     AC_MSG_RESULT([yes])
+  else
+     AC_MSG_RESULT([no])
+     AC_MSG_WARN([unable to find $with_hwloc_libs/libhwloc.la. Cannot use hwloc!])
+     with_hwloc_libs=
+  fi
+fi
+
+if test -n "$with_hwloc_includes" -a -n "$with_hwloc_libs"
+then
+  HWLOC_INCLUDES=-I$with_hwloc_includes
+  HWLOC_LIBS=-L$with_hwloc_libs
+  LIBHWLOC_LA=$with_hwloc_libs/libhwloc.la
+  AC_SUBST([LIBHWLOC_LA])
+  AC_SUBST([HWLOC_INCLUDES])
+  AC_SUBST([HWLOC_LIBS])
+  AC_DEFINE([ENABLE_HWLOC], [1], [Set to 1 to enable the hwloc.])
+  AM_CONDITIONAL([ENABLE_HWLOC], [true])
+else
+  AM_CONDITIONAL([ENABLE_HWLOC], [false])
+fi
+
+dnl Check for support for the resource management service.
+
+AC_ARG_ENABLE([resserv], [AS_HELP_STRING([--enable-resserv],
+    [Enable support for the resource management service (default is disabled).])],
+    [], [enable_resserv=no])
+if test x$enable_resserv = xyes; then
+  AC_DEFINE([ENABLE_RESSERV], [1], [Set to 1 to enable the resource management service.])
+fi
+AM_CONDITIONAL([ENABLE_RESSERV], [test x$enable_resserv = xyes])
 
 dnl check for sac compiler in order to build sac4snet interface
 

@@ -166,6 +166,7 @@ snet_handle_t *SNetOutRawV( snet_handle_t *hnd, int id, int variant_num,
     SNetRecDetrefCopy(out_rec, old_rec);
   } else {
     SNetRecSetDataMode( out_rec, DEFAULT_MODE);
+    SNetRecDetrefCopy(out_rec, old_rec);
   }
 
 

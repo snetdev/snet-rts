@@ -113,6 +113,7 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       DATA_REC( rec, detref) = NULL;
       break;
     case REC_trigger_initialiser:
+      DATA_REC( rec, detref) = NULL;
       break;
     case REC_sync:
       SYNC_REC( rec, input) = va_arg( args, snet_stream_t *);

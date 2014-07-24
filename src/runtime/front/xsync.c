@@ -250,9 +250,18 @@ void SNetTermSync(landing_t *land, fifo_t *fifo)
 
   if (lsync->state == SYNC_partial) {
     sync_arg_t *sarg = NODE_SPEC(land->node, sync);
+    char buf[1000] = "[SYNC] Warning: Destroying partially synchronized sync-cell!";
+    const size_t size = sizeof buf;
+    if (SNetVerbose()) {
+      size_t len = strlen(buf);
+      snprintf(&buf[len], size - len, "\n\t");
+      for (int i = 0; i < sarg->num_patterns; ++i) {
+        len += strlen(&buf[len]);
+        SNetRecordTypeString(lsync->storage[i], &buf[len], len);
+      }
+    }
     DestroyStorage(sarg, lsync);
-    SNetUtilDebugNoticeEnt(LAND_NODE_SPEC(land, sync)->entity,
-      "[SYNC] Warning: Destroying partially synchronized sync-cell!");
+    SNetUtilDebugNoticeEnt(LAND_NODE_SPEC(land, sync)->entity, buf);
   }
 
   if (lsync->outdesc) {

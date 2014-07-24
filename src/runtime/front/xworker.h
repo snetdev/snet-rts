@@ -1,6 +1,40 @@
 #ifndef _XWORKER_H
 #define _XWORKER_H
 
+/* The state a worker can be in from start to exit. */
+typedef enum worker_state {
+  WorkerBusy = 0,       /* When a worker may have more work to do. */
+  WorkerIdle = 1,       /* No work and no input. */
+  WorkerStrike = 2,     /* First impression is that all workers are idle. */
+  WorkerExit = 3,       /* Nothing left to do: this worker has ceased to be. */
+} worker_state_t;
+
+/* A set of pointers to the currently running workers.
+ * Idle workers require this for work-stealing. */
+typedef struct worker_config {
+  /* Total number of workers including managers. */
+  int                   worker_count;
+
+  /* Pointers to other workers: valid for [1..worker_count]. */
+  worker_t            **workers;
+
+  /* A global limit on the number of concurrent thieves if non-zero. */
+  int                   thief_limit;
+
+  /* The lock to use when there is a thief_limit. */
+  lock_t                idle_lock;
+
+  /* An output file descriptor to a pipe to the initial thread. */
+  int                   pipe_send;
+
+  /* The input node which reads via the parser from standard input. */
+  struct node          *input_node;
+
+  /* The output node which stores the number of output records. */
+  struct node          *output_node;
+
+} worker_config_t;
+
 /* A worker can be in either of two roles: */
 typedef enum worker_role {
   /* Data workers process records. */
@@ -78,6 +112,9 @@ typedef struct worker_loot {
  * or else from the input_node.
  */
 struct worker {
+  /* Pointer to globally shared configuration. */
+  worker_config_t       *config;
+
   /* A unique ID used in locking to identify owners. */
   int                    id;
 
@@ -105,9 +142,6 @@ struct worker {
   /* A pointer to the input stream. */
   snet_stream_desc_t    *input_desc;
 
-  /* The output node which stores the number of output records. */
-  struct node           *output_node;
-
   /* An exclusive lock for visiting thieves. */
   worker_lock_t         *steal_lock;
 
@@ -127,11 +161,17 @@ struct worker {
   /* Whether the input node has not yet reached end-of-file. */
   bool                   has_input;
 
-  /* Whether this worker is busy processing. */
+  /* Whether this worker is busy processing; also see worker_state_t. */
   int                    is_idle;
 
-  /* The sequence number for the current idle state. */
+  /* The sequence number for an idle state: either WorkerIdle or WorkerStrike. */
   size_t                 idle_seqnr;
+
+  /* Which processor to bind this thread to (if greater or equal to zero). */
+  int                    proc_bind;
+
+  /* Whether the processor this worker is executing on has been revoked. */
+  bool                   proc_revoked;
 };
 
 

@@ -1,0 +1,179 @@
+
+
+INTRODUCTION
+
+
+Distributed S-Net currently uses placement combinators
+at the language level to direct placement of S-Net
+subnetworks to compute nodes.  Two flavors of placement
+combinators exist: static placement and dynamic placement.
+Static placement is simple, but inflexible. 
+Dynamic placement is controlled by record tags,
+which gives some flexibility to the application 
+to control placement. The problem with the
+latter approach is that S-Net applications are unable
+to learn about the computational load. Neither are
+they able to contribute to optimal scheduling.
+In addition, this approach is unable to deal with
+changes in the availability of compute resources
+or the co-existence of multiple S-Net applications.
+
+Compute resources may change over time when they
+are required for other purposes, or when more compute
+nodes become available.  Resources may also have
+to be shared with other S-Net applications.
+These applications come and go. They are unaware
+of eachother. Each of these applications may
+have changing needs for resources over time.
+Here we look at ways for the S-Net runtime system
+to dynamically adjust to these changing conditions
+by means of a resource management service which
+is external to the S-Net runtime system.
+
+In the remaining sections we restrict the discussion
+to the Distributed Front runtime system for S-Net.
+Currently this is the first and only runtime system
+which implements Distributed S-Net correctly.
+In addition it is designed to be much more efficient
+compared to previous implementations, with much reduced
+latency and no instantiations of unnecessary entities.
+Last not least, its design, which includes a static
+property graph and a work-stealing threading layer,
+promises easier adaptation to changing conditions.
+
+
+PROPOSAL
+
+
+Resources for Distributed S-Net applications must be 
+managed by a dedicated service.  New applications can
+register themselves with this service and communicate
+their resource requirements.  Over time the applications
+update their changing requirements to the resource server.
+In turn, the resource server communicates changes
+in the available resources to the applications.
+
+We assume that the resource service is always available
+on all compute resources.  On startup an application
+registers itself with the service. Before commencing
+with computions it communicates its minimum and
+preferred requirements and waits for resource assignment.
+Once resources have been received the application
+can continue. The application must monitor its computational
+load and periodically communicate an update to the
+resource service.
+
+The resource service may dynamically decide to
+grant more resources or revoke part of the
+previously granted resources.
+Upon reception of a resource shrink event the
+application must take measures to reduce its
+resource usage over time. When the application
+succeeds in reducing its use of resources,
+according to the shrink event,
+it acknowledges this to the resource service.
+
+When the application recognizes that it can benefit from
+more resources it may request this with the resource service.
+Upon reception of a resource grant the application will
+decide whether to use this opportunity.  It will update
+its new resource usage to the resource service.
+
+Upon termination of the application the resource
+service assumes all resources are available for
+assignment to other applications.
+
+
+DESIGN
+
+
+We assume that S-Net applications are started
+independently from the resource service.
+However, the resource service still needs
+to detect inadvertent termination of S-Net
+applications in order to reclaim resources.
+Therefore, it seems logical to use a TCP connection
+for communication between the application and the
+service, because termination of the application is
+then signalled to the service through the closing
+of the TCP connection by the operating system.
+For improved efficiency, communication may in
+addition occur via shared memory segments.
+
+Several options exist for S-Net applications
+to change their resource usage dynamically
+in interaction with the resource service:
+
+1) The S-Net runtime can adjust the number of allocated
+worker threads to the number of available CPU cores.
+This is limited to a single compute node. (A problem
+exist to adjust to zero workers, because then the
+remaining work has first to be relocated to a different node.)
+
+2) Each runtime system must estimate the amount of work
+it has and compare this to the number of workers.
+In the case of excess work this work may be distributed
+to other compute nodes when their ratio of available work
+to workers warrants this.  Complementary, runtime systems
+with idle workers may request work from runtime systems
+on systems with more work.
+
+It seems logical to delegate this communication to
+the resource service. I.e. each runtime system 
+calculates the available work load and communicates
+this to the resource service. In turn, the resource
+management servers compute a favorable work placement
+strategy and communicate this back to the runtime systems.
+The task of the S-Net runtime systems is then reduced
+to redirecting work to idle systems, or accepting
+work from more busy systems.
+
+Redirecting work across compute nodes dynamically,
+based on guidance by the resource service,
+poses problems for the S-Net runtime system.
+Once an entity or stream has been instantiated
+knowledge about these instantiations and the
+records which are in transition via these resources,
+is distributed to an unknown number of worker threads.
+It is then unclear when all workers will stop
+referring to these resources. Therefore, relocation
+of existing instantiations of streams and entities
+is best avoided.
+
+Two options remain:
+
+A) The runtime systems can redirect some or all
+of their new streams to a different compute node.
+If there is only a relative work load imbalance
+then some streams can be directed. A total redirection
+of all streams is possible when a compute node has
+to be vacated or when there exists a strong imbalance
+of work load. Two potential disadvantages of this option
+can be discerned:
+1) Over time, a complex spaghetti network of cross-node
+connections may arise, which could be inefficient and
+waste some resources.
+2) Existing instantiations remain unmodified. Therefore,
+when the S-Net program specification is of a static
+nature then there is no dynamic adjustment possible.
+
+B) A different solution direction is possible whereby
+S-Net networks are only instantiated on the root node.
+Work is then only distributed to other compute nodes
+in the form of box invocations. Because of the stateless
+nature of box components the S-Net runtime system 
+can be flexible in the placement of box executions.
+Multiple invocations for a single box can be distributed.
+
+
+CONCLUSION
+
+
+We have discussed the benefits of a distributed resource
+management service for Distributed S-Net. Two viable
+design options for the S-Net runtime system to this 
+service have been found. We propose to implement
+option B to begin with. In case of time permits
+then option A can be implemented as well.
+
+

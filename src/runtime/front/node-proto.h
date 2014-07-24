@@ -1,16 +1,18 @@
 /* node.c */
 
-worker_t **SNetNodeGetWorkers(void);
-int SNetNodeGetWorkerCount(void);
 
 /* Assign a new index to a stream and add it to the stream table. */
 void SNetNodeTableAdd(snet_stream_t *stream);
+
+/* Delete a stream from the stream table. */
+void SNetNodeTableRemove(snet_stream_t *stream);
 
 /* Retrieve the node table index from a node structure. */
 snet_stream_t* SNetNodeTableIndex(int table_index);
 
 /* Cleanup the node table */
 void SNetNodeTableCleanup(void);
+void SNetNodeCleanup(void);
 
 /* Create a new node and connect its in/output streams. */
 node_t *SNetNodeNew(
@@ -23,12 +25,7 @@ node_t *SNetNodeNew(
   node_work_fun_t work,
   node_stop_fun_t stop,
   node_term_fun_t term);
-void SNetNodeStop(worker_t *worker);
-void *SNetNodeThreadStart(void *arg);
-
-/* Create workers and start them. */
-void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output);
-void SNetNodeCleanup(void);
+void SNetNodeStop(void);
 
 /* Create a new stream emmanating from this node. */
 snet_stream_t *SNetNodeStreamCreate(node_t *node);
@@ -572,6 +569,49 @@ snet_stream_t *SNetParallelDet(
     snet_variant_list_list_t *variant_lists,
     ...);
 
+/* xrun.c */
+
+
+/* Return worker ID from a Pthread. */
+int SNetGetWorkerId(void);
+
+/* Create configuration which is shared by all workers. */
+worker_config_t* SNetCreateWorkerConfig(
+  int worker_count,
+  int max_worker,
+  int pipe_send,
+  snet_stream_t *input,
+  snet_stream_t *output);
+
+/* Transmit a MesgBusy to the master. */
+void SNetNodeWorkerBusy(worker_t* worker);
+
+/* Direct a newly created Pthread to work. */
+void *SNetNodeThreadStart(void *arg);
+
+/* Start a number of workers and wait for all to finish. */
+void SNetMasterStatic(
+  const int num_workers,
+  const int num_managers,
+  worker_config_t* config,
+  const int recv);
+
+/* Activate a new worker thread. */
+void SNetMasterStartOne(int id, worker_config_t* config, int proc);
+
+/* Return a bitmask of 1/2/3 when input is available within a given delay. */
+int SNetWaitForInput(int pipe, int sock, double delay);
+
+/* Throttle number of workers by work load. */
+void SNetMasterDynamic(worker_config_t* config, int recv);
+void SNetBindLogicalProc(int proc);
+
+/* Dynamic resource management via the resource server. */
+void SNetMasterResource(worker_config_t* config, int recv);
+
+/* Create workers and start them. */
+void SNetNodeRun(snet_stream_t *input, snet_info_t *info, snet_stream_t *output);
+
 /* xserial.c */
 
 snet_stream_t *SNetSerial(
@@ -811,16 +851,24 @@ snet_stream_t *SNetSync(
 
 /* xthread.c */
 
+
+/* Total number of cores in system, whether currently online or not. */
+int SNetGetMaxProcs(void);
+
+/* The number of cores in the system which are currently operational. */
 int SNetGetNumProcs(void);
 
 /* How many workers? */
 int SNetThreadingWorkers(void);
 
-/* How many thieves? */
+/* Limit the number of actively stealing thieves, if non-zero. */
 int SNetThreadingThieves(void);
 
 /* How many distributed computing threads? */
 int SNetThreadedManagers(void);
+
+/* Name of this program. */
+const char* SNetGetProgramName(void);
 
 /* What kind of garbage collection to use? */
 bool SNetGarbageCollection(void);
@@ -837,6 +885,9 @@ bool SNetDebugDF(void);
 /* Whether debugging of garbage collection is enabled */
 bool SNetDebugGC(void);
 
+/* Whether debugging of resource management service is enabled */
+bool SNetDebugRS(void);
+
 /* Whether debugging of the streams layer is enabled */
 bool SNetDebugSL(void);
 
@@ -849,7 +900,13 @@ bool SNetDebugWS(void);
 /* Whether to use a deterministic feedback */
 bool SNetFeedbackDeterministic(void);
 
-/* Whether to use optimized sync-star */
+/* Whether to use dynamic resource management. */
+bool SNetOptResource(void);
+
+/* Whether and how to connect to the resource management service. */
+const char* SNetOptResourceServer(void);
+
+/* Whether to use optimized sync-star. */
 bool SNetZipperEnabled(void);
 
 /* The stack size for worker threads in bytes */
@@ -880,7 +937,7 @@ int SNetGetBoxConcurrency(const char *box, bool *is_det);
 int SNetThreadingInit(int argc, char**argv);
 
 /* Create a thread to instantiate a worker */
-void SNetThreadCreate(void *(*func)(void *), worker_t *worker);
+void SNetThreadCreate(void *(*func)(void *), worker_t *worker, int proc);
 void SNetThreadSetSelf(worker_t *self);
 worker_t *SNetThreadGetSelf(void);
 int SNetThreadingStop(void);
@@ -943,18 +1000,11 @@ void SNetTransferReturn(
 /* xworker.c */
 
 
-/* Init worker data */
-void SNetWorkerInit(void);
-
-/* Cleanup worker data */
-void SNetWorkerCleanup(void);
-
 /* Create a new worker. */
 worker_t *SNetWorkerCreate(
-    node_t *input_node,
     int worker_id,
-    node_t *output_node,
-    worker_role_t role);
+    worker_role_t role,
+    worker_config_t *config);
 
 /* Destroy a worker. */
 void SNetWorkerDestroy(worker_t *worker);
@@ -978,6 +1028,9 @@ void SNetWorkerMaintenaince(worker_t *worker);
 
 /* Wait for other workers to finish. */
 void SNetWorkerWait(worker_t *worker);
+
+/* Process input or work until stealing fails. */
+void SNetWorkerSlave(worker_t *worker);
 
 /* Process work forever and read input until EOF. */
 void SNetWorkerRun(worker_t *worker);

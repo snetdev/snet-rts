@@ -3,7 +3,7 @@
 <!-- Initial state first -->
 
 <record type="data" mode="textual" interface="C4SNet">
-  <field label="state" >(int)0</field>
+  <field label="state" >(int)10</field>
 </record>
 
 
