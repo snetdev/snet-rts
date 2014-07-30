@@ -56,10 +56,17 @@ double SNetTimeToDouble(snet_time_t *time)
 /* Return wall-clock time. */
 double SNetRealTime(void)
 {
+#ifdef CLOCK_REALTIME
   struct timespec ts = { 0, 0 };
   int r = clock_gettime(CLOCK_REALTIME, &ts);
   CHECK(r);
   return TS2SEC(ts);
+#else   /* __APPLE__ || __MACH__ */
+  struct timeval tv = { 0, 0 };
+  int r = gettimeofday(&tv, NULL); \
+  CHECK(r);
+  return TV2SEC(tv);
+#endif
 }
 
 #ifdef CLOCK_PROCESS_CPUTIME_ID
