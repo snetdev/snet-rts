@@ -14,14 +14,12 @@ invalRecord num = record ++ field "inval" num ++ endtag
 
 randomInts :: Int -> Int -> IO [Int]
 randomInts lower upper = do
-  let rs g = let (a,g') = randomR (lower, upper) g in a : rs g'
-  newStdGen >>= return . rs
+  let rs = (\(a,g) -> a : rs g) . randomR (lower, upper)
+  fmap rs newStdGen
 
 main = do
-  args <- getArgs
-  let num = if null args then 10 else read $ head args
-  let max = if length args < 2 then 10 else read $ args !! 1
-  myInts <- randomInts 0 max >>= return . take num
+  (num : max : _) <- fmap ((++) [10, 10] . map read) getArgs
+  myInts <- fmap (take num) $ randomInts 0 max
   let mySum = sum myInts
   putStr header
   putStr $ stateRecord mySum
