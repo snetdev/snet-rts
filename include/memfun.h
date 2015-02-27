@@ -76,6 +76,11 @@ void *SNetMemResize( void *ptr, size_t size)
  */
 void SNetMemFree( void *ptr);
 
+/*
+ * Return size of the allocated memory
+ */
+size_t SNetMemSize( void *ptr);
+
 
 /*
  * Frees the memory pointed to by ptr.

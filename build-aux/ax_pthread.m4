@@ -272,6 +272,13 @@ else
         PTHREAD_CC="$CC"
 fi
 
+# set flag for defining MALLOC_BSD where malloc_size is used
+# otherwise, (assuming Linux) malloc_useable_size is used
+# this is tested only on mac and linux
+case "${host_cpu}-${host_os}" in
+    *-freebsd* | *-darwin*) CFLAGS="$CFLAGS -D_SNET_MEMFUN_BSD";;
+esac
+
 AC_SUBST(PTHREAD_LIBS)
 AC_SUBST(PTHREAD_CFLAGS)
 AC_SUBST(PTHREAD_CC)
