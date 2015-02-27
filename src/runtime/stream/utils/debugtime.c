@@ -65,7 +65,7 @@ double SNetRealTime(void)
   struct timeval tv = { 0, 0 };
   int r = gettimeofday(&tv, NULL); \
   CHECK(r);
-  return TV2SEC(tv);
+  return TV2SEC(&tv);
 #endif
 }
 
