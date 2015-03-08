@@ -72,7 +72,7 @@ There are 2 kinds of events: worker events, task events.
 
 - Message trace: information of messages which task consumes/produces
   + <message-trace> = {<message-entry> <semicolon>}*
-  + <message-entry> = <timestamp> <io> <message-id>
+  + <message-entry> = <timestamp> <io> <message-id><S-character><size>
   + <message-id> = <node-id> <dot-character> <local-id>
     <timestamp> ... time at which the message is consumed/produced
     <io>: 'I' = message is an input (consumed by the task), 'O' message is an output (produced by the task)
@@ -80,7 +80,16 @@ There are 2 kinds of events: worker events, task events.
     <local-id> ... message id locally on the distributed node
     <dot-character> ... '.' character
     <semicolon> ... ';' character
+    <size> ... size of the message
+    <S-character> ... 'S' character
 
+- Note on Message Size:
+  + the information in message trace is only accurate for data created by SNet memory utilities (e.g. C4SNetAlloc)
+  + for data, which is managed by the user and passed to SNet as a pointer, the message size is simply the size of the pointer
+  + in distributed S-Net, the mechanism to achieve message is more complicated. Since SNet only pass the reference of data, and the real
+    data is actually sent when requested. This mechanism helps the effiecency. However, it invalidates the message size in the log files.
+    These messages that sent via LPEL are just the reference. And the real data is sent directly by Distributed SNet.
+    (Communication cost in distributed S-Net can be achieved, see Section DISTRIBUTED SNET)
 
 - Load Information:
  + two entries for two worker events: worker started and worker ended --> provide the total running time of the worker (including computational time and waiting time)
@@ -99,4 +108,14 @@ Log entries are same as DECEN LPEL except for following points:
 	Waiting time: is the time period from when worker send request to the master to a task is assigned.
 
 
+======================================================================
+========= DISTRIBUTED SNET =========
+- The communcation cost among computational nodes can be achieved by using flag "-logComm"
+- For each node, one log file "n[node_id]_comm.log" is created
+- The file consist multiple entries, each entry indicate a message that current node send to others
+- The entry format is: <node_id> <size> <semicolon>
+   + <node_id>: the receiver node
+   + <size>: the size of the message
+   + <semicolon>: ... ';' character
+   + meaning: the current node sent 1 message of <size> bytes to <node_id>
 

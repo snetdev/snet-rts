@@ -49,4 +49,6 @@ void SNetPackVoid(void *buf, int count, void **src);
 void SNetUnpackVoid(void *buf, int count, void **dst);
 void SNetPackRef(void *buf, int count, snet_ref_t **src);
 void SNetUnpackRef(void *buf, int count, snet_ref_t **dst);
+void startMonMPI();
+void stopMonMPI();
 
