@@ -147,6 +147,10 @@ snet_record_t *SNetRecCreate( snet_record_descr_t descr, ...)
       break;
     case REC_wakeup:
       break;
+    case REC_fetch:
+    	FETCH_REC( rec, ref) = va_arg( args, snet_ref_t *);
+    	FETCH_REC( rec, dest) = va_arg( args, void *);
+    	break;
     default:
       SNetRecUnknown(__func__, rec);
   }
@@ -185,6 +189,27 @@ snet_record_t *SNetRecCopy( snet_record_t *rec)
   }
 
   return new_rec;
+}
+
+size_t SNetRecGetSize( snet_record_t *rec) {
+	int name, val;
+  snet_ref_t *field;
+  size_t size = 0;
+  switch (REC_DESCR( rec)) {
+    case REC_data:
+    	RECORD_FOR_EACH_FIELD(rec, name, field) {
+    		size += SNetRefGetDataSize(SNetRefGetData(field));
+    	}
+    	RECORD_FOR_EACH_TAG(rec, name, val) {
+    		size += sizeof(int);
+    	}
+    	RECORD_FOR_EACH_BTAG(rec, name, val) {
+    		size += sizeof(int);
+    	}
+    	return size;
+    default:
+    	return -1;
+  }
 }
 
 void SNetRecDestroy( snet_record_t *rec)
@@ -226,6 +251,8 @@ void SNetRecDestroy( snet_record_t *rec)
       break;
     case REC_wakeup:
       break;
+    case REC_fetch:
+    	break;
     default:
       SNetRecUnknown(__func__, rec);
   }

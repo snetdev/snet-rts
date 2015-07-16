@@ -2,16 +2,20 @@
 
 export SNET_EXTRA_LDFLAGS+=$(BOXES)
 
-.PHONY: clean all lpel
+.PHONY: clean all lpel lpel_hrc pth front
 
-all: $(TARGET)
 
 %.o: %.c %.h
 	gcc -g -c $< -o $@ $(INCLUDES)
 
-all: $(TARGET)
+all: $(TARGET).front $(TARGET).pth $(TARGET).lpel $(TARGET).lpel_hrc
 
-$(TARGET):  $(TARGET).snet $(BOXES) $(SOURCES)
+front: $(TARGET).front
+pth: $(TARGET).pth
+lpel: $(TARGET).lpel
+lpel_hrc: $(TARGET).lpel_hrc
+
+$(TARGET).front:  $(TARGET).snet $(BOXES) $(SOURCES)
 	snetc -g $(SNETCFLAGS) $< -o $@ -threading front $(INCLUDES) $(SOURCES)
 
 $(TARGET).pth:  $(TARGET).snet $(BOXES) $(SOURCES)

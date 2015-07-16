@@ -296,6 +296,9 @@ static c4snet_data_t *C4SNetDecode(FILE *file)
 /* Language interface initialization function. */
 void C4SNetInit( int id, snet_distrib_t distImpl)
 {
+	/* set call back function on data */
+	SNetReferenceSetDataFunc(AllocatedSpace);
+
   interface_id = id;
   snet_pack_fun_t packfun = NULL;
   snet_unpack_fun_t unpackfun = NULL;

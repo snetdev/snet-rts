@@ -20,7 +20,6 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
     MPI_Abort(MPI_COMM_WORLD, 2);
   }
   MPI_Comm_rank(MPI_COMM_WORLD, &node_location);
-
   for (int i = 0; i < argc; i++) {
     if (strcmp(argv[i], "-debugWait") == 0) {
       volatile int stop = 0;
@@ -28,6 +27,9 @@ void SNetDistribImplementationInit(int argc, char **argv, snet_info_t *info)
       fflush(stdout);
       while (0 == stop) sleep(5);
       break;
+    } 
+    else if (strcmp(argv[i], "-logComm") == 0) {
+      startMonMPI();
     }
   }
 }
@@ -42,7 +44,10 @@ void SNetDistribGlobalStop(void)
   }
 }
 
-void SNetDistribLocalStop(void) { MPI_Finalize(); }
+void SNetDistribLocalStop(void) { 
+  stopMonMPI();
+  MPI_Finalize(); 
+}
 
 int SNetDistribGetNodeId(void) { return node_location; }
 

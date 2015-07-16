@@ -108,6 +108,19 @@ static snet_ref_refcount_map_t *remoteRefMap = NULL;
 static pthread_mutex_t localRefMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t remoteRefMutex = PTHREAD_MUTEX_INITIALIZER;
 
+static size_t (*snet_ref_data_size)(void*) = NULL;
+
+void SNetReferenceSetDataFunc(size_t (*get_size)(void *)) {
+	snet_ref_data_size = get_size;
+}
+
+/* data: c4snet_data */
+size_t SNetRefGetDataSize(void *data) {
+	if (snet_ref_data_size == NULL)
+		return -1;
+	return snet_ref_data_size(data);
+}
+
 /* Called by toplevel distribution. */
 void SNetReferenceInit(void)
 {

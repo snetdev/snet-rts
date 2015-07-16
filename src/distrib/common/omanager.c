@@ -63,7 +63,8 @@ void SNetOutputManagerNewOut(snet_dest_t dest, snet_stream_t *stream)
   SNetTupleListAppendEnd(newStreams, tuple);
   if (wakeupStream != NULL) {
     snet_stream_desc_t *sd = SNetStreamOpen(wakeupStream, 'w');
-    SNetStreamTryWrite(sd, (void*)1);
+    snet_record_t *wk_rec = SNetRecCreate(REC_wakeup);
+    SNetStreamTryWrite(sd, wk_rec);
     SNetStreamClose(sd, false);
   }
 
@@ -75,7 +76,8 @@ static void UpdateState(snet_dest_t dest, bool block)
   pthread_mutex_lock(&outputManagerMutex);
   SNetDestListAppendEnd(block ? newBlocked : newUnblocked, dest);
   snet_stream_desc_t *sd = SNetStreamOpen(wakeupStream, 'w');
-  SNetStreamTryWrite(sd, (void*)1);
+  snet_record_t *wk_rec = SNetRecCreate(REC_wakeup);
+  SNetStreamTryWrite(sd, wk_rec);
   SNetStreamClose(sd, false);
   pthread_mutex_unlock(&outputManagerMutex);
 }
@@ -136,7 +138,8 @@ void SNetOutputManagerStop(void)
 
   running = false;
   snet_stream_desc_t *sd = SNetStreamOpen(wakeupStream, 'w');
-  SNetStreamTryWrite(sd, (void*)1);
+  snet_record_t *wk_rec = SNetRecCreate(REC_wakeup);
+  SNetStreamTryWrite(sd, wk_rec);
   SNetStreamClose(sd, false);
 
   pthread_mutex_unlock(&outputManagerMutex);
@@ -160,8 +163,9 @@ void SNetOutputManager(snet_entity_t *ent, void *args)
     snet_stream_desc_t *sd = SNetStreamPoll(&waiting);
 
     if (sd == wakeupDesc) {
-      SNetStreamRead(sd);
-      UpdateOutgoing(streamMap, &waiting);
+    	snet_record_t *wk_rec = SNetStreamRead(sd);
+    	SNetRecDestroy(wk_rec);
+    	UpdateOutgoing(streamMap, &waiting);
       UpdateBlocked(streamMap, newBlocked, &waiting, &blocked);
       UpdateBlocked(streamMap, newUnblocked, &blocked, &waiting);
       continue;

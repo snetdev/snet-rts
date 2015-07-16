@@ -2,7 +2,7 @@
 #define _SNET_DISTRIBUTION_H_
 
 #include <stdint.h>
-
+#include <stddef.h>
 typedef struct snet_ref snet_ref_t;
 
 #include "info.h"
@@ -30,6 +30,11 @@ void *SNetRefGetData(snet_ref_t *ref);
 void *SNetRefTakeData(snet_ref_t *ref);
 void SNetRefDestroy(snet_ref_t *ref);
 
+/* set call back functions on data */
+void SNetReferenceSetDataFunc(size_t (*get_size)(void *));
+
+/* get size of referenced data */
+size_t SNetRefGetDataSize(void *data);
 
 /* Implementation specific functions in src/distrib/implementation */
 void SNetDistribGlobalStop(void);

@@ -517,7 +517,6 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
     }
 
     SNetLocvecParallelReset(locvec);
-
     /* create parallel */
     parg = SNetMemAlloc( sizeof(parallel_arg_t));
     parg->input   = instream;
@@ -532,7 +531,9 @@ static snet_stream_t *CreateParallel( snet_stream_t *instream,
         );
 
     /* create collector with collstreams */
+    SNetLocvecEndBorder(locvec);		// set end border index for collector
     outstream = CollectorCreateStatic(num, collstreams, location, info);
+    SNetLocvecResetBorder(locvec);
 
     /* free collstreams array */
     SNetMemFree(collstreams);

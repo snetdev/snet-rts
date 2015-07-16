@@ -81,10 +81,14 @@ static snet_stream_t *SNetSerialStarchild(snet_stream_t *input,
 
   assert( SNetLocvecStarWithin(SNetLocvecGet(info)) );
 
+
+  (void) SNetLocvecStarNext(locvec);	/* this is used to differentiate locvec for operand a and b.
+  																			by doing this, "<prefix>R1" would be the locvec for the generated star of the first instance */
+
   /* create operand B */
   output = (*box_b)(internal_stream, info, location);
 
-  (void) SNetLocvecStarSpawnRet(locvec);
+  (void) SNetLocvecStarSpawnRetNext(locvec);
 
   return(output);
 }
@@ -415,7 +419,9 @@ static snet_stream_t *CreateStar( snet_stream_t *input,
      */
     if (!is_incarnate) {
       /* the "top-level" star also creates a collector */
+    	SNetLocvecEndBorder(locvec);
       output = CollectorCreateDynamic(newstream, location, info);
+      SNetLocvecResetBorder(locvec);
     } else {
       output = newstream;
     }

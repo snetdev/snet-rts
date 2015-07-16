@@ -11,9 +11,26 @@
 #include "reference.h"
 
 extern int node_location;
+static FILE *mon_mpi = NULL;
+
+void startMonMPI() {
+  int node = SNetDistribGetNodeId();
+  char fn[1000];
+  sprintf(fn, "n%02d_comm.log", node);
+  mon_mpi = fopen(fn, "w");
+}
+
+void stopMonMPI() {
+  if (mon_mpi != NULL)
+    fclose(mon_mpi);
+}
 
 inline static void MPISend(void *src, int size, int dest, int type)
-{ MPI_Send(src, size, MPI_PACKED, dest, type, MPI_COMM_WORLD); }
+{
+  if (mon_mpi != NULL)
+    fprintf(mon_mpi, "%d %d;", dest, size);
+  MPI_Send(src, size, MPI_PACKED, dest, type, MPI_COMM_WORLD); 
+}
 
 void SNetMPISend(void *src, int size, int dest, int type)
 { MPI_Send(src, size, MPI_PACKED, dest, type, MPI_COMM_WORLD); }

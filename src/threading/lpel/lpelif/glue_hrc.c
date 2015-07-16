@@ -35,6 +35,22 @@ static FILE *mapfile = NULL;
  */
 static bool sosi_placement = false;
 
+void *copyPrio(void *p) {
+	snet_locvec_t *vec = (snet_locvec_t *)p;
+	return (void *)SNetLocvecCopy(vec);
+}
+
+void delPrio(void *p) {
+	snet_locvec_t *vec = (snet_locvec_t *)p;
+	SNetLocvecDestroy(vec);
+}
+
+int comparePrio(void *p1, void *p2) {
+	snet_locvec_t *vec1 = (snet_locvec_t *)p1;
+	snet_locvec_t *vec2 = (snet_locvec_t *)p2;
+	return SNetLocvecCompare(vec1, vec2);
+}
+
 int SNetThreadingInit(int argc, char **argv)
 {
 #ifdef USE_LOGGING
@@ -47,11 +63,11 @@ int SNetThreadingInit(int argc, char **argv)
 
 	memset(&config, 0, sizeof(lpel_config_t));
 
-	int priorf = 1;
+	int priorf = -1;
 
 	config.type = HRC_LPEL;
-
 	config.flags = LPEL_FLAG_PINNED;
+
 
 	for (i=0; i<argc; i++) {
 		if(strcmp(argv[i], "-m") == 0 && i + 1 <= argc) {
@@ -91,8 +107,8 @@ int SNetThreadingInit(int argc, char **argv)
 		}
 	}
 
-	LpelTaskSetPriorityFunc(priorf);
-	LpelTaskSetNegLim(neg_demand);
+	config.prio_config.neg_demand_lim = neg_demand;
+	config.prio_config.prio_index = priorf;
 
 #ifdef USE_LOGGING
 	char fname[20+1];
@@ -142,6 +158,11 @@ int SNetThreadingInit(int argc, char **argv)
 	/* initialise monitoring module */
 	SNetThreadingMonInit(&config.mon, SNetDistribGetNodeId(), mon_flags);
 #endif
+
+	/* set call back functions to rts */
+	config.prio_config.rts_prio_cmp = comparePrio;
+	config.prio_config.rts_cpy_prio = copyPrio;
+	config.prio_config.rts_del_prio = delPrio;
 
 	LpelInit(&config);
 
@@ -212,19 +233,21 @@ int SNetThreadingSpawn(snet_entity_t *ent)
 	int location = LPEL_MAP_MASTER;
 	int l1 = strlen(SNET_SOURCE_PREFIX);
 	int l2 = strlen(SNET_SINK_PREFIX);
-	if ((sosi_placement && (strnstr(name, SNET_SOURCE_PREFIX, l1) || strnstr(name, SNET_SINK_PREFIX, l2))) 	// sosi placemnet and entity is source/sink
-			|| type == ENTITY_other)	// wrappers
-		location = LPEL_MAP_OTHERS;
+	if (sosi_placement && (strnstr(name, SNET_SOURCE_PREFIX, l1) || strnstr(name, SNET_SINK_PREFIX, l2))) 	// sosi placemnet and entity is source/sink
+		location = LPEL_MAP_SOSI;
+	else if (type == ENTITY_other)	// wrappers
+		location = SNetEntityNode(ent);
 
 	lpel_task_t *t = LpelTaskCreate(
 			location,
 			//(lpel_taskfunc_t) func,
 			EntityTask,
 			ent,
-			GetStacksize(type)
+			GetStacksize(type),
+			(void *) SNetEntityGetLocvec(ent)
 	);
 
-	if (location != LPEL_MAP_OTHERS)
+	if (location == LPEL_MAP_MASTER)
 			setTaskRecLimit(type, t);
 
 #ifdef USE_LOGGING

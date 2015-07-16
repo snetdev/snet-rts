@@ -20,6 +20,7 @@ typedef enum {
   REC_observ,
   REC_star_leader,
   REC_wakeup,
+  REC_fetch,
 } snet_record_descr_t;
 
 typedef enum {
@@ -50,6 +51,7 @@ typedef struct {
 #define DETREF_REC( name, component) RECORD( name, detref_rec).component
 #define OBSERV_REC( name, component) RECORD( name, observ_rec).component
 #define LEADER_REC( name, component) RECORD( name, leader_rec).component
+#define FETCH_REC( name, component) RECORD( name, fetch_rec).component
 
 #include "distribution.h"
 #include "map.h"
@@ -106,6 +108,11 @@ typedef struct leader_rec {
   long  seqnr;
 } leader_rec_t;
 
+typedef struct {
+	snet_ref_t *ref;
+	void *dest;
+} fetch_rec_t;
+
 union record_types {
   data_rec_t data_rec;
   sync_rec_t sync_rec;
@@ -115,6 +122,7 @@ union record_types {
   detref_rec_t detref_rec;
   observ_rec_t observ_rec;
   leader_rec_t leader_rec;
+  fetch_rec_t fetch_rec;
 };
 
 struct record {
@@ -183,7 +191,7 @@ void SNetRecRenameField( snet_record_t *rec, int id, int newId);
 
 
 void SNetRecIdGet(snet_record_id_t *id, snet_record_t *from);
-
+size_t SNetRecGetSize(snet_record_t *rec);
 
 void SNetRecSerialise(
         snet_record_t *rec,

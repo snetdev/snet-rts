@@ -64,6 +64,7 @@ typedef char* snet_add_moninfo_rec_data_t;
 typedef struct {
 	snet_record_id_t id;
 	snet_add_moninfo_rec_data_t add_moninfo_rec_data; /* container for additional arbitrary data */
+	size_t size;
 } snet_moninfo_record_t;
 
 

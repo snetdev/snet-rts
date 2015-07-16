@@ -8,6 +8,7 @@
 #include "omanager.h"
 #include "reference.h"
 #include "tuplelist.h"
+#include "fetcher.h"
 
 #define MAP_NAME_H DestStream
 #define MAP_TYPE_NAME_H dest_stream
@@ -80,6 +81,7 @@ static snet_tuple_list_t *newStreams = NULL;
 static snet_buffer_list_t *unblocked = NULL;
 static pthread_mutex_t unblockedMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t newStreamsMutex = PTHREAD_MUTEX_INITIALIZER;
+static snet_stream_t *fetchStream = NULL;
 
 static void ReadCallback(snet_buffer_t *buf)
 {
@@ -203,6 +205,9 @@ void SNetInputManagerInit(void)
 
 void SNetInputManagerStart(void)
 {
+	fetchStream = SNetStreamCreate(0);
+	SNetFetcher(fetchStream);
+
   SNetThreadingSpawn(
     SNetEntityCreate( ENTITY_other, -1, NULL,
       "input_manager", &SNetInputManager, NULL));
@@ -213,7 +218,8 @@ void SNetInputManager(snet_entity_t *ent, void *args)
   (void) ent; /* NOT USED */
   (void) args; /* NOT USED */
   snet_dest_stream_map_t *destMap = SNetDestStreamMapCreate(0);
-
+  snet_stream_desc_t *fetchSd = SNetStreamOpen(fetchStream, 'w');
+  snet_record_t *rec;
   while (true) {
     snet_msg_t msg = SNetDistribRecvMsg();
     switch (msg.type) {
@@ -244,9 +250,12 @@ void SNetInputManager(snet_entity_t *ent, void *args)
         break;
 
       case snet_ref_fetch:
-        SNetDistribSendData(msg.ref, SNetRefGetData(msg.ref), (void*) msg.data);
-        SNetRefUpdate(msg.ref, -1);
-        SNetMemFree(msg.ref);
+//        SNetDistribSendData(msg.ref, SNetRefGetData(msg.ref), (void*) msg.data);
+//        SNetRefUpdate(msg.ref, -1);
+//        SNetMemFree(msg.ref);
+      	rec = SNetRecCreate(REC_fetch, msg.ref, msg.data);
+      	SNetStreamWrite(fetchSd, rec);
+      	msg.ref = NULL;
         break;
 
       case snet_stop:
@@ -260,6 +269,12 @@ void SNetInputManager(snet_entity_t *ent, void *args)
 
 exit:
   assert(SNetDestStreamMapSize(destMap) == 0);
+  rec = SNetRecCreate(REC_terminate);
+  SNetStreamWrite(fetchSd, rec);
+  SNetStreamClose(fetchSd, 0);
+  /* wait for fetcher to stop */
+  SNetFetcherWaitExit();
+
   SNetDestStreamMapDestroy(destMap);
   SNetOutputManagerStop();
   SNetReferenceDestroy();
